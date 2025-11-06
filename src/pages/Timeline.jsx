@@ -12,6 +12,7 @@ export default function Timeline() {
 
   const [startDate, setStartDate] = useState(now);
   const [endDate, setEndDate] = useState(twoHoursLater);
+  const [selectedShifts, setSelectedShifts] = useState(['shift1', 'shift2', 'shift3']);
 
   const { data: holidays, isLoading: isLoadingHolidays, refetch: refetchHolidays } = useQuery({
     queryKey: ['holidays'],
@@ -59,6 +60,8 @@ export default function Timeline() {
               vacations={vacations}
               isLoadingVacations={isLoadingVacations}
               onVacationsUpdate={refetchVacations}
+              selectedShifts={selectedShifts}
+              onSelectedShiftsChange={setSelectedShifts}
             />
           </Card>
 
@@ -68,6 +71,7 @@ export default function Timeline() {
               endDate={endDate}
               holidays={holidays}
               vacations={vacations}
+              selectedShifts={selectedShifts}
             />
           </Card>
         </motion.div>

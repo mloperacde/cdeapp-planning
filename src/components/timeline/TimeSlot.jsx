@@ -8,16 +8,35 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 
-export default function TimeSlot({ time, index, isFirst, isLast, totalIntervals }) {
+const SHIFT_COLORS = {
+  shift1: {
+    gradient: "from-amber-500 to-amber-600",
+    bg: "bg-amber-500",
+    text: "text-amber-700",
+    name: "Turno 1",
+    hours: "7:00-15:00"
+  },
+  shift2: {
+    gradient: "from-indigo-500 to-indigo-600",
+    bg: "bg-indigo-500",
+    text: "text-indigo-700",
+    name: "Turno 2",
+    hours: "15:00-22:00"
+  },
+  shift3: {
+    gradient: "from-purple-500 to-purple-600",
+    bg: "bg-purple-500",
+    text: "text-purple-700",
+    name: "Turno 3",
+    hours: "14:00-22:00"
+  },
+};
+
+export default function TimeSlot({ time, shift, index, isFirst, isLast, totalIntervals }) {
   const [isHovered, setIsHovered] = useState(false);
   
-  // Determinar el color del marcador
-  const getMarkerColor = () => {
-    if (isFirst) return "from-emerald-500 to-emerald-600";
-    if (isLast) return "from-purple-500 to-purple-600";
-    return "from-blue-500 to-blue-600";
-  };
-
+  const shiftColor = SHIFT_COLORS[shift] || SHIFT_COLORS.shift1;
+  
   const getMarkerSize = () => {
     if (isFirst || isLast) return "w-4 h-4";
     return "w-3 h-3";
@@ -40,18 +59,18 @@ export default function TimeSlot({ time, index, isFirst, isLast, totalIntervals 
         >
           {/* Marcador */}
           <motion.div
-            className={`${getMarkerSize()} rounded-full bg-gradient-to-br ${getMarkerColor()} shadow-lg z-10 cursor-pointer transition-all duration-300`}
+            className={`${getMarkerSize()} rounded-full bg-gradient-to-br ${shiftColor.gradient} shadow-lg z-10 cursor-pointer transition-all duration-300`}
             whileHover={{ scale: 1.3, y: -2 }}
             animate={{
               boxShadow: isHovered
-                ? "0 10px 25px -5px rgba(59, 130, 246, 0.5)"
+                ? `0 10px 25px -5px rgba(99, 102, 241, 0.5)`
                 : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
             }}
           />
 
           {/* Línea vertical */}
           <motion.div
-            className={`w-0.5 bg-gradient-to-b ${getMarkerColor()} transition-all duration-300`}
+            className={`w-0.5 bg-gradient-to-b ${shiftColor.gradient} transition-all duration-300`}
             animate={{
               height: isHovered ? "32px" : "20px",
               opacity: showLabel || isHovered ? 1 : 0.3,
@@ -65,11 +84,7 @@ export default function TimeSlot({ time, index, isFirst, isLast, totalIntervals 
               animate={{ opacity: 1 }}
               className="mt-1 text-center"
             >
-              <div className={`text-xs font-semibold ${
-                isFirst ? "text-emerald-700" : 
-                isLast ? "text-purple-700" : 
-                "text-slate-700"
-              }`}>
+              <div className={`text-xs font-semibold ${shiftColor.text}`}>
                 {format(time, "HH:mm")}
               </div>
               {(isFirst || isLast) && (
@@ -82,20 +97,13 @@ export default function TimeSlot({ time, index, isFirst, isLast, totalIntervals 
         </motion.div>
       </HoverCardTrigger>
       
-      <HoverCardContent className="w-56" side="top">
+      <HoverCardContent className="w-64" side="top">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Intervalo #{index + 1}</span>
-            {isFirst && (
-              <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
-                Inicio
-              </span>
-            )}
-            {isLast && (
-              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
-                Fin
-              </span>
-            )}
+            <span className={`text-xs px-2 py-0.5 ${shiftColor.bg} bg-opacity-10 ${shiftColor.text} rounded-full font-medium border border-current`}>
+              {shiftColor.name}
+            </span>
           </div>
           <div className="space-y-1">
             <div className="text-lg font-bold text-slate-900">
@@ -106,8 +114,13 @@ export default function TimeSlot({ time, index, isFirst, isLast, totalIntervals 
             </div>
           </div>
           <div className="pt-2 border-t border-slate-100">
-            <div className="text-xs text-slate-500">
-              Duración del intervalo: <span className="font-semibold text-blue-600">5 minutos</span>
+            <div className="text-xs text-slate-500 space-y-1">
+              <div>
+                Turno: <span className={`font-semibold ${shiftColor.text}`}>{shiftColor.name} ({shiftColor.hours})</span>
+              </div>
+              <div>
+                Duración: <span className="font-semibold text-blue-600">5 minutos</span>
+              </div>
             </div>
           </div>
         </div>

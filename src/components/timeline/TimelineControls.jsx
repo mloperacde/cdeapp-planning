@@ -6,6 +6,7 @@ import { Calendar, Clock, RotateCcw, CalendarOff, Plane } from "lucide-react";
 import { format } from "date-fns";
 import HolidayManager from "./HolidayManager";
 import VacationManager from "./VacationManager";
+import ShiftFilter from "./ShiftFilter";
 
 export default function TimelineControls({
   startDate,
@@ -17,7 +18,9 @@ export default function TimelineControls({
   onHolidaysUpdate,
   vacations,
   isLoadingVacations,
-  onVacationsUpdate
+  onVacationsUpdate,
+  selectedShifts,
+  onSelectedShiftsChange
 }) {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showVacationManager, setShowVacationManager] = useState(false);
@@ -61,12 +64,10 @@ export default function TimelineControls({
   const calculateWorkingMinutes = () => {
     const totalMinutes = Math.round((endDate - startDate) / (1000 * 60));
     
-    // Contar días festivos en el rango
     const holidayDates = new Set(
       holidays.map(h => format(new Date(h.date), "yyyy-MM-dd"))
     );
     
-    // Contar días de vacaciones en el rango
     const vacationDates = new Set();
     vacations.forEach(vacation => {
       const start = new Date(vacation.start_date);
@@ -82,13 +83,27 @@ export default function TimelineControls({
     let workingMinutes = 0;
     const current = new Date(startDate);
     
+    const isInShift = (date) => {
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const timeInMinutes = hours * 60 + minutes;
+      
+      return selectedShifts.some(shift => {
+        if (shift === 'shift1') return timeInMinutes >= 7 * 60 && timeInMinutes < 15 * 60;
+        if (shift === 'shift2') return timeInMinutes >= 15 * 60 && timeInMinutes < 22 * 60;
+        if (shift === 'shift3') return timeInMinutes >= 14 * 60 && timeInMinutes < 22 * 60;
+        return false;
+      });
+    };
+    
     while (current < endDate) {
       const dateStr = format(current, "yyyy-MM-dd");
       const isHoliday = holidayDates.has(dateStr);
       const isVacation = vacationDates.has(dateStr);
       const isWeekend = current.getDay() === 0 || current.getDay() === 6;
+      const inShift = isInShift(current);
       
-      if (!isHoliday && !isVacation && !isWeekend) {
+      if (!isHoliday && !isVacation && !isWeekend && inShift) {
         workingMinutes += 5;
       }
       
@@ -143,6 +158,13 @@ export default function TimelineControls({
               {format(endDate, "EEEE, d 'de' MMMM 'de' yyyy 'a las' HH:mm")}
             </p>
           </div>
+        </div>
+
+        <div className="mb-4 pb-4 border-b border-slate-100">
+          <ShiftFilter 
+            selectedShifts={selectedShifts}
+            onSelectedShiftsChange={onSelectedShiftsChange}
+          />
         </div>
 
         <div className="flex flex-wrap justify-between items-center pt-4 border-t border-slate-100 gap-4">

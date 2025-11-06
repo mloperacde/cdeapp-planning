@@ -2,13 +2,20 @@ import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import TimeSlot from "./TimeSlot";
-import { AlertCircle, Calendar } from "lucide-react";
+import { AlertCircle, Calendar, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export default function TimelineView({ startDate, endDate, holidays, vacations }) {
-  const { workingIntervals, excludedDays } = useMemo(() => {
+const SHIFTS = {
+  shift1: { name: 'Turno 1', start: 7 * 60, end: 15 * 60, color: 'amber' },
+  shift2: { name: 'Turno 2', start: 15 * 60, end: 22 * 60, color: 'indigo' },
+  shift3: { name: 'Turno 3', start: 14 * 60, end: 22 * 60, color: 'purple' },
+};
+
+export default function TimelineView({ startDate, endDate, holidays, vacations, selectedShifts }) {
+  const { workingIntervals, excludedDays, shiftStats } = useMemo(() => {
     const allIntervals = [];
-    const excluded = { weekends: 0, holidays: 0, vacations: 0 };
+    const excluded = { weekends: 0, holidays: 0, vacations: 0, outOfShift: 0 };
+    const stats = { shift1: 0, shift2: 0, shift3: 0 };
     const current = new Date(startDate);
     const end = new Date(endDate);
     
@@ -38,25 +45,47 @@ export default function TimelineView({ startDate, endDate, holidays, vacations }
     // Rastrear días excluidos únicos
     const excludedDaysSet = new Set();
     
+    const isInSelectedShift = (date) => {
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const timeInMinutes = hours * 60 + minutes;
+      
+      let matchedShift = null;
+      for (const shiftId of selectedShifts) {
+        const shift = SHIFTS[shiftId];
+        if (timeInMinutes >= shift.start && timeInMinutes < shift.end) {
+          matchedShift = shiftId;
+          break;
+        }
+      }
+      
+      return matchedShift;
+    };
+    
     let index = 0;
-    while (current <= end && index < 500) {
+    while (current <= end && index < 1000) {
       const currentDate = new Date(current);
       const dateStr = format(currentDate, "yyyy-MM-dd");
       const dayOfWeek = currentDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayDates.has(dateStr);
       const isVacation = vacationDates.has(dateStr);
+      const matchedShift = isInSelectedShift(currentDate);
       
-      // Solo incluir intervalos de días laborables
-      if (!isWeekend && !isHoliday && !isVacation) {
-        allIntervals.push(currentDate);
+      // Solo incluir intervalos de días laborables y dentro de turnos seleccionados
+      if (!isWeekend && !isHoliday && !isVacation && matchedShift) {
+        allIntervals.push({ date: currentDate, shift: matchedShift });
+        stats[matchedShift]++;
       } else {
         // Contar días excluidos únicos por tipo
         if (!excludedDaysSet.has(dateStr)) {
           excludedDaysSet.add(dateStr);
           if (isWeekend) excluded.weekends++;
           if (isHoliday) excluded.holidays++;
-          if (isVacation && !isWeekend) excluded.vacations++; // No contar vacaciones que caen en fin de semana
+          if (isVacation && !isWeekend) excluded.vacations++;
+        }
+        if (!isWeekend && !isHoliday && !isVacation && !matchedShift) {
+          excluded.outOfShift++;
         }
       }
       
@@ -64,8 +93,8 @@ export default function TimelineView({ startDate, endDate, holidays, vacations }
       index++;
     }
     
-    return { workingIntervals: allIntervals, excludedDays: excluded };
-  }, [startDate, endDate, holidays, vacations]);
+    return { workingIntervals: allIntervals, excludedDays: excluded, shiftStats: stats };
+  }, [startDate, endDate, holidays, vacations, selectedShifts]);
 
   const isTooLarge = workingIntervals.length > 288;
   
@@ -77,7 +106,7 @@ export default function TimelineView({ startDate, endDate, holidays, vacations }
           No hay intervalos laborables en el rango seleccionado
         </p>
         <p className="text-sm text-slate-500">
-          Todos los días en el período son fines de semana, festivos o vacaciones
+          Verifica las fechas, turnos seleccionados, festivos y vacaciones
         </p>
       </div>
     );
@@ -90,27 +119,54 @@ export default function TimelineView({ startDate, endDate, holidays, vacations }
           Visualización de Intervalos Laborables
         </h3>
         <p className="text-sm text-slate-600 mb-3">
-          Cada segmento representa 5 minutos (excluyendo fines de semana, festivos y vacaciones)
+          Cada segmento representa 5 minutos en los turnos seleccionados
         </p>
         
+        <div className="flex flex-wrap gap-2 mb-3">
+          {shiftStats.shift1 > 0 && selectedShifts.includes('shift1') && (
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+              <Clock className="w-3 h-3 mr-1" />
+              Turno 1: {shiftStats.shift1} intervalos (7:00-15:00)
+            </Badge>
+          )}
+          {shiftStats.shift2 > 0 && selectedShifts.includes('shift2') && (
+            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+              <Clock className="w-3 h-3 mr-1" />
+              Turno 2: {shiftStats.shift2} intervalos (15:00-22:00)
+            </Badge>
+          )}
+          {shiftStats.shift3 > 0 && selectedShifts.includes('shift3') && (
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+              <Clock className="w-3 h-3 mr-1" />
+              Turno 3: {shiftStats.shift3} intervalos (14:00-22:00)
+            </Badge>
+          )}
+        </div>
+
         {(excludedDays.weekends > 0 || excludedDays.holidays > 0 || excludedDays.vacations > 0) && (
           <div className="flex flex-wrap gap-2">
             {excludedDays.weekends > 0 && (
               <Badge variant="outline" className="bg-slate-50 text-slate-700">
                 <Calendar className="w-3 h-3 mr-1" />
-                {excludedDays.weekends} {excludedDays.weekends === 1 ? 'fin de semana excluido' : 'fines de semana excluidos'}
+                {excludedDays.weekends} {excludedDays.weekends === 1 ? 'fin de semana' : 'fines de semana'}
               </Badge>
             )}
             {excludedDays.holidays > 0 && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                 <Calendar className="w-3 h-3 mr-1" />
-                {excludedDays.holidays} {excludedDays.holidays === 1 ? 'festivo excluido' : 'festivos excluidos'}
+                {excludedDays.holidays} {excludedDays.holidays === 1 ? 'festivo' : 'festivos'}
               </Badge>
             )}
             {excludedDays.vacations > 0 && (
               <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
                 <Calendar className="w-3 h-3 mr-1" />
-                {excludedDays.vacations} {excludedDays.vacations === 1 ? 'día de vacaciones excluido' : 'días de vacaciones excluidos'}
+                {excludedDays.vacations} {excludedDays.vacations === 1 ? 'día de vacaciones' : 'días de vacaciones'}
+              </Badge>
+            )}
+            {excludedDays.outOfShift > 0 && (
+              <Badge variant="outline" className="bg-slate-50 text-slate-600">
+                <Clock className="w-3 h-3 mr-1" />
+                {excludedDays.outOfShift} intervalos fuera de turno
               </Badge>
             )}
           </div>
@@ -136,7 +192,8 @@ export default function TimelineView({ startDate, endDate, holidays, vacations }
             {workingIntervals.map((interval, index) => (
               <TimeSlot
                 key={index}
-                time={interval}
+                time={interval.date}
+                shift={interval.shift}
                 index={index}
                 isFirst={index === 0}
                 isLast={index === workingIntervals.length - 1}
@@ -150,16 +207,16 @@ export default function TimelineView({ startDate, endDate, holidays, vacations }
         <div className="mt-6 pt-6 border-t border-slate-100">
           <div className="flex flex-wrap gap-6 justify-center text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600" />
-              <span className="text-slate-600">Intervalo laborable (5 min)</span>
+              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-500 to-amber-600" />
+              <span className="text-slate-600">Turno 1 (7:00-15:00)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600" />
-              <span className="text-slate-600">Inicio del período</span>
+              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600" />
+              <span className="text-slate-600">Turno 2 (15:00-22:00)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-purple-600" />
-              <span className="text-slate-600">Fin del período</span>
+              <span className="text-slate-600">Turno 3 (14:00-22:00)</span>
             </div>
           </div>
         </div>
