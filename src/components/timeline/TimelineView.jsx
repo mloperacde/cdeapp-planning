@@ -11,10 +11,13 @@ const SHIFTS = {
   shift3: { name: 'Turno 3', start: 14 * 60, end: 22 * 60, color: 'purple' },
 };
 
+const WORKING_DAY_START = 7 * 60; // 7:00 en minutos
+const WORKING_DAY_END = 22 * 60; // 22:00 en minutos
+
 export default function TimelineView({ startDate, endDate, holidays, vacations, selectedShifts }) {
   const { workingIntervals, excludedDays, shiftStats } = useMemo(() => {
     const allIntervals = [];
-    const excluded = { weekends: 0, holidays: 0, vacations: 0, outOfShift: 0 };
+    const excluded = { weekends: 0, holidays: 0, vacations: 0, outOfShift: 0, outOfWorkingHours: 0 };
     const stats = { shift1: 0, shift2: 0, shift3: 0 };
     const current = new Date(startDate);
     const end = new Date(endDate);
@@ -45,6 +48,13 @@ export default function TimelineView({ startDate, endDate, holidays, vacations, 
     // Rastrear días excluidos únicos
     const excludedDaysSet = new Set();
     
+    const isInWorkingHours = (date) => {
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const timeInMinutes = hours * 60 + minutes;
+      return timeInMinutes >= WORKING_DAY_START && timeInMinutes < WORKING_DAY_END;
+    };
+    
     const isInSelectedShift = (date) => {
       const hours = date.getHours();
       const minutes = date.getMinutes();
@@ -70,10 +80,11 @@ export default function TimelineView({ startDate, endDate, holidays, vacations, 
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayDates.has(dateStr);
       const isVacation = vacationDates.has(dateStr);
+      const inWorkingHours = isInWorkingHours(currentDate);
       const matchedShift = isInSelectedShift(currentDate);
       
-      // Solo incluir intervalos de días laborables y dentro de turnos seleccionados
-      if (!isWeekend && !isHoliday && !isVacation && matchedShift) {
+      // Solo incluir intervalos dentro del horario laboral (7:00-22:00)
+      if (inWorkingHours && !isWeekend && !isHoliday && !isVacation && matchedShift) {
         allIntervals.push({ date: currentDate, shift: matchedShift });
         stats[matchedShift]++;
       } else {
@@ -84,7 +95,9 @@ export default function TimelineView({ startDate, endDate, holidays, vacations, 
           if (isHoliday) excluded.holidays++;
           if (isVacation && !isWeekend) excluded.vacations++;
         }
-        if (!isWeekend && !isHoliday && !isVacation && !matchedShift) {
+        if (!inWorkingHours && !isWeekend && !isHoliday && !isVacation) {
+          excluded.outOfWorkingHours++;
+        } else if (inWorkingHours && !isWeekend && !isHoliday && !isVacation && !matchedShift) {
           excluded.outOfShift++;
         }
       }
@@ -106,7 +119,7 @@ export default function TimelineView({ startDate, endDate, holidays, vacations, 
           No hay intervalos laborables en el rango seleccionado
         </p>
         <p className="text-sm text-slate-500">
-          Verifica las fechas, turnos seleccionados, festivos y vacaciones
+          Verifica las fechas, turnos seleccionados (horario laboral: 7:00-22:00)
         </p>
       </div>
     );
@@ -119,7 +132,7 @@ export default function TimelineView({ startDate, endDate, holidays, vacations, 
           Visualización de Intervalos Laborables
         </h3>
         <p className="text-sm text-slate-600 mb-3">
-          Cada segmento representa 5 minutos en los turnos seleccionados
+          Cada segmento representa 5 minutos (horario laboral: 7:00 - 22:00)
         </p>
         
         <div className="flex flex-wrap gap-2 mb-3">
@@ -167,6 +180,12 @@ export default function TimelineView({ startDate, endDate, holidays, vacations, 
               <Badge variant="outline" className="bg-slate-50 text-slate-600">
                 <Clock className="w-3 h-3 mr-1" />
                 {excludedDays.outOfShift} intervalos fuera de turno
+              </Badge>
+            )}
+            {excludedDays.outOfWorkingHours > 0 && (
+              <Badge variant="outline" className="bg-slate-50 text-slate-500">
+                <Clock className="w-3 h-3 mr-1" />
+                {excludedDays.outOfWorkingHours} intervalos fuera del horario laboral
               </Badge>
             )}
           </div>
