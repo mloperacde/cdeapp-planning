@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 
@@ -10,6 +12,12 @@ export default function Timeline() {
 
   const [startDate, setStartDate] = useState(now);
   const [endDate, setEndDate] = useState(twoHoursLater);
+
+  const { data: holidays, isLoading, refetch } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+    initialData: [],
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
@@ -39,11 +47,18 @@ export default function Timeline() {
               endDate={endDate}
               onStartDateChange={setStartDate}
               onEndDateChange={setEndDate}
+              holidays={holidays}
+              isLoadingHolidays={isLoading}
+              onHolidaysUpdate={refetch}
             />
           </Card>
 
           <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 overflow-hidden">
-            <TimelineView startDate={startDate} endDate={endDate} />
+            <TimelineView 
+              startDate={startDate} 
+              endDate={endDate}
+              holidays={holidays}
+            />
           </Card>
         </motion.div>
       </div>

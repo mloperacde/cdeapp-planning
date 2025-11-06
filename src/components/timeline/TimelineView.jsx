@@ -2,11 +2,13 @@ import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import TimeSlot from "./TimeSlot";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-export default function TimelineView({ startDate, endDate }) {
-  const intervals = useMemo(() => {
-    const result = [];
+export default function TimelineView({ startDate, endDate, holidays }) {
+  const { workingIntervals, excludedDays } = useMemo(() => {
+    const allIntervals = [];
+    const excluded = { weekends: 0, holidays: 0 };
     const current = new Date(startDate);
     const end = new Date(endDate);
     
@@ -15,25 +17,52 @@ export default function TimelineView({ startDate, endDate }) {
     current.setSeconds(0);
     current.setMilliseconds(0);
     
+    // Crear conjunto de fechas festivas
+    const holidayDates = new Set(
+      holidays.map(h => format(new Date(h.date), "yyyy-MM-dd"))
+    );
+    
+    // Rastrear días excluidos únicos
+    const excludedDaysSet = new Set();
+    
     let index = 0;
-    while (current <= end && index < 500) { // Límite de seguridad
-      result.push(new Date(current));
+    while (current <= end && index < 500) {
+      const currentDate = new Date(current);
+      const dateStr = format(currentDate, "yyyy-MM-dd");
+      const dayOfWeek = currentDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isHoliday = holidayDates.has(dateStr);
+      
+      // Solo incluir intervalos de días laborables
+      if (!isWeekend && !isHoliday) {
+        allIntervals.push(currentDate);
+      } else {
+        // Contar días excluidos únicos
+        if (!excludedDaysSet.has(dateStr)) {
+          excludedDaysSet.add(dateStr);
+          if (isWeekend) excluded.weekends++;
+          if (isHoliday) excluded.holidays++;
+        }
+      }
+      
       current.setMinutes(current.getMinutes() + 5);
       index++;
     }
     
-    return result;
-  }, [startDate, endDate]);
+    return { workingIntervals: allIntervals, excludedDays: excluded };
+  }, [startDate, endDate, holidays]);
 
-  // Verificar si el rango es demasiado grande
-  const isTooLarge = intervals.length > 288; // Más de 24 horas
+  const isTooLarge = workingIntervals.length > 288;
   
-  if (intervals.length === 0) {
+  if (workingIntervals.length === 0) {
     return (
       <div className="p-12 text-center">
         <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-        <p className="text-slate-600">
-          Por favor, selecciona un rango de fechas válido
+        <p className="text-slate-600 mb-2">
+          No hay intervalos laborables en el rango seleccionado
+        </p>
+        <p className="text-sm text-slate-500">
+          Todos los días en el período son fines de semana o festivos
         </p>
       </div>
     );
@@ -43,11 +72,28 @@ export default function TimelineView({ startDate, endDate }) {
     <div className="p-6 md:p-8">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-2">
-          Visualización de Intervalos
+          Visualización de Intervalos Laborables
         </h3>
-        <p className="text-sm text-slate-600">
-          Cada segmento representa 5 minutos
+        <p className="text-sm text-slate-600 mb-3">
+          Cada segmento representa 5 minutos (excluyendo fines de semana y festivos)
         </p>
+        
+        {(excludedDays.weekends > 0 || excludedDays.holidays > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {excludedDays.weekends > 0 && (
+              <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                <Calendar className="w-3 h-3 mr-1" />
+                {excludedDays.weekends} {excludedDays.weekends === 1 ? 'fin de semana excluido' : 'fines de semana excluidos'}
+              </Badge>
+            )}
+            {excludedDays.holidays > 0 && (
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                <Calendar className="w-3 h-3 mr-1" />
+                {excludedDays.holidays} {excludedDays.holidays === 1 ? 'festivo excluido' : 'festivos excluidos'}
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {isTooLarge && (
@@ -66,14 +112,14 @@ export default function TimelineView({ startDate, endDate }) {
         {/* Contenedor con scroll horizontal */}
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-0 min-w-max">
-            {intervals.map((interval, index) => (
+            {workingIntervals.map((interval, index) => (
               <TimeSlot
                 key={index}
                 time={interval}
                 index={index}
                 isFirst={index === 0}
-                isLast={index === intervals.length - 1}
-                totalIntervals={intervals.length}
+                isLast={index === workingIntervals.length - 1}
+                totalIntervals={workingIntervals.length}
               />
             ))}
           </div>
@@ -84,7 +130,7 @@ export default function TimelineView({ startDate, endDate }) {
           <div className="flex flex-wrap gap-6 justify-center text-sm">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600" />
-              <span className="text-slate-600">Intervalo de 5 minutos</span>
+              <span className="text-slate-600">Intervalo laborable (5 min)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600" />
