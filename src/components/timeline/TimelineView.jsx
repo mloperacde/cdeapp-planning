@@ -5,10 +5,10 @@ import TimeSlot from "./TimeSlot";
 import { AlertCircle, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export default function TimelineView({ startDate, endDate, holidays }) {
+export default function TimelineView({ startDate, endDate, holidays, vacations }) {
   const { workingIntervals, excludedDays } = useMemo(() => {
     const allIntervals = [];
-    const excluded = { weekends: 0, holidays: 0 };
+    const excluded = { weekends: 0, holidays: 0, vacations: 0 };
     const current = new Date(startDate);
     const end = new Date(endDate);
     
@@ -22,6 +22,19 @@ export default function TimelineView({ startDate, endDate, holidays }) {
       holidays.map(h => format(new Date(h.date), "yyyy-MM-dd"))
     );
     
+    // Crear conjunto de fechas de vacaciones
+    const vacationDates = new Set();
+    vacations.forEach(vacation => {
+      const vStart = new Date(vacation.start_date);
+      const vEnd = new Date(vacation.end_date);
+      const vCurrent = new Date(vStart);
+      
+      while (vCurrent <= vEnd) {
+        vacationDates.add(format(vCurrent, "yyyy-MM-dd"));
+        vCurrent.setDate(vCurrent.getDate() + 1);
+      }
+    });
+    
     // Rastrear días excluidos únicos
     const excludedDaysSet = new Set();
     
@@ -32,16 +45,18 @@ export default function TimelineView({ startDate, endDate, holidays }) {
       const dayOfWeek = currentDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayDates.has(dateStr);
+      const isVacation = vacationDates.has(dateStr);
       
       // Solo incluir intervalos de días laborables
-      if (!isWeekend && !isHoliday) {
+      if (!isWeekend && !isHoliday && !isVacation) {
         allIntervals.push(currentDate);
       } else {
-        // Contar días excluidos únicos
+        // Contar días excluidos únicos por tipo
         if (!excludedDaysSet.has(dateStr)) {
           excludedDaysSet.add(dateStr);
           if (isWeekend) excluded.weekends++;
           if (isHoliday) excluded.holidays++;
+          if (isVacation && !isWeekend) excluded.vacations++; // No contar vacaciones que caen en fin de semana
         }
       }
       
@@ -50,7 +65,7 @@ export default function TimelineView({ startDate, endDate, holidays }) {
     }
     
     return { workingIntervals: allIntervals, excludedDays: excluded };
-  }, [startDate, endDate, holidays]);
+  }, [startDate, endDate, holidays, vacations]);
 
   const isTooLarge = workingIntervals.length > 288;
   
@@ -62,7 +77,7 @@ export default function TimelineView({ startDate, endDate, holidays }) {
           No hay intervalos laborables en el rango seleccionado
         </p>
         <p className="text-sm text-slate-500">
-          Todos los días en el período son fines de semana o festivos
+          Todos los días en el período son fines de semana, festivos o vacaciones
         </p>
       </div>
     );
@@ -75,10 +90,10 @@ export default function TimelineView({ startDate, endDate, holidays }) {
           Visualización de Intervalos Laborables
         </h3>
         <p className="text-sm text-slate-600 mb-3">
-          Cada segmento representa 5 minutos (excluyendo fines de semana y festivos)
+          Cada segmento representa 5 minutos (excluyendo fines de semana, festivos y vacaciones)
         </p>
         
-        {(excludedDays.weekends > 0 || excludedDays.holidays > 0) && (
+        {(excludedDays.weekends > 0 || excludedDays.holidays > 0 || excludedDays.vacations > 0) && (
           <div className="flex flex-wrap gap-2">
             {excludedDays.weekends > 0 && (
               <Badge variant="outline" className="bg-slate-50 text-slate-700">
@@ -90,6 +105,12 @@ export default function TimelineView({ startDate, endDate, holidays }) {
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                 <Calendar className="w-3 h-3 mr-1" />
                 {excludedDays.holidays} {excludedDays.holidays === 1 ? 'festivo excluido' : 'festivos excluidos'}
+              </Badge>
+            )}
+            {excludedDays.vacations > 0 && (
+              <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+                <Calendar className="w-3 h-3 mr-1" />
+                {excludedDays.vacations} {excludedDays.vacations === 1 ? 'día de vacaciones excluido' : 'días de vacaciones excluidos'}
               </Badge>
             )}
           </div>

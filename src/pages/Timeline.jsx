@@ -13,9 +13,15 @@ export default function Timeline() {
   const [startDate, setStartDate] = useState(now);
   const [endDate, setEndDate] = useState(twoHoursLater);
 
-  const { data: holidays, isLoading, refetch } = useQuery({
+  const { data: holidays, isLoading: isLoadingHolidays, refetch: refetchHolidays } = useQuery({
     queryKey: ['holidays'],
     queryFn: () => base44.entities.Holiday.list(),
+    initialData: [],
+  });
+
+  const { data: vacations, isLoading: isLoadingVacations, refetch: refetchVacations } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list(),
     initialData: [],
   });
 
@@ -48,8 +54,11 @@ export default function Timeline() {
               onStartDateChange={setStartDate}
               onEndDateChange={setEndDate}
               holidays={holidays}
-              isLoadingHolidays={isLoading}
-              onHolidaysUpdate={refetch}
+              isLoadingHolidays={isLoadingHolidays}
+              onHolidaysUpdate={refetchHolidays}
+              vacations={vacations}
+              isLoadingVacations={isLoadingVacations}
+              onVacationsUpdate={refetchVacations}
             />
           </Card>
 
@@ -58,6 +67,7 @@ export default function Timeline() {
               startDate={startDate} 
               endDate={endDate}
               holidays={holidays}
+              vacations={vacations}
             />
           </Card>
         </motion.div>
