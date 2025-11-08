@@ -1,7 +1,6 @@
 import Timeline from './pages/Timeline';
 import Employees from './pages/Employees';
 import Machines from './pages/Machines';
-import ShiftAssignments from './pages/ShiftAssignments';
 import Breaks from './pages/Breaks';
 import Configuration from './pages/Configuration';
 import TeamConfiguration from './pages/TeamConfiguration';
@@ -12,7 +11,6 @@ export const PAGES = {
     "Timeline": Timeline,
     "Employees": Employees,
     "Machines": Machines,
-    "ShiftAssignments": ShiftAssignments,
     "Breaks": Breaks,
     "Configuration": Configuration,
     "TeamConfiguration": TeamConfiguration,

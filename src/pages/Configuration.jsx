@@ -1,9 +1,8 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Calendar, Plane, Building2, Coffee } from "lucide-react";
+import { Settings, Calendar, Plane, Building2, Coffee, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Button } from "@/components/ui/button";
 
 export default function ConfigurationPage() {
   const configSections = [
@@ -15,18 +14,18 @@ export default function ConfigurationPage() {
       color: "blue",
     },
     {
+      title: "Equipos de Turno",
+      description: "Configura los equipos y sus turnos rotativos semanales",
+      icon: UsersRound,
+      link: createPageUrl("TeamConfiguration"),
+      color: "purple",
+    },
+    {
       title: "Máquinas",
       description: "Configura las máquinas y asignaciones de operadores",
       icon: Settings,
       link: createPageUrl("Machines"),
-      color: "purple",
-    },
-    {
-      title: "Asignación de Turnos",
-      description: "Asigna turnos rotativos a los empleados",
-      icon: Calendar,
-      link: createPageUrl("ShiftAssignments"),
-      color: "green",
+      color: "indigo",
     },
     {
       title: "Turnos de Descanso",
@@ -54,6 +53,7 @@ export default function ConfigurationPage() {
   const colorClasses = {
     blue: "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
     purple: "from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700",
+    indigo: "from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700",
     green: "from-green-500 to-green-600 hover:from-green-600 hover:to-green-700",
     orange: "from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700",
     red: "from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
@@ -106,7 +106,7 @@ export default function ConfigurationPage() {
           <CardContent className="text-sm text-blue-800">
             <ul className="space-y-2">
               <li>• Gestión completa de empleados con campos personalizables</li>
-              <li>• Asignación flexible de turnos rotativos y fijos</li>
+              <li>• Sistema de equipos de turno rotativos configurables</li>
               <li>• Control de descansos por equipos de máquinas</li>
               <li>• Visualización de disponibilidad en tiempo real</li>
               <li>• Gestión de festivos y vacaciones</li>

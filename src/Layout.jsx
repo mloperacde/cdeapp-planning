@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Users, 
-  Calendar, 
   Clock, 
   Settings, 
   Activity,
@@ -27,7 +26,7 @@ import {
 
 const navigationItems = [
   {
-    title: "Línea de Tiempo",
+    title: "Planning/Línea de Tiempo",
     url: createPageUrl("Timeline"),
     icon: Activity,
   },
@@ -45,11 +44,6 @@ const navigationItems = [
     title: "Máquinas",
     url: createPageUrl("Machines"),
     icon: Cog,
-  },
-  {
-    title: "Asignar Turnos",
-    url: createPageUrl("ShiftAssignments"),
-    icon: Calendar,
   },
   {
     title: "Descansos",
