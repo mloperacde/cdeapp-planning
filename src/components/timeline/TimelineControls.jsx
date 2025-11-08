@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, RotateCcw, CalendarOff, Plane, CalendarDays, CalendarRange } from "lucide-react";
+import { Calendar, Clock, RotateCcw, CalendarOff, Plane, CalendarDays, CalendarRange, Users } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import HolidayManager from "./HolidayManager";
 import VacationManager from "./VacationManager";
-import ShiftFilter from "./ShiftFilter";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 export default function TimelineControls({
   viewMode,
@@ -21,8 +21,9 @@ export default function TimelineControls({
   vacations,
   isLoadingVacations,
   onVacationsUpdate,
-  selectedShifts,
-  onSelectedShiftsChange
+  selectedTeam,
+  onSelectedTeamChange,
+  teams
 }) {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showVacationManager, setShowVacationManager] = useState(false);
@@ -38,6 +39,7 @@ export default function TimelineControls({
     const now = new Date();
     onSelectedDateChange(now);
     onViewModeChange('day');
+    onSelectedTeamChange('all');
   };
 
   const handleDateChange = (e) => {
@@ -45,10 +47,69 @@ export default function TimelineControls({
     onSelectedDateChange(newDate);
   };
 
+  const getTeamConfig = (teamKey) => {
+    return teams.find(t => t.team_key === teamKey);
+  };
+
+  const team1Config = getTeamConfig('team_1') || { team_name: 'Equipo 1', color: '#8B5CF6' };
+  const team2Config = getTeamConfig('team_2') || { team_name: 'Equipo 2', color: '#EC4899' };
+
   return (
     <>
       <div className="p-6 md:p-8">
         <div className="space-y-6">
+          {/* Team Filter */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600" />
+              Filtrar por Equipo
+            </Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Button
+                variant={selectedTeam === 'all' ? 'default' : 'outline'}
+                onClick={() => onSelectedTeamChange('all')}
+                className={`h-auto py-3 ${selectedTeam === 'all' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Users className="w-5 h-5" />
+                  <span className="font-semibold">Todos los Equipos</span>
+                </div>
+              </Button>
+              
+              <Button
+                variant={selectedTeam === 'team_1' ? 'default' : 'outline'}
+                onClick={() => onSelectedTeamChange('team_1')}
+                className="h-auto py-3"
+                style={{
+                  backgroundColor: selectedTeam === 'team_1' ? team1Config.color : 'transparent',
+                  borderColor: team1Config.color,
+                  color: selectedTeam === 'team_1' ? 'white' : team1Config.color
+                }}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Users className="w-5 h-5" />
+                  <span className="font-semibold">{team1Config.team_name}</span>
+                </div>
+              </Button>
+              
+              <Button
+                variant={selectedTeam === 'team_2' ? 'default' : 'outline'}
+                onClick={() => onSelectedTeamChange('team_2')}
+                className="h-auto py-3"
+                style={{
+                  backgroundColor: selectedTeam === 'team_2' ? team2Config.color : 'transparent',
+                  borderColor: team2Config.color,
+                  color: selectedTeam === 'team_2' ? 'white' : team2Config.color
+                }}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Users className="w-5 h-5" />
+                  <span className="font-semibold">{team2Config.team_name}</span>
+                </div>
+              </Button>
+            </div>
+          </div>
+
           {/* Vista Mode Selector */}
           <div className="space-y-3">
             <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -94,20 +155,20 @@ export default function TimelineControls({
             </p>
           </div>
 
-          {/* Shift Filter */}
-          <div className="pb-4 border-b border-slate-100">
-            <ShiftFilter 
-              selectedShifts={selectedShifts}
-              onSelectedShiftsChange={onSelectedShiftsChange}
-            />
-          </div>
-
           {/* Actions */}
-          <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex flex-wrap justify-between items-center pt-4 border-t border-slate-100 gap-4">
             <div className="text-sm text-slate-600">
               <span className="font-semibold text-blue-600">
                 {viewMode === 'day' ? 'Vista de Día' : viewMode === 'week' ? 'Vista de Semana' : 'Vista de Mes'}
               </span>
+              {selectedTeam !== 'all' && (
+                <>
+                  {' • '}
+                  <span className="font-semibold" style={{ color: selectedTeam === 'team_1' ? team1Config.color : team2Config.color }}>
+                    {selectedTeam === 'team_1' ? team1Config.team_name : team2Config.team_name}
+                  </span>
+                </>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button

@@ -1,16 +1,10 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { format, isWithinInterval, isSameDay } from "date-fns";
+import { format, isWithinInterval, isSameDay, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import TimeSlot from "./TimeSlot";
 import { AlertCircle, Calendar, Clock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-const SHIFTS = {
-  shift1: { name: 'Turno 1', start: 7 * 60, end: 15 * 60, color: 'amber' },
-  shift2: { name: 'Turno 2', start: 15 * 60, end: 22 * 60, color: 'indigo' },
-  shift3: { name: 'Turno 3', start: 14 * 60, end: 22 * 60, color: 'purple' },
-};
 
 const WORKING_DAY_START = 7 * 60;
 const WORKING_DAY_END = 22 * 60;
@@ -20,14 +14,15 @@ export default function TimelineView({
   endDate, 
   holidays, 
   vacations, 
-  selectedShifts, 
+  selectedTeam,
   employees,
-  shiftAssignments,
+  teams,
+  teamSchedules,
   viewMode
 }) {
   const { workingIntervals, stats } = useMemo(() => {
     const allIntervals = [];
-    const stats = { totalEmployees: employees.length, intervals: 0 };
+    const stats = { totalEmployees: 0, intervals: 0 };
     const current = new Date(startDate);
     const end = new Date(endDate);
     
@@ -44,16 +39,53 @@ export default function TimelineView({
       end: new Date(v.end_date),
       employeeIds: v.aplica_todos ? null : v.employee_ids
     }));
+
+    // Filtrar empleados por equipo seleccionado
+    const getTeamName = (teamKey) => {
+      const team = teams.find(t => t.team_key === teamKey);
+      return team?.team_name || '';
+    };
+
+    let filteredEmployees = employees;
+    if (selectedTeam === 'team_1') {
+      const teamName = getTeamName('team_1');
+      filteredEmployees = employees.filter(emp => emp.equipo === teamName);
+    } else if (selectedTeam === 'team_2') {
+      const teamName = getTeamName('team_2');
+      filteredEmployees = employees.filter(emp => emp.equipo === teamName);
+    }
+
+    stats.totalEmployees = filteredEmployees.length;
+    
+    const getEmployeeTeamKey = (employee) => {
+      const team1 = teams.find(t => t.team_key === 'team_1');
+      const team2 = teams.find(t => t.team_key === 'team_2');
+      
+      if (team1 && employee.equipo === team1.team_name) return 'team_1';
+      if (team2 && employee.equipo === team2.team_name) return 'team_2';
+      return null;
+    };
+
+    const getTeamScheduleForWeek = (teamKey, date) => {
+      const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+      const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+      return teamSchedules.find(s => s.team_key === teamKey && s.fecha_inicio_semana === weekStartStr);
+    };
     
     const getEmployeeShift = (employee, date) => {
       if (employee.tipo_turno === "Fijo Mañana") return "Mañana";
       if (employee.tipo_turno === "Fijo Tarde") return "Tarde";
       
-      const dateStr = format(date, "yyyy-MM-dd");
-      const assignment = shiftAssignments.find(
-        a => a.employee_id === employee.id && a.fecha === dateStr
-      );
-      return assignment?.turno || "Mañana";
+      // Para rotativos, usar el horario del equipo
+      if (employee.tipo_turno === "Rotativo") {
+        const teamKey = getEmployeeTeamKey(employee);
+        if (teamKey) {
+          const schedule = getTeamScheduleForWeek(teamKey, date);
+          return schedule?.turno || "Mañana";
+        }
+      }
+      
+      return "Mañana";
     };
     
     const getEmployeeSchedule = (employee, shift) => {
@@ -111,14 +143,6 @@ export default function TimelineView({
       return timeInMinutes >= WORKING_DAY_START && timeInMinutes < WORKING_DAY_END;
     };
     
-    const isInSelectedShift = (date) => {
-      const timeInMinutes = date.getHours() * 60 + date.getMinutes();
-      return selectedShifts.some(shiftId => {
-        const shift = SHIFTS[shiftId];
-        return timeInMinutes >= shift.start && timeInMinutes < shift.end;
-      });
-    };
-    
     let index = 0;
     while (current <= end && index < 10000) {
       const currentDate = new Date(current);
@@ -127,10 +151,9 @@ export default function TimelineView({
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayDates.has(dateStr);
       const inWorkingHours = isInWorkingHours(currentDate);
-      const inSelectedShift = isInSelectedShift(currentDate);
       
-      if (inWorkingHours && !isWeekend && !isHoliday && inSelectedShift) {
-        const availableCount = employees.filter(emp => 
+      if (inWorkingHours && !isWeekend && !isHoliday) {
+        const availableCount = filteredEmployees.filter(emp => 
           isEmployeeAvailable(emp, currentDate)
         ).length;
         
@@ -146,7 +169,7 @@ export default function TimelineView({
     }
     
     return { workingIntervals: allIntervals, stats };
-  }, [startDate, endDate, holidays, vacations, selectedShifts, employees, shiftAssignments]);
+  }, [startDate, endDate, holidays, vacations, selectedTeam, employees, teams, teamSchedules]);
 
   if (workingIntervals.length === 0) {
     return (
@@ -162,18 +185,39 @@ export default function TimelineView({
   const maxEmployees = Math.max(...workingIntervals.map(i => i.availableEmployees), 1);
   const avgEmployees = (workingIntervals.reduce((sum, i) => sum + i.availableEmployees, 0) / workingIntervals.length).toFixed(1);
 
+  const getTeamColor = () => {
+    if (selectedTeam === 'team_1') {
+      const team = teams.find(t => t.team_key === 'team_1');
+      return team?.color || '#8B5CF6';
+    }
+    if (selectedTeam === 'team_2') {
+      const team = teams.find(t => t.team_key === 'team_2');
+      return team?.color || '#EC4899';
+    }
+    return '#3B82F6';
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-2">
           Disponibilidad de Empleados
+          {selectedTeam !== 'all' && (
+            <span style={{ color: getTeamColor() }} className="ml-2">
+              - {teams.find(t => t.team_key === selectedTeam)?.team_name}
+            </span>
+          )}
         </h3>
         <p className="text-sm text-slate-600 mb-3">
           Cada punto muestra el número de empleados disponibles en ese intervalo de 5 minutos
         </p>
         
         <div className="flex flex-wrap gap-2 mb-3">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Badge variant="outline" style={{ 
+            backgroundColor: `${getTeamColor()}20`,
+            color: getTeamColor(),
+            borderColor: getTeamColor()
+          }}>
             <Users className="w-3 h-3 mr-1" />
             Total Empleados: {stats.totalEmployees}
           </Badge>
@@ -208,6 +252,7 @@ export default function TimelineView({
                 isLast={index === workingIntervals.length - 1}
                 totalIntervals={workingIntervals.length}
                 viewMode={viewMode}
+                teamColor={getTeamColor()}
               />
             ))}
           </div>

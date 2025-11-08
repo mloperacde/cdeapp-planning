@@ -4,6 +4,7 @@ import Machines from './pages/Machines';
 import ShiftAssignments from './pages/ShiftAssignments';
 import Breaks from './pages/Breaks';
 import Configuration from './pages/Configuration';
+import TeamConfiguration from './pages/TeamConfiguration';
 import Layout from './Layout.jsx';
 
 
@@ -14,6 +15,7 @@ export const PAGES = {
     "ShiftAssignments": ShiftAssignments,
     "Breaks": Breaks,
     "Configuration": Configuration,
+    "TeamConfiguration": TeamConfiguration,
 }
 
 export const pagesConfig = {

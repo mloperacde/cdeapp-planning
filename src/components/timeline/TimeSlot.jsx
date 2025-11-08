@@ -17,16 +17,31 @@ export default function TimeSlot({
   isFirst, 
   isLast, 
   totalIntervals,
-  viewMode
+  viewMode,
+  teamColor = '#3B82F6'
 }) {
   const [isHovered, setIsHovered] = useState(false);
   
-  const getColor = () => {
+  const getColorByTeam = () => {
     const ratio = availableEmployees / maxEmployees;
-    if (ratio >= 0.8) return "from-green-500 to-green-600";
-    if (ratio >= 0.5) return "from-yellow-500 to-yellow-600";
-    if (ratio >= 0.3) return "from-orange-500 to-orange-600";
-    return "from-red-500 to-red-600";
+    
+    // Convertir hex a RGB
+    const hexToRgb = (hex) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 59, g: 130, b: 246 };
+    };
+    
+    const baseColor = hexToRgb(teamColor);
+    
+    // Ajustar opacidad basado en ratio
+    if (ratio >= 0.8) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 1)`;
+    if (ratio >= 0.5) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.8)`;
+    if (ratio >= 0.3) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.6)`;
+    return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.4)`;
   };
 
   const getSize = () => {
@@ -52,11 +67,12 @@ export default function TimeSlot({
           onMouseLeave={() => setIsHovered(false)}
         >
           <motion.div
-            className={`${getSize()} rounded-full bg-gradient-to-br ${getColor()} shadow-lg z-10 cursor-pointer transition-all duration-300 flex items-center justify-center`}
+            className={`${getSize()} rounded-full shadow-lg z-10 cursor-pointer transition-all duration-300 flex items-center justify-center`}
+            style={{ backgroundColor: getColorByTeam() }}
             whileHover={{ scale: 1.4, y: -2 }}
             animate={{
               boxShadow: isHovered
-                ? `0 10px 25px -5px rgba(99, 102, 241, 0.5)`
+                ? `0 10px 25px -5px ${teamColor}80`
                 : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
             }}
           >
@@ -68,7 +84,8 @@ export default function TimeSlot({
           </motion.div>
 
           <motion.div
-            className={`w-0.5 bg-gradient-to-b ${getColor()} transition-all duration-300`}
+            className="w-0.5 transition-all duration-300"
+            style={{ backgroundColor: teamColor }}
             animate={{
               height: isHovered ? "32px" : "20px",
               opacity: showLabel || isHovered ? 1 : 0.3,
@@ -99,8 +116,8 @@ export default function TimeSlot({
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Intervalo #{index + 1}</span>
             <div className="flex items-center gap-1">
-              <Users className="w-4 h-4 text-blue-600" />
-              <span className="text-lg font-bold text-blue-600">
+              <Users className="w-4 h-4" style={{ color: teamColor }} />
+              <span className="text-lg font-bold" style={{ color: teamColor }}>
                 {availableEmployees}
               </span>
             </div>
@@ -121,7 +138,7 @@ export default function TimeSlot({
               </div>
               <div className="flex justify-between">
                 <span>Disponibilidad:</span>
-                <span className="font-semibold text-blue-600">
+                <span className="font-semibold" style={{ color: teamColor }}>
                   {maxEmployees > 0 ? Math.round((availableEmployees / maxEmployees) * 100) : 0}%
                 </span>
               </div>

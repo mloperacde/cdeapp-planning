@@ -8,7 +8,8 @@ import {
   Settings, 
   Activity,
   Coffee,
-  Cog
+  Cog,
+  UsersRound
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +35,11 @@ const navigationItems = [
     title: "Empleados",
     url: createPageUrl("Employees"),
     icon: Users,
+  },
+  {
+    title: "Equipos de Turno",
+    url: createPageUrl("TeamConfiguration"),
+    icon: UsersRound,
   },
   {
     title: "Máquinas",

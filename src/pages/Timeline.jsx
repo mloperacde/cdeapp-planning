@@ -9,9 +9,9 @@ import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, en
 
 export default function Timeline() {
   const now = new Date();
-  const [viewMode, setViewMode] = useState('day'); // 'day', 'week', 'month'
+  const [viewMode, setViewMode] = useState('day');
   const [selectedDate, setSelectedDate] = useState(now);
-  const [selectedShifts, setSelectedShifts] = useState(['shift1', 'shift2', 'shift3']);
+  const [selectedTeam, setSelectedTeam] = useState('all'); // 'all', 'team_1', 'team_2'
 
   const getDateRange = () => {
     switch (viewMode) {
@@ -60,9 +60,15 @@ export default function Timeline() {
     initialData: [],
   });
 
-  const { data: shiftAssignments, isLoading: isLoadingAssignments } = useQuery({
-    queryKey: ['shiftAssignments'],
-    queryFn: () => base44.entities.ShiftAssignment.list(),
+  const { data: teams } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
+  });
+
+  const { data: teamSchedules } = useQuery({
+    queryKey: ['teamWeekSchedules'],
+    queryFn: () => base44.entities.TeamWeekSchedule.list(),
     initialData: [],
   });
 
@@ -79,7 +85,7 @@ export default function Timeline() {
             Línea de Tiempo - Disponibilidad
           </h1>
           <p className="text-slate-600 text-lg">
-            Visualiza la disponibilidad de empleados por intervalos
+            Visualiza la disponibilidad de empleados por intervalos y equipos
           </p>
         </motion.div>
 
@@ -100,8 +106,9 @@ export default function Timeline() {
               vacations={vacations}
               isLoadingVacations={isLoadingVacations}
               onVacationsUpdate={refetchVacations}
-              selectedShifts={selectedShifts}
-              onSelectedShiftsChange={setSelectedShifts}
+              selectedTeam={selectedTeam}
+              onSelectedTeamChange={setSelectedTeam}
+              teams={teams}
             />
           </Card>
 
@@ -111,9 +118,10 @@ export default function Timeline() {
               endDate={endDate}
               holidays={holidays}
               vacations={vacations}
-              selectedShifts={selectedShifts}
+              selectedTeam={selectedTeam}
               employees={employees}
-              shiftAssignments={shiftAssignments}
+              teams={teams}
+              teamSchedules={teamSchedules}
               viewMode={viewMode}
             />
           </Card>
