@@ -5,14 +5,42 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
+import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
 export default function Timeline() {
   const now = new Date();
-  const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-
-  const [startDate, setStartDate] = useState(now);
-  const [endDate, setEndDate] = useState(twoHoursLater);
+  const [viewMode, setViewMode] = useState('day'); // 'day', 'week', 'month'
+  const [selectedDate, setSelectedDate] = useState(now);
   const [selectedShifts, setSelectedShifts] = useState(['shift1', 'shift2', 'shift3']);
+
+  const getDateRange = () => {
+    switch (viewMode) {
+      case 'day':
+        return {
+          start: new Date(selectedDate.setHours(7, 0, 0, 0)),
+          end: new Date(selectedDate.setHours(22, 0, 0, 0))
+        };
+      case 'week':
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+        weekStart.setHours(7, 0, 0, 0);
+        weekEnd.setHours(22, 0, 0, 0);
+        return { start: weekStart, end: weekEnd };
+      case 'month':
+        const monthStart = startOfMonth(selectedDate);
+        const monthEnd = endOfMonth(selectedDate);
+        monthStart.setHours(7, 0, 0, 0);
+        monthEnd.setHours(22, 0, 0, 0);
+        return { start: monthStart, end: monthEnd };
+      default:
+        return {
+          start: new Date(selectedDate.setHours(7, 0, 0, 0)),
+          end: new Date(selectedDate.setHours(22, 0, 0, 0))
+        };
+    }
+  };
+
+  const { start: startDate, end: endDate } = getDateRange();
 
   const { data: holidays, isLoading: isLoadingHolidays, refetch: refetchHolidays } = useQuery({
     queryKey: ['holidays'],
@@ -26,6 +54,18 @@ export default function Timeline() {
     initialData: [],
   });
 
+  const { data: employees, isLoading: isLoadingEmployees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
+  });
+
+  const { data: shiftAssignments, isLoading: isLoadingAssignments } = useQuery({
+    queryKey: ['shiftAssignments'],
+    queryFn: () => base44.entities.ShiftAssignment.list(),
+    initialData: [],
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       <div className="container mx-auto px-4 py-8 md:py-12">
@@ -36,10 +76,10 @@ export default function Timeline() {
           className="text-center mb-10"
         >
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-3">
-            Línea de Tiempo
+            Línea de Tiempo - Disponibilidad
           </h1>
           <p className="text-slate-600 text-lg">
-            Visualiza intervalos de 5 minutos con precisión
+            Visualiza la disponibilidad de empleados por intervalos
           </p>
         </motion.div>
 
@@ -50,10 +90,10 @@ export default function Timeline() {
         >
           <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 mb-6">
             <TimelineControls
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              selectedDate={selectedDate}
+              onSelectedDateChange={setSelectedDate}
               holidays={holidays}
               isLoadingHolidays={isLoadingHolidays}
               onHolidaysUpdate={refetchHolidays}
@@ -72,6 +112,9 @@ export default function Timeline() {
               holidays={holidays}
               vacations={vacations}
               selectedShifts={selectedShifts}
+              employees={employees}
+              shiftAssignments={shiftAssignments}
+              viewMode={viewMode}
             />
           </Card>
         </motion.div>

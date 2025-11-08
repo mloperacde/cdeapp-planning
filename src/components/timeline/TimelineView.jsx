@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import { format, isWithinInterval, isSameDay } from "date-fns";
+import { es } from "date-fns/locale";
 import TimeSlot from "./TimeSlot";
-import { AlertCircle, Calendar, Clock } from "lucide-react";
+import { AlertCircle, Calendar, Clock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const SHIFTS = {
@@ -11,106 +12,142 @@ const SHIFTS = {
   shift3: { name: 'Turno 3', start: 14 * 60, end: 22 * 60, color: 'purple' },
 };
 
-const WORKING_DAY_START = 7 * 60; // 7:00 en minutos
-const WORKING_DAY_END = 22 * 60; // 22:00 en minutos
+const WORKING_DAY_START = 7 * 60;
+const WORKING_DAY_END = 22 * 60;
 
-export default function TimelineView({ startDate, endDate, holidays, vacations, selectedShifts }) {
-  const { workingIntervals, excludedDays, shiftStats } = useMemo(() => {
+export default function TimelineView({ 
+  startDate, 
+  endDate, 
+  holidays, 
+  vacations, 
+  selectedShifts, 
+  employees,
+  shiftAssignments,
+  viewMode
+}) {
+  const { workingIntervals, stats } = useMemo(() => {
     const allIntervals = [];
-    const excluded = { weekends: 0, holidays: 0, vacations: 0, outOfShift: 0, outOfWorkingHours: 0 };
-    const stats = { shift1: 0, shift2: 0, shift3: 0 };
+    const stats = { totalEmployees: employees.length, intervals: 0 };
     const current = new Date(startDate);
     const end = new Date(endDate);
     
-    // Redondear al intervalo de 5 minutos más cercano
     current.setMinutes(Math.floor(current.getMinutes() / 5) * 5);
     current.setSeconds(0);
     current.setMilliseconds(0);
     
-    // Crear conjunto de fechas festivas
     const holidayDates = new Set(
       holidays.map(h => format(new Date(h.date), "yyyy-MM-dd"))
     );
     
-    // Crear conjunto de fechas de vacaciones
-    const vacationDates = new Set();
-    vacations.forEach(vacation => {
-      const vStart = new Date(vacation.start_date);
-      const vEnd = new Date(vacation.end_date);
-      const vCurrent = new Date(vStart);
-      
-      while (vCurrent <= vEnd) {
-        vacationDates.add(format(vCurrent, "yyyy-MM-dd"));
-        vCurrent.setDate(vCurrent.getDate() + 1);
-      }
-    });
+    const vacationRanges = vacations.map(v => ({
+      start: new Date(v.start_date),
+      end: new Date(v.end_date),
+      employeeIds: v.aplica_todos ? null : v.employee_ids
+    }));
     
-    // Rastrear días excluidos únicos
-    const excludedDaysSet = new Set();
+    const getEmployeeShift = (employee, date) => {
+      if (employee.tipo_turno === "Fijo Mañana") return "Mañana";
+      if (employee.tipo_turno === "Fijo Tarde") return "Tarde";
+      
+      const dateStr = format(date, "yyyy-MM-dd");
+      const assignment = shiftAssignments.find(
+        a => a.employee_id === employee.id && a.fecha === dateStr
+      );
+      return assignment?.turno || "Mañana";
+    };
+    
+    const getEmployeeSchedule = (employee, shift) => {
+      if (employee.tipo_jornada === "Reducida" && employee.horario_personalizado_inicio && employee.horario_personalizado_fin) {
+        const [startH, startM] = employee.horario_personalizado_inicio.split(':').map(Number);
+        const [endH, endM] = employee.horario_personalizado_fin.split(':').map(Number);
+        return { start: startH * 60 + startM, end: endH * 60 + endM };
+      }
+      
+      if (shift === "Mañana") {
+        return { start: 7 * 60, end: 15 * 60 };
+      } else {
+        if (employee.tipo_jornada === "Completa 40h") {
+          return { start: 14 * 60, end: 22 * 60 };
+        } else {
+          return { start: 15 * 60, end: 22 * 60 };
+        }
+      }
+    };
+    
+    const isEmployeeAvailable = (employee, date) => {
+      const dateStr = format(date, "yyyy-MM-dd");
+      const dayOfWeek = date.getDay();
+      
+      if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+      if (holidayDates.has(dateStr)) return false;
+      
+      if (employee.disponibilidad === "Ausente") {
+        if (employee.ausencia_inicio && employee.ausencia_fin) {
+          const ausenciaStart = new Date(employee.ausencia_inicio);
+          const ausenciaEnd = new Date(employee.ausencia_fin);
+          if (date >= ausenciaStart && date <= ausenciaEnd) {
+            return false;
+          }
+        }
+      }
+      
+      for (const vacRange of vacationRanges) {
+        if (vacRange.employeeIds === null || vacRange.employeeIds?.includes(employee.id)) {
+          if (isWithinInterval(date, { start: vacRange.start, end: vacRange.end })) {
+            return false;
+          }
+        }
+      }
+      
+      const shift = getEmployeeShift(employee, date);
+      const schedule = getEmployeeSchedule(employee, shift);
+      const timeInMinutes = date.getHours() * 60 + date.getMinutes();
+      
+      return timeInMinutes >= schedule.start && timeInMinutes < schedule.end;
+    };
     
     const isInWorkingHours = (date) => {
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
-      const timeInMinutes = hours * 60 + minutes;
+      const timeInMinutes = date.getHours() * 60 + date.getMinutes();
       return timeInMinutes >= WORKING_DAY_START && timeInMinutes < WORKING_DAY_END;
     };
     
     const isInSelectedShift = (date) => {
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
-      const timeInMinutes = hours * 60 + minutes;
-      
-      let matchedShift = null;
-      for (const shiftId of selectedShifts) {
+      const timeInMinutes = date.getHours() * 60 + date.getMinutes();
+      return selectedShifts.some(shiftId => {
         const shift = SHIFTS[shiftId];
-        if (timeInMinutes >= shift.start && timeInMinutes < shift.end) {
-          matchedShift = shiftId;
-          break;
-        }
-      }
-      
-      return matchedShift;
+        return timeInMinutes >= shift.start && timeInMinutes < shift.end;
+      });
     };
     
     let index = 0;
-    while (current <= end && index < 1000) {
+    while (current <= end && index < 10000) {
       const currentDate = new Date(current);
       const dateStr = format(currentDate, "yyyy-MM-dd");
       const dayOfWeek = currentDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayDates.has(dateStr);
-      const isVacation = vacationDates.has(dateStr);
       const inWorkingHours = isInWorkingHours(currentDate);
-      const matchedShift = isInSelectedShift(currentDate);
+      const inSelectedShift = isInSelectedShift(currentDate);
       
-      // Solo incluir intervalos dentro del horario laboral (7:00-22:00)
-      if (inWorkingHours && !isWeekend && !isHoliday && !isVacation && matchedShift) {
-        allIntervals.push({ date: currentDate, shift: matchedShift });
-        stats[matchedShift]++;
-      } else {
-        // Contar días excluidos únicos por tipo
-        if (!excludedDaysSet.has(dateStr)) {
-          excludedDaysSet.add(dateStr);
-          if (isWeekend) excluded.weekends++;
-          if (isHoliday) excluded.holidays++;
-          if (isVacation && !isWeekend) excluded.vacations++;
-        }
-        if (!inWorkingHours && !isWeekend && !isHoliday && !isVacation) {
-          excluded.outOfWorkingHours++;
-        } else if (inWorkingHours && !isWeekend && !isHoliday && !isVacation && !matchedShift) {
-          excluded.outOfShift++;
-        }
+      if (inWorkingHours && !isWeekend && !isHoliday && inSelectedShift) {
+        const availableCount = employees.filter(emp => 
+          isEmployeeAvailable(emp, currentDate)
+        ).length;
+        
+        allIntervals.push({ 
+          date: currentDate, 
+          availableEmployees: availableCount 
+        });
+        stats.intervals++;
       }
       
       current.setMinutes(current.getMinutes() + 5);
       index++;
     }
     
-    return { workingIntervals: allIntervals, excludedDays: excluded, shiftStats: stats };
-  }, [startDate, endDate, holidays, vacations, selectedShifts]);
+    return { workingIntervals: allIntervals, stats };
+  }, [startDate, endDate, holidays, vacations, selectedShifts, employees, shiftAssignments]);
 
-  const isTooLarge = workingIntervals.length > 288;
-  
   if (workingIntervals.length === 0) {
     return (
       <div className="p-12 text-center">
@@ -118,125 +155,61 @@ export default function TimelineView({ startDate, endDate, holidays, vacations, 
         <p className="text-slate-600 mb-2">
           No hay intervalos laborables en el rango seleccionado
         </p>
-        <p className="text-sm text-slate-500">
-          Verifica las fechas, turnos seleccionados (horario laboral: 7:00-22:00)
-        </p>
       </div>
     );
   }
+
+  const maxEmployees = Math.max(...workingIntervals.map(i => i.availableEmployees), 1);
+  const avgEmployees = (workingIntervals.reduce((sum, i) => sum + i.availableEmployees, 0) / workingIntervals.length).toFixed(1);
 
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-2">
-          Visualización de Intervalos Laborables
+          Disponibilidad de Empleados
         </h3>
         <p className="text-sm text-slate-600 mb-3">
-          Cada segmento representa 5 minutos (horario laboral: 7:00 - 22:00)
+          Cada punto muestra el número de empleados disponibles en ese intervalo de 5 minutos
         </p>
         
         <div className="flex flex-wrap gap-2 mb-3">
-          {shiftStats.shift1 > 0 && selectedShifts.includes('shift1') && (
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-              <Clock className="w-3 h-3 mr-1" />
-              Turno 1: {shiftStats.shift1} intervalos (7:00-15:00)
-            </Badge>
-          )}
-          {shiftStats.shift2 > 0 && selectedShifts.includes('shift2') && (
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-              <Clock className="w-3 h-3 mr-1" />
-              Turno 2: {shiftStats.shift2} intervalos (15:00-22:00)
-            </Badge>
-          )}
-          {shiftStats.shift3 > 0 && selectedShifts.includes('shift3') && (
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-              <Clock className="w-3 h-3 mr-1" />
-              Turno 3: {shiftStats.shift3} intervalos (14:00-22:00)
-            </Badge>
-          )}
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Users className="w-3 h-3 mr-1" />
+            Total Empleados: {stats.totalEmployees}
+          </Badge>
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <Users className="w-3 h-3 mr-1" />
+            Máximo: {maxEmployees} empleados
+          </Badge>
+          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+            <Users className="w-3 h-3 mr-1" />
+            Promedio: {avgEmployees} empleados
+          </Badge>
+          <Badge variant="outline" className="bg-slate-50 text-slate-700">
+            <Clock className="w-3 h-3 mr-1" />
+            {stats.intervals} intervalos
+          </Badge>
         </div>
-
-        {(excludedDays.weekends > 0 || excludedDays.holidays > 0 || excludedDays.vacations > 0) && (
-          <div className="flex flex-wrap gap-2">
-            {excludedDays.weekends > 0 && (
-              <Badge variant="outline" className="bg-slate-50 text-slate-700">
-                <Calendar className="w-3 h-3 mr-1" />
-                {excludedDays.weekends} {excludedDays.weekends === 1 ? 'fin de semana' : 'fines de semana'}
-              </Badge>
-            )}
-            {excludedDays.holidays > 0 && (
-              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                <Calendar className="w-3 h-3 mr-1" />
-                {excludedDays.holidays} {excludedDays.holidays === 1 ? 'festivo' : 'festivos'}
-              </Badge>
-            )}
-            {excludedDays.vacations > 0 && (
-              <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
-                <Calendar className="w-3 h-3 mr-1" />
-                {excludedDays.vacations} {excludedDays.vacations === 1 ? 'día de vacaciones' : 'días de vacaciones'}
-              </Badge>
-            )}
-            {excludedDays.outOfShift > 0 && (
-              <Badge variant="outline" className="bg-slate-50 text-slate-600">
-                <Clock className="w-3 h-3 mr-1" />
-                {excludedDays.outOfShift} intervalos fuera de turno
-              </Badge>
-            )}
-            {excludedDays.outOfWorkingHours > 0 && (
-              <Badge variant="outline" className="bg-slate-50 text-slate-500">
-                <Clock className="w-3 h-3 mr-1" />
-                {excludedDays.outOfWorkingHours} intervalos fuera del horario laboral
-              </Badge>
-            )}
-          </div>
-        )}
       </div>
 
-      {isTooLarge && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-amber-800">
-            El rango seleccionado es muy amplio. Para una mejor visualización, considera usar un período más corto.
-          </p>
-        </div>
-      )}
-
       <div className="relative">
-        {/* Línea principal */}
         <div className="absolute top-8 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200" />
 
-        {/* Contenedor con scroll horizontal */}
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-0 min-w-max">
             {workingIntervals.map((interval, index) => (
               <TimeSlot
                 key={index}
                 time={interval.date}
-                shift={interval.shift}
+                availableEmployees={interval.availableEmployees}
+                maxEmployees={maxEmployees}
                 index={index}
                 isFirst={index === 0}
                 isLast={index === workingIntervals.length - 1}
                 totalIntervals={workingIntervals.length}
+                viewMode={viewMode}
               />
             ))}
-          </div>
-        </div>
-
-        {/* Leyenda */}
-        <div className="mt-6 pt-6 border-t border-slate-100">
-          <div className="flex flex-wrap gap-6 justify-center text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-500 to-amber-600" />
-              <span className="text-slate-600">Turno 1 (7:00-15:00)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600" />
-              <span className="text-slate-600">Turno 2 (15:00-22:00)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-purple-600" />
-              <span className="text-slate-600">Turno 3 (14:00-22:00)</span>
-            </div>
           </div>
         </div>
       </div>
