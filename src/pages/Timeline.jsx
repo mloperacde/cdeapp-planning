@@ -5,13 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
+import MachineRequirements from "../components/timeline/MachineRequirements";
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
 export default function Timeline() {
   const now = new Date();
   const [viewMode, setViewMode] = useState('day');
   const [selectedDate, setSelectedDate] = useState(now);
-  const [selectedTeam, setSelectedTeam] = useState('all'); // 'all', 'team_1', 'team_2'
+  const [selectedTeam, setSelectedTeam] = useState('all');
 
   const getDateRange = () => {
     switch (viewMode) {
@@ -82,10 +83,10 @@ export default function Timeline() {
           className="text-center mb-10"
         >
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-3">
-            Línea de Tiempo - Disponibilidad
+            Planning / Línea de Tiempo
           </h1>
           <p className="text-slate-600 text-lg">
-            Visualiza la disponibilidad de empleados por intervalos y equipos
+            Visualiza la disponibilidad de empleados y requisitos de máquinas
           </p>
         </motion.div>
 
@@ -93,8 +94,9 @@ export default function Timeline() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
+          className="space-y-6"
         >
-          <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 mb-6">
+          <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
             <TimelineControls
               viewMode={viewMode}
               onViewModeChange={setViewMode}
@@ -125,6 +127,8 @@ export default function Timeline() {
               viewMode={viewMode}
             />
           </Card>
+
+          <MachineRequirements />
         </motion.div>
       </div>
     </div>

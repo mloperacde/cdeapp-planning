@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -25,15 +25,39 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     nombre: "",
     email: "",
     telefono: "",
+    telefono_movil: "",
+    contacto_emergencia_nombre: "",
+    contacto_emergencia_telefono: "",
+    departamento: "",
+    puesto: "",
+    categoria: "",
     tipo_jornada: "Completa 40h",
     tipo_turno: "Rotativo",
-    equipo: "Equipo Turno Isa",
+    equipo: "",
     disponibilidad: "Disponible",
     horario_personalizado_inicio: "",
     horario_personalizado_fin: "",
+    salario_anual: 0,
+    evaluacion_responsable: "",
+    propuesta_cambio_categoria: "",
+    objetivos: {
+      periodo: "",
+      objetivo_1: { descripcion: "", peso: 0, resultado: 0 },
+      objetivo_2: { descripcion: "", peso: 0, resultado: 0 },
+      objetivo_3: { descripcion: "", peso: 0, resultado: 0 },
+      objetivo_4: { descripcion: "", peso: 0, resultado: 0 },
+      objetivo_5: { descripcion: "", peso: 0, resultado: 0 },
+      objetivo_6: { descripcion: "", peso: 0, resultado: 0 },
+    }
   });
 
   const queryClient = useQueryClient();
+
+  const { data: teams } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
+  });
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
@@ -55,9 +79,22 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
   const machineFields = Array.from({ length: 10 }, (_, i) => i + 1);
 
+  const updateObjective = (objNum, field, value) => {
+    setFormData({
+      ...formData,
+      objetivos: {
+        ...formData.objetivos,
+        [`objetivo_${objNum}`]: {
+          ...formData.objetivos[`objetivo_${objNum}`],
+          [field]: value
+        }
+      }
+    });
+  };
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {employee ? 'Editar Empleado' : 'Nuevo Empleado'}
@@ -65,15 +102,16 @@ export default function EmployeeForm({ employee, machines, onClose }) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="basic">Básico</TabsTrigger>
+          <Tabs defaultValue="datos" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="datos">Datos</TabsTrigger>
               <TabsTrigger value="schedule">Horario</TabsTrigger>
               <TabsTrigger value="machines">Máquinas</TabsTrigger>
               <TabsTrigger value="availability">Disponibilidad</TabsTrigger>
+              <TabsTrigger value="rrhh">Gestión RRHH</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="space-y-4 mt-4">
+            <TabsContent value="datos" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="nombre">Nombre Completo *</Label>
@@ -105,17 +143,76 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="telefono_movil">Teléfono Móvil</Label>
+                  <Input
+                    id="telefono_movil"
+                    value={formData.telefono_movil || ""}
+                    onChange={(e) => setFormData({ ...formData, telefono_movil: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contacto_emergencia_nombre">Contacto de Emergencia</Label>
+                  <Input
+                    id="contacto_emergencia_nombre"
+                    placeholder="Nombre"
+                    value={formData.contacto_emergencia_nombre || ""}
+                    onChange={(e) => setFormData({ ...formData, contacto_emergencia_nombre: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contacto_emergencia_telefono">Teléfono de Emergencia</Label>
+                  <Input
+                    id="contacto_emergencia_telefono"
+                    placeholder="Teléfono"
+                    value={formData.contacto_emergencia_telefono || ""}
+                    onChange={(e) => setFormData({ ...formData, contacto_emergencia_telefono: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="departamento">Departamento</Label>
+                  <Input
+                    id="departamento"
+                    value={formData.departamento || ""}
+                    onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="puesto">Puesto</Label>
+                  <Input
+                    id="puesto"
+                    value={formData.puesto || ""}
+                    onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="categoria">Categoría</Label>
+                  <Input
+                    id="categoria"
+                    value={formData.categoria || ""}
+                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="equipo">Equipo *</Label>
                   <Select
                     value={formData.equipo}
                     onValueChange={(value) => setFormData({ ...formData, equipo: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Seleccionar equipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Equipo Turno Isa">Equipo Turno Isa</SelectItem>
-                      <SelectItem value="Equipo Turno Sara">Equipo Turno Sara</SelectItem>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.team_name}>
+                          {team.team_name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -263,6 +360,107 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     </div>
                   </>
                 )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="rrhh" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Categoría</Label>
+                  <Input value={formData.categoria || ""} disabled className="bg-slate-50" />
+                  <p className="text-xs text-slate-500">Desde pestaña Datos</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="salario_anual">Salario Anual (€)</Label>
+                  <Input
+                    id="salario_anual"
+                    type="number"
+                    value={formData.salario_anual || 0}
+                    onChange={(e) => setFormData({ ...formData, salario_anual: parseFloat(e.target.value) })}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Tipo de Jornada</Label>
+                  <Input value={formData.tipo_jornada || ""} disabled className="bg-slate-50" />
+                  <p className="text-xs text-slate-500">Desde pestaña Horario</p>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="evaluacion_responsable">Evaluación de Responsable</Label>
+                  <Textarea
+                    id="evaluacion_responsable"
+                    value={formData.evaluacion_responsable || ""}
+                    onChange={(e) => setFormData({ ...formData, evaluacion_responsable: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="propuesta_cambio_categoria">Propuesta de Cambio de Categoría</Label>
+                  <Textarea
+                    id="propuesta_cambio_categoria"
+                    value={formData.propuesta_cambio_categoria || ""}
+                    onChange={(e) => setFormData({ ...formData, propuesta_cambio_categoria: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-semibold text-lg mb-4">Sistema de Objetivos</h4>
+                
+                <div className="space-y-2 mb-4">
+                  <Label htmlFor="periodo">Período de Objetivos</Label>
+                  <Input
+                    id="periodo"
+                    placeholder="ej. Q1 2024, Anual 2024..."
+                    value={formData.objetivos?.periodo || ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      objetivos: { ...formData.objetivos, periodo: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5, 6].map((num) => (
+                    <div key={num} className="border rounded-lg p-4 bg-slate-50">
+                      <h5 className="font-semibold mb-3 text-slate-700">Objetivo {num}</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="space-y-2 md:col-span-3">
+                          <Label>Descripción</Label>
+                          <Input
+                            placeholder="Descripción del objetivo"
+                            value={formData.objetivos?.[`objetivo_${num}`]?.descripcion || ""}
+                            onChange={(e) => updateObjective(num, 'descripcion', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Peso (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData.objetivos?.[`objetivo_${num}`]?.peso || 0}
+                            onChange={(e) => updateObjective(num, 'peso', parseFloat(e.target.value))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Resultado (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData.objetivos?.[`objetivo_${num}`]?.resultado || 0}
+                            onChange={(e) => updateObjective(num, 'resultado', parseFloat(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </TabsContent>
           </Tabs>

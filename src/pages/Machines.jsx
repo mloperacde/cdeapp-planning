@@ -28,10 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Cog, Power, PowerOff } from "lucide-react";
+import { Plus, Edit, Trash2, Cog, Power, PowerOff, CalendarRange } from "lucide-react";
+import MachinePlanningManager from "../components/machines/MachinePlanningManager";
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false);
+  const [showPlanning, setShowPlanning] = useState(false);
   const [editingMachine, setEditingMachine] = useState(null);
   const queryClient = useQueryClient();
 
@@ -114,6 +116,10 @@ export default function MachinesPage() {
     toggleStatusMutation.mutate({ id: machine.id, newStatus });
   };
 
+  const handlePlanningUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -127,13 +133,23 @@ export default function MachinesPage() {
               Administra las máquinas y equipos
             </p>
           </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Máquina
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowPlanning(true)}
+              variant="outline"
+              className="bg-white hover:bg-blue-50 border-blue-200"
+            >
+              <CalendarRange className="w-4 h-4 mr-2" />
+              Planificación de Máquinas
+            </Button>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Máquina
+            </Button>
+          </div>
         </div>
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -326,6 +342,15 @@ export default function MachinesPage() {
             </form>
           </DialogContent>
         </Dialog>
+      )}
+
+      {showPlanning && (
+        <MachinePlanningManager
+          open={showPlanning}
+          onOpenChange={setShowPlanning}
+          machines={machines}
+          onUpdate={handlePlanningUpdate}
+        />
       )}
     </div>
   );
