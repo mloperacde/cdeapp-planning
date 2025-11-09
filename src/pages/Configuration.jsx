@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Calendar, Plane, Building2, Coffee, UsersRound } from "lucide-react";
+import { Settings, Calendar, Plane, Building2, Coffee, UsersRound, Cog as CogIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -23,9 +23,16 @@ export default function ConfigurationPage() {
     {
       title: "Máquinas",
       description: "Configura las máquinas y asignaciones de operadores",
-      icon: Settings,
+      icon: CogIcon,
       link: createPageUrl("Machines"),
       color: "indigo",
+    },
+    {
+      title: "Procesos",
+      description: "Gestiona los procesos y asígnalos a las máquinas",
+      icon: Settings,
+      link: createPageUrl("ProcessConfiguration"),
+      color: "green",
     },
     {
       title: "Turnos de Descanso",
@@ -100,16 +107,18 @@ export default function ConfigurationPage() {
           <CardHeader>
             <CardTitle className="text-blue-900">Información del Sistema</CardTitle>
             <CardDescription className="text-blue-700">
-              WorkFlow Pro - Sistema de gestión de turnos y disponibilidad
+              CDE PlanApp - Gestión de Empleados y Planificador de Actividades diarias
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-blue-800">
             <ul className="space-y-2">
               <li>• Gestión completa de empleados con campos personalizables</li>
               <li>• Sistema de equipos de turno rotativos configurables</li>
+              <li>• Gestión de procesos y asignación a máquinas</li>
               <li>• Control de descansos por equipos de máquinas</li>
               <li>• Visualización de disponibilidad en tiempo real</li>
               <li>• Gestión de festivos y vacaciones</li>
+              <li>• Asignaciones automáticas de operarios a máquinas</li>
             </ul>
           </CardContent>
         </Card>

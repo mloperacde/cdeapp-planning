@@ -10,7 +10,8 @@ import {
   Cog,
   UsersRound,
   CalendarRange,
-  UserCog
+  UserCog,
+  UserX
 } from "lucide-react";
 import {
   Sidebar,
@@ -36,6 +37,11 @@ const navigationItems = [
     title: "Empleados",
     url: createPageUrl("Employees"),
     icon: Users,
+  },
+  {
+    title: "Gestión de Ausencias",
+    url: createPageUrl("AbsenceManagement"),
+    icon: UserX,
   },
   {
     title: "Equipos de Turno",
@@ -83,7 +89,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
               <div>
                 <h2 className="font-bold text-lg text-slate-900">CDE PlanApp</h2>
-                <p className="text-xs text-slate-500">Gestión y Planificación</p>
+                <p className="text-xs text-slate-500">Gestión de Empleados y Planificador de Actividades diarias</p>
               </div>
             </div>
           </SidebarHeader>

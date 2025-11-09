@@ -6,6 +6,8 @@ import Configuration from './pages/Configuration';
 import TeamConfiguration from './pages/TeamConfiguration';
 import MachinePlanning from './pages/MachinePlanning';
 import AbsenceManagement from './pages/AbsenceManagement';
+import MachineAssignments from './pages/MachineAssignments';
+import ProcessConfiguration from './pages/ProcessConfiguration';
 import Layout from './Layout.jsx';
 
 
@@ -18,6 +20,8 @@ export const PAGES = {
     "TeamConfiguration": TeamConfiguration,
     "MachinePlanning": MachinePlanning,
     "AbsenceManagement": AbsenceManagement,
+    "MachineAssignments": MachineAssignments,
+    "ProcessConfiguration": ProcessConfiguration,
 }
 
 export const pagesConfig = {
