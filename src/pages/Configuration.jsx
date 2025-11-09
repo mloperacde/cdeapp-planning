@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Calendar, Plane, Building2, Coffee, UsersRound, Cog as CogIcon, Wrench } from "lucide-react";
+import { Settings, Calendar, Plane, Building2, Coffee, UsersRound, Cog as CogIcon, Wrench, TrendingUp, ListTree } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -12,6 +12,13 @@ export default function ConfigurationPage() {
       icon: Building2,
       link: createPageUrl("Employees"),
       color: "blue",
+    },
+    {
+      title: "Gestión de Rendimiento",
+      description: "Evaluaciones de desempeño y planes de mejora",
+      icon: TrendingUp,
+      link: createPageUrl("PerformanceManagement"),
+      color: "emerald",
     },
     {
       title: "Equipos de Turno",
@@ -28,18 +35,18 @@ export default function ConfigurationPage() {
       color: "indigo",
     },
     {
+      title: "Procesos",
+      description: "Gestiona los procesos y asígnalos a las máquinas",
+      icon: ListTree,
+      link: createPageUrl("ProcessConfiguration"),
+      color: "green",
+    },
+    {
       title: "Mantenimiento",
       description: "Gestiona el mantenimiento planificado y reparaciones",
       icon: Wrench,
       link: createPageUrl("MaintenanceTracking"),
       color: "orange",
-    },
-    {
-      title: "Procesos",
-      description: "Gestiona los procesos y asígnalos a las máquinas",
-      icon: Settings,
-      link: createPageUrl("ProcessConfiguration"),
-      color: "green",
     },
     {
       title: "Turnos de Descanso",
@@ -69,6 +76,7 @@ export default function ConfigurationPage() {
     purple: "from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700",
     indigo: "from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700",
     green: "from-green-500 to-green-600 hover:from-green-600 hover:to-green-700",
+    emerald: "from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700",
     orange: "from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700",
     amber: "from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
     red: "from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
@@ -88,7 +96,7 @@ export default function ConfigurationPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {configSections.map((section) => {
             const Icon = section.icon;
             return (
@@ -121,14 +129,16 @@ export default function ConfigurationPage() {
           <CardContent className="text-sm text-blue-800">
             <ul className="space-y-2">
               <li>• Gestión completa de empleados con campos personalizables</li>
+              <li>• Sistema de evaluaciones de rendimiento y planes de mejora</li>
               <li>• Sistema de equipos de turno rotativos configurables</li>
-              <li>• Gestión de procesos y asignación a máquinas</li>
+              <li>• Gestión de procesos y asignación a múltiples máquinas</li>
               <li>• Seguimiento completo de mantenimiento preventivo y correctivo</li>
               <li>• Control de descansos por equipos de máquinas</li>
               <li>• Visualización de disponibilidad en tiempo real</li>
               <li>• Gestión de festivos, vacaciones y ausencias</li>
               <li>• Asignaciones automáticas de operarios a máquinas</li>
               <li>• Alertas automáticas de mantenimiento próximo</li>
+              <li>• Indicadores visuales para empleados ausentes</li>
             </ul>
           </CardContent>
         </Card>

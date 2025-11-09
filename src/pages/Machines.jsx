@@ -42,14 +42,25 @@ export default function MachinesPage() {
     codigo: "",
     tipo: "",
     ubicacion: "",
-    estado: "Activa",
+    estado: "Disponible",
     descripcion: "",
-    requiere_operadores: 1,
   });
 
   const { data: machines, isLoading } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list('-created_date'),
+    initialData: [],
+  });
+
+  const { data: machinePlannings } = useQuery({
+    queryKey: ['machinePlannings'],
+    queryFn: () => base44.entities.MachinePlanning.list(),
+    initialData: [],
+  });
+
+  const { data: machineProcesses } = useQuery({
+    queryKey: ['machineProcesses'],
+    queryFn: () => base44.entities.MachineProcess.list(),
     initialData: [],
   });
 
@@ -94,9 +105,8 @@ export default function MachinesPage() {
       codigo: "",
       tipo: "",
       ubicacion: "",
-      estado: "Activa",
+      estado: "Disponible",
       descripcion: "",
-      requiere_operadores: 1,
     });
   };
 
@@ -112,12 +122,28 @@ export default function MachinesPage() {
   };
 
   const toggleStatus = (machine) => {
-    const newStatus = machine.estado === "Activa" ? "Inactiva" : "Activa";
+    const newStatus = machine.estado === "Disponible" ? "No disponible" : "Disponible";
     toggleStatusMutation.mutate({ id: machine.id, newStatus });
   };
 
   const handlePlanningUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
+  };
+
+  // Calcular el promedio de operadores requeridos basado en el histórico de planificaciones
+  const getAverageOperators = (machineId) => {
+    // Filtrar planificaciones activas de esta máquina
+    const plannings = machinePlannings.filter(p => p.machine_id === machineId && p.activa_planning);
+    
+    if (plannings.length === 0) return 0;
+    
+    // Sumar los operadores requeridos de cada planificación
+    const totalOperators = plannings.reduce((sum, planning) => {
+      return sum + (planning.operadores_necesarios || 0);
+    }, 0);
+    
+    // Calcular el promedio
+    return Math.round((totalOperators / plannings.length) * 10) / 10;
   };
 
   return (
@@ -173,69 +199,77 @@ export default function MachinesPage() {
                       <TableHead>Tipo</TableHead>
                       <TableHead>Ubicación</TableHead>
                       <TableHead>Estado</TableHead>
-                      <TableHead>Operadores</TableHead>
+                      <TableHead>Operadores (Promedio)</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {machines.map((machine) => (
-                      <TableRow key={machine.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          <span className="font-mono font-semibold">{machine.codigo}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-slate-900">{machine.nombre}</span>
-                        </TableCell>
-                        <TableCell>{machine.tipo || '-'}</TableCell>
-                        <TableCell>{machine.ubicacion || '-'}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            machine.estado === "Activa"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-slate-100 text-slate-600"
-                          }>
-                            {machine.estado === "Activa" ? (
-                              <Power className="w-3 h-3 mr-1" />
-                            ) : (
-                              <PowerOff className="w-3 h-3 mr-1" />
-                            )}
-                            {machine.estado}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{machine.requiere_operadores || 1}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => toggleStatus(machine)}
-                              title={machine.estado === "Activa" ? "Desactivar" : "Activar"}
-                            >
-                              {machine.estado === "Activa" ? (
-                                <PowerOff className="w-4 h-4 text-slate-600" />
+                    {machines.map((machine) => {
+                      const avgOperators = getAverageOperators(machine.id);
+                      
+                      return (
+                        <TableRow key={machine.id} className="hover:bg-slate-50">
+                          <TableCell>
+                            <span className="font-mono font-semibold">{machine.codigo}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-semibold text-slate-900">{machine.nombre}</span>
+                          </TableCell>
+                          <TableCell>{machine.tipo || '-'}</TableCell>
+                          <TableCell>{machine.ubicacion || '-'}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              machine.estado === "Disponible"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-slate-100 text-slate-600"
+                            }>
+                              {machine.estado === "Disponible" ? (
+                                <Power className="w-3 h-3 mr-1" />
                               ) : (
-                                <Power className="w-4 h-4 text-green-600" />
+                                <PowerOff className="w-3 h-3 mr-1" />
                               )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(machine)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(machine.id)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              {machine.estado}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              {avgOperators > 0 ? avgOperators : '-'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => toggleStatus(machine)}
+                                title={machine.estado === "Disponible" ? "Marcar no disponible" : "Marcar disponible"}
+                              >
+                                {machine.estado === "Disponible" ? (
+                                  <PowerOff className="w-4 h-4 text-slate-600" />
+                                ) : (
+                                  <Power className="w-4 h-4 text-green-600" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(machine)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(machine.id)}
+                                className="hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -303,21 +337,10 @@ export default function MachinesPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Activa">Activa</SelectItem>
-                      <SelectItem value="Inactiva">Inactiva</SelectItem>
+                      <SelectItem value="Disponible">Disponible</SelectItem>
+                      <SelectItem value="No disponible">No disponible</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="operadores">Operadores Requeridos</Label>
-                  <Input
-                    id="operadores"
-                    type="number"
-                    min="1"
-                    value={formData.requiere_operadores}
-                    onChange={(e) => setFormData({ ...formData, requiere_operadores: parseInt(e.target.value) })}
-                  />
                 </div>
               </div>
 

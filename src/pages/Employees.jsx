@@ -70,6 +70,10 @@ export default function EmployeesPage() {
     return <Badge className="bg-green-100 text-green-800">Disponible</Badge>;
   };
 
+  const isEmployeeAbsent = (employee) => {
+    return employee.disponibilidad === "Ausente";
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -128,55 +132,69 @@ export default function EmployeesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEmployees.map((employee) => (
-                      <TableRow key={employee.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          <div>
-                            <div className="font-semibold text-slate-900">{employee.nombre}</div>
-                            {employee.email && (
-                              <div className="text-xs text-slate-500">{employee.email}</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{employee.tipo_jornada}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                            {employee.tipo_turno}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={
-                            employee.equipo === "Equipo Turno Isa" 
-                              ? "bg-purple-100 text-purple-800" 
-                              : "bg-pink-100 text-pink-800"
-                          }>
-                            {employee.equipo}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{getAvailabilityBadge(employee)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(employee)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(employee.id)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredEmployees.map((employee) => {
+                      const isAbsent = isEmployeeAbsent(employee);
+                      
+                      return (
+                        <TableRow 
+                          key={employee.id} 
+                          className={`hover:bg-slate-50 ${isAbsent ? 'bg-red-50' : ''}`}
+                        >
+                          <TableCell>
+                            <div>
+                              <div className={`font-semibold ${isAbsent ? 'text-red-700' : 'text-slate-900'}`}>
+                                {employee.nombre}
+                              </div>
+                              {employee.email && (
+                                <div className={`text-xs ${isAbsent ? 'text-red-600' : 'text-slate-500'}`}>
+                                  {employee.email}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={isAbsent ? 'border-red-300 text-red-700' : ''}>
+                              {employee.tipo_jornada}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={isAbsent ? 'border-red-300 text-red-700 bg-red-50' : 'bg-blue-50 text-blue-700'}>
+                              {employee.tipo_turno}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              isAbsent ? "bg-red-200 text-red-900" :
+                              employee.equipo === "Equipo Turno Isa" 
+                                ? "bg-purple-100 text-purple-800" 
+                                : "bg-pink-100 text-pink-800"
+                            }>
+                              {employee.equipo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{getAvailabilityBadge(employee)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(employee)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(employee.id)}
+                                className="hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
