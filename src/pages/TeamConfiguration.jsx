@@ -14,13 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, Sunrise, Sunset, Calendar, RefreshCw, Save } from "lucide-react";
+import { Users, Sunrise, Sunset, Calendar, RefreshCw, Save, Filter } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function TeamConfigurationPage() {
   const [selectedWeek, setSelectedWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
   const queryClient = useQueryClient();
 
   const { data: teams, isLoading: isLoadingTeams } = useQuery({
@@ -124,10 +125,48 @@ export default function TeamConfigurationPage() {
   };
 
   const getTeamEmployees = (teamName) => {
-    return employees.filter(emp => emp.equipo === teamName);
+    let teamEmployees = employees.filter(emp => emp.equipo === teamName);
+    
+    if (selectedDepartment !== "all") {
+      teamEmployees = teamEmployees.filter(emp => emp.departamento === selectedDepartment);
+    }
+    
+    return teamEmployees;
+  };
+
+  const getDepartments = () => {
+    const depts = new Set();
+    employees.forEach(emp => {
+      if (emp.departamento) {
+        depts.add(emp.departamento);
+      }
+    });
+    return Array.from(depts).sort();
+  };
+
+  const groupByDepartmentAndPosition = (teamEmployees) => {
+    const grouped = {};
+    
+    teamEmployees.forEach(emp => {
+      const dept = emp.departamento || "Sin Departamento";
+      const position = emp.puesto || "Sin Puesto";
+      
+      if (!grouped[dept]) {
+        grouped[dept] = {};
+      }
+      
+      if (!grouped[dept][position]) {
+        grouped[dept][position] = [];
+      }
+      
+      grouped[dept][position].push(emp);
+    });
+    
+    return grouped;
   };
 
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
+  const departments = getDepartments();
 
   return (
     <div className="p-6 md:p-8">
@@ -394,6 +433,30 @@ export default function TeamConfigurationPage() {
           </TabsContent>
 
           <TabsContent value="members">
+            <div className="mb-6">
+              <Card className="bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <Filter className="w-5 h-5 text-blue-600" />
+                    <Label>Filtrar por Departamento:</Label>
+                    <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los Departamentos</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Equipo 1 */}
               <Card className="shadow-lg border-2 border-purple-200 bg-white/80 backdrop-blur-sm">
@@ -403,32 +466,58 @@ export default function TeamConfigurationPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  {getTeamEmployees(teamFormData.team_1.team_name).length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      No hay empleados asignados
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {getTeamEmployees(teamFormData.team_1.team_name).map(emp => (
-                        <div key={emp.id} className="flex justify-between items-center p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                          <div>
-                            <div className="font-semibold text-slate-900">{emp.nombre}</div>
-                            <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
-                          </div>
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                            {emp.tipo_turno}
-                          </Badge>
+                  {(() => {
+                    const teamEmployees = getTeamEmployees(teamFormData.team_1.team_name);
+                    const grouped = groupByDepartmentAndPosition(teamEmployees);
+                    
+                    if (teamEmployees.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-slate-500">
+                          No hay empleados asignados
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <div className="text-sm text-slate-600">
-                      Total: <span className="font-semibold text-purple-700">
-                        {getTeamEmployees(teamFormData.team_1.team_name).length} empleados
-                      </span>
-                    </div>
-                  </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="space-y-6">
+                        {Object.entries(grouped).map(([dept, positions]) => (
+                          <div key={dept} className="border-2 border-purple-100 rounded-lg p-4 bg-purple-50/30">
+                            <h4 className="font-bold text-purple-900 mb-3 text-lg">{dept}</h4>
+                            {Object.entries(positions).map(([position, emps]) => (
+                              <div key={position} className="mb-4 last:mb-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                                    {position}
+                                  </Badge>
+                                  <span className="text-xs text-slate-500">({emps.length})</span>
+                                </div>
+                                <div className="space-y-2 ml-4">
+                                  {emps.map(emp => (
+                                    <div key={emp.id} className="flex justify-between items-center p-2 border border-slate-200 rounded bg-white hover:bg-slate-50">
+                                      <div>
+                                        <div className="font-semibold text-slate-900 text-sm">{emp.nombre}</div>
+                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                      </div>
+                                      <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
+                                        {emp.tipo_turno}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        <div className="pt-4 border-t border-purple-200">
+                          <div className="text-sm text-slate-600">
+                            Total: <span className="font-semibold text-purple-700">
+                              {teamEmployees.length} empleados
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
 
@@ -440,32 +529,58 @@ export default function TeamConfigurationPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  {getTeamEmployees(teamFormData.team_2.team_name).length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      No hay empleados asignados
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {getTeamEmployees(teamFormData.team_2.team_name).map(emp => (
-                        <div key={emp.id} className="flex justify-between items-center p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                          <div>
-                            <div className="font-semibold text-slate-900">{emp.nombre}</div>
-                            <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
-                          </div>
-                          <Badge variant="outline" className="bg-pink-50 text-pink-700">
-                            {emp.tipo_turno}
-                          </Badge>
+                  {(() => {
+                    const teamEmployees = getTeamEmployees(teamFormData.team_2.team_name);
+                    const grouped = groupByDepartmentAndPosition(teamEmployees);
+                    
+                    if (teamEmployees.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-slate-500">
+                          No hay empleados asignados
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <div className="text-sm text-slate-600">
-                      Total: <span className="font-semibold text-pink-700">
-                        {getTeamEmployees(teamFormData.team_2.team_name).length} empleados
-                      </span>
-                    </div>
-                  </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="space-y-6">
+                        {Object.entries(grouped).map(([dept, positions]) => (
+                          <div key={dept} className="border-2 border-pink-100 rounded-lg p-4 bg-pink-50/30">
+                            <h4 className="font-bold text-pink-900 mb-3 text-lg">{dept}</h4>
+                            {Object.entries(positions).map(([position, emps]) => (
+                              <div key={position} className="mb-4 last:mb-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className="bg-pink-100 text-pink-800">
+                                    {position}
+                                  </Badge>
+                                  <span className="text-xs text-slate-500">({emps.length})</span>
+                                </div>
+                                <div className="space-y-2 ml-4">
+                                  {emps.map(emp => (
+                                    <div key={emp.id} className="flex justify-between items-center p-2 border border-slate-200 rounded bg-white hover:bg-slate-50">
+                                      <div>
+                                        <div className="font-semibold text-slate-900 text-sm">{emp.nombre}</div>
+                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                      </div>
+                                      <Badge variant="outline" className="bg-pink-50 text-pink-700 text-xs">
+                                        {emp.tipo_turno}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        <div className="pt-4 border-t border-pink-200">
+                          <div className="text-sm text-slate-600">
+                            Total: <span className="font-semibold text-pink-700">
+                              {teamEmployees.length} empleados
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </div>

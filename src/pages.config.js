@@ -5,6 +5,7 @@ import Breaks from './pages/Breaks';
 import Configuration from './pages/Configuration';
 import TeamConfiguration from './pages/TeamConfiguration';
 import MachinePlanning from './pages/MachinePlanning';
+import AbsenceManagement from './pages/AbsenceManagement';
 import Layout from './Layout.jsx';
 
 
@@ -16,6 +17,7 @@ export const PAGES = {
     "Configuration": Configuration,
     "TeamConfiguration": TeamConfiguration,
     "MachinePlanning": MachinePlanning,
+    "AbsenceManagement": AbsenceManagement,
 }
 
 export const pagesConfig = {
