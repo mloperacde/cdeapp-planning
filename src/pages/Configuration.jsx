@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Calendar, Plane, Building2, Coffee, UsersRound, Cog as CogIcon } from "lucide-react";
+import { Settings, Calendar, Plane, Building2, Coffee, UsersRound, Cog as CogIcon, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -28,6 +28,13 @@ export default function ConfigurationPage() {
       color: "indigo",
     },
     {
+      title: "Mantenimiento",
+      description: "Gestiona el mantenimiento planificado y reparaciones",
+      icon: Wrench,
+      link: createPageUrl("MaintenanceTracking"),
+      color: "orange",
+    },
+    {
       title: "Procesos",
       description: "Gestiona los procesos y asígnalos a las máquinas",
       icon: Settings,
@@ -39,7 +46,7 @@ export default function ConfigurationPage() {
       description: "Configura los horarios y grupos de descanso",
       icon: Coffee,
       link: createPageUrl("Breaks"),
-      color: "orange",
+      color: "amber",
     },
     {
       title: "Días Festivos",
@@ -63,6 +70,7 @@ export default function ConfigurationPage() {
     indigo: "from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700",
     green: "from-green-500 to-green-600 hover:from-green-600 hover:to-green-700",
     orange: "from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700",
+    amber: "from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
     red: "from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
     sky: "from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700",
   };
@@ -80,7 +88,7 @@ export default function ConfigurationPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {configSections.map((section) => {
             const Icon = section.icon;
             return (
@@ -115,10 +123,12 @@ export default function ConfigurationPage() {
               <li>• Gestión completa de empleados con campos personalizables</li>
               <li>• Sistema de equipos de turno rotativos configurables</li>
               <li>• Gestión de procesos y asignación a máquinas</li>
+              <li>• Seguimiento completo de mantenimiento preventivo y correctivo</li>
               <li>• Control de descansos por equipos de máquinas</li>
               <li>• Visualización de disponibilidad en tiempo real</li>
-              <li>• Gestión de festivos y vacaciones</li>
+              <li>• Gestión de festivos, vacaciones y ausencias</li>
               <li>• Asignaciones automáticas de operarios a máquinas</li>
+              <li>• Alertas automáticas de mantenimiento próximo</li>
             </ul>
           </CardContent>
         </Card>

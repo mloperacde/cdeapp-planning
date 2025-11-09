@@ -11,7 +11,8 @@ import {
   UsersRound,
   CalendarRange,
   UserCog,
-  UserX
+  UserX,
+  Wrench
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,6 +53,11 @@ const navigationItems = [
     title: "Máquinas",
     url: createPageUrl("Machines"),
     icon: Cog,
+  },
+  {
+    title: "Seguimiento de Mantenimiento",
+    url: createPageUrl("MaintenanceTracking"),
+    icon: Wrench,
   },
   {
     title: "Planificación de Máquinas",
