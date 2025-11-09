@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,28 +22,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Cog, Plus, Edit, Trash2, Settings, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Cog, ListTree } from "lucide-react";
 
 export default function ProcessConfigurationPage() {
   const [showProcessForm, setShowProcessForm] = useState(false);
-  const [showMachineProcessForm, setShowMachineProcessForm] = useState(false);
+  const [showMachineAssignForm, setShowMachineAssignForm] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [selectedProcess, setSelectedProcess] = useState(null);
+  const [selectedMachines, setSelectedMachines] = useState([]);
+  const [operatorsPerMachine, setOperatorsPerMachine] = useState({});
   const queryClient = useQueryClient();
 
   const [processFormData, setProcessFormData] = useState({
     nombre: "",
     codigo: "",
     descripcion: "",
+    operadores_requeridos: 1,
     activo: true,
   });
 
-  const [machineProcessData, setMachineProcessData] = useState({
-    selectedMachines: [],
-    operadores_requeridos: 1,
-  });
-
-  const { data: processes, isLoading } = useQuery({
+  const { data: processes, isLoading: loadingProcesses } = useQuery({
     queryKey: ['processes'],
     queryFn: () => base44.entities.Process.list('-created_date'),
     initialData: [],
@@ -82,22 +80,25 @@ export default function ProcessConfigurationPage() {
   });
 
   const saveMachineProcessMutation = useMutation({
-    mutationFn: async (data) => {
-      const promises = data.selectedMachines.map(machineId => {
+    mutationFn: async ({ processId, machineIds, operators }) => {
+      // Crear/actualizar asignaciones para cada máquina seleccionada
+      const promises = machineIds.map(async (machineId) => {
         const existing = machineProcesses.find(
-          mp => mp.machine_id === machineId && mp.process_id === selectedProcess.id
+          mp => mp.process_id === processId && mp.machine_id === machineId
         );
+        
+        const operatorsRequired = operators[machineId] || 1;
         
         if (existing) {
           return base44.entities.MachineProcess.update(existing.id, {
-            operadores_requeridos: data.operadores_requeridos,
+            operadores_requeridos: operatorsRequired,
             activo: true,
           });
         } else {
           return base44.entities.MachineProcess.create({
+            process_id: processId,
             machine_id: machineId,
-            process_id: selectedProcess.id,
-            operadores_requeridos: data.operadores_requeridos,
+            operadores_requeridos: operatorsRequired,
             activo: true,
           });
         }
@@ -107,7 +108,7 @@ export default function ProcessConfigurationPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
-      handleCloseMachineProcessForm();
+      handleCloseMachineAssignForm();
     },
   });
 
@@ -124,27 +125,14 @@ export default function ProcessConfigurationPage() {
       nombre: "",
       codigo: "",
       descripcion: "",
-      activo: true,
-    });
-  };
-
-  const handleCloseMachineProcessForm = () => {
-    setShowMachineProcessForm(false);
-    setSelectedProcess(null);
-    setMachineProcessData({
-      selectedMachines: [],
       operadores_requeridos: 1,
+      activo: true,
     });
   };
 
   const handleSubmitProcess = (e) => {
     e.preventDefault();
     saveProcessMutation.mutate(processFormData);
-  };
-
-  const handleSubmitMachineProcess = (e) => {
-    e.preventDefault();
-    saveMachineProcessMutation.mutate(machineProcessData);
   };
 
   const handleDeleteProcess = (id) => {
@@ -155,29 +143,70 @@ export default function ProcessConfigurationPage() {
 
   const handleConfigureMachines = (process) => {
     setSelectedProcess(process);
+    
+    // Pre-seleccionar máquinas que ya tienen este proceso
     const assignedMachines = machineProcesses
-      .filter(mp => mp.process_id === process.id && mp.activo)
+      .filter(mp => mp.process_id === process.id)
       .map(mp => mp.machine_id);
     
-    setMachineProcessData({
-      selectedMachines: assignedMachines,
-      operadores_requeridos: machineProcesses.find(mp => mp.process_id === process.id)?.operadores_requeridos || 1,
-    });
+    setSelectedMachines(assignedMachines);
     
-    setShowMachineProcessForm(true);
+    // Pre-cargar operadores por máquina
+    const operators = {};
+    machineProcesses
+      .filter(mp => mp.process_id === process.id)
+      .forEach(mp => {
+        operators[mp.machine_id] = mp.operadores_requeridos;
+      });
+    setOperatorsPerMachine(operators);
+    
+    setShowMachineAssignForm(true);
   };
 
-  const toggleMachine = (machineId) => {
-    setMachineProcessData(prev => ({
+  const handleCloseMachineAssignForm = () => {
+    setShowMachineAssignForm(false);
+    setSelectedProcess(null);
+    setSelectedMachines([]);
+    setOperatorsPerMachine({});
+  };
+
+  const handleToggleMachine = (machineId) => {
+    setSelectedMachines(prev => {
+      if (prev.includes(machineId)) {
+        return prev.filter(id => id !== machineId);
+      } else {
+        return [...prev, machineId];
+      }
+    });
+  };
+
+  const handleOperatorsChange = (machineId, value) => {
+    setOperatorsPerMachine(prev => ({
       ...prev,
-      selectedMachines: prev.selectedMachines.includes(machineId)
-        ? prev.selectedMachines.filter(id => id !== machineId)
-        : [...prev.selectedMachines, machineId]
+      [machineId]: parseInt(value) || 1
     }));
   };
 
-  const getMachineCount = (processId) => {
-    return machineProcesses.filter(mp => mp.process_id === processId && mp.activo).length;
+  const handleSubmitMachineAssign = (e) => {
+    e.preventDefault();
+    saveMachineProcessMutation.mutate({
+      processId: selectedProcess.id,
+      machineIds: selectedMachines,
+      operators: operatorsPerMachine,
+    });
+  };
+
+  const getMachinesForProcess = (processId) => {
+    return machineProcesses
+      .filter(mp => mp.process_id === processId && mp.activo)
+      .map(mp => {
+        const machine = machines.find(m => m.id === mp.machine_id);
+        return {
+          ...machine,
+          operadores_requeridos: mp.operadores_requeridos,
+        };
+      })
+      .filter(m => m);
   };
 
   return (
@@ -186,11 +215,11 @@ export default function ProcessConfigurationPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <Settings className="w-8 h-8 text-blue-600" />
+              <ListTree className="w-8 h-8 text-blue-600" />
               Configuración de Procesos
             </h1>
             <p className="text-slate-600 mt-1">
-              Gestiona los procesos y asígnalos a las máquinas
+              Gestiona los procesos y asígnalos a múltiples máquinas
             </p>
           </div>
           <Button
@@ -204,10 +233,10 @@ export default function ProcessConfigurationPage() {
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
-            <CardTitle>Procesos Configurados ({processes.length})</CardTitle>
+            <CardTitle>Lista de Procesos ({processes.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
+            {loadingProcesses ? (
               <div className="p-12 text-center text-slate-500">Cargando procesos...</div>
             ) : processes.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
@@ -220,68 +249,73 @@ export default function ProcessConfigurationPage() {
                     <TableRow className="bg-slate-50">
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre</TableHead>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead className="text-center">Máquinas</TableHead>
-                      <TableHead className="text-center">Estado</TableHead>
+                      <TableHead>Operadores</TableHead>
+                      <TableHead>Máquinas Asignadas</TableHead>
+                      <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {processes.map((process) => (
-                      <TableRow key={process.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          <span className="font-mono font-semibold">{process.codigo}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-slate-900">{process.nombre}</span>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {process.descripcion || '-'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                            <Cog className="w-3 h-3 mr-1" />
-                            {getMachineCount(process.id)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge className={
-                            process.activo
-                              ? "bg-green-100 text-green-800"
-                              : "bg-slate-100 text-slate-600"
-                          }>
-                            {process.activo ? "Activo" : "Inactivo"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleConfigureMachines(process)}
-                              title="Configurar máquinas"
-                            >
-                              <Cog className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditProcess(process)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteProcess(process.id)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {processes.map((process) => {
+                      const assignedMachines = getMachinesForProcess(process.id);
+                      
+                      return (
+                        <TableRow key={process.id} className="hover:bg-slate-50">
+                          <TableCell>
+                            <span className="font-mono font-semibold">{process.codigo}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-semibold text-slate-900">{process.nombre}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              {process.operadores_requeridos || 1} operadores
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className="bg-purple-100 text-purple-800">
+                              {assignedMachines.length} máquinas
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              process.activo
+                                ? "bg-green-100 text-green-800"
+                                : "bg-slate-100 text-slate-600"
+                            }>
+                              {process.activo ? "Activo" : "Inactivo"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleConfigureMachines(process)}
+                                title="Configurar máquinas"
+                              >
+                                <Settings className="w-4 h-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditProcess(process)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteProcess(process.id)}
+                                className="hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -321,6 +355,30 @@ export default function ProcessConfigurationPage() {
                     required
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="operadores">Operadores Requeridos *</Label>
+                  <Input
+                    id="operadores"
+                    type="number"
+                    min="1"
+                    value={processFormData.operadores_requeridos}
+                    onChange={(e) => setProcessFormData({ ...processFormData, operadores_requeridos: parseInt(e.target.value) })}
+                    required
+                  />
+                  <p className="text-xs text-slate-500">Número base de operadores (se puede ajustar por máquina)</p>
+                </div>
+
+                <div className="space-y-2 flex items-center">
+                  <Checkbox
+                    id="activo"
+                    checked={processFormData.activo}
+                    onCheckedChange={(checked) => setProcessFormData({ ...processFormData, activo: checked })}
+                  />
+                  <label htmlFor="activo" className="text-sm font-medium ml-2">
+                    Proceso Activo
+                  </label>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -331,17 +389,6 @@ export default function ProcessConfigurationPage() {
                   onChange={(e) => setProcessFormData({ ...processFormData, descripcion: e.target.value })}
                   rows={3}
                 />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="activo"
-                  checked={processFormData.activo}
-                  onCheckedChange={(checked) => setProcessFormData({ ...processFormData, activo: checked })}
-                />
-                <label htmlFor="activo" className="text-sm font-medium">
-                  Proceso Activo
-                </label>
               </div>
 
               <div className="flex justify-end gap-3">
@@ -357,86 +404,77 @@ export default function ProcessConfigurationPage() {
         </Dialog>
       )}
 
-      {/* Formulario de Asignación a Máquinas */}
-      {showMachineProcessForm && selectedProcess && (
-        <Dialog open={true} onOpenChange={handleCloseMachineProcessForm}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      {/* Formulario de Asignación de Máquinas */}
+      {showMachineAssignForm && selectedProcess && (
+        <Dialog open={true} onOpenChange={handleCloseMachineAssignForm}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                Configurar Máquinas - {selectedProcess.nombre}
+                Asignar Máquinas a: {selectedProcess.nombre}
               </DialogTitle>
+              <p className="text-sm text-slate-600 mt-2">
+                Selecciona las máquinas a las que aplica este proceso y configura el número de operadores para cada una
+              </p>
             </DialogHeader>
 
-            <form onSubmit={handleSubmitMachineProcess} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="operadores">Operadores Requeridos *</Label>
-                <Input
-                  id="operadores"
-                  type="number"
-                  min="1"
-                  value={machineProcessData.operadores_requeridos}
-                  onChange={(e) => setMachineProcessData({ 
-                    ...machineProcessData, 
-                    operadores_requeridos: parseInt(e.target.value) 
-                  })}
-                  required
-                />
-                <p className="text-xs text-slate-500">
-                  Este número de operadores se aplicará a todas las máquinas seleccionadas
-                </p>
-              </div>
-
+            <form onSubmit={handleSubmitMachineAssign} className="space-y-4">
               <div className="space-y-3">
-                <Label>Seleccionar Máquinas</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2 border rounded-lg bg-slate-50">
-                  {machines.map((machine) => (
-                    <div
-                      key={machine.id}
-                      onClick={() => toggleMachine(machine.id)}
-                      className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                        machineProcessData.selectedMachines.includes(machine.id)
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
+                {machines.length === 0 ? (
+                  <p className="text-center text-slate-500 py-8">No hay máquinas disponibles</p>
+                ) : (
+                  machines.map((machine) => (
+                    <div key={machine.id} className="border rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                      <div className="flex items-start gap-4">
                         <Checkbox
-                          checked={machineProcessData.selectedMachines.includes(machine.id)}
-                          onCheckedChange={() => toggleMachine(machine.id)}
+                          id={`machine-${machine.id}`}
+                          checked={selectedMachines.includes(machine.id)}
+                          onCheckedChange={() => handleToggleMachine(machine.id)}
                         />
                         <div className="flex-1">
-                          <div className="font-semibold text-slate-900">{machine.nombre}</div>
-                          <div className="text-xs text-slate-500 font-mono">{machine.codigo}</div>
-                          <Badge 
-                            variant="outline" 
-                            className={`mt-1 text-xs ${
-                              machine.estado === "Disponible"
-                                ? "bg-green-50 text-green-700"
-                                : "bg-slate-50 text-slate-600"
-                            }`}
-                          >
-                            {machine.estado}
-                          </Badge>
+                          <label htmlFor={`machine-${machine.id}`} className="flex items-center gap-2 cursor-pointer">
+                            <Cog className="w-5 h-5 text-blue-600" />
+                            <span className="font-semibold text-slate-900">{machine.nombre}</span>
+                            <span className="text-sm text-slate-500">({machine.codigo})</span>
+                          </label>
+                          
+                          {selectedMachines.includes(machine.id) && (
+                            <div className="mt-3 flex items-center gap-3">
+                              <Label htmlFor={`operators-${machine.id}`} className="text-sm">
+                                Operadores requeridos:
+                              </Label>
+                              <Input
+                                id={`operators-${machine.id}`}
+                                type="number"
+                                min="1"
+                                className="w-24"
+                                value={operatorsPerMachine[machine.id] || selectedProcess.operadores_requeridos || 1}
+                                onChange={(e) => handleOperatorsChange(machine.id, e.target.value)}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <p className="text-sm text-slate-600">
-                  Máquinas seleccionadas: {machineProcessData.selectedMachines.length}
+                  ))
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Seleccionadas:</strong> {selectedMachines.length} máquinas
                 </p>
               </div>
 
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleCloseMachineProcessForm}>
+                <Button type="button" variant="outline" onClick={handleCloseMachineAssignForm}>
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   className="bg-blue-600 hover:bg-blue-700" 
-                  disabled={saveMachineProcessMutation.isPending || machineProcessData.selectedMachines.length === 0}
+                  disabled={saveMachineProcessMutation.isPending || selectedMachines.length === 0}
                 >
-                  {saveMachineProcessMutation.isPending ? "Guardando..." : "Guardar Configuración"}
+                  {saveMachineProcessMutation.isPending ? "Guardando..." : "Guardar Asignaciones"}
                 </Button>
               </div>
             </form>

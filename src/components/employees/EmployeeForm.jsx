@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -59,8 +60,29 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     initialData: [],
   });
 
+  const { data: absences } = useQuery({
+    queryKey: ['absences'],
+    queryFn: () => base44.entities.Absence.list(),
+    initialData: [],
+  });
+
   const saveMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
+      // Si cambiamos el estado a "Disponible", limpiar campos de ausencia y eliminar ausencias registradas
+      if (data.disponibilidad === "Disponible") {
+        data.ausencia_inicio = null;
+        data.ausencia_fin = null;
+        data.ausencia_motivo = null;
+        
+        // Si había ausencias registradas para este empleado, eliminarlas
+        if (employee?.id) {
+          const employeeAbsences = absences.filter(abs => abs.employee_id === employee.id);
+          await Promise.all(
+            employeeAbsences.map(abs => base44.entities.Absence.delete(abs.id))
+          );
+        }
+      }
+      
       if (employee?.id) {
         return base44.entities.Employee.update(employee.id, data);
       }
@@ -68,6 +90,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['absences'] }); // Invalidate absences query
       onClose();
     },
   });
@@ -295,7 +318,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={null}>Sin asignar</SelectItem>
-                        {machines.filter(m => m.estado === "Activa").map((machine) => (
+                        {machines.filter(m => m.estado === "Disponible").map((machine) => (
                           <SelectItem key={machine.id} value={machine.id}>
                             {machine.nombre} ({machine.codigo})
                           </SelectItem>
@@ -324,6 +347,14 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.disponibilidad === "Disponible" && employee?.disponibilidad === "Ausente" && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm text-green-800">
+                      <strong>Nota:</strong> Al cambiar el estado a "Disponible", se eliminarán automáticamente todas las ausencias registradas para este empleado.
+                    </p>
+                  </div>
+                )}
 
                 {formData.disponibilidad === "Ausente" && (
                   <>

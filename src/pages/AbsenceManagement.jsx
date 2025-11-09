@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,15 +28,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserX, Plus, Edit, Trash2, Search, Calendar, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, Edit, Trash2, UserX, Search, AlertCircle } from "lucide-react";
+import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -44,7 +43,7 @@ export default function AbsenceManagementPage() {
     fecha_inicio: "",
     fecha_fin: "",
     motivo: "",
-    tipo: "Otro",
+    tipo: "Vacaciones",
     notas: "",
   });
 
@@ -60,20 +59,33 @@ export default function AbsenceManagementPage() {
     initialData: [],
   });
 
+  const updateEmployeeAvailability = async (employeeId, disponibilidad, ausenciaData = {}) => {
+    await base44.entities.Employee.update(employeeId, {
+      disponibilidad,
+      ausencia_inicio: ausenciaData.ausencia_inicio || null,
+      ausencia_fin: ausenciaData.ausencia_fin || null,
+      ausencia_motivo: ausenciaData.ausencia_motivo || null,
+    });
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      // Actualizar el estado del empleado a Ausente
-      await base44.entities.Employee.update(data.employee_id, {
-        disponibilidad: "Ausente",
+      // Primero guardar/actualizar la ausencia
+      let result;
+      if (editingAbsence?.id) {
+        result = await base44.entities.Absence.update(editingAbsence.id, data);
+      } else {
+        result = await base44.entities.Absence.create(data);
+      }
+
+      // Actualizar estado del empleado a "Ausente"
+      await updateEmployeeAvailability(data.employee_id, "Ausente", {
         ausencia_inicio: data.fecha_inicio,
         ausencia_fin: data.fecha_fin,
-        ausencia_motivo: data.motivo
+        ausencia_motivo: data.motivo,
       });
 
-      if (editingAbsence?.id) {
-        return base44.entities.Absence.update(editingAbsence.id, data);
-      }
-      return base44.entities.Absence.create(data);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
@@ -84,15 +96,11 @@ export default function AbsenceManagementPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (absence) => {
-      // Actualizar el estado del empleado a Disponible
-      await base44.entities.Employee.update(absence.employee_id, {
-        disponibilidad: "Disponible",
-        ausencia_inicio: null,
-        ausencia_fin: null,
-        ausencia_motivo: null
-      });
-
-      return base44.entities.Absence.delete(absence.id);
+      // Primero eliminar la ausencia
+      await base44.entities.Absence.delete(absence.id);
+      
+      // Restaurar disponibilidad del empleado
+      await updateEmployeeAvailability(absence.employee_id, "Disponible");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
@@ -103,20 +111,18 @@ export default function AbsenceManagementPage() {
   const handleEdit = (absence) => {
     setEditingAbsence(absence);
     setFormData(absence);
-    setSelectedEmployee(employees.find(e => e.id === absence.employee_id));
     setShowForm(true);
   };
 
   const handleClose = () => {
     setShowForm(false);
     setEditingAbsence(null);
-    setSelectedEmployee(null);
     setFormData({
       employee_id: "",
       fecha_inicio: "",
       fecha_fin: "",
       motivo: "",
-      tipo: "Otro",
+      tipo: "Vacaciones",
       notas: "",
     });
   };
@@ -127,15 +133,9 @@ export default function AbsenceManagementPage() {
   };
 
   const handleDelete = (absence) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta ausencia?')) {
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta ausencia? El empleado volverá a estar disponible.')) {
       deleteMutation.mutate(absence);
     }
-  };
-
-  const handleEmployeeSelect = (employeeId) => {
-    const emp = employees.find(e => e.id === employeeId);
-    setSelectedEmployee(emp);
-    setFormData({ ...formData, employee_id: employeeId });
   };
 
   const getEmployeeName = (employeeId) => {
@@ -143,16 +143,37 @@ export default function AbsenceManagementPage() {
     return emp?.nombre || "Empleado desconocido";
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const isAbsenceActive = (absence) => {
     const now = new Date();
-    const inicio = new Date(absence.fecha_inicio);
-    const fin = new Date(absence.fecha_fin);
-    return now >= inicio && now <= fin;
+    const start = new Date(absence.fecha_inicio);
+    const end = new Date(absence.fecha_fin);
+    return now >= start && now <= end;
   };
+
+  const isAbsenceExpired = (absence) => {
+    return isPast(new Date(absence.fecha_fin));
+  };
+
+  const filteredAbsences = useMemo(() => {
+    return absences.filter(abs =>
+      getEmployeeName(abs.employee_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      abs.motivo?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [absences, searchTerm, employees]);
+
+  const activeAbsences = useMemo(() => {
+    return absences.filter(abs => isAbsenceActive(abs));
+  }, [absences]);
+
+  const expiredAbsences = useMemo(() => {
+    return absences.filter(abs => isAbsenceExpired(abs) && !isAbsenceActive(abs));
+  }, [absences]);
+
+  const employeesForSelect = useMemo(() => {
+    return employees.filter(emp => 
+      !searchTerm || emp.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [employees, searchTerm]);
 
   return (
     <div className="p-6 md:p-8">
@@ -164,7 +185,7 @@ export default function AbsenceManagementPage() {
               Gestión de Ausencias
             </h1>
             <p className="text-slate-600 mt-1">
-              Configura y administra las ausencias de empleados
+              Registra y gestiona las ausencias de empleados
             </p>
           </div>
           <Button
@@ -176,14 +197,100 @@ export default function AbsenceManagementPage() {
           </Button>
         </div>
 
+        {/* Alertas de ausencias expiradas */}
+        {expiredAbsences.length > 0 && (
+          <Card className="mb-6 bg-amber-50 border-amber-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-900">
+                <AlertCircle className="w-5 h-5" />
+                Ausencias Finalizadas ({expiredAbsences.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-amber-800 mb-3">
+                Las siguientes ausencias han finalizado. Los empleados deberían estar disponibles automáticamente.
+              </p>
+              <div className="space-y-2">
+                {expiredAbsences.slice(0, 5).map((absence) => (
+                  <div key={absence.id} className="flex justify-between items-center bg-white p-3 rounded border border-amber-200">
+                    <div>
+                      <span className="font-semibold text-slate-900">{getEmployeeName(absence.employee_id)}</span>
+                      <span className="text-sm text-slate-600 ml-2">
+                        - Finalizó el {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm")}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(absence)}
+                      className="text-amber-700 hover:bg-amber-100"
+                    >
+                      Marcar como Disponible
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-red-700 font-medium">Ausencias Activas</p>
+                  <p className="text-2xl font-bold text-red-900">{activeAbsences.length}</p>
+                </div>
+                <UserX className="w-8 h-8 text-red-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-700 font-medium">Total Ausencias</p>
+                  <p className="text-2xl font-bold text-blue-900">{absences.length}</p>
+                </div>
+                <UserX className="w-8 h-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-amber-700 font-medium">Finalizadas</p>
+                  <p className="text-2xl font-bold text-amber-900">{expiredAbsences.length}</p>
+                </div>
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
-            <CardTitle>Registro de Ausencias ({absences.length})</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Registro de Ausencias</CardTitle>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar ausencias..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
               <div className="p-12 text-center text-slate-500">Cargando ausencias...</div>
-            ) : absences.length === 0 ? (
+            ) : filteredAbsences.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
                 No hay ausencias registradas
               </div>
@@ -192,72 +299,71 @@ export default function AbsenceManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50">
-                      <TableHead>Estado</TableHead>
                       <TableHead>Empleado</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Fecha Inicio</TableHead>
                       <TableHead>Fecha Fin</TableHead>
                       <TableHead>Motivo</TableHead>
+                      <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {absences.map((absence) => (
-                      <TableRow key={absence.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          {isAbsenceActive(absence) ? (
-                            <Badge className="bg-red-100 text-red-800">
-                              <AlertCircle className="w-3 h-3 mr-1" />
-                              Activa
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-slate-50 text-slate-600">
-                              Finalizada
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-slate-900">
-                            {getEmployeeName(absence.employee_id)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{absence.tipo}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-blue-600" />
+                    {filteredAbsences.map((absence) => {
+                      const isActive = isAbsenceActive(absence);
+                      const isExpired = isAbsenceExpired(absence);
+                      
+                      return (
+                        <TableRow 
+                          key={absence.id} 
+                          className={`hover:bg-slate-50 ${isActive ? 'bg-red-50' : isExpired ? 'bg-slate-50' : ''}`}
+                        >
+                          <TableCell>
+                            <span className={`font-semibold ${isActive ? 'text-red-700' : 'text-slate-900'}`}>
+                              {getEmployeeName(absence.employee_id)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{absence.tipo}</Badge>
+                          </TableCell>
+                          <TableCell>
                             {format(new Date(absence.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-blue-600" />
+                          </TableCell>
+                          <TableCell>
                             {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm", { locale: es })}
-                          </div>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">{absence.motivo}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(absence)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(absence)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>{absence.motivo}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              isActive ? "bg-red-100 text-red-800" :
+                              isExpired ? "bg-slate-100 text-slate-600" :
+                              "bg-blue-100 text-blue-800"
+                            }>
+                              {isActive ? "Activa" : isExpired ? "Finalizada" : "Futura"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(absence)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(absence)}
+                                className="hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -276,49 +382,33 @@ export default function AbsenceManagementPage() {
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!editingAbsence && (
-                <div className="space-y-2">
-                  <Label>Buscar Empleado *</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      placeholder="Buscar por nombre..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  {searchTerm && filteredEmployees.length > 0 && (
-                    <div className="border rounded-lg max-h-48 overflow-y-auto">
-                      {filteredEmployees.map((emp) => (
-                        <div
-                          key={emp.id}
-                          onClick={() => {
-                            handleEmployeeSelect(emp.id);
-                            setSearchTerm("");
-                          }}
-                          className={`p-3 hover:bg-slate-50 cursor-pointer border-b last:border-b-0 ${
-                            selectedEmployee?.id === emp.id ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <div className="font-semibold text-slate-900">{emp.nombre}</div>
-                          <div className="text-xs text-slate-500">
-                            {emp.departamento} - {emp.puesto}
-                          </div>
-                        </div>
-                      ))}
+              <div className="space-y-2">
+                <Label htmlFor="employee_id">Empleado *</Label>
+                <Select
+                  value={formData.employee_id}
+                  onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Buscar y seleccionar empleado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2">
+                      <Input
+                        placeholder="Buscar empleado..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="mb-2"
+                      />
                     </div>
-                  )}
-                  {selectedEmployee && (
-                    <div className="p-3 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                      <div className="font-semibold text-blue-900">{selectedEmployee.nombre}</div>
-                      <div className="text-sm text-blue-700">
-                        {selectedEmployee.departamento} - {selectedEmployee.puesto}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    {employeesForSelect.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.nombre} {emp.disponibilidad === "Ausente" && "(Ya ausente)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -347,7 +437,6 @@ export default function AbsenceManagementPage() {
                     id="motivo"
                     value={formData.motivo}
                     onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
-                    placeholder="Breve descripción"
                     required
                   />
                 </div>
@@ -382,19 +471,20 @@ export default function AbsenceManagementPage() {
                   value={formData.notas}
                   onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
                   rows={3}
-                  placeholder="Información adicional..."
                 />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Nota:</strong> Al guardar esta ausencia, el empleado será marcado automáticamente como "Ausente" y no estará disponible para planificación durante este período.
+                </p>
               </div>
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={handleClose}>
                   Cancelar
                 </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-blue-600 hover:bg-blue-700" 
-                  disabled={saveMutation.isPending || (!editingAbsence && !selectedEmployee)}
-                >
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
                   {saveMutation.isPending ? "Guardando..." : "Guardar"}
                 </Button>
               </div>
