@@ -12,7 +12,9 @@ import {
   CalendarRange,
   UserCog,
   UserX,
-  Wrench
+  Wrench,
+  TrendingUp,
+  ListTree
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,6 +42,11 @@ const navigationItems = [
     icon: Users,
   },
   {
+    title: "Gestión de Rendimiento",
+    url: createPageUrl("PerformanceManagement"),
+    icon: TrendingUp,
+  },
+  {
     title: "Gestión de Ausencias",
     url: createPageUrl("AbsenceManagement"),
     icon: UserX,
@@ -53,6 +60,11 @@ const navigationItems = [
     title: "Máquinas",
     url: createPageUrl("Machines"),
     icon: Cog,
+  },
+  {
+    title: "Configuración de Procesos",
+    url: createPageUrl("ProcessConfiguration"),
+    icon: ListTree,
   },
   {
     title: "Seguimiento de Mantenimiento",

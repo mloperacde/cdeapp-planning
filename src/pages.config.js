@@ -9,6 +9,7 @@ import AbsenceManagement from './pages/AbsenceManagement';
 import MachineAssignments from './pages/MachineAssignments';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import MaintenanceTracking from './pages/MaintenanceTracking';
+import PerformanceManagement from './pages/PerformanceManagement';
 import Layout from './Layout.jsx';
 
 
@@ -24,6 +25,7 @@ export const PAGES = {
     "MachineAssignments": MachineAssignments,
     "ProcessConfiguration": ProcessConfiguration,
     "MaintenanceTracking": MaintenanceTracking,
+    "PerformanceManagement": PerformanceManagement,
 }
 
 export const pagesConfig = {
