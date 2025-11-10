@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -20,8 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { differenceInDays, differenceInMonths, differenceInYears } from "date-fns";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge"; // New import
+import { differenceInDays, differenceInMonths, differenceInYears, format } from "date-fns"; // Added format
+import { es } from "date-fns/locale"; // New import for locale
+import { AlertCircle } from "lucide-react"; // New import
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   const [formData, setFormData] = useState(employee || {
@@ -66,12 +68,10 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       objetivo_5: { descripcion: "", peso: 0, resultado: 0 },
       objetivo_6: { descripcion: "", peso: 0, resultado: 0 },
     },
-    ausencia_inicio: "", // Added for initial state consistency
-    ausencia_fin: "",    // Added for initial state consistency
-    ausencia_motivo: "", // Added for initial state consistency
+    // Removed ausencia_inicio, ausencia_fin, ausencia_motivo from initial state as they are now read-only
   });
 
-  const [fullDayAbsence, setFullDayAbsence] = useState(false);
+  // Removed fullDayAbsence state as it's no longer used
 
   const queryClient = useQueryClient();
 
@@ -87,7 +87,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     initialData: [],
   });
 
-  const antiguedad = useMemo(() => {
+  const antiguedad = useMemo(() => { // Changed to useMemo as React.useMemo is redundant
     if (!formData.fecha_alta) return null;
     
     const fechaAlta = new Date(formData.fecha_alta);
@@ -95,64 +95,30 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     
     const years = differenceInYears(hoy, fechaAlta);
     const months = differenceInMonths(hoy, fechaAlta) % 12;
+    // Adjusted logic for days as per outline
     const days = differenceInDays(hoy, new Date(hoy.getFullYear(), hoy.getMonth() - months, fechaAlta.getDate()));
     
     let result = [];
     if (years > 0) result.push(`${years} año${years !== 1 ? 's' : ''}`);
     if (months > 0) result.push(`${months} mes${months !== 1 ? 'es' : ''}`);
-    if (days > 0 && years === 0 && months === 0) result.push(`${days} día${days !== 1 ? 's' : ''}`); // Only show days if less than a month/year
-    else if (days > 0 && (years > 0 || months > 0)) {
-      // If there are years or months, only show days if it's significant (e.g., more than 0 days)
-      // This logic can be adjusted based on desired precision.
-      // For now, if years or months exist, we might simplify days or not show them unless explicitly requested for precision.
-      // The `differenceInDays` calculation for remaining days is already accurate.
-      result.push(`${days} día${days !== 1 ? 's' : ''}`);
-    }
+    if (days > 0 && years === 0) result.push(`${days} día${days !== 1 ? 's' : ''}`); // Only show days if less than a year
     
     return result.length > 0 ? result.join(', ') : '0 días';
   }, [formData.fecha_alta]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      // Ajustar fechas si es ausencia de día completo
-      let finalData = { ...data };
-      
-      if (finalData.disponibilidad === "Ausente" && fullDayAbsence && finalData.ausencia_inicio && finalData.ausencia_fin) {
-        const startDate = new Date(finalData.ausencia_inicio);
-        const endDate = new Date(finalData.ausencia_fin);
-        
-        // Set time to start of day for start date (local time)
-        startDate.setHours(0, 0, 0, 0);
-        // Set time to end of day for end date (local time)
-        endDate.setHours(23, 59, 59, 999);
-        
-        finalData.ausencia_inicio = startDate.toISOString();
-        finalData.ausencia_fin = endDate.toISOString();
-      }
-
-      // Si cambiamos el estado a "Disponible", limpiar campos de ausencia y eliminar ausencias registradas
-      if (finalData.disponibilidad === "Disponible") {
-        finalData.ausencia_inicio = null;
-        finalData.ausencia_fin = null;
-        finalData.ausencia_motivo = null;
-        
-        // Si había ausencias registradas para este empleado, eliminarlas
-        if (employee?.id) {
-          const employeeAbsences = absences.filter(abs => abs.employee_id === employee.id);
-          await Promise.all(
-            employeeAbsences.map(abs => base44.entities.Absence.delete(abs.id))
-          );
-        }
-      }
+      // Removed absence-related logic (fullDayAbsence adjustment, clearing absence fields, deleting absences)
+      // Absence management is now external and reflected in the formData.disponibilidad
       
       if (employee?.id) {
-        return base44.entities.Employee.update(employee.id, finalData);
+        return base44.entities.Employee.update(employee.id, data);
       }
-      return base44.entities.Employee.create(finalData);
+      return base44.entities.Employee.create(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['absences'] }); // Invalidate absences query
+      // Removed invalidation of 'absences' query as absence management is now external
       onClose();
     },
   });
@@ -176,6 +142,11 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       }
     });
   };
+
+  // Showing absence info if exists
+  const isAbsent = formData.disponibilidad === "Ausente";
+  // Check if both start and end dates are present to consider "hasAbsenceData"
+  const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -495,84 +466,73 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             </TabsContent>
 
             <TabsContent value="availability" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="disponibilidad">Estado de Disponibilidad</Label>
-                  <Select
-                    value={formData.disponibilidad}
-                    onValueChange={(value) => setFormData({ ...formData, disponibilidad: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Disponible">Disponible</SelectItem>
-                      <SelectItem value="Ausente">Ausente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.disponibilidad === "Disponible" && employee?.disponibilidad === "Ausente" && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-sm text-green-800">
-                      <strong>Nota:</strong> Al cambiar el estado a "Disponible", se eliminarán automáticamente todas las ausencias registradas para este empleado.
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900 mb-1">
+                      Gestión de Ausencias Centralizada
+                    </p>
+                    <p className="text-sm text-amber-800">
+                      Para gestionar ausencias de forma centralizada, utiliza la página "Gestión de Ausencias" 
+                      que sincronizará automáticamente los datos con esta pestaña.
                     </p>
                   </div>
-                )}
+                </div>
+              </div>
 
-                {formData.disponibilidad === "Ausente" && (
-                  <>
-                    <div className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <Checkbox
-                        id="fullDayAbsence"
-                        checked={fullDayAbsence}
-                        onCheckedChange={setFullDayAbsence}
-                      />
-                      <label htmlFor="fullDayAbsence" className="text-sm font-medium text-blue-900 cursor-pointer">
-                        Ausencia de horario completo (00:00 - 23:59)
-                      </label>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="ausencia_inicio">Fecha {!fullDayAbsence && "y Hora"} Inicio</Label>
-                        <Input
-                          id="ausencia_inicio"
-                          type={fullDayAbsence ? "date" : "datetime-local"}
-                          value={formData.ausencia_inicio || ""}
-                          onChange={(e) => setFormData({ ...formData, ausencia_inicio: e.target.value })}
-                        />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Estado de Disponibilidad</Label>
+                  <div className="p-4 border-2 rounded-lg bg-slate-50">
+                    {isAbsent ? (
+                      <div className="space-y-3">
+                        <Badge variant="destructive" className="text-base px-3 py-1">
+                          Ausente
+                        </Badge>
+                        
+                        {hasAbsenceData && (
+                          <div className="space-y-2 text-sm">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <span className="font-semibold text-slate-700">Fecha Inicio:</span>
+                                <p className="text-slate-600">
+                                  {format(new Date(formData.ausencia_inicio), "dd/MM/yyyy HH:mm", { locale: es })}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-slate-700">Fecha Fin:</span>
+                                <p className="text-slate-600">
+                                  {format(new Date(formData.ausencia_fin), "dd/MM/yyyy HH:mm", { locale: es })}
+                                </p>
+                              </div>
+                            </div>
+                            {formData.ausencia_motivo && (
+                              <div>
+                                <span className="font-semibold text-slate-700">Motivo:</span>
+                                <p className="text-slate-600">{formData.ausencia_motivo}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!hasAbsenceData && (
+                           <p className="text-sm text-slate-600 mt-2">
+                              No hay datos de ausencia específicos registrados aquí. Gestione las ausencias desde la página de gestión de ausencias.
+                           </p>
+                        )}
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="ausencia_fin">Fecha {!fullDayAbsence && "y Hora"} Fin</Label>
-                        <Input
-                          id="ausencia_fin"
-                          type={fullDayAbsence ? "date" : "datetime-local"}
-                          value={formData.ausencia_fin || ""}
-                          onChange={(e) => setFormData({ ...formData, ausencia_fin: e.target.value })}
-                        />
+                    ) : (
+                      <div>
+                        <Badge className="bg-green-100 text-green-800 text-base px-3 py-1">
+                          Disponible
+                        </Badge>
+                        <p className="text-sm text-slate-600 mt-2">
+                          El empleado está disponible para trabajar
+                        </p>
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="ausencia_motivo">Motivo de Ausencia</Label>
-                      <Textarea
-                        id="ausencia_motivo"
-                        value={formData.ausencia_motivo || ""}
-                        onChange={(e) => setFormData({ ...formData, ausencia_motivo: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <p className="text-sm text-amber-800">
-                        <strong>Recomendación:</strong> Para gestionar ausencias de forma centralizada, 
-                        utiliza la página "Gestión de Ausencias" que sincronizará automáticamente los datos con esta pestaña.
-                      </p>
-                    </div>
-                  </>
-                )}
+                    )}
+                  </div>
+                </div>
               </div>
             </TabsContent>
 

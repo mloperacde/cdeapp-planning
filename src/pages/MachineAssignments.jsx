@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -5,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCog, Users, GripVertical, Save } from "lucide-react";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
+import { UserCog, GripVertical, User, UserCheck, Users, ArrowLeft, Save } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function MachineAssignmentsPage() {
   const [selectedTeam, setSelectedTeam] = useState('team_1');
@@ -139,13 +142,22 @@ export default function MachineAssignmentsPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Link to={createPageUrl("Employees")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver a Empleados
+            </Button>
+          </Link>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <UserCog className="w-8 h-8 text-blue-600" />
-            Asignaciones Operarios Máquinas
+            Asignaciones de Operarios a Máquinas
           </h1>
           <p className="text-slate-600 mt-1">
-            Gestiona las asignaciones de personal a cada máquina por equipo
+            Gestiona las asignaciones de empleados a máquinas por equipo
           </p>
         </div>
 

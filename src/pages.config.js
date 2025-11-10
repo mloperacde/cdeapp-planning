@@ -10,6 +10,7 @@ import MachineAssignments from './pages/MachineAssignments';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import PerformanceManagement from './pages/PerformanceManagement';
+import ShiftHandover from './pages/ShiftHandover';
 import Layout from './Layout.jsx';
 
 
@@ -26,6 +27,7 @@ export const PAGES = {
     "ProcessConfiguration": ProcessConfiguration,
     "MaintenanceTracking": MaintenanceTracking,
     "PerformanceManagement": PerformanceManagement,
+    "ShiftHandover": ShiftHandover,
 }
 
 export const pagesConfig = {

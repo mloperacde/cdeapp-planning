@@ -8,6 +8,7 @@ import {
   Activity,
   Coffee,
   Cog,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,11 @@ const navigationItems = [
     title: "Máquinas",
     url: createPageUrl("Machines"),
     icon: Cog,
+  },
+  {
+    title: "Cambio de Turno",
+    url: createPageUrl("ShiftHandover"),
+    icon: ArrowLeftRight,
   },
   {
     title: "Descansos",

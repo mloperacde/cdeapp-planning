@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/select";
 // Removed Dialog components as they are now encapsulated in MaintenanceForm, MaintenanceTypeManager, MaintenanceWorkOrder
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Wrench, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Calendar, 
+import {
+  Wrench,
+  Plus,
+  Edit,
+  Trash2,
+  Calendar,
   AlertTriangle,
   Clock,
   CheckCircle2,
@@ -31,10 +31,13 @@ import {
   Bell,
   TrendingUp,
   Settings, // Added Settings icon
-  ClipboardList // Added ClipboardList icon
+  ClipboardList, // Added ClipboardList icon
+  ArrowLeft // Added ArrowLeft icon
 } from "lucide-react";
 import { format, differenceInDays, addDays, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 // New imports for components
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
@@ -219,6 +222,15 @@ export default function MaintenanceTrackingPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Link to={createPageUrl("Machines")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver a Máquinas
+            </Button>
+          </Link>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
