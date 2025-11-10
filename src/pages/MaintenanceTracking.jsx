@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -5,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -14,20 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// Removed Dialog components as they are now encapsulated in MaintenanceForm, MaintenanceTypeManager, MaintenanceWorkOrder
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Wrench, 
@@ -42,133 +29,80 @@ import {
   PlayCircle,
   History,
   Bell,
-  TrendingUp
+  TrendingUp,
+  Settings, // Added Settings icon
+  ClipboardList // Added ClipboardList icon
 } from "lucide-react";
 import { format, differenceInDays, addDays, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 
+// New imports for components
+import MaintenanceForm from "../components/maintenance/MaintenanceForm";
+import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeManager";
+import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder";
+
 export default function MaintenanceTrackingPage() {
   const [showForm, setShowForm] = useState(false);
+  const [showTypeManager, setShowTypeManager] = useState(false); // New state
+  const [showWorkOrder, setShowWorkOrder] = useState(false); // New state
   const [editingMaintenance, setEditingMaintenance] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterMachine, setFilterMachine] = useState("all");
+  const [selectedMaintenance, setSelectedMaintenance] = useState(null); // New state for work order
+  const [currentTab, setCurrentTab] = useState("all"); // New state to manage active tab
+  // Removed filterStatus and filterMachine states as filtering is handled by tabs
   const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
-    machine_id: "",
-    tipo: "Mantenimiento Planificado",
-    prioridad: "Media",
-    estado: "Pendiente",
-    fecha_programada: "",
-    fecha_inicio: "",
-    fecha_finalizacion: "",
-    duracion_estimada: 2,
-    duracion_real: 0,
-    tecnico_asignado: "",
-    descripcion: "",
-    notas: "",
-    costo_total: 0,
-    frecuencia_dias: 0,
-    dias_anticipacion_alerta: 7,
-    alerta_activa: false,
-  });
+  // Removed formData state as it's now handled by MaintenanceForm
 
   const { data: maintenances, isLoading } = useQuery({
-    queryKey: ['maintenanceSchedules'],
+    queryKey: ['maintenances'], // Changed query key
     queryFn: () => base44.entities.MaintenanceSchedule.list('-fecha_programada'),
     initialData: [],
   });
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('codigo'),
+    queryFn: () => base44.entities.Machine.list('codigo'), // Using 'codigo' as sort field
     initialData: [],
   });
 
-  const saveMutation = useMutation({
-    mutationFn: (data) => {
-      // Calcular próximo mantenimiento si es recurrente
-      if (data.frecuencia_dias > 0 && data.fecha_programada) {
-        const nextDate = addDays(new Date(data.fecha_programada), data.frecuencia_dias);
-        data.proximo_mantenimiento = nextDate.toISOString();
-      }
-
-      // Activar alerta si está próximo
-      const daysUntil = differenceInDays(new Date(data.fecha_programada), new Date());
-      if (daysUntil <= data.dias_anticipacion_alerta && daysUntil >= 0) {
-        data.alerta_activa = true;
-      }
-
-      if (editingMaintenance?.id) {
-        return base44.entities.MaintenanceSchedule.update(editingMaintenance.id, data);
-      }
-      return base44.entities.MaintenanceSchedule.create(data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
-      handleClose();
-    },
+  const { data: employees } = useQuery({ // New query for employees
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list('nombre'),
+    initialData: [],
   });
+
+  const { data: maintenanceTypes } = useQuery({ // New query for maintenance types
+    queryKey: ['maintenanceTypes'],
+    queryFn: () => base44.entities.MaintenanceType.list(),
+    initialData: [],
+  });
+
+  // Removed saveMutation as it's now handled within MaintenanceForm
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MaintenanceSchedule.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenances'] }); // Updated query key
     },
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, estado, fecha_inicio, fecha_finalizacion }) => {
-      const updates = { estado };
-      if (fecha_inicio) updates.fecha_inicio = fecha_inicio;
-      if (fecha_finalizacion) {
-        updates.fecha_finalizacion = fecha_finalizacion;
-        // Calcular duración real
-        if (fecha_inicio) {
-          const duration = (new Date(fecha_finalizacion) - new Date(fecha_inicio)) / (1000 * 60 * 60);
-          updates.duracion_real = Math.round(duration * 10) / 10;
-        }
-      }
-      return base44.entities.MaintenanceSchedule.update(id, updates);
+    mutationFn: ({ id, data }) => { // Changed mutationFn signature to accept data object
+      return base44.entities.MaintenanceSchedule.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenances'] }); // Updated query key
     },
   });
 
   const handleEdit = (maintenance) => {
     setEditingMaintenance(maintenance);
-    setFormData(maintenance);
     setShowForm(true);
   };
 
-  const handleClose = () => {
-    setShowForm(false);
-    setEditingMaintenance(null);
-    setFormData({
-      machine_id: "",
-      tipo: "Mantenimiento Planificado",
-      prioridad: "Media",
-      estado: "Pendiente",
-      fecha_programada: "",
-      fecha_inicio: "",
-      fecha_finalizacion: "",
-      duracion_estimada: 2,
-      duracion_real: 0,
-      tecnico_asignado: "",
-      descripcion: "",
-      notas: "",
-      costo_total: 0,
-      frecuencia_dias: 0,
-      dias_anticipacion_alerta: 7,
-      alerta_activa: false,
-    });
-  };
+  // Removed handleClose as it's now handled by the individual dialog components
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    saveMutation.mutate(formData);
-  };
+  // Removed handleSubmit as it's now handled by MaintenanceForm
 
   const handleDelete = (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este mantenimiento?')) {
@@ -179,23 +113,26 @@ export default function MaintenanceTrackingPage() {
   const handleStartMaintenance = (maintenance) => {
     updateStatusMutation.mutate({
       id: maintenance.id,
-      estado: "En Progreso",
-      fecha_inicio: new Date().toISOString(),
+      data: {
+        estado: "En Progreso",
+        fecha_inicio: new Date().toISOString(),
+      }
     });
   };
 
-  const handleCompleteMaintenance = (maintenance) => {
-    updateStatusMutation.mutate({
-      id: maintenance.id,
-      estado: "Completado",
-      fecha_finalizacion: new Date().toISOString(),
-      fecha_inicio: maintenance.fecha_inicio || new Date().toISOString(),
-    });
+  const handleOpenWorkOrder = (maintenance) => { // New handler for work order
+    setSelectedMaintenance(maintenance);
+    setShowWorkOrder(true);
   };
 
   const getMachineName = (machineId) => {
     const machine = machines.find(m => m.id === machineId);
     return machine ? `${machine.codigo} - ${machine.nombre}` : "Máquina desconocida";
+  };
+
+  const getEmployeeName = (employeeId) => { // New helper function
+    const employee = employees.find(e => e.id === employeeId);
+    return employee ? employee.nombre : "No asignado";
   };
 
   const getStatusIcon = (estado) => {
@@ -208,68 +145,76 @@ export default function MaintenanceTrackingPage() {
     }
   };
 
-  const getStatusColor = (estado) => {
+  // Renamed and modified getStatusColor to getStatusBadge
+  const getStatusBadge = (estado) => {
+    let colorClass = "bg-slate-100 text-slate-600";
     switch (estado) {
-      case "Pendiente": return "bg-yellow-100 text-yellow-800";
-      case "En Progreso": return "bg-blue-100 text-blue-800";
-      case "Completado": return "bg-green-100 text-green-800";
-      case "Cancelado": return "bg-slate-100 text-slate-600";
-      default: return "bg-slate-100 text-slate-600";
+      case "Pendiente": colorClass = "bg-yellow-100 text-yellow-800"; break;
+      case "En Progreso": colorClass = "bg-blue-100 text-blue-800"; break;
+      case "Completado": colorClass = "bg-green-100 text-green-800"; break;
+      case "Cancelado": colorClass = "bg-slate-100 text-slate-600"; break;
     }
+    return (
+      <Badge className={colorClass}>
+        {getStatusIcon(estado)}
+        <span className="ml-1">{estado}</span>
+      </Badge>
+    );
   };
 
-  const getPriorityColor = (prioridad) => {
+  // Renamed and modified getPriorityColor to getPriorityBadge
+  const getPriorityBadge = (prioridad) => {
+    let colorClass = "bg-slate-100 text-slate-600";
     switch (prioridad) {
-      case "Baja": return "bg-green-100 text-green-800";
-      case "Media": return "bg-yellow-100 text-yellow-800";
-      case "Alta": return "bg-orange-100 text-orange-800";
-      case "Urgente": return "bg-red-100 text-red-800";
-      default: return "bg-slate-100 text-slate-600";
+      case "Baja": colorClass = "bg-green-100 text-green-800"; break;
+      case "Media": colorClass = "bg-yellow-100 text-yellow-800"; break;
+      case "Alta": colorClass = "bg-orange-100 text-orange-800"; break;
+      case "Urgente": colorClass = "bg-red-100 text-red-800"; break;
     }
+    return <Badge className={colorClass}>{prioridad}</Badge>;
   };
 
-  const filteredMaintenances = useMemo(() => {
-    let filtered = maintenances;
-    
-    if (filterStatus !== "all") {
-      filtered = filtered.filter(m => m.estado === filterStatus);
-    }
-    
-    if (filterMachine !== "all") {
-      filtered = filtered.filter(m => m.machine_id === filterMachine);
-    }
-    
-    return filtered;
-  }, [maintenances, filterStatus, filterMachine]);
+  // Removed old filteredMaintenances as tabs handle the main filtering now
 
   const upcomingMaintenances = useMemo(() => {
-    const now = new Date();
-    return maintenances.filter(m => {
-      if (m.estado !== "Pendiente") return false;
-      const scheduledDate = new Date(m.fecha_programada);
-      const daysUntil = differenceInDays(scheduledDate, now);
-      return daysUntil >= 0 && daysUntil <= 30;
-    }).sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
+    // Filter for all pending maintenances, then sort by scheduled date
+    return maintenances
+      .filter(m => m.estado === "Pendiente")
+      .sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
   }, [maintenances]);
 
   const activeAlerts = useMemo(() => {
-    return maintenances.filter(m => m.alerta_activa && m.estado === "Pendiente");
+    const now = new Date();
+    return maintenances.filter(m => {
+      // Check if alert is active and maintenance is pending
+      if (m.alerta_activa !== true || m.estado !== "Pendiente") return false;
+      const scheduledDate = new Date(m.fecha_programada);
+      const daysUntil = differenceInDays(scheduledDate, now);
+      // An alert is active if it's due soon (within dias_anticipacion_alerta) or overdue
+      return daysUntil <= (m.dias_anticipacion_alerta || 7);
+    }).sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
   }, [maintenances]);
 
   const completedMaintenances = useMemo(() => {
     return maintenances.filter(m => m.estado === "Completado");
   }, [maintenances]);
 
-  const stats = useMemo(() => {
-    return {
-      total: maintenances.length,
-      pendientes: maintenances.filter(m => m.estado === "Pendiente").length,
-      enProgreso: maintenances.filter(m => m.estado === "En Progreso").length,
-      completados: maintenances.filter(m => m.estado === "Completado").length,
-      alertas: activeAlerts.length,
-      costoTotal: maintenances.reduce((sum, m) => sum + (m.costo_total || 0), 0),
-    };
-  }, [maintenances, activeAlerts]);
+  const filteredMaintenances = useMemo(() => { // New memo to filter based on currentTab
+    switch (currentTab) {
+      case "all":
+        return maintenances;
+      case "upcoming":
+        return upcomingMaintenances;
+      case "alerts":
+        return activeAlerts;
+      case "history":
+        return completedMaintenances;
+      default:
+        return maintenances;
+    }
+  }, [currentTab, maintenances, upcomingMaintenances, activeAlerts, completedMaintenances]);
+
+  // Removed stats useMemo as the outline uses simpler card stats directly
 
   return (
     <div className="p-6 md:p-8">
@@ -281,52 +226,50 @@ export default function MaintenanceTrackingPage() {
               Seguimiento de Mantenimiento
             </h1>
             <p className="text-slate-600 mt-1">
-              Gestiona el mantenimiento planificado y reparaciones de máquinas
+              Gestiona el mantenimiento planificado y reparaciones
             </p>
           </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Mantenimiento
-          </Button>
+          <div className="flex gap-2"> {/* Added div for buttons */}
+            <Button
+              onClick={() => setShowTypeManager(true)} // New button for type manager
+              variant="outline"
+              className="bg-white hover:bg-purple-50 border-purple-200"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Tipos de Mantenimiento
+            </Button>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Mantenimiento
+            </Button>
+          </div>
         </div>
 
-        {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {/* Simplified Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"> {/* Changed grid layout */}
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-blue-700 font-medium">Total</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+                  <p className="text-xs text-blue-700 font-medium">Pendientes</p>
+                  <p className="text-2xl font-bold text-blue-900">{upcomingMaintenances.length}</p>
                 </div>
-                <Wrench className="w-8 h-8 text-blue-600" />
+                <Wrench className="w-8 h-8 text-blue-600" /> {/* Changed icon */}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-yellow-700 font-medium">Pendientes</p>
-                  <p className="text-2xl font-bold text-yellow-900">{stats.pendientes}</p>
+                  <p className="text-xs text-red-700 font-medium">Alertas Activas</p>
+                  <p className="text-2xl font-bold text-red-900">{activeAlerts.length}</p>
                 </div>
-                <Clock className="w-8 h-8 text-yellow-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-blue-700 font-medium">En Progreso</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.enProgreso}</p>
-                </div>
-                <PlayCircle className="w-8 h-8 text-blue-600" />
+                <Bell className="w-8 h-8 text-red-600" /> {/* Changed icon */}
               </div>
             </CardContent>
           </Card>
@@ -336,570 +279,156 @@ export default function MaintenanceTrackingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-green-700 font-medium">Completados</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.completados}</p>
+                  <p className="text-2xl font-bold text-green-900">{completedMaintenances.length}</p>
                 </div>
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-red-700 font-medium">Alertas</p>
-                  <p className="text-2xl font-bold text-red-900">{stats.alertas}</p>
-                </div>
-                <Bell className="w-8 h-8 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-purple-700 font-medium">Costo Total</p>
-                  <p className="text-xl font-bold text-purple-900">{stats.costoTotal.toLocaleString()}€</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-purple-600" />
+                <CheckCircle2 className="w-8 h-8 text-green-600" /> {/* Changed icon */}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">Todos</TabsTrigger>
-            <TabsTrigger value="upcoming">
-              Próximos ({upcomingMaintenances.length})
-            </TabsTrigger>
-            <TabsTrigger value="alerts">
-              Alertas ({activeAlerts.length})
-            </TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
-          </TabsList>
+        {/* Unified Tabs Section */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <Tabs value={currentTab} onValueChange={setCurrentTab}> {/* Added currentTab and onValueChange */}
+            <CardHeader className="border-b border-slate-100">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                <TabsTrigger value="upcoming">
+                  Próximos ({upcomingMaintenances.length})
+                </TabsTrigger>
+                <TabsTrigger value="alerts">
+                  Alertas ({activeAlerts.length})
+                </TabsTrigger>
+                <TabsTrigger value="history">
+                  Historial ({completedMaintenances.length})
+                </TabsTrigger>
+              </TabsList>
+            </CardHeader>
 
-          <TabsContent value="all">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100">
-                <div className="flex justify-between items-center">
-                  <CardTitle>Todos los Mantenimientos</CardTitle>
-                  <div className="flex gap-3">
-                    <Select value={filterMachine} onValueChange={setFilterMachine}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Filtrar máquina" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas las máquinas</SelectItem>
-                        {machines.map(m => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.codigo} - {m.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Pendiente">Pendiente</SelectItem>
-                        <SelectItem value="En Progreso">En Progreso</SelectItem>
-                        <SelectItem value="Completado">Completado</SelectItem>
-                        <SelectItem value="Cancelado">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
+            <TabsContent value={currentTab} className="mt-0"> {/* Removed specific tab content values, using currentTab */}
+              <CardContent className="p-6">
                 {isLoading ? (
-                  <div className="p-12 text-center text-slate-500">Cargando...</div>
+                  <div className="p-12 text-center text-slate-500">Cargando mantenimientos...</div>
                 ) : filteredMaintenances.length === 0 ? (
                   <div className="p-12 text-center text-slate-500">
-                    No hay mantenimientos registrados
+                    No hay mantenimientos en esta categoría
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-slate-50">
-                          <TableHead>Máquina</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Prioridad</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead>Fecha Programada</TableHead>
-                          <TableHead>Técnico</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredMaintenances.map((maintenance) => (
-                          <TableRow key={maintenance.id} className="hover:bg-slate-50">
-                            <TableCell>
-                              <span className="font-semibold text-slate-900">
+                  <div className="space-y-4"> {/* Changed to a div for a list of cards */}
+                    {filteredMaintenances.map((maintenance) => (
+                      <div key={maintenance.id} className="border rounded-lg p-4 hover:bg-slate-50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-lg text-slate-900">
                                 {getMachineName(maintenance.machine_id)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{maintenance.tipo}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getPriorityColor(maintenance.prioridad)}>
-                                {maintenance.prioridad}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getStatusColor(maintenance.estado)}>
-                                {getStatusIcon(maintenance.estado)}
-                                <span className="ml-1">{maintenance.estado}</span>
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-blue-600" />
+                              </h3>
+                              {getStatusBadge(maintenance.estado)} {/* Using new badge component */}
+                              {getPriorityBadge(maintenance.prioridad)} {/* Using new badge component */}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
+                              <div>
+                                <span className="font-medium">Tipo:</span> {maintenance.tipo}
+                              </div>
+                              <div>
+                                <span className="font-medium">Técnico:</span> {getEmployeeName(maintenance.tecnico_asignado)}
+                              </div>
+                              <div>
+                                <span className="font-medium">Fecha programada:</span>{" "}
                                 {format(new Date(maintenance.fecha_programada), "dd/MM/yyyy HH:mm", { locale: es })}
                               </div>
-                            </TableCell>
-                            <TableCell>{maintenance.tecnico_asignado || "-"}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                {maintenance.estado === "Pendiente" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleStartMaintenance(maintenance)}
-                                    title="Iniciar"
-                                  >
-                                    <PlayCircle className="w-4 h-4 text-blue-600" />
-                                  </Button>
-                                )}
-                                {maintenance.estado === "En Progreso" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleCompleteMaintenance(maintenance)}
-                                    title="Completar"
-                                  >
-                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(maintenance)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(maintenance.id)}
-                                  className="hover:bg-red-50 hover:text-red-600"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="upcoming">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  Próximos Mantenimientos (30 días)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {upcomingMaintenances.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    No hay mantenimientos programados en los próximos 30 días
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {upcomingMaintenances.map((maintenance) => {
-                      const daysUntil = differenceInDays(new Date(maintenance.fecha_programada), new Date());
-                      return (
-                        <div key={maintenance.id} className="p-4 border-2 border-slate-200 rounded-lg hover:border-blue-300 transition-all">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-slate-900">
-                                  {getMachineName(maintenance.machine_id)}
-                                </h4>
-                                <Badge className={getPriorityColor(maintenance.prioridad)}>
-                                  {maintenance.prioridad}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-slate-600 mb-2">{maintenance.descripcion}</p>
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="flex items-center gap-1 text-slate-600">
-                                  <Calendar className="w-4 h-4" />
-                                  {format(new Date(maintenance.fecha_programada), "dd/MM/yyyy HH:mm")}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  En {daysUntil} días
-                                </Badge>
-                              </div>
+                              {maintenance.creado_por && (
+                                <div>
+                                  <span className="font-medium">Creado por:</span> {getEmployeeName(maintenance.creado_por)}
+                                </div>
+                              )}
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() => handleEdit(maintenance)}
-                              variant="outline"
-                            >
-                              Ver Detalles
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="alerts">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-red-100 bg-red-50">
-                <CardTitle className="flex items-center gap-2 text-red-900">
-                  <AlertTriangle className="w-5 h-5" />
-                  Alertas de Mantenimiento
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {activeAlerts.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    No hay alertas activas
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {activeAlerts.map((maintenance) => {
-                      const daysUntil = differenceInDays(new Date(maintenance.fecha_programada), new Date());
-                      const isOverdue = daysUntil < 0;
-                      
-                      return (
-                        <div key={maintenance.id} className={`p-4 border-2 rounded-lg ${
-                          isOverdue ? 'border-red-300 bg-red-50' : 'border-orange-300 bg-orange-50'
-                        }`}>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Bell className={`w-5 h-5 ${isOverdue ? 'text-red-600' : 'text-orange-600'}`} />
-                                <h4 className="font-semibold text-slate-900">
-                                  {getMachineName(maintenance.machine_id)}
-                                </h4>
-                                {isOverdue && (
-                                  <Badge className="bg-red-600 text-white">
-                                    ¡Atrasado!
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-slate-700 mb-2">
-                                {maintenance.tipo} - {maintenance.descripcion}
-                              </p>
-                              <div className="flex items-center gap-2 text-sm">
-                                <span className={`font-semibold ${isOverdue ? 'text-red-700' : 'text-orange-700'}`}>
-                                  {isOverdue 
-                                    ? `Atrasado ${Math.abs(daysUntil)} días` 
-                                    : `Vence en ${daysUntil} días`
-                                  }
-                                </span>
-                                <span className="text-slate-600">
-                                  - {format(new Date(maintenance.fecha_programada), "dd/MM/yyyy")}
-                                </span>
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => handleStartMaintenance(maintenance)}
-                              className="bg-blue-600 hover:bg-blue-700"
-                            >
-                              Iniciar
-                            </Button>
+                            {maintenance.descripcion && (
+                              <p className="text-sm text-slate-600 mt-2">{maintenance.descripcion}</p>
+                            )}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="history">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100">
-                <CardTitle className="flex items-center gap-2">
-                  <History className="w-5 h-5 text-blue-600" />
-                  Historial de Mantenimientos Completados
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {completedMaintenances.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
-                    No hay mantenimientos completados
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-slate-50">
-                          <TableHead>Máquina</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Fecha Realización</TableHead>
-                          <TableHead>Duración</TableHead>
-                          <TableHead>Técnico</TableHead>
-                          <TableHead>Costo</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {completedMaintenances.map((maintenance) => (
-                          <TableRow key={maintenance.id} className="hover:bg-slate-50">
-                            <TableCell>
-                              <span className="font-semibold text-slate-900">
-                                {getMachineName(maintenance.machine_id)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{maintenance.tipo}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              {maintenance.fecha_finalizacion 
-                                ? format(new Date(maintenance.fecha_finalizacion), "dd/MM/yyyy HH:mm")
-                                : "-"
-                              }
-                            </TableCell>
-                            <TableCell>
-                              {maintenance.duracion_real 
-                                ? `${maintenance.duracion_real}h`
-                                : "-"
-                              }
-                            </TableCell>
-                            <TableCell>{maintenance.tecnico_asignado || "-"}</TableCell>
-                            <TableCell>
-                              {maintenance.costo_total 
-                                ? `${maintenance.costo_total.toLocaleString()}€`
-                                : "-"
-                              }
-                            </TableCell>
-                            <TableCell className="text-right">
+                          <div className="flex flex-col gap-2 ml-4">
+                            {maintenance.estado === "Pendiente" && (
                               <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(maintenance)}
+                                size="sm"
+                                onClick={() => handleStartMaintenance(maintenance)}
+                                className="bg-green-600 hover:bg-green-700"
                               >
-                                <Edit className="w-4 h-4" />
+                                Iniciar
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            )}
+                            {(maintenance.estado === "En Progreso" || maintenance.estado === "Completado") && ( // Show work order for in progress and completed
+                              <Button
+                                size="sm"
+                                onClick={() => handleOpenWorkOrder(maintenance)}
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                <ClipboardList className="w-4 h-4 mr-1" />
+                                Ver Orden
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEdit(maintenance)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(maintenance.id)}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
+        </Card>
       </div>
 
-      {/* Formulario de Mantenimiento */}
       {showForm && (
-        <Dialog open={true} onOpenChange={handleClose}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingMaintenance ? 'Editar Mantenimiento' : 'Nuevo Mantenimiento'}
-              </DialogTitle>
-            </DialogHeader>
+        <MaintenanceForm
+          maintenance={editingMaintenance} // Pass editing maintenance prop
+          machines={machines}
+          employees={employees} // Pass employees
+          maintenanceTypes={maintenanceTypes} // Pass maintenance types
+          onClose={() => {
+            setShowForm(false);
+            setEditingMaintenance(null);
+          }}
+        />
+      )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="machine_id">Máquina *</Label>
-                  <Select
-                    value={formData.machine_id}
-                    onValueChange={(value) => setFormData({ ...formData, machine_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar máquina" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {machines.map(m => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.codigo} - {m.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+      {showTypeManager && ( // New component for type management
+        <MaintenanceTypeManager
+          open={showTypeManager}
+          onOpenChange={setShowTypeManager}
+          machines={machines} // Pass machines, might be useful for types tied to specific machine models/series
+        />
+      )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo de Mantenimiento *</Label>
-                  <Select
-                    value={formData.tipo}
-                    onValueChange={(value) => setFormData({ ...formData, tipo: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mantenimiento Planificado">Mantenimiento Planificado</SelectItem>
-                      <SelectItem value="Reparación No Planificada">Reparación No Planificada</SelectItem>
-                      <SelectItem value="Inspección">Inspección</SelectItem>
-                      <SelectItem value="Calibración">Calibración</SelectItem>
-                      <SelectItem value="Limpieza">Limpieza</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="prioridad">Prioridad *</Label>
-                  <Select
-                    value={formData.prioridad}
-                    onValueChange={(value) => setFormData({ ...formData, prioridad: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Baja">Baja</SelectItem>
-                      <SelectItem value="Media">Media</SelectItem>
-                      <SelectItem value="Alta">Alta</SelectItem>
-                      <SelectItem value="Urgente">Urgente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
-                  <Select
-                    value={formData.estado}
-                    onValueChange={(value) => setFormData({ ...formData, estado: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pendiente">Pendiente</SelectItem>
-                      <SelectItem value="En Progreso">En Progreso</SelectItem>
-                      <SelectItem value="Completado">Completado</SelectItem>
-                      <SelectItem value="Cancelado">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fecha_programada">Fecha Programada *</Label>
-                  <Input
-                    id="fecha_programada"
-                    type="datetime-local"
-                    value={formData.fecha_programada}
-                    onChange={(e) => setFormData({ ...formData, fecha_programada: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tecnico_asignado">Técnico Asignado</Label>
-                  <Input
-                    id="tecnico_asignado"
-                    value={formData.tecnico_asignado}
-                    onChange={(e) => setFormData({ ...formData, tecnico_asignado: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duracion_estimada">Duración Estimada (horas)</Label>
-                  <Input
-                    id="duracion_estimada"
-                    type="number"
-                    step="0.5"
-                    value={formData.duracion_estimada}
-                    onChange={(e) => setFormData({ ...formData, duracion_estimada: parseFloat(e.target.value) })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="costo_total">Costo Total (€)</Label>
-                  <Input
-                    id="costo_total"
-                    type="number"
-                    step="0.01"
-                    value={formData.costo_total}
-                    onChange={(e) => setFormData({ ...formData, costo_total: parseFloat(e.target.value) })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="frecuencia_dias">Frecuencia (días) - Recurrente</Label>
-                  <Input
-                    id="frecuencia_dias"
-                    type="number"
-                    value={formData.frecuencia_dias}
-                    onChange={(e) => setFormData({ ...formData, frecuencia_dias: parseInt(e.target.value) })}
-                    placeholder="0 = No recurrente"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="dias_anticipacion_alerta">Alerta con Anticipación (días)</Label>
-                  <Input
-                    id="dias_anticipacion_alerta"
-                    type="number"
-                    value={formData.dias_anticipacion_alerta}
-                    onChange={(e) => setFormData({ ...formData, dias_anticipacion_alerta: parseInt(e.target.value) })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="descripcion">Descripción</Label>
-                <Textarea
-                  id="descripcion"
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  rows={3}
-                  placeholder="Descripción del trabajo a realizar..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notas">Notas Adicionales</Label>
-                <Textarea
-                  id="notas"
-                  value={formData.notas}
-                  onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-                  rows={2}
-                  placeholder="Notas, observaciones, etc..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Guardando..." : "Guardar"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+      {showWorkOrder && selectedMaintenance && ( // New component for work order
+        <MaintenanceWorkOrder
+          maintenance={selectedMaintenance}
+          machines={machines}
+          employees={employees}
+          updateStatusMutation={updateStatusMutation} // Pass mutation for status updates
+          onClose={() => {
+            setShowWorkOrder(false);
+            setSelectedMaintenance(null);
+          }}
+        />
       )}
     </div>
   );
