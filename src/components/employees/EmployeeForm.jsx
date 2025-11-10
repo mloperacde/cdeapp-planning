@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { differenceInDays, differenceInMonths, differenceInYears } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   const [formData, setFormData] = useState(employee || {
@@ -64,8 +65,13 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       objetivo_4: { descripcion: "", peso: 0, resultado: 0 },
       objetivo_5: { descripcion: "", peso: 0, resultado: 0 },
       objetivo_6: { descripcion: "", peso: 0, resultado: 0 },
-    }
+    },
+    ausencia_inicio: "", // Added for initial state consistency
+    ausencia_fin: "",    // Added for initial state consistency
+    ausencia_motivo: "", // Added for initial state consistency
   });
+
+  const [fullDayAbsence, setFullDayAbsence] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -94,18 +100,41 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     let result = [];
     if (years > 0) result.push(`${years} año${years !== 1 ? 's' : ''}`);
     if (months > 0) result.push(`${months} mes${months !== 1 ? 'es' : ''}`);
-    if (days > 0 && years === 0) result.push(`${days} día${days !== 1 ? 's' : ''}`);
+    if (days > 0 && years === 0 && months === 0) result.push(`${days} día${days !== 1 ? 's' : ''}`); // Only show days if less than a month/year
+    else if (days > 0 && (years > 0 || months > 0)) {
+      // If there are years or months, only show days if it's significant (e.g., more than 0 days)
+      // This logic can be adjusted based on desired precision.
+      // For now, if years or months exist, we might simplify days or not show them unless explicitly requested for precision.
+      // The `differenceInDays` calculation for remaining days is already accurate.
+      result.push(`${days} día${days !== 1 ? 's' : ''}`);
+    }
     
     return result.length > 0 ? result.join(', ') : '0 días';
   }, [formData.fecha_alta]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      // Ajustar fechas si es ausencia de día completo
+      let finalData = { ...data };
+      
+      if (finalData.disponibilidad === "Ausente" && fullDayAbsence && finalData.ausencia_inicio && finalData.ausencia_fin) {
+        const startDate = new Date(finalData.ausencia_inicio);
+        const endDate = new Date(finalData.ausencia_fin);
+        
+        // Set time to start of day for start date (local time)
+        startDate.setHours(0, 0, 0, 0);
+        // Set time to end of day for end date (local time)
+        endDate.setHours(23, 59, 59, 999);
+        
+        finalData.ausencia_inicio = startDate.toISOString();
+        finalData.ausencia_fin = endDate.toISOString();
+      }
+
       // Si cambiamos el estado a "Disponible", limpiar campos de ausencia y eliminar ausencias registradas
-      if (data.disponibilidad === "Disponible") {
-        data.ausencia_inicio = null;
-        data.ausencia_fin = null;
-        data.ausencia_motivo = null;
+      if (finalData.disponibilidad === "Disponible") {
+        finalData.ausencia_inicio = null;
+        finalData.ausencia_fin = null;
+        finalData.ausencia_motivo = null;
         
         // Si había ausencias registradas para este empleado, eliminarlas
         if (employee?.id) {
@@ -117,9 +146,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       }
       
       if (employee?.id) {
-        return base44.entities.Employee.update(employee.id, data);
+        return base44.entities.Employee.update(employee.id, finalData);
       }
-      return base44.entities.Employee.create(data);
+      return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -493,22 +522,33 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
                 {formData.disponibilidad === "Ausente" && (
                   <>
+                    <div className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <Checkbox
+                        id="fullDayAbsence"
+                        checked={fullDayAbsence}
+                        onCheckedChange={setFullDayAbsence}
+                      />
+                      <label htmlFor="fullDayAbsence" className="text-sm font-medium text-blue-900 cursor-pointer">
+                        Ausencia de horario completo (00:00 - 23:59)
+                      </label>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="ausencia_inicio">Fecha y Hora Inicio</Label>
+                        <Label htmlFor="ausencia_inicio">Fecha {!fullDayAbsence && "y Hora"} Inicio</Label>
                         <Input
                           id="ausencia_inicio"
-                          type="datetime-local"
+                          type={fullDayAbsence ? "date" : "datetime-local"}
                           value={formData.ausencia_inicio || ""}
                           onChange={(e) => setFormData({ ...formData, ausencia_inicio: e.target.value })}
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="ausencia_fin">Fecha y Hora Fin</Label>
+                        <Label htmlFor="ausencia_fin">Fecha {!fullDayAbsence && "y Hora"} Fin</Label>
                         <Input
                           id="ausencia_fin"
-                          type="datetime-local"
+                          type={fullDayAbsence ? "date" : "datetime-local"}
                           value={formData.ausencia_fin || ""}
                           onChange={(e) => setFormData({ ...formData, ausencia_fin: e.target.value })}
                         />
@@ -523,6 +563,13 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                         onChange={(e) => setFormData({ ...formData, ausencia_motivo: e.target.value })}
                         rows={3}
                       />
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <p className="text-sm text-amber-800">
+                        <strong>Recomendación:</strong> Para gestionar ausencias de forma centralizada, 
+                        utiliza la página "Gestión de Ausencias" que sincronizará automáticamente los datos con esta pestaña.
+                      </p>
                     </div>
                   </>
                 )}

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -38,6 +38,7 @@ export default function AbsenceManagementPage() {
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("all");
+  const [fullDay, setFullDay] = useState(false);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -86,7 +87,7 @@ export default function AbsenceManagementPage() {
         result = await base44.entities.Absence.create(data);
       }
 
-      // Actualizar estado del empleado a "Ausente"
+      // Actualizar estado del empleado a "Ausente" y copiar datos de ausencia
       await updateEmployeeAvailability(data.employee_id, "Ausente", {
         ausencia_inicio: data.fecha_inicio,
         ausencia_fin: data.fecha_fin,
@@ -107,8 +108,15 @@ export default function AbsenceManagementPage() {
       // Primero eliminar la ausencia
       await base44.entities.Absence.delete(absence.id);
       
-      // Restaurar disponibilidad del empleado
-      await updateEmployeeAvailability(absence.employee_id, "Disponible");
+      // Comprobar si el empleado tiene más ausencias
+      const remainingAbsences = absences.filter(
+        abs => abs.employee_id === absence.employee_id && abs.id !== absence.id
+      );
+
+      // Si no tiene más ausencias, restaurar disponibilidad
+      if (remainingAbsences.length === 0) {
+        await updateEmployeeAvailability(absence.employee_id, "Disponible");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
@@ -125,6 +133,7 @@ export default function AbsenceManagementPage() {
   const handleClose = () => {
     setShowForm(false);
     setEditingAbsence(null);
+    setFullDay(false);
     setFormData({
       employee_id: "",
       fecha_inicio: "",
@@ -137,11 +146,26 @@ export default function AbsenceManagementPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    saveMutation.mutate(formData);
+    
+    let finalData = { ...formData };
+
+    // Si está marcado como día completo, ajustar las horas
+    if (fullDay && formData.fecha_inicio && formData.fecha_fin) {
+      const startDate = new Date(formData.fecha_inicio);
+      const endDate = new Date(formData.fecha_fin);
+      
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      
+      finalData.fecha_inicio = startDate.toISOString();
+      finalData.fecha_fin = endDate.toISOString();
+    }
+
+    saveMutation.mutate(finalData);
   };
 
   const handleDelete = (absence) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta ausencia? El empleado volverá a estar disponible.')) {
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta ausencia?')) {
       deleteMutation.mutate(absence);
     }
   };
@@ -306,7 +330,7 @@ export default function AbsenceManagementPage() {
                 <Label className="text-sm font-medium text-slate-700">Filtrar por Equipo:</Label>
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                   <SelectTrigger className="w-64">
-                    <SelectValue placeholder="Seleccionar Equipo" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los Equipos</SelectItem>
@@ -473,12 +497,25 @@ export default function AbsenceManagementPage() {
                     required
                   />
                 </div>
+              </div>
 
+              <div className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <Checkbox
+                  id="fullDay"
+                  checked={fullDay}
+                  onCheckedChange={setFullDay}
+                />
+                <label htmlFor="fullDay" className="text-sm font-medium text-blue-900 cursor-pointer">
+                  Ausencia de horario completo (00:00 - 23:59)
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fecha_inicio">Fecha y Hora Inicio *</Label>
+                  <Label htmlFor="fecha_inicio">Fecha {!fullDay && "y Hora"} Inicio *</Label>
                   <Input
                     id="fecha_inicio"
-                    type="datetime-local"
+                    type={fullDay ? "date" : "datetime-local"}
                     value={formData.fecha_inicio}
                     onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
                     required
@@ -486,10 +523,10 @@ export default function AbsenceManagementPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fecha_fin">Fecha y Hora Fin *</Label>
+                  <Label htmlFor="fecha_fin">Fecha {!fullDay && "y Hora"} Fin *</Label>
                   <Input
                     id="fecha_fin"
-                    type="datetime-local"
+                    type={fullDay ? "date" : "datetime-local"}
                     value={formData.fecha_fin}
                     onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
                     required
@@ -509,7 +546,8 @@ export default function AbsenceManagementPage() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> Al guardar esta ausencia, el empleado será marcado automáticamente como "Ausente" y no estará disponible para planificación durante este período.
+                  <strong>Nota:</strong> Al guardar esta ausencia, el empleado será marcado automáticamente como "Ausente" 
+                  y los datos de la ausencia se copiarán a su ficha en la pestaña "Disponibilidad".
                 </p>
               </div>
 
