@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -13,6 +14,7 @@ import {
   FileText,
   Bell,
   Smartphone,
+  Calendar, // Added Calendar icon import
 } from "lucide-react";
 import {
   Sidebar,
@@ -48,6 +50,16 @@ const navigationItems = [
     title: "Máquinas",
     url: createPageUrl("Machines"),
     icon: Cog,
+  },
+  {
+    title: "Gestión de Turnos", // New item
+    url: createPageUrl("ShiftManagement"),
+    icon: Calendar,
+  },
+  {
+    title: "Apoyos 14-15h", // New item
+    url: createPageUrl("SupportManagement1415"),
+    icon: Clock,
   },
   {
     title: "Cambio de Turno",

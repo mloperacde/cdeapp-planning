@@ -42,12 +42,15 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     departamento: "",
     puesto: "",
     categoria: "",
-    tipo_jornada: "Completa 40h",
+    tipo_jornada: "Jornada Completa",
+    num_horas_jornada: 40,
     tipo_turno: "Rotativo",
     equipo: "",
     disponibilidad: "Disponible",
-    horario_personalizado_inicio: "",
-    horario_personalizado_fin: "",
+    horario_manana_inicio: "07:00",
+    horario_manana_fin: "15:00",
+    horario_tarde_inicio: "14:00",
+    horario_tarde_fin: "22:00",
     turno_partido_entrada1: "",
     turno_partido_salida1: "",
     turno_partido_entrada2: "",
@@ -103,6 +106,34 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     
     return result.length > 0 ? result.join(', ') : '0 días';
   }, [formData.fecha_alta]);
+
+  const handleTipoJornadaChange = (value) => {
+    const newData = { ...formData, tipo_jornada: value };
+    
+    if (value === "Jornada Completa") {
+      newData.num_horas_jornada = 40;
+      newData.horario_manana_inicio = "07:00";
+      newData.horario_manana_fin = "15:00";
+      newData.horario_tarde_inicio = "14:00";
+      newData.horario_tarde_fin = "22:00";
+    } else if (value === "Jornada Parcial") {
+      newData.num_horas_jornada = 20; // Default for partial, can be changed by user
+      newData.horario_manana_inicio = "07:00";
+      newData.horario_manana_fin = "15:00";
+      newData.horario_tarde_inicio = "15:00";
+      newData.horario_tarde_fin = "22:00";
+    } else if (value === "Reducción de Jornada") {
+      // Default for "Reducción de Jornada" will depend on what was before, or be set manually
+      // We'll keep existing horario_manana/tarde_inicio/fin if they exist, or set sensible defaults
+      if (!newData.horario_manana_inicio) newData.horario_manana_inicio = "08:00";
+      if (!newData.horario_manana_fin) newData.horario_manana_fin = "12:00";
+      if (!newData.horario_tarde_inicio) newData.horario_tarde_inicio = "16:00";
+      if (!newData.horario_tarde_fin) newData.horario_tarde_fin = "20:00";
+      // num_horas_jornada should be set manually for Reducción de Jornada
+    }
+    
+    setFormData(newData);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -338,17 +369,31 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   <Label htmlFor="tipo_jornada">Tipo de Jornada *</Label>
                   <Select
                     value={formData.tipo_jornada}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_jornada: value })}
+                    onValueChange={handleTipoJornadaChange}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Completa 40h">Completa 40h</SelectItem>
-                      <SelectItem value="Completa 35h">Completa 35h</SelectItem>
-                      <SelectItem value="Reducida">Reducida</SelectItem>
+                      <SelectItem value="Jornada Completa">Jornada Completa</SelectItem>
+                      <SelectItem value="Jornada Parcial">Jornada Parcial</SelectItem>
+                      <SelectItem value="Reducción de Jornada">Reducción de Jornada</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="num_horas">Nº Horas Jornada *</Label>
+                  <Input
+                    id="num_horas"
+                    type="number"
+                    min="1"
+                    max="40"
+                    value={formData.num_horas_jornada || ""}
+                    onChange={(e) => setFormData({ ...formData, num_horas_jornada: parseFloat(e.target.value) })}
+                    disabled={formData.tipo_jornada === "Jornada Completa"}
+                    className={formData.tipo_jornada === "Jornada Completa" ? "bg-slate-100" : ""}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -368,77 +413,148 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
-                {formData.tipo_jornada === "Reducida" && (
-                  <>
+              {/* Configuración de horarios para Reducción de Jornada con Rotativo */}
+              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Rotativo" && (
+                <div className="p-4 border-2 border-orange-200 rounded-lg bg-orange-50 space-y-4">
+                  <h4 className="font-semibold text-orange-900">Configuración de Horario Especial - Jornada Reducida</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="horario_inicio">Horario Inicio</Label>
+                      <Label>Horario Inicio Mañana</Label>
                       <Input
-                        id="horario_inicio"
                         type="time"
-                        value={formData.horario_personalizado_inicio || ""}
-                        onChange={(e) => setFormData({ ...formData, horario_personalizado_inicio: e.target.value })}
+                        value={formData.horario_manana_inicio || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_manana_inicio: e.target.value })}
                       />
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="horario_fin">Horario Fin</Label>
+                      <Label>Horario Fin Mañana</Label>
                       <Input
-                        id="horario_fin"
                         type="time"
-                        value={formData.horario_personalizado_fin || ""}
-                        onChange={(e) => setFormData({ ...formData, horario_personalizado_fin: e.target.value })}
+                        value={formData.horario_manana_fin || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_manana_fin: e.target.value })}
                       />
                     </div>
-                  </>
-                )}
-
-                {formData.tipo_turno === "Turno Partido" && (
-                  <div className="md:col-span-2 space-y-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
-                    <h4 className="font-semibold text-blue-900">Configuración de Turno Partido</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="entrada1">Horario Entrada 1</Label>
-                        <Input
-                          id="entrada1"
-                          type="time"
-                          value={formData.turno_partido_entrada1 || ""}
-                          onChange={(e) => setFormData({ ...formData, turno_partido_entrada1: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="salida1">Horario Salida 1</Label>
-                        <Input
-                          id="salida1"
-                          type="time"
-                          value={formData.turno_partido_salida1 || ""}
-                          onChange={(e) => setFormData({ ...formData, turno_partido_salida1: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="entrada2">Horario Entrada 2</Label>
-                        <Input
-                          id="entrada2"
-                          type="time"
-                          value={formData.turno_partido_entrada2 || ""}
-                          onChange={(e) => setFormData({ ...formData, turno_partido_entrada2: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="salida2">Horario Salida 2</Label>
-                        <Input
-                          id="salida2"
-                          type="time"
-                          value={formData.turno_partido_salida2 || ""}
-                          onChange={(e) => setFormData({ ...formData, turno_partido_salida2: e.target.value })}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label>Horario Inicio Tarde</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_tarde_inicio || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_tarde_inicio: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Horario Fin Tarde</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_tarde_fin || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_tarde_fin: e.target.value })}
+                      />
                     </div>
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Jornada Parcial con horarios específicos */}
+              {formData.tipo_jornada === "Jornada Parcial" && (
+                <div className="p-4 border-2 border-blue-200 rounded-lg bg-blue-50 space-y-4">
+                  <h4 className="font-semibold text-blue-900">Horarios Específicos (Opcional)</h4>
+                  <p className="text-sm text-blue-700">
+                    Si no se configura, se usarán horarios estándar: Mañana 7:00-15:00, Tarde 15:00-22:00
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Horario Inicio Mañana</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_manana_inicio || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_manana_inicio: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Horario Fin Mañana</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_manana_fin || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_manana_fin: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Horario Inicio Tarde</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_tarde_inicio || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_tarde_inicio: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Horario Fin Tarde</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_tarde_fin || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_tarde_fin: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.tipo_turno === "Turno Partido" && (
+                <div className="md:col-span-2 space-y-4 p-4 border-2 border-purple-200 rounded-lg bg-purple-50">
+                  <h4 className="font-semibold text-purple-900">Configuración de Turno Partido</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="entrada1">Horario Entrada 1</Label>
+                      <Input
+                        id="entrada1"
+                        type="time"
+                        value={formData.turno_partido_entrada1 || ""}
+                        onChange={(e) => setFormData({ ...formData, turno_partido_entrada1: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="salida1">Horario Salida 1</Label>
+                      <Input
+                        id="salida1"
+                        type="time"
+                        value={formData.turno_partido_salida1 || ""}
+                        onChange={(e) => setFormData({ ...formData, turno_partido_salida1: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="entrada2">Horario Entrada 2</Label>
+                      <Input
+                        id="entrada2"
+                        type="time"
+                        value={formData.turno_partido_entrada2 || ""}
+                        onChange={(e) => setFormData({ ...formData, turno_partido_entrada2: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="salida2">Horario Salida 2</Label>
+                      <Input
+                        id="salida2"
+                        type="time"
+                        value={formData.turno_partido_salida2 || ""}
+                        onChange={(e) => setFormData({ ...formData, turno_partido_salida2: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Información de Horarios Estándar */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <h5 className="font-semibold text-slate-900 mb-2">Horarios Estándar por Jornada</h5>
+                <div className="text-sm text-slate-700 space-y-1">
+                  <p><strong>Jornada Completa:</strong> Mañana 7:00-15:00, Tarde 14:00-22:00</p>
+                  <p><strong>Jornada Parcial:</strong> Mañana 7:00-15:00, Tarde 15:00-22:00 (configurable)</p>
+                  <p><strong>Reducción de Jornada:</strong> Horario configurable individualmente (Mañana y Tarde)</p>
+                </div>
               </div>
             </TabsContent>
 
