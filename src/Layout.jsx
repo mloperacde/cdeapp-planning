@@ -52,12 +52,12 @@ const navigationItems = [
     icon: Cog,
   },
   {
-    title: "Gestión de Turnos", // New item
+    title: "Gestión de Turnos",
     url: createPageUrl("ShiftManagement"),
     icon: Calendar,
   },
   {
-    title: "Apoyos 14-15h", // New item
+    title: "Apoyos 14-15h",
     url: createPageUrl("SupportManagement1415"),
     icon: Clock,
   },
@@ -80,6 +80,11 @@ const navigationItems = [
     title: "Notificaciones",
     url: createPageUrl("Notifications"),
     icon: Bell,
+  },
+  {
+    title: "Análisis Predictivo ML",
+    url: createPageUrl("MLInsights"),
+    icon: Activity,
   },
   {
     title: "Mantenimiento Predictivo",

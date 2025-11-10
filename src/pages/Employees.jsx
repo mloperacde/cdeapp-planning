@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, UserCog } from "lucide-react";
 import EmployeeForm from "../components/employees/EmployeeForm";
+import BirthdayPanel from "../components/employees/BirthdayPanel";
+import AnniversaryPanel from "../components/employees/AnniversaryPanel";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -165,6 +167,14 @@ export default function EmployeesPage() {
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Empleado
           </Button>
+        </div>
+
+        {/* Paneles de Cumpleaños y Aniversarios */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <BirthdayPanel employees={employees} />
+          <div>
+            <AnniversaryPanel employees={employees} />
+          </div>
         </div>
 
         {/* Sub-páginas */}
