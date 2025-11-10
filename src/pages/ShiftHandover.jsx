@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Save, Trash2, ArrowLeftRight } from "lucide-react";
+import { RefreshCw, Save, Trash2, ArrowLeftRight, Mic, Square } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -24,6 +25,8 @@ export default function ShiftHandoverPage() {
   const [turnoEntrante, setTurnoEntrante] = useState("Tarde");
   const [observaciones, setObservaciones] = useState({});
   const [otrasIndicaciones, setOtrasIndicaciones] = useState("");
+  const [isRecording, setIsRecording] = useState({});
+  const [recognition, setRecognition] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: machines, isLoading } = useQuery({
@@ -47,8 +50,8 @@ export default function ShiftHandoverPage() {
   const saveHandoverMutation = useMutation({
     mutationFn: async (data) => {
       const existing = handovers.find(
-        h => h.fecha === data.fecha && 
-        h.turno_saliente === data.turno_saliente && 
+        h => h.fecha === data.fecha &&
+        h.turno_saliente === data.turno_saliente &&
         h.turno_entrante === data.turno_entrante
       );
 
@@ -62,11 +65,23 @@ export default function ShiftHandoverPage() {
     },
   });
 
+  // Inicializar reconocimiento de voz
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'es-ES';
+      setRecognition(recognitionInstance);
+    }
+  }, []);
+
   // Cargar datos existentes cuando cambia la fecha o los turnos
   useEffect(() => {
     const existing = handovers.find(
-      h => h.fecha === selectedDate && 
-      h.turno_saliente === turnoSaliente && 
+      h => h.fecha === selectedDate &&
+      h.turno_saliente === turnoSaliente &&
       h.turno_entrante === turnoEntrante
     );
 
@@ -85,6 +100,51 @@ export default function ShiftHandoverPage() {
       [machineId]: value
     }));
   };
+
+  const handleVoiceInput = (fieldId, fieldType = 'machine') => {
+    if (!recognition) {
+      alert('Tu navegador no soporta reconocimiento de voz. Por favor usa Chrome, Edge o Safari.');
+      return;
+    }
+
+    const recordingKey = `${fieldType}-${fieldId}`;
+
+    if (isRecording[recordingKey]) {
+      // Detener grabación
+      recognition.stop();
+      setIsRecording(prev => ({ ...prev, [recordingKey]: false }));
+    } else {
+      // Iniciar grabación
+      setIsRecording(prev => ({ ...prev, [recordingKey]: true }));
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+
+        if (fieldType === 'machine') {
+          setObservaciones(prev => ({
+            ...prev,
+            [fieldId]: (prev[fieldId] ? prev[fieldId].trim() + ' ' : '') + transcript.trim()
+          }));
+        } else if (fieldType === 'general') {
+          setOtrasIndicaciones(prev => (prev ? prev.trim() + ' ' : '') + transcript.trim());
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Error de reconocimiento de voz:', event.error);
+        setIsRecording(prev => ({ ...prev, [recordingKey]: false }));
+        // alert(`Error en el reconocimiento de voz: ${event.error}`); // Optional: provide user feedback
+      };
+
+      recognition.onend = () => {
+        // Recognition ended, ensure recording state is off
+        setIsRecording(prev => ({ ...prev, [recordingKey]: false }));
+      };
+
+      recognition.start();
+    }
+  };
+
 
   const handleSave = () => {
     const data = {
@@ -219,39 +279,70 @@ export default function ShiftHandoverPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {machines.map((machine) => (
-                  <div key={machine.id} className="border rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-slate-900 text-lg">
-                          {machine.nombre}
-                        </h3>
-                        <p className="text-sm text-slate-500">{machine.codigo}</p>
-                      </div>
-                      <Badge className={
-                        machine.estado === "Disponible"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }>
-                        {machine.estado}
-                      </Badge>
-                    </div>
+                {machines.map((machine) => {
+                  const recordingKey = `machine-${machine.id}`;
+                  const isCurrentlyRecording = isRecording[recordingKey];
 
-                    <div className="space-y-2">
-                      <Label htmlFor={`obs-${machine.id}`} className="text-sm font-medium text-slate-700">
-                        Observaciones del Jefe de Turno Saliente
-                      </Label>
-                      <Textarea
-                        id={`obs-${machine.id}`}
-                        value={observaciones[machine.id] || ""}
-                        onChange={(e) => handleObservacionChange(machine.id, e.target.value)}
-                        placeholder="Escribe el estado de la máquina, incidencias, trabajos pendientes, etc..."
-                        rows={3}
-                        className="resize-none"
-                      />
+                  return (
+                    <div key={machine.id} className="border rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-slate-900 text-lg">
+                            {machine.nombre}
+                          </h3>
+                          <p className="text-sm text-slate-500">{machine.codigo}</p>
+                        </div>
+                        <Badge className={
+                          machine.estado === "Disponible"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }>
+                          {machine.estado}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`obs-${machine.id}`} className="text-sm font-medium text-slate-700">
+                            Observaciones del Jefe de Turno Saliente
+                          </Label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={isCurrentlyRecording ? "destructive" : "outline"}
+                            onClick={() => handleVoiceInput(machine.id, 'machine')}
+                            className="ml-2"
+                          >
+                            {isCurrentlyRecording ? (
+                              <>
+                                <Square className="w-4 h-4 mr-1" />
+                                Detener
+                              </>
+                            ) : (
+                              <>
+                                <Mic className="w-4 h-4 mr-1" />
+                                Grabar
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <Textarea
+                          id={`obs-${machine.id}`}
+                          value={observaciones[machine.id] || ""}
+                          onChange={(e) => handleObservacionChange(machine.id, e.target.value)}
+                          placeholder="Escribe o graba el estado de la máquina, incidencias, trabajos pendientes, etc..."
+                          rows={3}
+                          className={`resize-none ${isCurrentlyRecording ? 'border-red-500 bg-red-50' : ''}`}
+                        />
+                        {isCurrentlyRecording && (
+                          <p className="text-xs text-red-600 animate-pulse">
+                            🔴 Grabando... Habla ahora
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -264,17 +355,42 @@ export default function ShiftHandoverPage() {
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-2">
-              <Label htmlFor="otras_indicaciones" className="text-sm font-medium text-slate-700">
-                Información adicional relevante para el turno entrante
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="otras_indicaciones" className="text-sm font-medium text-slate-700">
+                  Información adicional relevante para el turno entrante
+                </Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isRecording['general-general'] ? "destructive" : "outline"}
+                  onClick={() => handleVoiceInput('general', 'general')}
+                >
+                  {isRecording['general-general'] ? (
+                    <>
+                      <Square className="w-4 h-4 mr-1" />
+                      Detener
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4 mr-1" />
+                      Grabar
+                    </>
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="otras_indicaciones"
                 value={otrasIndicaciones}
                 onChange={(e) => setOtrasIndicaciones(e.target.value)}
                 placeholder="Incidencias generales, avisos importantes, personal ausente, reuniones programadas, etc..."
                 rows={6}
-                className="resize-none"
+                className={`resize-none ${isRecording['general-general'] ? 'border-red-500 bg-red-50' : ''}`}
               />
+              {isRecording['general-general'] && (
+                <p className="text-xs text-red-600 animate-pulse">
+                  🔴 Grabando... Habla ahora
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

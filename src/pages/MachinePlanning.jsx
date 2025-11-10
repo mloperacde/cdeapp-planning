@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,8 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarRange, Power, PowerOff, Settings, GripVertical, Sparkles, ArrowLeft } from "lucide-react";
-import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarRange, Power, PowerOff, Settings, GripVertical, Sparkles, ArrowLeft, Calendar as CalendarIcon, AlertTriangle, Users } from "lucide-react";
+import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router-dom";
@@ -41,6 +41,8 @@ export default function MachinePlanningPage() {
   const [showProcessDialog, setShowProcessDialog] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [isCalling, setIsCalling] = useState(false);
+  const [viewMode, setViewMode] = useState('day');
+  const [currentTab, setCurrentTab] = useState('list');
   const queryClient = useQueryClient();
 
   const { data: machines, isLoading: loadingMachines } = useQuery({
@@ -70,6 +72,12 @@ export default function MachinePlanningPage() {
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
+  });
+
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
     initialData: [],
   });
 
@@ -106,7 +114,6 @@ export default function MachinePlanningPage() {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    // Update order for all affected machines
     items.forEach((machine, index) => {
       if (machine.orden !== index + 1) {
         updateMachineOrderMutation.mutate({ 
@@ -120,16 +127,37 @@ export default function MachinePlanningPage() {
   const handleTogglePlanning = (machine) => {
     const planning = getPlanningForMachine(machine.id);
     
-    if (planning?.activa_planning) {
+    // Verificar operarios disponibles antes de activar
+    if (!planning?.activa_planning) {
+      const currentActiveMachines = plannings.filter(
+        p => p.activa_planning && 
+        p.team_key === selectedTeam && 
+        p.fecha_planificacion === selectedDate &&
+        p.machine_id !== machine.id
+      );
+      
+      const currentTotalOperators = currentActiveMachines.reduce((sum, p) => sum + (p.operadores_necesarios || 0), 0);
+      
+      // Necesitamos saber cuántos operadores necesita esta máquina
+      const machineProcess = machineProcesses.find(mp => mp.machine_id === machine.id);
+      const neededOperators = machineProcess?.operadores_requeridos || 1;
+      
+      if (currentTotalOperators + neededOperators > availableOperators) {
+        alert('⚠️ No hay suficientes operarios disponibles para activar esta máquina.\n\n' +
+              `Operarios necesarios: ${currentTotalOperators + neededOperators}\n` +
+              `Operarios disponibles: ${availableOperators}\n\n` +
+              'Por favor, desactiva otras máquinas o aumenta la disponibilidad de operarios.');
+        return;
+      }
+      
+      setSelectedMachine(machine);
+      setShowProcessDialog(true);
+    } else {
       // Desactivar
       savePlanningMutation.mutate({
         ...planning,
         activa_planning: false,
       });
-    } else {
-      // Activar - mostrar diálogo de selección de proceso
-      setSelectedMachine(machine);
-      setShowProcessDialog(true);
     }
   };
 
@@ -157,18 +185,12 @@ export default function MachinePlanningPage() {
   const handleCallAgent = async () => {
     setIsCalling(true);
     try {
-      // Aquí llamaríamos al agente assignment_generator
-      // Por ahora solo mostramos un mensaje
       alert('Llamando al agente de planificación automática...');
-      
-      // Simulamos la llamada al agente
-      // await base44.agents.assignmentGenerator.generate({ date: selectedDate, team: selectedTeam });
-      
     } catch (error) {
       console.error('Error al llamar al agente:', error);
       alert('Error al ejecutar la planificación automática');
     } finally {
-      queryClient.invalidateQueries({ queryKey: ['machinePlannings'] }); // Invalidate after agent call
+      queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
       setIsCalling(false);
     }
   };
@@ -205,6 +227,48 @@ export default function MachinePlanningPage() {
     return activeMachines.reduce((sum, p) => sum + (p.operadores_necesarios || 0), 0);
   }, [activeMachines]);
 
+  // Calcular operarios disponibles
+  const availableOperators = useMemo(() => {
+    // Filtrar empleados del equipo seleccionado que estén disponibles
+    const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+    if (!teamName) return 0;
+
+    return employees.filter(emp => 
+      emp.equipo === teamName && 
+      emp.disponibilidad === "Disponible"
+    ).length;
+  }, [employees, selectedTeam, teams]);
+
+  const operatorsDeficit = totalOperators - availableOperators;
+
+  // Obtener rango de fechas para la vista de calendario
+  const getCalendarDates = () => {
+    const date = new Date(selectedDate);
+    switch (viewMode) {
+      case 'week':
+        const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+        return eachDayOfInterval({ start: weekStart, end: weekEnd });
+      case 'month':
+        const monthStart = startOfMonth(date);
+        const monthEnd = endOfMonth(date);
+        return eachDayOfInterval({ start: monthStart, end: monthEnd });
+      default:
+        return [date];
+    }
+  };
+
+  const calendarDates = getCalendarDates();
+
+  const getActiveMachinesForDate = (date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return plannings.filter(
+      p => p.activa_planning && 
+      p.team_key === selectedTeam && 
+      p.fecha_planificacion === dateStr
+    ).length;
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -240,7 +304,7 @@ export default function MachinePlanningPage() {
         {/* Filtros */}
         <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fecha">Fecha de Planificación</Label>
                 <Input
@@ -266,12 +330,26 @@ export default function MachinePlanningPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="viewMode">Vista de Calendario</Label>
+                <Select value={viewMode} onValueChange={setViewMode}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Día</SelectItem>
+                    <SelectItem value="week">Semana</SelectItem>
+                    <SelectItem value="month">Mes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Resumen */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Resumen con alerta si faltan operarios */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -284,135 +362,239 @@ export default function MachinePlanningPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Total Operadores Necesarios</p>
-                  <p className="text-2xl font-bold text-green-900">{totalOperators}</p>
+                  <p className="text-xs text-orange-700 font-medium">Total Operadores Necesarios</p>
+                  <p className="text-2xl font-bold text-orange-900">{totalOperators}</p>
                 </div>
-                <Settings className="w-8 h-8 text-green-600" />
+                <Settings className="w-8 h-8 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={`bg-gradient-to-br ${
+            operatorsDeficit > 0 
+              ? 'from-red-50 to-red-100 border-red-300' 
+              : 'from-green-50 to-green-100 border-green-200'
+          }`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-xs font-medium ${
+                    operatorsDeficit > 0 ? 'text-red-700' : 'text-green-700'
+                  }`}>
+                    Operadores Disponibles
+                  </p>
+                  <p className={`text-2xl font-bold ${
+                    operatorsDeficit > 0 ? 'text-red-900' : 'text-green-900'
+                  }`}>
+                    {availableOperators}
+                  </p>
+                </div>
+                {operatorsDeficit > 0 ? (
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                ) : (
+                  <Users className="w-8 h-8 text-green-600" />
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Lista de Máquinas con Drag & Drop */}
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle>
-              Lista de Máquinas ({machines.length})
-              <p className="text-sm text-slate-500 font-normal mt-1">
-                Arrastra las máquinas para reordenarlas
-              </p>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loadingMachines ? (
-              <div className="p-12 text-center text-slate-500">Cargando máquinas...</div>
-            ) : (
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="machines">
-                  {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                    >
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-slate-50">
-                            <TableHead className="w-12"></TableHead>
-                            <TableHead>Máquina</TableHead>
-                            <TableHead>Proceso</TableHead>
-                            <TableHead>Operadores</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {machines.map((machine, index) => {
-                            const planning = getPlanningForMachine(machine.id);
-                            const isActive = planning?.activa_planning;
+        {/* Alerta de déficit de operarios */}
+        {operatorsDeficit > 0 && (
+          <Card className="mb-6 bg-red-50 border-2 border-red-300">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-red-900 mb-1">
+                    ⚠️ Déficit de Operadores: Faltan {operatorsDeficit} operador{operatorsDeficit !== 1 ? 'es' : ''}
+                  </p>
+                  <p className="text-sm text-red-800">
+                    No puedes activar más máquinas hasta que haya suficientes operarios disponibles. 
+                    Desactiva algunas máquinas o aumenta la disponibilidad de empleados.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                            return (
-                              <Draggable
-                                key={machine.id}
-                                draggableId={machine.id}
-                                index={index}
-                              >
-                                {(provided, snapshot) => (
-                                  <TableRow
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className={`
-                                      ${snapshot.isDragging ? 'bg-blue-50 shadow-lg' : 'hover:bg-slate-50'}
-                                      ${isActive ? 'bg-green-50' : ''}
-                                    `}
+        {/* Tabs: Lista y Calendario */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
+          <Tabs value={currentTab} onValueChange={setCurrentTab}>
+            <CardHeader className="border-b border-slate-100">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="list">Vista Lista</TabsTrigger>
+                <TabsTrigger value="calendar">Vista Calendario</TabsTrigger>
+              </TabsList>
+            </CardHeader>
+
+            <TabsContent value="list" className="mt-0">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-lg mb-4">Lista de Máquinas ({machines.length})</h3>
+                {loadingMachines ? (
+                  <div className="p-12 text-center text-slate-500">Cargando máquinas...</div>
+                ) : (
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="machines">
+                      {(provided) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                        >
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-slate-50">
+                                <TableHead className="w-12"></TableHead>
+                                <TableHead>Máquina</TableHead>
+                                <TableHead>Proceso</TableHead>
+                                <TableHead>Operadores</TableHead>
+                                <TableHead>Estado</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {machines.map((machine, index) => {
+                                const planning = getPlanningForMachine(machine.id);
+                                const isActive = planning?.activa_planning;
+
+                                return (
+                                  <Draggable
+                                    key={machine.id}
+                                    draggableId={machine.id}
+                                    index={index}
                                   >
-                                    <TableCell {...provided.dragHandleProps}>
-                                      <GripVertical className="w-5 h-5 text-slate-400 cursor-grab" />
-                                    </TableCell>
-                                    <TableCell>
-                                      <div>
-                                        <span className="font-semibold text-slate-900">{machine.nombre}</span>
-                                        <div className="text-xs text-slate-500">{machine.codigo}</div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      {planning?.process_id ? (
-                                        <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                                          {getProcessName(planning.process_id)}
-                                        </Badge>
-                                      ) : (
-                                        <span className="text-slate-400">-</span>
-                                      )}
-                                    </TableCell>
-                                    <TableCell>
-                                      {planning?.operadores_necesarios ? (
-                                        <Badge className="bg-purple-100 text-purple-800">
-                                          {planning.operadores_necesarios}
-                                        </Badge>
-                                      ) : (
-                                        <span className="text-slate-400">-</span>
-                                      )}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge className={
-                                        isActive
-                                          ? "bg-green-100 text-green-800"
-                                          : "bg-slate-100 text-slate-600"
-                                      }>
-                                        {isActive ? "Activa" : "Inactiva"}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleTogglePlanning(machine)}
-                                        title={isActive ? "Desactivar" : "Activar"}
+                                    {(provided, snapshot) => (
+                                      <TableRow
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        className={`
+                                          ${snapshot.isDragging ? 'bg-blue-50 shadow-lg' : 'hover:bg-slate-50'}
+                                          ${isActive ? 'bg-green-50' : ''}
+                                        `}
                                       >
-                                        {isActive ? (
-                                          <PowerOff className="w-4 h-4 text-red-600" />
-                                        ) : (
-                                          <Power className="w-4 h-4 text-green-600" />
-                                        )}
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                )}
-                              </Draggable>
-                            );
-                          })}
-                          {provided.placeholder}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-            )}
-          </CardContent>
+                                        <TableCell {...provided.dragHandleProps}>
+                                          <GripVertical className="w-5 h-5 text-slate-400 cursor-grab" />
+                                        </TableCell>
+                                        <TableCell>
+                                          <div>
+                                            <span className="font-semibold text-slate-900">{machine.nombre}</span>
+                                            <div className="text-xs text-slate-500">{machine.codigo}</div>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          {planning?.process_id ? (
+                                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                              {getProcessName(planning.process_id)}
+                                            </Badge>
+                                          ) : (
+                                            <span className="text-slate-400">-</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {planning?.operadores_necesarios ? (
+                                            <Badge className="bg-purple-100 text-purple-800">
+                                              {planning.operadores_necesarios}
+                                            </Badge>
+                                          ) : (
+                                            <span className="text-slate-400">-</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge className={
+                                            isActive
+                                              ? "bg-green-100 text-green-800"
+                                              : "bg-slate-100 text-slate-600"
+                                          }>
+                                            {isActive ? "Activa" : "Inactiva"}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleTogglePlanning(machine)}
+                                            title={isActive ? "Desactivar" : "Activar"}
+                                          >
+                                            {isActive ? (
+                                              <PowerOff className="w-4 h-4 text-red-600" />
+                                            ) : (
+                                              <Power className="w-4 h-4 text-green-600" />
+                                            )}
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                  </Draggable>
+                                );
+                              })}
+                              {provided.placeholder}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
+                )}
+              </CardContent>
+            </TabsContent>
+
+            <TabsContent value="calendar" className="mt-0">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-lg mb-4">
+                  Calendario de Planificación - {viewMode === 'day' ? 'Día' : viewMode === 'week' ? 'Semana' : 'Mes'}
+                </h3>
+                <div className={`grid gap-3 ${
+                  viewMode === 'month' ? 'grid-cols-7' : 
+                  viewMode === 'week' ? 'grid-cols-7' : 
+                  'grid-cols-1'
+                }`}>
+                  {calendarDates.map((date) => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const activeMachinesCount = getActiveMachinesForDate(date);
+                    const isSelected = isSameDay(date, new Date(selectedDate));
+
+                    return (
+                      <div
+                        key={dateStr}
+                        onClick={() => setSelectedDate(dateStr)}
+                        className={`
+                          p-4 border-2 rounded-lg cursor-pointer transition-all
+                          ${isSelected 
+                            ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                            : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}
+                          ${activeMachinesCount > 0 ? 'bg-green-50' : ''}
+                        `}
+                      >
+                        <div className="text-center">
+                          <div className="text-xs text-slate-500 font-medium">
+                            {format(date, 'EEE', { locale: es })}
+                          </div>
+                          <div className="text-2xl font-bold text-slate-900">
+                            {format(date, 'd')}
+                          </div>
+                          {viewMode === 'month' && (
+                            <div className="text-xs text-slate-500">
+                              {format(date, 'MMM', { locale: es })}
+                            </div>
+                          )}
+                          {activeMachinesCount > 0 && (
+                            <Badge className="mt-2 bg-green-600 text-white text-xs">
+                              {activeMachinesCount} máq.
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </TabsContent>
+          </Tabs>
         </Card>
 
         {/* Máquinas Activas Hoy */}
@@ -420,7 +602,7 @@ export default function MachinePlanningPage() {
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100">
               <CardTitle>
-                Máquinas Activas para Hoy ({activeMachines.length})
+                Máquinas Activas para {format(new Date(selectedDate), "d 'de' MMMM, yyyy", { locale: es })} ({activeMachines.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">

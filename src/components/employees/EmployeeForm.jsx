@@ -20,10 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge"; // New import
-import { differenceInDays, differenceInMonths, differenceInYears, format } from "date-fns"; // Added format
-import { es } from "date-fns/locale"; // New import for locale
-import { AlertCircle } from "lucide-react"; // New import
+import { Badge } from "@/components/ui/badge";
+import { differenceInDays, differenceInMonths, differenceInYears, format } from "date-fns";
+import { es } from "date-fns/locale";
+import { AlertCircle } from "lucide-react";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   const [formData, setFormData] = useState(employee || {
@@ -33,8 +33,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     dni: "",
     sexo: "",
     nacionalidad: "",
+    direccion: "", // Added
+    formacion: "", // Added
     email: "",
-    telefono: "",
     telefono_movil: "",
     contacto_emergencia_nombre: "",
     contacto_emergencia_telefono: "",
@@ -54,6 +55,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     fecha_alta: "",
     tipo_contrato: "",
     codigo_contrato: "",
+    fecha_fin_contrato: "", // Added
     salario_anual: 0,
     evaluacion_responsable: "",
     propuesta_cambio_categoria: "",
@@ -68,10 +70,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       objetivo_5: { descripcion: "", peso: 0, resultado: 0 },
       objetivo_6: { descripcion: "", peso: 0, resultado: 0 },
     },
-    // Removed ausencia_inicio, ausencia_fin, ausencia_motivo from initial state as they are now read-only
   });
-
-  // Removed fullDayAbsence state as it's no longer used
 
   const queryClient = useQueryClient();
 
@@ -87,7 +86,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     initialData: [],
   });
 
-  const antiguedad = useMemo(() => { // Changed to useMemo as React.useMemo is redundant
+  const antiguedad = useMemo(() => {
     if (!formData.fecha_alta) return null;
     
     const fechaAlta = new Date(formData.fecha_alta);
@@ -95,22 +94,18 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     
     const years = differenceInYears(hoy, fechaAlta);
     const months = differenceInMonths(hoy, fechaAlta) % 12;
-    // Adjusted logic for days as per outline
     const days = differenceInDays(hoy, new Date(hoy.getFullYear(), hoy.getMonth() - months, fechaAlta.getDate()));
     
     let result = [];
     if (years > 0) result.push(`${years} año${years !== 1 ? 's' : ''}`);
     if (months > 0) result.push(`${months} mes${months !== 1 ? 'es' : ''}`);
-    if (days > 0 && years === 0) result.push(`${days} día${days !== 1 ? 's' : ''}`); // Only show days if less than a year
+    if (days > 0 && years === 0) result.push(`${days} día${days !== 1 ? 's' : ''}`);
     
     return result.length > 0 ? result.join(', ') : '0 días';
   }, [formData.fecha_alta]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      // Removed absence-related logic (fullDayAbsence adjustment, clearing absence fields, deleting absences)
-      // Absence management is now external and reflected in the formData.disponibilidad
-      
       if (employee?.id) {
         return base44.entities.Employee.update(employee.id, data);
       }
@@ -118,7 +113,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      // Removed invalidation of 'absences' query as absence management is now external
       onClose();
     },
   });
@@ -143,9 +137,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     });
   };
 
-  // Showing absence info if exists
   const isAbsent = formData.disponibilidad === "Ausente";
-  // Check if both start and end dates are present to consider "hasAbsenceData"
   const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
 
   return (
@@ -233,6 +225,26 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   />
                 </div>
 
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="direccion">Dirección</Label>
+                  <Input
+                    id="direccion"
+                    value={formData.direccion || ""}
+                    onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                    placeholder="Calle, número, piso, ciudad, código postal"
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="formacion">Formación</Label>
+                  <Input
+                    id="formacion"
+                    value={formData.formacion || ""}
+                    onChange={(e) => setFormData({ ...formData, formacion: e.target.value })}
+                    placeholder="Estudios, titulaciones, certificados"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -240,15 +252,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     type="email"
                     value={formData.email || ""}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="telefono">Teléfono</Label>
-                  <Input
-                    id="telefono"
-                    value={formData.telefono || ""}
-                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                   />
                 </div>
 
@@ -572,6 +575,16 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="fecha_fin_contrato">Fecha Fin Contrato</Label>
+                  <Input
+                    id="fecha_fin_contrato"
+                    type="date"
+                    value={formData.fecha_fin_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_fin_contrato: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label>Categoría</Label>
                   <Input value={formData.categoria || ""} disabled className="bg-slate-50" />
                   <p className="text-xs text-slate-500">Desde pestaña Datos</p>
@@ -587,7 +600,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   />
                 </div>
 
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <Label>Tipo de Jornada</Label>
                   <Input value={formData.tipo_jornada || ""} disabled className="bg-slate-50" />
                   <p className="text-xs text-slate-500">Desde pestaña Horario</p>
