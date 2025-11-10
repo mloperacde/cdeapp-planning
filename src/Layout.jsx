@@ -9,6 +9,9 @@ import {
   Coffee,
   Cog,
   ArrowLeftRight,
+  BarChart3,
+  FileText,
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +28,11 @@ import {
 } from "@/components/ui/sidebar";
 
 const navigationItems = [
+  {
+    title: "Panel de Control",
+    url: createPageUrl("Dashboard"),
+    icon: BarChart3,
+  },
   {
     title: "Planning/Línea de Tiempo",
     url: createPageUrl("Timeline"),
@@ -49,6 +57,16 @@ const navigationItems = [
     title: "Descansos",
     url: createPageUrl("Breaks"),
     icon: Coffee,
+  },
+  {
+    title: "Informes",
+    url: createPageUrl("Reports"),
+    icon: FileText,
+  },
+  {
+    title: "Notificaciones",
+    url: createPageUrl("Notifications"),
+    icon: Bell,
   },
   {
     title: "Configuración",

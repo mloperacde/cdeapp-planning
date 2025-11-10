@@ -11,6 +11,9 @@ import ProcessConfiguration from './pages/ProcessConfiguration';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import PerformanceManagement from './pages/PerformanceManagement';
 import ShiftHandover from './pages/ShiftHandover';
+import Dashboard from './pages/Dashboard';
+import Reports from './pages/Reports';
+import Notifications from './pages/Notifications';
 import Layout from './Layout.jsx';
 
 
@@ -28,6 +31,9 @@ export const PAGES = {
     "MaintenanceTracking": MaintenanceTracking,
     "PerformanceManagement": PerformanceManagement,
     "ShiftHandover": ShiftHandover,
+    "Dashboard": Dashboard,
+    "Reports": Reports,
+    "Notifications": Notifications,
 }
 
 export const pagesConfig = {
