@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,16 +13,95 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import SignatureCanvas from "react-signature-canvas";
+
+function SignaturePad({ onSave, existingSignature }) {
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+
+    if (existingSignature) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.src = existingSignature;
+    }
+  }, [existingSignature]);
+
+  const startDrawing = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext('2d');
+    
+    ctx.beginPath();
+    ctx.moveTo(
+      e.clientX - rect.left,
+      e.clientY - rect.top
+    );
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext('2d');
+    
+    ctx.lineTo(
+      e.clientX - rect.left,
+      e.clientY - rect.top
+    );
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    if (isDrawing) {
+      const canvas = canvasRef.current;
+      onSave(canvas.toDataURL());
+    }
+    setIsDrawing(false);
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    onSave('');
+  };
+
+  return (
+    <div className="space-y-2">
+      <canvas
+        ref={canvasRef}
+        width={600}
+        height={150}
+        className="border-2 border-slate-200 rounded-lg w-full cursor-crosshair bg-white"
+        onMouseDown={startDrawing}
+        onMouseMove={draw}
+        onMouseUp={stopDrawing}
+        onMouseLeave={stopDrawing}
+      />
+      <Button type="button" variant="outline" size="sm" onClick={clear}>
+        Limpiar
+      </Button>
+    </div>
+  );
+}
 
 export default function MaintenanceWorkOrder({ maintenance, machines, employees, onClose }) {
   const [fechaInicio, setFechaInicio] = useState(maintenance.fecha_inicio || "");
   const [fechaFin, setFechaFin] = useState(maintenance.fecha_finalizacion || "");
+  const [firmaTecnico, setFirmaTecnico] = useState(maintenance.firma_tecnico || "");
+  const [firmaRevisado, setFirmaRevisado] = useState(maintenance.firma_revisado || "");
+  const [firmaVerificado, setFirmaVerificado] = useState(maintenance.firma_verificado || "");
   const queryClient = useQueryClient();
-
-  const tecnicoSigPad = useRef(null);
-  const revisadoSigPad = useRef(null);
-  const verificadoSigPad = useRef(null);
 
   const completeMutation = useMutation({
     mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, data),
@@ -42,9 +121,9 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
       fecha_inicio: fechaInicio,
       fecha_finalizacion: fechaFin,
       duracion_real: duracionReal,
-      firma_tecnico: tecnicoSigPad.current?.toDataURL() || maintenance.firma_tecnico,
-      firma_revisado: revisadoSigPad.current?.toDataURL() || maintenance.firma_revisado,
-      firma_verificado: verificadoSigPad.current?.toDataURL() || maintenance.firma_verificado,
+      firma_tecnico: firmaTecnico,
+      firma_revisado: firmaRevisado,
+      firma_verificado: firmaVerificado,
     };
 
     completeMutation.mutate(data);
@@ -164,68 +243,26 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label>Firma Técnico Asignado</Label>
-                <div className="border-2 border-slate-200 rounded-lg">
-                  <SignatureCanvas
-                    ref={tecnicoSigPad}
-                    canvasProps={{
-                      className: 'w-full h-32 bg-white rounded-lg',
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => tecnicoSigPad.current?.clear()}
-                  >
-                    Limpiar
-                  </Button>
-                </div>
+                <SignaturePad 
+                  onSave={setFirmaTecnico}
+                  existingSignature={firmaTecnico}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Firma Revisado Por</Label>
-                <div className="border-2 border-slate-200 rounded-lg">
-                  <SignatureCanvas
-                    ref={revisadoSigPad}
-                    canvasProps={{
-                      className: 'w-full h-32 bg-white rounded-lg',
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => revisadoSigPad.current?.clear()}
-                  >
-                    Limpiar
-                  </Button>
-                </div>
+                <SignaturePad 
+                  onSave={setFirmaRevisado}
+                  existingSignature={firmaRevisado}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Firma Verificado Por</Label>
-                <div className="border-2 border-slate-200 rounded-lg">
-                  <SignatureCanvas
-                    ref={verificadoSigPad}
-                    canvasProps={{
-                      className: 'w-full h-32 bg-white rounded-lg',
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => verificadoSigPad.current?.clear()}
-                  >
-                    Limpiar
-                  </Button>
-                </div>
+                <SignaturePad 
+                  onSave={setFirmaVerificado}
+                  existingSignature={firmaVerificado}
+                />
               </div>
             </CardContent>
           </Card>
