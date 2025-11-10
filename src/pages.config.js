@@ -22,6 +22,7 @@ import SupportManagement1415 from './pages/SupportManagement1415';
 import ShiftManagement from './pages/ShiftManagement';
 import MLInsights from './pages/MLInsights';
 import DataImport from './pages/DataImport';
+import ShiftManagers from './pages/ShiftManagers';
 import Layout from './Layout.jsx';
 
 
@@ -50,6 +51,7 @@ export const PAGES = {
     "ShiftManagement": ShiftManagement,
     "MLInsights": MLInsights,
     "DataImport": DataImport,
+    "ShiftManagers": ShiftManagers,
 }
 
 export const pagesConfig = {

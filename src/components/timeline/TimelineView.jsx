@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { format, isWithinInterval, isSameDay, startOfWeek } from "date-fns";
@@ -18,7 +19,8 @@ export default function TimelineView({
   employees,
   teams,
   teamSchedules,
-  viewMode
+  viewMode,
+  selectedDepartment
 }) {
   const { workingIntervals, stats } = useMemo(() => {
     const allIntervals = [];
@@ -40,19 +42,26 @@ export default function TimelineView({
       employeeIds: v.aplica_todos ? null : v.employee_ids
     }));
 
-    // Filtrar empleados por equipo seleccionado
+    // Filtrar empleados por equipo y departamento
     const getTeamName = (teamKey) => {
       const team = teams.find(t => t.team_key === teamKey);
       return team?.team_name || '';
     };
 
     let filteredEmployees = employees;
+    
+    // Filtro por departamento
+    if (selectedDepartment !== 'all') {
+      filteredEmployees = filteredEmployees.filter(emp => emp.departamento === selectedDepartment);
+    }
+    
+    // Filtro por equipo
     if (selectedTeam === 'team_1') {
       const teamName = getTeamName('team_1');
-      filteredEmployees = employees.filter(emp => emp.equipo === teamName);
+      filteredEmployees = filteredEmployees.filter(emp => emp.equipo === teamName);
     } else if (selectedTeam === 'team_2') {
       const teamName = getTeamName('team_2');
-      filteredEmployees = employees.filter(emp => emp.equipo === teamName);
+      filteredEmployees = filteredEmployees.filter(emp => emp.equipo === teamName);
     }
 
     stats.totalEmployees = filteredEmployees.length;
@@ -169,7 +178,7 @@ export default function TimelineView({
     }
     
     return { workingIntervals: allIntervals, stats };
-  }, [startDate, endDate, holidays, vacations, selectedTeam, employees, teams, teamSchedules]);
+  }, [startDate, endDate, holidays, vacations, selectedTeam, employees, teams, teamSchedules, selectedDepartment]);
 
   if (workingIntervals.length === 0) {
     return (
@@ -202,6 +211,9 @@ export default function TimelineView({
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-2">
           Disponibilidad de Empleados
+          {selectedDepartment !== 'all' && (
+            <span className="text-orange-600 ml-2">- {selectedDepartment}</span>
+          )}
           {selectedTeam !== 'all' && (
             <span style={{ color: getTeamColor() }} className="ml-2">
               - {teams.find(t => t.team_key === selectedTeam)?.team_name}

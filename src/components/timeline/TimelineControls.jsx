@@ -1,8 +1,9 @@
+
 import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, RotateCcw, CalendarOff, Plane, CalendarDays, CalendarRange, Users } from "lucide-react";
+import { Calendar, Clock, RotateCcw, CalendarOff, Plane, CalendarDays, CalendarRange, Users, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import HolidayManager from "./HolidayManager";
@@ -23,7 +24,10 @@ export default function TimelineControls({
   onVacationsUpdate,
   selectedTeam,
   onSelectedTeamChange,
-  teams
+  teams,
+  selectedDepartment,
+  onSelectedDepartmentChange,
+  departments
 }) {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showVacationManager, setShowVacationManager] = useState(false);
@@ -40,6 +44,7 @@ export default function TimelineControls({
     onSelectedDateChange(now);
     onViewModeChange('day');
     onSelectedTeamChange('all');
+    onSelectedDepartmentChange('all');
   };
 
   const handleDateChange = (e) => {
@@ -58,6 +63,33 @@ export default function TimelineControls({
     <>
       <div className="p-6 md:p-8">
         <div className="space-y-6">
+          {/* Department Filter - NEW */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-blue-600" />
+              Filtrar por Departamento
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={selectedDepartment === 'all' ? 'default' : 'outline'}
+                onClick={() => onSelectedDepartmentChange('all')}
+                className={`${selectedDepartment === 'all' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+              >
+                Todos
+              </Button>
+              {departments.map(dept => (
+                <Button
+                  key={dept}
+                  variant={selectedDepartment === dept ? 'default' : 'outline'}
+                  onClick={() => onSelectedDepartmentChange(dept)}
+                  className={`${selectedDepartment === dept ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                >
+                  {dept}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Team Filter */}
           <div className="space-y-3">
             <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -161,6 +193,14 @@ export default function TimelineControls({
               <span className="font-semibold text-blue-600">
                 {viewMode === 'day' ? 'Vista de Día' : viewMode === 'week' ? 'Vista de Semana' : 'Vista de Mes'}
               </span>
+              {selectedDepartment !== 'all' && (
+                <>
+                  {' • '}
+                  <span className="font-semibold text-orange-600">
+                    {selectedDepartment}
+                  </span>
+                </>
+              )}
               {selectedTeam !== 'all' && (
                 <>
                   {' • '}

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -15,6 +16,7 @@ export default function Timeline() {
   const [viewMode, setViewMode] = useState('day');
   const [selectedDate, setSelectedDate] = useState(now);
   const [selectedTeam, setSelectedTeam] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all'); // New state for selected department
   const [isCalling, setIsCalling] = useState(false);
 
   const getDateRange = () => {
@@ -75,6 +77,17 @@ export default function Timeline() {
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
     initialData: [],
   });
+
+  // Get unique departments
+  const departments = useMemo(() => {
+    const depts = new Set();
+    if (employees) { // Ensure employees data is available
+      employees.forEach(emp => {
+        if (emp.departamento) depts.add(emp.departamento);
+      });
+    }
+    return Array.from(depts).sort();
+  }, [employees]);
 
   const handleCallSchedulingAssistant = async () => {
     setIsCalling(true);
@@ -149,6 +162,9 @@ export default function Timeline() {
               selectedTeam={selectedTeam}
               onSelectedTeamChange={setSelectedTeam}
               teams={teams}
+              selectedDepartment={selectedDepartment} // New prop
+              onSelectedDepartmentChange={setSelectedDepartment} // New prop
+              departments={departments} // New prop
             />
           </Card>
 
@@ -163,6 +179,7 @@ export default function Timeline() {
               teams={teams}
               teamSchedules={teamSchedules}
               viewMode={viewMode}
+              selectedDepartment={selectedDepartment} // New prop
             />
           </Card>
 

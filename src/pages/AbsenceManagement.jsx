@@ -43,6 +43,7 @@ export default function AbsenceManagementPage() {
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("all");
+  const [selectedDepartment, setSelectedDepartment] = useState("all"); // Added state for department filter
   const [fullDay, setFullDay] = useState(false);
   const queryClient = useQueryClient();
 
@@ -73,6 +74,15 @@ export default function AbsenceManagementPage() {
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
+
+  // Get unique departments
+  const departments = useMemo(() => {
+    const depts = new Set();
+    employees.forEach(emp => {
+      if (emp.departamento) depts.add(emp.departamento);
+    });
+    return Array.from(depts).sort();
+  }, [employees]);
 
   const updateEmployeeAvailability = async (employeeId, disponibilidad, ausenciaData = {}) => {
     await base44.entities.Employee.update(employeeId, {
@@ -212,10 +222,11 @@ export default function AbsenceManagementPage() {
         abs.motivo?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesTeam = selectedTeam === "all" || employee?.equipo === selectedTeam;
+      const matchesDepartment = selectedDepartment === "all" || employee?.departamento === selectedDepartment;
       
-      return matchesSearch && matchesTeam;
+      return matchesSearch && matchesTeam && matchesDepartment;
     });
-  }, [absences, searchTerm, selectedTeam, employees]);
+  }, [absences, searchTerm, selectedTeam, selectedDepartment, employees]);
 
   const activeAbsences = useMemo(() => {
     return absences.filter(abs => isAbsenceActive(abs));
@@ -366,11 +377,26 @@ export default function AbsenceManagementPage() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <Label className="text-sm font-medium text-slate-700">Filtrar por Equipo:</Label>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Label className="text-sm font-medium text-slate-700">Filtros:</Label>
+                    
+                    <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los Departamentos</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
                     <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                      <SelectTrigger className="w-64">
-                        <SelectValue />
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Equipo" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos los Equipos</SelectItem>

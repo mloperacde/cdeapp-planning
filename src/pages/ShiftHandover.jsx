@@ -181,10 +181,10 @@ export default function ShiftHandoverPage() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <ArrowLeftRight className="w-8 h-8 text-blue-600" />
-              Cambio de Turno
+              Información Traspaso de Turno
             </h1>
             <p className="text-slate-600 mt-1">
-              Registro de traspaso de información entre turnos
+              Registra observaciones y información relevante en el cambio de turno
             </p>
           </div>
           <div className="flex gap-2">

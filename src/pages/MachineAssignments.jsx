@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -231,10 +232,10 @@ export default function MachineAssignmentsPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Employees")}>
+          <Link to={createPageUrl("ShiftManagers")}>
             <Button variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Empleados
+              Volver a Jefes de Turno
             </Button>
           </Link>
         </div>

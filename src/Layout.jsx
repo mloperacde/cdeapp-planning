@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -14,7 +13,9 @@ import {
   FileText,
   Bell,
   Smartphone,
-  Calendar, // Added Calendar icon import
+  Calendar,
+  Upload,
+  UsersRound
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,19 +53,19 @@ const navigationItems = [
     icon: Cog,
   },
   {
-    title: "Gestión de Turnos",
-    url: createPageUrl("ShiftManagement"),
-    icon: Calendar,
+    title: "Jefes de Turno",
+    url: createPageUrl("ShiftManagers"),
+    icon: UsersRound,
   },
   {
-    title: "Apoyos 14-15h",
-    url: createPageUrl("SupportManagement1415"),
-    icon: Clock,
-  },
-  {
-    title: "Cambio de Turno",
+    title: "Información Traspaso Turno",
     url: createPageUrl("ShiftHandover"),
     icon: ArrowLeftRight,
+  },
+  {
+    title: "Apoyos 14-15",
+    url: createPageUrl("SupportManagement1415"),
+    icon: Clock,
   },
   {
     title: "Descansos",
@@ -74,7 +75,7 @@ const navigationItems = [
   {
     title: "Importar Datos",
     url: createPageUrl("DataImport"),
-    icon: FileText,
+    icon: Upload,
   },
   {
     title: "Informes",

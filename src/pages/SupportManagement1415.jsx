@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -51,10 +52,10 @@ export default function SupportManagement1415Page() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Clock className="w-8 h-8 text-blue-600" />
-            Gestión Apoyos 14-15h
+            Apoyos 14-15
           </h1>
           <p className="text-slate-600 mt-1">
-            Personal de FABRICACION con jornada completa disponible para tareas especiales 14:00-15:00h
+            Gestión de personal de apoyo en franja horaria 14:00-15:00h
           </p>
         </div>
 

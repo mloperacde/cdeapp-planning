@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, Sunrise, Sunset, Calendar, RefreshCw, Save, Filter, ArrowLeft } from "lucide-react";
+import { Users, Sunrise, Sunset, Calendar, RefreshCw, Save, Filter, ArrowLeft, UsersRound } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -175,22 +175,24 @@ export default function TeamConfigurationPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Employees")}>
+          <Link to={createPageUrl("ShiftManagers")}>
             <Button variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Empleados
+              Volver a Jefes de Turno
             </Button>
           </Link>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Users className="w-8 h-8 text-blue-600" />
-            Configuración de Equipos de Turno
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Configura los equipos y sus turnos rotativos semanales
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <UsersRound className="w-8 h-8 text-blue-600" />
+              Equipos de Turno
+            </h1>
+            <p className="text-slate-600 mt-1">
+              Configura equipos y programa sus turnos semanales
+            </p>
+          </div>
         </div>
 
         <Tabs defaultValue="teams" className="space-y-6">

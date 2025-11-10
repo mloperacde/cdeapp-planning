@@ -2,13 +2,14 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Cake, PartyPopper } from "lucide-react";
-import { format, isSameDay, addDays } from "date-fns";
+import { format, isSameDay, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function BirthdayPanel({ employees }) {
   const upcomingBirthdays = useMemo(() => {
     const today = new Date();
-    const next30Days = addDays(today, 30);
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
     
     return employees
       .filter(emp => emp.fecha_nacimiento)
@@ -23,17 +24,17 @@ export default function BirthdayPanel({ employees }) {
         
         const age = today.getFullYear() - birthDate.getFullYear();
         const isToday = isSameDay(thisYearBirthday, today);
-        const isUpcoming = thisYearBirthday <= next30Days;
+        const isThisWeek = thisYearBirthday >= weekStart && thisYearBirthday <= weekEnd;
         
         return {
           ...emp,
           nextBirthday: thisYearBirthday,
           age,
           isToday,
-          isUpcoming,
+          isThisWeek,
         };
       })
-      .filter(emp => emp.isUpcoming)
+      .filter(emp => emp.isThisWeek)
       .sort((a, b) => a.nextBirthday - b.nextBirthday);
   }, [employees]);
 
@@ -41,34 +42,34 @@ export default function BirthdayPanel({ employees }) {
 
   return (
     <Card className="shadow-lg border-0 bg-gradient-to-br from-pink-50 to-purple-50">
-      <CardHeader className="border-b border-pink-200">
-        <CardTitle className="flex items-center gap-2 text-pink-900">
-          <Cake className="w-5 h-5" />
-          Próximos Cumpleaños (30 días)
+      <CardHeader className="border-b border-pink-200 pb-3">
+        <CardTitle className="flex items-center gap-2 text-pink-900 text-base">
+          <Cake className="w-4 h-4" />
+          Cumpleaños Esta Semana
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-4">
+      <CardContent className="p-3">
         <div className="space-y-2">
           {upcomingBirthdays.map((emp) => (
             <div
               key={emp.id}
-              className={`flex items-center justify-between p-3 rounded-lg ${
+              className={`flex items-center justify-between p-2 rounded-lg ${
                 emp.isToday 
                   ? 'bg-gradient-to-r from-pink-200 to-purple-200 border-2 border-pink-400' 
                   : 'bg-white border border-pink-200'
               }`}
             >
-              <div className="flex items-center gap-3">
-                {emp.isToday && <PartyPopper className="w-5 h-5 text-pink-600 animate-bounce" />}
+              <div className="flex items-center gap-2">
+                {emp.isToday && <PartyPopper className="w-4 h-4 text-pink-600 animate-bounce" />}
                 <div>
-                  <p className="font-semibold text-slate-900">{emp.nombre}</p>
-                  <p className="text-sm text-slate-600">
+                  <p className="font-semibold text-slate-900 text-sm">{emp.nombre}</p>
+                  <p className="text-xs text-slate-600">
                     {format(emp.nextBirthday, "d 'de' MMMM", { locale: es })}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <Badge className={emp.isToday ? "bg-pink-600" : "bg-purple-600"}>
+                <Badge className={`${emp.isToday ? "bg-pink-600" : "bg-purple-600"} text-xs`}>
                   {emp.age} años
                 </Badge>
                 {emp.isToday && (

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,9 +30,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Plus, Edit, Trash2, Users, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, Users, RefreshCw, CheckCircle, XCircle, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { format, addDays, startOfWeek, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
+import { Link } from "react-router-dom"; // Added Link
+
+// Helper function for creating URLs - assuming a simple implementation for now.
+// In a real application, this would typically be part of a router utility or constants.
+const createPageUrl = (pageName: string) => {
+  switch (pageName) {
+    case "ShiftManagers":
+      return "/shift-managers"; // Example path for Shift Managers page
+    // Add more cases for other pages as needed
+    default:
+      return "/";
+  }
+};
 
 export default function ShiftManagementPage() {
   const [showShiftForm, setShowShiftForm] = useState(false);
@@ -180,22 +194,31 @@ export default function ShiftManagementPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Link to={createPageUrl("ShiftManagers")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver a Jefes de Turno
+            </Button>
+          </Link>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <Calendar className="w-8 h-8 text-blue-600" />
-              Gestión de Turnos
+              <RefreshCw className="w-8 h-8 text-blue-600" />
+              Intercambio de Turnos
             </h1>
             <p className="text-slate-600 mt-1">
-              Crea, asigna y gestiona los turnos de los operadores
+              Gestiona solicitudes de intercambio de turnos entre operarios
             </p>
           </div>
           <Button
-            onClick={() => setShowShiftForm(true)}
+            onClick={() => setShowShiftForm(true)} // Retained existing state management
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Nuevo Turno
+            Asignar Turno
           </Button>
         </div>
 
