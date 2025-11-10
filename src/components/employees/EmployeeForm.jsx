@@ -31,10 +31,11 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     nombre: "",
     fecha_nacimiento: "",
     dni: "",
+    nuss: "", // Added
     sexo: "",
     nacionalidad: "",
-    direccion: "", // Added
-    formacion: "", // Added
+    direccion: "",
+    formacion: "",
     email: "",
     telefono_movil: "",
     contacto_emergencia_nombre: "",
@@ -58,7 +59,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     fecha_alta: "",
     tipo_contrato: "",
     codigo_contrato: "",
-    fecha_fin_contrato: "", // Added
+    fecha_fin_contrato: "",
     salario_anual: 0,
     evaluacion_responsable: "",
     propuesta_cambio_categoria: "",
@@ -89,6 +90,21 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     initialData: [],
   });
 
+  const edad = useMemo(() => {
+    if (!formData.fecha_nacimiento) return null;
+    
+    const birthDate = new Date(formData.fecha_nacimiento);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  }, [formData.fecha_nacimiento]);
+
   const antiguedad = useMemo(() => {
     if (!formData.fecha_alta) return null;
     
@@ -117,30 +133,29 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       newData.horario_tarde_inicio = "14:00";
       newData.horario_tarde_fin = "22:00";
     } else if (value === "Jornada Parcial") {
-      newData.num_horas_jornada = 20; // Default for partial, can be changed by user
+      // num_horas_jornada for partial is left for manual input
       newData.horario_manana_inicio = "07:00";
       newData.horario_manana_fin = "15:00";
       newData.horario_tarde_inicio = "15:00";
       newData.horario_tarde_fin = "22:00";
-    } else if (value === "Reducción de Jornada") {
-      // Default for "Reducción de Jornada" will depend on what was before, or be set manually
-      // We'll keep existing horario_manana/tarde_inicio/fin if they exist, or set sensible defaults
-      if (!newData.horario_manana_inicio) newData.horario_manana_inicio = "08:00";
-      if (!newData.horario_manana_fin) newData.horario_manana_fin = "12:00";
-      if (!newData.horario_tarde_inicio) newData.horario_tarde_inicio = "16:00";
-      if (!newData.horario_tarde_fin) newData.horario_tarde_fin = "20:00";
-      // num_horas_jornada should be set manually for Reducción de Jornada
     }
+    // For "Reducción de Jornada", specific time inputs will be shown based on turno type.
     
     setFormData(newData);
   };
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      if (employee?.id) {
-        return base44.entities.Employee.update(employee.id, data);
+      // Si es turno fijo, no debe tener equipo asignado
+      const finalData = { ...data };
+      if (data.tipo_turno === "Fijo Mañana" || data.tipo_turno === "Fijo Tarde") {
+        finalData.equipo = "";
       }
-      return base44.entities.Employee.create(data);
+      
+      if (employee?.id) {
+        return base44.entities.Employee.update(employee.id, finalData);
+      }
+      return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -170,6 +185,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
   const isAbsent = formData.disponibilidad === "Ausente";
   const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
+  const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -222,11 +238,30 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>Edad</Label>
+                  <Input 
+                    value={edad !== null ? `${edad} años` : "Sin fecha de nacimiento"} 
+                    disabled 
+                    className="bg-slate-50" 
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="dni">DNI/NIE</Label>
                   <Input
                     id="dni"
                     value={formData.dni || ""}
                     onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nuss">NUSS (Nº Seguridad Social)</Label>
+                  <Input
+                    id="nuss"
+                    value={formData.nuss || ""}
+                    onChange={(e) => setFormData({ ...formData, nuss: e.target.value })}
+                    placeholder="XX-XXXXXXXXXX-XX"
                   />
                 </div>
 
@@ -343,13 +378,14 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="equipo">Equipo *</Label>
+                  <Label htmlFor="equipo">Equipo {isTurnoFijo && "(No aplica para turnos fijos)"}</Label>
                   <Select
-                    value={formData.equipo}
+                    value={formData.equipo || ""}
                     onValueChange={(value) => setFormData({ ...formData, equipo: value })}
+                    disabled={isTurnoFijo}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar equipo" />
+                      <SelectValue placeholder={isTurnoFijo ? "Turnos fijos sin equipo" : "Seleccionar equipo"} />
                     </SelectTrigger>
                     <SelectContent>
                       {teams.map((team) => (
@@ -359,6 +395,11 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                       ))}
                     </SelectContent>
                   </Select>
+                  {isTurnoFijo && (
+                    <p className="text-xs text-blue-600">
+                      Los empleados con turno fijo están disponibles para cualquier equipo en su horario
+                    </p>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -389,7 +430,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     type="number"
                     min="1"
                     max="40"
-                    value={formData.num_horas_jornada || ""}
+                    value={formData.num_horas_jornada || 0}
                     onChange={(e) => setFormData({ ...formData, num_horas_jornada: parseFloat(e.target.value) })}
                     disabled={formData.tipo_jornada === "Jornada Completa"}
                     className={formData.tipo_jornada === "Jornada Completa" ? "bg-slate-100" : ""}
@@ -414,6 +455,56 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   </Select>
                 </div>
               </div>
+
+              {/* Jornada Reducida + Fijo Mañana */}
+              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Fijo Mañana" && (
+                <div className="p-4 border-2 border-amber-200 rounded-lg bg-amber-50 space-y-4">
+                  <h4 className="font-semibold text-amber-900">Configuración Turno Fijo Mañana - Jornada Reducida</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Hora de Entrada</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_manana_inicio || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_manana_inicio: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Hora de Salida</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_manana_fin || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_manana_fin: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Jornada Reducida + Fijo Tarde */}
+              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Fijo Tarde" && (
+                <div className="p-4 border-2 border-indigo-200 rounded-lg bg-indigo-50 space-y-4">
+                  <h4 className="font-semibold text-indigo-900">Configuración Turno Fijo Tarde - Jornada Reducida</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Hora de Entrada</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_tarde_inicio || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_tarde_inicio: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Hora de Salida</Label>
+                      <Input
+                        type="time"
+                        value={formData.horario_tarde_fin || ""}
+                        onChange={(e) => setFormData({ ...formData, horario_tarde_fin: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Configuración de horarios para Reducción de Jornada con Rotativo */}
               {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Rotativo" && (
@@ -553,7 +644,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 <div className="text-sm text-slate-700 space-y-1">
                   <p><strong>Jornada Completa:</strong> Mañana 7:00-15:00, Tarde 14:00-22:00</p>
                   <p><strong>Jornada Parcial:</strong> Mañana 7:00-15:00, Tarde 15:00-22:00 (configurable)</p>
-                  <p><strong>Reducción de Jornada:</strong> Horario configurable individualmente (Mañana y Tarde)</p>
+                  <p><strong>Jornada Reducida:</strong> Horario configurado específicamente</p>
+                  <p><strong>Turnos Fijos:</strong> Disponibles para cualquier equipo en su horario</p>
                 </div>
               </div>
             </TabsContent>

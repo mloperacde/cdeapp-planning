@@ -20,6 +20,7 @@ import MobileAppConfig from './pages/MobileAppConfig';
 import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import ShiftManagement from './pages/ShiftManagement';
+import MLInsights from './pages/MLInsights';
 import Layout from './Layout.jsx';
 
 
@@ -46,6 +47,7 @@ export const PAGES = {
     "PredictiveMaintenance": PredictiveMaintenance,
     "SupportManagement1415": SupportManagement1415,
     "ShiftManagement": ShiftManagement,
+    "MLInsights": MLInsights,
 }
 
 export const pagesConfig = {
