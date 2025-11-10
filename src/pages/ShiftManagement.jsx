@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,22 +29,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Plus, Edit, Trash2, Users, RefreshCw, CheckCircle, XCircle, ArrowLeft } from "lucide-react"; // Added ArrowLeft
+import { Calendar, Plus, Edit, Trash2, Users, RefreshCw, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 import { format, addDays, startOfWeek, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
-import { Link } from "react-router-dom"; // Added Link
-
-// Helper function for creating URLs - assuming a simple implementation for now.
-// In a real application, this would typically be part of a router utility or constants.
-const createPageUrl = (pageName: string) => {
-  switch (pageName) {
-    case "ShiftManagers":
-      return "/shift-managers"; // Example path for Shift Managers page
-    // Add more cases for other pages as needed
-    default:
-      return "/";
-  }
-};
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function ShiftManagementPage() {
   const [showShiftForm, setShowShiftForm] = useState(false);
@@ -214,7 +202,7 @@ export default function ShiftManagementPage() {
             </p>
           </div>
           <Button
-            onClick={() => setShowShiftForm(true)} // Retained existing state management
+            onClick={() => setShowShiftForm(true)}
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -231,7 +219,6 @@ export default function ShiftManagementPage() {
           </TabsList>
 
           <TabsContent value="calendar">
-            {/* Filtros */}
             <Card className="mb-6">
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -263,7 +250,6 @@ export default function ShiftManagementPage() {
               </CardContent>
             </Card>
 
-            {/* Tabla de Turnos */}
             <Card>
               <CardHeader>
                 <CardTitle>
@@ -407,7 +393,6 @@ export default function ShiftManagementPage() {
         </Tabs>
       </div>
 
-      {/* Dialog Formulario Turno */}
       {showShiftForm && (
         <Dialog open={true} onOpenChange={handleCloseShiftForm}>
           <DialogContent className="max-w-2xl">
