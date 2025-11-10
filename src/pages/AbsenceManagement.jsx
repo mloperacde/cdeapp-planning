@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,7 @@ export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState("all");
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -56,6 +58,12 @@ export default function AbsenceManagementPage() {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
+    initialData: [],
+  });
+
+  const { data: teams } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
 
@@ -155,11 +163,17 @@ export default function AbsenceManagementPage() {
   };
 
   const filteredAbsences = useMemo(() => {
-    return absences.filter(abs =>
-      getEmployeeName(abs.employee_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      abs.motivo?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [absences, searchTerm, employees]);
+    return absences.filter(abs => {
+      const employee = employees.find(e => e.id === abs.employee_id);
+      const matchesSearch = 
+        getEmployeeName(abs.employee_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        abs.motivo?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesTeam = selectedTeam === "all" || employee?.equipo === selectedTeam;
+      
+      return matchesSearch && matchesTeam;
+    });
+  }, [absences, searchTerm, selectedTeam, employees]);
 
   const activeAbsences = useMemo(() => {
     return absences.filter(abs => isAbsenceActive(abs));
@@ -274,16 +288,35 @@ export default function AbsenceManagementPage() {
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
-            <div className="flex justify-between items-center">
-              <CardTitle>Registro de Ausencias</CardTitle>
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar ausencias..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <CardTitle>Registro de Ausencias</CardTitle>
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar ausencias..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Label className="text-sm font-medium text-slate-700">Filtrar por Equipo:</Label>
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Seleccionar Equipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los Equipos</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.team_name}>
+                        {team.team_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>

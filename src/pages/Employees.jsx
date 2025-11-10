@@ -1,10 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -13,13 +21,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Users, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Search, Filter } from "lucide-react";
 import EmployeeForm from "../components/employees/EmployeeForm";
 
 export default function EmployeesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState({
+    tipo_jornada: "all",
+    tipo_turno: "all",
+    equipo: "all",
+    disponibilidad: "all",
+  });
   const queryClient = useQueryClient();
 
   const { data: employees, isLoading } = useQuery({
@@ -31,6 +45,12 @@ export default function EmployeesPage() {
   const { data: machines } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list(),
+    initialData: [],
+  });
+
+  const { data: teams } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
 
@@ -57,11 +77,21 @@ export default function EmployeesPage() {
     setEditingEmployee(null);
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.equipo?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const matchesSearch = 
+        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.equipo?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesTipoJornada = filters.tipo_jornada === "all" || emp.tipo_jornada === filters.tipo_jornada;
+      const matchesTipoTurno = filters.tipo_turno === "all" || emp.tipo_turno === filters.tipo_turno;
+      const matchesEquipo = filters.equipo === "all" || emp.equipo === filters.equipo;
+      const matchesDisponibilidad = filters.disponibilidad === "all" || emp.disponibilidad === filters.disponibilidad;
+      
+      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad;
+    });
+  }, [employees, searchTerm, filters]);
 
   const getAvailabilityBadge = (employee) => {
     if (employee.disponibilidad === "Ausente") {
@@ -96,27 +126,104 @@ export default function EmployeesPage() {
           </Button>
         </div>
 
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        {/* Filtros */}
+        <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
-            <div className="flex justify-between items-center">
-              <CardTitle>Lista de Empleados ({employees.length})</CardTitle>
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar empleados..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-blue-600" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <Label>Búsqueda</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar empleados..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo Jornada</Label>
+                <Select value={filters.tipo_jornada} onValueChange={(value) => setFilters({...filters, tipo_jornada: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="Completa 40h">Completa 40h</SelectItem>
+                    <SelectItem value="Completa 35h">Completa 35h</SelectItem>
+                    <SelectItem value="Reducida">Reducida</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo Turno</Label>
+                <Select value={filters.tipo_turno} onValueChange={(value) => setFilters({...filters, tipo_turno: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Rotativo">Rotativo</SelectItem>
+                    <SelectItem value="Fijo Mañana">Fijo Mañana</SelectItem>
+                    <SelectItem value="Fijo Tarde">Fijo Tarde</SelectItem>
+                    <SelectItem value="Turno Partido">Turno Partido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Equipo</Label>
+                <Select value={filters.equipo} onValueChange={(value) => setFilters({...filters, equipo: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.team_name}>
+                        {team.team_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Disponibilidad</Label>
+                <Select value={filters.disponibilidad} onValueChange={(value) => setFilters({...filters, disponibilidad: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="Disponible">Disponible</SelectItem>
+                    <SelectItem value="Ausente">Ausente</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle>Lista de Empleados ({filteredEmployees.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
               <div className="p-12 text-center text-slate-500">Cargando empleados...</div>
             ) : filteredEmployees.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
-                {searchTerm ? 'No se encontraron empleados' : 'No hay empleados registrados'}
+                {searchTerm || Object.values(filters).some(f => f !== "all") ? 'No se encontraron empleados con estos filtros' : 'No hay empleados registrados'}
               </div>
             ) : (
               <div className="overflow-x-auto">
