@@ -72,6 +72,11 @@ const navigationItems = [
     icon: Coffee,
   },
   {
+    title: "Importar Datos",
+    url: createPageUrl("DataImport"),
+    icon: FileText,
+  },
+  {
     title: "Informes",
     url: createPageUrl("Reports"),
     icon: FileText,

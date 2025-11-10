@@ -21,6 +21,7 @@ import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import ShiftManagement from './pages/ShiftManagement';
 import MLInsights from './pages/MLInsights';
+import DataImport from './pages/DataImport';
 import Layout from './Layout.jsx';
 
 
@@ -48,6 +49,7 @@ export const PAGES = {
     "SupportManagement1415": SupportManagement1415,
     "ShiftManagement": ShiftManagement,
     "MLInsights": MLInsights,
+    "DataImport": DataImport,
 }
 
 export const pagesConfig = {

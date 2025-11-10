@@ -30,11 +30,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, BarChart3 } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
@@ -50,6 +52,7 @@ export default function AbsenceManagementPage() {
     fecha_fin: "",
     motivo: "",
     tipo: "Vacaciones",
+    remunerada: true, // Added remunerada field
     notas: "",
   });
 
@@ -129,7 +132,17 @@ export default function AbsenceManagementPage() {
 
   const handleEdit = (absence) => {
     setEditingAbsence(absence);
-    setFormData(absence);
+    // Ensure remunerada has a default if not present in absence object
+    setFormData({ ...absence, remunerada: absence.remunerada ?? true });
+    // Check if dates are full day (e.g., 00:00 and 23:59) to set fullDay checkbox
+    const start = new Date(absence.fecha_inicio);
+    const end = new Date(absence.fecha_fin);
+    if (start.getHours() === 0 && start.getMinutes() === 0 &&
+        end.getHours() === 23 && end.getMinutes() === 59) {
+      setFullDay(true);
+    } else {
+      setFullDay(false);
+    }
     setShowForm(true);
   };
 
@@ -143,8 +156,10 @@ export default function AbsenceManagementPage() {
       fecha_fin: "",
       motivo: "",
       tipo: "Vacaciones",
+      remunerada: true, // Reset remunerada
       notas: "",
     });
+    setSearchTerm(""); // Reset search term for employee select
   };
 
   const handleSubmit = (e) => {
@@ -247,198 +262,217 @@ export default function AbsenceManagementPage() {
           </Button>
         </div>
 
-        {/* Alertas de ausencias expiradas */}
-        {expiredAbsences.length > 0 && (
-          <Card className="mb-6 bg-amber-50 border-amber-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-amber-900">
-                <AlertCircle className="w-5 h-5" />
-                Ausencias Finalizadas ({expiredAbsences.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-amber-800 mb-3">
-                Las siguientes ausencias han finalizado. Los empleados deberían estar disponibles automáticamente.
-              </p>
-              <div className="space-y-2">
-                {expiredAbsences.slice(0, 5).map((absence) => (
-                  <div key={absence.id} className="flex justify-between items-center bg-white p-3 rounded border border-amber-200">
-                    <div>
-                      <span className="font-semibold text-slate-900">{getEmployeeName(absence.employee_id)}</span>
-                      <span className="text-sm text-slate-600 ml-2">
-                        - Finalizó el {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm")}
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(absence)}
-                      className="text-amber-700 hover:bg-amber-100"
-                    >
-                      Marcar como Disponible
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Tabs defaultValue="absences" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="absences">
+              <UserX className="w-4 h-4 mr-2" />
+              Registro de Ausencias
+            </TabsTrigger>
+            <TabsTrigger value="dashboard">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Dashboard Estadísticas
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-red-700 font-medium">Ausencias Activas</p>
-                  <p className="text-2xl font-bold text-red-900">{activeAbsences.length}</p>
-                </div>
-                <UserX className="w-8 h-8 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-blue-700 font-medium">Total Ausencias</p>
-                  <p className="text-2xl font-bold text-blue-900">{absences.length}</p>
-                </div>
-                <UserX className="w-8 h-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-amber-700 font-medium">Finalizadas</p>
-                  <p className="text-2xl font-bold text-amber-900">{expiredAbsences.length}</p>
-                </div>
-                <AlertCircle className="w-8 h-8 text-amber-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <CardTitle>Registro de Ausencias</CardTitle>
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    placeholder="Buscar ausencias..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Label className="text-sm font-medium text-slate-700">Filtrar por Equipo:</Label>
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-64">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los Equipos</SelectItem>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.team_name}>
-                        {team.team_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-12 text-center text-slate-500">Cargando ausencias...</div>
-            ) : filteredAbsences.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
-                No hay ausencias registradas
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead>Empleado</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Fecha Inicio</TableHead>
-                      <TableHead>Fecha Fin</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAbsences.map((absence) => {
-                      const isActive = isAbsenceActive(absence);
-                      const isExpired = isAbsenceExpired(absence);
-                      
-                      return (
-                        <TableRow 
-                          key={absence.id} 
-                          className={`hover:bg-slate-50 ${isActive ? 'bg-red-50' : isExpired ? 'bg-slate-50' : ''}`}
+          <TabsContent value="absences" className="space-y-6">
+            {/* Alertas de ausencias expiradas */}
+            {expiredAbsences.length > 0 && (
+              <Card className="mb-6 bg-amber-50 border-amber-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-amber-900">
+                    <AlertCircle className="w-5 h-5" />
+                    Ausencias Finalizadas ({expiredAbsences.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-amber-800 mb-3">
+                    Las siguientes ausencias han finalizado. Los empleados deberían estar disponibles automáticamente.
+                  </p>
+                  <div className="space-y-2">
+                    {expiredAbsences.slice(0, 5).map((absence) => (
+                      <div key={absence.id} className="flex justify-between items-center bg-white p-3 rounded border border-amber-200">
+                        <div>
+                          <span className="font-semibold text-slate-900">{getEmployeeName(absence.employee_id)}</span>
+                          <span className="text-sm text-slate-600 ml-2">
+                            - Finalizó el {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm", { locale: es })}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(absence)}
+                          className="text-amber-700 hover:bg-amber-100"
                         >
-                          <TableCell>
-                            <span className={`font-semibold ${isActive ? 'text-red-700' : 'text-slate-900'}`}>
-                              {getEmployeeName(absence.employee_id)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{absence.tipo}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(absence.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm", { locale: es })}
-                          </TableCell>
-                          <TableCell>{absence.motivo}</TableCell>
-                          <TableCell>
-                            <Badge className={
-                              isActive ? "bg-red-100 text-red-800" :
-                              isExpired ? "bg-slate-100 text-slate-600" :
-                              "bg-blue-100 text-blue-800"
-                            }>
-                              {isActive ? "Activa" : isExpired ? "Finalizada" : "Futura"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(absence)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(absence)}
-                                className="hover:bg-red-50 hover:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                          Marcar como Disponible
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-red-700 font-medium">Ausencias Activas</p>
+                      <p className="text-2xl font-bold text-red-900">{activeAbsences.length}</p>
+                    </div>
+                    <UserX className="w-8 h-8 text-red-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-blue-700 font-medium">Total Ausencias</p>
+                      <p className="text-2xl font-bold text-blue-900">{absences.length}</p>
+                    </div>
+                    <UserX className="w-8 h-8 text-blue-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-amber-700 font-medium">Finalizadas</p>
+                      <p className="text-2xl font-bold text-amber-900">{expiredAbsences.length}</p>
+                    </div>
+                    <AlertCircle className="w-8 h-8 text-amber-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Registro de Ausencias</CardTitle>
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Buscar ausencias..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Label className="text-sm font-medium text-slate-700">Filtrar por Equipo:</Label>
+                    <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los Equipos</SelectItem>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.team_name}>
+                            {team.team_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-12 text-center text-slate-500">Cargando ausencias...</div>
+                ) : filteredAbsences.length === 0 ? (
+                  <div className="p-12 text-center text-slate-500">
+                    No hay ausencias registradas
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead>Empleado</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Fecha Inicio</TableHead>
+                          <TableHead>Fecha Fin</TableHead>
+                          <TableHead>Motivo</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAbsences.map((absence) => {
+                          const isActive = isAbsenceActive(absence);
+                          const isExpired = isAbsenceExpired(absence);
+                          
+                          return (
+                            <TableRow 
+                              key={absence.id} 
+                              className={`hover:bg-slate-50 ${isActive ? 'bg-red-50' : isExpired ? 'bg-slate-50' : ''}`}
+                            >
+                              <TableCell>
+                                <span className={`font-semibold ${isActive ? 'text-red-700' : 'text-slate-900'}`}>
+                                  {getEmployeeName(absence.employee_id)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{absence.tipo}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(absence.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm", { locale: es })}
+                              </TableCell>
+                              <TableCell>{absence.motivo}</TableCell>
+                              <TableCell>
+                                <Badge className={
+                                  isActive ? "bg-red-100 text-red-800" :
+                                  isExpired ? "bg-slate-100 text-slate-600" :
+                                  "bg-blue-100 text-blue-800"
+                                }>
+                                  {isActive ? "Activa" : isExpired ? "Finalizada" : "Futura"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEdit(absence)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDelete(absence)}
+                                    className="hover:bg-red-50 hover:text-red-600"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="dashboard">
+            <AbsenceDashboard absences={absences} employees={employees} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {showForm && (
@@ -511,13 +545,24 @@ export default function AbsenceManagementPage() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <Checkbox
+                  id="remunerada"
+                  checked={formData.remunerada}
+                  onCheckedChange={(checked) => setFormData({ ...formData, remunerada: checked })}
+                />
+                <label htmlFor="remunerada" className="text-sm font-medium text-slate-900 cursor-pointer">
+                  Ausencia Remunerada (con pago de salario)
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
                 <Checkbox
                   id="fullDay"
                   checked={fullDay}
                   onCheckedChange={setFullDay}
                 />
-                <label htmlFor="fullDay" className="text-sm font-medium text-blue-900 cursor-pointer">
+                <label htmlFor="fullDay" className="text-sm font-medium text-slate-900 cursor-pointer">
                   Ausencia de horario completo (00:00 - 23:59)
                 </label>
               </div>
