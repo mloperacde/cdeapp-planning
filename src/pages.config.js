@@ -18,6 +18,8 @@ import UserManagement from './pages/UserManagement';
 import EmailNotifications from './pages/EmailNotifications';
 import MobileAppConfig from './pages/MobileAppConfig';
 import PredictiveMaintenance from './pages/PredictiveMaintenance';
+import SupportManagement1415 from './pages/SupportManagement1415';
+import ShiftManagement from './pages/ShiftManagement';
 import Layout from './Layout.jsx';
 
 
@@ -42,6 +44,8 @@ export const PAGES = {
     "EmailNotifications": EmailNotifications,
     "MobileAppConfig": MobileAppConfig,
     "PredictiveMaintenance": PredictiveMaintenance,
+    "SupportManagement1415": SupportManagement1415,
+    "ShiftManagement": ShiftManagement,
 }
 
 export const pagesConfig = {
