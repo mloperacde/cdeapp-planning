@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -20,10 +20,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { differenceInDays, differenceInMonths, differenceInYears } from "date-fns";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   const [formData, setFormData] = useState(employee || {
+    codigo_empleado: "",
     nombre: "",
+    fecha_nacimiento: "",
+    dni: "",
+    sexo: "",
+    nacionalidad: "",
     email: "",
     telefono: "",
     telefono_movil: "",
@@ -38,11 +44,20 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     disponibilidad: "Disponible",
     horario_personalizado_inicio: "",
     horario_personalizado_fin: "",
+    turno_partido_entrada1: "",
+    turno_partido_salida1: "",
+    turno_partido_entrada2: "",
+    turno_partido_salida2: "",
+    fecha_alta: "",
+    tipo_contrato: "",
+    codigo_contrato: "",
     salario_anual: 0,
     evaluacion_responsable: "",
     propuesta_cambio_categoria: "",
+    propuesta_cambio_quien: "",
     objetivos: {
       periodo: "",
+      importe_incentivo: 0,
       objetivo_1: { descripcion: "", peso: 0, resultado: 0 },
       objetivo_2: { descripcion: "", peso: 0, resultado: 0 },
       objetivo_3: { descripcion: "", peso: 0, resultado: 0 },
@@ -65,6 +80,24 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     queryFn: () => base44.entities.Absence.list(),
     initialData: [],
   });
+
+  const antiguedad = useMemo(() => {
+    if (!formData.fecha_alta) return null;
+    
+    const fechaAlta = new Date(formData.fecha_alta);
+    const hoy = new Date();
+    
+    const years = differenceInYears(hoy, fechaAlta);
+    const months = differenceInMonths(hoy, fechaAlta) % 12;
+    const days = differenceInDays(hoy, new Date(hoy.getFullYear(), hoy.getMonth() - months, fechaAlta.getDate()));
+    
+    let result = [];
+    if (years > 0) result.push(`${years} año${years !== 1 ? 's' : ''}`);
+    if (months > 0) result.push(`${months} mes${months !== 1 ? 'es' : ''}`);
+    if (days > 0 && years === 0) result.push(`${days} día${days !== 1 ? 's' : ''}`);
+    
+    return result.length > 0 ? result.join(', ') : '0 días';
+  }, [formData.fecha_alta]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -137,12 +170,66 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             <TabsContent value="datos" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="codigo_empleado">Código de Empleado</Label>
+                  <Input
+                    id="codigo_empleado"
+                    value={formData.codigo_empleado || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo_empleado: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="nombre">Nombre Completo *</Label>
                   <Input
                     id="nombre"
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento</Label>
+                  <Input
+                    id="fecha_nacimiento"
+                    type="date"
+                    value={formData.fecha_nacimiento || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_nacimiento: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dni">DNI/NIE</Label>
+                  <Input
+                    id="dni"
+                    value={formData.dni || ""}
+                    onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sexo">Sexo</Label>
+                  <Select
+                    value={formData.sexo || ""}
+                    onValueChange={(value) => setFormData({ ...formData, sexo: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Masculino">Masculino</SelectItem>
+                      <SelectItem value="Femenino">Femenino</SelectItem>
+                      <SelectItem value="Otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nacionalidad">Nacionalidad</Label>
+                  <Input
+                    id="nacionalidad"
+                    value={formData.nacionalidad || ""}
+                    onChange={(e) => setFormData({ ...formData, nacionalidad: e.target.value })}
                   />
                 </div>
 
@@ -274,6 +361,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                       <SelectItem value="Rotativo">Rotativo</SelectItem>
                       <SelectItem value="Fijo Mañana">Fijo Mañana</SelectItem>
                       <SelectItem value="Fijo Tarde">Fijo Tarde</SelectItem>
+                      <SelectItem value="Turno Partido">Turno Partido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -300,6 +388,53 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                       />
                     </div>
                   </>
+                )}
+
+                {formData.tipo_turno === "Turno Partido" && (
+                  <div className="md:col-span-2 space-y-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+                    <h4 className="font-semibold text-blue-900">Configuración de Turno Partido</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="entrada1">Horario Entrada 1</Label>
+                        <Input
+                          id="entrada1"
+                          type="time"
+                          value={formData.turno_partido_entrada1 || ""}
+                          onChange={(e) => setFormData({ ...formData, turno_partido_entrada1: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="salida1">Horario Salida 1</Label>
+                        <Input
+                          id="salida1"
+                          type="time"
+                          value={formData.turno_partido_salida1 || ""}
+                          onChange={(e) => setFormData({ ...formData, turno_partido_salida1: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="entrada2">Horario Entrada 2</Label>
+                        <Input
+                          id="entrada2"
+                          type="time"
+                          value={formData.turno_partido_entrada2 || ""}
+                          onChange={(e) => setFormData({ ...formData, turno_partido_entrada2: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="salida2">Horario Salida 2</Label>
+                        <Input
+                          id="salida2"
+                          type="time"
+                          value={formData.turno_partido_salida2 || ""}
+                          onChange={(e) => setFormData({ ...formData, turno_partido_salida2: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </TabsContent>
@@ -397,6 +532,39 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             <TabsContent value="rrhh" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="fecha_alta">Fecha de Alta</Label>
+                  <Input
+                    id="fecha_alta"
+                    type="date"
+                    value={formData.fecha_alta || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_alta: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Antigüedad</Label>
+                  <Input value={antiguedad || "Sin fecha de alta"} disabled className="bg-slate-50" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tipo_contrato">Tipo de Contrato</Label>
+                  <Input
+                    id="tipo_contrato"
+                    value={formData.tipo_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, tipo_contrato: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="codigo_contrato">Código de Contrato</Label>
+                  <Input
+                    id="codigo_contrato"
+                    value={formData.codigo_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label>Categoría</Label>
                   <Input value={formData.categoria || ""} disabled className="bg-slate-50" />
                   <p className="text-xs text-slate-500">Desde pestaña Datos</p>
@@ -428,13 +596,30 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   />
                 </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="propuesta_cambio_categoria">Propuesta de Cambio de Categoría</Label>
-                  <Textarea
-                    id="propuesta_cambio_categoria"
+                <div className="space-y-2">
+                  <Label htmlFor="propuesta_cambio_categoria">Propuesta Cambio Categoría</Label>
+                  <Select
                     value={formData.propuesta_cambio_categoria || ""}
-                    onChange={(e) => setFormData({ ...formData, propuesta_cambio_categoria: e.target.value })}
-                    rows={2}
+                    onValueChange={(value) => setFormData({ ...formData, propuesta_cambio_categoria: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Categoría 1</SelectItem>
+                      <SelectItem value="2">Categoría 2</SelectItem>
+                      <SelectItem value="3">Categoría 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="propuesta_cambio_quien">Propuesto Por</Label>
+                  <Input
+                    id="propuesta_cambio_quien"
+                    placeholder="Nombre de quien propone"
+                    value={formData.propuesta_cambio_quien || ""}
+                    onChange={(e) => setFormData({ ...formData, propuesta_cambio_quien: e.target.value })}
                   />
                 </div>
               </div>
@@ -442,17 +627,42 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               <div className="border-t pt-4 mt-4">
                 <h4 className="font-semibold text-lg mb-4">Sistema de Objetivos</h4>
                 
-                <div className="space-y-2 mb-4">
-                  <Label htmlFor="periodo">Período de Objetivos</Label>
-                  <Input
-                    id="periodo"
-                    placeholder="ej. Q1 2024, Anual 2024..."
-                    value={formData.objetivos?.periodo || ""}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      objetivos: { ...formData.objetivos, periodo: e.target.value }
-                    })}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="periodo">Período de Objetivos</Label>
+                    <Select
+                      value={formData.objetivos?.periodo || ""}
+                      onValueChange={(value) => setFormData({
+                        ...formData,
+                        objetivos: { ...formData.objetivos, periodo: value }
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar período" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mensual">Mensual</SelectItem>
+                        <SelectItem value="Bimensual">Bimensual</SelectItem>
+                        <SelectItem value="Trimestral">Trimestral</SelectItem>
+                        <SelectItem value="Cuatrimestral">Cuatrimestral</SelectItem>
+                        <SelectItem value="Semestral">Semestral</SelectItem>
+                        <SelectItem value="Anual">Anual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="importe_incentivo">Importe Incentivo (€)</Label>
+                    <Input
+                      id="importe_incentivo"
+                      type="number"
+                      value={formData.objetivos?.importe_incentivo || 0}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        objetivos: { ...formData.objetivos, importe_incentivo: parseFloat(e.target.value) }
+                      })}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
