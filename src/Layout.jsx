@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -13,7 +12,7 @@ import {
   BarChart3,
   FileText,
   Bell,
-  Smartphone, // Added Smartphone icon import
+  Smartphone,
 } from "lucide-react";
 import {
   Sidebar,
