@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,12 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Cog, Power, PowerOff, CalendarRange } from "lucide-react";
-import MachinePlanningManager from "../components/machines/MachinePlanningManager";
+import { Plus, Edit, Trash2, Cog, Power, PowerOff, CalendarRange, Wrench, ListTree } from "lucide-react";
+import MachinePlanningManager from "../components/machines/MachinePlanningManager"; // Keep import for now, though it's likely moved to its own page logic.
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false);
-  const [showPlanning, setShowPlanning] = useState(false);
+  // const [showPlanning, setShowPlanning] = useState(false); // Removed as planning is now a sub-page link
   const [editingMachine, setEditingMachine] = useState(null);
   const queryClient = useQueryClient();
 
@@ -126,9 +129,10 @@ export default function MachinesPage() {
     toggleStatusMutation.mutate({ id: machine.id, newStatus });
   };
 
-  const handlePlanningUpdate = () => {
-    queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
-  };
+  // handlePlanningUpdate is no longer needed here as MachinePlanningManager is not directly rendered via a dialog.
+  // const handlePlanningUpdate = () => {
+  //   queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
+  // };
 
   // Calcular el promedio de operadores requeridos basado en el histórico de planificaciones
   const getAverageOperators = (machineId) => {
@@ -146,6 +150,36 @@ export default function MachinesPage() {
     return Math.round((totalOperators / plannings.length) * 10) / 10;
   };
 
+  const subPages = [
+    {
+      title: "Planificación de Máquinas",
+      description: "Planifica procesos diarios por máquina",
+      icon: CalendarRange,
+      url: createPageUrl("MachinePlanning"),
+      color: "blue"
+    },
+    {
+      title: "Configuración de Procesos",
+      description: "Gestiona procesos y asígnalos a máquinas",
+      icon: ListTree,
+      url: createPageUrl("ProcessConfiguration"),
+      color: "green"
+    },
+    {
+      title: "Seguimiento de Mantenimiento",
+      description: "Mantenimiento planificado y reparaciones",
+      icon: Wrench,
+      url: createPageUrl("MaintenanceTracking"),
+      color: "orange"
+    }
+  ];
+
+  const colorClasses = {
+    blue: "from-blue-500 to-blue-600",
+    green: "from-green-500 to-green-600",
+    orange: "from-orange-500 to-orange-600"
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -160,14 +194,15 @@ export default function MachinesPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
+            {/* Removed the direct button for planning, now it's a sub-page link */}
+            {/* <Button
               onClick={() => setShowPlanning(true)}
               variant="outline"
               className="bg-white hover:bg-blue-50 border-blue-200"
             >
               <CalendarRange className="w-4 h-4 mr-2" />
               Planificación de Máquinas
-            </Button>
+            </Button> */}
             <Button
               onClick={() => setShowForm(true)}
               className="bg-blue-600 hover:bg-blue-700"
@@ -177,6 +212,29 @@ export default function MachinesPage() {
             </Button>
           </div>
         </div>
+
+        {/* Sub-páginas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {subPages.map((page) => {
+            const Icon = page.icon;
+            return (
+              <Link key={page.title} to={page.url}>
+                <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
+                  <CardContent className="p-4">
+                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[page.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                      {page.title}
+                    </h3>
+                    <p className="text-xs text-slate-600">{page.description}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
@@ -367,14 +425,15 @@ export default function MachinesPage() {
         </Dialog>
       )}
 
-      {showPlanning && (
+      {/* MachinePlanningManager dialog removed as its functionality is now accessed via a dedicated sub-page link */}
+      {/* {showPlanning && (
         <MachinePlanningManager
           open={showPlanning}
           onOpenChange={setShowPlanning}
           machines={machines}
           onUpdate={handlePlanningUpdate}
         />
-      )}
+      )} */}
     </div>
   );
 }

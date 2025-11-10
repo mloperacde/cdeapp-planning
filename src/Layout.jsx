@@ -8,13 +8,6 @@ import {
   Activity,
   Coffee,
   Cog,
-  UsersRound,
-  CalendarRange,
-  UserCog,
-  UserX,
-  Wrench,
-  TrendingUp,
-  ListTree
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,44 +35,9 @@ const navigationItems = [
     icon: Users,
   },
   {
-    title: "Gestión de Rendimiento",
-    url: createPageUrl("PerformanceManagement"),
-    icon: TrendingUp,
-  },
-  {
-    title: "Gestión de Ausencias",
-    url: createPageUrl("AbsenceManagement"),
-    icon: UserX,
-  },
-  {
-    title: "Equipos de Turno",
-    url: createPageUrl("TeamConfiguration"),
-    icon: UsersRound,
-  },
-  {
     title: "Máquinas",
     url: createPageUrl("Machines"),
     icon: Cog,
-  },
-  {
-    title: "Configuración de Procesos",
-    url: createPageUrl("ProcessConfiguration"),
-    icon: ListTree,
-  },
-  {
-    title: "Seguimiento de Mantenimiento",
-    url: createPageUrl("MaintenanceTracking"),
-    icon: Wrench,
-  },
-  {
-    title: "Planificación de Máquinas",
-    url: createPageUrl("MachinePlanning"),
-    icon: CalendarRange,
-  },
-  {
-    title: "Asignaciones Operarios Máquinas",
-    url: createPageUrl("MachineAssignments"),
-    icon: UserCog,
   },
   {
     title: "Descansos",

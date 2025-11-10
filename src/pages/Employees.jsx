@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,8 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Users, Search, Filter } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, UserCog } from "lucide-react";
 import EmployeeForm from "../components/employees/EmployeeForm";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function EmployeesPage() {
   const [showForm, setShowForm] = useState(false);
@@ -104,6 +107,44 @@ export default function EmployeesPage() {
     return employee.disponibilidad === "Ausente";
   };
 
+  const subPages = [
+    {
+      title: "Gestión de Ausencias",
+      description: "Registra y gestiona ausencias de empleados",
+      icon: UserX,
+      url: createPageUrl("AbsenceManagement"),
+      color: "red"
+    },
+    {
+      title: "Gestión de Rendimiento",
+      description: "Evaluaciones y planes de mejora",
+      icon: TrendingUp,
+      url: createPageUrl("PerformanceManagement"),
+      color: "emerald"
+    },
+    {
+      title: "Equipos de Turno",
+      description: "Configura equipos y turnos rotativos",
+      icon: UsersRound,
+      url: createPageUrl("TeamConfiguration"),
+      color: "purple"
+    },
+    {
+      title: "Asignaciones Operarios Máquinas",
+      description: "Asigna operarios a máquinas por equipo",
+      icon: UserCog,
+      url: createPageUrl("MachineAssignments"),
+      color: "blue"
+    }
+  ];
+
+  const colorClasses = {
+    red: "from-red-500 to-red-600",
+    emerald: "from-emerald-500 to-emerald-600",
+    purple: "from-purple-500 to-purple-600",
+    blue: "from-blue-500 to-blue-600"
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -124,6 +165,28 @@ export default function EmployeesPage() {
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Empleado
           </Button>
+        </div>
+
+        {/* Sub-páginas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {subPages.map((page) => {
+            const Icon = page.icon;
+            return (
+              <Link key={page.title} to={page.url}>
+                <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
+                  <CardContent className="p-4">
+                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[page.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                      {page.title}
+                    </h3>
+                    <p className="text-xs text-slate-600">{page.description}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
 
         {/* Filtros */}

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,11 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Coffee, Plus, Edit, Trash2, Clock, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users } from "lucide-react";
 
 export default function BreaksPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingBreak, setEditingBreak] = useState(null);
+  const [isCalling, setIsCalling] = useState(false);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -95,6 +97,24 @@ export default function BreaksPage() {
     }
   };
 
+  const handleCallAgent = async () => {
+    setIsCalling(true);
+    try {
+      // Aquí llamaríamos al agente break_manager
+      // Por ahora solo mostramos un mensaje
+      alert('Llamando al agente de generación automática de descansos...');
+      
+      // Simulamos la llamada al agente
+      // await base44.agents.breakManager.generate();
+      
+    } catch (error) {
+      console.error('Error al llamar al agente:', error);
+      alert('Error al ejecutar la generación automática de descansos');
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -105,16 +125,27 @@ export default function BreaksPage() {
               Gestión de Descansos
             </h1>
             <p className="text-slate-600 mt-1">
-              Configura los turnos de descanso para los empleados
+              Configura los horarios y grupos de descanso
             </p>
           </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Turno de Descanso
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleCallAgent}
+              disabled={isCalling}
+              variant="outline"
+              className="bg-white hover:bg-purple-50 border-purple-200"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {isCalling ? "Generando..." : "Generar descansos"}
+            </Button>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Turno de Descanso
+            </Button>
+          </div>
         </div>
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
