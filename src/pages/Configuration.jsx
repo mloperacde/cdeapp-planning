@@ -1,6 +1,7 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Calendar, Plane, Building2, Coffee, UsersRound, Cog as CogIcon, Wrench, TrendingUp, ListTree } from "lucide-react";
+import { Settings, Calendar, Plane, Building2, Coffee, UsersRound, Cog as CogIcon, Wrench, TrendingUp, ListTree, Shield, Mail, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -68,6 +69,27 @@ export default function ConfigurationPage() {
       icon: Plane,
       link: createPageUrl("Timeline"),
       color: "sky",
+    },
+    {
+      title: "Gestión de Usuarios",
+      description: "Administra usuarios, roles y permisos del sistema",
+      icon: Shield,
+      link: createPageUrl("UserManagement"),
+      color: "red",
+    },
+    {
+      title: "Notificaciones Email/SMS",
+      description: "Configura notificaciones automáticas por email y SMS",
+      icon: Mail,
+      link: createPageUrl("EmailNotifications"),
+      color: "green",
+    },
+    {
+      title: "Aplicación Móvil",
+      description: "Información y configuración de la app móvil",
+      icon: Smartphone,
+      link: createPageUrl("MobileAppConfig"),
+      color: "blue",
     },
   ];
 

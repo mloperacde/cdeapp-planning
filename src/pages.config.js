@@ -14,6 +14,10 @@ import ShiftHandover from './pages/ShiftHandover';
 import Dashboard from './pages/Dashboard';
 import Reports from './pages/Reports';
 import Notifications from './pages/Notifications';
+import UserManagement from './pages/UserManagement';
+import EmailNotifications from './pages/EmailNotifications';
+import MobileAppConfig from './pages/MobileAppConfig';
+import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import Layout from './Layout.jsx';
 
 
@@ -34,6 +38,10 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "Reports": Reports,
     "Notifications": Notifications,
+    "UserManagement": UserManagement,
+    "EmailNotifications": EmailNotifications,
+    "MobileAppConfig": MobileAppConfig,
+    "PredictiveMaintenance": PredictiveMaintenance,
 }
 
 export const pagesConfig = {

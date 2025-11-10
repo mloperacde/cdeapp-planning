@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -12,6 +13,7 @@ import {
   BarChart3,
   FileText,
   Bell,
+  Smartphone, // Added Smartphone icon import
 } from "lucide-react";
 import {
   Sidebar,
@@ -67,6 +69,16 @@ const navigationItems = [
     title: "Notificaciones",
     url: createPageUrl("Notifications"),
     icon: Bell,
+  },
+  {
+    title: "Mantenimiento Predictivo",
+    url: createPageUrl("PredictiveMaintenance"),
+    icon: Activity,
+  },
+  {
+    title: "App Móvil",
+    url: createPageUrl("MobileAppConfig"),
+    icon: Smartphone,
   },
   {
     title: "Configuración",
