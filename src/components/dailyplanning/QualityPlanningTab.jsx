@@ -137,7 +137,6 @@ export default function QualityPlanningTab({ selectedDate, selectedTeam, selecte
   );
 
   const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || 'N/A';
-  const getMachineName = (id) => machines.find(m => m.id === id)?.nombre || id;
 
   return (
     <div className="space-y-6">
