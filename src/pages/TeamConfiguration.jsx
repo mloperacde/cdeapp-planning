@@ -82,7 +82,7 @@ export default function TeamConfigurationPage() {
       const orders = {};
       positionOrdersData.forEach(po => {
         const key = `${po.departamento}_${po.team_key}`;
-        orders[key] = po.orden_puestos;
+        orders[key] = po.orden_puestos || [];
       });
       setPositionOrders(orders);
     }
@@ -237,42 +237,10 @@ export default function TeamConfigurationPage() {
     });
   };
 
-  const movePositionUp = (dept, teamKey, position) => {
-    const key = `${dept}_${teamKey}`;
-    const currentOrder = positionOrders[key] || [];
-    const index = currentOrder.indexOf(position);
-    
-    if (index <= 0) return;
-    
-    const newOrder = [...currentOrder];
-    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-    
-    setPositionOrders({
-      ...positionOrders,
-      [key]: newOrder
-    });
-  };
-
-  const movePositionDown = (dept, teamKey, position) => {
-    const key = `${dept}_${teamKey}`;
-    const currentOrder = positionOrders[key] || [];
-    const index = currentOrder.indexOf(position);
-    
-    if (index < 0 || index >= currentOrder.length - 1) return;
-    
-    const newOrder = [...currentOrder];
-    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-    
-    setPositionOrders({
-      ...positionOrders,
-      [key]: newOrder
-    });
-  };
-
   const handleSavePositionOrders = (dept, teamKey) => {
     const key = `${dept}_${teamKey}`;
     const orden = positionOrders[key];
-    if (orden) {
+    if (orden && orden.length > 0) {
       savePositionOrderMutation.mutate({
         departamento: dept,
         team_key: teamKey,
@@ -284,14 +252,13 @@ export default function TeamConfigurationPage() {
   const getOrderedPositions = (positions, dept, teamKey) => {
     const key = `${dept}_${teamKey}`;
     const savedOrder = positionOrders[key];
+    const positionKeys = Object.keys(positions);
     
-    // If there's no saved order, use the keys from the grouped positions, sorted alphabetically
     if (!savedOrder || savedOrder.length === 0) {
-      return Object.keys(positions).sort();
+      return positionKeys.sort();
     }
 
     const ordered = [];
-    const positionKeys = Object.keys(positions);
     
     // Add positions in saved order
     savedOrder.forEach(pos => {
@@ -300,11 +267,46 @@ export default function TeamConfigurationPage() {
       }
     });
     
-    // Add any new positions not in saved order, append them to the end (sorted alphabetically)
-    const newPositions = positionKeys.filter(pos => !ordered.includes(pos)).sort();
-    ordered.push(...newPositions);
+    // Add any new positions not in saved order
+    positionKeys.forEach(pos => {
+      if (!ordered.includes(pos)) {
+        ordered.push(pos);
+      }
+    });
     
     return ordered;
+  };
+
+  const movePositionUp = (dept, teamKey, position, positions) => {
+    const key = `${dept}_${teamKey}`;
+    const orderedPositions = getOrderedPositions(positions, dept, teamKey);
+    const index = orderedPositions.indexOf(position);
+    
+    if (index <= 0) return;
+    
+    const newOrder = [...orderedPositions];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    
+    setPositionOrders({
+      ...positionOrders,
+      [key]: newOrder
+    });
+  };
+
+  const movePositionDown = (dept, teamKey, position, positions) => {
+    const key = `${dept}_${teamKey}`;
+    const orderedPositions = getOrderedPositions(positions, dept, teamKey);
+    const index = orderedPositions.indexOf(position);
+    
+    if (index < 0 || index >= orderedPositions.length - 1) return;
+    
+    const newOrder = [...orderedPositions];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    
+    setPositionOrders({
+      ...positionOrders,
+      [key]: newOrder
+    });
   };
 
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
@@ -662,7 +664,7 @@ export default function TeamConfigurationPage() {
                                           size="icon"
                                           variant="ghost"
                                           className="h-6 w-6"
-                                          onClick={() => movePositionUp(dept, 'team_1', position)}
+                                          onClick={() => movePositionUp(dept, 'team_1', position, positions)}
                                           disabled={index === 0}
                                         >
                                           <ArrowUp className="w-3 h-3" />
@@ -671,7 +673,7 @@ export default function TeamConfigurationPage() {
                                           size="icon"
                                           variant="ghost"
                                           className="h-6 w-6"
-                                          onClick={() => movePositionDown(dept, 'team_1', position)}
+                                          onClick={() => movePositionDown(dept, 'team_1', position, positions)}
                                           disabled={index >= orderedPositions.length - 1}
                                         >
                                           <ArrowDown className="w-3 h-3" />
@@ -762,7 +764,7 @@ export default function TeamConfigurationPage() {
                 </CardContent>
               </Card>
 
-              {/* Equipo 2 - Same structure */}
+              {/* Equipo 2 */}
               <Card className="shadow-lg border-2 border-pink-200 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-pink-100 bg-pink-50/50">
                   <CardTitle className="text-pink-900">
@@ -813,7 +815,7 @@ export default function TeamConfigurationPage() {
                                           size="icon"
                                           variant="ghost"
                                           className="h-6 w-6"
-                                          onClick={() => movePositionUp(dept, 'team_2', position)}
+                                          onClick={() => movePositionUp(dept, 'team_2', position, positions)}
                                           disabled={index === 0}
                                         >
                                           <ArrowUp className="w-3 h-3" />
@@ -822,7 +824,7 @@ export default function TeamConfigurationPage() {
                                           size="icon"
                                           variant="ghost"
                                           className="h-6 w-6"
-                                          onClick={() => movePositionDown(dept, 'team_2', position)}
+                                          onClick={() => movePositionDown(dept, 'team_2', position, positions)}
                                           disabled={index >= orderedPositions.length - 1}
                                         >
                                           <ArrowDown className="w-3 h-3" />
