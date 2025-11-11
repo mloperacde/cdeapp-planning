@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Save, Trash2, Edit, CheckCircle2, Factory } from "lucide-react";
+import { Plus, Save, Trash2, Edit, CheckCircle2, Factory, Activity } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -23,9 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import MachinePlanningManager from "../machines/MachinePlanningManager";
 
 export default function ProductionPlanningTab({ selectedDate, selectedTeam, selectedShift }) {
   const [showForm, setShowForm] = useState(false);
+  const [showPlanningManager, setShowPlanningManager] = useState(false);
   const [editingPlanning, setEditingPlanning] = useState(null);
   const queryClient = useQueryClient();
 
@@ -166,13 +169,23 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
               <Factory className="w-6 h-6" />
               Planificación de Producción - {selectedShift || 'Sin turno'}
             </CardTitle>
-            <Button
-              onClick={() => setShowForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Planificación
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowPlanningManager(true)}
+                variant="outline"
+                className="bg-white hover:bg-blue-50 border-blue-200"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Planificación Máquinas
+              </Button>
+              <Button
+                onClick={() => setShowForm(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva Asignación
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-6">
@@ -376,6 +389,15 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {showPlanningManager && (
+        <MachinePlanningManager
+          open={showPlanningManager}
+          onOpenChange={setShowPlanningManager}
+          machines={machines}
+          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['machines'] })}
+        />
       )}
     </div>
   );

@@ -241,8 +241,22 @@ export default function SupportManagement1415Page() {
     saveTaskMutation.mutate(allTasks);
   };
 
-  const handleClearAll = () => {
-    if (window.confirm('¿Estás seguro de que quieres limpiar todos los cambios? Esta acción no se puede deshacer.')) {
+  const deleteTasksMutation = useMutation({
+    mutationFn: async (fecha) => {
+      const tasksToDelete = savedTasks.filter(t => t.fecha === fecha);
+      const promises = tasksToDelete.map(task => base44.entities.SupportTask1415.delete(task.id));
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supportTasks1415'] });
+    },
+  });
+
+  const handleClearAll = async () => {
+    if (window.confirm('¿Estás seguro de que quieres limpiar TODAS las asignaciones del día seleccionado? Esta acción eliminará los registros guardados y no se puede deshacer.')) {
+      // Eliminar registros de base de datos
+      await deleteTasksMutation.mutateAsync(selectedDate);
+      // Limpiar estado local
       setTaskGroups([{ id: 1, employees: new Set(), tarea: '', instrucciones: '' }]);
       setUseQuickFilter(true);
     }
@@ -344,9 +358,10 @@ export default function SupportManagement1415Page() {
                       onClick={handleClearAll}
                       variant="outline"
                       className="border-red-300 text-red-700 hover:bg-red-50"
+                      disabled={deleteTasksMutation.isPending}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Limpiar
+                      {deleteTasksMutation.isPending ? 'Limpiando...' : 'Limpiar'}
                     </Button>
 
                     <Button

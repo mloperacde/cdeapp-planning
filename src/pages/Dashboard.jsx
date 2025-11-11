@@ -1,38 +1,59 @@
-import React, { useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  BarChart, 
-  Bar, 
-  LineChart, 
-  Line, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
-} from "recharts";
-import { 
-  Users, 
-  Cog, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  TrendingUp,
-  Activity,
+import {
+  BarChart3,
+  Users,
+  UserX,
+  Cog,
+  AlertTriangle,
   Calendar,
-  Wrench
+  Wrench,
+  Settings,
+  TrendingUp,
+  Cake,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
-import { format, differenceInDays, isPast, isFuture } from "date-fns";
+import { format, differenceInDays, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
+const AVAILABLE_WIDGETS = [
+  { id: 'absence_kpis', name: 'KPIs de Ausencias', icon: UserX, color: 'red' },
+  { id: 'daily_planning_summary', name: 'Resumen Planning Diario', icon: Calendar, color: 'blue' },
+  { id: 'machine_status', name: 'Estado de Máquinas', icon: Cog, color: 'green' },
+  { id: 'upcoming_birthdays', name: 'Próximos Cumpleaños', icon: Cake, color: 'purple' },
+  { id: 'maintenance_alerts', name: 'Alertas de Mantenimiento', icon: Wrench, color: 'orange' },
+  { id: 'team_summary', name: 'Resumen de Equipos', icon: Users, color: 'indigo' }
+];
 
 export default function DashboardPage() {
+  const [showWidgetConfig, setShowWidgetConfig] = useState(false);
+  const [user, setUser] = useState(null);
+
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => setUser(null));
+  }, []);
+
+  const { data: absences } = useQuery({
+    queryKey: ['absences'],
+    queryFn: () => base44.entities.Absence.list(),
+    initialData: [],
+  });
+
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
@@ -45,369 +66,426 @@ export default function DashboardPage() {
     initialData: [],
   });
 
-  const { data: plannings } = useQuery({
-    queryKey: ['machinePlannings'],
-    queryFn: () => base44.entities.MachinePlanning.list(),
-    initialData: [],
-  });
-
   const { data: maintenances } = useQuery({
     queryKey: ['maintenances'],
     queryFn: () => base44.entities.MaintenanceSchedule.list(),
     initialData: [],
   });
 
-  const { data: absences } = useQuery({
-    queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list(),
+  const { data: productionPlannings } = useQuery({
+    queryKey: ['dailyProductionPlannings'],
+    queryFn: () => base44.entities.DailyProductionPlanning.list(),
     initialData: [],
   });
 
-  const { data: teams } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
+  const { data: widgetPreferences } = useQuery({
+    queryKey: ['dashboardWidgets', user?.email],
+    queryFn: () => base44.entities.DashboardWidget.list(),
     initialData: [],
+    enabled: !!user,
   });
 
-  // KPIs
-  const kpis = useMemo(() => {
-    const availableEmployees = employees.filter(e => e.disponibilidad === "Disponible").length;
-    const absentEmployees = employees.filter(e => e.disponibilidad === "Ausente").length;
-    const availableMachines = machines.filter(m => m.estado === "Disponible").length;
-    const unavailableMachines = machines.filter(m => m.estado === "No disponible").length;
-    
-    const pendingMaintenances = maintenances.filter(m => m.estado === "Pendiente").length;
-    const upcomingMaintenances = maintenances.filter(m => {
+  // Active absences
+  const activeAbsences = useMemo(() => {
+    const now = new Date();
+    return absences.filter(abs => {
+      const start = new Date(abs.fecha_inicio);
+      const end = new Date(abs.fecha_fin);
+      return now >= start && now <= end;
+    });
+  }, [absences]);
+
+  // Critical absences
+  const criticalAbsences = useMemo(() => {
+    return activeAbsences.filter(abs => 
+      abs.tipo === "Baja médica" || abs.tipo === "Ausencia injustificada"
+    );
+  }, [activeAbsences]);
+
+  // Machine stats
+  const machineStats = useMemo(() => {
+    const available = machines.filter(m => m.estado === "Disponible").length;
+    const unavailable = machines.length - available;
+    return { available, unavailable, total: machines.length };
+  }, [machines]);
+
+  // Maintenance alerts
+  const maintenanceAlerts = useMemo(() => {
+    const now = new Date();
+    return maintenances.filter(m => {
       if (m.estado !== "Pendiente") return false;
-      const daysUntil = differenceInDays(new Date(m.fecha_programada), new Date());
+      const scheduledDate = new Date(m.fecha_programada);
+      const daysUntil = differenceInDays(scheduledDate, now);
       return daysUntil <= 7 && daysUntil >= 0;
-    }).length;
-
-    const activeAbsences = absences.filter(a => {
-      const now = new Date();
-      return now >= new Date(a.fecha_inicio) && now <= new Date(a.fecha_fin);
-    }).length;
-
-    const todayPlannings = plannings.filter(p => 
-      p.activa_planning && 
-      p.fecha_planificacion === format(new Date(), 'yyyy-MM-dd')
-    ).length;
-
-    return {
-      availableEmployees,
-      absentEmployees,
-      totalEmployees: employees.length,
-      availableMachines,
-      unavailableMachines,
-      totalMachines: machines.length,
-      pendingMaintenances,
-      upcomingMaintenances,
-      activeAbsences,
-      todayPlannings,
-      employeeAvailabilityRate: employees.length > 0 ? (availableEmployees / employees.length * 100).toFixed(1) : 0,
-      machineAvailabilityRate: machines.length > 0 ? (availableMachines / machines.length * 100).toFixed(1) : 0,
-    };
-  }, [employees, machines, maintenances, absences, plannings]);
-
-  // Datos para gráficos
-  const employeesByTeam = useMemo(() => {
-    return teams.map(team => ({
-      name: team.team_name,
-      disponibles: employees.filter(e => e.equipo === team.team_name && e.disponibilidad === "Disponible").length,
-      ausentes: employees.filter(e => e.equipo === team.team_name && e.disponibilidad === "Ausente").length,
-    }));
-  }, [employees, teams]);
-
-  const maintenanceByStatus = useMemo(() => {
-    return [
-      { name: "Pendiente", value: maintenances.filter(m => m.estado === "Pendiente").length, color: "#FCD34D" },
-      { name: "En Progreso", value: maintenances.filter(m => m.estado === "En Progreso").length, color: "#60A5FA" },
-      { name: "Completado", value: maintenances.filter(m => m.estado === "Completado").length, color: "#34D399" },
-      { name: "Cancelado", value: maintenances.filter(m => m.estado === "Cancelado").length, color: "#94A3B8" },
-    ].filter(item => item.value > 0);
+    });
   }, [maintenances]);
 
-  const planningTrend = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
-      const dateStr = format(date, 'yyyy-MM-dd');
-      const activeMachines = plannings.filter(p => 
-        p.activa_planning && p.fecha_planificacion === dateStr
-      ).length;
-      
-      return {
-        fecha: format(date, 'dd/MM', { locale: es }),
-        maquinas: activeMachines,
-      };
-    });
-    return last7Days;
-  }, [plannings]);
+  // Upcoming birthdays
+  const upcomingBirthdays = useMemo(() => {
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
 
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+    return employees.filter(emp => {
+      if (!emp.fecha_nacimiento) return false;
+      const birthDate = new Date(emp.fecha_nacimiento);
+      const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+      
+      if (isSameDay(thisYearBirthday, today)) return true;
+      return thisYearBirthday >= today && thisYearBirthday <= nextWeek;
+    }).slice(0, 5);
+  }, [employees]);
+
+  // Today's planning summary
+  const todayPlanningSummary = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const todayPlannings = productionPlannings.filter(p => p.fecha === today);
+    
+    return {
+      total: todayPlannings.length,
+      completed: todayPlannings.filter(p => p.estado === "Completado").length,
+      inProgress: todayPlannings.filter(p => p.estado === "En Curso").length,
+      pending: todayPlannings.filter(p => p.estado === "Planificado").length
+    };
+  }, [productionPlannings]);
+
+  // Get enabled widgets
+  const enabledWidgets = useMemo(() => {
+    if (!user) return AVAILABLE_WIDGETS;
+    
+    const userPrefs = widgetPreferences.filter(w => w.user_email === user.email && w.enabled);
+    if (userPrefs.length === 0) return AVAILABLE_WIDGETS;
+    
+    return AVAILABLE_WIDGETS.filter(w => 
+      userPrefs.some(p => p.widget_id === w.id)
+    ).sort((a, b) => {
+      const orderA = userPrefs.find(p => p.widget_id === a.id)?.order || 0;
+      const orderB = userPrefs.find(p => p.widget_id === b.id)?.order || 0;
+      return orderA - orderB;
+    });
+  }, [widgetPreferences, user]);
+
+  const renderWidget = (widget) => {
+    const Icon = widget.icon;
+    const colorClasses = {
+      red: 'from-red-500 to-red-600',
+      blue: 'from-blue-500 to-blue-600',
+      green: 'from-green-500 to-green-600',
+      purple: 'from-purple-500 to-purple-600',
+      orange: 'from-orange-500 to-orange-600',
+      indigo: 'from-indigo-500 to-indigo-600'
+    };
+
+    switch (widget.id) {
+      case 'absence_kpis':
+        return (
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <UserX className="w-5 h-5 text-red-600" />
+                KPIs de Ausencias
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-red-50 rounded-lg">
+                  <div className="text-3xl font-bold text-red-900">{activeAbsences.length}</div>
+                  <div className="text-sm text-red-700">Ausencias Activas</div>
+                </div>
+                <div className="text-center p-4 bg-orange-50 rounded-lg">
+                  <div className="text-3xl font-bold text-orange-900">{criticalAbsences.length}</div>
+                  <div className="text-sm text-orange-700">Críticas</div>
+                </div>
+              </div>
+              <Link to={createPageUrl("AbsenceManagement")}>
+                <Button className="w-full mt-4" variant="outline">
+                  Ver Detalles
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+
+      case 'daily_planning_summary':
+        return (
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Planning Diario (Hoy)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-900">{todayPlanningSummary.total}</div>
+                  <div className="text-xs text-blue-700">Total</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-900">{todayPlanningSummary.completed}</div>
+                  <div className="text-xs text-green-700">Completados</div>
+                </div>
+                <div className="text-center p-3 bg-amber-50 rounded-lg">
+                  <div className="text-2xl font-bold text-amber-900">{todayPlanningSummary.inProgress}</div>
+                  <div className="text-xs text-amber-700">En Curso</div>
+                </div>
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <div className="text-2xl font-bold text-slate-900">{todayPlanningSummary.pending}</div>
+                  <div className="text-xs text-slate-700">Pendientes</div>
+                </div>
+              </div>
+              <Link to={createPageUrl("DailyPlanning")}>
+                <Button className="w-full mt-4" variant="outline">
+                  Ir al Planning
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+
+      case 'machine_status':
+        return (
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <Cog className="w-5 h-5 text-green-600" />
+                Estado de Máquinas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                  <span className="text-sm font-medium text-green-900">Disponibles</span>
+                  <Badge className="bg-green-600 text-white text-lg px-3">
+                    {machineStats.available}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                  <span className="text-sm font-medium text-red-900">No Disponibles</span>
+                  <Badge className="bg-red-600 text-white text-lg px-3">
+                    {machineStats.unavailable}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <span className="text-sm font-medium text-blue-900">Total</span>
+                  <Badge className="bg-blue-600 text-white text-lg px-3">
+                    {machineStats.total}
+                  </Badge>
+                </div>
+              </div>
+              <Link to={createPageUrl("MachineManagement")}>
+                <Button className="w-full mt-4" variant="outline">
+                  Ver Máquinas
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+
+      case 'upcoming_birthdays':
+        return (
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <Cake className="w-5 h-5 text-purple-600" />
+                Próximos Cumpleaños
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {upcomingBirthdays.length === 0 ? (
+                <p className="text-center text-slate-500 py-4">No hay cumpleaños próximos</p>
+              ) : (
+                <div className="space-y-2">
+                  {upcomingBirthdays.map(emp => {
+                    const birthDate = new Date(emp.fecha_nacimiento);
+                    const thisYearBirthday = new Date(new Date().getFullYear(), birthDate.getMonth(), birthDate.getDate());
+                    const isToday = isSameDay(thisYearBirthday, new Date());
+                    
+                    return (
+                      <div key={emp.id} className={`p-2 rounded-lg ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-slate-50'}`}>
+                        <div className="font-semibold text-sm">{emp.nombre}</div>
+                        <div className="text-xs text-slate-600">
+                          {format(thisYearBirthday, "d 'de' MMMM", { locale: es })}
+                          {isToday && <span className="ml-2 font-bold text-purple-700">¡HOY!</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+
+      case 'maintenance_alerts':
+        return (
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-orange-600" />
+                Alertas de Mantenimiento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {maintenanceAlerts.length === 0 ? (
+                <div className="text-center py-4">
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm text-slate-600">No hay alertas pendientes</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {maintenanceAlerts.slice(0, 5).map(maint => (
+                    <div key={maint.id} className="p-2 bg-orange-50 rounded-lg border border-orange-200">
+                      <div className="text-sm font-semibold text-orange-900">
+                        {machines.find(m => m.id === maint.machine_id)?.nombre || 'Máquina'}
+                      </div>
+                      <div className="text-xs text-orange-700">
+                        {format(new Date(maint.fecha_programada), "d/MM/yyyy")} - {maint.tipo}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Link to={createPageUrl("MaintenanceTracking")}>
+                <Button className="w-full mt-4" variant="outline">
+                  Ver Mantenimientos
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+
+      case 'team_summary':
+        const fabricacionEmployees = employees.filter(e => e.departamento === "FABRICACION");
+        const availableFabricacion = fabricacionEmployees.filter(e => e.disponibilidad === "Disponible").length;
+        
+        return (
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                Resumen de Equipos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg">
+                  <span className="text-sm font-medium text-indigo-900">Total Empleados</span>
+                  <Badge className="bg-indigo-600 text-white text-lg px-3">
+                    {employees.length}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                  <span className="text-sm font-medium text-green-900">Disponibles</span>
+                  <Badge className="bg-green-600 text-white text-lg px-3">
+                    {employees.filter(e => e.disponibilidad === "Disponible").length}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <span className="text-sm font-medium text-blue-900">Fabricación Disponible</span>
+                  <Badge className="bg-blue-600 text-white text-lg px-3">
+                    {availableFabricacion}/{fabricacionEmployees.length}
+                  </Badge>
+                </div>
+              </div>
+              <Link to={createPageUrl("Employees")}>
+                <Button className="w-full mt-4" variant="outline">
+                  Ver Empleados
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Activity className="w-8 h-8 text-blue-600" />
-            Panel de Control
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Resumen de métricas clave y estado general del sistema
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <BarChart3 className="w-8 h-8 text-blue-600" />
+              Dashboard Principal
+            </h1>
+            <p className="text-slate-600 mt-1">
+              Resumen de información clave del sistema
+            </p>
+          </div>
+          <Button
+            onClick={() => setShowWidgetConfig(true)}
+            variant="outline"
+            className="bg-white hover:bg-slate-50"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Configurar Widgets
+          </Button>
         </div>
 
-        {/* KPIs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-blue-700 font-medium">Empleados Disponibles</p>
-                  <p className="text-2xl font-bold text-blue-900">{kpis.availableEmployees}</p>
-                  <p className="text-xs text-blue-600 mt-1">{kpis.employeeAvailabilityRate}% disponibilidad</p>
-                </div>
-                <Users className="w-10 h-10 text-blue-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-green-700 font-medium">Máquinas Disponibles</p>
-                  <p className="text-2xl font-bold text-green-900">{kpis.availableMachines}</p>
-                  <p className="text-xs text-green-600 mt-1">{kpis.machineAvailabilityRate}% operativas</p>
-                </div>
-                <Cog className="w-10 h-10 text-green-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-orange-700 font-medium">Mantenimientos Próximos</p>
-                  <p className="text-2xl font-bold text-orange-900">{kpis.upcomingMaintenances}</p>
-                  <p className="text-xs text-orange-600 mt-1">En los próximos 7 días</p>
-                </div>
-                <Wrench className="w-10 h-10 text-orange-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-purple-700 font-medium">Máquinas Planificadas Hoy</p>
-                  <p className="text-2xl font-bold text-purple-900">{kpis.todayPlannings}</p>
-                  <p className="text-xs text-purple-600 mt-1">Activas en producción</p>
-                </div>
-                <Calendar className="w-10 h-10 text-purple-600 opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {enabledWidgets.map(widget => renderWidget(widget))}
         </div>
 
-        {/* Alertas Críticas */}
-        {(kpis.absentEmployees > 5 || kpis.upcomingMaintenances > 3 || kpis.unavailableMachines > 2) && (
-          <Card className="mb-6 bg-red-50 border-2 border-red-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-900">
-                <AlertTriangle className="w-5 h-5" />
-                Alertas Críticas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {kpis.absentEmployees > 5 && (
-                  <div className="flex items-center gap-2 text-sm text-red-800">
-                    <AlertTriangle className="w-4 h-4" />
-                    Alto número de ausencias: {kpis.absentEmployees} empleados ausentes
-                  </div>
-                )}
-                {kpis.upcomingMaintenances > 3 && (
-                  <div className="flex items-center gap-2 text-sm text-red-800">
-                    <Clock className="w-4 h-4" />
-                    Múltiples mantenimientos próximos: {kpis.upcomingMaintenances} en los próximos 7 días
-                  </div>
-                )}
-                {kpis.unavailableMachines > 2 && (
-                  <div className="flex items-center gap-2 text-sm text-red-800">
-                    <AlertTriangle className="w-4 h-4" />
-                    Máquinas no disponibles: {kpis.unavailableMachines} fuera de servicio
-                  </div>
-                )}
-              </div>
+        {enabledWidgets.length === 0 && (
+          <Card className="bg-amber-50 border-2 border-amber-300">
+            <CardContent className="p-8 text-center">
+              <AlertTriangle className="w-12 h-12 text-amber-600 mx-auto mb-3" />
+              <p className="text-amber-900 font-semibold mb-2">
+                No hay widgets configurados
+              </p>
+              <p className="text-amber-800 text-sm mb-4">
+                Haz clic en "Configurar Widgets" para seleccionar qué información quieres ver
+              </p>
+              <Button onClick={() => setShowWidgetConfig(true)}>
+                Configurar Ahora
+              </Button>
             </CardContent>
           </Card>
         )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Gráfico de Empleados por Equipo */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Disponibilidad por Equipo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={employeesByTeam}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="disponibles" fill="#10B981" name="Disponibles" />
-                  <Bar dataKey="ausentes" fill="#EF4444" name="Ausentes" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Gráfico de Mantenimientos */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Estado de Mantenimientos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={maintenanceByStatus}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {maintenanceByStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tendencia de Planificación */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Tendencia de Planificación (Últimos 7 Días)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={planningTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="fecha" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="maquinas" 
-                  stroke="#3B82F6" 
-                  strokeWidth={2}
-                  name="Máquinas Activas"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Resumen de Estado */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Estado de Empleados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Total</span>
-                  <Badge variant="outline">{kpis.totalEmployees}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Disponibles</span>
-                  <Badge className="bg-green-100 text-green-800">{kpis.availableEmployees}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Ausentes</span>
-                  <Badge className="bg-red-100 text-red-800">{kpis.absentEmployees}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Ausencias Activas</span>
-                  <Badge className="bg-orange-100 text-orange-800">{kpis.activeAbsences}</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Estado de Máquinas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Total</span>
-                  <Badge variant="outline">{kpis.totalMachines}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Disponibles</span>
-                  <Badge className="bg-green-100 text-green-800">{kpis.availableMachines}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">No Disponibles</span>
-                  <Badge className="bg-red-100 text-red-800">{kpis.unavailableMachines}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Planificadas Hoy</span>
-                  <Badge className="bg-purple-100 text-purple-800">{kpis.todayPlannings}</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Estado de Mantenimientos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Pendientes</span>
-                  <Badge className="bg-yellow-100 text-yellow-800">{kpis.pendingMaintenances}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Próximos (7 días)</span>
-                  <Badge className="bg-orange-100 text-orange-800">{kpis.upcomingMaintenances}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">En Progreso</span>
-                  <Badge className="bg-blue-100 text-blue-800">
-                    {maintenances.filter(m => m.estado === "En Progreso").length}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Completados</span>
-                  <Badge className="bg-green-100 text-green-800">
-                    {maintenances.filter(m => m.estado === "Completado").length}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
+
+      {showWidgetConfig && (
+        <Dialog open={true} onOpenChange={setShowWidgetConfig}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Configurar Widgets del Dashboard</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {AVAILABLE_WIDGETS.map(widget => {
+                const Icon = widget.icon;
+                const isEnabled = enabledWidgets.some(w => w.id === widget.id);
+                
+                return (
+                  <div key={widget.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-slate-50">
+                    <Checkbox
+                      checked={isEnabled}
+                      onCheckedChange={(checked) => {
+                        // TODO: Save preference to database
+                        console.log('Toggle widget:', widget.id, checked);
+                      }}
+                    />
+                    <Icon className="w-5 h-5 text-slate-600" />
+                    <Label className="flex-1 cursor-pointer">
+                      {widget.name}
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setShowWidgetConfig(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={() => setShowWidgetConfig(false)}>
+                Guardar Configuración
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

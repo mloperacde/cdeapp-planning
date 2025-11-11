@@ -222,15 +222,7 @@ export default function MaintenanceTrackingPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to={createPageUrl("MachineMaintenance")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Mantenimiento Máquinas
-            </Button>
-          </Link>
-        </div>
-
+        {/* The 'Volver a Mantenimiento Máquinas' Link button div was removed as per the outline */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">

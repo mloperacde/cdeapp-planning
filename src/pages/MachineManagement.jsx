@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,14 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Cog, ArrowLeft, Settings, Activity } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowLeft, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import MachinePlanningManager from "../components/machines/MachinePlanningManager";
+// import MachinePlanningManager from "../components/machines/MachinePlanningManager"; // This import is no longer needed
 
 export default function MachineManagementPage() {
   const [showForm, setShowForm] = useState(false);
-  const [showPlanningManager, setShowPlanningManager] = useState(false);
+  // const [showPlanningManager, setShowPlanningManager] = useState(false); // Removed state
   const [editingMachine, setEditingMachine] = useState(null);
   const queryClient = useQueryClient();
 
@@ -129,6 +130,7 @@ export default function MachineManagementPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            {/* Removed Planning button
             <Button
               onClick={() => setShowPlanningManager(true)}
               variant="outline"
@@ -137,6 +139,7 @@ export default function MachineManagementPage() {
               <Activity className="w-4 h-4 mr-2" />
               Planificación
             </Button>
+            */}
             <Button
               onClick={() => setShowForm(true)}
               className="bg-blue-600 hover:bg-blue-700"
@@ -319,6 +322,7 @@ export default function MachineManagementPage() {
         </Dialog>
       )}
 
+      {/* Removed MachinePlanningManager dialog
       {showPlanningManager && (
         <MachinePlanningManager
           open={showPlanningManager}
@@ -327,6 +331,7 @@ export default function MachineManagementPage() {
           onUpdate={() => queryClient.invalidateQueries({ queryKey: ['machines'] })}
         />
       )}
+      */}
     </div>
   );
 }

@@ -17,7 +17,6 @@ import Notifications from './pages/Notifications';
 import UserManagement from './pages/UserManagement';
 import EmailNotifications from './pages/EmailNotifications';
 import MobileAppConfig from './pages/MobileAppConfig';
-import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import ShiftManagement from './pages/ShiftManagement';
 import MLInsights from './pages/MLInsights';
@@ -50,7 +49,6 @@ export const PAGES = {
     "UserManagement": UserManagement,
     "EmailNotifications": EmailNotifications,
     "MobileAppConfig": MobileAppConfig,
-    "PredictiveMaintenance": PredictiveMaintenance,
     "SupportManagement1415": SupportManagement1415,
     "ShiftManagement": ShiftManagement,
     "MLInsights": MLInsights,

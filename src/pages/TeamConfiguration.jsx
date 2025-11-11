@@ -312,6 +312,42 @@ export default function TeamConfigurationPage() {
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
   const departments = getDepartments();
 
+  // Helper to check if employee has active absence on today
+  const isEmployeeAvailableToday = (employee) => {
+    const now = new Date();
+    if (employee.disponibilidad !== "Disponible") return false;
+    // Additional check would require absence data - we'll use disponibilidad field
+    return true;
+  };
+
+  // Get department stats for a team
+  const getDepartmentStats = (teamName) => {
+    const teamEmployees = getTeamEmployees(teamName);
+    const grouped = groupByDepartmentAndPosition(teamEmployees);
+    
+    const stats = {};
+    Object.entries(grouped).forEach(([dept, positions]) => {
+      stats[dept] = {
+        total: 0,
+        byPosition: {},
+        availableByPosition: {}
+      };
+      
+      Object.entries(positions).forEach(([position, employees]) => {
+        const total = employees.length;
+        const available = employees.filter(emp => 
+          emp.disponibilidad === "Disponible" && emp.incluir_en_planning !== false
+        ).length;
+        
+        stats[dept].total += total;
+        stats[dept].byPosition[position] = total;
+        stats[dept].availableByPosition[position] = available;
+      });
+    });
+    
+    return stats;
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -616,9 +652,42 @@ export default function TeamConfigurationPage() {
               {/* Equipo 1 */}
               <Card className="shadow-lg border-2 border-purple-200 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-purple-100 bg-purple-50/50">
-                  <CardTitle className="text-purple-900">
-                    {teamFormData.team_1.team_name}
-                  </CardTitle>
+                  <div>
+                    <CardTitle className="text-purple-900 mb-3">
+                      {teamFormData.team_1.team_name}
+                    </CardTitle>
+                    {/* Totalizadores por Departamento */}
+                    {(() => {
+                      const stats = getDepartmentStats(teamFormData.team_1.team_name);
+                      return (
+                        <div className="space-y-2">
+                          {Object.entries(stats).map(([dept, data]) => (
+                            <div key={dept} className="bg-white rounded-lg p-3 border border-purple-200">
+                              <div className="font-semibold text-sm text-purple-900 mb-2">{dept}</div>
+                              <div className="space-y-1">
+                                {Object.entries(data.byPosition).map(([position, total]) => {
+                                  const available = data.availableByPosition[position] || 0;
+                                  return (
+                                    <div key={position} className="flex justify-between items-center text-xs">
+                                      <span className="text-slate-700">{position}:</span>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                                          {total} total
+                                        </Badge>
+                                        <Badge className="bg-green-600 text-white">
+                                          {available} disp.
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </CardHeader>
                 <CardContent className="p-6">
                   {(() => {
@@ -767,9 +836,42 @@ export default function TeamConfigurationPage() {
               {/* Equipo 2 */}
               <Card className="shadow-lg border-2 border-pink-200 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-pink-100 bg-pink-50/50">
-                  <CardTitle className="text-pink-900">
-                    {teamFormData.team_2.team_name}
-                  </CardTitle>
+                  <div>
+                    <CardTitle className="text-pink-900 mb-3">
+                      {teamFormData.team_2.team_name}
+                    </CardTitle>
+                    {/* Totalizadores por Departamento */}
+                    {(() => {
+                      const stats = getDepartmentStats(teamFormData.team_2.team_name);
+                      return (
+                        <div className="space-y-2">
+                          {Object.entries(stats).map(([dept, data]) => (
+                            <div key={dept} className="bg-white rounded-lg p-3 border border-pink-200">
+                              <div className="font-semibold text-sm text-pink-900 mb-2">{dept}</div>
+                              <div className="space-y-1">
+                                {Object.entries(data.byPosition).map(([position, total]) => {
+                                  const available = data.availableByPosition[position] || 0;
+                                  return (
+                                    <div key={position} className="flex justify-between items-center text-xs">
+                                      <span className="text-slate-700">{position}:</span>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="bg-pink-50 text-pink-700">
+                                          {total} total
+                                        </Badge>
+                                        <Badge className="bg-green-600 text-white">
+                                          {available} disp.
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </CardHeader>
                 <CardContent className="p-6">
                   {(() => {
