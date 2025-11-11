@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertTriangle, TrendingUp, Wrench, Cpu, Activity, Calendar } from "lucide-react";
+import { AlertTriangle, TrendingUp, Wrench, Cpu, Activity, Calendar, ArrowLeft } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Label } from "@/components/ui/label";
 
 export default function PredictiveMaintenancePage() {
   const [selectedMachine, setSelectedMachine] = useState(null);
@@ -115,6 +119,15 @@ export default function PredictiveMaintenancePage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Link to={createPageUrl("MachineMaintenance")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver a Mantenimiento Máquinas
+            </Button>
+          </Link>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Cpu className="w-8 h-8 text-blue-600" />
@@ -182,7 +195,7 @@ export default function PredictiveMaintenancePage() {
                     <div>
                       <p className="font-semibold text-slate-900">{getMachineName(pred.machine_id)}</p>
                       <p className="text-sm text-slate-600">
-                        Fallo estimado: {format(new Date(pred.fecha_fallo_estimada), "dd/MM/yyyy")} 
+                        Fallo estimado: {format(new Date(pred.fecha_fallo_estimada), "dd/MM/yyyy")}
                         ({differenceInDays(new Date(pred.fecha_fallo_estimada), new Date())} días)
                       </p>
                     </div>
@@ -331,9 +344,9 @@ export default function PredictiveMaintenancePage() {
         {/* Nota sobre ML */}
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-900">
-            <strong>Nota:</strong> El sistema de mantenimiento predictivo utiliza modelos de Machine Learning 
-            que analizan datos de sensores de las máquinas (temperatura, vibración, presión, etc.) para 
-            predecir fallos antes de que ocurran. Las predicciones se generan automáticamente y crean 
+            <strong>Nota:</strong> El sistema de mantenimiento predictivo utiliza modelos de Machine Learning
+            que analizan datos de sensores de las máquinas (temperatura, vibración, presión, etc.) para
+            predecir fallos antes de que ocurran. Las predicciones se generan automáticamente y crean
             notificaciones para programar mantenimiento proactivo.
           </p>
         </div>
