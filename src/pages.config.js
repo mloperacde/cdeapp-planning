@@ -24,6 +24,7 @@ import MLInsights from './pages/MLInsights';
 import DataImport from './pages/DataImport';
 import ShiftManagers from './pages/ShiftManagers';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
+import DailyPlanning from './pages/DailyPlanning';
 import Layout from './Layout.jsx';
 
 
@@ -54,6 +55,7 @@ export const PAGES = {
     "DataImport": DataImport,
     "ShiftManagers": ShiftManagers,
     "AbsenceTypeConfig": AbsenceTypeConfig,
+    "DailyPlanning": DailyPlanning,
 }
 
 export const pagesConfig = {
