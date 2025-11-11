@@ -37,6 +37,7 @@ import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
+import AbsenceNotifications from "../components/employees/AbsenceNotifications";
 
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
@@ -72,6 +73,12 @@ export default function AbsenceManagementPage() {
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
+  });
+
+  const { data: absenceTypes } = useQuery({
+    queryKey: ['absenceTypes'],
+    queryFn: () => base44.entities.AbsenceType.list('orden'),
     initialData: [],
   });
 
@@ -286,6 +293,13 @@ export default function AbsenceManagementPage() {
           </TabsList>
 
           <TabsContent value="absences" className="space-y-6">
+            {/* Nuevo panel de notificaciones */}
+            <AbsenceNotifications 
+              absences={absences}
+              employees={employees}
+              absenceTypes={absenceTypes}
+            />
+
             {/* Alertas de ausencias expiradas */}
             {expiredAbsences.length > 0 && (
               <Card className="mb-6 bg-amber-50 border-amber-200">

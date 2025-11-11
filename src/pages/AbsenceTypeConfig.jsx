@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,10 @@ export default function AbsenceTypeConfigPage() {
     codigo: "",
     remunerada: false,
     requiere_aprobacion: true,
+    duracion_prevista_dias: 0,
+    es_critica: false,
+    notificar_admin: false,
+    dias_aviso_previo: 0,
     color: "#3B82F6",
     descripcion: "",
     activo: true,
@@ -86,7 +91,13 @@ export default function AbsenceTypeConfigPage() {
 
   const handleEdit = (type) => {
     setEditingType(type);
-    setFormData(type);
+    setFormData({
+      ...type,
+      duracion_prevista_dias: type.duracion_prevista_dias || 0,
+      es_critica: type.es_critica || false,
+      notificar_admin: type.notificar_admin || false,
+      dias_aviso_previo: type.dias_aviso_previo || 0,
+    });
     setShowForm(true);
   };
 
@@ -98,6 +109,10 @@ export default function AbsenceTypeConfigPage() {
       codigo: "",
       remunerada: false,
       requiere_aprobacion: true,
+      duracion_prevista_dias: 0,
+      es_critica: false,
+      notificar_admin: false,
+      dias_aviso_previo: 0,
       color: "#3B82F6",
       descripcion: "",
       activo: true,
@@ -385,6 +400,54 @@ export default function AbsenceTypeConfigPage() {
                     checked={formData.requiere_aprobacion}
                     onCheckedChange={(checked) => setFormData({ ...formData, requiere_aprobacion: checked })}
                   />
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div>
+                    <Label htmlFor="es_critica" className="font-semibold">Ausencia Crítica</Label>
+                    <p className="text-xs text-amber-700">Requiere notificación especial y atención inmediata</p>
+                  </div>
+                  <Switch
+                    id="es_critica"
+                    checked={formData.es_critica}
+                    onCheckedChange={(checked) => setFormData({ ...formData, es_critica: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div>
+                    <Label htmlFor="notificar_admin" className="font-semibold">Notificar Admin/Supervisores</Label>
+                    <p className="text-xs text-blue-700">Enviar notificaciones cuando se registre este tipo</p>
+                  </div>
+                  <Switch
+                    id="notificar_admin"
+                    checked={formData.notificar_admin}
+                    onCheckedChange={(checked) => setFormData({ ...formData, notificar_admin: checked })}
+                  />
+                </div>
+
+                <div className="space-y-2 p-3 bg-slate-50 rounded-lg">
+                  <Label htmlFor="duracion_prevista_dias">Duración Prevista (días)</Label>
+                  <Input
+                    id="duracion_prevista_dias"
+                    type="number"
+                    min="0"
+                    value={formData.duracion_prevista_dias}
+                    onChange={(e) => setFormData({ ...formData, duracion_prevista_dias: parseInt(e.target.value) || 0 })}
+                  />
+                  <p className="text-xs text-slate-600">Duración estimada típica para este tipo de ausencia</p>
+                </div>
+
+                <div className="space-y-2 p-3 bg-slate-50 rounded-lg">
+                  <Label htmlFor="dias_aviso_previo">Días de Aviso Previo</Label>
+                  <Input
+                    id="dias_aviso_previo"
+                    type="number"
+                    min="0"
+                    value={formData.dias_aviso_previo}
+                    onChange={(e) => setFormData({ ...formData, dias_aviso_previo: parseInt(e.target.value) || 0 })}
+                  />
+                  <p className="text-xs text-slate-600">Días antes del inicio para generar notificación (0 = no notificar)</p>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">

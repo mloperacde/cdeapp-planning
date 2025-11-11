@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -43,7 +44,8 @@ export default function Layout({ children, currentPageName }) {
   const [openSections, setOpenSections] = useState({
     jefes: false,
     informes: false,
-    maquinas: false
+    maquinas: false,
+    planning: false
   });
 
   const toggleSection = (section) => {
@@ -92,20 +94,55 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* Planning */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("Timeline")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("Timeline")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Activity className="w-5 h-5" />
-                        <span className="text-sm">Planning/Línea de Tiempo</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {/* Planning/Línea de Tiempo (Collapsible) */}
+                  <Collapsible open={openSections.planning} onOpenChange={() => toggleSection('planning')}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton 
+                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                            isParentActive([
+                              createPageUrl("Timeline"),
+                              createPageUrl("DailyPlanning")
+                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <Activity className="w-5 h-5" />
+                              <span className="text-sm">Planning</span>
+                            </div>
+                            {openSections.planning ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </div>
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="ml-6 mt-1 space-y-1">
+                          <SidebarMenuButton 
+                            asChild 
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("Timeline")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("Timeline")} className="flex items-center gap-2 px-3 py-2">
+                              <Activity className="w-4 h-4" />
+                              Línea de Tiempo
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton 
+                            asChild 
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("DailyPlanning")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("DailyPlanning")} className="flex items-center gap-2 px-3 py-2">
+                              <Clock className="w-4 h-4" />
+                              Planning Diario
+                            </Link>
+                          </SidebarMenuButton>
+                        </div>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
 
                   {/* Empleados */}
                   <SidebarMenuItem>
