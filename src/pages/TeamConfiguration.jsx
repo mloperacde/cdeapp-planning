@@ -16,14 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Users, Sunrise, Sunset, RefreshCw, Save, Filter, ArrowLeft, UsersRound, Edit, CheckCircle2, XCircle, GripVertical } from "lucide-react";
+import { Users, Sunrise, Sunset, RefreshCw, Save, Filter, ArrowLeft, UsersRound, Edit, CheckCircle2, XCircle, ArrowUp, ArrowDown } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import EmployeeForm from "../components/employees/EmployeeForm";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function TeamConfigurationPage() {
   const [selectedWeek, setSelectedWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -238,15 +237,32 @@ export default function TeamConfigurationPage() {
     });
   };
 
-  const handleDragEnd = (result, dept, teamKey) => {
-    if (!result.destination) return;
-
+  const movePositionUp = (dept, teamKey, position) => {
     const key = `${dept}_${teamKey}`;
     const currentOrder = positionOrders[key] || [];
-    const newOrder = Array.from(currentOrder);
-    const [removed] = newOrder.splice(result.source.index, 1);
-    newOrder.splice(result.destination.index, 0, removed);
+    const index = currentOrder.indexOf(position);
+    
+    if (index <= 0) return;
+    
+    const newOrder = [...currentOrder];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    
+    setPositionOrders({
+      ...positionOrders,
+      [key]: newOrder
+    });
+  };
 
+  const movePositionDown = (dept, teamKey, position) => {
+    const key = `${dept}_${teamKey}`;
+    const currentOrder = positionOrders[key] || [];
+    const index = currentOrder.indexOf(position);
+    
+    if (index < 0 || index >= currentOrder.length - 1) return;
+    
+    const newOrder = [...currentOrder];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    
     setPositionOrders({
       ...positionOrders,
       [key]: newOrder
@@ -269,6 +285,7 @@ export default function TeamConfigurationPage() {
     const key = `${dept}_${teamKey}`;
     const savedOrder = positionOrders[key];
     
+    // If there's no saved order, use the keys from the grouped positions, sorted alphabetically
     if (!savedOrder || savedOrder.length === 0) {
       return Object.keys(positions).sort();
     }
@@ -283,12 +300,9 @@ export default function TeamConfigurationPage() {
       }
     });
     
-    // Add any new positions not in saved order
-    positionKeys.forEach(pos => {
-      if (!ordered.includes(pos)) {
-        ordered.push(pos);
-      }
-    });
+    // Add any new positions not in saved order, append them to the end (sorted alphabetically)
+    const newPositions = positionKeys.filter(pos => !ordered.includes(pos)).sort();
+    ordered.push(...newPositions);
     
     return ordered;
   };
@@ -639,90 +653,92 @@ export default function TeamConfigurationPage() {
                                 </Button>
                               </div>
                               
-                              <DragDropContext onDragEnd={(result) => handleDragEnd(result, dept, 'team_1')}>
-                                <Droppable droppableId={`positions-${dept}-team1`}>
-                                  {(provided) => (
-                                    <div {...provided.droppableProps} ref={provided.innerRef}>
-                                      {orderedPositions.map((position, index) => (
-                                        <Draggable key={position} draggableId={position} index={index}>
-                                          {(provided, snapshot) => (
-                                            <div
-                                              ref={provided.innerRef}
-                                              {...provided.draggableProps}
-                                              className={`mb-4 last:mb-0 ${snapshot.isDragging ? 'opacity-50' : ''}`}
-                                            >
-                                              <div className="flex items-center gap-2 mb-2">
-                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                                                  <GripVertical className="w-4 h-4 text-slate-400" />
-                                                </div>
-                                                <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                                                  {position}
-                                                </Badge>
-                                                <span className="text-xs text-slate-500">({positions[position].length})</span>
-                                              </div>
-                                              <div className="space-y-2 ml-6">
-                                                {positions[position].map(emp => {
-                                                  const isIncluded = emp.incluir_en_planning !== false;
-                                                  return (
-                                                    <div 
-                                                      key={emp.id} 
-                                                      className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
-                                                        isIncluded 
-                                                          ? 'bg-white border-slate-200 hover:border-purple-300 hover:shadow-md' 
-                                                          : 'bg-slate-50 border-slate-300 opacity-60'
-                                                      } cursor-pointer`}
-                                                      onClick={() => handleEditEmployee(emp)}
-                                                    >
-                                                      <div className="flex-1">
-                                                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                                                          {emp.nombre}
-                                                          {!isIncluded && <XCircle className="w-4 h-4 text-red-500" />}
-                                                          {isIncluded && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
-                                                      </div>
-                                                      <div className="flex items-center gap-2">
-                                                        <div 
-                                                          className="flex items-center gap-2 px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 transition-colors"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleTogglePlanning(emp);
-                                                          }}
-                                                        >
-                                                          <Switch
-                                                            checked={isIncluded}
-                                                            onCheckedChange={() => handleTogglePlanning(emp)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                          />
-                                                          <span className="text-xs text-purple-700 font-medium">
-                                                            {isIncluded ? 'En planning' : 'Excluido'}
-                                                          </span>
-                                                        </div>
-                                                        <Button
-                                                          variant="ghost"
-                                                          size="icon"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditEmployee(emp);
-                                                          }}
-                                                          className="h-8 w-8"
-                                                        >
-                                                          <Edit className="w-4 h-4 text-purple-600" />
-                                                        </Button>
-                                                      </div>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </Draggable>
-                                      ))}
-                                      {provided.placeholder}
+                              <div className="space-y-4">
+                                {orderedPositions.map((position, index) => (
+                                  <div key={position} className="mb-4 last:mb-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="flex gap-1">
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6"
+                                          onClick={() => movePositionUp(dept, 'team_1', position)}
+                                          disabled={index === 0}
+                                        >
+                                          <ArrowUp className="w-3 h-3" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6"
+                                          onClick={() => movePositionDown(dept, 'team_1', position)}
+                                          disabled={index >= orderedPositions.length - 1}
+                                        >
+                                          <ArrowDown className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                      <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                                        {position}
+                                      </Badge>
+                                      <span className="text-xs text-slate-500">({positions[position].length})</span>
                                     </div>
-                                  )}
-                                </Droppable>
-                              </DragDropContext>
+                                    <div className="space-y-2 ml-6">
+                                      {positions[position].map(emp => {
+                                        const isIncluded = emp.incluir_en_planning !== false;
+                                        return (
+                                          <div 
+                                            key={emp.id} 
+                                            className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
+                                              isIncluded 
+                                                ? 'bg-white border-slate-200 hover:border-purple-300 hover:shadow-md' 
+                                                : 'bg-slate-50 border-slate-300 opacity-60'
+                                            } cursor-pointer`}
+                                            onClick={() => handleEditEmployee(emp)}
+                                          >
+                                            <div className="flex-1">
+                                              <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                                                {emp.nombre}
+                                                {!isIncluded && <XCircle className="w-4 h-4 text-red-500" />}
+                                                {isIncluded && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                                              </div>
+                                              <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <div 
+                                                className="flex items-center gap-2 px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 transition-colors"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleTogglePlanning(emp);
+                                                }}
+                                              >
+                                                <Switch
+                                                  checked={isIncluded}
+                                                  onCheckedChange={() => handleTogglePlanning(emp)}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                />
+                                                <span className="text-xs text-purple-700 font-medium">
+                                                  {isIncluded ? 'En planning' : 'Excluido'}
+                                                </span>
+                                              </div>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleEditEmployee(emp);
+                                                }}
+                                                className="h-8 w-8"
+                                              >
+                                                <Edit className="w-4 h-4 text-purple-600" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           );
                         })}
@@ -788,90 +804,92 @@ export default function TeamConfigurationPage() {
                                 </Button>
                               </div>
                               
-                              <DragDropContext onDragEnd={(result) => handleDragEnd(result, dept, 'team_2')}>
-                                <Droppable droppableId={`positions-${dept}-team2`}>
-                                  {(provided) => (
-                                    <div {...provided.droppableProps} ref={provided.innerRef}>
-                                      {orderedPositions.map((position, index) => (
-                                        <Draggable key={position} draggableId={`${position}-team2`} index={index}>
-                                          {(provided, snapshot) => (
-                                            <div
-                                              ref={provided.innerRef}
-                                              {...provided.draggableProps}
-                                              className={`mb-4 last:mb-0 ${snapshot.isDragging ? 'opacity-50' : ''}`}
-                                            >
-                                              <div className="flex items-center gap-2 mb-2">
-                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                                                  <GripVertical className="w-4 h-4 text-slate-400" />
-                                                </div>
-                                                <Badge variant="outline" className="bg-pink-100 text-pink-800">
-                                                  {position}
-                                                </Badge>
-                                                <span className="text-xs text-slate-500">({positions[position].length})</span>
-                                              </div>
-                                              <div className="space-y-2 ml-6">
-                                                {positions[position].map(emp => {
-                                                  const isIncluded = emp.incluir_en_planning !== false;
-                                                  return (
-                                                    <div 
-                                                      key={emp.id} 
-                                                      className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
-                                                        isIncluded 
-                                                          ? 'bg-white border-slate-200 hover:border-pink-300 hover:shadow-md' 
-                                                          : 'bg-slate-50 border-slate-300 opacity-60'
-                                                      } cursor-pointer`}
-                                                      onClick={() => handleEditEmployee(emp)}
-                                                    >
-                                                      <div className="flex-1">
-                                                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                                                          {emp.nombre}
-                                                          {!isIncluded && <XCircle className="w-4 h-4 text-red-500" />}
-                                                          {isIncluded && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
-                                                      </div>
-                                                      <div className="flex items-center gap-2">
-                                                        <div 
-                                                          className="flex items-center gap-2 px-2 py-1 rounded bg-pink-50 hover:bg-pink-100 transition-colors"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleTogglePlanning(emp);
-                                                          }}
-                                                        >
-                                                          <Switch
-                                                            checked={isIncluded}
-                                                            onCheckedChange={() => handleTogglePlanning(emp)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                          />
-                                                          <span className="text-xs text-pink-700 font-medium">
-                                                            {isIncluded ? 'En planning' : 'Excluido'}
-                                                          </span>
-                                                        </div>
-                                                        <Button
-                                                          variant="ghost"
-                                                          size="icon"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditEmployee(emp);
-                                                          }}
-                                                          className="h-8 w-8"
-                                                        >
-                                                          <Edit className="w-4 h-4 text-pink-600" />
-                                                        </Button>
-                                                      </div>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </Draggable>
-                                      ))}
-                                      {provided.placeholder}
+                              <div className="space-y-4">
+                                {orderedPositions.map((position, index) => (
+                                  <div key={position} className="mb-4 last:mb-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="flex gap-1">
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6"
+                                          onClick={() => movePositionUp(dept, 'team_2', position)}
+                                          disabled={index === 0}
+                                        >
+                                          <ArrowUp className="w-3 h-3" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6"
+                                          onClick={() => movePositionDown(dept, 'team_2', position)}
+                                          disabled={index >= orderedPositions.length - 1}
+                                        >
+                                          <ArrowDown className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                      <Badge variant="outline" className="bg-pink-100 text-pink-800">
+                                        {position}
+                                      </Badge>
+                                      <span className="text-xs text-slate-500">({positions[position].length})</span>
                                     </div>
-                                  )}
-                                </Droppable>
-                              </DragDropContext>
+                                    <div className="space-y-2 ml-6">
+                                      {positions[position].map(emp => {
+                                        const isIncluded = emp.incluir_en_planning !== false;
+                                        return (
+                                          <div 
+                                            key={emp.id} 
+                                            className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
+                                              isIncluded 
+                                                ? 'bg-white border-slate-200 hover:border-pink-300 hover:shadow-md' 
+                                                : 'bg-slate-50 border-slate-300 opacity-60'
+                                            } cursor-pointer`}
+                                            onClick={() => handleEditEmployee(emp)}
+                                          >
+                                            <div className="flex-1">
+                                              <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                                                {emp.nombre}
+                                                {!isIncluded && <XCircle className="w-4 h-4 text-red-500" />}
+                                                {isIncluded && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                                              </div>
+                                              <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <div 
+                                                className="flex items-center gap-2 px-2 py-1 rounded bg-pink-50 hover:bg-pink-100 transition-colors"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleTogglePlanning(emp);
+                                                }}
+                                              >
+                                                <Switch
+                                                  checked={isIncluded}
+                                                  onCheckedChange={() => handleTogglePlanning(emp)}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                />
+                                                <span className="text-xs text-pink-700 font-medium">
+                                                  {isIncluded ? 'En planning' : 'Excluido'}
+                                                </span>
+                                              </div>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleEditEmployee(emp);
+                                                }}
+                                                className="h-8 w-8"
+                                              >
+                                                <Edit className="w-4 h-4 text-pink-600" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           );
                         })}

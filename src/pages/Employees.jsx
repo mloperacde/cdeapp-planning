@@ -38,6 +38,8 @@ export default function EmployeesPage() {
     tipo_turno: "all",
     equipo: "all",
     disponibilidad: "all",
+    departamento: "all", // New filter
+    puesto: "all",       // New filter
   });
   const queryClient = useQueryClient();
 
@@ -82,6 +84,22 @@ export default function EmployeesPage() {
     setEditingEmployee(null);
   };
 
+  const departments = useMemo(() => {
+    const depts = new Set();
+    employees.forEach(emp => {
+      if (emp.departamento) depts.add(emp.departamento);
+    });
+    return Array.from(depts).sort();
+  }, [employees]);
+
+  const puestos = useMemo(() => {
+    const psts = new Set();
+    employees.forEach(emp => {
+      if (emp.puesto) psts.add(emp.puesto);
+    });
+    return Array.from(psts).sort();
+  }, [employees]);
+
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const matchesSearch = 
@@ -93,8 +111,10 @@ export default function EmployeesPage() {
       const matchesTipoTurno = filters.tipo_turno === "all" || emp.tipo_turno === filters.tipo_turno;
       const matchesEquipo = filters.equipo === "all" || emp.equipo === filters.equipo;
       const matchesDisponibilidad = filters.disponibilidad === "all" || emp.disponibilidad === filters.disponibilidad;
+      const matchesDepartamento = filters.departamento === "all" || emp.departamento === filters.departamento; // New filter logic
+      const matchesPuesto = filters.puesto === "all" || emp.puesto === filters.puesto;                       // New filter logic
       
-      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad;
+      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto;
     });
   }, [employees, searchTerm, filters]);
 
@@ -208,7 +228,7 @@ export default function EmployeesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Búsqueda</Label>
                 <div className="relative">
@@ -223,6 +243,40 @@ export default function EmployeesPage() {
               </div>
 
               <div className="space-y-2">
+                <Label>Departamento</Label>
+                <Select value={filters.departamento} onValueChange={(value) => setFilters({...filters, departamento: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un departamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Puesto</Label>
+                <Select value={filters.puesto} onValueChange={(value) => setFilters({...filters, puesto: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un puesto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {puestos.map((puesto) => (
+                      <SelectItem key={puesto} value={puesto}>
+                        {puesto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Tipo Jornada</Label>
                 <Select value={filters.tipo_jornada} onValueChange={(value) => setFilters({...filters, tipo_jornada: value})}>
                   <SelectTrigger>
@@ -230,9 +284,9 @@ export default function EmployeesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
-                    <SelectItem value="Completa 40h">Completa 40h</SelectItem>
-                    <SelectItem value="Completa 35h">Completa 35h</SelectItem>
-                    <SelectItem value="Reducida">Reducida</SelectItem>
+                    <SelectItem value="Jornada Completa">Jornada Completa</SelectItem>
+                    <SelectItem value="Jornada Parcial">Jornada Parcial</SelectItem>
+                    <SelectItem value="Reducción de Jornada">Reducción de Jornada</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

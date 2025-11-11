@@ -43,6 +43,20 @@ export default function MachineAssignmentsPage() {
     initialData: [],
   });
 
+  // Filtrar solo empleados de FABRICACIÓN con puestos específicos
+  const fabricationEmployees = useMemo(() => {
+    const validPositions = ['responsable de linea', 'segunda de linea', 'operaria de linea'];
+    
+    return employees.filter(emp => {
+      if (emp.departamento !== "FABRICACION") return false;
+      if (emp.disponibilidad !== "Disponible") return false;
+      if (emp.incluir_en_planning === false) return false;
+      
+      const puesto = (emp.puesto || '').toLowerCase();
+      return validPositions.some(vp => puesto.includes(vp));
+    });
+  }, [employees]);
+
   const saveAssignmentsMutation = useMutation({
     mutationFn: async (assignmentsData) => {
       const promises = Object.entries(assignmentsData).map(([machineId, data]) => {
@@ -72,16 +86,16 @@ export default function MachineAssignmentsPage() {
     },
   });
 
-  // Auto-asignar operarios basado en sus fichas de empleado
+  // Auto-asignar operarios basado en sus fichas de empleado - SOLO FABRICACIÓN
   const autoAssignOperators = () => {
     const newAssignments = {};
     const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
 
     machines.forEach(machine => {
       // Buscar empleados que tienen esta máquina configurada en su ficha
-      const eligibleEmployees = employees.filter(emp => {
-        // Solo empleados del equipo actual y disponibles
-        if (emp.equipo !== teamName || emp.disponibilidad !== "Disponible") return false;
+      const eligibleEmployees = fabricationEmployees.filter(emp => {
+        // Solo empleados del equipo actual (departamento, disponibilidad e incluir_en_planning ya filtrados por fabricationEmployees)
+        if (emp.equipo !== teamName) return false;
 
         // Verificar si tienen alguna de las 10 máquinas asignadas que coincida con esta máquina
         for (let i = 1; i <= 10; i++) {
@@ -93,13 +107,9 @@ export default function MachineAssignmentsPage() {
       });
 
       // Clasificar por puesto
-      const responsables = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('responsable'));
-      const segundas = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('segunda'));
-      const operarios = eligibleEmployees.filter(e => 
-        !e.puesto?.toLowerCase().includes('responsable') && 
-        !e.puesto?.toLowerCase().includes('segunda') &&
-        e.puesto?.toLowerCase().includes('operari')
-      );
+      const responsables = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('responsable de linea'));
+      const segundas = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('segunda de linea'));
+      const operarios = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('operaria de linea'));
 
       newAssignments[machine.id] = {
         responsable_linea: responsables.map(e => e.id),
@@ -247,7 +257,7 @@ export default function MachineAssignmentsPage() {
               Asignaciones de Operarios a Máquinas
             </h1>
             <p className="text-slate-600 mt-1">
-              Gestiona las asignaciones de empleados a máquinas por equipo
+              Solo empleados de FABRICACIÓN (Responsable, Segunda, Operaria de línea)
             </p>
           </div>
           <div className="flex gap-2">
@@ -279,6 +289,15 @@ export default function MachineAssignmentsPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card className="mb-6 bg-blue-50 border-2 border-blue-300">
+          <CardContent className="p-4">
+            <p className="text-sm text-blue-800">
+              <strong>ℹ️ Información:</strong> Solo se mostrarán empleados del departamento FABRICACIÓN con los puestos: 
+              Responsable de línea, Segunda de línea y Operaria de línea.
+            </p>
+          </CardContent>
+        </Card>
 
         <Tabs value={currentTeam} onValueChange={setCurrentTeam} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">

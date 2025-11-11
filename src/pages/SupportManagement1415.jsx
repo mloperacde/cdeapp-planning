@@ -14,11 +14,12 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Label } from "@/components/ui/label"; // Added Label import
 
 export default function SupportManagement1415Page() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEmployees, setSelectedEmployees] = useState(new Set());
-  const [tasks, setTasks] = useState({});
+  const [commonTask, setCommonTask] = useState({ tarea: '', instrucciones: '' }); // Added commonTask state
   const [showPrintView, setShowPrintView] = useState(false);
   const queryClient = useQueryClient();
 
@@ -41,54 +42,60 @@ export default function SupportManagement1415Page() {
   });
 
   const saveTaskMutation = useMutation({
-    mutationFn: (data) => {
-      const existing = savedTasks.find(t => t.employee_id === data.employee_id && t.fecha === data.fecha);
-      if (existing) {
-        return base44.entities.SupportTask1415.update(existing.id, data);
-      }
-      return base44.entities.SupportTask1415.create(data);
+    mutationFn: async (tasksData) => { // Modified to accept an array of tasks
+      const promises = tasksData.map(data => {
+        const existing = savedTasks.find(t => t.employee_id === data.employee_id && t.fecha === data.fecha);
+        if (existing) {
+          return base44.entities.SupportTask1415.update(existing.id, data);
+        }
+        return base44.entities.SupportTask1415.create(data);
+      });
+      return Promise.all(promises);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supportTasks1415'] });
+      queryClient.invalidateQueries({ queryKey: ['supportTasks1415', selectedDate] }); // Invalidate for specific date
     },
   });
 
   React.useEffect(() => {
     const tasksForDate = savedTasks.filter(t => t.fecha === selectedDate);
-    const taskMap = {};
-    const selectedSet = new Set();
-    
-    tasksForDate.forEach(t => {
-      taskMap[t.employee_id] = {
-        tarea: t.tarea,
-        instrucciones: t.instrucciones
-      };
-      selectedSet.add(t.employee_id);
-    });
-    
-    setTasks(taskMap);
-    setSelectedEmployees(selectedSet);
+
+    if (tasksForDate.length > 0) {
+      // Cargar la primera tarea como común
+      const firstTask = tasksForDate[0];
+      setCommonTask({
+        tarea: firstTask.tarea,
+        instrucciones: firstTask.instrucciones || ''
+      });
+
+      // Seleccionar empleados que tienen tareas guardadas
+      const selectedSet = new Set(tasksForDate.map(t => t.employee_id));
+      setSelectedEmployees(selectedSet);
+    } else {
+      setCommonTask({ tarea: '', instrucciones: '' }); // Reset common task if no tasks for date
+      setSelectedEmployees(new Set()); // Reset selected employees
+    }
   }, [savedTasks, selectedDate]);
 
   // Solo empleados de MANTENIMIENTO y FABRICACION
   // De FABRICACION solo: responsable de línea, segunda de línea, operaria de línea
   const supportEmployees = useMemo(() => {
     const validPositions = ['responsable de linea', 'segunda de linea', 'operaria de linea'];
-    
+
     return employees.filter(emp => {
       if (emp.disponibilidad !== "Disponible" || emp.incluir_en_planning === false) {
         return false;
       }
-      
+
       if (emp.departamento === "MANTENIMIENTO") {
         return true;
       }
-      
+
       if (emp.departamento === "FABRICACION") {
         const puesto = (emp.puesto || '').toLowerCase();
         return validPositions.some(vp => puesto.includes(vp));
       }
-      
+
       return false;
     });
   }, [employees]);
@@ -105,38 +112,33 @@ export default function SupportManagement1415Page() {
     const newSelected = new Set(selectedEmployees);
     if (newSelected.has(empId)) {
       newSelected.delete(empId);
-      const newTasks = { ...tasks };
-      delete newTasks[empId];
-      setTasks(newTasks);
     } else {
       newSelected.add(empId);
     }
     setSelectedEmployees(newSelected);
   };
 
-  const handleTaskChange = (empId, field, value) => {
-    setTasks({
-      ...tasks,
-      [empId]: {
-        ...tasks[empId],
-        [field]: value
-      }
-    });
-  };
+  // handleTaskChange and tasks state are removed as we're using commonTask
 
   const handleSaveAllTasks = () => {
-    selectedEmployees.forEach(empId => {
-      const task = tasks[empId];
-      if (task && task.tarea) {
-        saveTaskMutation.mutate({
-          fecha: selectedDate,
-          employee_id: empId,
-          tarea: task.tarea,
-          instrucciones: task.instrucciones || '',
-          completada: false
-        });
-      }
-    });
+    if (!commonTask.tarea || commonTask.tarea.trim() === '') {
+      alert('Por favor, ingresa una descripción de tarea');
+      return;
+    }
+    if (selectedEmployees.size === 0) {
+      alert('Por favor, selecciona al menos un empleado para asignar la tarea.');
+      return;
+    }
+
+    const tasksToSave = Array.from(selectedEmployees).map(empId => ({
+      fecha: selectedDate,
+      employee_id: empId,
+      tarea: commonTask.tarea,
+      instrucciones: commonTask.instrucciones || '',
+      completada: false
+    }));
+
+    saveTaskMutation.mutate(tasksToSave);
   };
 
   const handlePrint = () => {
@@ -155,9 +157,9 @@ export default function SupportManagement1415Page() {
   const assignedTasks = Array.from(selectedEmployees)
     .map(empId => ({
       employee: employees.find(e => e.id === empId),
-      task: tasks[empId]
+      task: commonTask // Use commonTask here
     }))
-    .filter(item => item.employee && item.task && item.task.tarea);
+    .filter(item => item.employee && commonTask.tarea && commonTask.tarea.trim() !== ''); // Filter if common task exists
 
   return (
     <div className="p-6 md:p-8">
@@ -217,7 +219,7 @@ export default function SupportManagement1415Page() {
                   />
                   <Button
                     onClick={handleSaveAllTasks}
-                    disabled={assignedTasks.length === 0 || saveTaskMutation.isPending}
+                    disabled={selectedEmployees.size === 0 || !commonTask.tarea || commonTask.tarea.trim() === '' || saveTaskMutation.isPending}
                     className="ml-auto bg-green-600 hover:bg-green-700"
                   >
                     {saveTaskMutation.isPending ? 'Guardando...' : 'Guardar Todas las Tareas'}
@@ -282,86 +284,105 @@ export default function SupportManagement1415Page() {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-slate-100">
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Asignación de Tareas - {format(new Date(selectedDate), "d 'de' MMMM 'de' yyyy", { locale: es })}</CardTitle>
-                    <Button
-                      onClick={handleSelectAll}
-                      variant="outline"
-                      size="sm"
-                    >
-                      {selectedEmployees.size === supportEmployees.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    {supportEmployees.map((emp) => {
-                      const isSelected = selectedEmployees.has(emp.id);
-                      const task = tasks[emp.id] || {};
-                      
-                      return (
-                        <div 
-                          key={emp.id} 
-                          className={`border-2 rounded-lg p-4 transition-all ${
-                            isSelected ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'
-                          }`}
-                        >
-                          <div className="flex items-start gap-4">
+              <>
+                {/* Tarea Común para Todos */}
+                <Card className="mb-6 shadow-lg border-0 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <CardHeader className="border-b border-blue-200">
+                    <CardTitle className="text-blue-900">
+                      Tarea Común para Empleados Seleccionados
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="common_task" className="text-blue-900 font-semibold">
+                          Descripción de Tarea *
+                        </Label>
+                        <Input
+                          id="common_task"
+                          placeholder="Ej: Limpieza de área de producción"
+                          value={commonTask.tarea}
+                          onChange={(e) => setCommonTask({ ...commonTask, tarea: e.target.value })}
+                          className="bg-white text-base"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="common_instructions" className="text-blue-900 font-semibold">
+                          Instrucciones
+                        </Label>
+                        <Textarea
+                          id="common_instructions"
+                          placeholder="Instrucciones detalladas que se aplicarán a todos los empleados seleccionados..."
+                          value={commonTask.instrucciones}
+                          onChange={(e) => setCommonTask({ ...commonTask, instrucciones: e.target.value })}
+                          rows={3}
+                          className="bg-white text-base"
+                        />
+                      </div>
+                      <p className="text-sm text-blue-700">
+                        Esta tarea e instrucciones se asignarán a todos los empleados que selecciones abajo.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Lista de Empleados */}
+                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                  <CardHeader className="border-b border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <CardTitle>
+                        Seleccionar Empleados - {format(new Date(selectedDate), "d 'de' MMMM 'de' yyyy", { locale: es })}
+                      </CardTitle>
+                      <Button
+                        onClick={handleSelectAll}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {selectedEmployees.size === supportEmployees.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {supportEmployees.map((emp) => {
+                        const isSelected = selectedEmployees.has(emp.id);
+
+                        return (
+                          <div
+                            key={emp.id}
+                            className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-all cursor-pointer ${
+                              isSelected ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                            }`}
+                            onClick={() => handleToggleEmployee(emp.id)}
+                          >
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => handleToggleEmployee(emp.id)}
-                              className="mt-1"
+                              onClick={(e) => e.stopPropagation()} // Prevent parent onClick from firing twice
                             />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="font-semibold text-slate-900">{emp.nombre}</span>
-                                <Badge 
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-slate-900 text-sm truncate">
+                                {emp.nombre}
+                              </div>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge
                                   style={{ backgroundColor: getTeamColor(emp.equipo) }}
                                   className="text-white text-xs"
                                 >
                                   {emp.equipo}
                                 </Badge>
                                 <Badge variant="outline" className="text-xs">
-                                  {emp.departamento}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
                                   {emp.puesto}
                                 </Badge>
                               </div>
-                              
-                              {isSelected && (
-                                <div className="space-y-3 mt-3">
-                                  <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-700">Tarea *</label>
-                                    <Input
-                                      placeholder="Ej: Limpieza de área de producción"
-                                      value={task.tarea || ''}
-                                      onChange={(e) => handleTaskChange(emp.id, 'tarea', e.target.value)}
-                                      className="bg-white"
-                                    />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-700">Instrucciones</label>
-                                    <Textarea
-                                      placeholder="Instrucciones detalladas de la tarea..."
-                                      value={task.instrucciones || ''}
-                                      onChange={(e) => handleTaskChange(emp.id, 'instrucciones', e.target.value)}
-                                      rows={2}
-                                      className="bg-white"
-                                    />
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </>
         ) : (
@@ -381,37 +402,48 @@ export default function SupportManagement1415Page() {
                   No hay tareas asignadas para esta fecha
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Empleado</TableHead>
-                      <TableHead>Equipo</TableHead>
-                      <TableHead>Departamento</TableHead>
-                      <TableHead>Puesto</TableHead>
-                      <TableHead>Tarea</TableHead>
-                      <TableHead>Instrucciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignedTasks.map(({ employee, task }) => (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-semibold">{employee.nombre}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            style={{ backgroundColor: getTeamColor(employee.equipo) }}
-                            className="text-white"
-                          >
-                            {employee.equipo}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{employee.departamento}</TableCell>
-                        <TableCell>{employee.puesto}</TableCell>
-                        <TableCell className="font-medium">{task.tarea}</TableCell>
-                        <TableCell className="text-sm">{task.instrucciones || '-'}</TableCell>
+                <>
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                    <h3 className="font-semibold text-blue-900 mb-2">Tarea Asignada:</h3>
+                    <p className="text-blue-800 font-medium">{commonTask.tarea}</p>
+                    {commonTask.instrucciones && commonTask.instrucciones.trim() !== '' && (
+                      <>
+                        <h4 className="font-semibold text-blue-900 mt-3 mb-1">Instrucciones:</h4>
+                        <p className="text-blue-800 text-sm">{commonTask.instrucciones}</p>
+                      </>
+                    )}
+                  </div>
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Empleado</TableHead>
+                        <TableHead>Equipo</TableHead>
+                        <TableHead>Departamento</TableHead>
+                        <TableHead>Puesto</TableHead>
+                        {/* Task and Instructions columns removed here */}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {assignedTasks.map(({ employee }) => ( // employee, task destructuring removed here
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-semibold">{employee.nombre}</TableCell>
+                          <TableCell>
+                            <Badge
+                              style={{ backgroundColor: getTeamColor(employee.equipo) }}
+                              className="text-white"
+                            >
+                              {employee.equipo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{employee.departamento}</TableCell>
+                          <TableCell>{employee.puesto}</TableCell>
+                          {/* Task and Instructions cells removed here */}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
               )}
             </CardContent>
           </Card>
@@ -424,7 +456,7 @@ export default function SupportManagement1415Page() {
             <p>• Empleados de MANTENIMIENTO (todos los puestos)</p>
             <p>• Empleados de FABRICACION (solo: responsable de línea, segunda de línea, operaria de línea)</p>
             <p>• Disponibles en la franja horaria de 14:00 a 15:00h</p>
-            <p>• Selecciona empleados y asigna tareas específicas para cada uno</p>
+            <p>• Selecciona empleados y asigna una tarea común específica para todos</p>
             <p>• Las tareas se guardan por fecha y pueden imprimirse</p>
           </div>
         </div>
