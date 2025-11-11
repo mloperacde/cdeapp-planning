@@ -152,13 +152,6 @@ export default function MachinesPage() {
 
   const subPages = [
     {
-      title: "Mantenimiento de Máquinas",
-      description: "Seguimiento y mantenimiento predictivo",
-      icon: Wrench,
-      url: createPageUrl("MachineMaintenance"),
-      color: "orange"
-    },
-    {
       title: "Planificación de Máquinas",
       description: "Planifica procesos diarios por máquina",
       icon: CalendarRange,
@@ -171,13 +164,20 @@ export default function MachinesPage() {
       icon: ListTree,
       url: createPageUrl("ProcessConfiguration"),
       color: "green"
+    },
+    {
+      title: "Seguimiento de Mantenimiento",
+      description: "Mantenimiento planificado y reparaciones",
+      icon: Wrench,
+      url: createPageUrl("MaintenanceTracking"),
+      color: "orange"
     }
   ];
 
   const colorClasses = {
-    orange: "from-orange-500 to-orange-600",
     blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600"
+    green: "from-green-500 to-green-600",
+    orange: "from-orange-500 to-orange-600"
   };
 
   return (

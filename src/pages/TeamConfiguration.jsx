@@ -312,42 +312,6 @@ export default function TeamConfigurationPage() {
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
   const departments = getDepartments();
 
-  // Calcular estadísticas por departamento para cada equipo
-  const getDepartmentStats = (teamName) => {
-    const teamEmployees = employees.filter(emp => emp.equipo === teamName);
-    const stats = {};
-    
-    teamEmployees.forEach(emp => {
-      const dept = emp.departamento || "Sin Departamento";
-      if (!stats[dept]) {
-        stats[dept] = {
-          total: 0,
-          available: 0,
-          byPosition: {}
-        };
-      }
-      
-      stats[dept].total++;
-      
-      // Contar disponibles (sin ausencias activas)
-      if (emp.disponibilidad === "Disponible") {
-        stats[dept].available++;
-      }
-      
-      // Contar por puesto
-      const position = emp.puesto || "Sin Puesto";
-      if (!stats[dept].byPosition[position]) {
-        stats[dept].byPosition[position] = { total: 0, available: 0 };
-      }
-      stats[dept].byPosition[position].total++;
-      if (emp.disponibilidad === "Disponible") {
-        stats[dept].byPosition[position].available++;
-      }
-    });
-    
-    return stats;
-  };
-
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -652,43 +616,9 @@ export default function TeamConfigurationPage() {
               {/* Equipo 1 */}
               <Card className="shadow-lg border-2 border-purple-200 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-purple-100 bg-purple-50/50">
-                  <div>
-                    <CardTitle className="text-purple-900 mb-4">
-                      {teamFormData.team_1.team_name}
-                    </CardTitle>
-                    {/* Totalizadores por departamento */}
-                    <div className="space-y-2">
-                      {(() => {
-                        const stats = getDepartmentStats(teamFormData.team_1.team_name);
-                        return Object.entries(stats).map(([dept, data]) => (
-                          <div key={dept} className="bg-white/60 rounded-lg p-3 border border-purple-200">
-                            <div className="flex justify-between items-center mb-2">
-                              <h5 className="font-bold text-purple-900 text-sm">{dept}</h5>
-                              <div className="flex items-center gap-2">
-                                <Badge className="bg-green-600 text-white">
-                                  {data.available} disponibles
-                                </Badge>
-                                <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                                  Total: {data.total}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="text-xs text-slate-600 space-y-1">
-                              {Object.entries(data.byPosition).map(([pos, count]) => (
-                                <div key={pos} className="flex justify-between">
-                                  <span>{pos}:</span>
-                                  <span className="font-semibold">
-                                    <span className="text-green-700">{count.available}</span>
-                                    <span className="text-slate-400"> / {count.total}</span>
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
+                  <CardTitle className="text-purple-900">
+                    {teamFormData.team_1.team_name}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   {(() => {
@@ -837,43 +767,9 @@ export default function TeamConfigurationPage() {
               {/* Equipo 2 */}
               <Card className="shadow-lg border-2 border-pink-200 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-pink-100 bg-pink-50/50">
-                  <div>
-                    <CardTitle className="text-pink-900 mb-4">
-                      {teamFormData.team_2.team_name}
-                    </CardTitle>
-                    {/* Totalizadores por departamento */}
-                    <div className="space-y-2">
-                      {(() => {
-                        const stats = getDepartmentStats(teamFormData.team_2.team_name);
-                        return Object.entries(stats).map(([dept, data]) => (
-                          <div key={dept} className="bg-white/60 rounded-lg p-3 border border-pink-200">
-                            <div className="flex justify-between items-center mb-2">
-                              <h5 className="font-bold text-pink-900 text-sm">{dept}</h5>
-                              <div className="flex items-center gap-2">
-                                <Badge className="bg-green-600 text-white">
-                                  {data.available} disponibles
-                                </Badge>
-                                <Badge variant="outline" className="bg-pink-100 text-pink-800">
-                                  Total: {data.total}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="text-xs text-slate-600 space-y-1">
-                              {Object.entries(data.byPosition).map(([pos, count]) => (
-                                <div key={pos} className="flex justify-between">
-                                  <span>{pos}:</span>
-                                  <span className="font-semibold">
-                                    <span className="text-green-700">{count.available}</span>
-                                    <span className="text-slate-400"> / {count.total}</span>
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
+                  <CardTitle className="text-pink-900">
+                    {teamFormData.team_2.team_name}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   {(() => {
