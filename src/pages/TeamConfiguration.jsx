@@ -16,19 +16,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Users, Sunrise, Sunset, Calendar, RefreshCw, Save, Filter, ArrowLeft, UsersRound, Edit, CheckCircle2, XCircle } from "lucide-react";
+import { Users, Sunrise, Sunset, RefreshCw, Save, Filter, ArrowLeft, UsersRound, Edit, CheckCircle2, XCircle, GripVertical } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import EmployeeForm from "../components/employees/EmployeeForm";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function TeamConfigurationPage() {
   const [selectedWeek, setSelectedWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
+  const [positionOrders, setPositionOrders] = useState({});
   const queryClient = useQueryClient();
 
   const { data: teams, isLoading: isLoadingTeams } = useQuery({
@@ -55,6 +57,12 @@ export default function TeamConfigurationPage() {
     initialData: [],
   });
 
+  const { data: positionOrdersData } = useQuery({
+    queryKey: ['positionOrders'],
+    queryFn: () => base44.entities.PositionOrder.list(),
+    initialData: [],
+  });
+
   const [teamFormData, setTeamFormData] = useState({
     team_1: { team_key: 'team_1', team_name: 'Turno Equipo Isa', descripcion: '', activo: true, color: '#8B5CF6' },
     team_2: { team_key: 'team_2', team_name: 'Turno Equipo Sara', descripcion: '', activo: true, color: '#EC4899' }
@@ -69,6 +77,17 @@ export default function TeamConfigurationPage() {
       setTeamFormData(newFormData);
     }
   }, [teams]);
+
+  React.useEffect(() => {
+    if (positionOrdersData.length > 0) {
+      const orders = {};
+      positionOrdersData.forEach(po => {
+        const key = `${po.departamento}_${po.team_key}`;
+        orders[key] = po.orden_puestos;
+      });
+      setPositionOrders(orders);
+    }
+  }, [positionOrdersData]);
 
   const saveTeamMutation = useMutation({
     mutationFn: async (data) => {
@@ -104,6 +123,21 @@ export default function TeamConfigurationPage() {
       base44.entities.Employee.update(id, { incluir_en_planning: incluirEnPlanning }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
+  });
+
+  const savePositionOrderMutation = useMutation({
+    mutationFn: async (data) => {
+      const existing = positionOrdersData.find(
+        po => po.departamento === data.departamento && po.team_key === data.team_key
+      );
+      if (existing) {
+        return base44.entities.PositionOrder.update(existing.id, data);
+      }
+      return base44.entities.PositionOrder.create(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['positionOrders'] });
     },
   });
 
@@ -202,6 +236,61 @@ export default function TeamConfigurationPage() {
       id: employee.id,
       incluirEnPlanning: newValue
     });
+  };
+
+  const handleDragEnd = (result, dept, teamKey) => {
+    if (!result.destination) return;
+
+    const key = `${dept}_${teamKey}`;
+    const currentOrder = positionOrders[key] || [];
+    const newOrder = Array.from(currentOrder);
+    const [removed] = newOrder.splice(result.source.index, 1);
+    newOrder.splice(result.destination.index, 0, removed);
+
+    setPositionOrders({
+      ...positionOrders,
+      [key]: newOrder
+    });
+  };
+
+  const handleSavePositionOrders = (dept, teamKey) => {
+    const key = `${dept}_${teamKey}`;
+    const orden = positionOrders[key];
+    if (orden) {
+      savePositionOrderMutation.mutate({
+        departamento: dept,
+        team_key: teamKey,
+        orden_puestos: orden
+      });
+    }
+  };
+
+  const getOrderedPositions = (positions, dept, teamKey) => {
+    const key = `${dept}_${teamKey}`;
+    const savedOrder = positionOrders[key];
+    
+    if (!savedOrder || savedOrder.length === 0) {
+      return Object.keys(positions).sort();
+    }
+
+    const ordered = [];
+    const positionKeys = Object.keys(positions);
+    
+    // Add positions in saved order
+    savedOrder.forEach(pos => {
+      if (positionKeys.includes(pos)) {
+        ordered.push(pos);
+      }
+    });
+    
+    // Add any new positions not in saved order
+    positionKeys.forEach(pos => {
+      if (!ordered.includes(pos)) {
+        ordered.push(pos);
+      }
+    });
+    
+    return ordered;
   };
 
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
@@ -531,79 +620,112 @@ export default function TeamConfigurationPage() {
                     
                     return (
                       <div className="space-y-6">
-                        {Object.entries(grouped).map(([dept, positions]) => (
-                          <div key={dept} className="border-2 border-purple-100 rounded-lg p-4 bg-purple-50/30">
-                            <h4 className="font-bold text-purple-900 mb-3 text-lg">{dept}</h4>
-                            {Object.entries(positions).map(([position, emps]) => (
-                              <div key={position} className="mb-4 last:mb-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                                    {position}
-                                  </Badge>
-                                  <span className="text-xs text-slate-500">({emps.length})</span>
-                                </div>
-                                <div className="space-y-2 ml-4">
-                                  {emps.map(emp => {
-                                    const isIncluded = emp.incluir_en_planning !== false;
-                                    return (
-                                      <div 
-                                        key={emp.id} 
-                                        className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
-                                          isIncluded 
-                                            ? 'bg-white border-slate-200 hover:border-purple-300 hover:shadow-md' 
-                                            : 'bg-slate-50 border-slate-300 opacity-60'
-                                        } cursor-pointer`}
-                                        onClick={() => handleEditEmployee(emp)}
-                                      >
-                                        <div className="flex-1">
-                                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                                            {emp.nombre}
-                                            {!isIncluded && (
-                                              <XCircle className="w-4 h-4 text-red-500" />
-                                            )}
-                                            {isIncluded && (
-                                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                            )}
-                                          </div>
-                                          <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <div 
-                                            className="flex items-center gap-2 px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 transition-colors"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleTogglePlanning(emp);
-                                            }}
-                                          >
-                                            <Switch
-                                              checked={isIncluded}
-                                              onCheckedChange={() => handleTogglePlanning(emp)}
-                                              onClick={(e) => e.stopPropagation()}
-                                            />
-                                            <span className="text-xs text-purple-700 font-medium">
-                                              {isIncluded ? 'En planning' : 'Excluido'}
-                                            </span>
-                                          </div>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleEditEmployee(emp);
-                                            }}
-                                            className="h-8 w-8"
-                                          >
-                                            <Edit className="w-4 h-4 text-purple-600" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                        {Object.entries(grouped).map(([dept, positions]) => {
+                          const orderedPositions = getOrderedPositions(positions, dept, 'team_1');
+                          
+                          return (
+                            <div key={dept} className="border-2 border-purple-100 rounded-lg p-4 bg-purple-50/30">
+                              <div className="flex justify-between items-center mb-3">
+                                <h4 className="font-bold text-purple-900 text-lg">{dept}</h4>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSavePositionOrders(dept, 'team_1')}
+                                  className="text-xs"
+                                  disabled={savePositionOrderMutation.isPending}
+                                >
+                                  <Save className="w-3 h-3 mr-1" />
+                                  {savePositionOrderMutation.isPending ? 'Guardando...' : 'Guardar Orden'}
+                                </Button>
                               </div>
-                            ))}
-                          </div>
-                        ))}
+                              
+                              <DragDropContext onDragEnd={(result) => handleDragEnd(result, dept, 'team_1')}>
+                                <Droppable droppableId={`positions-${dept}-team1`}>
+                                  {(provided) => (
+                                    <div {...provided.droppableProps} ref={provided.innerRef}>
+                                      {orderedPositions.map((position, index) => (
+                                        <Draggable key={position} draggableId={position} index={index}>
+                                          {(provided, snapshot) => (
+                                            <div
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              className={`mb-4 last:mb-0 ${snapshot.isDragging ? 'opacity-50' : ''}`}
+                                            >
+                                              <div className="flex items-center gap-2 mb-2">
+                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                                  <GripVertical className="w-4 h-4 text-slate-400" />
+                                                </div>
+                                                <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                                                  {position}
+                                                </Badge>
+                                                <span className="text-xs text-slate-500">({positions[position].length})</span>
+                                              </div>
+                                              <div className="space-y-2 ml-6">
+                                                {positions[position].map(emp => {
+                                                  const isIncluded = emp.incluir_en_planning !== false;
+                                                  return (
+                                                    <div 
+                                                      key={emp.id} 
+                                                      className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
+                                                        isIncluded 
+                                                          ? 'bg-white border-slate-200 hover:border-purple-300 hover:shadow-md' 
+                                                          : 'bg-slate-50 border-slate-300 opacity-60'
+                                                      } cursor-pointer`}
+                                                      onClick={() => handleEditEmployee(emp)}
+                                                    >
+                                                      <div className="flex-1">
+                                                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                                                          {emp.nombre}
+                                                          {!isIncluded && <XCircle className="w-4 h-4 text-red-500" />}
+                                                          {isIncluded && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                                      </div>
+                                                      <div className="flex items-center gap-2">
+                                                        <div 
+                                                          className="flex items-center gap-2 px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 transition-colors"
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleTogglePlanning(emp);
+                                                          }}
+                                                        >
+                                                          <Switch
+                                                            checked={isIncluded}
+                                                            onCheckedChange={() => handleTogglePlanning(emp)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                          />
+                                                          <span className="text-xs text-purple-700 font-medium">
+                                                            {isIncluded ? 'En planning' : 'Excluido'}
+                                                          </span>
+                                                        </div>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditEmployee(emp);
+                                                          }}
+                                                          className="h-8 w-8"
+                                                        >
+                                                          <Edit className="w-4 h-4 text-purple-600" />
+                                                        </Button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                      {provided.placeholder}
+                                    </div>
+                                  )}
+                                </Droppable>
+                              </DragDropContext>
+                            </div>
+                          );
+                        })}
                         <div className="pt-4 border-t border-purple-200">
                           <div className="text-sm text-slate-600 space-y-1">
                             <div>
@@ -624,7 +746,7 @@ export default function TeamConfigurationPage() {
                 </CardContent>
               </Card>
 
-              {/* Equipo 2 */}
+              {/* Equipo 2 - Same structure */}
               <Card className="shadow-lg border-2 border-pink-200 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-pink-100 bg-pink-50/50">
                   <CardTitle className="text-pink-900">
@@ -647,79 +769,112 @@ export default function TeamConfigurationPage() {
                     
                     return (
                       <div className="space-y-6">
-                        {Object.entries(grouped).map(([dept, positions]) => (
-                          <div key={dept} className="border-2 border-pink-100 rounded-lg p-4 bg-pink-50/30">
-                            <h4 className="font-bold text-pink-900 mb-3 text-lg">{dept}</h4>
-                            {Object.entries(positions).map(([position, emps]) => (
-                              <div key={position} className="mb-4 last:mb-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline" className="bg-pink-100 text-pink-800">
-                                    {position}
-                                  </Badge>
-                                  <span className="text-xs text-slate-500">({emps.length})</span>
-                                </div>
-                                <div className="space-y-2 ml-4">
-                                  {emps.map(emp => {
-                                    const isIncluded = emp.incluir_en_planning !== false;
-                                    return (
-                                      <div 
-                                        key={emp.id} 
-                                        className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
-                                          isIncluded 
-                                            ? 'bg-white border-slate-200 hover:border-pink-300 hover:shadow-md' 
-                                            : 'bg-slate-50 border-slate-300 opacity-60'
-                                        } cursor-pointer`}
-                                        onClick={() => handleEditEmployee(emp)}
-                                      >
-                                        <div className="flex-1">
-                                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                                            {emp.nombre}
-                                            {!isIncluded && (
-                                              <XCircle className="w-4 h-4 text-red-500" />
-                                            )}
-                                            {isIncluded && (
-                                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                            )}
-                                          </div>
-                                          <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <div 
-                                            className="flex items-center gap-2 px-2 py-1 rounded bg-pink-50 hover:bg-pink-100 transition-colors"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleTogglePlanning(emp);
-                                            }}
-                                          >
-                                            <Switch
-                                              checked={isIncluded}
-                                              onCheckedChange={() => handleTogglePlanning(emp)}
-                                              onClick={(e) => e.stopPropagation()}
-                                            />
-                                            <span className="text-xs text-pink-700 font-medium">
-                                              {isIncluded ? 'En planning' : 'Excluido'}
-                                            </span>
-                                          </div>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleEditEmployee(emp);
-                                            }}
-                                            className="h-8 w-8"
-                                          >
-                                            <Edit className="w-4 h-4 text-pink-600" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                        {Object.entries(grouped).map(([dept, positions]) => {
+                          const orderedPositions = getOrderedPositions(positions, dept, 'team_2');
+                          
+                          return (
+                            <div key={dept} className="border-2 border-pink-100 rounded-lg p-4 bg-pink-50/30">
+                              <div className="flex justify-between items-center mb-3">
+                                <h4 className="font-bold text-pink-900 text-lg">{dept}</h4>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSavePositionOrders(dept, 'team_2')}
+                                  className="text-xs"
+                                  disabled={savePositionOrderMutation.isPending}
+                                >
+                                  <Save className="w-3 h-3 mr-1" />
+                                  {savePositionOrderMutation.isPending ? 'Guardando...' : 'Guardar Orden'}
+                                </Button>
                               </div>
-                            ))}
-                          </div>
-                        ))}
+                              
+                              <DragDropContext onDragEnd={(result) => handleDragEnd(result, dept, 'team_2')}>
+                                <Droppable droppableId={`positions-${dept}-team2`}>
+                                  {(provided) => (
+                                    <div {...provided.droppableProps} ref={provided.innerRef}>
+                                      {orderedPositions.map((position, index) => (
+                                        <Draggable key={position} draggableId={`${position}-team2`} index={index}>
+                                          {(provided, snapshot) => (
+                                            <div
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              className={`mb-4 last:mb-0 ${snapshot.isDragging ? 'opacity-50' : ''}`}
+                                            >
+                                              <div className="flex items-center gap-2 mb-2">
+                                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                                  <GripVertical className="w-4 h-4 text-slate-400" />
+                                                </div>
+                                                <Badge variant="outline" className="bg-pink-100 text-pink-800">
+                                                  {position}
+                                                </Badge>
+                                                <span className="text-xs text-slate-500">({positions[position].length})</span>
+                                              </div>
+                                              <div className="space-y-2 ml-6">
+                                                {positions[position].map(emp => {
+                                                  const isIncluded = emp.incluir_en_planning !== false;
+                                                  return (
+                                                    <div 
+                                                      key={emp.id} 
+                                                      className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
+                                                        isIncluded 
+                                                          ? 'bg-white border-slate-200 hover:border-pink-300 hover:shadow-md' 
+                                                          : 'bg-slate-50 border-slate-300 opacity-60'
+                                                      } cursor-pointer`}
+                                                      onClick={() => handleEditEmployee(emp)}
+                                                    >
+                                                      <div className="flex-1">
+                                                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                                                          {emp.nombre}
+                                                          {!isIncluded && <XCircle className="w-4 h-4 text-red-500" />}
+                                                          {isIncluded && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                                      </div>
+                                                      <div className="flex items-center gap-2">
+                                                        <div 
+                                                          className="flex items-center gap-2 px-2 py-1 rounded bg-pink-50 hover:bg-pink-100 transition-colors"
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleTogglePlanning(emp);
+                                                          }}
+                                                        >
+                                                          <Switch
+                                                            checked={isIncluded}
+                                                            onCheckedChange={() => handleTogglePlanning(emp)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                          />
+                                                          <span className="text-xs text-pink-700 font-medium">
+                                                            {isIncluded ? 'En planning' : 'Excluido'}
+                                                          </span>
+                                                        </div>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditEmployee(emp);
+                                                          }}
+                                                          className="h-8 w-8"
+                                                        >
+                                                          <Edit className="w-4 h-4 text-pink-600" />
+                                                        </Button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                      {provided.placeholder}
+                                    </div>
+                                  )}
+                                </Droppable>
+                              </DragDropContext>
+                            </div>
+                          );
+                        })}
                         <div className="pt-4 border-t border-pink-200">
                           <div className="text-sm text-slate-600 space-y-1">
                             <div>
