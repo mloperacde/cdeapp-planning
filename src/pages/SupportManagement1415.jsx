@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -5,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label"; // Added Label import
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Clock, AlertTriangle, CheckSquare, Printer, ArrowLeft, Filter as FilterIcon, Trash2 } from "lucide-react";
@@ -312,7 +314,7 @@ export default function SupportManagement1415Page() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <Clock className="w-5 h-5 text-blue-600" />
-                    <label className="font-medium">Fecha:</label>
+                    <Label className="font-medium">Fecha:</Label>
                     <Input
                       type="date"
                       value={selectedDate}
