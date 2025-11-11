@@ -15,16 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, Sunrise, Sunset, Calendar, RefreshCw, Save, Filter, ArrowLeft, UsersRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Users, Sunrise, Sunset, Calendar, RefreshCw, Save, Filter, ArrowLeft, UsersRound, Edit, CheckCircle2, XCircle } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import EmployeeForm from "../components/employees/EmployeeForm";
 
 export default function TeamConfigurationPage() {
   const [selectedWeek, setSelectedWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: teams, isLoading: isLoadingTeams } = useQuery({
@@ -42,6 +46,12 @@ export default function TeamConfigurationPage() {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
+  });
+
+  const { data: machines } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list(),
     initialData: [],
   });
 
@@ -86,6 +96,14 @@ export default function TeamConfigurationPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamWeekSchedules'] });
+    },
+  });
+
+  const togglePlanningMutation = useMutation({
+    mutationFn: ({ id, incluirEnPlanning }) => 
+      base44.entities.Employee.update(id, { incluir_en_planning: incluirEnPlanning }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
   });
 
@@ -166,6 +184,24 @@ export default function TeamConfigurationPage() {
     });
     
     return grouped;
+  };
+
+  const handleEditEmployee = (employee) => {
+    setEditingEmployee(employee);
+    setShowEmployeeForm(true);
+  };
+
+  const handleCloseEmployeeForm = () => {
+    setEditingEmployee(null);
+    setShowEmployeeForm(false);
+  };
+
+  const handleTogglePlanning = (employee) => {
+    const newValue = !(employee.incluir_en_planning ?? true);
+    togglePlanningMutation.mutate({
+      id: employee.id,
+      incluirEnPlanning: newValue
+    });
   };
 
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
@@ -483,6 +519,7 @@ export default function TeamConfigurationPage() {
                   {(() => {
                     const teamEmployees = getTeamEmployees(teamFormData.team_1.team_name);
                     const grouped = groupByDepartmentAndPosition(teamEmployees);
+                    const includedCount = teamEmployees.filter(emp => emp.incluir_en_planning !== false).length;
                     
                     if (teamEmployees.length === 0) {
                       return (
@@ -506,27 +543,79 @@ export default function TeamConfigurationPage() {
                                   <span className="text-xs text-slate-500">({emps.length})</span>
                                 </div>
                                 <div className="space-y-2 ml-4">
-                                  {emps.map(emp => (
-                                    <div key={emp.id} className="flex justify-between items-center p-2 border border-slate-200 rounded bg-white hover:bg-slate-50">
-                                      <div>
-                                        <div className="font-semibold text-slate-900 text-sm">{emp.nombre}</div>
-                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                  {emps.map(emp => {
+                                    const isIncluded = emp.incluir_en_planning !== false;
+                                    return (
+                                      <div 
+                                        key={emp.id} 
+                                        className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
+                                          isIncluded 
+                                            ? 'bg-white border-slate-200 hover:border-purple-300 hover:shadow-md' 
+                                            : 'bg-slate-50 border-slate-300 opacity-60'
+                                        } cursor-pointer`}
+                                        onClick={() => handleEditEmployee(emp)}
+                                      >
+                                        <div className="flex-1">
+                                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                                            {emp.nombre}
+                                            {!isIncluded && (
+                                              <XCircle className="w-4 h-4 text-red-500" />
+                                            )}
+                                            {isIncluded && (
+                                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                            )}
+                                          </div>
+                                          <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <div 
+                                            className="flex items-center gap-2 px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 transition-colors"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleTogglePlanning(emp);
+                                            }}
+                                          >
+                                            <Switch
+                                              checked={isIncluded}
+                                              onCheckedChange={() => handleTogglePlanning(emp)}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
+                                            <span className="text-xs text-purple-700 font-medium">
+                                              {isIncluded ? 'En planning' : 'Excluido'}
+                                            </span>
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleEditEmployee(emp);
+                                            }}
+                                            className="h-8 w-8"
+                                          >
+                                            <Edit className="w-4 h-4 text-purple-600" />
+                                          </Button>
+                                        </div>
                                       </div>
-                                      <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
-                                        {emp.tipo_turno}
-                                      </Badge>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             ))}
                           </div>
                         ))}
                         <div className="pt-4 border-t border-purple-200">
-                          <div className="text-sm text-slate-600">
-                            Total: <span className="font-semibold text-purple-700">
-                              {teamEmployees.length} empleados
-                            </span>
+                          <div className="text-sm text-slate-600 space-y-1">
+                            <div>
+                              Total: <span className="font-semibold text-purple-700">
+                                {teamEmployees.length} empleados
+                              </span>
+                            </div>
+                            <div>
+                              En planning: <span className="font-semibold text-green-700">
+                                {includedCount} empleados
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -546,6 +635,7 @@ export default function TeamConfigurationPage() {
                   {(() => {
                     const teamEmployees = getTeamEmployees(teamFormData.team_2.team_name);
                     const grouped = groupByDepartmentAndPosition(teamEmployees);
+                    const includedCount = teamEmployees.filter(emp => emp.incluir_en_planning !== false).length;
                     
                     if (teamEmployees.length === 0) {
                       return (
@@ -569,27 +659,79 @@ export default function TeamConfigurationPage() {
                                   <span className="text-xs text-slate-500">({emps.length})</span>
                                 </div>
                                 <div className="space-y-2 ml-4">
-                                  {emps.map(emp => (
-                                    <div key={emp.id} className="flex justify-between items-center p-2 border border-slate-200 rounded bg-white hover:bg-slate-50">
-                                      <div>
-                                        <div className="font-semibold text-slate-900 text-sm">{emp.nombre}</div>
-                                        <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                  {emps.map(emp => {
+                                    const isIncluded = emp.incluir_en_planning !== false;
+                                    return (
+                                      <div 
+                                        key={emp.id} 
+                                        className={`flex justify-between items-center p-3 border-2 rounded-lg transition-all ${
+                                          isIncluded 
+                                            ? 'bg-white border-slate-200 hover:border-pink-300 hover:shadow-md' 
+                                            : 'bg-slate-50 border-slate-300 opacity-60'
+                                        } cursor-pointer`}
+                                        onClick={() => handleEditEmployee(emp)}
+                                      >
+                                        <div className="flex-1">
+                                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                                            {emp.nombre}
+                                            {!isIncluded && (
+                                              <XCircle className="w-4 h-4 text-red-500" />
+                                            )}
+                                            {isIncluded && (
+                                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                            )}
+                                          </div>
+                                          <div className="text-xs text-slate-500">{emp.tipo_jornada} - {emp.tipo_turno}</div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <div 
+                                            className="flex items-center gap-2 px-2 py-1 rounded bg-pink-50 hover:bg-pink-100 transition-colors"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleTogglePlanning(emp);
+                                            }}
+                                          >
+                                            <Switch
+                                              checked={isIncluded}
+                                              onCheckedChange={() => handleTogglePlanning(emp)}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
+                                            <span className="text-xs text-pink-700 font-medium">
+                                              {isIncluded ? 'En planning' : 'Excluido'}
+                                            </span>
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleEditEmployee(emp);
+                                            }}
+                                            className="h-8 w-8"
+                                          >
+                                            <Edit className="w-4 h-4 text-pink-600" />
+                                          </Button>
+                                        </div>
                                       </div>
-                                      <Badge variant="outline" className="bg-pink-50 text-pink-700 text-xs">
-                                        {emp.tipo_turno}
-                                      </Badge>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             ))}
                           </div>
                         ))}
                         <div className="pt-4 border-t border-pink-200">
-                          <div className="text-sm text-slate-600">
-                            Total: <span className="font-semibold text-pink-700">
-                              {teamEmployees.length} empleados
-                            </span>
+                          <div className="text-sm text-slate-600 space-y-1">
+                            <div>
+                              Total: <span className="font-semibold text-pink-700">
+                                {teamEmployees.length} empleados
+                              </span>
+                            </div>
+                            <div>
+                              En planning: <span className="font-semibold text-green-700">
+                                {includedCount} empleados
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -601,6 +743,14 @@ export default function TeamConfigurationPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {showEmployeeForm && (
+        <EmployeeForm
+          employee={editingEmployee}
+          machines={machines}
+          onClose={handleCloseEmployeeForm}
+        />
+      )}
     </div>
   );
 }

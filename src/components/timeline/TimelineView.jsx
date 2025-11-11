@@ -42,13 +42,13 @@ export default function TimelineView({
       employeeIds: v.aplica_todos ? null : v.employee_ids
     }));
 
-    // Filtrar empleados por equipo y departamento
+    // Filtrar empleados por equipo, departamento y que estén incluidos en planning
     const getTeamName = (teamKey) => {
       const team = teams.find(t => t.team_key === teamKey);
       return team?.team_name || '';
     };
 
-    let filteredEmployees = employees;
+    let filteredEmployees = employees.filter(emp => emp.incluir_en_planning !== false);
     
     // Filtro por departamento
     if (selectedDepartment !== 'all') {
