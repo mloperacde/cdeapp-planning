@@ -25,6 +25,7 @@ import DataImport from './pages/DataImport';
 import ShiftManagers from './pages/ShiftManagers';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import DailyPlanning from './pages/DailyPlanning';
+import MachineMaintenance from './pages/MachineMaintenance';
 import Layout from './Layout.jsx';
 
 
@@ -56,6 +57,7 @@ export const PAGES = {
     "ShiftManagers": ShiftManagers,
     "AbsenceTypeConfig": AbsenceTypeConfig,
     "DailyPlanning": DailyPlanning,
+    "MachineMaintenance": MachineMaintenance,
 }
 
 export const pagesConfig = {

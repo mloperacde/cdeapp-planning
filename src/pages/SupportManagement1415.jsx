@@ -65,6 +65,22 @@ export default function SupportManagement1415Page() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      // Eliminar todos los registros del día seleccionado
+      const tasksToDelete = savedTasks.filter(t => t.fecha === selectedDate);
+      const promises = tasksToDelete.map(task => 
+        base44.entities.SupportTask1415.delete(task.id)
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supportTasks1415'] });
+      setTaskGroups([{ id: 1, employees: new Set(), tarea: '', instrucciones: '' }]);
+      setUseQuickFilter(true);
+    },
+  });
+
   React.useEffect(() => {
     const tasksForDate = savedTasks.filter(t => t.fecha === selectedDate);
     
@@ -242,9 +258,8 @@ export default function SupportManagement1415Page() {
   };
 
   const handleClearAll = () => {
-    if (window.confirm('¿Estás seguro de que quieres limpiar todos los cambios? Esta acción no se puede deshacer.')) {
-      setTaskGroups([{ id: 1, employees: new Set(), tarea: '', instrucciones: '' }]);
-      setUseQuickFilter(true);
+    if (window.confirm('¿Estás seguro de que quieres limpiar y eliminar todos los registros de este día? Esta acción no se puede deshacer.')) {
+      deleteMutation.mutate();
     }
   };
 
@@ -344,9 +359,10 @@ export default function SupportManagement1415Page() {
                       onClick={handleClearAll}
                       variant="outline"
                       className="border-red-300 text-red-700 hover:bg-red-50"
+                      disabled={deleteMutation.isPending}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Limpiar
+                      {deleteMutation.isPending ? 'Eliminando...' : 'Limpiar'}
                     </Button>
 
                     <Button

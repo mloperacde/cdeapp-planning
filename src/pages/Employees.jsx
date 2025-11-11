@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -101,14 +102,23 @@ export default function EmployeesPage() {
 
   const employeesByDepartment = useMemo(() => {
     const byDept = {};
+    
     employees.forEach(emp => {
       const dept = emp.departamento || 'Sin Departamento';
       if (!byDept[dept]) {
-        byDept[dept] = 0;
+        byDept[dept] = {
+          total: 0,
+          available: 0
+        };
       }
-      byDept[dept]++;
+      byDept[dept].total++;
+      
+      // Contar disponibles (sin ausencias activas para hoy)
+      if (emp.disponibilidad === "Disponible") {
+        byDept[dept].available++;
+      }
     });
-    return Object.entries(byDept).sort((a, b) => b[1] - a[1]);
+    return Object.entries(byDept).sort((a, b) => b[1].total - a[1].total);
   }, [employees]);
 
   const filteredEmployees = useMemo(() => {
@@ -232,15 +242,20 @@ export default function EmployeesPage() {
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {employeesByDepartment.map(([dept, count], index) => (
+                  {employeesByDepartment.map(([dept, stats], index) => (
                     <div key={dept} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${departmentColors[index % departmentColors.length]}`} />
                         <span className="text-sm font-medium text-slate-700">{dept}</span>
                       </div>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 font-semibold">
-                        {count}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-600 text-white font-semibold">
+                          {stats.available}
+                        </Badge>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 font-semibold">
+                          {stats.total}
+                        </Badge>
+                      </div>
                     </div>
                   ))}
                   {employeesByDepartment.length === 0 && (
@@ -252,10 +267,18 @@ export default function EmployeesPage() {
                 <div className="mt-3 pt-3 border-t border-slate-200">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-slate-700">Total:</span>
-                    <Badge className="bg-blue-600 text-white text-base px-3">
-                      {employees.length}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-green-600 text-white text-base px-3">
+                        {employeesByDepartment.reduce((sum, [, stats]) => sum + stats.available, 0)}
+                      </Badge>
+                      <Badge className="bg-blue-600 text-white text-base px-3">
+                        {employees.length}
+                      </Badge>
+                    </div>
                   </div>
+                  <p className="text-xs text-slate-500 mt-1 text-center">
+                    <span className="text-green-600 font-semibold">Disponibles</span> / Total
+                  </p>
                 </div>
               </CardContent>
             </Card>

@@ -34,15 +34,12 @@ export default function MachineRequirements() {
     return sum + (planning?.operadores_necesarios || 0);
   }, 0);
 
-  // Contar solo empleados de FABRICACIÓN con puestos específicos, disponibles e incluidos en planning
-  const validPositions = ['responsable de linea', 'segunda de linea', 'operaria de linea'];
+  // Contar SOLO empleados de FABRICACIÓN que estén marcados como visibles para planning
   const availableOperators = employees.filter(emp => {
     if (emp.departamento !== "FABRICACION") return false;
     if (emp.disponibilidad !== "Disponible") return false;
     if (emp.incluir_en_planning === false) return false;
-    
-    const puesto = (emp.puesto || '').toLowerCase();
-    return validPositions.some(vp => puesto.includes(vp));
+    return true;
   }).length;
 
   if (activeMachines.length === 0) {
@@ -91,10 +88,10 @@ export default function MachineRequirements() {
               </div>
               <div>
                 <div className={`text-sm font-medium ${hasDeficit ? 'text-red-700' : 'text-green-700'}`}>
-                  Operadores FABRICACIÓN (en planning)
+                  Disponibilidad de Empleados
                 </div>
                 <div className={`text-xs ${hasDeficit ? 'text-red-600' : 'text-green-600'}`}>
-                  Responsable, Segunda, Operaria línea
+                  FABRICACIÓN - Visibles en planning
                 </div>
                 <div className={`text-3xl font-bold ${hasDeficit ? 'text-red-900' : 'text-green-900'}`}>
                   {availableOperators}
@@ -153,7 +150,7 @@ export default function MachineRequirements() {
             <TrendingUp className="w-5 h-5" />
             <span className="font-semibold">
               {hasDeficit 
-                ? `⚠️ Déficit de ${operatorDeficit} operador(es): Se necesitan ${totalOperatorsNeeded} pero solo hay ${availableOperators} disponibles de FABRICACIÓN (Responsable, Segunda, Operaria línea)`
+                ? `⚠️ Déficit de ${operatorDeficit} operador(es): Se necesitan ${totalOperatorsNeeded} pero solo hay ${availableOperators} disponibles de FABRICACIÓN (visibles en planning)`
                 : `✓ Cobertura completa: ${availableOperators} operadores de FABRICACIÓN disponibles para ${totalOperatorsNeeded} necesarios en ${activeMachines.length} máquina(s)`
               }
             </span>
