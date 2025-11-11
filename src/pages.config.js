@@ -23,6 +23,7 @@ import ShiftManagement from './pages/ShiftManagement';
 import MLInsights from './pages/MLInsights';
 import DataImport from './pages/DataImport';
 import ShiftManagers from './pages/ShiftManagers';
+import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import Layout from './Layout.jsx';
 
 
@@ -52,6 +53,7 @@ export const PAGES = {
     "MLInsights": MLInsights,
     "DataImport": DataImport,
     "ShiftManagers": ShiftManagers,
+    "AbsenceTypeConfig": AbsenceTypeConfig,
 }
 
 export const pagesConfig = {

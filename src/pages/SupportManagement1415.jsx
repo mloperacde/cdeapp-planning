@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Added Label import
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Clock, AlertTriangle, CheckSquare, Printer, ArrowLeft, Filter as FilterIcon, Trash2 } from "lucide-react";
@@ -241,6 +241,13 @@ export default function SupportManagement1415Page() {
     saveTaskMutation.mutate(allTasks);
   };
 
+  const handleClearAll = () => {
+    if (window.confirm('¿Estás seguro de que quieres limpiar todos los cambios? Esta acción no se puede deshacer.')) {
+      setTaskGroups([{ id: 1, employees: new Set(), tarea: '', instrucciones: '' }]);
+      setUseQuickFilter(true);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -311,7 +318,7 @@ export default function SupportManagement1415Page() {
             {/* Selector de Fecha y Filtro */}
             <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-4">
                     <Clock className="w-5 h-5 text-blue-600" />
                     <Label className="font-medium">Fecha:</Label>
@@ -333,6 +340,15 @@ export default function SupportManagement1415Page() {
                       Personal 14-15h
                     </Button>
                     
+                    <Button
+                      onClick={handleClearAll}
+                      variant="outline"
+                      className="border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Limpiar
+                    </Button>
+
                     <Button
                       onClick={handleSaveAllTasks}
                       disabled={taskGroups.every(g => !g.tarea || g.employees.size === 0) || saveTaskMutation.isPending}
