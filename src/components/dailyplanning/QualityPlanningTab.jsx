@@ -1,206 +1,364 @@
-import React, { useMemo } from "react";
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, AlertTriangle, UserX, Calendar } from "lucide-react";
-import { format, differenceInDays, addDays, isPast, isToday, isFuture } from "date-fns";
-import { es } from "date-fns/locale";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Save, Trash2, Edit, ClipboardCheck } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-export default function AbsenceNotifications({ absences, employees, absenceTypes }) {
-  const notifications = useMemo(() => {
-    const now = new Date();
-    const alerts = [];
+export default function QualityPlanningTab({ selectedDate, selectedTeam, selectedShift }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingPlanning, setEditingPlanning] = useState(null);
+  const queryClient = useQueryClient();
 
-    absences.forEach(absence => {
-      const employee = employees.find(e => e.id === absence.employee_id);
-      if (!employee) return;
+  const [formData, setFormData] = useState({
+    employee_id: "",
+    funcion_asignada: "",
+    tipo_inspeccion: "Control de Proceso",
+    lineas_asignadas: [],
+    prioridad: "Media",
+    notas: "",
+    hora_inicio: "",
+    hora_fin: "",
+  });
 
-      const absenceType = absenceTypes?.find(t => t.nombre === absence.tipo);
-      const startDate = new Date(absence.fecha_inicio);
-      const endDate = new Date(absence.fecha_fin);
-      const daysUntilStart = differenceInDays(startDate, now);
-      const duration = differenceInDays(endDate, startDate) + 1;
+  const { data: plannings, isLoading } = useQuery({
+    queryKey: ['dailyQualityPlannings', selectedDate, selectedTeam],
+    queryFn: () => base44.entities.DailyQualityPlanning.list(),
+    initialData: [],
+  });
 
-      // Ausencia activa
-      if (now >= startDate && now <= endDate) {
-        alerts.push({
-          id: `active-${absence.id}`,
-          type: 'active',
-          priority: absenceType?.es_critica ? 'critical' : 'high',
-          employee: employee.nombre,
-          absenceType: absence.tipo,
-          message: `${employee.nombre} está actualmente ausente`,
-          details: `${absence.tipo} - ${format(startDate, 'dd/MM/yyyy')} a ${format(endDate, 'dd/MM/yyyy')}`,
-          duration: `${duration} días`,
-          isCritical: absenceType?.es_critica || false,
-          absenceId: absence.id,
-        });
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list('nombre'),
+    initialData: [],
+  });
+
+  const { data: machines } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list('orden'),
+    initialData: [],
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (data) => {
+      const finalData = {
+        ...data,
+        fecha: selectedDate,
+        team_key: selectedTeam,
+        turno: selectedShift || "Mañana",
+      };
+
+      if (editingPlanning?.id) {
+        return base44.entities.DailyQualityPlanning.update(editingPlanning.id, finalData);
       }
+      return base44.entities.DailyQualityPlanning.create(finalData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dailyQualityPlannings'] });
+      handleClose();
+    },
+  });
 
-      // Ausencia próxima a iniciar (según configuración del tipo)
-      if (isFuture(startDate)) {
-        const diasAviso = absenceType?.dias_aviso_previo || 0;
-        if (diasAviso > 0 && daysUntilStart <= diasAviso && daysUntilStart > 0) {
-          alerts.push({
-            id: `upcoming-${absence.id}`,
-            type: 'upcoming',
-            priority: absenceType?.notificar_admin ? 'high' : 'medium',
-            employee: employee.nombre,
-            absenceType: absence.tipo,
-            message: `${employee.nombre} iniciará ausencia en ${daysUntilStart} día${daysUntilStart !== 1 ? 's' : ''}`,
-            details: `${absence.tipo} - Desde ${format(startDate, 'dd/MM/yyyy')}`,
-            duration: `${duration} días`,
-            isCritical: absenceType?.es_critica || false,
-            daysUntil: daysUntilStart,
-            absenceId: absence.id,
-          });
-        }
-      }
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.DailyQualityPlanning.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dailyQualityPlannings'] });
+    },
+  });
 
-      // Baja médica prolongada (más de 15 días)
-      if (absence.tipo === "Baja médica" && duration > 15 && now >= startDate && now <= endDate) {
-        alerts.push({
-          id: `prolonged-${absence.id}`,
-          type: 'prolonged',
-          priority: 'critical',
-          employee: employee.nombre,
-          absenceType: absence.tipo,
-          message: `Baja médica prolongada: ${employee.nombre}`,
-          details: `${duration} días - Inicio: ${format(startDate, 'dd/MM/yyyy')}`,
-          duration: `${duration} días`,
-          isCritical: true,
-          absenceId: absence.id,
-        });
-      }
-
-      // Ausencia injustificada
-      if (absence.tipo === "Ausencia injustificada" && now >= startDate && now <= endDate) {
-        alerts.push({
-          id: `unjustified-${absence.id}`,
-          type: 'unjustified',
-          priority: 'critical',
-          employee: employee.nombre,
-          absenceType: absence.tipo,
-          message: `⚠️ Ausencia injustificada: ${employee.nombre}`,
-          details: `Desde ${format(startDate, 'dd/MM/yyyy')}`,
-          duration: `${duration} días`,
-          isCritical: true,
-          absenceId: absence.id,
-        });
-      }
+  const handleEdit = (planning) => {
+    setEditingPlanning(planning);
+    setFormData({
+      employee_id: planning.employee_id || "",
+      funcion_asignada: planning.funcion_asignada || "",
+      tipo_inspeccion: planning.tipo_inspeccion || "Control de Proceso",
+      lineas_asignadas: planning.lineas_asignadas || [],
+      prioridad: planning.prioridad || "Media",
+      notas: planning.notas || "",
+      hora_inicio: planning.hora_inicio || "",
+      hora_fin: planning.hora_fin || "",
     });
+    setShowForm(true);
+  };
 
-    // Ordenar por prioridad
-    return alerts.sort((a, b) => {
-      const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
+  const handleClose = () => {
+    setShowForm(false);
+    setEditingPlanning(null);
+    setFormData({
+      employee_id: "",
+      funcion_asignada: "",
+      tipo_inspeccion: "Control de Proceso",
+      lineas_asignadas: [],
+      prioridad: "Media",
+      notas: "",
+      hora_inicio: "",
+      hora_fin: "",
     });
-  }, [absences, employees, absenceTypes]);
+  };
 
-  const criticalCount = notifications.filter(n => n.priority === 'critical').length;
-  const highCount = notifications.filter(n => n.priority === 'high').length;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    saveMutation.mutate(formData);
+  };
 
-  if (notifications.length === 0) {
-    return null;
-  }
+  const handleDelete = (id) => {
+    if (window.confirm('¿Eliminar esta planificación?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const filteredPlannings = plannings.filter(
+    p => p.fecha === selectedDate && p.team_key === selectedTeam
+  );
+
+  const qualityEmployees = employees.filter(emp => 
+    emp.departamento === "CALIDAD" && 
+    emp.disponibilidad === "Disponible" &&
+    emp.incluir_en_planning !== false
+  );
+
+  const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || 'N/A';
+  const getMachineName = (id) => machines.find(m => m.id === id)?.nombre || id;
 
   return (
-    <Card className="shadow-lg border-2 border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
-      <CardHeader className="border-b border-red-200 bg-red-100/50">
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2 text-red-900">
-            <Bell className="w-6 h-6 animate-pulse" />
-            Notificaciones de Ausencias
-          </CardTitle>
-          <div className="flex gap-2">
-            {criticalCount > 0 && (
-              <Badge className="bg-red-600 text-white">
-                {criticalCount} Crítica{criticalCount !== 1 ? 's' : ''}
-              </Badge>
-            )}
-            {highCount > 0 && (
-              <Badge className="bg-orange-600 text-white">
-                {highCount} Prioritaria{highCount !== 1 ? 's' : ''}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-4">
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                notification.priority === 'critical'
-                  ? 'bg-red-50 border-red-300 hover:border-red-400'
-                  : notification.priority === 'high'
-                  ? 'bg-orange-50 border-orange-300 hover:border-orange-400'
-                  : 'bg-yellow-50 border-yellow-300 hover:border-yellow-400'
-              }`}
+    <div className="space-y-6">
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-emerald-50">
+        <CardHeader className="border-b border-green-100">
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2 text-green-900">
+              <ClipboardCheck className="w-6 h-6" />
+              Planificación de Calidad - {selectedShift || 'Sin turno'}
+            </CardTitle>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-green-600 hover:bg-green-700"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  {notification.priority === 'critical' ? (
-                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <UserX className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className={`font-semibold ${
-                        notification.priority === 'critical' ? 'text-red-900' : 'text-orange-900'
-                      }`}>
-                        {notification.message}
-                      </p>
-                      {notification.isCritical && (
-                        <Badge className="bg-red-600 text-white text-xs">
-                          CRÍTICA
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Asignación
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          {isLoading ? (
+            <p className="text-center text-slate-500 py-8">Cargando...</p>
+          ) : filteredPlannings.length === 0 ? (
+            <p className="text-center text-slate-500 py-8">
+              No hay asignaciones para esta fecha y equipo
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empleado</TableHead>
+                    <TableHead>Función</TableHead>
+                    <TableHead>Tipo Inspección</TableHead>
+                    <TableHead>Líneas</TableHead>
+                    <TableHead>Prioridad</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPlannings.map((planning) => (
+                    <TableRow key={planning.id}>
+                      <TableCell className="font-semibold">
+                        {getEmployeeName(planning.employee_id)}
+                      </TableCell>
+                      <TableCell>{planning.funcion_asignada}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{planning.tipo_inspeccion}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {planning.lineas_asignadas?.length > 0
+                          ? `${planning.lineas_asignadas.length} línea${planning.lineas_asignadas.length !== 1 ? 's' : ''}`
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={
+                          planning.prioridad === "Urgente" ? "bg-red-100 text-red-800" :
+                          planning.prioridad === "Alta" ? "bg-orange-100 text-orange-800" :
+                          planning.prioridad === "Media" ? "bg-yellow-100 text-yellow-800" :
+                          "bg-blue-100 text-blue-800"
+                        }>
+                          {planning.prioridad}
                         </Badge>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-slate-700">
-                        {notification.details}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-slate-600">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          Duración: {notification.duration}
-                        </span>
-                        {notification.type === 'upcoming' && notification.daysUntil && (
-                          <Badge variant="outline" className="bg-white">
-                            Inicia en {notification.daysUntil} día{notification.daysUntil !== 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {notification.type === 'active' && (
-                          <Badge className="bg-blue-100 text-blue-800">
-                            En curso
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <Link to={createPageUrl("AbsenceManagement")}>
-                  <Button size="sm" variant="outline">
-                    Ver Detalles
-                  </Button>
-                </Link>
-              </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={
+                          planning.estado === "Completado" ? "bg-green-100 text-green-800" :
+                          planning.estado === "En Curso" ? "bg-blue-100 text-blue-800" :
+                          "bg-slate-100 text-slate-600"
+                        }>
+                          {planning.estado}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(planning)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(planning.id)}
+                            className="hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          ))}
-        </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-blue-800">
-            <strong>💡 Consejo:</strong> Las ausencias críticas y las bajas médicas prolongadas 
-            requieren atención inmediata para reorganizar recursos.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+      {showForm && (
+        <Card className="shadow-xl border-2 border-green-300">
+          <CardHeader className="bg-green-50 border-b border-green-200">
+            <CardTitle>
+              {editingPlanning ? 'Editar Asignación' : 'Nueva Asignación de Calidad'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Empleado *</Label>
+                  <Select
+                    value={formData.employee_id}
+                    onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar empleado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {qualityEmployees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.nombre} - {emp.puesto}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tipo de Inspección</Label>
+                  <Select
+                    value={formData.tipo_inspeccion}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_inspeccion: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Control de Proceso">Control de Proceso</SelectItem>
+                      <SelectItem value="Control de Recepción">Control de Recepción</SelectItem>
+                      <SelectItem value="Control Final">Control Final</SelectItem>
+                      <SelectItem value="Auditoría">Auditoría</SelectItem>
+                      <SelectItem value="Metrología">Metrología</SelectItem>
+                      <SelectItem value="Otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Función Asignada *</Label>
+                  <Input
+                    value={formData.funcion_asignada}
+                    onChange={(e) => setFormData({ ...formData, funcion_asignada: e.target.value })}
+                    placeholder="Descripción de la función o tarea"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Prioridad</Label>
+                  <Select
+                    value={formData.prioridad}
+                    onValueChange={(value) => setFormData({ ...formData, prioridad: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Baja">Baja</SelectItem>
+                      <SelectItem value="Media">Media</SelectItem>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Urgente">Urgente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Hora Inicio</Label>
+                  <Input
+                    type="time"
+                    value={formData.hora_inicio}
+                    onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Hora Fin</Label>
+                  <Input
+                    type="time"
+                    value={formData.hora_fin}
+                    onChange={(e) => setFormData({ ...formData, hora_fin: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notas</Label>
+                <Textarea
+                  value={formData.notas}
+                  onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={handleClose}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                  <Save className="w-4 h-4 mr-2" />
+                  Guardar
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
