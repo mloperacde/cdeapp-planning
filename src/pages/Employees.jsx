@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, UserCog } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, UserCog, Building2 } from "lucide-react";
 import EmployeeForm from "../components/employees/EmployeeForm";
 import BirthdayPanel from "../components/employees/BirthdayPanel";
 import AnniversaryPanel from "../components/employees/AnniversaryPanel";
@@ -38,8 +37,8 @@ export default function EmployeesPage() {
     tipo_turno: "all",
     equipo: "all",
     disponibilidad: "all",
-    departamento: "all", // New filter
-    puesto: "all",       // New filter
+    departamento: "all",
+    puesto: "all",
   });
   const queryClient = useQueryClient();
 
@@ -100,6 +99,18 @@ export default function EmployeesPage() {
     return Array.from(psts).sort();
   }, [employees]);
 
+  const employeesByDepartment = useMemo(() => {
+    const byDept = {};
+    employees.forEach(emp => {
+      const dept = emp.departamento || 'Sin Departamento';
+      if (!byDept[dept]) {
+        byDept[dept] = 0;
+      }
+      byDept[dept]++;
+    });
+    return Object.entries(byDept).sort((a, b) => b[1] - a[1]);
+  }, [employees]);
+
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const matchesSearch = 
@@ -111,8 +122,8 @@ export default function EmployeesPage() {
       const matchesTipoTurno = filters.tipo_turno === "all" || emp.tipo_turno === filters.tipo_turno;
       const matchesEquipo = filters.equipo === "all" || emp.equipo === filters.equipo;
       const matchesDisponibilidad = filters.disponibilidad === "all" || emp.disponibilidad === filters.disponibilidad;
-      const matchesDepartamento = filters.departamento === "all" || emp.departamento === filters.departamento; // New filter logic
-      const matchesPuesto = filters.puesto === "all" || emp.puesto === filters.puesto;                       // New filter logic
+      const matchesDepartamento = filters.departamento === "all" || emp.departamento === filters.departamento;
+      const matchesPuesto = filters.puesto === "all" || emp.puesto === filters.puesto;
       
       return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto;
     });
@@ -167,6 +178,15 @@ export default function EmployeesPage() {
     blue: "from-blue-500 to-blue-600"
   };
 
+  const departmentColors = [
+    'from-blue-500 to-blue-600',
+    'from-purple-500 to-purple-600',
+    'from-pink-500 to-pink-600',
+    'from-orange-500 to-orange-600',
+    'from-green-500 to-green-600',
+    'from-indigo-500 to-indigo-600',
+  ];
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -189,11 +209,56 @@ export default function EmployeesPage() {
           </Button>
         </div>
 
-        {/* Paneles de Cumpleaños y Aniversarios */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <BirthdayPanel employees={employees} />
-          <div>
-            <AnniversaryPanel employees={employees} />
+        {/* Paneles Resumen */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          {/* Cumpleaños - Reducido */}
+          <div className="lg:col-span-1">
+            <BirthdayPanel employees={employees} compact={true} />
+          </div>
+          
+          {/* Aniversarios - Reducido */}
+          <div className="lg:col-span-1">
+            <AnniversaryPanel employees={employees} compact={true} />
+          </div>
+
+          {/* Nuevo: Empleados por Departamento */}
+          <div className="lg:col-span-1">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm h-full">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Building2 className="w-5 h-5 text-blue-600" />
+                  Empleados por Departamento
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {employeesByDepartment.map(([dept, count], index) => (
+                    <div key={dept} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${departmentColors[index % departmentColors.length]}`} />
+                        <span className="text-sm font-medium text-slate-700">{dept}</span>
+                      </div>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 font-semibold">
+                        {count}
+                      </Badge>
+                    </div>
+                  ))}
+                  {employeesByDepartment.length === 0 && (
+                    <p className="text-center text-slate-400 text-sm py-4">
+                      No hay empleados registrados
+                    </p>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-slate-700">Total:</span>
+                    <Badge className="bg-blue-600 text-white text-base px-3">
+                      {employees.length}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
@@ -246,7 +311,7 @@ export default function EmployeesPage() {
                 <Label>Departamento</Label>
                 <Select value={filters.departamento} onValueChange={(value) => setFilters({...filters, departamento: value})}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un departamento" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
@@ -263,7 +328,7 @@ export default function EmployeesPage() {
                 <Label>Puesto</Label>
                 <Select value={filters.puesto} onValueChange={(value) => setFilters({...filters, puesto: value})}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un puesto" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
