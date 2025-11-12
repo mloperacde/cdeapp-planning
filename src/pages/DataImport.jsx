@@ -211,25 +211,23 @@ export default function DataImportPage() {
       const fileUrl = uploadResult.file_url;
 
       // Usar InvokeLLM para extraer datos del archivo
-      const prompt = `Analiza este archivo Excel/CSV de asignaciones de taquillas y extrae los datos en formato JSON.
+      const prompt = `Analiza este archivo Excel/CSV de asignaciones de taquillas y extrae TODOS los datos.
 
-El archivo contiene 3 columnas:
-1. Vestuario (puede ser "Vestuario Femenino Planta Baja", "Vestuario Femenino Planta Alta", o "Vestuario Masculino Planta Baja")
-2. Nombre del Empleado
-3. Número de Taquilla
+El archivo tiene columnas con información sobre:
+- Vestuario/Locker room (normaliza a: "Vestuario Femenino Planta Baja", "Vestuario Femenino Planta Alta", o "Vestuario Masculino Planta Baja")
+- Nombre del Empleado (mantén el nombre exacto)
+- Número de Taquilla (como string)
 
-Devuelve un array JSON con objetos que tengan esta estructura:
-{
-  "vestuario": "nombre del vestuario",
-  "empleado": "nombre completo del empleado",
-  "numero_taquilla": "número de la taquilla"
-}
+Extrae absolutamente TODOS los registros del archivo, fila por fila.
 
 IMPORTANTE: 
-- Incluye TODOS los registros del archivo
+- NO omitas ninguna fila
 - Mantén los nombres de empleados exactamente como aparecen
 - Los números de taquilla deben ser strings
-- Normaliza los nombres de vestuario a uno de los 3 valores válidos mencionados`;
+- Normaliza los nombres de vestuario según los 3 valores válidos
+- Si el vestuario contiene "Femenino" y "Baja" -> "Vestuario Femenino Planta Baja"
+- Si el vestuario contiene "Femenino" y "Alta" -> "Vestuario Femenino Planta Alta"  
+- Si el vestuario contiene "Masculino" -> "Vestuario Masculino Planta Baja"`;
 
       const llmResult = await base44.integrations.Core.InvokeLLM({
         prompt: prompt,
@@ -237,7 +235,7 @@ IMPORTANTE:
         response_json_schema: {
           type: "object",
           properties: {
-            asignaciones: {
+            registros: {
               type: "array",
               items: {
                 type: "object",
@@ -245,14 +243,16 @@ IMPORTANTE:
                   vestuario: { type: "string" },
                   empleado: { type: "string" },
                   numero_taquilla: { type: "string" }
-                }
+                },
+                required: ["vestuario", "empleado", "numero_taquilla"]
               }
             }
-          }
+          },
+          required: ["registros"]
         }
       });
 
-      const extractedData = llmResult.asignaciones;
+      const extractedData = llmResult?.registros || [];
 
       if (!Array.isArray(extractedData) || extractedData.length === 0) {
         throw new Error("No se encontraron datos válidos en el archivo");
