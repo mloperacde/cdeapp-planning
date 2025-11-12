@@ -17,7 +17,8 @@ import {
   UsersRound,
   ChevronDown,
   ChevronRight,
-  Wrench
+  Wrench,
+  UserPlus
 } from "lucide-react";
 import {
   Sidebar,
