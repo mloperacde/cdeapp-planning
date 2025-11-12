@@ -210,49 +210,47 @@ export default function DataImportPage() {
       const uploadResult = await base44.integrations.Core.UploadFile({ file: lockerFile });
       const fileUrl = uploadResult.file_url;
 
-      // Usar InvokeLLM para extraer datos del archivo
-      const prompt = `Analiza este archivo Excel/CSV de asignaciones de taquillas y extrae TODOS los datos.
-
-El archivo tiene columnas con información sobre:
-- Vestuario/Locker room (normaliza a: "Vestuario Femenino Planta Baja", "Vestuario Femenino Planta Alta", o "Vestuario Masculino Planta Baja")
-- Nombre del Empleado (mantén el nombre exacto)
-- Número de Taquilla (como string)
-
-Extrae absolutamente TODOS los registros del archivo, fila por fila.
-
-IMPORTANTE: 
-- NO omitas ninguna fila
-- Mantén los nombres de empleados exactamente como aparecen
-- Los números de taquilla deben ser strings
-- Normaliza los nombres de vestuario según los 3 valores válidos
-- Si el vestuario contiene "Femenino" y "Baja" -> "Vestuario Femenino Planta Baja"
-- Si el vestuario contiene "Femenino" y "Alta" -> "Vestuario Femenino Planta Alta"  
-- Si el vestuario contiene "Masculino" -> "Vestuario Masculino Planta Baja"`;
-
-      const llmResult = await base44.integrations.Core.InvokeLLM({
-        prompt: prompt,
-        file_urls: [fileUrl],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            registros: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  vestuario: { type: "string" },
-                  empleado: { type: "string" },
-                  numero_taquilla: { type: "string" }
-                },
-                required: ["vestuario", "empleado", "numero_taquilla"]
-              }
-            }
-          },
-          required: ["registros"]
+      // Leer archivo CSV directamente en el navegador
+      const text = await lockerFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      // Saltar la primera línea si es encabezado
+      const hasHeader = lines[0].toLowerCase().includes('vestuario') || 
+                        lines[0].toLowerCase().includes('empleado') ||
+                        lines[0].toLowerCase().includes('taquilla');
+      
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      
+      const extractedData = [];
+      
+      for (const line of dataLines) {
+        // Separar por coma o punto y coma
+        const parts = line.includes(';') ? line.split(';') : line.split(',');
+        
+        if (parts.length < 3) continue;
+        
+        let vestuario = parts[0].trim();
+        const empleado = parts[1].trim();
+        const numero_taquilla = parts[2].trim();
+        
+        if (!empleado || !numero_taquilla) continue;
+        
+        // Normalizar vestuario
+        const vestuarioUpper = vestuario.toUpperCase();
+        if (vestuarioUpper.includes('FEMENINO') && vestuarioUpper.includes('BAJA')) {
+          vestuario = "Vestuario Femenino Planta Baja";
+        } else if (vestuarioUpper.includes('FEMENINO') && vestuarioUpper.includes('ALTA')) {
+          vestuario = "Vestuario Femenino Planta Alta";
+        } else if (vestuarioUpper.includes('MASCULINO')) {
+          vestuario = "Vestuario Masculino Planta Baja";
         }
-      });
-
-      const extractedData = llmResult?.registros || [];
+        
+        extractedData.push({
+          vestuario,
+          empleado,
+          numero_taquilla
+        });
+      }
 
       if (!Array.isArray(extractedData) || extractedData.length === 0) {
         throw new Error("No se encontraron datos válidos en el archivo");
