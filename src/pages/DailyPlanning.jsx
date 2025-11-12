@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Factory, Wrench, Package, ClipboardCheck, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import ProductionPlanningTab from "../components/dailyplanning/ProductionPlanningTab";
