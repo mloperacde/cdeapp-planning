@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   Users,
   Cog,
-  Wrench
+  Wrench,
+  KeyRound
 } from "lucide-react";
 
 export default function DataImportPage() {
@@ -21,6 +22,9 @@ export default function DataImportPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [selectedEntity, setSelectedEntity] = useState("employees");
+  const [lockerFile, setLockerFile] = useState(null);
+  const [importingLockers, setImportingLockers] = useState(false);
+  const [lockerImportResult, setLockerImportResult] = useState(null);
   const queryClient = useQueryClient();
 
   const handleFileSelect = (e) => {
@@ -180,11 +184,149 @@ export default function DataImportPage() {
     }
   };
 
+  const handleLockerFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+          file.type === "application/vnd.ms-excel" ||
+          file.name.endsWith('.csv')) {
+        setLockerFile(file);
+        setLockerImportResult(null);
+      } else {
+        alert('Por favor selecciona un archivo Excel (.xlsx, .xls) o CSV');
+      }
+    }
+  };
+
+  const handleLockerImport = async () => {
+    if (!lockerFile) {
+      alert('Por favor selecciona un archivo primero');
+      return;
+    }
+
+    setImportingLockers(true);
+    try {
+      // Subir archivo
+      const uploadResult = await base44.integrations.Core.UploadFile({ file: lockerFile });
+      const fileUrl = uploadResult.file_url;
+
+      // Esquema para extraer datos de taquillas
+      const jsonSchema = {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            vestuario: { type: "string" },
+            empleado: { type: "string" },
+            numero_taquilla: { type: "string" }
+          },
+          required: ["vestuario", "empleado", "numero_taquilla"]
+        }
+      };
+
+      // Extraer datos
+      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url: fileUrl,
+        json_schema: jsonSchema
+      });
+
+      if (extractResult.status === "error") {
+        throw new Error(extractResult.details || "Error extrayendo datos del archivo");
+      }
+
+      const extractedData = extractResult.output;
+
+      if (!Array.isArray(extractedData) || extractedData.length === 0) {
+        throw new Error("No se encontraron datos válidos en el archivo");
+      }
+
+      // Obtener empleados y asignaciones actuales
+      const employees = await base44.entities.Employee.list();
+      const lockerAssignments = await base44.entities.LockerAssignment.list();
+
+      const normalizeString = (str) => {
+        if (!str) return "";
+        return str
+          .toUpperCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^A-Z0-9]/g, "");
+      };
+
+      let matched = 0;
+      let notFound = [];
+      let updated = [];
+
+      for (const row of extractedData) {
+        if (!row.empleado || row.empleado.trim() === "") continue;
+
+        const normalizedSearch = normalizeString(row.empleado);
+        const employee = employees.find(emp => 
+          normalizeString(emp.nombre) === normalizedSearch
+        );
+
+        if (!employee) {
+          notFound.push(row.empleado);
+          continue;
+        }
+
+        const existingAssignment = lockerAssignments.find(la => la.employee_id === employee.id);
+
+        const assignmentData = {
+          employee_id: employee.id,
+          requiere_taquilla: true,
+          vestuario: row.vestuario,
+          numero_taquilla_actual: row.numero_taquilla,
+          numero_taquilla_nuevo: null,
+          fecha_asignacion: new Date().toISOString(),
+          notificacion_enviada: false
+        };
+
+        if (existingAssignment) {
+          await base44.entities.LockerAssignment.update(existingAssignment.id, assignmentData);
+        } else {
+          await base44.entities.LockerAssignment.create(assignmentData);
+        }
+
+        matched++;
+        updated.push(`${employee.nombre} -> ${row.vestuario} #${row.numero_taquilla}`);
+      }
+
+      setLockerImportResult({
+        success: true,
+        total: extractedData.length,
+        matched,
+        notFound: notFound.length,
+        notFoundList: notFound.slice(0, 10),
+        message: `Se procesaron ${matched} de ${extractedData.length} registros exitosamente`
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+
+    } catch (error) {
+      console.error('Error importando taquillas:', error);
+      setLockerImportResult({
+        success: false,
+        message: error.message || 'Error al importar datos de taquillas'
+      });
+    } finally {
+      setImportingLockers(false);
+    }
+  };
+
   const downloadTemplate = (type) => {
     let csvContent = "";
     let filename = "";
 
     switch (type) {
+      case "lockers":
+        csvContent = "vestuario,empleado,numero_taquilla\n";
+        csvContent += "Vestuario Femenino Planta Baja,MARIA LOPEZ,1\n";
+        csvContent += "Vestuario Femenino Planta Alta,ANA GARCIA,101\n";
+        csvContent += "Vestuario Masculino Planta Baja,JUAN PEREZ,1\n";
+        filename = "plantilla_taquillas.csv";
+        break;
+
       case "employees":
         csvContent = "codigo_empleado,nombre,fecha_nacimiento,dni,nuss,sexo,nacionalidad,direccion,formacion,email,telefono_movil,contacto_emergencia_nombre,contacto_emergencia_telefono,departamento,puesto,categoria,tipo_jornada,num_horas_jornada,tipo_turno,equipo,horario_manana_inicio,horario_manana_fin,horario_tarde_inicio,horario_tarde_fin,fecha_alta,tipo_contrato,codigo_contrato,fecha_fin_contrato,salario_anual,disponibilidad\n";
         csvContent += "EMP001,Juan Pérez,1985-05-15,12345678A,12-3456789012-34,Masculino,Española,Calle Mayor 1,Grado en Ingeniería,juan@email.com,600123456,María Pérez,600654321,FABRICACION,Operario,Categoría 1,Jornada Completa,40,Rotativo,Equipo Turno Isa,07:00,15:00,14:00,22:00,2020-01-15,Indefinido,CONT001,,,Disponible\n";
@@ -228,8 +370,12 @@ export default function DataImportPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="employees" onValueChange={setSelectedEntity} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="lockers" onValueChange={setSelectedEntity} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="lockers">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Taquillas
+            </TabsTrigger>
             <TabsTrigger value="employees">
               <Users className="w-4 h-4 mr-2" />
               Empleados
@@ -243,6 +389,125 @@ export default function DataImportPage() {
               Mantenimientos
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="lockers">
+            <Card>
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle>Importar Asignaciones de Taquillas</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-2">Instrucciones</h3>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                    <li>Descarga la plantilla de ejemplo o prepara tu archivo con las columnas: vestuario, empleado, numero_taquilla</li>
+                    <li>El sistema buscará automáticamente coincidencias de nombres de empleados</li>
+                    <li>Los vestuarios válidos son: "Vestuario Femenino Planta Baja", "Vestuario Femenino Planta Alta", "Vestuario Masculino Planta Baja"</li>
+                    <li>Las asignaciones se crearán/actualizarán automáticamente</li>
+                  </ol>
+                </div>
+
+                <Button
+                  onClick={() => downloadTemplate("lockers")}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Descargar Plantilla de Taquillas
+                </Button>
+
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                  <KeyRound className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                  <input
+                    type="file"
+                    id="file-upload-lockers"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleLockerFileSelect}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="file-upload-lockers"
+                    className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Haz clic para seleccionar archivo
+                  </label>
+                  <p className="text-sm text-slate-500 mt-2">
+                    Formatos: Excel (.xlsx, .xls) o CSV
+                  </p>
+                </div>
+
+                {lockerFile && (
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-900">{lockerFile.name}</span>
+                    </div>
+                    <Button
+                      onClick={handleLockerImport}
+                      disabled={importingLockers}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {importingLockers ? "Procesando..." : "Importar y Asignar"}
+                    </Button>
+                  </div>
+                )}
+
+                {lockerImportResult && (
+                  <div className={`p-4 rounded-lg border ${
+                    lockerImportResult.success 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    <div className="flex items-start gap-2">
+                      {lockerImportResult.success ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <p className={`font-semibold ${
+                          lockerImportResult.success ? 'text-green-900' : 'text-red-900'
+                        }`}>
+                          {lockerImportResult.success ? '¡Importación Exitosa!' : 'Error en la Importación'}
+                        </p>
+                        <p className={`text-sm mt-1 ${
+                          lockerImportResult.success ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          {lockerImportResult.message}
+                        </p>
+                        {lockerImportResult.success && (
+                          <div className="mt-3 space-y-2">
+                            <div className="flex gap-2">
+                              <Badge className="bg-green-600">
+                                {lockerImportResult.matched} asignaciones exitosas
+                              </Badge>
+                              {lockerImportResult.notFound > 0 && (
+                                <Badge className="bg-amber-600">
+                                  {lockerImportResult.notFound} no encontrados
+                                </Badge>
+                              )}
+                            </div>
+                            {lockerImportResult.notFoundList && lockerImportResult.notFoundList.length > 0 && (
+                              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded">
+                                <p className="text-xs font-semibold text-amber-900 mb-1">Empleados no encontrados:</p>
+                                <ul className="text-xs text-amber-800 list-disc list-inside">
+                                  {lockerImportResult.notFoundList.map((name, i) => (
+                                    <li key={i}>{name}</li>
+                                  ))}
+                                  {lockerImportResult.notFound > lockerImportResult.notFoundList.length && (
+                                    <li>... y {lockerImportResult.notFound - lockerImportResult.notFoundList.length} más</li>
+                                  )}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="employees">
             <Card>
@@ -289,7 +554,7 @@ export default function DataImportPage() {
                   </p>
                 </div>
 
-                {selectedFile && (
+                {selectedFile && selectedEntity === "employees" && (
                   <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -305,7 +570,7 @@ export default function DataImportPage() {
                   </div>
                 )}
 
-                {importResult && (
+                {importResult && selectedEntity === "employees" && (
                   <div className={`p-4 rounded-lg border ${
                     importResult.success 
                       ? 'bg-green-50 border-green-200' 
