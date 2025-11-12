@@ -22,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Edit } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Edit, Settings, CheckCircle2, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -44,6 +45,8 @@ export default function LockerManagementPage() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [editingAssignments, setEditingAssignments] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [configFormData, setConfigFormData] = useState({});
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
@@ -61,6 +64,12 @@ export default function LockerManagementPage() {
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
+  });
+
+  const { data: lockerRoomConfigs } = useQuery({
+    queryKey: ['lockerRoomConfigs'],
+    queryFn: () => base44.entities.LockerRoomConfig.list(),
     initialData: [],
   });
 
@@ -154,6 +163,48 @@ export default function LockerManagementPage() {
     },
   });
 
+  const saveConfigMutation = useMutation({
+    mutationFn: async (configs) => {
+      const promises = Object.entries(configs).map(([vestuario, numTaquillas]) => {
+        const existing = lockerRoomConfigs.find(c => c.vestuario === vestuario);
+        
+        if (existing) {
+          return base44.entities.LockerRoomConfig.update(existing.id, {
+            vestuario,
+            numero_taquillas_instaladas: parseInt(numTaquillas)
+          });
+        }
+        return base44.entities.LockerRoomConfig.create({
+          vestuario,
+          numero_taquillas_instaladas: parseInt(numTaquillas)
+        });
+      });
+
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lockerRoomConfigs'] });
+      setShowConfigDialog(false);
+    },
+  });
+
+  // Inicializar configuración de taquillas
+  React.useEffect(() => {
+    const defaultConfigs = {
+      "Vestuario Femenino Planta Baja": 56,
+      "Vestuario Femenino Planta Alta": 263,
+      "Vestuario Masculino Planta Baja": 128
+    };
+
+    const configs = {};
+    Object.keys(defaultConfigs).forEach(vestuario => {
+      const existing = lockerRoomConfigs.find(c => c.vestuario === vestuario);
+      configs[vestuario] = existing?.numero_taquillas_instaladas || defaultConfigs[vestuario];
+    });
+
+    setConfigFormData(configs);
+  }, [lockerRoomConfigs]);
+
   const departments = useMemo(() => {
     const depts = new Set();
     employees.forEach(emp => {
@@ -217,6 +268,35 @@ export default function LockerManagementPage() {
     return { conTaquilla, sinTaquilla, pendientesNotificacion };
   }, [lockerAssignments, filteredEmployees]);
 
+  const lockerRoomStats = useMemo(() => {
+    const vestuarios = [
+      "Vestuario Femenino Planta Baja",
+      "Vestuario Femenino Planta Alta",
+      "Vestuario Masculino Planta Baja"
+    ];
+
+    return vestuarios.map(vestuario => {
+      const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
+      const totalInstaladas = config?.numero_taquillas_instaladas || 0;
+      
+      const asignadas = lockerAssignments.filter(la => 
+        la.vestuario === vestuario && 
+        la.numero_taquilla_actual &&
+        la.requiere_taquilla !== false
+      ).length;
+      
+      const libres = totalInstaladas - asignadas;
+      
+      return {
+        vestuario,
+        totalInstaladas,
+        asignadas,
+        libres,
+        porcentajeOcupacion: totalInstaladas > 0 ? Math.round((asignadas / totalInstaladas) * 100) : 0
+      };
+    });
+  }, [lockerRoomConfigs, lockerAssignments]);
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -239,14 +319,24 @@ export default function LockerManagementPage() {
               Asigna y gestiona taquillas de vestuarios para empleados
             </p>
           </div>
-          <Button
-            onClick={handleSaveAll}
-            disabled={!hasChanges || saveAllMutation.isPending}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {saveAllMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowConfigDialog(true)}
+              variant="outline"
+              className="border-blue-200 hover:bg-blue-50"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Configurar Vestuarios
+            </Button>
+            <Button
+              onClick={handleSaveAll}
+              disabled={!hasChanges || saveAllMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saveAllMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          </div>
         </div>
 
         {/* Alerta de cambios sin guardar */}
@@ -259,6 +349,77 @@ export default function LockerManagementPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Resumen por Vestuario */}
+        <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-slate-100">
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-blue-600" />
+                Resumen de Vestuarios
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowConfigDialog(true)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Configurar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {lockerRoomStats.map((stat) => (
+                <div key={stat.vestuario} className="border-2 rounded-lg p-4 bg-gradient-to-br from-slate-50 to-slate-100">
+                  <h3 className="font-semibold text-slate-900 mb-3 text-sm">
+                    {stat.vestuario}
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600">Instaladas:</span>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 font-bold">
+                        {stat.totalInstaladas}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600">Asignadas:</span>
+                      <Badge className="bg-green-600 text-white font-bold">
+                        {stat.asignadas}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600">Libres:</span>
+                      <Badge className={
+                        stat.libres > 10 ? "bg-green-100 text-green-800" :
+                        stat.libres > 5 ? "bg-amber-100 text-amber-800" :
+                        "bg-red-100 text-red-800"
+                      }>
+                        {stat.libres}
+                      </Badge>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-600">Ocupación:</span>
+                        <span className="text-sm font-bold text-slate-900">{stat.porcentajeOcupacion}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2 mt-1">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            stat.porcentajeOcupacion > 90 ? 'bg-red-500' :
+                            stat.porcentajeOcupacion > 75 ? 'bg-amber-500' :
+                            'bg-green-500'
+                          }`}
+                          style={{ width: `${stat.porcentajeOcupacion}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Estadísticas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -573,6 +734,81 @@ export default function LockerManagementPage() {
                   </div>
                 ));
               })()}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialog de Configuración */}
+      {showConfigDialog && (
+        <Dialog open={true} onOpenChange={setShowConfigDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Configurar Número de Taquillas por Vestuario</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>ℹ️ Información:</strong> Define el número total de taquillas instaladas en cada vestuario. 
+                  Esta información se usará para calcular taquillas libres y porcentaje de ocupación.
+                </p>
+              </div>
+
+              {Object.keys(configFormData).map((vestuario) => (
+                <div key={vestuario} className="border-2 border-slate-200 rounded-lg p-4 bg-slate-50">
+                  <Label className="text-base font-semibold text-slate-900 mb-3 block">
+                    {vestuario}
+                  </Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`config-${vestuario}`}>Número de Taquillas Instaladas *</Label>
+                      <Input
+                        id={`config-${vestuario}`}
+                        type="number"
+                        min="0"
+                        value={configFormData[vestuario]}
+                        onChange={(e) => setConfigFormData({
+                          ...configFormData,
+                          [vestuario]: e.target.value
+                        })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estado Actual</Label>
+                      <div className="h-10 flex items-center">
+                        {(() => {
+                          const stat = lockerRoomStats.find(s => s.vestuario === vestuario);
+                          return (
+                            <div className="flex gap-2">
+                              <Badge className="bg-green-600 text-white">
+                                {stat?.asignadas || 0} asign.
+                              </Badge>
+                              <Badge variant="outline">
+                                {stat?.libres || 0} libres
+                              </Badge>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setShowConfigDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => saveConfigMutation.mutate(configFormData)}
+                  disabled={saveConfigMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {saveConfigMutation.isPending ? "Guardando..." : "Guardar Configuración"}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
