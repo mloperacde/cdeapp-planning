@@ -672,15 +672,19 @@ export default function LockerManagementPage() {
 
         {/* Información */}
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="font-semibold text-blue-900 mb-2">ℹ️ Información</h3>
+          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" />
+            ℹ️ Instrucciones de Uso
+          </h3>
           <div className="text-sm text-blue-800 space-y-1">
-            <p>• Marca la casilla "Req." para indicar que el empleado requiere taquilla</p>
-            <p>• Todos los empleados están marcados por defecto</p>
-            <p>• Asigna el vestuario según el sexo del empleado</p>
-            <p>• Ingresa el nuevo número de taquilla cuando haya una reasignación</p>
-            <p>• Los cambios se guardan al hacer clic en el botón "Guardar Cambios" de la parte superior</p>
-            <p>• Haz clic en "Notificar" para enviar una notificación al empleado sobre su nueva taquilla</p>
-            <p>• El botón de historial muestra todos los cambios de taquilla del empleado</p>
+            <p>• <strong>Configurar Vestuarios:</strong> Click en "Configurar Vestuarios" para definir el número total de taquillas instaladas</p>
+            <p>• <strong>Asignar Taquilla:</strong> Selecciona el vestuario y el número de taquilla en "Nueva Taquilla"</p>
+            <p>• <strong>Req. (Requiere):</strong> Marca/desmarca si el empleado necesita taquilla</p>
+            <p>• <strong>Reasignar:</strong> Cambia el número en "Nueva Taquilla" para reasignar</p>
+            <p>• <strong>Guardar:</strong> Los cambios se guardan al hacer clic en "Guardar Cambios"</p>
+            <p>• <strong>Notificar:</strong> Envía email/SMS al empleado sobre su nueva taquilla</p>
+            <p>• <strong>Historial:</strong> Muestra todos los cambios de taquilla del empleado</p>
+            <p className="pt-2 border-t border-blue-300 mt-2"><strong>💡 Tip:</strong> Los vestuarios se asignan automáticamente según el sexo del empleado y disponibilidad</p>
           </div>
         </div>
       </div>
