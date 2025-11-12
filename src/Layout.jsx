@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -212,82 +211,20 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Jefes de Turno (Collapsible) */}
-                  <Collapsible open={openSections.jefes} onOpenChange={() => toggleSection('jefes')}>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton 
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                            isParentActive([
-                              createPageUrl("ShiftManagers"),
-                              createPageUrl("TeamConfiguration"),
-                              createPageUrl("MachineAssignments"),
-                              createPageUrl("ShiftManagement"),
-                              createPageUrl("ShiftHandover"),
-                              createPageUrl("SupportManagement1415"),
-                              createPageUrl("Breaks")
-                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <UsersRound className="w-5 h-5" />
-                              <span className="text-sm">Jefes de Turno</span>
-                            </div>
-                            {openSections.jefes ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </div>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton 
-                            asChild 
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ShiftManagers")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("ShiftManagers")} className="flex items-center gap-2 px-3 py-2">
-                              <UsersRound className="w-4 h-4" />
-                              Resumen
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ShiftHandover")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("ShiftHandover")} className="flex items-center gap-2 px-3 py-2">
-                              <ArrowLeftRight className="w-4 h-4" />
-                              Info. Traspaso Turno
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("SupportManagement1415")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("SupportManagement1415")} className="flex items-center gap-2 px-3 py-2">
-                              <Clock className="w-4 h-4" />
-                              Apoyos 14-15
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("Breaks")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("Breaks")} className="flex items-center gap-2 px-3 py-2">
-                              <Coffee className="w-4 h-4" />
-                              Descansos
-                            </Link>
-                          </SidebarMenuButton>
-                        </div>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+                  {/* Jefes de Turno */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("ShiftManagers")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("ShiftManagers")} className="flex items-center gap-3 px-3 py-2.5">
+                        <UsersRound className="w-5 h-5" />
+                        <span className="text-sm">Jefes de Turno</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
                   {/* Importar Datos */}
                   <SidebarMenuItem>
