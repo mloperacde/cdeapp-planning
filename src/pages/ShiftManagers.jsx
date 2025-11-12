@@ -7,7 +7,8 @@ import {
   UsersRound, 
   RefreshCw,
   Users as UsersIcon,
-  Clock
+  Clock,
+  KeyRound
 } from "lucide-react";
 
 export default function ShiftManagersPage() {
@@ -32,13 +33,21 @@ export default function ShiftManagersPage() {
       icon: RefreshCw,
       url: createPageUrl("ShiftManagement"),
       color: "green"
+    },
+    {
+      title: "Gestión de Taquillas",
+      description: "Asigna y gestiona taquillas de vestuarios",
+      icon: KeyRound,
+      url: createPageUrl("LockerManagement"),
+      color: "orange"
     }
   ];
 
   const colorClasses = {
     purple: "from-purple-500 to-purple-600",
     blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600"
+    green: "from-green-500 to-green-600",
+    orange: "from-orange-500 to-orange-600"
   };
 
   return (
@@ -54,7 +63,7 @@ export default function ShiftManagersPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {subPages.map((page) => {
             const Icon = page.icon;
             return (
@@ -84,6 +93,7 @@ export default function ShiftManagersPage() {
             <p>• <strong>Equipos de Turno:</strong> Configura los equipos rotativos y sus horarios semanales</p>
             <p>• <strong>Asignaciones:</strong> Distribuye operarios en máquinas según habilidades y disponibilidad</p>
             <p>• <strong>Intercambios:</strong> Gestiona y aprueba solicitudes de cambio de turno entre operarios</p>
+            <p>• <strong>Taquillas:</strong> Asigna taquillas de vestuarios y gestiona reasignaciones</p>
             <p>• Todas las acciones se sincronizan automáticamente con el sistema de planning</p>
           </div>
         </div>

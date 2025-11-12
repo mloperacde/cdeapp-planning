@@ -26,6 +26,9 @@ import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import DailyPlanning from './pages/DailyPlanning';
 import MachineManagement from './pages/MachineManagement';
 import MachineMaintenance from './pages/MachineMaintenance';
+import LockerManagement from './pages/LockerManagement';
+import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
+import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
 import Layout from './Layout.jsx';
 
 
@@ -58,6 +61,9 @@ export const PAGES = {
     "DailyPlanning": DailyPlanning,
     "MachineManagement": MachineManagement,
     "MachineMaintenance": MachineMaintenance,
+    "LockerManagement": LockerManagement,
+    "AbsenceTypeInfo": AbsenceTypeInfo,
+    "EmployeeAbsenceInfo": EmployeeAbsenceInfo,
 }
 
 export const pagesConfig = {
