@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History } from "lucide-react";
+import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Edit } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -42,6 +42,8 @@ export default function LockerManagementPage() {
   });
   const [showHistory, setShowHistory] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [editingAssignments, setEditingAssignments] = useState({});
+  const [hasChanges, setHasChanges] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
@@ -62,46 +64,68 @@ export default function LockerManagementPage() {
     initialData: [],
   });
 
-  const saveAssignmentMutation = useMutation({
-    mutationFn: async (data) => {
-      const existing = lockerAssignments.find(la => la.employee_id === data.employee_id);
-      
-      // Verificar si hay cambio de taquilla
-      const hasLockerChange = existing && 
-        (existing.numero_taquilla_actual !== data.numero_taquilla_nuevo || 
-         existing.vestuario !== data.vestuario);
-      
-      const now = new Date().toISOString();
-      const updatedData = {
-        ...data,
-        fecha_asignacion: now,
-        notificacion_enviada: hasLockerChange ? false : data.notificacion_enviada
+  // Cargar asignaciones existentes en estado de edición
+  React.useEffect(() => {
+    const assignments = {};
+    lockerAssignments.forEach(la => {
+      assignments[la.employee_id] = {
+        requiere_taquilla: la.requiere_taquilla !== false,
+        vestuario: la.vestuario || "",
+        numero_taquilla_actual: la.numero_taquilla_actual || "",
+        numero_taquilla_nuevo: la.numero_taquilla_nuevo || ""
       };
+    });
+    setEditingAssignments(assignments);
+  }, [lockerAssignments]);
 
-      // Si hay cambio, agregar al historial
-      if (hasLockerChange && existing) {
-        const historial = existing.historial_cambios || [];
-        historial.push({
-          fecha: now,
-          vestuario_anterior: existing.vestuario,
-          taquilla_anterior: existing.numero_taquilla_actual,
-          vestuario_nuevo: data.vestuario,
-          taquilla_nueva: data.numero_taquilla_nuevo,
-          motivo: "Reasignación"
-        });
-        updatedData.historial_cambios = historial;
+  const saveAllMutation = useMutation({
+    mutationFn: async () => {
+      const promises = Object.entries(editingAssignments).map(([employeeId, data]) => {
+        const existing = lockerAssignments.find(la => la.employee_id === employeeId);
         
-        // Actualizar taquilla actual con la nueva
-        updatedData.numero_taquilla_actual = data.numero_taquilla_nuevo;
-      }
+        // Verificar si hay cambio de taquilla
+        const hasLockerChange = existing && 
+          (existing.numero_taquilla_actual !== data.numero_taquilla_nuevo || 
+           existing.vestuario !== data.vestuario) &&
+          data.numero_taquilla_nuevo && 
+          data.numero_taquilla_nuevo !== existing.numero_taquilla_actual;
+        
+        const now = new Date().toISOString();
+        const updatedData = {
+          employee_id: employeeId,
+          requiere_taquilla: data.requiere_taquilla,
+          vestuario: data.vestuario,
+          numero_taquilla_actual: hasLockerChange ? data.numero_taquilla_nuevo : (existing?.numero_taquilla_actual || data.numero_taquilla_actual),
+          numero_taquilla_nuevo: data.numero_taquilla_nuevo,
+          fecha_asignacion: now,
+          notificacion_enviada: hasLockerChange ? false : (existing?.notificacion_enviada || false)
+        };
 
-      if (existing) {
-        return base44.entities.LockerAssignment.update(existing.id, updatedData);
-      }
-      return base44.entities.LockerAssignment.create(updatedData);
+        // Si hay cambio, agregar al historial
+        if (hasLockerChange && existing) {
+          const historial = existing.historial_cambios || [];
+          historial.push({
+            fecha: now,
+            vestuario_anterior: existing.vestuario,
+            taquilla_anterior: existing.numero_taquilla_actual,
+            vestuario_nuevo: data.vestuario,
+            taquilla_nueva: data.numero_taquilla_nuevo,
+            motivo: "Reasignación"
+          });
+          updatedData.historial_cambios = historial;
+        }
+
+        if (existing) {
+          return base44.entities.LockerAssignment.update(existing.id, updatedData);
+        }
+        return base44.entities.LockerAssignment.create(updatedData);
+      });
+
+      return Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      setHasChanges(false);
     },
   });
 
@@ -110,7 +134,7 @@ export default function LockerManagementPage() {
       const employee = employees.find(e => e.id === employeeId);
       if (!employee || !employee.telefono_movil) return;
 
-      // Enviar notificación SMS
+      // Enviar notificación SMS/Email
       await base44.integrations.Core.SendEmail({
         to: employee.email,
         subject: "Reasignación de Taquilla",
@@ -118,9 +142,12 @@ export default function LockerManagementPage() {
       });
 
       // Marcar notificación como enviada
-      await base44.entities.LockerAssignment.update(assignment.id, {
-        notificacion_enviada: true
-      });
+      const existing = lockerAssignments.find(la => la.employee_id === employeeId);
+      if (existing) {
+        await base44.entities.LockerAssignment.update(existing.id, {
+          notificacion_enviada: true
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
@@ -149,28 +176,15 @@ export default function LockerManagementPage() {
     return lockerAssignments.find(la => la.employee_id === employeeId);
   };
 
-  const handleToggleRequieresTaquilla = (employeeId, currentValue) => {
-    const assignment = getAssignment(employeeId) || { employee_id: employeeId };
-    saveAssignmentMutation.mutate({
-      ...assignment,
-      requiere_taquilla: !currentValue
-    });
-  };
-
-  const handleVestuarioChange = (employeeId, vestuario) => {
-    const assignment = getAssignment(employeeId) || { employee_id: employeeId };
-    saveAssignmentMutation.mutate({
-      ...assignment,
-      vestuario
-    });
-  };
-
-  const handleNuevoNumeroChange = (employeeId, numeroTaquilla) => {
-    const assignment = getAssignment(employeeId) || { employee_id: employeeId };
-    saveAssignmentMutation.mutate({
-      ...assignment,
-      numero_taquilla_nuevo: numeroTaquilla
-    });
+  const handleFieldChange = (employeeId, field, value) => {
+    setEditingAssignments(prev => ({
+      ...prev,
+      [employeeId]: {
+        ...(prev[employeeId] || {}),
+        [field]: value
+      }
+    }));
+    setHasChanges(true);
   };
 
   const handleSendNotification = (employeeId) => {
@@ -183,6 +197,12 @@ export default function LockerManagementPage() {
   const handleShowHistory = (employee) => {
     setSelectedEmployee(employee);
     setShowHistory(true);
+  };
+
+  const handleSaveAll = () => {
+    if (window.confirm('¿Guardar todos los cambios realizados?')) {
+      saveAllMutation.mutate();
+    }
   };
 
   const stats = useMemo(() => {
@@ -219,7 +239,26 @@ export default function LockerManagementPage() {
               Asigna y gestiona taquillas de vestuarios para empleados
             </p>
           </div>
+          <Button
+            onClick={handleSaveAll}
+            disabled={!hasChanges || saveAllMutation.isPending}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saveAllMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+          </Button>
         </div>
+
+        {/* Alerta de cambios sin guardar */}
+        {hasChanges && (
+          <Card className="mb-6 bg-amber-50 border-2 border-amber-300">
+            <CardContent className="p-4">
+              <p className="text-sm text-amber-800">
+                <strong>⚠️ Hay cambios sin guardar.</strong> Recuerda hacer clic en "Guardar Cambios" para aplicar las modificaciones.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Estadísticas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -352,16 +391,23 @@ export default function LockerManagementPage() {
                   ) : (
                     filteredEmployees.map((employee) => {
                       const assignment = getAssignment(employee.id);
-                      const requiereTaquilla = assignment?.requiere_taquilla !== false;
-                      const hasNewLocker = assignment?.numero_taquilla_nuevo && 
-                        assignment.numero_taquilla_nuevo !== assignment.numero_taquilla_actual;
+                      const editData = editingAssignments[employee.id] || {
+                        requiere_taquilla: assignment?.requiere_taquilla !== false,
+                        vestuario: assignment?.vestuario || "",
+                        numero_taquilla_actual: assignment?.numero_taquilla_actual || "",
+                        numero_taquilla_nuevo: assignment?.numero_taquilla_nuevo || ""
+                      };
+                      
+                      const requiereTaquilla = editData.requiere_taquilla;
+                      const hasNewLocker = editData.numero_taquilla_nuevo && 
+                        editData.numero_taquilla_nuevo !== editData.numero_taquilla_actual;
                       
                       return (
                         <TableRow key={employee.id} className={`hover:bg-slate-50 ${!requiereTaquilla ? 'opacity-50' : ''}`}>
                           <TableCell>
                             <Checkbox
                               checked={requiereTaquilla}
-                              onCheckedChange={() => handleToggleRequieresTaquilla(employee.id, requiereTaquilla)}
+                              onCheckedChange={(checked) => handleFieldChange(employee.id, 'requiere_taquilla', checked)}
                             />
                           </TableCell>
                           <TableCell>
@@ -385,8 +431,8 @@ export default function LockerManagementPage() {
                           <TableCell>
                             {requiereTaquilla && (
                               <Select
-                                value={assignment?.vestuario || ""}
-                                onValueChange={(value) => handleVestuarioChange(employee.id, value)}
+                                value={editData.vestuario}
+                                onValueChange={(value) => handleFieldChange(employee.id, 'vestuario', value)}
                               >
                                 <SelectTrigger className="w-48">
                                   <SelectValue placeholder="Seleccionar" />
@@ -408,7 +454,7 @@ export default function LockerManagementPage() {
                           <TableCell>
                             {requiereTaquilla && (
                               <div className="font-mono text-sm font-semibold text-slate-900">
-                                {assignment?.numero_taquilla_actual || "-"}
+                                {editData.numero_taquilla_actual || "-"}
                               </div>
                             )}
                           </TableCell>
@@ -416,8 +462,8 @@ export default function LockerManagementPage() {
                             {requiereTaquilla && (
                               <div className="flex items-center gap-2">
                                 <Input
-                                  value={assignment?.numero_taquilla_nuevo || ""}
-                                  onChange={(e) => handleNuevoNumeroChange(employee.id, e.target.value)}
+                                  value={editData.numero_taquilla_nuevo}
+                                  onChange={(e) => handleFieldChange(employee.id, 'numero_taquilla_nuevo', e.target.value)}
                                   placeholder="Nº"
                                   className="w-20"
                                 />
@@ -471,6 +517,7 @@ export default function LockerManagementPage() {
             <p>• Todos los empleados están marcados por defecto</p>
             <p>• Asigna el vestuario según el sexo del empleado</p>
             <p>• Ingresa el nuevo número de taquilla cuando haya una reasignación</p>
+            <p>• Los cambios se guardan al hacer clic en el botón "Guardar Cambios" de la parte superior</p>
             <p>• Haz clic en "Notificar" para enviar una notificación al empleado sobre su nueva taquilla</p>
             <p>• El botón de historial muestra todos los cambios de taquilla del empleado</p>
           </div>

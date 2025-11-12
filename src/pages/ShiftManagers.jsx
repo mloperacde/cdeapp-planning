@@ -8,11 +8,19 @@ import {
   RefreshCw,
   Users as UsersIcon,
   Clock,
-  KeyRound
+  KeyRound,
+  LayoutDashboard
 } from "lucide-react";
 
 export default function ShiftManagersPage() {
   const subPages = [
+    {
+      title: "Panel de Control",
+      description: "Vista general de equipos y turnos",
+      icon: LayoutDashboard,
+      url: createPageUrl("ShiftManagersDashboard"),
+      color: "indigo"
+    },
     {
       title: "Equipos de Turno",
       description: "Configura equipos y turnos rotativos",
@@ -44,6 +52,7 @@ export default function ShiftManagersPage() {
   ];
 
   const colorClasses = {
+    indigo: "from-indigo-500 to-indigo-600",
     purple: "from-purple-500 to-purple-600",
     blue: "from-blue-500 to-blue-600",
     green: "from-green-500 to-green-600",
@@ -63,7 +72,7 @@ export default function ShiftManagersPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {subPages.map((page) => {
             const Icon = page.icon;
             return (
@@ -90,6 +99,7 @@ export default function ShiftManagersPage() {
             Información para Jefes de Turno
           </h3>
           <div className="text-sm text-blue-800 space-y-1">
+            <p>• <strong>Panel de Control:</strong> Vista general de equipos, turnos y estadísticas</p>
             <p>• <strong>Equipos de Turno:</strong> Configura los equipos rotativos y sus horarios semanales</p>
             <p>• <strong>Asignaciones:</strong> Distribuye operarios en máquinas según habilidades y disponibilidad</p>
             <p>• <strong>Intercambios:</strong> Gestiona y aprueba solicitudes de cambio de turno entre operarios</p>
