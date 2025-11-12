@@ -19,7 +19,9 @@ import {
   Cake,
   Calendar,
   AlertTriangle,
-  MessageSquare
+  MessageSquare,
+  ArrowLeftRight,
+  Coffee
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -179,7 +181,10 @@ export default function ShiftManagersPage() {
     blue: "from-blue-500 to-blue-600",
     green: "from-green-500 to-green-600",
     orange: "from-orange-500 to-orange-600",
-    red: "from-red-500 to-red-600"
+    red: "from-red-500 to-red-600",
+    cyan: "from-cyan-500 to-cyan-600",
+    teal: "from-teal-500 to-teal-600",
+    violet: "from-violet-500 to-violet-600"
   };
 
   return (
@@ -348,6 +353,66 @@ export default function ShiftManagersPage() {
                 </Link>
               );
             })}
+          </div>
+        </div>
+
+        {/* Módulos Adicionales */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Comunicación y Coordinación</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link to={createPageUrl("ShiftHandover")}>
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                      <ArrowLeftRight className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        Info. Traspaso Turno
+                      </h3>
+                      <p className="text-xs text-slate-600">Comunica info entre turnos</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to={createPageUrl("Breaks")}>
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                      <Coffee className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        Descansos
+                      </h3>
+                      <p className="text-xs text-slate-600">Gestiona turnos de descanso</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to={createPageUrl("SupportManagement1415")}>
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                      <Clock className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        Apoyos 14-15h
+                      </h3>
+                      <p className="text-xs text-slate-600">Asigna soporte 14-15h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
 

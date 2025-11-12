@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Factory, Wrench, Package, ClipboardCheck, Save, Eye } from "lucide-react";
+import { Calendar, Factory, Wrench, Package, ClipboardCheck, Eye } from "lucide-react";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import ProductionPlanningTab from "../components/dailyplanning/ProductionPlanningTab";
@@ -133,7 +134,7 @@ export default function DailyPlanningPage() {
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="text-sm text-blue-800 space-y-1">
+              <div className="text-sm text-blue-800 space-y-1 flex-1">
                 <p><strong>📅 Fecha:</strong> {format(new Date(selectedDate), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</p>
                 <p><strong>👥 Equipo:</strong> {getTeamName(selectedTeam)}</p>
                 <p><strong>⏰ Turno:</strong> {selectedShift || 'Pendiente de asignar'}</p>
@@ -141,6 +142,12 @@ export default function DailyPlanningPage() {
                   Configura la planificación para cada departamento usando las pestañas abajo
                 </p>
               </div>
+              <Link to={createPageUrl("MachinePlanning")}>
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-base px-6 py-6">
+                  <Eye className="w-5 h-5 mr-2" />
+                  Planificación Máquinas
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

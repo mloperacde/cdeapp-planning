@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 export default function AnniversaryPanel({ employees }) {
   const upcomingAnniversaries = useMemo(() => {
     const today = new Date();
-    const next60Days = addDays(today, 60);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const milestones = [5, 10, 15, 20, 25, 30, 35, 40];
     
     return employees
@@ -28,7 +28,7 @@ export default function AnniversaryPanel({ employees }) {
         const milestoneDate = new Date(hireDate);
         milestoneDate.setFullYear(hireDate.getFullYear() + nextMilestone);
         
-        const isUpcoming = milestoneDate <= next60Days && milestoneDate >= today;
+        const isUpcoming = milestoneDate <= endOfMonth && milestoneDate >= today;
         
         return {
           ...emp,
@@ -73,7 +73,7 @@ export default function AnniversaryPanel({ employees }) {
           <CardHeader className="border-b border-amber-200">
             <CardTitle className="flex items-center gap-2 text-amber-900">
               <Award className="w-5 h-5" />
-              Próximos Aniversarios Importantes (60 días)
+              Próximos Aniversarios Importantes (Mes Actual)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
