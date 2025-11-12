@@ -158,6 +158,21 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
+                  {/* Onboarding */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("EmployeeOnboarding")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("EmployeeOnboarding")} className="flex items-center gap-3 px-3 py-2.5">
+                        <UserPlus className="w-5 h-5" />
+                        <span className="text-sm">Onboarding</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
                   {/* Máquinas (Collapsible) */}
                   <Collapsible open={openSections.maquinas} onOpenChange={() => toggleSection('maquinas')}>
                     <SidebarMenuItem>

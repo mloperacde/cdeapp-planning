@@ -210,31 +210,49 @@ export default function DataImportPage() {
       const uploadResult = await base44.integrations.Core.UploadFile({ file: lockerFile });
       const fileUrl = uploadResult.file_url;
 
-      // Esquema para extraer datos de taquillas
-      const jsonSchema = {
-        type: "array",
-        items: {
+      // Usar InvokeLLM para extraer datos del archivo
+      const prompt = `Analiza este archivo Excel/CSV de asignaciones de taquillas y extrae los datos en formato JSON.
+
+El archivo contiene 3 columnas:
+1. Vestuario (puede ser "Vestuario Femenino Planta Baja", "Vestuario Femenino Planta Alta", o "Vestuario Masculino Planta Baja")
+2. Nombre del Empleado
+3. Número de Taquilla
+
+Devuelve un array JSON con objetos que tengan esta estructura:
+{
+  "vestuario": "nombre del vestuario",
+  "empleado": "nombre completo del empleado",
+  "numero_taquilla": "número de la taquilla"
+}
+
+IMPORTANTE: 
+- Incluye TODOS los registros del archivo
+- Mantén los nombres de empleados exactamente como aparecen
+- Los números de taquilla deben ser strings
+- Normaliza los nombres de vestuario a uno de los 3 valores válidos mencionados`;
+
+      const llmResult = await base44.integrations.Core.InvokeLLM({
+        prompt: prompt,
+        file_urls: [fileUrl],
+        response_json_schema: {
           type: "object",
           properties: {
-            vestuario: { type: "string" },
-            empleado: { type: "string" },
-            numero_taquilla: { type: "string" }
-          },
-          required: ["vestuario", "empleado", "numero_taquilla"]
+            asignaciones: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  vestuario: { type: "string" },
+                  empleado: { type: "string" },
+                  numero_taquilla: { type: "string" }
+                }
+              }
+            }
+          }
         }
-      };
-
-      // Extraer datos
-      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url: fileUrl,
-        json_schema: jsonSchema
       });
 
-      if (extractResult.status === "error") {
-        throw new Error(extractResult.details || "Error extrayendo datos del archivo");
-      }
-
-      const extractedData = extractResult.output;
+      const extractedData = llmResult.asignaciones;
 
       if (!Array.isArray(extractedData) || extractedData.length === 0) {
         throw new Error("No se encontraron datos válidos en el archivo");
