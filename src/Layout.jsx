@@ -20,7 +20,8 @@ import {
   ChevronRight,
   Wrench,
   UserPlus,
-  ClipboardCheck // Added ClipboardCheck icon
+  ClipboardCheck, // Added ClipboardCheck icon
+  Award // Added Award icon for Skill Matrix
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,7 +48,8 @@ export default function Layout({ children, currentPageName }) {
     empleados: false,
     informes: false,
     maquinas: false,
-    planning: false
+    planning: false,
+    habilidades: false // Added habilidades section
   });
 
   const toggleSection = (section) => {
@@ -155,7 +157,7 @@ export default function Layout({ children, currentPageName }) {
                             isParentActive([
                               createPageUrl("Employees"),
                               createPageUrl("EmployeeOnboarding"),
-                              createPageUrl("AttendanceManagement") // Added to parent active check
+                              createPageUrl("AttendanceManagement")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
                         >
@@ -192,7 +194,6 @@ export default function Layout({ children, currentPageName }) {
                               Onboarding
                             </Link>
                           </SidebarMenuButton>
-                          {/* New menu item for Attendance Management */}
                           <SidebarMenuButton 
                             asChild 
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
@@ -200,7 +201,7 @@ export default function Layout({ children, currentPageName }) {
                             }`}
                           >
                             <Link to={createPageUrl("AttendanceManagement")} className="flex items-center gap-2 px-3 py-2">
-                              <ClipboardCheck className="w-4 h-4" /> {/* Using the new icon */}
+                              <ClipboardCheck className="w-4 h-4" />
                               Gestión de Presencia
                             </Link>
                           </SidebarMenuButton>
@@ -217,7 +218,7 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Machines"),
-                              createPageUrl("MachineManagement"), // Added MachineManagement to parent active check
+                              createPageUrl("MachineManagement"),
                               createPageUrl("MachinePlanning"),
                               createPageUrl("ProcessConfiguration"),
                               createPageUrl("MaintenanceTracking")
@@ -250,6 +251,21 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleContent>
                     </SidebarMenuItem>
                   </Collapsible>
+
+                  {/* Habilidades (Nuevo) */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("SkillMatrix")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("SkillMatrix")} className="flex items-center gap-3 px-3 py-2.5">
+                        <Award className="w-5 h-5" />
+                        <span className="text-sm">Matriz de Habilidades</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
                   {/* Jefes de Turno */}
                   <SidebarMenuItem>

@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tantml:react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCog, GripVertical, User, UserCheck, Users, ArrowLeft, RefreshCw, Save, ArrowUp, ArrowDown, Factory, Wrench } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserCog, GripVertical, User, UserCheck, Users, ArrowLeft, RefreshCw, Save, ArrowUp, ArrowDown, Factory, Wrench, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -182,10 +182,12 @@ export default function MachineAssignmentsPage() {
   };
 
   const getEmployeeName = (employeeId) => {
+    if (!employeeId) return null;
     return employees.find(e => e.id === employeeId)?.nombre || "Desconocido";
   };
 
   const isEmployeeAvailable = (employeeId) => {
+    if (!employeeId) return true;
     return employees.find(e => e.id === employeeId)?.disponibilidad === "Disponible";
   };
 
@@ -267,6 +269,82 @@ export default function MachineAssignmentsPage() {
     }
 
     return machinesWithPriority.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  };
+
+  // Funciones para asignación manual
+  const handleAddToRole = (machineId, role, employeeId) => {
+    const assignment = assignments[machineId];
+    const currentList = assignment[role] || [];
+    
+    if (!currentList.includes(employeeId)) {
+      setAssignments({
+        ...assignments,
+        [machineId]: {
+          ...assignment,
+          [role]: [...currentList, employeeId]
+        }
+      });
+      setHasChanges(true);
+    }
+  };
+
+  const handleRemoveFromRole = (machineId, role, index) => {
+    const assignment = assignments[machineId];
+    const newList = [...assignment[role]];
+    newList.splice(index, 1);
+    
+    setAssignments({
+      ...assignments,
+      [machineId]: {
+        ...assignment,
+        [role]: newList
+      }
+    });
+    setHasChanges(true);
+  };
+
+  const handleSetOperator = (machineId, operatorNum, employeeId) => {
+    const assignment = assignments[machineId];
+    
+    setAssignments({
+      ...assignments,
+      [machineId]: {
+        ...assignment,
+        [`operador_${operatorNum}`]: employeeId || null
+      }
+    });
+    setHasChanges(true);
+  };
+
+  // Obtener empleados disponibles para cada rol
+  const getAvailableEmployeesForRole = (machineId, role) => {
+    const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
+    
+    if (role === 'responsable_linea') {
+      return filteredEmployees.filter(e => 
+        e.puesto?.toLowerCase().includes('responsable de linea') && 
+        e.equipo === teamName
+      );
+    } else if (role === 'segunda_linea') {
+      return filteredEmployees.filter(e => 
+        e.puesto?.toLowerCase().includes('segunda de linea') && 
+        e.equipo === teamName
+      );
+    } else {
+      // Para operarios, filtrar los que tienen la máquina en su configuración
+      return filteredEmployees.filter(emp => {
+        if (!emp.puesto?.toLowerCase().includes('operaria de linea')) return false;
+        if (emp.equipo !== teamName) return false;
+        
+        // Verificar si tiene esta máquina en su configuración
+        for (let i = 1; i <= 10; i++) {
+          if (emp[`maquina_${i}`] === machineId) {
+            return true;
+          }
+        }
+        return false;
+      });
+    }
   };
 
   return (
@@ -396,6 +474,10 @@ export default function MachineAssignmentsPage() {
                           operador_8: null,
                         };
 
+                        const responsables = getAvailableEmployeesForRole(machine.id, 'responsable_linea');
+                        const segundas = getAvailableEmployeesForRole(machine.id, 'segunda_linea');
+                        const operarios = getAvailableEmployeesForRole(machine.id, 'operador');
+
                         return (
                           <Card key={machine.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                             <CardHeader className="border-b border-slate-100">
@@ -417,11 +499,30 @@ export default function MachineAssignmentsPage() {
                               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 {/* Responsables de Línea */}
                                 <div className="space-y-3">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <UserCheck className="w-5 h-5 text-green-600" />
-                                    <Label className="text-base font-semibold">Responsables de Línea</Label>
-                                    <Badge variant="outline">{assignment.responsable_linea.length}</Badge>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <UserCheck className="w-5 h-5 text-green-600" />
+                                      <Label className="text-base font-semibold">Responsables de Línea</Label>
+                                      <Badge variant="outline">{assignment.responsable_linea.length}</Badge>
+                                    </div>
                                   </div>
+
+                                  {/* Selector Manual */}
+                                  <Select 
+                                    onValueChange={(value) => handleAddToRole(machine.id, 'responsable_linea', value)}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="+ Añadir responsable" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {responsables.map((emp) => (
+                                        <SelectItem key={emp.id} value={emp.id}>
+                                          {emp.nombre}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+
                                   <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'responsable_linea')}>
                                     <Droppable droppableId={`responsables-${machine.id}`}>
                                       {(provided) => (
@@ -435,49 +536,61 @@ export default function MachineAssignmentsPage() {
                                               Sin responsables asignados
                                             </p>
                                           ) : (
-                                            assignment.responsable_linea.map((empId, index) => (
-                                              <Draggable key={empId} draggableId={`resp-${empId}-${machine.id}`} index={index}>
-                                                {(provided, snapshot) => (
-                                                  <div
-                                                    ref={provided.innerRef}
-                                                    {...provided.draggableProps}
-                                                    className={`
-                                                      flex items-center gap-2 p-2 bg-white border rounded
-                                                      ${snapshot.isDragging ? 'shadow-lg' : ''}
-                                                      ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
-                                                    `}
-                                                  >
-                                                    <div {...provided.dragHandleProps}>
-                                                      <GripVertical className="w-4 h-4 text-slate-400" />
+                                            assignment.responsable_linea.map((empId, index) => {
+                                              const empName = getEmployeeName(empId);
+                                              
+                                              return (
+                                                <Draggable key={empId} draggableId={`resp-${empId}-${machine.id}`} index={index}>
+                                                  {(provided, snapshot) => (
+                                                    <div
+                                                      ref={provided.innerRef}
+                                                      {...provided.draggableProps}
+                                                      className={`
+                                                        flex items-center gap-2 p-2 bg-white border rounded
+                                                        ${snapshot.isDragging ? 'shadow-lg' : ''}
+                                                        ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
+                                                      `}
+                                                    >
+                                                      <div {...provided.dragHandleProps}>
+                                                        <GripVertical className="w-4 h-4 text-slate-400" />
+                                                      </div>
+                                                      <Badge className="text-xs px-2 py-0 bg-green-600 text-white">
+                                                        {index + 1}
+                                                      </Badge>
+                                                      <span className="text-sm flex-1">{empName}</span>
+                                                      <div className="flex gap-1">
+                                                        <Button
+                                                          size="icon"
+                                                          variant="ghost"
+                                                          className="h-6 w-6"
+                                                          onClick={() => moveUp(machine.id, 'responsable_linea', index)}
+                                                          disabled={index === 0}
+                                                        >
+                                                          <ArrowUp className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                          size="icon"
+                                                          variant="ghost"
+                                                          className="h-6 w-6"
+                                                          onClick={() => moveDown(machine.id, 'responsable_linea', index)}
+                                                          disabled={index >= assignment.responsable_linea.length - 1}
+                                                        >
+                                                          <ArrowDown className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                          size="icon"
+                                                          variant="ghost"
+                                                          className="h-6 w-6 text-red-600 hover:bg-red-50"
+                                                          onClick={() => handleRemoveFromRole(machine.id, 'responsable_linea', index)}
+                                                        >
+                                                          <X className="w-3 h-3" />
+                                                        </Button>
+                                                      </div>
                                                     </div>
-                                                    <Badge className="text-xs px-2 py-0 bg-green-600 text-white">
-                                                      {index + 1}
-                                                    </Badge>
-                                                    <span className="text-sm flex-1">{getEmployeeName(empId)}</span>
-                                                    <div className="flex gap-1">
-                                                      <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-6 w-6"
-                                                        onClick={() => moveUp(machine.id, 'responsable_linea', index)}
-                                                        disabled={index === 0}
-                                                      >
-                                                        <ArrowUp className="w-3 h-3" />
-                                                      </Button>
-                                                      <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-6 w-6"
-                                                        onClick={() => moveDown(machine.id, 'responsable_linea', index)}
-                                                        disabled={index >= assignment.responsable_linea.length - 1}
-                                                      >
-                                                        <ArrowDown className="w-3 h-3" />
-                                                      </Button>
-                                                    </div>
-                                                  </div>
-                                                )}
-                                              </Draggable>
-                                            ))
+                                                  )}
+                                                </Draggable>
+                                              );
+                                            })
                                           )}
                                           {provided.placeholder}
                                         </div>
@@ -488,11 +601,30 @@ export default function MachineAssignmentsPage() {
 
                                 {/* Segundas de Línea */}
                                 <div className="space-y-3">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <User className="w-5 h-5 text-blue-600" />
-                                    <Label className="text-base font-semibold">Segundas de Línea</Label>
-                                    <Badge variant="outline">{assignment.segunda_linea.length}</Badge>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <User className="w-5 h-5 text-blue-600" />
+                                      <Label className="text-base font-semibold">Segundas de Línea</Label>
+                                      <Badge variant="outline">{assignment.segunda_linea.length}</Badge>
+                                    </div>
                                   </div>
+
+                                  {/* Selector Manual */}
+                                  <Select 
+                                    onValueChange={(value) => handleAddToRole(machine.id, 'segunda_linea', value)}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="+ Añadir segunda" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {segundas.map((emp) => (
+                                        <SelectItem key={emp.id} value={emp.id}>
+                                          {emp.nombre}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+
                                   <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'segunda_linea')}>
                                     <Droppable droppableId={`segundas-${machine.id}`}>
                                       {(provided) => (
@@ -506,49 +638,61 @@ export default function MachineAssignmentsPage() {
                                               Sin segundas asignadas
                                             </p>
                                           ) : (
-                                            assignment.segunda_linea.map((empId, index) => (
-                                              <Draggable key={empId} draggableId={`seg-${empId}-${machine.id}`} index={index}>
-                                                {(provided, snapshot) => (
-                                                  <div
-                                                    ref={provided.innerRef}
-                                                    {...provided.draggableProps}
-                                                    className={`
-                                                      flex items-center gap-2 p-2 bg-white border rounded
-                                                      ${snapshot.isDragging ? 'shadow-lg' : ''}
-                                                      ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
-                                                    `}
-                                                  >
-                                                    <div {...provided.dragHandleProps}>
-                                                      <GripVertical className="w-4 h-4 text-slate-400" />
+                                            assignment.segunda_linea.map((empId, index) => {
+                                              const empName = getEmployeeName(empId);
+                                              
+                                              return (
+                                                <Draggable key={empId} draggableId={`seg-${empId}-${machine.id}`} index={index}>
+                                                  {(provided, snapshot) => (
+                                                    <div
+                                                      ref={provided.innerRef}
+                                                      {...provided.draggableProps}
+                                                      className={`
+                                                        flex items-center gap-2 p-2 bg-white border rounded
+                                                        ${snapshot.isDragging ? 'shadow-lg' : ''}
+                                                        ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
+                                                      `}
+                                                    >
+                                                      <div {...provided.dragHandleProps}>
+                                                        <GripVertical className="w-4 h-4 text-slate-400" />
+                                                      </div>
+                                                      <Badge className="text-xs px-2 py-0 bg-blue-600 text-white">
+                                                        {index + 1}
+                                                      </Badge>
+                                                      <span className="text-sm flex-1">{empName}</span>
+                                                      <div className="flex gap-1">
+                                                        <Button
+                                                          size="icon"
+                                                          variant="ghost"
+                                                          className="h-6 w-6"
+                                                          onClick={() => moveUp(machine.id, 'segunda_linea', index)}
+                                                          disabled={index === 0}
+                                                        >
+                                                          <ArrowUp className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                          size="icon"
+                                                          variant="ghost"
+                                                          className="h-6 w-6"
+                                                          onClick={() => moveDown(machine.id, 'segunda_linea', index)}
+                                                          disabled={index >= assignment.segunda_linea.length - 1}
+                                                        >
+                                                          <ArrowDown className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                          size="icon"
+                                                          variant="ghost"
+                                                          className="h-6 w-6 text-red-600 hover:bg-red-50"
+                                                          onClick={() => handleRemoveFromRole(machine.id, 'segunda_linea', index)}
+                                                        >
+                                                          <X className="w-3 h-3" />
+                                                        </Button>
+                                                      </div>
                                                     </div>
-                                                    <Badge className="text-xs px-2 py-0 bg-blue-600 text-white">
-                                                      {index + 1}
-                                                    </Badge>
-                                                    <span className="text-sm flex-1">{getEmployeeName(empId)}</span>
-                                                    <div className="flex gap-1">
-                                                      <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-6 w-6"
-                                                        onClick={() => moveUp(machine.id, 'segunda_linea', index)}
-                                                        disabled={index === 0}
-                                                      >
-                                                        <ArrowUp className="w-3 h-3" />
-                                                      </Button>
-                                                      <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-6 w-6"
-                                                        onClick={() => moveDown(machine.id, 'segunda_linea', index)}
-                                                        disabled={index >= assignment.segunda_linea.length - 1}
-                                                      >
-                                                        <ArrowDown className="w-3 h-3" />
-                                                      </Button>
-                                                    </div>
-                                                  </div>
-                                                )}
-                                              </Draggable>
-                                            ))
+                                                  )}
+                                                </Draggable>
+                                              );
+                                            })
                                           )}
                                           {provided.placeholder}
                                         </div>
@@ -563,34 +707,46 @@ export default function MachineAssignmentsPage() {
                                     <Users className="w-5 h-5 text-purple-600" />
                                     <Label className="text-base font-semibold">Operarios</Label>
                                     <Badge variant="outline">
-                                      {Object.values(assignment).filter((v, i) => i >= 2 && v !== null).length}
+                                      {Object.entries(assignment).filter(([k, v]) => k.startsWith('operador_') && v !== null).length}
                                     </Badge>
                                   </div>
                                   <div className="space-y-2 min-h-[100px] bg-slate-50 rounded-lg p-3">
                                     {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
                                       const empId = assignment[`operador_${num}`];
-                                      if (!empId) return null;
-
+                                      
                                       return (
-                                        <div
-                                          key={num}
-                                          className={`
-                                            flex items-center gap-2 p-2 bg-white border rounded
-                                            ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
-                                          `}
-                                        >
-                                          <Badge className="text-xs px-2 py-0 bg-purple-600 text-white">
-                                            Op {num}
-                                          </Badge>
-                                          <span className="text-sm">{getEmployeeName(empId)}</span>
+                                        <div key={num} className="space-y-1">
+                                          <Select
+                                            value={empId || "empty"}
+                                            onValueChange={(value) => handleSetOperator(machine.id, num, value === "empty" ? null : value)}
+                                          >
+                                            <SelectTrigger className="w-full">
+                                              <SelectValue placeholder={`Operario ${num}`} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="empty">Sin asignar</SelectItem>
+                                              {operarios.map((emp) => (
+                                                <SelectItem key={emp.id} value={emp.id}>
+                                                  {emp.nombre}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          
+                                          {empId && (
+                                            <div className={`
+                                              flex items-center gap-2 p-2 bg-white border rounded
+                                              ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
+                                            `}>
+                                              <Badge className="text-xs px-2 py-0 bg-purple-600 text-white">
+                                                Op {num}
+                                              </Badge>
+                                              <span className="text-sm flex-1">{getEmployeeName(empId)}</span>
+                                            </div>
+                                          )}
                                         </div>
                                       );
                                     })}
-                                    {Object.values(assignment).filter((v, i) => i >= 2 && v !== null).length === 0 && (
-                                      <p className="text-sm text-slate-400 text-center py-4">
-                                        Sin operarios asignados
-                                      </p>
-                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -653,17 +809,6 @@ export default function MachineAssignmentsPage() {
                           )}
                         </div>
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-3"
-                        onClick={() => {
-                          // This would open the employee form - for now just a placeholder
-                          alert(`Editar asignaciones de ${emp.nombre} en su ficha de empleado`);
-                        }}
-                      >
-                        Ver/Editar Asignaciones
-                      </Button>
                     </CardContent>
                   </Card>
                 );
