@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,7 +25,7 @@ export default function MachineAssignmentsPage() {
     initialData: [],
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees, isLoading: loadingEmployees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
     initialData: [],
@@ -140,6 +139,8 @@ export default function MachineAssignmentsPage() {
 
   // Cargar asignaciones existentes
   useEffect(() => {
+    if (employees.length === 0 || machines.length === 0) return;
+
     const loadedAssignments = {};
     machines.forEach(machine => {
       const existing = machineAssignments.find(
@@ -176,20 +177,22 @@ export default function MachineAssignmentsPage() {
     });
 
     setAssignments(loadedAssignments);
-  }, [machines, machineAssignments, currentTeam]);
+  }, [machines, machineAssignments, currentTeam, employees.length]);
 
   const handleSave = () => {
     saveAssignmentsMutation.mutate(assignments);
   };
 
   const getEmployeeName = (employeeId) => {
-    if (!employeeId) return null;
-    return employees.find(e => e.id === employeeId)?.nombre || "Desconocido";
+    if (!employeeId) return "Sin asignar";
+    const emp = employees.find(e => e.id === employeeId);
+    return emp?.nombre || "Sin asignar";
   };
 
   const isEmployeeAvailable = (employeeId) => {
     if (!employeeId) return true;
-    return employees.find(e => e.id === employeeId)?.disponibilidad === "Disponible";
+    const emp = employees.find(e => e.id === employeeId);
+    return emp?.disponibilidad === "Disponible";
   };
 
   const handleDragEnd = (result, machineId, role) => {
@@ -348,6 +351,16 @@ export default function MachineAssignmentsPage() {
     }
   };
 
+  if (loadingEmployees || loadingMachines) {
+    return (
+      <div className="p-6 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="p-12 text-center text-slate-500">Cargando datos...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -458,304 +471,300 @@ export default function MachineAssignmentsPage() {
               {teams.map((team) => (
                 <TabsContent key={team.team_key} value={team.team_key}>
                   <div className="space-y-4">
-                    {loadingMachines ? (
-                      <div className="p-12 text-center text-slate-500">Cargando máquinas...</div>
-                    ) : (
-                      machines.map((machine) => {
-                        const assignment = assignments[machine.id] || {
-                          responsable_linea: [],
-                          segunda_linea: [],
-                          operador_1: null,
-                          operador_2: null,
-                          operador_3: null,
-                          operador_4: null,
-                          operador_5: null,
-                          operador_6: null,
-                          operador_7: null,
-                          operador_8: null,
-                        };
+                    {machines.map((machine) => {
+                      const assignment = assignments[machine.id] || {
+                        responsable_linea: [],
+                        segunda_linea: [],
+                        operador_1: null,
+                        operador_2: null,
+                        operador_3: null,
+                        operador_4: null,
+                        operador_5: null,
+                        operador_6: null,
+                        operador_7: null,
+                        operador_8: null,
+                      };
 
-                        const responsables = getAvailableEmployeesForRole(machine.id, 'responsable_linea');
-                        const segundas = getAvailableEmployeesForRole(machine.id, 'segunda_linea');
-                        const operarios = getAvailableEmployeesForRole(machine.id, 'operador');
+                      const responsables = getAvailableEmployeesForRole(machine.id, 'responsable_linea');
+                      const segundas = getAvailableEmployeesForRole(machine.id, 'segunda_linea');
+                      const operarios = getAvailableEmployeesForRole(machine.id, 'operador');
 
-                        return (
-                          <Card key={machine.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                            <CardHeader className="border-b border-slate-100">
-                              <CardTitle className="flex items-center justify-between">
-                                <div>
-                                  <span className="text-xl">{machine.nombre}</span>
-                                  <span className="text-sm text-slate-500 ml-3">{machine.codigo}</span>
-                                </div>
-                                <Badge className={
-                                  machine.estado === "Disponible"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }>
-                                  {machine.estado}
-                                </Badge>
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-6">
-                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                {/* Responsables de Línea */}
-                                <div className="space-y-3">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <UserCheck className="w-5 h-5 text-green-600" />
-                                      <Label className="text-base font-semibold">Responsables de Línea</Label>
-                                      <Badge variant="outline">{assignment.responsable_linea.length}</Badge>
-                                    </div>
+                      return (
+                        <Card key={machine.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                          <CardHeader className="border-b border-slate-100">
+                            <CardTitle className="flex items-center justify-between">
+                              <div>
+                                <span className="text-xl">{machine.nombre}</span>
+                                <span className="text-sm text-slate-500 ml-3">{machine.codigo}</span>
+                              </div>
+                              <Badge className={
+                                machine.estado === "Disponible"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }>
+                                {machine.estado}
+                              </Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                              {/* Responsables de Línea */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <UserCheck className="w-5 h-5 text-green-600" />
+                                    <Label className="text-base font-semibold">Responsables de Línea</Label>
+                                    <Badge variant="outline">{assignment.responsable_linea.length}</Badge>
                                   </div>
+                                </div>
 
-                                  {/* Selector Manual */}
-                                  <Select 
-                                    onValueChange={(value) => handleAddToRole(machine.id, 'responsable_linea', value)}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="+ Añadir responsable" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {responsables.map((emp) => (
-                                        <SelectItem key={emp.id} value={emp.id}>
-                                          {emp.nombre}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                {/* Selector Manual */}
+                                <Select 
+                                  onValueChange={(value) => handleAddToRole(machine.id, 'responsable_linea', value)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="+ Añadir responsable" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {responsables.map((emp) => (
+                                      <SelectItem key={emp.id} value={emp.id}>
+                                        {emp.nombre}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
 
-                                  <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'responsable_linea')}>
-                                    <Droppable droppableId={`responsables-${machine.id}`}>
-                                      {(provided) => (
-                                        <div
-                                          {...provided.droppableProps}
-                                          ref={provided.innerRef}
-                                          className="space-y-2 min-h-[100px] bg-slate-50 rounded-lg p-3"
-                                        >
-                                          {assignment.responsable_linea.length === 0 ? (
-                                            <p className="text-sm text-slate-400 text-center py-4">
-                                              Sin responsables asignados
-                                            </p>
-                                          ) : (
-                                            assignment.responsable_linea.map((empId, index) => {
-                                              const empName = getEmployeeName(empId);
-                                              
-                                              return (
-                                                <Draggable key={empId} draggableId={`resp-${empId}-${machine.id}`} index={index}>
-                                                  {(provided, snapshot) => (
-                                                    <div
-                                                      ref={provided.innerRef}
-                                                      {...provided.draggableProps}
-                                                      className={`
-                                                        flex items-center gap-2 p-2 bg-white border rounded
-                                                        ${snapshot.isDragging ? 'shadow-lg' : ''}
-                                                        ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
-                                                      `}
-                                                    >
-                                                      <div {...provided.dragHandleProps}>
-                                                        <GripVertical className="w-4 h-4 text-slate-400" />
-                                                      </div>
-                                                      <Badge className="text-xs px-2 py-0 bg-green-600 text-white">
-                                                        {index + 1}
-                                                      </Badge>
-                                                      <span className="text-sm flex-1">{empName}</span>
-                                                      <div className="flex gap-1">
-                                                        <Button
-                                                          size="icon"
-                                                          variant="ghost"
-                                                          className="h-6 w-6"
-                                                          onClick={() => moveUp(machine.id, 'responsable_linea', index)}
-                                                          disabled={index === 0}
-                                                        >
-                                                          <ArrowUp className="w-3 h-3" />
-                                                        </Button>
-                                                        <Button
-                                                          size="icon"
-                                                          variant="ghost"
-                                                          className="h-6 w-6"
-                                                          onClick={() => moveDown(machine.id, 'responsable_linea', index)}
-                                                          disabled={index >= assignment.responsable_linea.length - 1}
-                                                        >
-                                                          <ArrowDown className="w-3 h-3" />
-                                                        </Button>
-                                                        <Button
-                                                          size="icon"
-                                                          variant="ghost"
-                                                          className="h-6 w-6 text-red-600 hover:bg-red-50"
-                                                          onClick={() => handleRemoveFromRole(machine.id, 'responsable_linea', index)}
-                                                        >
-                                                          <X className="w-3 h-3" />
-                                                        </Button>
-                                                      </div>
+                                <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'responsable_linea')}>
+                                  <Droppable droppableId={`responsables-${machine.id}`}>
+                                    {(provided) => (
+                                      <div
+                                        {...provided.droppableProps}
+                                        ref={provided.innerRef}
+                                        className="space-y-2 min-h-[100px] bg-slate-50 rounded-lg p-3"
+                                      >
+                                        {assignment.responsable_linea.length === 0 ? (
+                                          <p className="text-sm text-slate-400 text-center py-4">
+                                            Sin responsables asignados
+                                          </p>
+                                        ) : (
+                                          assignment.responsable_linea.map((empId, index) => {
+                                            const empName = getEmployeeName(empId);
+                                            
+                                            return (
+                                              <Draggable key={`${empId}-${index}`} draggableId={`resp-${empId}-${machine.id}-${index}`} index={index}>
+                                                {(provided, snapshot) => (
+                                                  <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    className={`
+                                                      flex items-center gap-2 p-2 bg-white border rounded
+                                                      ${snapshot.isDragging ? 'shadow-lg' : ''}
+                                                      ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
+                                                    `}
+                                                  >
+                                                    <div {...provided.dragHandleProps}>
+                                                      <GripVertical className="w-4 h-4 text-slate-400" />
                                                     </div>
-                                                  )}
-                                                </Draggable>
-                                              );
-                                            })
-                                          )}
-                                          {provided.placeholder}
-                                        </div>
-                                      )}
-                                    </Droppable>
-                                  </DragDropContext>
-                                </div>
-
-                                {/* Segundas de Línea */}
-                                <div className="space-y-3">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <User className="w-5 h-5 text-blue-600" />
-                                      <Label className="text-base font-semibold">Segundas de Línea</Label>
-                                      <Badge variant="outline">{assignment.segunda_linea.length}</Badge>
-                                    </div>
-                                  </div>
-
-                                  {/* Selector Manual */}
-                                  <Select 
-                                    onValueChange={(value) => handleAddToRole(machine.id, 'segunda_linea', value)}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="+ Añadir segunda" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {segundas.map((emp) => (
-                                        <SelectItem key={emp.id} value={emp.id}>
-                                          {emp.nombre}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-
-                                  <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'segunda_linea')}>
-                                    <Droppable droppableId={`segundas-${machine.id}`}>
-                                      {(provided) => (
-                                        <div
-                                          {...provided.droppableProps}
-                                          ref={provided.innerRef}
-                                          className="space-y-2 min-h-[100px] bg-slate-50 rounded-lg p-3"
-                                        >
-                                          {assignment.segunda_linea.length === 0 ? (
-                                            <p className="text-sm text-slate-400 text-center py-4">
-                                              Sin segundas asignadas
-                                            </p>
-                                          ) : (
-                                            assignment.segunda_linea.map((empId, index) => {
-                                              const empName = getEmployeeName(empId);
-                                              
-                                              return (
-                                                <Draggable key={empId} draggableId={`seg-${empId}-${machine.id}`} index={index}>
-                                                  {(provided, snapshot) => (
-                                                    <div
-                                                      ref={provided.innerRef}
-                                                      {...provided.draggableProps}
-                                                      className={`
-                                                        flex items-center gap-2 p-2 bg-white border rounded
-                                                        ${snapshot.isDragging ? 'shadow-lg' : ''}
-                                                        ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
-                                                      `}
-                                                    >
-                                                      <div {...provided.dragHandleProps}>
-                                                        <GripVertical className="w-4 h-4 text-slate-400" />
-                                                      </div>
-                                                      <Badge className="text-xs px-2 py-0 bg-blue-600 text-white">
-                                                        {index + 1}
-                                                      </Badge>
-                                                      <span className="text-sm flex-1">{empName}</span>
-                                                      <div className="flex gap-1">
-                                                        <Button
-                                                          size="icon"
-                                                          variant="ghost"
-                                                          className="h-6 w-6"
-                                                          onClick={() => moveUp(machine.id, 'segunda_linea', index)}
-                                                          disabled={index === 0}
-                                                        >
-                                                          <ArrowUp className="w-3 h-3" />
-                                                        </Button>
-                                                        <Button
-                                                          size="icon"
-                                                          variant="ghost"
-                                                          className="h-6 w-6"
-                                                          onClick={() => moveDown(machine.id, 'segunda_linea', index)}
-                                                          disabled={index >= assignment.segunda_linea.length - 1}
-                                                        >
-                                                          <ArrowDown className="w-3 h-3" />
-                                                        </Button>
-                                                        <Button
-                                                          size="icon"
-                                                          variant="ghost"
-                                                          className="h-6 w-6 text-red-600 hover:bg-red-50"
-                                                          onClick={() => handleRemoveFromRole(machine.id, 'segunda_linea', index)}
-                                                        >
-                                                          <X className="w-3 h-3" />
-                                                        </Button>
-                                                      </div>
+                                                    <Badge className="text-xs px-2 py-0 bg-green-600 text-white">
+                                                      {index + 1}
+                                                    </Badge>
+                                                    <span className="text-sm flex-1">{empName}</span>
+                                                    <div className="flex gap-1">
+                                                      <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-6 w-6"
+                                                        onClick={() => moveUp(machine.id, 'responsable_linea', index)}
+                                                        disabled={index === 0}
+                                                      >
+                                                        <ArrowUp className="w-3 h-3" />
+                                                      </Button>
+                                                      <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-6 w-6"
+                                                        onClick={() => moveDown(machine.id, 'responsable_linea', index)}
+                                                        disabled={index >= assignment.responsable_linea.length - 1}
+                                                      >
+                                                        <ArrowDown className="w-3 h-3" />
+                                                      </Button>
+                                                      <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-6 w-6 text-red-600 hover:bg-red-50"
+                                                        onClick={() => handleRemoveFromRole(machine.id, 'responsable_linea', index)}
+                                                      >
+                                                        <X className="w-3 h-3" />
+                                                      </Button>
                                                     </div>
-                                                  )}
-                                                </Draggable>
-                                              );
-                                            })
-                                          )}
-                                          {provided.placeholder}
-                                        </div>
-                                      )}
-                                    </Droppable>
-                                  </DragDropContext>
+                                                  </div>
+                                                )}
+                                              </Draggable>
+                                            );
+                                          })
+                                        )}
+                                        {provided.placeholder}
+                                      </div>
+                                    )}
+                                  </Droppable>
+                                </DragDropContext>
+                              </div>
+
+                              {/* Segundas de Línea */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-5 h-5 text-blue-600" />
+                                    <Label className="text-base font-semibold">Segundas de Línea</Label>
+                                    <Badge variant="outline">{assignment.segunda_linea.length}</Badge>
+                                  </div>
                                 </div>
 
-                                {/* Operarios */}
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <Users className="w-5 h-5 text-purple-600" />
-                                    <Label className="text-base font-semibold">Operarios</Label>
-                                    <Badge variant="outline">
-                                      {Object.entries(assignment).filter(([k, v]) => k.startsWith('operador_') && v !== null).length}
-                                    </Badge>
-                                  </div>
-                                  <div className="space-y-2 min-h-[100px] bg-slate-50 rounded-lg p-3">
-                                    {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
-                                      const empId = assignment[`operador_${num}`];
-                                      
-                                      return (
-                                        <div key={num} className="space-y-1">
-                                          <Select
-                                            value={empId || "empty"}
-                                            onValueChange={(value) => handleSetOperator(machine.id, num, value === "empty" ? null : value)}
-                                          >
-                                            <SelectTrigger className="w-full">
-                                              <SelectValue placeholder={`Operario ${num}`} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="empty">Sin asignar</SelectItem>
-                                              {operarios.map((emp) => (
-                                                <SelectItem key={emp.id} value={emp.id}>
-                                                  {emp.nombre}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                          
-                                          {empId && (
-                                            <div className={`
-                                              flex items-center gap-2 p-2 bg-white border rounded
-                                              ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
-                                            `}>
-                                              <Badge className="text-xs px-2 py-0 bg-purple-600 text-white">
-                                                Op {num}
-                                              </Badge>
-                                              <span className="text-sm flex-1">{getEmployeeName(empId)}</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                {/* Selector Manual */}
+                                <Select 
+                                  onValueChange={(value) => handleAddToRole(machine.id, 'segunda_linea', value)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="+ Añadir segunda" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {segundas.map((emp) => (
+                                      <SelectItem key={emp.id} value={emp.id}>
+                                        {emp.nombre}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'segunda_linea')}>
+                                  <Droppable droppableId={`segundas-${machine.id}`}>
+                                    {(provided) => (
+                                      <div
+                                        {...provided.droppableProps}
+                                        ref={provided.innerRef}
+                                        className="space-y-2 min-h-[100px] bg-slate-50 rounded-lg p-3"
+                                      >
+                                        {assignment.segunda_linea.length === 0 ? (
+                                          <p className="text-sm text-slate-400 text-center py-4">
+                                            Sin segundas asignadas
+                                          </p>
+                                        ) : (
+                                          assignment.segunda_linea.map((empId, index) => {
+                                            const empName = getEmployeeName(empId);
+                                            
+                                            return (
+                                              <Draggable key={`${empId}-${index}`} draggableId={`seg-${empId}-${machine.id}-${index}`} index={index}>
+                                                {(provided, snapshot) => (
+                                                  <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    className={`
+                                                      flex items-center gap-2 p-2 bg-white border rounded
+                                                      ${snapshot.isDragging ? 'shadow-lg' : ''}
+                                                      ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
+                                                    `}
+                                                  >
+                                                    <div {...provided.dragHandleProps}>
+                                                      <GripVertical className="w-4 h-4 text-slate-400" />
+                                                    </div>
+                                                    <Badge className="text-xs px-2 py-0 bg-blue-600 text-white">
+                                                      {index + 1}
+                                                    </Badge>
+                                                    <span className="text-sm flex-1">{empName}</span>
+                                                    <div className="flex gap-1">
+                                                      <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-6 w-6"
+                                                        onClick={() => moveUp(machine.id, 'segunda_linea', index)}
+                                                        disabled={index === 0}
+                                                      >
+                                                        <ArrowUp className="w-3 h-3" />
+                                                      </Button>
+                                                      <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-6 w-6"
+                                                        onClick={() => moveDown(machine.id, 'segunda_linea', index)}
+                                                        disabled={index >= assignment.segunda_linea.length - 1}
+                                                      >
+                                                        <ArrowDown className="w-3 h-3" />
+                                                      </Button>
+                                                      <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-6 w-6 text-red-600 hover:bg-red-50"
+                                                        onClick={() => handleRemoveFromRole(machine.id, 'segunda_linea', index)}
+                                                      >
+                                                        <X className="w-3 h-3" />
+                                                      </Button>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </Draggable>
+                                            );
+                                          })
+                                        )}
+                                        {provided.placeholder}
+                                      </div>
+                                    )}
+                                  </Droppable>
+                                </DragDropContext>
+                              </div>
+
+                              {/* Operarios */}
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Users className="w-5 h-5 text-purple-600" />
+                                  <Label className="text-base font-semibold">Operarios</Label>
+                                  <Badge variant="outline">
+                                    {Object.entries(assignment).filter(([k, v]) => k.startsWith('operador_') && v !== null).length}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2 min-h-[100px] bg-slate-50 rounded-lg p-3">
+                                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
+                                    const empId = assignment[`operador_${num}`];
+                                    
+                                    return (
+                                      <div key={num} className="space-y-1">
+                                        <Select
+                                          value={empId || "empty"}
+                                          onValueChange={(value) => handleSetOperator(machine.id, num, value === "empty" ? null : value)}
+                                        >
+                                          <SelectTrigger className="w-full">
+                                            <SelectValue placeholder={`Operario ${num}`} />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="empty">Sin asignar</SelectItem>
+                                            {operarios.map((emp) => (
+                                              <SelectItem key={emp.id} value={emp.id}>
+                                                {emp.nombre}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        
+                                        {empId && (
+                                          <div className={`
+                                            flex items-center gap-2 p-2 bg-white border rounded
+                                            ${!isEmployeeAvailable(empId) ? 'opacity-50 bg-red-50' : ''}
+                                          `}>
+                                            <Badge className="text-xs px-2 py-0 bg-purple-600 text-white">
+                                              Op {num}
+                                            </Badge>
+                                            <span className="text-sm flex-1">{getEmployeeName(empId)}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })
-                    )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </TabsContent>
               ))}
