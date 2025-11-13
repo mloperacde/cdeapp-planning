@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,24 +28,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, ArrowLeft, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowLeft, Settings, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-// import MachinePlanningManager from "../components/machines/MachinePlanningManager"; // This import is no longer needed
+import MachineDetailCard from "../components/machines/MachineDetailCard";
 
 export default function MachineManagementPage() {
   const [showForm, setShowForm] = useState(false);
-  // const [showPlanningManager, setShowPlanningManager] = useState(false); // Removed state
   const [editingMachine, setEditingMachine] = useState(null);
+  const [viewingMachine, setViewingMachine] = useState(null);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     nombre: "",
     codigo: "",
+    marca: "",
+    modelo: "",
+    numero_serie: "",
+    fecha_compra: "",
     tipo: "",
     ubicacion: "",
     estado: "Disponible",
     descripcion: "",
+    programa_mantenimiento: "",
     orden: 0,
   });
 
@@ -78,7 +82,20 @@ export default function MachineManagementPage() {
 
   const handleEdit = (machine) => {
     setEditingMachine(machine);
-    setFormData(machine);
+    setFormData({
+      nombre: machine.nombre || "",
+      codigo: machine.codigo || "",
+      marca: machine.marca || "",
+      modelo: machine.modelo || "",
+      numero_serie: machine.numero_serie || "",
+      fecha_compra: machine.fecha_compra || "",
+      tipo: machine.tipo || "",
+      ubicacion: machine.ubicacion || "",
+      estado: machine.estado || "Disponible",
+      descripcion: machine.descripcion || "",
+      programa_mantenimiento: machine.programa_mantenimiento || "",
+      orden: machine.orden || 0,
+    });
     setShowForm(true);
   };
 
@@ -88,10 +105,15 @@ export default function MachineManagementPage() {
     setFormData({
       nombre: "",
       codigo: "",
+      marca: "",
+      modelo: "",
+      numero_serie: "",
+      fecha_compra: "",
       tipo: "",
       ubicacion: "",
       estado: "Disponible",
       descripcion: "",
+      programa_mantenimiento: "",
       orden: 0,
     });
   };
@@ -129,25 +151,13 @@ export default function MachineManagementPage() {
               Administra el catálogo de máquinas
             </p>
           </div>
-          <div className="flex gap-2">
-            {/* Removed Planning button
-            <Button
-              onClick={() => setShowPlanningManager(true)}
-              variant="outline"
-              className="bg-white hover:bg-blue-50 border-blue-200"
-            >
-              <Activity className="w-4 h-4 mr-2" />
-              Planificación
-            </Button>
-            */}
-            <Button
-              onClick={() => setShowForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Máquina
-            </Button>
-          </div>
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nueva Máquina
+          </Button>
         </div>
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -166,6 +176,7 @@ export default function MachineManagementPage() {
                     <TableRow className="bg-slate-50">
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre</TableHead>
+                      <TableHead>Marca/Modelo</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Ubicación</TableHead>
                       <TableHead>Estado</TableHead>
@@ -183,6 +194,13 @@ export default function MachineManagementPage() {
                         <TableCell>
                           <span className="font-semibold text-slate-900">{machine.nombre}</span>
                         </TableCell>
+                        <TableCell>
+                          {machine.marca && machine.modelo ? (
+                            <span className="text-sm">{machine.marca} {machine.modelo}</span>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>{machine.tipo || '-'}</TableCell>
                         <TableCell>{machine.ubicacion || '-'}</TableCell>
                         <TableCell>
@@ -196,6 +214,14 @@ export default function MachineManagementPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setViewingMachine(machine)}
+                              title="Ver ficha completa"
+                            >
+                              <FileText className="w-4 h-4 text-blue-600" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -225,7 +251,7 @@ export default function MachineManagementPage() {
 
       {showForm && (
         <Dialog open={true} onOpenChange={handleClose}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingMachine ? 'Editar Máquina' : 'Nueva Máquina'}
@@ -255,10 +281,47 @@ export default function MachineManagementPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="marca">Marca</Label>
+                  <Input
+                    id="marca"
+                    value={formData.marca}
+                    onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="modelo">Modelo</Label>
+                  <Input
+                    id="modelo"
+                    value={formData.modelo}
+                    onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="numero_serie">Número de Serie</Label>
+                  <Input
+                    id="numero_serie"
+                    value={formData.numero_serie}
+                    onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_compra">Fecha de Compra</Label>
+                  <Input
+                    id="fecha_compra"
+                    type="date"
+                    value={formData.fecha_compra}
+                    onChange={(e) => setFormData({ ...formData, fecha_compra: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="tipo">Tipo</Label>
                   <Input
                     id="tipo"
-                    value={formData.tipo || ''}
+                    value={formData.tipo}
                     onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                   />
                 </div>
@@ -267,7 +330,7 @@ export default function MachineManagementPage() {
                   <Label htmlFor="ubicacion">Ubicación</Label>
                   <Input
                     id="ubicacion"
-                    value={formData.ubicacion || ''}
+                    value={formData.ubicacion}
                     onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
                   />
                 </div>
@@ -293,7 +356,7 @@ export default function MachineManagementPage() {
                   <Input
                     id="orden"
                     type="number"
-                    value={formData.orden || 0}
+                    value={formData.orden}
                     onChange={(e) => setFormData({ ...formData, orden: parseInt(e.target.value) || 0 })}
                   />
                 </div>
@@ -303,9 +366,20 @@ export default function MachineManagementPage() {
                 <Label htmlFor="descripcion">Descripción</Label>
                 <Textarea
                   id="descripcion"
-                  value={formData.descripcion || ''}
+                  value={formData.descripcion}
                   onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="programa_mantenimiento">Programa de Mantenimiento</Label>
+                <Textarea
+                  id="programa_mantenimiento"
+                  value={formData.programa_mantenimiento}
+                  onChange={(e) => setFormData({ ...formData, programa_mantenimiento: e.target.value })}
+                  rows={2}
+                  placeholder="Descripción del programa de mantenimiento aplicable..."
                 />
               </div>
 
@@ -322,16 +396,12 @@ export default function MachineManagementPage() {
         </Dialog>
       )}
 
-      {/* Removed MachinePlanningManager dialog
-      {showPlanningManager && (
-        <MachinePlanningManager
-          open={showPlanningManager}
-          onOpenChange={setShowPlanningManager}
-          machines={machines}
-          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['machines'] })}
+      {viewingMachine && (
+        <MachineDetailCard
+          machine={viewingMachine}
+          onClose={() => setViewingMachine(null)}
         />
       )}
-      */}
     </div>
   );
 }
