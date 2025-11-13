@@ -23,6 +23,7 @@ import {
   XCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import TrainingCertificate from "./TrainingCertificate";
 
 export default function TrainingAssignment({ 
   employeeId, 
@@ -130,7 +131,6 @@ export default function TrainingAssignment({
     const training = getModuleStatus(module.id);
     if (!training) return;
 
-    // Calcular nota
     const preguntas = module.cuestionario.preguntas;
     let correctas = 0;
     
@@ -254,11 +254,20 @@ export default function TrainingAssignment({
                   <p className="text-sm text-slate-600 mb-3">{module.descripcion}</p>
                   
                   {isCompleted ? (
-                    <Badge className="bg-green-600 w-full justify-center py-2">
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Completado
-                      {status.nota_cuestionario && ` - ${status.nota_cuestionario}%`}
-                    </Badge>
+                    <div className="space-y-2">
+                      <Badge className="bg-green-600 w-full justify-center py-2">
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Completado
+                        {status.nota_cuestionario && ` - ${status.nota_cuestionario}%`}
+                      </Badge>
+                      <TrainingCertificate
+                        employeeName={employee?.nombre || "Empleado"}
+                        trainingTitle={module.titulo}
+                        completionDate={status.fecha_completado}
+                        certificateId={`CERT-${status.id.substring(0, 8).toUpperCase()}`}
+                        nota={status.nota_cuestionario}
+                      />
+                    </div>
                   ) : (
                     <Button
                       className="w-full"
@@ -310,7 +319,21 @@ export default function TrainingAssignment({
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-slate-600 mb-3">{module.descripcion}</p>
-                    {!isCompleted && (
+                    {isCompleted ? (
+                      <div className="space-y-2">
+                        <Badge className="bg-green-600 w-full justify-center py-2">
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Completado
+                        </Badge>
+                        <TrainingCertificate
+                          employeeName={employee?.nombre || "Empleado"}
+                          trainingTitle={module.titulo}
+                          completionDate={status.fecha_completado}
+                          certificateId={`CERT-${status.id.substring(0, 8).toUpperCase()}`}
+                          nota={status.nota_cuestionario}
+                        />
+                      </div>
+                    ) : (
                       <Button
                         className="w-full"
                         variant="outline"
@@ -338,16 +361,27 @@ export default function TrainingAssignment({
             <div className="space-y-4">
               <div className="bg-slate-100 rounded-lg p-6 min-h-[300px] flex items-center justify-center">
                 {selectedModule.contenido_url ? (
-                  <div className="text-center">
+                  <div className="text-center w-full">
                     <p className="text-sm text-slate-600 mb-4">Contenido del módulo:</p>
-                    <a
-                      href={selectedModule.contenido_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      Abrir contenido →
-                    </a>
+                    {selectedModule.tipo === "Video" && selectedModule.contenido_url.includes('youtube') ? (
+                      <iframe
+                        width="100%"
+                        height="400"
+                        src={selectedModule.contenido_url.replace('watch?v=', 'embed/')}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <a
+                        href={selectedModule.contenido_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-lg"
+                      >
+                        Abrir contenido →
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center text-slate-500">

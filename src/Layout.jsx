@@ -42,7 +42,7 @@ import {
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const [openSections, setOpenSections] = useState({
-    jefes: false,
+    empleados: false,
     informes: false,
     maquinas: false,
     planning: false
@@ -144,35 +144,55 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Empleados */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("Employees")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("Employees")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Users className="w-5 h-5" />
-                        <span className="text-sm">Empleados</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  {/* Onboarding */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("EmployeeOnboarding")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("EmployeeOnboarding")} className="flex items-center gap-3 px-3 py-2.5">
-                        <UserPlus className="w-5 h-5" />
-                        <span className="text-sm">Onboarding</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {/* Empleados (Collapsible) */}
+                  <Collapsible open={openSections.empleados} onOpenChange={() => toggleSection('empleados')}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton 
+                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                            isParentActive([
+                              createPageUrl("Employees"),
+                              createPageUrl("EmployeeOnboarding")
+                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <Users className="w-5 h-5" />
+                              <span className="text-sm">Empleados</span>
+                            </div>
+                            {openSections.empleados ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </div>
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="ml-6 mt-1 space-y-1">
+                          <SidebarMenuButton 
+                            asChild 
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("Employees")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("Employees")} className="flex items-center gap-2 px-3 py-2">
+                              <Users className="w-4 h-4" />
+                              Gestión de Empleados
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton 
+                            asChild 
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("EmployeeOnboarding")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("EmployeeOnboarding")} className="flex items-center gap-2 px-3 py-2">
+                              <UserPlus className="w-4 h-4" />
+                              Onboarding
+                            </Link>
+                          </SidebarMenuButton>
+                        </div>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
 
                   {/* Máquinas (Collapsible) */}
                   <Collapsible open={openSections.maquinas} onOpenChange={() => toggleSection('maquinas')}>
@@ -184,8 +204,7 @@ export default function Layout({ children, currentPageName }) {
                               createPageUrl("Machines"),
                               createPageUrl("MachinePlanning"),
                               createPageUrl("ProcessConfiguration"),
-                              createPageUrl("MaintenanceTracking"),
-                              createPageUrl("PredictiveMaintenance")
+                              createPageUrl("MaintenanceTracking")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
                         >
@@ -209,17 +228,6 @@ export default function Layout({ children, currentPageName }) {
                             <Link to={createPageUrl("Machines")} className="flex items-center gap-2 px-3 py-2">
                               <Cog className="w-4 h-4" />
                               Gestión de Máquinas
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("PredictiveMaintenance")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("PredictiveMaintenance")} className="flex items-center gap-2 px-3 py-2">
-                              <Wrench className="w-4 h-4" />
-                              Mantenimiento Predictivo
                             </Link>
                           </SidebarMenuButton>
                         </div>
