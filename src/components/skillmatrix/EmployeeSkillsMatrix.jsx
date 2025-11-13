@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, Plus, Search, Filter } from "lucide-react";
+import { Users, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EmployeeSkillsMatrix() {
@@ -95,7 +95,6 @@ export default function EmployeeSkillsMatrix() {
       return;
     }
 
-    // Verificar si ya existe
     const exists = employeeSkills.find(
       es => es.employee_id === selectedEmployee.id && es.skill_id === newSkill.skill_id
     );
@@ -126,7 +125,6 @@ export default function EmployeeSkillsMatrix() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          {/* Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="space-y-2">
               <Label>Buscar Empleado</Label>
@@ -157,7 +155,6 @@ export default function EmployeeSkillsMatrix() {
             </div>
           </div>
 
-          {/* Grid de Empleados */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEmployees.map((employee) => {
               const empSkills = getEmployeeSkills(employee.id);
@@ -210,7 +207,6 @@ export default function EmployeeSkillsMatrix() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Gestión de Habilidades */}
       {showAddSkillDialog && selectedEmployee && (
         <Dialog open={true} onOpenChange={() => setShowAddSkillDialog(false)}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -219,7 +215,6 @@ export default function EmployeeSkillsMatrix() {
             </DialogHeader>
 
             <div className="space-y-6">
-              {/* Habilidades actuales */}
               <div>
                 <h3 className="font-semibold mb-3">Habilidades Actuales</h3>
                 {getEmployeeSkills(selectedEmployee.id).length === 0 ? (
@@ -260,7 +255,6 @@ export default function EmployeeSkillsMatrix() {
                 )}
               </div>
 
-              {/* Añadir nueva habilidad */}
               <div className="border-t pt-6">
                 <h3 className="font-semibold mb-3">Añadir Nueva Habilidad</h3>
                 <div className="grid grid-cols-2 gap-4">
