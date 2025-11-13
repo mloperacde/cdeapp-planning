@@ -301,18 +301,22 @@ export default function AttendanceConfig({ config }) {
             {departments.map((dept) => (
               <div
                 key={dept}
-                className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                className={`p-3 border-2 rounded-lg transition-all ${
                   formData.departamentos_estrictos?.includes(dept)
                     ? 'border-orange-400 bg-orange-50'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
-                onClick={() => handleToggleDepartment(dept)}
               >
-                <Checkbox
-                  checked={formData.departamentos_estrictos?.includes(dept)}
-                  onCheckedChange={() => handleToggleDepartment(dept)}
-                />
-                <span className="ml-2 text-sm font-medium">{dept}</span>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`dept-${dept}`}
+                    checked={formData.departamentos_estrictos?.includes(dept)}
+                    onCheckedChange={() => handleToggleDepartment(dept)}
+                  />
+                  <label htmlFor={`dept-${dept}`} className="text-sm font-medium cursor-pointer flex-1">
+                    {dept}
+                  </label>
+                </div>
               </div>
             ))}
           </div>
