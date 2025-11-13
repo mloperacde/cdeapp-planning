@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -143,12 +144,6 @@ export default function DailyPlanningPage() {
                   Configura la planificación para cada departamento usando las pestañas abajo
                 </p>
               </div>
-              <Link to={createPageUrl("MachinePlanning")}>
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-base px-6 py-6">
-                  <Eye className="w-5 h-5 mr-2" />
-                  Planificación Máquinas
-                </Button>
-              </Link>
             </div>
           </CardContent>
         </Card>

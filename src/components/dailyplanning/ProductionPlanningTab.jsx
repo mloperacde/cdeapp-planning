@@ -1,51 +1,19 @@
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Save, Trash2, Edit, CheckCircle2, Factory, Activity } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import MachinePlanningManager from "../machines/MachinePlanningManager";
+import { Factory, Eye, AlertTriangle, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function ProductionPlanningTab({ selectedDate, selectedTeam, selectedShift }) {
-  const [showForm, setShowForm] = useState(false);
-  const [showPlanningManager, setShowPlanningManager] = useState(false);
-  const [editingPlanning, setEditingPlanning] = useState(null);
   const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
-    machine_id: "",
-    process_id: "",
-    operadores_asignados: [],
-    responsable_linea_id: "",
-    segunda_linea_id: "",
-    articulo: "",
-    cantidad_objetivo: 0,
-    notas: "",
-  });
-
-  const { data: plannings, isLoading } = useQuery({
-    queryKey: ['dailyProductionPlannings', selectedDate, selectedTeam],
-    queryFn: () => base44.entities.DailyProductionPlanning.list(),
+  const { data: plannings } = useQuery({
+    queryKey: ['machinePlannings', selectedDate, selectedTeam],
+    queryFn: () => base44.entities.MachinePlanning.list(),
     initialData: [],
   });
 
@@ -61,104 +29,47 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     initialData: [],
   });
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+  const { data: teams } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
 
-  const saveMutation = useMutation({
-    mutationFn: (data) => {
-      const finalData = {
-        ...data,
-        fecha: selectedDate,
-        team_key: selectedTeam,
-        turno: selectedShift || "Mañana",
-      };
-
-      if (editingPlanning?.id) {
-        return base44.entities.DailyProductionPlanning.update(editingPlanning.id, finalData);
-      }
-      return base44.entities.DailyProductionPlanning.create(finalData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dailyProductionPlannings'] });
-      handleClose();
-    },
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DailyProductionPlanning.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dailyProductionPlannings'] });
-    },
-  });
+  const activeMachines = useMemo(() => {
+    return plannings.filter(
+      p => p.activa_planning && 
+      p.team_key === selectedTeam && 
+      p.fecha_planificacion === selectedDate
+    );
+  }, [plannings, selectedTeam, selectedDate]);
 
-  const handleEdit = (planning) => {
-    setEditingPlanning(planning);
-    setFormData({
-      machine_id: planning.machine_id || "",
-      process_id: planning.process_id || "",
-      operadores_asignados: planning.operadores_asignados || [],
-      responsable_linea_id: planning.responsable_linea_id || "",
-      segunda_linea_id: planning.segunda_linea_id || "",
-      articulo: planning.articulo || "",
-      cantidad_objetivo: planning.cantidad_objetivo || 0,
-      notas: planning.notas || "",
-    });
-    setShowForm(true);
+  const totalOperators = useMemo(() => {
+    return activeMachines.reduce((sum, p) => sum + (p.operadores_necesarios || 0), 0);
+  }, [activeMachines]);
+
+  const availableOperators = useMemo(() => {
+    const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+    if (!teamName) return 0;
+
+    return employees.filter(emp => 
+      emp.equipo === teamName && 
+      emp.disponibilidad === "Disponible" &&
+      emp.incluir_en_planning !== false
+    ).length;
+  }, [employees, selectedTeam, teams]);
+
+  const operatorsDeficit = totalOperators - availableOperators;
+
+  const getProcessName = (processId) => {
+    const process = processes.find(p => p.id === processId);
+    return process?.nombre || "Sin proceso";
   };
-
-  const handleClose = () => {
-    setShowForm(false);
-    setEditingPlanning(null);
-    setFormData({
-      machine_id: "",
-      process_id: "",
-      operadores_asignados: [],
-      responsable_linea_id: "",
-      segunda_linea_id: "",
-      articulo: "",
-      cantidad_objetivo: 0,
-      notas: "",
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    saveMutation.mutate(formData);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('¿Eliminar esta planificación?')) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  const filteredPlannings = plannings.filter(
-    p => p.fecha === selectedDate && p.team_key === selectedTeam
-  );
-
-  const fabricationEmployees = employees.filter(emp => {
-    if (emp.departamento !== "FABRICACION") return false;
-    if (emp.disponibilidad !== "Disponible") return false;
-    if (emp.incluir_en_planning === false) return false;
-    return true;
-  });
-
-  const responsables = fabricationEmployees.filter(e => 
-    e.puesto?.toLowerCase().includes('responsable de linea')
-  );
-  const segundas = fabricationEmployees.filter(e => 
-    e.puesto?.toLowerCase().includes('segunda de linea')
-  );
-  const operarios = fabricationEmployees.filter(e => 
-    e.puesto?.toLowerCase().includes('operaria de linea')
-  );
-
-  const getMachineName = (id) => machines.find(m => m.id === id)?.nombre || 'N/A';
-  const getProcessName = (id) => processes.find(p => p.id === id)?.nombre || 'N/A';
-  const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || 'N/A';
 
   return (
     <div className="space-y-6">
@@ -169,236 +80,128 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
               <Factory className="w-6 h-6" />
               Planificación de Producción - {selectedShift || 'Sin turno'}
             </CardTitle>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setShowPlanningManager(true)}
-                variant="outline"
-                className="bg-white hover:bg-blue-50 border-blue-200"
-              >
-                <Activity className="w-4 h-4 mr-2" />
-                Planificación Máquinas
+            <Link to={createPageUrl("MachinePlanning")}>
+              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Eye className="w-4 h-4 mr-2" />
+                Planificación de Máquinas
               </Button>
-              <Button
-                onClick={() => setShowForm(true)}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva Asignación
-              </Button>
-            </div>
+            </Link>
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          {isLoading ? (
-            <p className="text-center text-slate-500 py-8">Cargando...</p>
-          ) : filteredPlannings.length === 0 ? (
-            <p className="text-center text-slate-500 py-8">
-              No hay planificaciones para esta fecha y equipo
-            </p>
+          {/* Resumen de Operadores */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-blue-700 font-medium">Máquinas Activas</p>
+                    <p className="text-2xl font-bold text-blue-900">{activeMachines.length}</p>
+                  </div>
+                  <Factory className="w-8 h-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-orange-700 font-medium">Operadores Necesarios</p>
+                    <p className="text-2xl font-bold text-orange-900">{totalOperators}</p>
+                  </div>
+                  <Users className="w-8 h-8 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={`bg-gradient-to-br ${
+              operatorsDeficit > 0 
+                ? 'from-red-50 to-red-100 border-red-300' 
+                : 'from-green-50 to-green-100 border-green-200'
+            }`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-xs font-medium ${
+                      operatorsDeficit > 0 ? 'text-red-700' : 'text-green-700'
+                    }`}>
+                      Operadores Disponibles
+                    </p>
+                    <p className={`text-2xl font-bold ${
+                      operatorsDeficit > 0 ? 'text-red-900' : 'text-green-900'
+                    }`}>
+                      {availableOperators}
+                    </p>
+                  </div>
+                  {operatorsDeficit > 0 ? (
+                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                  ) : (
+                    <Users className="w-8 h-8 text-green-600" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Alerta de déficit */}
+          {operatorsDeficit > 0 && (
+            <Card className="mb-6 bg-red-50 border-2 border-red-300">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-red-900 mb-1">
+                      ⚠️ Déficit de Operadores: Faltan {operatorsDeficit} operador{operatorsDeficit !== 1 ? 'es' : ''}
+                    </p>
+                    <p className="text-sm text-red-800">
+                      Ve a "Planificación de Máquinas" para ajustar las máquinas activas.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Lista de Máquinas Activas */}
+          {activeMachines.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <Factory className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+              <p>No hay máquinas planificadas para esta fecha</p>
+              <p className="text-sm mt-2">Haz clic en "Planificación de Máquinas" para configurar</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Máquina</TableHead>
-                    <TableHead>Proceso</TableHead>
-                    <TableHead>Artículo</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead>Responsable</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPlannings.map((planning) => (
-                    <TableRow key={planning.id}>
-                      <TableCell className="font-semibold">
-                        {getMachineName(planning.machine_id)}
-                      </TableCell>
-                      <TableCell>{getProcessName(planning.process_id)}</TableCell>
-                      <TableCell>{planning.articulo || '-'}</TableCell>
-                      <TableCell>
-                        {planning.cantidad_objetivo ? `${planning.cantidad_objetivo} uds` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {getEmployeeName(planning.responsable_linea_id)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={
-                          planning.estado === "Completado" ? "bg-green-100 text-green-800" :
-                          planning.estado === "En Curso" ? "bg-blue-100 text-blue-800" :
-                          "bg-slate-100 text-slate-600"
-                        }>
-                          {planning.estado}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(planning)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(planning.id)}
-                            className="hover:bg-red-50 hover:text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {activeMachines.map((planning) => {
+                const machine = machines.find(m => m.id === planning.machine_id);
+                return (
+                  <Card key={planning.id} className="bg-green-50 border-green-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-slate-900">{machine?.nombre}</h3>
+                          <p className="text-xs text-slate-600 mt-1">{machine?.codigo}</p>
+                          <div className="mt-3 space-y-1">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              {getProcessName(planning.process_id)}
+                            </Badge>
+                            <div className="flex items-center gap-1 mt-2">
+                              <Users className="w-3 h-3 text-purple-600" />
+                              <span className="text-sm font-semibold text-purple-900">
+                                {planning.operadores_necesarios} operadores
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {showForm && (
-        <Card className="shadow-xl border-2 border-blue-300">
-          <CardHeader className="bg-blue-50 border-b border-blue-200">
-            <CardTitle>
-              {editingPlanning ? 'Editar Planificación' : 'Nueva Planificación de Producción'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Máquina *</Label>
-                  <Select
-                    value={formData.machine_id}
-                    onValueChange={(value) => setFormData({ ...formData, machine_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar máquina" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {machines.filter(m => m.estado === "Disponible").map((machine) => (
-                        <SelectItem key={machine.id} value={machine.id}>
-                          {machine.nombre} ({machine.codigo})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Proceso *</Label>
-                  <Select
-                    value={formData.process_id}
-                    onValueChange={(value) => setFormData({ ...formData, process_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar proceso" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {processes.filter(p => p.activo).map((process) => (
-                        <SelectItem key={process.id} value={process.id}>
-                          {process.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Responsable de Línea</Label>
-                  <Select
-                    value={formData.responsable_linea_id}
-                    onValueChange={(value) => setFormData({ ...formData, responsable_linea_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {responsables.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Segunda de Línea</Label>
-                  <Select
-                    value={formData.segunda_linea_id}
-                    onValueChange={(value) => setFormData({ ...formData, segunda_linea_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {segundas.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Artículo</Label>
-                  <Input
-                    value={formData.articulo}
-                    onChange={(e) => setFormData({ ...formData, articulo: e.target.value })}
-                    placeholder="Código o nombre del artículo"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Cantidad Objetivo</Label>
-                  <Input
-                    type="number"
-                    value={formData.cantidad_objetivo}
-                    onChange={(e) => setFormData({ ...formData, cantidad_objetivo: parseInt(e.target.value) || 0 })}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notas</Label>
-                <Textarea
-                  value={formData.notas}
-                  onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  <Save className="w-4 h-4 mr-2" />
-                  Guardar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {showPlanningManager && (
-        <MachinePlanningManager
-          open={showPlanningManager}
-          onOpenChange={setShowPlanningManager}
-          machines={machines}
-          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['machines'] })}
-        />
-      )}
     </div>
   );
 }

@@ -217,6 +217,7 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Machines"),
+                              createPageUrl("MachineManagement"), // Added MachineManagement to parent active check
                               createPageUrl("MachinePlanning"),
                               createPageUrl("ProcessConfiguration"),
                               createPageUrl("MaintenanceTracking")
