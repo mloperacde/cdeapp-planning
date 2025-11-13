@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, Users, TrendingUp, Target, BookOpen, Settings } from "lucide-react";
+import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase } from "lucide-react";
 import SkillManagement from "../components/skillmatrix/SkillManagement";
 import EmployeeSkillsMatrix from "../components/skillmatrix/EmployeeSkillsMatrix";
 import ProcessSkillRequirements from "../components/skillmatrix/ProcessSkillRequirements";
 import SkillGapAnalysis from "../components/skillmatrix/SkillGapAnalysis";
 import TrainingNeedsView from "../components/skillmatrix/TrainingNeedsView";
+import DepartmentPositionSkillConfig from "../components/skillmatrix/DepartmentPositionSkillConfig";
 
 export default function SkillMatrixPage() {
   const [activeTab, setActiveTab] = useState('matrix');
@@ -113,10 +114,14 @@ export default function SkillMatrixPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="matrix">
               <Users className="w-4 h-4 mr-2" />
               Matriz
+            </TabsTrigger>
+            <TabsTrigger value="dept-positions">
+              <Briefcase className="w-4 h-4 mr-2" />
+              Por Puesto
             </TabsTrigger>
             <TabsTrigger value="processes">
               <Target className="w-4 h-4 mr-2" />
@@ -132,12 +137,16 @@ export default function SkillMatrixPage() {
             </TabsTrigger>
             <TabsTrigger value="config">
               <Settings className="w-4 h-4 mr-2" />
-              Configuración
+              Habilidades
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="matrix">
             <EmployeeSkillsMatrix />
+          </TabsContent>
+
+          <TabsContent value="dept-positions">
+            <DepartmentPositionSkillConfig />
           </TabsContent>
 
           <TabsContent value="processes">

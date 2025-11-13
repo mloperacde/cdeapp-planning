@@ -32,7 +32,8 @@ import {
   TrendingUp,
   Settings, // Added Settings icon
   ClipboardList, // Added ClipboardList icon
-  ArrowLeft // Added ArrowLeft icon
+  ArrowLeft, // Added ArrowLeft icon
+  Brain // Added Brain icon for predictive maintenance
 } from "lucide-react";
 import { format, differenceInDays, addDays, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
@@ -43,6 +44,7 @@ import { createPageUrl } from "@/utils";
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeManager";
 import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder";
+import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenance"; // New import
 
 export default function MaintenanceTrackingPage() {
   const [showForm, setShowForm] = useState(false);
@@ -293,9 +295,9 @@ export default function MaintenanceTrackingPage() {
 
         {/* Unified Tabs Section */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <Tabs value={currentTab} onValueChange={setCurrentTab}> {/* Added currentTab and onValueChange */}
+          <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6"> {/* Added currentTab and onValueChange */}
             <CardHeader className="border-b border-slate-100">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5"> {/* Changed grid-cols-4 to grid-cols-5 */}
                 <TabsTrigger value="all">Todos</TabsTrigger>
                 <TabsTrigger value="upcoming">
                   Próximos ({upcomingMaintenances.length})
@@ -305,6 +307,10 @@ export default function MaintenanceTrackingPage() {
                 </TabsTrigger>
                 <TabsTrigger value="history">
                   Historial ({completedMaintenances.length})
+                </TabsTrigger>
+                <TabsTrigger value="predictive"> {/* New Predictive tab */}
+                  <Brain className="w-4 h-4 mr-2" />
+                  Predictivo
                 </TabsTrigger>
               </TabsList>
             </CardHeader>
@@ -396,6 +402,10 @@ export default function MaintenanceTrackingPage() {
                   </div>
                 )}
               </CardContent>
+            </TabsContent>
+            {/* New TabsContent for Predictive Maintenance */}
+            <TabsContent value="predictive" className="mt-0">
+              <PredictiveMaintenance />
             </TabsContent>
           </Tabs>
         </Card>
