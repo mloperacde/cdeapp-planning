@@ -31,6 +31,7 @@ import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
 import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
 import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
+import AttendanceManagement from './pages/AttendanceManagement';
 import Layout from './Layout.jsx';
 
 
@@ -68,6 +69,7 @@ export const PAGES = {
     "EmployeeAbsenceInfo": EmployeeAbsenceInfo,
     "ShiftAbsenceReport": ShiftAbsenceReport,
     "EmployeeOnboarding": EmployeeOnboarding,
+    "AttendanceManagement": AttendanceManagement,
 }
 
 export const pagesConfig = {

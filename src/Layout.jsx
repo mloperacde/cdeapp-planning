@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -18,7 +19,8 @@ import {
   ChevronDown,
   ChevronRight,
   Wrench,
-  UserPlus
+  UserPlus,
+  ClipboardCheck // Added ClipboardCheck icon
 } from "lucide-react";
 import {
   Sidebar,
@@ -152,7 +154,8 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Employees"),
-                              createPageUrl("EmployeeOnboarding")
+                              createPageUrl("EmployeeOnboarding"),
+                              createPageUrl("AttendanceManagement") // Added to parent active check
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
                         >
@@ -187,6 +190,18 @@ export default function Layout({ children, currentPageName }) {
                             <Link to={createPageUrl("EmployeeOnboarding")} className="flex items-center gap-2 px-3 py-2">
                               <UserPlus className="w-4 h-4" />
                               Onboarding
+                            </Link>
+                          </SidebarMenuButton>
+                          {/* New menu item for Attendance Management */}
+                          <SidebarMenuButton 
+                            asChild 
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("AttendanceManagement")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("AttendanceManagement")} className="flex items-center gap-2 px-3 py-2">
+                              <ClipboardCheck className="w-4 h-4" /> {/* Using the new icon */}
+                              Gestión de Presencia
                             </Link>
                           </SidebarMenuButton>
                         </div>
