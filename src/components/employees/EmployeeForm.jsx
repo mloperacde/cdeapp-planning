@@ -26,12 +26,13 @@ import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
-  const [formData, setFormData] = useState(employee || {
+  // Define initial state for new employees, including all possible machine fields
+  const initialNewEmployeeFormData = {
     codigo_empleado: "",
     nombre: "",
     fecha_nacimiento: "",
     dni: "",
-    nuss: "", // Added
+    nuss: "",
     sexo: "",
     nacionalidad: "",
     direccion: "",
@@ -40,7 +41,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     telefono_movil: "",
     contacto_emergencia_nombre: "",
     contacto_emergencia_telefono: "",
-    departamento: "",
+    departamento: "", // Crucial for conditional logic
     puesto: "",
     categoria: "",
     tipo_jornada: "Jornada Completa",
@@ -74,7 +75,19 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       objetivo_5: { descripcion: "", peso: 0, resultado: 0 },
       objetivo_6: { descripcion: "", peso: 0, resultado: 0 },
     },
-  });
+  };
+
+  // Dynamically add manufacturing machine fields
+  for (let i = 1; i <= 10; i++) {
+    initialNewEmployeeFormData[`maquina_${i}`] = null;
+  }
+  // Dynamically add maintenance machine fields and their priorities
+  for (let i = 1; i <= 20; i++) {
+    initialNewEmployeeFormData[`maquina_mantenimiento_${i}`] = null;
+    initialNewEmployeeFormData[`prioridad_mantenimiento_${i}`] = null;
+  }
+
+  const [formData, setFormData] = useState(employee || initialNewEmployeeFormData);
 
   const queryClient = useQueryClient();
 
@@ -169,6 +182,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   };
 
   const machineFields = Array.from({ length: 10 }, (_, i) => i + 1);
+  const maintenanceMachineFields = Array.from({ length: 20 }, (_, i) => i + 1);
 
   const updateObjective = (objNum, field, value) => {
     setFormData({
@@ -186,6 +200,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const isAbsent = formData.disponibilidad === "Ausente";
   const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
   const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
+  const isMaintenanceDepartment = formData.departamento === "MANTENIMIENTO";
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -201,7 +216,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="datos">Datos</TabsTrigger>
               <TabsTrigger value="schedule">Horario</TabsTrigger>
-              <TabsTrigger value="machines">Máquinas</TabsTrigger>
+              <TabsTrigger value="machines">
+                Máquinas {isMaintenanceDepartment && "(Mantenimiento)"}
+              </TabsTrigger>
               <TabsTrigger value="availability">Disponibilidad</TabsTrigger>
               <TabsTrigger value="rrhh">Gestión RRHH</TabsTrigger>
             </TabsList>
@@ -651,29 +668,98 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             </TabsContent>
 
             <TabsContent value="machines" className="space-y-4 mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {machineFields.map((num) => (
-                  <div key={num} className="space-y-2">
-                    <Label htmlFor={`maquina_${num}`}>Máquina {num}</Label>
-                    <Select
-                      value={formData[`maquina_${num}`] || ""}
-                      onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sin asignar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={null}>Sin asignar</SelectItem>
-                        {machines.filter(m => m.estado === "Disponible").map((machine) => (
-                          <SelectItem key={machine.id} value={machine.id}>
-                            {machine.nombre} ({machine.codigo})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {isMaintenanceDepartment ? (
+                <>
+                  <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold text-orange-900 mb-2">
+                      Configuración de Máquinas - Departamento de Mantenimiento
+                    </h4>
+                    <p className="text-sm text-orange-800">
+                      Configure hasta 20 máquinas con sus respectivas prioridades (1-10, siendo 10 la máxima prioridad)
+                    </p>
                   </div>
-                ))}
-              </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {maintenanceMachineFields.map((num) => (
+                      <div key={num} className="grid grid-cols-3 gap-3 items-end p-3 bg-slate-50 rounded-lg border">
+                        <div className="col-span-2 space-y-2">
+                          <Label htmlFor={`maquina_mant_${num}`}>Máquina {num}</Label>
+                          <Select
+                            value={formData[`maquina_mantenimiento_${num}`] || ""}
+                            onValueChange={(value) => setFormData({ 
+                              ...formData, 
+                              [`maquina_mantenimiento_${num}`]: value 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sin asignar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={null}>Sin asignar</SelectItem>
+                              {machines.map((machine) => (
+                                <SelectItem key={machine.id} value={machine.id}>
+                                  {machine.nombre} ({machine.codigo})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`prioridad_mant_${num}`}>Prioridad</Label>
+                          <Input
+                            id={`prioridad_mant_${num}`}
+                            type="number"
+                            min="1"
+                            max="10"
+                            placeholder="1-10"
+                            value={formData[`prioridad_mantenimiento_${num}`] || ""}
+                            onChange={(e) => setFormData({ 
+                              ...formData, 
+                              [`prioridad_mantenimiento_${num}`]: e.target.value ? parseInt(e.target.value) : null 
+                            })}
+                            disabled={!formData[`maquina_mantenimiento_${num}`]}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold text-blue-900 mb-2">
+                      Configuración de Máquinas - Departamento de Fabricación
+                    </h4>
+                    <p className="text-sm text-blue-800">
+                      Configure hasta 10 máquinas para empleados de fabricación
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {machineFields.map((num) => (
+                      <div key={num} className="space-y-2">
+                        <Label htmlFor={`maquina_${num}`}>Máquina {num}</Label>
+                        <Select
+                          value={formData[`maquina_${num}`] || ""}
+                          onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sin asignar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={null}>Sin asignar</SelectItem>
+                            {machines.filter(m => m.estado === "Disponible").map((machine) => (
+                              <SelectItem key={machine.id} value={machine.id}>
+                                {machine.nombre} ({machine.codigo})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="availability" className="space-y-4 mt-4">
