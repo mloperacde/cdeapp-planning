@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -69,7 +68,6 @@ export default function SupportManagement1415Page() {
     const tasksForDate = savedTasks.filter(t => t.fecha === selectedDate);
     
     if (tasksForDate.length > 0) {
-      // Agrupar tareas por descripción
       const grouped = new Map();
       tasksForDate.forEach(task => {
         const key = `${task.tarea}|||${task.instrucciones || ''}`;
@@ -83,7 +81,6 @@ export default function SupportManagement1415Page() {
         grouped.get(key).employees.add(task.employee_id);
       });
       
-      // Convertir a array de grupos
       const groups = Array.from(grouped.values()).map((group, index) => ({
         id: index + 1,
         tarea: group.tarea,
@@ -97,7 +94,6 @@ export default function SupportManagement1415Page() {
     }
   }, [savedTasks, selectedDate]);
 
-  // Obtener turno del equipo para la fecha seleccionada
   const getTeamShiftForDate = (teamName, date) => {
     const weekStart = startOfWeek(new Date(date), { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
@@ -112,21 +108,17 @@ export default function SupportManagement1415Page() {
     return schedule?.turno;
   };
 
-  // Empleados filtrados según modo
   const filteredEmployees = useMemo(() => {
     let filtered = employees.filter(emp => 
       emp.disponibilidad === "Disponible" && emp.incluir_en_planning !== false
     );
 
     if (useQuickFilter) {
-      // Filtro rápido: Jornada completa 8h, turno tarde en fecha seleccionada, depts específicos
       const validDepts = ['FABRICACION', 'MANTENIMIENTO', 'ALMACEN'];
       
       filtered = filtered.filter(emp => {
-        // Jornada completa
         if (emp.tipo_jornada !== "Jornada Completa") return false;
         
-        // Verificar turno para la fecha
         let hasTardeTurn = false;
         
         if (emp.tipo_turno === "Fijo Tarde") {
@@ -138,11 +130,9 @@ export default function SupportManagement1415Page() {
         
         if (!hasTardeTurn) return false;
         
-        // Departamento válido
         return validDepts.includes(emp.departamento);
       });
       
-      // Ordenar por departamento: FABRICACION, MANTENIMIENTO, ALMACEN
       filtered.sort((a, b) => {
         const deptOrder = { 'FABRICACION': 0, 'MANTENIMIENTO': 1, 'ALMACEN': 2 };
         const orderA = deptOrder[a.departamento] ?? 999;
@@ -154,17 +144,35 @@ export default function SupportManagement1415Page() {
     return filtered;
   }, [employees, useQuickFilter, selectedDate, teams, teamSchedules]);
 
-  // Empleados ya asignados (ocultar o marcar)
-  const assignedEmployeeIds = useMemo(() => {
+  // Empleados asignados a cualquier grupo en el estado actual
+  const allAssignedEmployeeIds = useMemo(() => {
+    const assigned = new Set();
+    taskGroups.forEach(group => {
+      group.employees.forEach(empId => assigned.add(empId));
+    });
+    return assigned;
+  }, [taskGroups]);
+
+  // Empleados ya guardados en DB
+  const savedAssignedEmployeeIds = useMemo(() => {
     return savedTasks
       .filter(t => t.fecha === selectedDate)
       .map(t => t.employee_id);
   }, [savedTasks, selectedDate]);
 
-  // Empleados disponibles (no asignados)
-  const availableEmployees = useMemo(() => {
-    return filteredEmployees.filter(emp => !assignedEmployeeIds.includes(emp.id));
-  }, [filteredEmployees, assignedEmployeeIds]);
+  // Función para obtener empleados disponibles para un grupo específico
+  const getAvailableEmployeesForGroup = (groupId) => {
+    // Obtener todos los empleados asignados en grupos ANTERIORES
+    const assignedInPreviousGroups = new Set();
+    
+    for (const group of taskGroups) {
+      if (group.id >= groupId) break; // Solo grupos anteriores
+      group.employees.forEach(empId => assignedInPreviousGroups.add(empId));
+    }
+
+    // Filtrar empleados: no deben estar en grupos anteriores
+    return filteredEmployees.filter(emp => !assignedInPreviousGroups.has(emp.id));
+  };
 
   const handleToggleEmployee = (empId, groupId) => {
     setTaskGroups(prevGroups => 
@@ -184,16 +192,22 @@ export default function SupportManagement1415Page() {
   };
 
   const handleSelectAll = (groupId) => {
+    const availableForGroup = getAvailableEmployeesForGroup(groupId);
+    const group = taskGroups.find(g => g.id === groupId);
+    
     setTaskGroups(prevGroups => 
-      prevGroups.map(group => {
-        if (group.id === groupId) {
-          if (group.employees.size === availableEmployees.length) {
-            return { ...group, employees: new Set() };
+      prevGroups.map(g => {
+        if (g.id === groupId) {
+          // Si ya están todos seleccionados, deseleccionar
+          const allSelected = availableForGroup.every(emp => group.employees.has(emp.id));
+          if (allSelected) {
+            return { ...g, employees: new Set() };
           } else {
-            return { ...group, employees: new Set(availableEmployees.map(emp => emp.id)) };
+            // Seleccionar todos los disponibles
+            return { ...g, employees: new Set(availableForGroup.map(emp => emp.id)) };
           }
         }
-        return group;
+        return g;
       })
     );
   };
@@ -254,9 +268,7 @@ export default function SupportManagement1415Page() {
 
   const handleClearAll = async () => {
     if (window.confirm('¿Estás seguro de que quieres limpiar TODAS las asignaciones del día seleccionado? Esta acción eliminará los registros guardados y no se puede deshacer.')) {
-      // Eliminar registros de base de datos
       await deleteTasksMutation.mutateAsync(selectedDate);
-      // Limpiar estado local
       setTaskGroups([{ id: 1, employees: new Set(), tarea: '', instrucciones: '' }]);
       setUseQuickFilter(true);
     }
@@ -394,8 +406,8 @@ export default function SupportManagement1415Page() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-blue-700 font-medium">Disponibles</p>
-                      <p className="text-2xl font-bold text-blue-900">{availableEmployees.length}</p>
+                      <p className="text-xs text-blue-700 font-medium">Total Disponibles</p>
+                      <p className="text-2xl font-bold text-blue-900">{filteredEmployees.length}</p>
                     </div>
                     <Users className="w-8 h-8 text-blue-600" />
                   </div>
@@ -406,8 +418,8 @@ export default function SupportManagement1415Page() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-purple-700 font-medium">Ya Asignados</p>
-                      <p className="text-2xl font-bold text-purple-900">{assignedEmployeeIds.length}</p>
+                      <p className="text-xs text-purple-700 font-medium">Asignados</p>
+                      <p className="text-2xl font-bold text-purple-900">{allAssignedEmployeeIds.size}</p>
                     </div>
                     <CheckSquare className="w-8 h-8 text-purple-600" />
                   </div>
@@ -427,7 +439,7 @@ export default function SupportManagement1415Page() {
               </Card>
             </div>
 
-            {availableEmployees.length === 0 && assignedEmployeeIds.length === 0 ? (
+            {filteredEmployees.length === 0 ? (
               <Card className="bg-amber-50 border-2 border-amber-300">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
@@ -451,8 +463,9 @@ export default function SupportManagement1415Page() {
                 {/* Grupos de Tareas */}
                 <div className="space-y-4 mb-6">
                   {taskGroups.map((group, index) => {
+                    const availableForThisGroup = getAvailableEmployeesForGroup(group.id);
                     const selectedInGroup = Array.from(group.employees).filter(id => 
-                      availableEmployees.some(emp => emp.id === id)
+                      availableForThisGroup.some(emp => emp.id === id)
                     );
                     
                     return (
@@ -464,6 +477,9 @@ export default function SupportManagement1415Page() {
                               {selectedInGroup.length > 0 && (
                                 <Badge className="ml-2 bg-blue-600">{selectedInGroup.length} empleados</Badge>
                               )}
+                              <Badge className="ml-2 bg-slate-200 text-slate-700">
+                                {availableForThisGroup.length} disponibles
+                              </Badge>
                             </CardTitle>
                             {taskGroups.length > 1 && (
                               <Button
@@ -506,58 +522,69 @@ export default function SupportManagement1415Page() {
                             </div>
                           </div>
 
-                          <div className="border-t pt-4">
-                            <div className="flex justify-between items-center mb-3">
-                              <Label className="text-slate-900 font-semibold">
-                                Seleccionar Empleados ({selectedInGroup.length}/{availableEmployees.length})
-                              </Label>
-                              <Button
-                                onClick={() => handleSelectAll(group.id)}
-                                variant="outline"
-                                size="sm"
-                              >
-                                {selectedInGroup.length === availableEmployees.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
-                              </Button>
+                          {availableForThisGroup.length === 0 ? (
+                            <div className="border-t pt-4">
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                <p className="text-sm text-amber-800">
+                                  <AlertTriangle className="w-4 h-4 inline mr-2" />
+                                  No hay empleados disponibles para este grupo. Todos los empleados ya han sido asignados en grupos anteriores.
+                                </p>
+                              </div>
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-2">
-                              {availableEmployees.map((emp) => {
-                                const isSelected = group.employees.has(emp.id);
-                                
-                                return (
-                                  <div 
-                                    key={emp.id} 
-                                    className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-all cursor-pointer ${
-                                      isSelected ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                                    }`}
-                                    onClick={() => handleToggleEmployee(emp.id, group.id)}
-                                  >
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => handleToggleEmployee(emp.id, group.id)}
-                                      onClick={(e) => e.stopPropagation()}
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-slate-900 text-sm truncate">
-                                        {emp.nombre}
-                                      </div>
-                                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                        <Badge 
-                                          style={{ backgroundColor: getTeamColor(emp.equipo) }}
-                                          className="text-white text-xs"
-                                        >
-                                          {emp.equipo}
-                                        </Badge>
-                                        <Badge variant="outline" className="text-xs">
-                                          {emp.departamento}
-                                        </Badge>
+                          ) : (
+                            <div className="border-t pt-4">
+                              <div className="flex justify-between items-center mb-3">
+                                <Label className="text-slate-900 font-semibold">
+                                  Seleccionar Empleados ({selectedInGroup.length}/{availableForThisGroup.length})
+                                </Label>
+                                <Button
+                                  onClick={() => handleSelectAll(group.id)}
+                                  variant="outline"
+                                  size="sm"
+                                >
+                                  {selectedInGroup.length === availableForThisGroup.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-2">
+                                {availableForThisGroup.map((emp) => {
+                                  const isSelected = group.employees.has(emp.id);
+                                  
+                                  return (
+                                    <div 
+                                      key={emp.id} 
+                                      className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-all cursor-pointer ${
+                                        isSelected ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                                      }`}
+                                      onClick={() => handleToggleEmployee(emp.id, group.id)}
+                                    >
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() => handleToggleEmployee(emp.id, group.id)}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-semibold text-slate-900 text-sm truncate">
+                                          {emp.nombre}
+                                        </div>
+                                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                          <Badge 
+                                            style={{ backgroundColor: getTeamColor(emp.equipo) }}
+                                            className="text-white text-xs"
+                                          >
+                                            {emp.equipo}
+                                          </Badge>
+                                          <Badge variant="outline" className="text-xs">
+                                            {emp.departamento}
+                                          </Badge>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </CardContent>
                       </Card>
                     );
@@ -572,32 +599,6 @@ export default function SupportManagement1415Page() {
                   <Clock className="w-4 h-4 mr-2" />
                   Añadir Otro Grupo de Tarea
                 </Button>
-
-                {/* Empleados ya asignados */}
-                {assignedEmployeeIds.length > 0 && (
-                  <Card className="mt-6 bg-slate-50 border-2 border-slate-300">
-                    <CardHeader>
-                      <CardTitle className="text-slate-700">
-                        Empleados Ya Asignados ({assignedEmployeeIds.length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {assignedEmployeeIds.map(empId => {
-                          const emp = employees.find(e => e.id === empId);
-                          if (!emp) return null;
-                          
-                          return (
-                            <div key={empId} className="p-2 bg-slate-100 rounded border border-slate-300 opacity-60">
-                              <div className="text-sm font-semibold text-slate-700">{emp.nombre}</div>
-                              <div className="text-xs text-slate-500">{emp.departamento}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
               </>
             )}
           </>
@@ -620,7 +621,6 @@ export default function SupportManagement1415Page() {
               ) : (
                 <div className="space-y-6">
                   {(() => {
-                    // Agrupar por tarea
                     const grouped = new Map();
                     allAssignedTasks.forEach(({ employee, task }) => {
                       const key = `${task.tarea}|||${task.instrucciones || ''}`;
@@ -689,7 +689,7 @@ export default function SupportManagement1415Page() {
           <div className="text-sm text-blue-800 space-y-1">
             <p>• <strong>Filtro "Personal 14-15h":</strong> Jornada completa, turno tarde, depts: FABRICACIÓN, MANTENIMIENTO, ALMACÉN</p>
             <p>• <strong>Sin filtro:</strong> Todos los empleados disponibles</p>
-            <p>• Los empleados con tareas asignadas se ocultan de la vista de selección</p>
+            <p>• <strong>⭐ Nuevo:</strong> Los empleados asignados a un grupo NO aparecerán en grupos posteriores</p>
             <p>• Puedes crear múltiples grupos con tareas diferentes</p>
             <p>• La vista previa muestra todas las configuraciones guardadas</p>
           </div>
