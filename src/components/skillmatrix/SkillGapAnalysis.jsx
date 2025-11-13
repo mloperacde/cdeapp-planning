@@ -37,11 +37,15 @@ export default function SkillGapAnalysis() {
     initialData: [],
   });
 
-  const { data: teams } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
-  });
+  const getLevelValue = (level) => {
+    switch (level) {
+      case "Experto": return 4;
+      case "Avanzado": return 3;
+      case "Intermedio": return 2;
+      case "Básico": return 1;
+      default: return 0;
+    }
+  };
 
   // Análisis de brechas por proceso
   const processGaps = useMemo(() => {
@@ -117,16 +121,6 @@ export default function SkillGapAnalysis() {
     }).filter(sg => sg.processesRequiring > 0)
       .sort((a, b) => a.coverage - b.coverage);
   }, [skills, employeeSkills, processSkillRequirements]);
-
-  const getLevelValue = (level) => {
-    switch (level) {
-      case "Experto": return 4;
-      case "Avanzado": return 3;
-      case "Intermedio": return 2;
-      case "Básico": return 1;
-      default: return 0;
-    }
-  };
 
   const getSkillName = (skillId) => skills.find(s => s.id === skillId)?.nombre || "Desconocida";
 

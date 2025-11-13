@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,12 +44,6 @@ export default function TrainingNeedsView() {
   const { data: trainingNeeds } = useQuery({
     queryKey: ['trainingNeeds'],
     queryFn: () => base44.entities.TrainingNeed.list('-fecha_identificacion'),
-    initialData: [],
-  });
-
-  const { data: trainingModules } = useQuery({
-    queryKey: ['trainingModules'],
-    queryFn: () => base44.entities.TrainingModule.list(),
     initialData: [],
   });
 
