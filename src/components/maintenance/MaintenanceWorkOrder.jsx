@@ -44,10 +44,10 @@ function SignaturePad({ onSave, existingSignature }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    const rect = canvas.getBoundingClientRect();
     ctx.beginPath();
     ctx.moveTo(
       e.clientX - rect.left,
@@ -62,10 +62,10 @@ function SignaturePad({ onSave, existingSignature }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    const rect = canvas.getBoundingClientRect();
     ctx.lineTo(
       e.clientX - rect.left,
       e.clientY - rect.top
@@ -74,11 +74,14 @@ function SignaturePad({ onSave, existingSignature }) {
   };
 
   const stopDrawing = () => {
-    if (isDrawing) {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        onSave(canvas.toDataURL());
-      }
+    if (!isDrawing) {
+      setIsDrawing(false);
+      return;
+    }
+    
+    const canvas = canvasRef.current;
+    if (canvas) {
+      onSave(canvas.toDataURL());
     }
     setIsDrawing(false);
   };
