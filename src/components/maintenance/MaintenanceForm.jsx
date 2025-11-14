@@ -38,8 +38,6 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
     dias_anticipacion_alerta: 7,
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState("");
   const queryClient = useQueryClient();
 
   // Importar tareas del tipo de mantenimiento cuando se selecciona
@@ -105,47 +103,44 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
     );
   }, [employees]);
 
-  const getFilteredEmployees = (field) => {
-    if (searchField !== field) return employees;
-    return employees.filter(emp =>
-      emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+  const EmployeeSearchSelect = ({ field, label, value, onChange }) => {
+    const [localSearch, setLocalSearch] = useState("");
+    
+    const filteredEmployees = employees.filter(emp =>
+      emp.nombre?.toLowerCase().includes(localSearch.toLowerCase())
+    );
+
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <Select value={value || ""} onValueChange={onChange}>
+          <SelectTrigger>
+            <SelectValue placeholder={`Buscar ${label.toLowerCase()}`} />
+          </SelectTrigger>
+          <SelectContent>
+            <div className="p-2 border-b" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar empleado..."
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  className="pl-10"
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+            <SelectItem value={null}>Sin asignar</SelectItem>
+            {filteredEmployees.map((emp) => (
+              <SelectItem key={emp.id} value={emp.id}>
+                {emp.nombre} {emp.departamento && `(${emp.departamento})`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     );
   };
-
-  const EmployeeSearchSelect = ({ field, label, value, onChange }) => (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Select value={value || ""} onValueChange={onChange}>
-        <SelectTrigger>
-          <SelectValue placeholder={`Buscar ${label.toLowerCase()}`} />
-        </SelectTrigger>
-        <SelectContent>
-          <div className="p-2" onClick={(e) => e.stopPropagation()}>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Buscar empleado..."
-                value={searchField === field ? searchTerm : ""}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setSearchField(field);
-                  setSearchTerm(e.target.value);
-                }}
-                className="pl-10 mb-2"
-                onKeyDown={(e) => e.stopPropagation()}
-              />
-            </div>
-          </div>
-          <SelectItem value={null}>Sin asignar</SelectItem>
-          {getFilteredEmployees(field).map((emp) => (
-            <SelectItem key={emp.id} value={emp.id}>
-              {emp.nombre} {emp.departamento && `(${emp.departamento})`}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
