@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -16,13 +15,15 @@ import {
   Users,
   Settings,
   BarChart3,
-  Brain
+  Brain,
+  FileSearch
 } from "lucide-react";
 import AttendanceImporter from "../components/attendance/AttendanceImporter";
 import AttendanceDashboard from "../components/attendance/AttendanceDashboard";
 import AttendanceConfig from "../components/attendance/AttendanceConfig";
 import AttendanceList from "../components/attendance/AttendanceList";
 import AttendancePredictions from "../components/attendance/AttendancePredictions";
+import AttendanceAnalysisReport from "../components/attendance/AttendanceAnalysisReport";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -56,7 +57,6 @@ export default function AttendanceManagementPage() {
     initialData: [],
   });
 
-  // Estadísticas del día seleccionado
   const todayStats = useMemo(() => {
     const recordsToday = attendanceRecords.filter(r => r.fecha === selectedDate);
     
@@ -75,7 +75,6 @@ export default function AttendanceManagementPage() {
     return stats;
   }, [attendanceRecords, selectedDate]);
 
-  // Predicciones de rotación basadas en patrones de asistencia
   const attendancePredictions = useMemo(() => {
     return predictions.filter(p => 
       p.tipo_prediccion === "Rotación Empleado" && 
@@ -96,7 +95,6 @@ export default function AttendanceManagementPage() {
           </p>
         </div>
 
-        {/* KPIs Principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-4">
@@ -159,15 +157,8 @@ export default function AttendanceManagementPage() {
           </Card>
         </div>
 
-        {/* Alertas de Predicciones ML */}
         {attendancePredictions.length > 0 && (
           <Card className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300">
-            <CardHeader className="border-b border-purple-200">
-              <CardTitle className="flex items-center gap-2 text-purple-900">
-                <Brain className="w-5 h-5" />
-                Predicciones ML - Riesgo de Rotación
-              </CardTitle>
-            </CardHeader>
             <CardContent className="p-4">
               <div className="space-y-2">
                 {attendancePredictions.slice(0, 3).map(pred => {
@@ -185,8 +176,7 @@ export default function AttendanceManagementPage() {
                         <div>
                           <p className="font-semibold text-slate-900">{employee.nombre}</p>
                           <p className="text-xs text-slate-600">
-                            {pred.probabilidad}% probabilidad de rotación - 
-                            Factores: {pred.factores_contribuyentes?.slice(0, 2).map(f => f.factor).join(', ')}
+                            {pred.probabilidad}% probabilidad de rotación
                           </p>
                         </div>
                       </div>
@@ -206,10 +196,14 @@ export default function AttendanceManagementPage() {
         )}
 
         <Tabs defaultValue="import" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="import">
               <Upload className="w-4 h-4 mr-2" />
               Importar
+            </TabsTrigger>
+            <TabsTrigger value="analysis">
+              <FileSearch className="w-4 h-4 mr-2" />
+              Análisis
             </TabsTrigger>
             <TabsTrigger value="records">
               <ClipboardCheck className="w-4 h-4 mr-2" />
@@ -235,6 +229,10 @@ export default function AttendanceManagementPage() {
               onDateChange={setSelectedDate}
               config={config}
             />
+          </TabsContent>
+
+          <TabsContent value="analysis">
+            <AttendanceAnalysisReport />
           </TabsContent>
 
           <TabsContent value="records">

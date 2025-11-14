@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import { Plus, X, Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import MaintenanceWorkOrderPDF from "./MaintenanceWorkOrderPDF";
 
 function SignaturePad({ onSave, existingSignature }) {
   const canvasRef = useRef(null);
@@ -29,35 +31,62 @@ function SignaturePad({ onSave, existingSignature }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    // Set canvas dimensions explicitly for high-DPI screens if necessary,
+    // but for drawing, default context styles are usually fine.
+    // The width/height attributes in JSX already set the drawing buffer size.
+    // Make sure the canvas is clear initially if no signature.
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous content
+
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round'; // Add lineJoin for smoother corners
 
     if (existingSignature) {
       const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.onload = () => {
+        // Clear canvas before drawing new image to prevent stacking
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
       img.src = existingSignature;
     }
   }, [existingSignature]);
 
+  const getCoordinates = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches && e.touches.length > 0) { // Touch event
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top,
+      };
+    } else { // Mouse event
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    }
+  };
+
   const startDrawing = (e) => {
+    e.preventDefault(); // Prevent scrolling on touch devices
     const canvas = canvasRef.current;
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    const rect = canvas.getBoundingClientRect();
+    const { x, y } = getCoordinates(e);
     ctx.beginPath();
-    ctx.moveTo(
-      e.clientX - rect.left,
-      e.clientY - rect.top
-    );
+    ctx.moveTo(x, y);
     setIsDrawing(true);
   };
 
   const draw = (e) => {
     if (!isDrawing) return;
+    e.preventDefault(); // Prevent scrolling on touch devices
     
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -65,11 +94,8 @@ function SignaturePad({ onSave, existingSignature }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(
-      e.clientX - rect.left,
-      e.clientY - rect.top
-    );
+    const { x, y } = getCoordinates(e);
+    ctx.lineTo(x, y);
     ctx.stroke();
   };
 
@@ -94,7 +120,7 @@ function SignaturePad({ onSave, existingSignature }) {
     if (!ctx) return;
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onSave('');
+    onSave(''); // Clear the saved signature data
   };
 
   return (
@@ -108,6 +134,10 @@ function SignaturePad({ onSave, existingSignature }) {
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
+        onTouchStart={startDrawing}
+        onTouchMove={draw}
+        onTouchEnd={stopDrawing}
+        onTouchCancel={stopDrawing}
       />
       <Button type="button" variant="outline" size="sm" onClick={clear}>
         Limpiar
@@ -125,6 +155,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
   const [firmaTecnico, setFirmaTecnico] = useState(maintenance.firma_tecnico || "");
   const [firmaRevisado, setFirmaRevisado] = useState(maintenance.firma_revisado || "");
   const [firmaVerificado, setFirmaVerificado] = useState(maintenance.firma_verificado || "");
+  const [showPDFView, setShowPDFView] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -245,13 +276,17 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
     });
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleExportPDF = async () => {
-    toast.info("Generando PDF...");
-    window.print();
+  const handleExportPDF = () => {
+    // First, save any pending changes to ensure the PDF includes the latest data
+    handleSave();
+    setShowPDFView(true);
+    // Give a short delay for the component to render the PDF view before printing
+    setTimeout(() => {
+      window.print();
+      // Optionally, hide the PDF view after print dialog is closed
+      // or keep it open until user manually closes it.
+      // setShowPDFView(false); // Can uncomment if you want it to auto-close after print
+    }, 500);
   };
 
   const getMachineName = (machineId) => {
@@ -273,24 +308,55 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
   const tareasCompletadas = tareas.filter(t => t.completada).length;
   const progresoTareas = tareas.length > 0 ? (tareasCompletadas / tareas.length) * 100 : 0;
 
+  // Create an object that represents the current state of maintenance data
+  // to pass to the PDF component.
+  const currentMaintenance = {
+    ...maintenance,
+    fecha_inicio: fechaInicio,
+    fecha_finalizacion: fechaFin,
+    duracion_real: fechaInicio && fechaFin 
+      ? (new Date(fechaFin) - new Date(fechaInicio)) / (1000 * 60 * 60) 
+      : 0,
+    tareas: tareas,
+    firma_tecnico: firmaTecnico,
+    firma_revisado: firmaRevisado,
+    firma_verificado: firmaVerificado,
+  };
+
+  if (showPDFView) {
+    const selectedMachine = machines.find(m => m.id === maintenance.machine_id);
+    const selectedMaintenanceType = maintenanceTypes?.find(mt => mt.id === maintenance.maintenance_type_id);
+
+    return (
+      <Dialog open={true} onOpenChange={() => setShowPDFView(false)}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto print:max-w-full print:max-h-full print:overflow-visible">
+          <MaintenanceWorkOrderPDF
+            maintenance={currentMaintenance}
+            machine={selectedMachine}
+            employees={employees}
+            maintenanceType={selectedMaintenanceType}
+            getEmployeeName={getEmployeeName} // Pass utility functions if needed by PDF component
+            getMachineName={getMachineName}
+            getMachineCode={getMachineCode}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto print:max-w-full print:max-h-full print:overflow-visible">
-        <DialogHeader className="print:hidden">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
+        <DialogHeader>
           <DialogTitle>Orden de Trabajo de Mantenimiento</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 print:space-y-4 print:p-8">
-          <div className="hidden print:block text-center mb-8">
-            <h1 className="text-2xl font-bold">ORDEN DE TRABAJO DE MANTENIMIENTO</h1>
-            <p className="text-sm text-slate-600 mt-2">OT-{maintenance.id?.substring(0, 8).toUpperCase()}</p>
-          </div>
-
-          <Card className="print:shadow-none print:border-2">
-            <CardHeader className="print:pb-2">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg">Información del Mantenimiento</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm print:gap-2">
+            <CardContent className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-semibold">Máquina:</span> {getMachineName(maintenance.machine_id)}
               </div>
@@ -318,11 +384,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card className="print:shadow-none print:border-2">
-            <CardHeader className="print:pb-2">
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg">Personal Asignado</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm print:gap-2">
+            <CardContent className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-semibold">Técnico Asignado:</span>{" "}
                 {getEmployeeName(maintenance.tecnico_asignado)}
@@ -342,15 +408,15 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card className="print:shadow-none print:border-2">
-            <CardHeader className="print:pb-2">
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center justify-between">
                 <span>Lista de Tareas ({tareasCompletadas}/{tareas.length} completadas)</span>
                 <span className="text-sm font-normal">{progresoTareas.toFixed(0)}%</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 print:space-y-2">
-              <div className="print:hidden space-y-3 border-2 border-dashed border-blue-200 rounded-lg p-4 bg-blue-50">
+            <CardContent className="space-y-4">
+              <div className="space-y-3 border-2 border-dashed border-blue-200 rounded-lg p-4 bg-blue-50">
                 <div className="space-y-2">
                   <Label>Nueva Tarea</Label>
                   <Input
@@ -401,11 +467,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
               </div>
 
               {tareas.length === 0 ? (
-                <p className="text-center text-slate-400 py-8 print:py-4">No hay tareas definidas</p>
+                <p className="text-center text-slate-400 py-8">No hay tareas definidas</p>
               ) : (
-                <div className="space-y-3 print:space-y-2">
+                <div className="space-y-3">
                   {tareas.map((tarea, index) => (
-                    <Card key={index} className={`${tarea.completada ? 'bg-green-50 border-green-200' : 'bg-slate-50'} print:shadow-none print:border`}>
+                    <Card key={index} className={`${tarea.completada ? 'bg-green-50 border-green-200' : 'bg-slate-50'}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <Checkbox
@@ -443,7 +509,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                             variant="ghost"
                             size="icon"
                             onClick={() => handleRemoveTarea(index)}
-                            className="print:hidden text-red-600 hover:bg-red-50"
+                            className="text-red-600 hover:bg-red-50"
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -456,11 +522,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card className="print:break-before-auto print:shadow-none print:border-2">
-            <CardHeader className="print:pb-2">
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg">Registro de Tiempos</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 print:space-y-2">
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
@@ -469,7 +535,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                     type="datetime-local"
                     value={fechaInicio}
                     onChange={(e) => setFechaInicio(e.target.value)}
-                    className="print:border-0 print:p-0"
                   />
                 </div>
                 <div className="space-y-2">
@@ -479,7 +544,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                     type="datetime-local"
                     value={fechaFin}
                     onChange={(e) => setFechaFin(e.target.value)}
-                    className="print:border-0 print:p-0"
                   />
                 </div>
               </div>
@@ -493,11 +557,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card className="print:break-before-page print:shadow-none print:border-2">
-            <CardHeader className="print:pb-2">
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg">Firmas y Validación</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6 print:space-y-4">
+            <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label>Firma Técnico Asignado: {getEmployeeName(maintenance.tecnico_asignado)}</Label>
                 <SignaturePad 
@@ -524,19 +588,10 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <div className="hidden print:block text-center text-xs text-slate-500 mt-8 pt-4 border-t">
-            <p>Documento generado el {format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</p>
-            <p>Este documento es válido con las firmas digitales correspondientes</p>
-          </div>
-
-          <div className="flex justify-end gap-3 print:hidden">
-            <Button type="button" variant="outline" onClick={handlePrint}>
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimir
-            </Button>
+          <div className="flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={handleExportPDF}>
               <Download className="w-4 h-4 mr-2" />
-              Exportar PDF
+              Ver/Exportar PDF
             </Button>
             <Button type="button" variant="outline" onClick={onClose}>
               Cerrar

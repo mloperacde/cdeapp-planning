@@ -20,8 +20,9 @@ import {
   ChevronRight,
   Wrench,
   UserPlus,
-  ClipboardCheck, // Added ClipboardCheck icon
-  Award // Added Award icon for Skill Matrix
+  ClipboardCheck,
+  Award,
+  Shield // Added Shield icon
 } from "lucide-react";
 import {
   Sidebar,
@@ -252,7 +253,7 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Habilidades (Nuevo) */}
+                  {/* Habilidades */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
@@ -263,6 +264,21 @@ export default function Layout({ children, currentPageName }) {
                       <Link to={createPageUrl("SkillMatrix")} className="flex items-center gap-3 px-3 py-2.5">
                         <Award className="w-5 h-5" />
                         <span className="text-sm">Matriz de Habilidades</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  {/* Comités y PRL (Nuevo) */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("CommitteeManagement")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("CommitteeManagement")} className="flex items-center gap-3 px-3 py-2.5">
+                        <Shield className="w-5 h-5" />
+                        <span className="text-sm">Comités y PRL</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
