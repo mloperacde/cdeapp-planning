@@ -27,6 +27,8 @@ function SignaturePad({ onSave, existingSignature }) {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
@@ -40,8 +42,11 @@ function SignaturePad({ onSave, existingSignature }) {
 
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
+    
     const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     ctx.beginPath();
     ctx.moveTo(
@@ -55,8 +60,11 @@ function SignaturePad({ onSave, existingSignature }) {
     if (!isDrawing) return;
     
     const canvas = canvasRef.current;
+    if (!canvas) return;
+    
     const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     ctx.lineTo(
       e.clientX - rect.left,
@@ -68,14 +76,20 @@ function SignaturePad({ onSave, existingSignature }) {
   const stopDrawing = () => {
     if (isDrawing) {
       const canvas = canvasRef.current;
-      onSave(canvas.toDataURL());
+      if (canvas) {
+        onSave(canvas.toDataURL());
+      }
     }
     setIsDrawing(false);
   };
 
   const clear = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
+    
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     onSave('');
   };
@@ -109,7 +123,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
   const [firmaRevisado, setFirmaRevisado] = useState(maintenance.firma_revisado || "");
   const [firmaVerificado, setFirmaVerificado] = useState(maintenance.firma_verificado || "");
   const queryClient = useQueryClient();
-  const printRef = useRef(null);
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, data),
@@ -198,8 +211,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
 
   const handleExportPDF = async () => {
     toast.info("Generando PDF...");
-    // En producción, aquí llamarías a una API que genere el PDF
-    // Por ahora, usamos window.print() como alternativa
     window.print();
   };
 
@@ -229,7 +240,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
           <DialogTitle>Orden de Trabajo de Mantenimiento</DialogTitle>
         </DialogHeader>
 
-        <div ref={printRef} className="space-y-6 print:p-8">
+        <div className="space-y-6 print:p-8">
           {/* Header para impresión */}
           <div className="hidden print:block text-center mb-8">
             <h1 className="text-2xl font-bold">ORDEN DE TRABAJO DE MANTENIMIENTO</h1>
@@ -337,7 +348,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                     placeholder="Añadir subtarea..."
                     value={nuevaSubtarea}
                     onChange={(e) => setNuevaSubtarea(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddSubtarea()}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubtarea())}
                   />
                   <Button type="button" variant="outline" size="sm" onClick={handleAddSubtarea}>
                     + Subtarea
