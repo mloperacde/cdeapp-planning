@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -22,7 +21,7 @@ import {
   UserPlus,
   ClipboardCheck,
   Award,
-  Shield // Added Shield icon
+  Shield
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,7 +49,7 @@ export default function Layout({ children, currentPageName }) {
     informes: false,
     maquinas: false,
     planning: false,
-    habilidades: false // Added habilidades section
+    habilidades: false
   });
 
   const toggleSection = (section) => {
@@ -84,7 +83,6 @@ export default function Layout({ children, currentPageName }) {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {/* Panel de Control */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
@@ -99,7 +97,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* Planning/Línea de Tiempo (Collapsible) */}
                   <Collapsible open={openSections.planning} onOpenChange={() => toggleSection('planning')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
@@ -149,7 +146,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Empleados (Collapsible) */}
                   <Collapsible open={openSections.empleados} onOpenChange={() => toggleSection('empleados')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
@@ -158,14 +154,15 @@ export default function Layout({ children, currentPageName }) {
                             isParentActive([
                               createPageUrl("Employees"),
                               createPageUrl("EmployeeOnboarding"),
-                              createPageUrl("AttendanceManagement")
+                              createPageUrl("AttendanceManagement"),
+                              createPageUrl("CommitteeManagement")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
                         >
                           <div className="flex items-center justify-between w-full">
                             <div className="flex items-center gap-3">
                               <Users className="w-5 h-5" />
-                              <span className="text-sm">Empleados</span>
+                              <span className="text-sm">RRHH</span>
                             </div>
                             {openSections.empleados ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           </div>
@@ -206,12 +203,22 @@ export default function Layout({ children, currentPageName }) {
                               Gestión de Presencia
                             </Link>
                           </SidebarMenuButton>
+                          <SidebarMenuButton 
+                            asChild 
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("CommitteeManagement")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("CommitteeManagement")} className="flex items-center gap-2 px-3 py-2">
+                              <Shield className="w-4 h-4" />
+                              Comités y PRL
+                            </Link>
+                          </SidebarMenuButton>
                         </div>
                       </CollapsibleContent>
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Máquinas (Collapsible) */}
                   <Collapsible open={openSections.maquinas} onOpenChange={() => toggleSection('maquinas')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
@@ -253,7 +260,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Habilidades */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
@@ -268,22 +274,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* Comités y PRL (Nuevo) */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("CommitteeManagement")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("CommitteeManagement")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Shield className="w-5 h-5" />
-                        <span className="text-sm">Comités y PRL</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  {/* Jefes de Turno */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
@@ -298,7 +288,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* Importar Datos */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
@@ -313,7 +302,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* Informes (Collapsible) */}
                   <Collapsible open={openSections.informes} onOpenChange={() => toggleSection('informes')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
@@ -363,7 +351,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* Notificaciones */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
@@ -378,7 +365,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* App Móvil */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
@@ -393,7 +379,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* Configuración */}
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
