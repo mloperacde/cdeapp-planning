@@ -120,18 +120,19 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
           <SelectValue placeholder={`Buscar ${label.toLowerCase()}`} />
         </SelectTrigger>
         <SelectContent>
-          <div className="p-2">
+          <div className="p-2" onClick={(e) => e.stopPropagation()}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Buscar empleado..."
                 value={searchField === field ? searchTerm : ""}
                 onChange={(e) => {
+                  e.stopPropagation();
                   setSearchField(field);
                   setSearchTerm(e.target.value);
                 }}
                 className="pl-10 mb-2"
-                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               />
             </div>
           </div>
