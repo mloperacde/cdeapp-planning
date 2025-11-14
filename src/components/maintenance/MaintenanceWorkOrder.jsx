@@ -275,22 +275,22 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto print:max-w-full">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto print:max-w-full print:max-h-full print:overflow-visible">
         <DialogHeader className="print:hidden">
           <DialogTitle>Orden de Trabajo de Mantenimiento</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 print:p-8">
+        <div className="space-y-6 print:space-y-4 print:p-8">
           <div className="hidden print:block text-center mb-8">
             <h1 className="text-2xl font-bold">ORDEN DE TRABAJO DE MANTENIMIENTO</h1>
             <p className="text-sm text-slate-600 mt-2">OT-{maintenance.id?.substring(0, 8).toUpperCase()}</p>
           </div>
 
-          <Card>
-            <CardHeader>
+          <Card className="print:shadow-none print:border-2">
+            <CardHeader className="print:pb-2">
               <CardTitle className="text-lg">Información del Mantenimiento</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm">
+            <CardContent className="grid grid-cols-2 gap-4 text-sm print:gap-2">
               <div>
                 <span className="font-semibold">Máquina:</span> {getMachineName(maintenance.machine_id)}
               </div>
@@ -318,11 +318,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="print:shadow-none print:border-2">
+            <CardHeader className="print:pb-2">
               <CardTitle className="text-lg">Personal Asignado</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm">
+            <CardContent className="grid grid-cols-2 gap-4 text-sm print:gap-2">
               <div>
                 <span className="font-semibold">Técnico Asignado:</span>{" "}
                 {getEmployeeName(maintenance.tecnico_asignado)}
@@ -342,14 +342,14 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="print:shadow-none print:border-2">
+            <CardHeader className="print:pb-2">
               <CardTitle className="text-lg flex items-center justify-between">
                 <span>Lista de Tareas ({tareasCompletadas}/{tareas.length} completadas)</span>
                 <span className="text-sm font-normal">{progresoTareas.toFixed(0)}%</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 print:space-y-2">
               <div className="print:hidden space-y-3 border-2 border-dashed border-blue-200 rounded-lg p-4 bg-blue-50">
                 <div className="space-y-2">
                   <Label>Nueva Tarea</Label>
@@ -401,11 +401,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
               </div>
 
               {tareas.length === 0 ? (
-                <p className="text-center text-slate-400 py-8">No hay tareas definidas</p>
+                <p className="text-center text-slate-400 py-8 print:py-4">No hay tareas definidas</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 print:space-y-2">
                   {tareas.map((tarea, index) => (
-                    <Card key={index} className={`${tarea.completada ? 'bg-green-50 border-green-200' : 'bg-slate-50'}`}>
+                    <Card key={index} className={`${tarea.completada ? 'bg-green-50 border-green-200' : 'bg-slate-50'} print:shadow-none print:border`}>
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <Checkbox
@@ -456,11 +456,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card className="print:break-before-auto">
-            <CardHeader>
+          <Card className="print:break-before-auto print:shadow-none print:border-2">
+            <CardHeader className="print:pb-2">
               <CardTitle className="text-lg">Registro de Tiempos</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 print:space-y-2">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
@@ -493,11 +493,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          <Card className="print:break-before-page">
-            <CardHeader>
+          <Card className="print:break-before-page print:shadow-none print:border-2">
+            <CardHeader className="print:pb-2">
               <CardTitle className="text-lg">Firmas y Validación</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 print:space-y-4">
               <div className="space-y-2">
                 <Label>Firma Técnico Asignado: {getEmployeeName(maintenance.tecnico_asignado)}</Label>
                 <SignaturePad 
