@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,30 +30,89 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, BarChart3 } from "lucide-react";
+import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, BarChart3, Infinity } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
+import { debounce } from "lodash";
+
+// Sugerencias de motivos frecuentes por tipo
+const SUGGESTED_REASONS = {
+  "Baja médica": [
+    "Gripe / Resfriado común",
+    "Gastroenteritis",
+    "Lesión muscular",
+    "Dolor de espalda / Lumbalgia",
+    "Cirugía programada",
+    "Recuperación post-operatoria",
+    "Estrés / Ansiedad",
+    "Migraña",
+    "Tratamiento médico",
+    "Enfermedad crónica",
+    "Otra enfermedad"
+  ],
+  "Indisposición": [
+    "Malestar general",
+    "Dolor de cabeza intenso",
+    "Mareo / Vértigo",
+    "Problemas digestivos",
+    "Fatiga extrema",
+    "Reacción alérgica",
+    "Otra indisposición"
+  ],
+  "Accidente laboral": [
+    "Caída en el lugar de trabajo",
+    "Golpe con maquinaria",
+    "Corte / Herida",
+    "Quemadura",
+    "Esguince / Torcedura",
+    "Lesión por movimiento repetitivo",
+    "Exposición a sustancias nocivas",
+    "Otro accidente laboral"
+  ],
+  "Fuerza mayor": [
+    "Emergencia familiar grave",
+    "Hospitalización de familiar directo",
+    "Fallecimiento de familiar",
+    "Desastre natural",
+    "Problema de transporte grave",
+    "Incendio en domicilio",
+    "Inundación",
+    "Otra causa de fuerza mayor"
+  ],
+  "Permiso no remunerado": [
+    "Asuntos personales",
+    "Cuidado de familiar",
+    "Trámites legales",
+    "Mudanza",
+    "Viaje personal",
+    "Formación no laboral",
+    "Otro motivo personal"
+  ]
+};
 
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("all");
-  const [selectedDepartment, setSelectedDepartment] = useState("all"); // Added state for department filter
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [fullDay, setFullDay] = useState(false);
+  const [unknownEndDate, setUnknownEndDate] = useState(false);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     employee_id: "",
     fecha_inicio: "",
     fecha_fin: "",
+    fecha_fin_desconocida: false,
     motivo: "",
-    tipo: "Vacaciones",
-    remunerada: true, // Added remunerada field
+    tipo: "",
+    absence_type_id: "",
+    remunerada: true,
     notas: "",
   });
 
@@ -78,11 +136,10 @@ export default function AbsenceManagementPage() {
 
   const { data: absenceTypes } = useQuery({
     queryKey: ['absenceTypes'],
-    queryFn: () => base44.entities.AbsenceType.list('orden'),
+    queryFn: () => base44.entities.AbsenceType.filter({ activo: true }, 'orden'),
     initialData: [],
   });
 
-  // Get unique departments
   const departments = useMemo(() => {
     const depts = new Set();
     employees.forEach(emp => {
@@ -102,7 +159,6 @@ export default function AbsenceManagementPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      // Primero guardar/actualizar la ausencia
       let result;
       if (editingAbsence?.id) {
         result = await base44.entities.Absence.update(editingAbsence.id, data);
@@ -110,10 +166,10 @@ export default function AbsenceManagementPage() {
         result = await base44.entities.Absence.create(data);
       }
 
-      // Actualizar estado del empleado a "Ausente" y copiar datos de ausencia
+      // Actualizar estado del empleado
       await updateEmployeeAvailability(data.employee_id, "Ausente", {
         ausencia_inicio: data.fecha_inicio,
-        ausencia_fin: data.fecha_fin,
+        ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
         ausencia_motivo: data.motivo,
       });
 
@@ -128,15 +184,12 @@ export default function AbsenceManagementPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (absence) => {
-      // Primero eliminar la ausencia
       await base44.entities.Absence.delete(absence.id);
       
-      // Comprobar si el empleado tiene más ausencias
       const remainingAbsences = absences.filter(
         abs => abs.employee_id === absence.employee_id && abs.id !== absence.id
       );
 
-      // Si no tiene más ausencias, restaurar disponibilidad
       if (remainingAbsences.length === 0) {
         await updateEmployeeAvailability(absence.employee_id, "Disponible");
       }
@@ -149,16 +202,23 @@ export default function AbsenceManagementPage() {
 
   const handleEdit = (absence) => {
     setEditingAbsence(absence);
-    // Ensure remunerada has a default if not present in absence object
-    setFormData({ ...absence, remunerada: absence.remunerada ?? true });
-    // Check if dates are full day (e.g., 00:00 and 23:59) to set fullDay checkbox
-    const start = new Date(absence.fecha_inicio);
-    const end = new Date(absence.fecha_fin);
-    if (start.getHours() === 0 && start.getMinutes() === 0 &&
-        end.getHours() === 23 && end.getMinutes() === 59) {
-      setFullDay(true);
-    } else {
-      setFullDay(false);
+    setUnknownEndDate(absence.fecha_fin_desconocida || false);
+    setFormData({ 
+      ...absence, 
+      remunerada: absence.remunerada ?? true,
+      fecha_fin_desconocida: absence.fecha_fin_desconocida || false
+    });
+    
+    // Check if full day
+    if (absence.fecha_inicio && absence.fecha_fin && !absence.fecha_fin_desconocida) {
+      const start = new Date(absence.fecha_inicio);
+      const end = new Date(absence.fecha_fin);
+      if (start.getHours() === 0 && start.getMinutes() === 0 &&
+          end.getHours() === 23 && end.getMinutes() === 59) {
+        setFullDay(true);
+      } else {
+        setFullDay(false);
+      }
     }
     setShowForm(true);
   };
@@ -167,16 +227,19 @@ export default function AbsenceManagementPage() {
     setShowForm(false);
     setEditingAbsence(null);
     setFullDay(false);
+    setUnknownEndDate(false);
     setFormData({
       employee_id: "",
       fecha_inicio: "",
       fecha_fin: "",
+      fecha_fin_desconocida: false,
       motivo: "",
-      tipo: "Vacaciones",
-      remunerada: true, // Reset remunerada
+      tipo: "",
+      absence_type_id: "",
+      remunerada: true,
       notas: "",
     });
-    setSearchTerm(""); // Reset search term for employee select
+    setSearchTerm("");
   };
 
   const handleSubmit = (e) => {
@@ -184,16 +247,24 @@ export default function AbsenceManagementPage() {
     
     let finalData = { ...formData };
 
-    // Si está marcado como día completo, ajustar las horas
-    if (fullDay && formData.fecha_inicio && formData.fecha_fin) {
-      const startDate = new Date(formData.fecha_inicio);
-      const endDate = new Date(formData.fecha_fin);
+    // Si la fecha de fin es desconocida, establecer una fecha muy lejana
+    if (unknownEndDate) {
+      finalData.fecha_fin_desconocida = true;
+      finalData.fecha_fin = new Date('2099-12-31').toISOString();
+    } else {
+      finalData.fecha_fin_desconocida = false;
       
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-      
-      finalData.fecha_inicio = startDate.toISOString();
-      finalData.fecha_fin = endDate.toISOString();
+      // Si está marcado como día completo, ajustar las horas
+      if (fullDay && formData.fecha_inicio && formData.fecha_fin) {
+        const startDate = new Date(formData.fecha_inicio);
+        const endDate = new Date(formData.fecha_fin);
+        
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        
+        finalData.fecha_inicio = startDate.toISOString();
+        finalData.fecha_fin = endDate.toISOString();
+      }
     }
 
     saveMutation.mutate(finalData);
@@ -213,13 +284,27 @@ export default function AbsenceManagementPage() {
   const isAbsenceActive = (absence) => {
     const now = new Date();
     const start = new Date(absence.fecha_inicio);
+    
+    if (absence.fecha_fin_desconocida) {
+      return now >= start;
+    }
+    
     const end = new Date(absence.fecha_fin);
     return now >= start && now <= end;
   };
 
   const isAbsenceExpired = (absence) => {
+    if (absence.fecha_fin_desconocida) return false;
     return isPast(new Date(absence.fecha_fin));
   };
+
+  // Debounced search
+  const debouncedSearchChange = useCallback(
+    debounce((value) => {
+      setSearchTerm(value);
+    }, 300),
+    []
+  );
 
   const filteredAbsences = useMemo(() => {
     return absences.filter(abs => {
@@ -248,6 +333,36 @@ export default function AbsenceManagementPage() {
       !searchTerm || emp.nombre.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [employees, searchTerm]);
+
+  // Obtener sugerencias de motivos según el tipo seleccionado
+  const suggestedReasons = useMemo(() => {
+    const selectedType = absenceTypes.find(at => at.id === formData.absence_type_id);
+    if (!selectedType) return [];
+    
+    // Buscar en las sugerencias predefinidas
+    const typeName = selectedType.nombre?.toLowerCase();
+    for (const [key, suggestions] of Object.entries(SUGGESTED_REASONS)) {
+      if (typeName.includes(key.toLowerCase())) {
+        return suggestions;
+      }
+    }
+    
+    return [];
+  }, [formData.absence_type_id, absenceTypes]);
+
+  // Manejar cambio de tipo de ausencia
+  const handleAbsenceTypeChange = (absenceTypeId) => {
+    const selectedType = absenceTypes.find(at => at.id === absenceTypeId);
+    if (selectedType) {
+      setFormData({
+        ...formData,
+        absence_type_id: absenceTypeId,
+        tipo: selectedType.nombre,
+        remunerada: selectedType.remunerada || false,
+        motivo: "" // Reset motivo al cambiar tipo
+      });
+    }
+  };
 
   return (
     <div className="p-6 md:p-8">
@@ -293,14 +408,12 @@ export default function AbsenceManagementPage() {
           </TabsList>
 
           <TabsContent value="absences" className="space-y-6">
-            {/* Nuevo panel de notificaciones */}
             <AbsenceNotifications 
               absences={absences}
               employees={employees}
               absenceTypes={absenceTypes}
             />
 
-            {/* Alertas de ausencias expiradas */}
             {expiredAbsences.length > 0 && (
               <Card className="mb-6 bg-amber-50 border-amber-200">
                 <CardHeader>
@@ -384,8 +497,8 @@ export default function AbsenceManagementPage() {
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <Input
                         placeholder="Buscar ausencias..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        defaultValue={searchTerm}
+                        onChange={(e) => debouncedSearchChange(e.target.value)}
                         className="pl-10"
                       />
                     </div>
@@ -467,7 +580,14 @@ export default function AbsenceManagementPage() {
                                 {format(new Date(absence.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })}
                               </TableCell>
                               <TableCell>
-                                {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm", { locale: es })}
+                                {absence.fecha_fin_desconocida ? (
+                                  <Badge className="bg-purple-100 text-purple-800">
+                                    <Infinity className="w-3 h-3 mr-1" />
+                                    Desconocida
+                                  </Badge>
+                                ) : (
+                                  format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm", { locale: es })
+                                )}
                               </TableCell>
                               <TableCell>{absence.motivo}</TableCell>
                               <TableCell>
@@ -517,7 +637,7 @@ export default function AbsenceManagementPage() {
 
       {showForm && (
         <Dialog open={true} onOpenChange={handleClose}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingAbsence ? 'Editar Ausencia' : 'Nueva Ausencia'}
@@ -555,33 +675,54 @@ export default function AbsenceManagementPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo de Ausencia *</Label>
+                  <Label htmlFor="absence_type_id">Tipo de Ausencia *</Label>
                   <Select
-                    value={formData.tipo}
-                    onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+                    value={formData.absence_type_id}
+                    onValueChange={handleAbsenceTypeChange}
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Vacaciones">Vacaciones</SelectItem>
-                      <SelectItem value="Baja médica">Baja médica</SelectItem>
-                      <SelectItem value="Permiso">Permiso</SelectItem>
-                      <SelectItem value="Ausencia justificada">Ausencia justificada</SelectItem>
-                      <SelectItem value="Ausencia injustificada">Ausencia injustificada</SelectItem>
-                      <SelectItem value="Otro">Otro</SelectItem>
+                      {absenceTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.nombre}
+                          {type.remunerada && " (Remunerada)"}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="motivo">Motivo *</Label>
-                  <Input
-                    id="motivo"
-                    value={formData.motivo}
-                    onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
-                    required
-                  />
+                  {suggestedReasons.length > 0 ? (
+                    <Select
+                      value={formData.motivo}
+                      onValueChange={(value) => setFormData({ ...formData, motivo: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar motivo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suggestedReasons.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="motivo"
+                      value={formData.motivo}
+                      onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
+                      placeholder="Especificar motivo"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
@@ -601,6 +742,7 @@ export default function AbsenceManagementPage() {
                   id="fullDay"
                   checked={fullDay}
                   onCheckedChange={setFullDay}
+                  disabled={unknownEndDate}
                 />
                 <label htmlFor="fullDay" className="text-sm font-medium text-slate-900 cursor-pointer">
                   Ausencia de horario completo (00:00 - 23:59)
@@ -620,15 +762,33 @@ export default function AbsenceManagementPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fecha_fin">Fecha {!fullDay && "y Hora"} Fin *</Label>
+                  <Label htmlFor="fecha_fin">Fecha {!fullDay && "y Hora"} Fin</Label>
                   <Input
                     id="fecha_fin"
                     type={fullDay ? "date" : "datetime-local"}
                     value={formData.fecha_fin}
                     onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
-                    required
+                    required={!unknownEndDate}
+                    disabled={unknownEndDate}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2 bg-purple-50 border-2 border-purple-300 rounded-lg p-3">
+                <Checkbox
+                  id="unknownEndDate"
+                  checked={unknownEndDate}
+                  onCheckedChange={(checked) => {
+                    setUnknownEndDate(checked);
+                    if (checked) {
+                      setFullDay(false);
+                    }
+                  }}
+                />
+                <label htmlFor="unknownEndDate" className="text-sm font-medium text-purple-900 cursor-pointer flex items-center gap-2">
+                  <Infinity className="w-4 h-4" />
+                  Fecha de fin desconocida (empleado ausente hasta finalizar manualmente)
+                </label>
               </div>
 
               <div className="space-y-2">

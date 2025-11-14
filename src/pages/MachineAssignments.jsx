@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ export default function MachineAssignmentsPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("FABRICACION");
   const [assignments, setAssignments] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [employeeSearchCache, setEmployeeSearchCache] = useState({});
   const queryClient = useQueryClient();
 
   const { data: machines, isLoading: loadingMachines } = useQuery({
@@ -43,12 +45,19 @@ export default function MachineAssignmentsPage() {
     initialData: [],
   });
 
-  // Filtrar empleados según departamento seleccionado
+  // Optimized filtered employees with caching
   const filteredEmployees = useMemo(() => {
+    const cacheKey = `${selectedDepartment}-${currentTeam}`;
+    
+    if (employeeSearchCache[cacheKey]) {
+      return employeeSearchCache[cacheKey];
+    }
+
+    let filtered;
     if (selectedDepartment === "FABRICACION") {
       const validPositions = ['responsable de linea', 'segunda de linea', 'operaria de linea'];
       
-      return employees.filter(emp => {
+      filtered = employees.filter(emp => {
         if (emp.departamento !== "FABRICACION") return false;
         if (emp.disponibilidad !== "Disponible") return false;
         if (emp.incluir_en_planning === false) return false;
@@ -57,15 +66,19 @@ export default function MachineAssignmentsPage() {
         return validPositions.some(vp => puesto.includes(vp));
       });
     } else if (selectedDepartment === "MANTENIMIENTO") {
-      return employees.filter(emp => {
+      filtered = employees.filter(emp => {
         if (emp.departamento !== "MANTENIMIENTO") return false;
         if (emp.disponibilidad !== "Disponible") return false;
         if (emp.incluir_en_planning === false) return false;
         return true;
       });
+    } else {
+      filtered = [];
     }
-    return [];
-  }, [employees, selectedDepartment]);
+
+    setEmployeeSearchCache(prev => ({ ...prev, [cacheKey]: filtered }));
+    return filtered;
+  }, [employees, selectedDepartment, currentTeam, employeeSearchCache]);
 
   const saveAssignmentsMutation = useMutation({
     mutationFn: async (assignmentsData) => {
