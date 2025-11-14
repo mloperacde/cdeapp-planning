@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Edit, Settings, CheckCircle2, AlertCircle, BarChart3, Users } from "lucide-react";
+import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function LockerManagementPage() {
   const [filters, setFilters] = useState({
@@ -48,6 +49,9 @@ export default function LockerManagementPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [configFormData, setConfigFormData] = useState({});
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
@@ -74,7 +78,6 @@ export default function LockerManagementPage() {
     initialData: [],
   });
 
-  // Cargar asignaciones existentes en estado de edición
   React.useEffect(() => {
     const assignments = {};
     lockerAssignments.forEach(la => {
@@ -82,36 +85,145 @@ export default function LockerManagementPage() {
         requiere_taquilla: la.requiere_taquilla !== false,
         vestuario: la.vestuario || "",
         numero_taquilla_actual: la.numero_taquilla_actual || "",
-        numero_taquilla_nuevo: la.numero_taquilla_nuevo || ""
+        numero_taquilla_nuevo: ""
       };
     });
     setEditingAssignments(assignments);
   }, [lockerAssignments]);
+
+  const normalizeString = (str) => {
+    if (!str) return "";
+    return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+  };
+
+  const handleImportFile = async () => {
+    if (!importFile) {
+      toast.error("Selecciona un archivo");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const text = await importFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const hasHeader = lines[0].toLowerCase().includes('nombre') || 
+                        lines[0].toLowerCase().includes('codigo');
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+
+      const matched = [];
+      const unmatched = [];
+
+      for (const line of dataLines) {
+        const parts = line.includes(';') ? line.split(';') : line.split(',');
+        if (parts.length < 3) continue;
+
+        const codigo = parts[0]?.trim();
+        const nombre = parts[1]?.trim();
+        const vestuario = parts[2]?.trim();
+        const numeroTaquilla = parts[3]?.trim();
+
+        let employee = null;
+        if (codigo) {
+          employee = employees.find(e => e.codigo_empleado === codigo);
+        }
+        if (!employee && nombre) {
+          const normalized = normalizeString(nombre);
+          employee = employees.find(e => normalizeString(e.nombre) === normalized);
+        }
+
+        if (employee) {
+          matched.push({
+            employee,
+            vestuario,
+            numeroTaquilla,
+            codigo,
+            nombre
+          });
+        } else {
+          unmatched.push({ codigo, nombre, vestuario, numeroTaquilla });
+        }
+      }
+
+      setImportPreview({ matched, unmatched });
+      toast.success(`${matched.length} empleados encontrados, ${unmatched.length} sin coincidencia`);
+    } catch (error) {
+      toast.error("Error al procesar el archivo");
+      console.error(error);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview?.matched) return;
+
+    try {
+      const promises = importPreview.matched.map(async ({ employee, vestuario, numeroTaquilla }) => {
+        const existing = lockerAssignments.find(la => la.employee_id === employee.id);
+        
+        const now = new Date().toISOString();
+        const hasChange = existing && existing.numero_taquilla_actual !== numeroTaquilla;
+
+        const dataToSave = {
+          employee_id: employee.id,
+          requiere_taquilla: true,
+          vestuario: vestuario,
+          numero_taquilla_actual: numeroTaquilla,
+          numero_taquilla_nuevo: "",
+          fecha_asignacion: now,
+          notificacion_enviada: hasChange ? false : (existing?.notificacion_enviada || false)
+        };
+
+        if (hasChange && existing) {
+          const historial = existing.historial_cambios || [];
+          historial.push({
+            fecha: now,
+            vestuario_anterior: existing.vestuario,
+            taquilla_anterior: existing.numero_taquilla_actual,
+            vestuario_nuevo: vestuario,
+            taquilla_nueva: numeroTaquilla,
+            motivo: "Importación masiva"
+          });
+          dataToSave.historial_cambios = historial;
+        }
+
+        if (existing) {
+          return base44.entities.LockerAssignment.update(existing.id, dataToSave);
+        }
+        return base44.entities.LockerAssignment.create(dataToSave);
+      });
+
+      await Promise.all(promises);
+      
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      toast.success(`${importPreview.matched.length} asignaciones importadas`);
+      setImportPreview(null);
+      setImportFile(null);
+    } catch (error) {
+      toast.error("Error al importar");
+      console.error(error);
+    }
+  };
 
   const saveAllMutation = useMutation({
     mutationFn: async () => {
       const promises = Object.entries(editingAssignments).map(([employeeId, data]) => {
         const existing = lockerAssignments.find(la => la.employee_id === employeeId);
         
-        // Verificar si hay cambio de taquilla
-        const hasLockerChange = existing && 
-          (existing.numero_taquilla_actual !== data.numero_taquilla_nuevo || 
-           existing.vestuario !== data.vestuario) &&
-          data.numero_taquilla_nuevo && 
-          data.numero_taquilla_nuevo !== existing.numero_taquilla_actual;
+        const hasLockerChange = data.numero_taquilla_nuevo && 
+          data.numero_taquilla_nuevo !== data.numero_taquilla_actual;
         
         const now = new Date().toISOString();
         const updatedData = {
           employee_id: employeeId,
           requiere_taquilla: data.requiere_taquilla,
           vestuario: data.vestuario,
-          numero_taquilla_actual: hasLockerChange ? data.numero_taquilla_nuevo : (existing?.numero_taquilla_actual || data.numero_taquilla_actual),
-          numero_taquilla_nuevo: data.numero_taquilla_nuevo,
+          numero_taquilla_actual: hasLockerChange ? data.numero_taquilla_nuevo : data.numero_taquilla_actual,
+          numero_taquilla_nuevo: "",
           fecha_asignacion: now,
           notificacion_enviada: hasLockerChange ? false : (existing?.notificacion_enviada || false)
         };
 
-        // Si hay cambio, agregar al historial
         if (hasLockerChange && existing) {
           const historial = existing.historial_cambios || [];
           historial.push({
@@ -120,7 +232,7 @@ export default function LockerManagementPage() {
             taquilla_anterior: existing.numero_taquilla_actual,
             vestuario_nuevo: data.vestuario,
             taquilla_nueva: data.numero_taquilla_nuevo,
-            motivo: "Reasignación"
+            motivo: "Reasignación manual"
           });
           updatedData.historial_cambios = historial;
         }
@@ -136,18 +248,19 @@ export default function LockerManagementPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
       setHasChanges(false);
+      toast.success("Cambios guardados");
     },
   });
 
   const sendNotificationMutation = useMutation({
-    mutationFn: async ({ employeeId, assignment }) => {
+    mutationFn: async ({ employeeId, vestuario, numeroTaquilla }) => {
       const employee = employees.find(e => e.id === employeeId);
       if (!employee || !employee.email) return;
 
       await base44.integrations.Core.SendEmail({
         to: employee.email,
-        subject: "Reasignación de Taquilla",
-        body: `Hola ${employee.nombre},\n\nSe te ha reasignado una nueva taquilla:\n\nVestuario: ${assignment.vestuario}\nNúmero de taquilla: ${assignment.numero_taquilla_nuevo}\n\nPor favor, actualiza tu información.\n\nSaludos.`
+        subject: "Asignación de Taquilla",
+        body: `Hola ${employee.nombre},\n\nSe te ha asignado una taquilla:\n\nVestuario: ${vestuario}\nNúmero de taquilla: ${numeroTaquilla}\n\nPor favor, toma nota de tu nueva asignación.\n\nSaludos.`
       });
 
       const existing = lockerAssignments.find(la => la.employee_id === employeeId);
@@ -159,6 +272,7 @@ export default function LockerManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      toast.success("Notificación enviada");
     },
   });
 
@@ -183,11 +297,10 @@ export default function LockerManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerRoomConfigs'] });
-      setShowConfigDialog(false);
+      toast.success("Configuración guardada");
     },
   });
 
-  // Inicializar configuración de taquillas
   React.useEffect(() => {
     const defaultConfigs = {
       "Vestuario Femenino Planta Baja": 56,
@@ -240,9 +353,13 @@ export default function LockerManagementPage() {
   };
 
   const handleSendNotification = (employeeId) => {
-    const assignment = getAssignment(employeeId);
-    if (assignment) {
-      sendNotificationMutation.mutate({ employeeId, assignment });
+    const editData = editingAssignments[employeeId];
+    if (editData) {
+      sendNotificationMutation.mutate({ 
+        employeeId, 
+        vestuario: editData.vestuario,
+        numeroTaquilla: editData.numero_taquilla_nuevo || editData.numero_taquilla_actual
+      });
     }
   };
 
@@ -257,6 +374,17 @@ export default function LockerManagementPage() {
     }
   };
 
+  const downloadTemplate = () => {
+    const csv = "codigo_empleado,nombre,vestuario,numero_taquilla\nEMP001,Juan Pérez,Vestuario Masculino Planta Baja,15\nEMP002,María García,Vestuario Femenino Planta Alta,42";
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plantilla_taquillas.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const stats = useMemo(() => {
     const conTaquilla = lockerAssignments.filter(la => 
       la.requiere_taquilla !== false && la.numero_taquilla_actual
@@ -266,9 +394,7 @@ export default function LockerManagementPage() {
       return !assignment || !assignment.numero_taquilla_actual;
     }).length;
     const pendientesNotificacion = lockerAssignments.filter(la => 
-      la.numero_taquilla_nuevo && 
-      la.numero_taquilla_nuevo !== la.numero_taquilla_actual &&
-      !la.notificacion_enviada
+      !la.notificacion_enviada && la.numero_taquilla_actual
     ).length;
     
     return { conTaquilla, sinTaquilla, pendientesNotificacion };
@@ -327,7 +453,6 @@ export default function LockerManagementPage() {
           </div>
         </div>
 
-        {/* Alerta de cambios sin guardar */}
         {hasChanges && (
           <Card className="mb-6 bg-amber-50 border-2 border-amber-300">
             <CardContent className="p-4">
@@ -349,10 +474,14 @@ export default function LockerManagementPage() {
         )}
 
         <Tabs defaultValue="estadisticas" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="estadisticas">
               <BarChart3 className="w-4 h-4 mr-2" />
               Estadísticas
+            </TabsTrigger>
+            <TabsTrigger value="importar">
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
             </TabsTrigger>
             <TabsTrigger value="asignaciones">
               <Users className="w-4 h-4 mr-2" />
@@ -364,9 +493,7 @@ export default function LockerManagementPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab Estadísticas */}
           <TabsContent value="estadisticas">
-            {/* KPIs Generales */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
                 <CardContent className="p-4">
@@ -405,7 +532,6 @@ export default function LockerManagementPage() {
               </Card>
             </div>
 
-            {/* Resumen por Vestuario */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2">
@@ -467,9 +593,135 @@ export default function LockerManagementPage() {
             </Card>
           </TabsContent>
 
-          {/* Tab Asignaciones */}
+          <TabsContent value="importar">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle>Importar Asignaciones desde Archivo</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-2">¿Cómo funciona?</h3>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                    <li>Descarga la plantilla CSV o prepara tu archivo con las columnas: codigo_empleado, nombre, vestuario, numero_taquilla</li>
+                    <li>El sistema buscará coincidencias por código de empleado o nombre</li>
+                    <li>Se configurará automáticamente el vestuario y número de taquilla actual</li>
+                    <li>Los campos de "nueva taquilla" quedarán en blanco para futuras reasignaciones</li>
+                    <li>Se mantendrán las notificaciones pendientes si hay cambios</li>
+                  </ol>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button onClick={downloadTemplate} variant="outline">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Descargar Plantilla CSV
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Seleccionar Archivo *</Label>
+                    <input
+                      type="file"
+                      id="locker-import"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={(e) => setImportFile(e.target.files[0])}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => document.getElementById('locker-import').click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {importFile ? importFile.name : "Seleccionar Archivo"}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleImportFile}
+                      disabled={!importFile || importing}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      {importing ? "Procesando..." : "Procesar Archivo"}
+                    </Button>
+                  </div>
+                </div>
+
+                {importPreview && (
+                  <Card className="border-2 border-green-200 bg-green-50">
+                    <CardHeader className="border-b border-green-200">
+                      <CardTitle className="text-green-900">Vista Previa de Importación</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Badge className="bg-green-600 text-white mr-2">
+                            {importPreview.matched.length} empleados encontrados
+                          </Badge>
+                          {importPreview.unmatched.length > 0 && (
+                            <Badge className="bg-amber-600 text-white">
+                              {importPreview.unmatched.length} sin coincidencia
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          onClick={handleConfirmImport}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Confirmar Importación
+                        </Button>
+                      </div>
+
+                      {importPreview.matched.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-sm text-slate-700">Asignaciones a Importar:</h3>
+                          <div className="max-h-64 overflow-y-auto space-y-2">
+                            {importPreview.matched.slice(0, 10).map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-white rounded border">
+                                <div>
+                                  <div className="font-semibold text-slate-900">{item.employee.nombre}</div>
+                                  <div className="text-xs text-slate-600">{item.employee.departamento}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium text-slate-700">{item.vestuario}</div>
+                                  <Badge className="bg-blue-600 text-white font-mono">
+                                    Taquilla {item.numeroTaquilla}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
+                            {importPreview.matched.length > 10 && (
+                              <p className="text-xs text-center text-slate-500">
+                                +{importPreview.matched.length - 10} más...
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {importPreview.unmatched.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-sm text-amber-700">Sin Coincidencia:</h3>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {importPreview.unmatched.map((item, idx) => (
+                              <div key={idx} className="text-xs p-2 bg-amber-100 rounded border border-amber-300">
+                                {item.nombre} ({item.codigo})
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="asignaciones">
-            {/* Filtros */}
             <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2">
@@ -540,7 +792,6 @@ export default function LockerManagementPage() {
               </CardContent>
             </Card>
 
-            {/* Tabla de Asignaciones */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
                 <div className="flex justify-between items-center">
@@ -585,7 +836,7 @@ export default function LockerManagementPage() {
                             requiere_taquilla: assignment?.requiere_taquilla !== false,
                             vestuario: assignment?.vestuario || "",
                             numero_taquilla_actual: assignment?.numero_taquilla_actual || "",
-                            numero_taquilla_nuevo: assignment?.numero_taquilla_nuevo || ""
+                            numero_taquilla_nuevo: ""
                           };
                           
                           const requiereTaquilla = editData.requiere_taquilla;
@@ -664,15 +915,14 @@ export default function LockerManagementPage() {
                               </TableCell>
                               <TableCell className="text-center">
                                 <div className="flex justify-center gap-2">
-                                  {hasNewLocker && !assignment?.notificacion_enviada && (
+                                  {editData.numero_taquilla_actual && !assignment?.notificacion_enviada && (
                                     <Button
                                       size="sm"
                                       onClick={() => handleSendNotification(employee.id)}
                                       disabled={sendNotificationMutation.isPending}
                                       className="bg-orange-600 hover:bg-orange-700"
                                     >
-                                      <Bell className="w-4 h-4 mr-1" />
-                                      Notificar
+                                      <Bell className="w-4 h-4" />
                                     </Button>
                                   )}
                                   {assignment?.historial_cambios && assignment.historial_cambios.length > 0 && (
@@ -695,24 +945,8 @@ export default function LockerManagementPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Información */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5" />
-                ℹ️ Instrucciones
-              </h3>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p>• <strong>Req.:</strong> Marca si el empleado necesita taquilla</p>
-                <p>• <strong>Asignar:</strong> Selecciona vestuario y número de taquilla</p>
-                <p>• <strong>Reasignar:</strong> Cambia el número en "Nueva Taquilla"</p>
-                <p>• <strong>Guardar:</strong> Click en "Guardar Cambios" para aplicar</p>
-                <p>• <strong>Notificar:</strong> Envía email al empleado sobre su nueva taquilla</p>
-              </div>
-            </div>
           </TabsContent>
 
-          {/* Tab Configuración */}
           <TabsContent value="configuracion">
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
@@ -786,7 +1020,6 @@ export default function LockerManagementPage() {
         </Tabs>
       </div>
 
-      {/* Dialog de Historial */}
       {showHistory && selectedEmployee && (
         <Dialog open={true} onOpenChange={setShowHistory}>
           <DialogContent className="max-w-3xl">
