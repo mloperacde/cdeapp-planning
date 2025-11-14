@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
@@ -24,7 +23,7 @@ import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenan
 import KanbanView from "../components/maintenance/KanbanView";
 
 export default function MaintenanceTrackingPage() {
-  const [currentTab, setCurrentTab] = useState('kanban'); // Changed initial tab to 'kanban'
+  const [currentTab, setCurrentTab] = useState('kanban');
   const [showForm, setShowForm] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState(null);
   const [showTypeManager, setShowTypeManager] = useState(false);
@@ -248,7 +247,6 @@ export default function MaintenanceTrackingPage() {
           </div>
         </div>
 
-        {/* Dashboard Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardContent className="p-4">
@@ -300,9 +298,9 @@ export default function MaintenanceTrackingPage() {
         </div>
 
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6"> {/* Updated grid-cols to 6 */}
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="kanban">
-              <Settings className="w-4 h-4 mr-2" /> {/* Reused Settings icon as per outline */}
+              <Columns className="w-4 h-4 mr-2" />
               Kanban
             </TabsTrigger>
             <TabsTrigger value="all">Todos</TabsTrigger>
@@ -411,7 +409,7 @@ export default function MaintenanceTrackingPage() {
           maintenance={showWorkOrder}
           machines={machines}
           employees={employees}
-          maintenanceTypes={maintenanceTypes} {/* Added maintenanceTypes prop */}
+          maintenanceTypes={maintenanceTypes}
           onClose={() => setShowWorkOrder(null)}
         />
       )}

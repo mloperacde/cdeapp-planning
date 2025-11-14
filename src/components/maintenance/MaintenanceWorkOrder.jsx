@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -125,7 +124,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
   const [firmaVerificado, setFirmaVerificado] = useState(maintenance.firma_verificado || "");
   const queryClient = useQueryClient();
 
-  // Cargar tareas: primero del mantenimiento existente, sino del tipo de mantenimiento
   useEffect(() => {
     if (maintenance.tareas && maintenance.tareas.length > 0) {
       setTareas(maintenance.tareas);
@@ -280,13 +278,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
         </DialogHeader>
 
         <div className="space-y-6 print:p-8">
-          {/* Header para impresión */}
           <div className="hidden print:block text-center mb-8">
             <h1 className="text-2xl font-bold">ORDEN DE TRABAJO DE MANTENIMIENTO</h1>
             <p className="text-sm text-slate-600 mt-2">OT-{maintenance.id?.substring(0, 8).toUpperCase()}</p>
           </div>
 
-          {/* Información General */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Información del Mantenimiento</CardTitle>
@@ -319,7 +315,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          {/* Personal */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Personal Asignado</CardTitle>
@@ -344,7 +339,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          {/* Tareas y Subtareas */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center justify-between">
@@ -353,7 +347,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Formulario para añadir tareas (oculto en impresión) */}
               <div className="print:hidden space-y-3 border-2 border-dashed border-blue-200 rounded-lg p-4 bg-blue-50">
                 <div className="space-y-2">
                   <Label>Nueva Tarea</Label>
@@ -370,7 +363,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                   />
                 </div>
 
-                {/* Subtareas */}
                 {nuevaTarea.subtareas.length > 0 && (
                   <div className="space-y-1">
                     <Label className="text-xs">Subtareas:</Label>
@@ -387,7 +379,12 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                     placeholder="Añadir subtarea..."
                     value={nuevaSubtarea}
                     onChange={(e) => setNuevaSubtarea(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubtarea())}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSubtarea();
+                      }
+                    }}
                   />
                   <Button type="button" variant="outline" size="sm" onClick={handleAddSubtarea}>
                     + Subtarea
@@ -400,7 +397,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                 </Button>
               </div>
 
-              {/* Lista de tareas */}
               {tareas.length === 0 ? (
                 <p className="text-center text-slate-400 py-8">No hay tareas definidas</p>
               ) : (
@@ -422,7 +418,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                               <p className="text-sm text-slate-600 mt-1">{tarea.descripcion}</p>
                             )}
 
-                            {/* Subtareas */}
                             {tarea.subtareas && tarea.subtareas.length > 0 && (
                               <div className="mt-3 ml-4 space-y-2">
                                 {tarea.subtareas.map((subtarea, subIndex) => (
@@ -458,7 +453,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          {/* Registro de Tiempos */}
           <Card className="print:break-before-auto">
             <CardHeader>
               <CardTitle className="text-lg">Registro de Tiempos</CardTitle>
@@ -496,7 +490,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          {/* Firmas */}
           <Card className="print:break-before-page">
             <CardHeader>
               <CardTitle className="text-lg">Firmas y Validación</CardTitle>
@@ -528,13 +521,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             </CardContent>
           </Card>
 
-          {/* Footer para impresión */}
           <div className="hidden print:block text-center text-xs text-slate-500 mt-8 pt-4 border-t">
             <p>Documento generado el {format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</p>
             <p>Este documento es válido con las firmas digitales correspondientes</p>
           </div>
 
-          {/* Botones de acción (ocultos en impresión) */}
           <div className="flex justify-end gap-3 print:hidden">
             <Button type="button" variant="outline" onClick={handlePrint}>
               <Printer className="w-4 h-4 mr-2" />
