@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet } from "lucide-react";
+import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -41,13 +42,14 @@ export default function LockerManagementPage() {
     departamento: "all",
     equipo: "all",
     sexo: "all",
+    vestuario: "all",
     searchTerm: ""
   });
+  const [sortConfig, setSortConfig] = useState({ field: "nombre", direction: "asc" });
   const [showHistory, setShowHistory] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [editingAssignments, setEditingAssignments] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
-  const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [configFormData, setConfigFormData] = useState({});
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -93,7 +95,42 @@ export default function LockerManagementPage() {
 
   const normalizeString = (str) => {
     if (!str) return "";
-    return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+    // Normalizar y manejar caracteres especiales
+    let normalized = str.toUpperCase();
+    
+    // Reemplazar ? por posibles caracteres españoles
+    normalized = normalized.replace(/\?/g, '[ÑN]');
+    
+    // Normalizar tildes
+    normalized = normalized.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Limpiar caracteres especiales excepto corchetes
+    normalized = normalized.replace(/[^A-Z0-9\[\]]/g, "");
+    
+    return normalized;
+  };
+
+  const matchNames = (name1, name2) => {
+    if (!name1 || !name2) return false;
+    
+    const norm1 = normalizeString(name1);
+    const norm2 = normalizeString(name2);
+    
+    // Coincidencia exacta
+    if (norm1 === norm2) return true;
+    
+    // Si hay corchetes (caracteres ? convertidos), hacer matching flexible
+    if (norm1.includes('[') || norm2.includes('[')) {
+      const pattern1 = norm1.replace(/\[ÑN\]/g, '[ÑN]'); // Keep [ÑN] as is for regex pattern
+      const pattern2 = norm2.replace(/\[ÑN\]/g, '[ÑN]');
+      
+      const regex1 = new RegExp(`^${pattern1}$`);
+      const regex2 = new RegExp(`^${pattern2}$`);
+      
+      if (regex1.test(norm2) || regex2.test(norm1)) return true;
+    }
+    
+    return false;
   };
 
   const handleImportFile = async () => {
@@ -123,12 +160,15 @@ export default function LockerManagementPage() {
         const numeroTaquilla = parts[3]?.trim();
 
         let employee = null;
+        
+        // Buscar por código primero
         if (codigo) {
           employee = employees.find(e => e.codigo_empleado === codigo);
         }
+        
+        // Si no se encuentra, buscar por nombre con manejo de caracteres especiales
         if (!employee && nombre) {
-          const normalized = normalizeString(nombre);
-          employee = employees.find(e => normalizeString(e.nombre) === normalized);
+          employee = employees.find(e => matchNames(e.nombre, nombre));
         }
 
         if (employee) {
@@ -171,7 +211,7 @@ export default function LockerManagementPage() {
           numero_taquilla_actual: numeroTaquilla,
           numero_taquilla_nuevo: "",
           fecha_asignacion: now,
-          notificacion_enviada: hasChange ? false : (existing?.notificacion_enviada || false)
+          notificacion_enviada: false // New imports or changes should always trigger a new notification
         };
 
         if (hasChange && existing) {
@@ -196,7 +236,7 @@ export default function LockerManagementPage() {
       await Promise.all(promises);
       
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      toast.success(`${importPreview.matched.length} asignaciones importadas`);
+      toast.success(`${importPreview.matched.length} asignaciones importadas con notificaciones pendientes`);
       setImportPreview(null);
       setImportFile(null);
     } catch (error) {
@@ -317,6 +357,7 @@ export default function LockerManagementPage() {
     setConfigFormData(configs);
   }, [lockerRoomConfigs]);
 
+
   const departments = useMemo(() => {
     const depts = new Set();
     employees.forEach(emp => {
@@ -325,17 +366,73 @@ export default function LockerManagementPage() {
     return Array.from(depts).sort();
   }, [employees]);
 
-  const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => {
+  const filteredAndSortedEmployees = useMemo(() => {
+    let filtered = employees.filter(emp => {
       const matchesDept = filters.departamento === "all" || emp.departamento === filters.departamento;
       const matchesTeam = filters.equipo === "all" || emp.equipo === filters.equipo;
       const matchesSex = filters.sexo === "all" || emp.sexo === filters.sexo;
       const matchesSearch = !filters.searchTerm || 
         emp.nombre?.toLowerCase().includes(filters.searchTerm.toLowerCase());
       
-      return matchesDept && matchesTeam && matchesSex && matchesSearch;
+      const editData = editingAssignments[emp.id];
+      const assignment = getAssignment(emp.id);
+      const vestuario = editData?.vestuario || assignment?.vestuario || "";
+      const matchesVestuario = filters.vestuario === "all" || vestuario === filters.vestuario;
+      
+      return matchesDept && matchesTeam && matchesSex && matchesSearch && matchesVestuario;
     });
-  }, [employees, filters]);
+
+    // Ordenar
+    filtered.sort((a, b) => {
+      let aVal = "";
+      let bVal = "";
+      
+      if (sortConfig.field === "nombre") {
+        aVal = a.nombre || "";
+        bVal = b.nombre || "";
+      } else if (sortConfig.field === "vestuario") {
+        const aAssign = editingAssignments[a.id] || getAssignment(a.id);
+        const bAssign = editingAssignments[b.id] || getAssignment(b.id);
+        aVal = aAssign?.vestuario || "";
+        bVal = bAssign?.vestuario || "";
+      } else if (sortConfig.field === "taquilla") {
+        const aAssign = editingAssignments[a.id] || getAssignment(a.id);
+        const bAssign = editingAssignments[b.id] || getAssignment(b.id);
+        aVal = aAssign?.numero_taquilla_actual || "";
+        bVal = bAssign?.numero_taquilla_actual || "";
+      } else if (sortConfig.field === "departamento") {
+        aVal = a.departamento || "";
+        bVal = b.departamento || "";
+      }
+
+      // Handle numerical sort for taquilla
+      if (sortConfig.field === "taquilla") {
+        const numA = parseInt(aVal, 10);
+        const numB = parseInt(bVal, 10);
+        if (sortConfig.direction === "asc") {
+          return (isNaN(numA) ? Infinity : numA) - (isNaN(numB) ? Infinity : numB);
+        } else {
+          return (isNaN(numB) ? -Infinity : numB) - (isNaN(numA) ? -Infinity : numA);
+        }
+      }
+
+      // Default string sort
+      if (sortConfig.direction === "asc") {
+        return aVal.localeCompare(bVal);
+      } else {
+        return bVal.localeCompare(aVal);
+      }
+    });
+
+    return filtered;
+  }, [employees, filters, sortConfig, editingAssignments, lockerAssignments]);
+
+  const handleSort = (field) => {
+    setSortConfig(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc"
+    }));
+  };
 
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => la.employee_id === employeeId);
@@ -428,6 +525,23 @@ export default function LockerManagementPage() {
       };
     });
   }, [lockerRoomConfigs, lockerAssignments]);
+
+  const SortableHeader = ({ field, label }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-slate-100 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {label}
+        {sortConfig.field === field && (
+          <ArrowUpDown 
+            className={`w-4 h-4 text-slate-400 ${sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} 
+          />
+        )}
+        {sortConfig.field !== field && <ArrowUpDown className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100" />}
+      </div>
+    </TableHead>
+  );
 
   return (
     <div className="p-6 md:p-8">
@@ -602,11 +716,11 @@ export default function LockerManagementPage() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-semibold text-blue-900 mb-2">¿Cómo funciona?</h3>
                   <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                    <li>Descarga la plantilla CSV o prepara tu archivo con las columnas: codigo_empleado, nombre, vestuario, numero_taquilla</li>
-                    <li>El sistema buscará coincidencias por código de empleado o nombre</li>
-                    <li>Se configurará automáticamente el vestuario y número de taquilla actual</li>
-                    <li>Los campos de "nueva taquilla" quedarán en blanco para futuras reasignaciones</li>
-                    <li>Se mantendrán las notificaciones pendientes si hay cambios</li>
+                    <li>Descarga la plantilla CSV o prepara tu archivo con: codigo_empleado, nombre, vestuario, numero_taquilla</li>
+                    <li>El sistema busca coincidencias por código o nombre (soporta ? para Ñ y tildes)</li>
+                    <li>Se configura automáticamente vestuario y taquilla actual</li>
+                    <li>Los campos de "nueva taquilla" quedan vacíos para futuras reasignaciones</li>
+                    <li>Se activan notificaciones pendientes para todos los cambios</li>
                   </ol>
                 </div>
 
@@ -679,7 +793,7 @@ export default function LockerManagementPage() {
                         <div className="space-y-2">
                           <h3 className="font-semibold text-sm text-slate-700">Asignaciones a Importar:</h3>
                           <div className="max-h-64 overflow-y-auto space-y-2">
-                            {importPreview.matched.slice(0, 10).map((item, idx) => (
+                            {importPreview.matched.map((item, idx) => (
                               <div key={idx} className="flex items-center justify-between p-3 bg-white rounded border">
                                 <div>
                                   <div className="font-semibold text-slate-900">{item.employee.nombre}</div>
@@ -693,11 +807,6 @@ export default function LockerManagementPage() {
                                 </div>
                               </div>
                             ))}
-                            {importPreview.matched.length > 10 && (
-                              <p className="text-xs text-center text-slate-500">
-                                +{importPreview.matched.length - 10} más...
-                              </p>
-                            )}
                           </div>
                         </div>
                       )}
@@ -730,7 +839,7 @@ export default function LockerManagementPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div className="space-y-2">
                     <Label>Buscar por Nombre</Label>
                     <Input
@@ -788,6 +897,21 @@ export default function LockerManagementPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label>Vestuario</Label>
+                    <Select value={filters.vestuario} onValueChange={(value) => setFilters({...filters, vestuario: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="Vestuario Femenino Planta Baja">Femenino P. Baja</SelectItem>
+                        <SelectItem value="Vestuario Femenino Planta Alta">Femenino P. Alta</SelectItem>
+                        <SelectItem value="Vestuario Masculino Planta Baja">Masculino P. Baja</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -795,7 +919,7 @@ export default function LockerManagementPage() {
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
                 <div className="flex justify-between items-center">
-                  <CardTitle>Lista de Empleados ({filteredEmployees.length})</CardTitle>
+                  <CardTitle>Lista de Empleados ({filteredAndSortedEmployees.length})</CardTitle>
                   {hasChanges && (
                     <Button
                       onClick={handleSaveAll}
@@ -814,23 +938,24 @@ export default function LockerManagementPage() {
                     <TableHeader>
                       <TableRow className="bg-slate-50">
                         <TableHead className="w-12">Req.</TableHead>
-                        <TableHead>Empleado</TableHead>
+                        <SortableHeader field="nombre" label="Empleado" />
                         <TableHead>Sexo</TableHead>
-                        <TableHead>Vestuario</TableHead>
-                        <TableHead>Taquilla Actual</TableHead>
+                        <SortableHeader field="departamento" label="Departamento" />
+                        <SortableHeader field="vestuario" label="Vestuario" />
+                        <SortableHeader field="taquilla" label="Taquilla Actual" />
                         <TableHead>Nueva Taquilla</TableHead>
                         <TableHead className="text-center">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEmployees.length === 0 ? (
+                      {filteredAndSortedEmployees.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                          <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                             No hay empleados con los filtros seleccionados
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredEmployees.map((employee) => {
+                        filteredAndSortedEmployees.map((employee) => {
                           const assignment = getAssignment(employee.id);
                           const editData = editingAssignments[employee.id] || {
                             requiere_taquilla: assignment?.requiere_taquilla !== false,
@@ -852,10 +977,7 @@ export default function LockerManagementPage() {
                                 />
                               </TableCell>
                               <TableCell>
-                                <div>
-                                  <div className="font-semibold text-slate-900">{employee.nombre}</div>
-                                  <div className="text-xs text-slate-500">{employee.departamento}</div>
-                                </div>
+                                <div className="font-semibold text-slate-900">{employee.nombre}</div>
                               </TableCell>
                               <TableCell>
                                 <Badge className={
@@ -865,6 +987,9 @@ export default function LockerManagementPage() {
                                 }>
                                   {employee.sexo || "N/A"}
                                 </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-xs text-slate-500">{employee.departamento}</div>
                               </TableCell>
                               <TableCell>
                                 {requiereTaquilla && (
@@ -891,9 +1016,12 @@ export default function LockerManagementPage() {
                               </TableCell>
                               <TableCell>
                                 {requiereTaquilla && (
-                                  <div className="font-mono text-sm font-semibold text-slate-900">
-                                    {editData.numero_taquilla_actual || "-"}
-                                  </div>
+                                  <Input
+                                    value={editData.numero_taquilla_actual}
+                                    onChange={(e) => handleFieldChange(employee.id, 'numero_taquilla_actual', e.target.value)}
+                                    placeholder="Nº"
+                                    className="w-20 font-mono"
+                                  />
                                 )}
                               </TableCell>
                               <TableCell>
@@ -903,7 +1031,7 @@ export default function LockerManagementPage() {
                                       value={editData.numero_taquilla_nuevo}
                                       onChange={(e) => handleFieldChange(employee.id, 'numero_taquilla_nuevo', e.target.value)}
                                       placeholder="Nº"
-                                      className="w-20"
+                                      className="w-20 font-mono"
                                     />
                                     {hasNewLocker && (
                                       <Badge className="bg-orange-100 text-orange-800">
