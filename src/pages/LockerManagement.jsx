@@ -80,6 +80,11 @@ export default function LockerManagementPage() {
     initialData: [],
   });
 
+  // Helper function to get an employee's locker assignment
+  const getAssignment = (employeeId) => {
+    return lockerAssignments.find(la => la.employee_id === employeeId);
+  };
+
   React.useEffect(() => {
     const assignments = {};
     lockerAssignments.forEach(la => {
@@ -434,10 +439,6 @@ export default function LockerManagementPage() {
     }));
   };
 
-  const getAssignment = (employeeId) => {
-    return lockerAssignments.find(la => la.employee_id === employeeId);
-  };
-
   const handleFieldChange = (employeeId, field, value) => {
     setEditingAssignments(prev => ({
       ...prev,
@@ -528,17 +529,19 @@ export default function LockerManagementPage() {
 
   const SortableHeader = ({ field, label }) => (
     <TableHead 
-      className="cursor-pointer hover:bg-slate-100 transition-colors"
+      className="cursor-pointer hover:bg-slate-100 transition-colors group" // Added 'group' class for hover effect
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center gap-2">
         {label}
-        {sortConfig.field === field && (
-          <ArrowUpDown 
-            className={`w-4 h-4 text-slate-400 ${sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} 
-          />
-        )}
-        {sortConfig.field !== field && <ArrowUpDown className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100" />}
+        <ArrowUpDown 
+          className={`w-4 h-4 transition-transform 
+            ${sortConfig.field === field 
+              ? `text-blue-600 ${sortConfig.direction === 'desc' ? 'rotate-180' : ''}` 
+              : 'text-slate-300 opacity-0 group-hover:opacity-100' // Icon is hidden until hovered, then appears
+            }`
+          }
+        />
       </div>
     </TableHead>
   );
