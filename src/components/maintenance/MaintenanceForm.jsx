@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -33,6 +33,7 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
     creado_por: "",
     descripcion: "",
     notas: "",
+    tareas: [],
     alerta_activa: true,
     dias_anticipacion_alerta: 7,
   });
@@ -40,6 +41,44 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
   const [searchTerm, setSearchTerm] = useState("");
   const [searchField, setSearchField] = useState("");
   const queryClient = useQueryClient();
+
+  // Importar tareas del tipo de mantenimiento cuando se selecciona
+  useEffect(() => {
+    if (formData.maintenance_type_id && !maintenance?.id) {
+      const selectedType = maintenanceTypes.find(mt => mt.id === formData.maintenance_type_id);
+      if (selectedType) {
+        const tareas = [];
+        
+        // Importar hasta 6 tareas
+        for (let i = 1; i <= 6; i++) {
+          const tarea = selectedType[`tarea_${i}`];
+          if (tarea && tarea.nombre) {
+            const subtareas = [];
+            
+            // Importar subtareas (hasta 8)
+            for (let j = 1; j <= 8; j++) {
+              const subtarea = tarea[`subtarea_${j}`];
+              if (subtarea) {
+                subtareas.push({
+                  titulo: subtarea,
+                  completada: false
+                });
+              }
+            }
+            
+            tareas.push({
+              titulo: tarea.nombre,
+              descripcion: "",
+              completada: false,
+              subtareas: subtareas
+            });
+          }
+        }
+        
+        setFormData(prev => ({ ...prev, tareas }));
+      }
+    }
+  }, [formData.maintenance_type_id, maintenanceTypes, maintenance?.id]);
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
@@ -59,7 +98,12 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
     saveMutation.mutate(formData);
   };
 
-  const maintenanceTechnicians = employees.filter(emp => emp.departamento === "Mantenimiento");
+  // Filtrar solo empleados del departamento Mantenimiento
+  const maintenanceTechnicians = useMemo(() => {
+    return employees.filter(emp => 
+      emp.departamento === "MANTENIMIENTO" || emp.departamento === "Mantenimiento"
+    );
+  }, [employees]);
 
   const getFilteredEmployees = (field) => {
     if (searchField !== field) return employees;
@@ -151,6 +195,11 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
                   ))}
                 </SelectContent>
               </Select>
+              {formData.maintenance_type_id && (
+                <p className="text-xs text-blue-600">
+                  ✓ Las tareas se importarán automáticamente
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -168,6 +217,7 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
                   <SelectItem value="Inspección">Inspección</SelectItem>
                   <SelectItem value="Calibración">Calibración</SelectItem>
                   <SelectItem value="Limpieza">Limpieza</SelectItem>
+                  <SelectItem value="Predictivo">Predictivo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -230,7 +280,9 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500">Solo empleados del departamento Mantenimiento</p>
+              <p className="text-xs text-slate-500">
+                Solo empleados del departamento Mantenimiento ({maintenanceTechnicians.length} disponibles)
+              </p>
             </div>
 
             <EmployeeSearchSelect

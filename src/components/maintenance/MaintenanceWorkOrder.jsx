@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -113,16 +114,54 @@ function SignaturePad({ onSave, existingSignature }) {
   );
 }
 
-export default function MaintenanceWorkOrder({ maintenance, machines, employees, onClose }) {
+export default function MaintenanceWorkOrder({ maintenance, machines, employees, maintenanceTypes, onClose }) {
   const [fechaInicio, setFechaInicio] = useState(maintenance.fecha_inicio || "");
   const [fechaFin, setFechaFin] = useState(maintenance.fecha_finalizacion || "");
-  const [tareas, setTareas] = useState(maintenance.tareas || []);
+  const [tareas, setTareas] = useState([]);
   const [nuevaTarea, setNuevaTarea] = useState({ titulo: "", descripcion: "", subtareas: [] });
   const [nuevaSubtarea, setNuevaSubtarea] = useState("");
   const [firmaTecnico, setFirmaTecnico] = useState(maintenance.firma_tecnico || "");
   const [firmaRevisado, setFirmaRevisado] = useState(maintenance.firma_revisado || "");
   const [firmaVerificado, setFirmaVerificado] = useState(maintenance.firma_verificado || "");
   const queryClient = useQueryClient();
+
+  // Cargar tareas: primero del mantenimiento existente, sino del tipo de mantenimiento
+  useEffect(() => {
+    if (maintenance.tareas && maintenance.tareas.length > 0) {
+      setTareas(maintenance.tareas);
+    } else if (maintenance.maintenance_type_id && maintenanceTypes) {
+      const selectedType = maintenanceTypes.find(mt => mt.id === maintenance.maintenance_type_id);
+      if (selectedType) {
+        const importedTareas = [];
+        
+        for (let i = 1; i <= 6; i++) {
+          const tarea = selectedType[`tarea_${i}`];
+          if (tarea && tarea.nombre) {
+            const subtareas = [];
+            
+            for (let j = 1; j <= 8; j++) {
+              const subtarea = tarea[`subtarea_${j}`];
+              if (subtarea) {
+                subtareas.push({
+                  titulo: subtarea,
+                  completada: false
+                });
+              }
+            }
+            
+            importedTareas.push({
+              titulo: tarea.nombre,
+              descripcion: "",
+              completada: false,
+              subtareas: subtareas
+            });
+          }
+        }
+        
+        setTareas(importedTareas);
+      }
+    }
+  }, [maintenance, maintenanceTypes]);
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, data),

@@ -21,9 +21,10 @@ import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeManager";
 import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder";
 import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenance";
+import KanbanView from "../components/maintenance/KanbanView";
 
 export default function MaintenanceTrackingPage() {
-  const [currentTab, setCurrentTab] = useState('all');
+  const [currentTab, setCurrentTab] = useState('kanban'); // Changed initial tab to 'kanban'
   const [showForm, setShowForm] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState(null);
   const [showTypeManager, setShowTypeManager] = useState(false);
@@ -299,7 +300,11 @@ export default function MaintenanceTrackingPage() {
         </div>
 
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6"> {/* Updated grid-cols to 6 */}
+            <TabsTrigger value="kanban">
+              <Settings className="w-4 h-4 mr-2" /> {/* Reused Settings icon as per outline */}
+              Kanban
+            </TabsTrigger>
             <TabsTrigger value="all">Todos</TabsTrigger>
             <TabsTrigger value="upcoming">Próximos</TabsTrigger>
             <TabsTrigger value="alerts">Alertas</TabsTrigger>
@@ -309,6 +314,15 @@ export default function MaintenanceTrackingPage() {
               Predictivo
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="kanban">
+            <KanbanView
+              maintenances={maintenances}
+              machines={machines}
+              employees={employees}
+              onOpenWorkOrder={setShowWorkOrder}
+            />
+          </TabsContent>
 
           <TabsContent value="all">
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -397,6 +411,7 @@ export default function MaintenanceTrackingPage() {
           maintenance={showWorkOrder}
           machines={machines}
           employees={employees}
+          maintenanceTypes={maintenanceTypes} {/* Added maintenanceTypes prop */}
           onClose={() => setShowWorkOrder(null)}
         />
       )}
