@@ -33,6 +33,7 @@ import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import AttendanceManagement from './pages/AttendanceManagement';
 import SkillMatrix from './pages/SkillMatrix';
+import CommitteeManagement from './pages/CommitteeManagement';
 import Layout from './Layout.jsx';
 
 
@@ -72,6 +73,7 @@ export const PAGES = {
     "EmployeeOnboarding": EmployeeOnboarding,
     "AttendanceManagement": AttendanceManagement,
     "SkillMatrix": SkillMatrix,
+    "CommitteeManagement": CommitteeManagement,
 }
 
 export const pagesConfig = {
