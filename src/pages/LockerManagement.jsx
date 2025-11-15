@@ -82,7 +82,6 @@ export default function LockerManagementPage() {
     initialData: [],
   });
 
-  // Helper function to get an employee's locker assignment
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => la.employee_id === employeeId);
   };
@@ -102,18 +101,10 @@ export default function LockerManagementPage() {
 
   const normalizeString = (str) => {
     if (!str) return "";
-    // Normalizar y manejar caracteres especiales
     let normalized = str.toUpperCase();
-    
-    // Reemplazar ? por posibles caracteres españoles
     normalized = normalized.replace(/\?/g, '[ÑN]');
-    
-    // Normalizar tildes
     normalized = normalized.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
-    // Limpiar caracteres especiales excepto corchetes
     normalized = normalized.replace(/[^A-Z0-9\[\]]/g, "");
-    
     return normalized;
   };
 
@@ -123,12 +114,10 @@ export default function LockerManagementPage() {
     const norm1 = normalizeString(name1);
     const norm2 = normalizeString(name2);
     
-    // Coincidencia exacta
     if (norm1 === norm2) return true;
     
-    // Si hay corchetes (caracteres ? convertidos), hacer matching flexible
     if (norm1.includes('[') || norm2.includes('[')) {
-      const pattern1 = norm1.replace(/\[ÑN\]/g, '[ÑN]'); // Keep [ÑN] as is for regex pattern
+      const pattern1 = norm1.replace(/\[ÑN\]/g, '[ÑN]');
       const pattern2 = norm2.replace(/\[ÑN\]/g, '[ÑN]');
       
       const regex1 = new RegExp(`^${pattern1}$`);
@@ -168,12 +157,10 @@ export default function LockerManagementPage() {
 
         let employee = null;
         
-        // Buscar por código primero
         if (codigo) {
           employee = employees.find(e => e.codigo_empleado === codigo);
         }
         
-        // Si no se encuentra, buscar por nombre con manejo de caracteres especiales
         if (!employee && nombre) {
           employee = employees.find(e => matchNames(e.nombre, nombre));
         }
@@ -218,7 +205,7 @@ export default function LockerManagementPage() {
           numero_taquilla_actual: numeroTaquilla,
           numero_taquilla_nuevo: "",
           fecha_asignacion: now,
-          notificacion_enviada: false // New imports or changes should always trigger a new notification
+          notificacion_enviada: false
         };
 
         if (hasChange && existing) {
@@ -364,7 +351,6 @@ export default function LockerManagementPage() {
     setConfigFormData(configs);
   }, [lockerRoomConfigs]);
 
-
   const departments = useMemo(() => {
     const depts = new Set();
     employees.forEach(emp => {
@@ -393,7 +379,6 @@ export default function LockerManagementPage() {
       return matchesDept && matchesTeam && matchesSex && matchesSearch && matchesVestuario && matchesNumeroTaquilla;
     });
 
-    // Ordenar
     filtered.sort((a, b) => {
       let aVal = "";
       let bVal = "";
@@ -416,7 +401,6 @@ export default function LockerManagementPage() {
         bVal = b.departamento || "";
       }
 
-      // Handle numerical sort for taquilla
       if (sortConfig.field === "taquilla") {
         const numA = parseInt(aVal, 10);
         const numB = parseInt(bVal, 10);
@@ -427,7 +411,6 @@ export default function LockerManagementPage() {
         }
       }
 
-      // Default string sort
       if (sortConfig.direction === "asc") {
         return aVal.localeCompare(bVal);
       } else {
@@ -501,19 +484,34 @@ export default function LockerManagementPage() {
   };
 
   const stats = useMemo(() => {
-    const conTaquilla = lockerAssignments.filter(la => 
-      la.requiere_taquilla !== false && la.numero_taquilla_actual
-    ).length;
+    // Contar solo asignaciones válidas con taquilla asignada
+    const conTaquilla = lockerAssignments.filter(la => {
+      const tieneTaquilla = la.numero_taquilla_actual && 
+                           la.numero_taquilla_actual.toString().trim() !== "";
+      const requiere = la.requiere_taquilla !== false;
+      return tieneTaquilla && requiere;
+    }).length;
+
+    // Contar empleados sin taquilla (que no tienen asignación o no tienen número)
     const sinTaquilla = employees.filter(emp => {
       const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
-      return !assignment || !assignment.numero_taquilla_actual;
+      if (!assignment) return true; // Si no tiene asignación, está "sin taquilla"
+      if (assignment.requiere_taquilla === false) return false; // Si no requiere taquilla, no lo contamos como "sin taquilla"
+      return !assignment.numero_taquilla_actual || assignment.numero_taquilla_actual.toString().trim() === "";
     }).length;
-    const pendientesNotificacion = lockerAssignments.filter(la => 
-      !la.notificacion_enviada && la.numero_taquilla_actual
-    ).length;
-    const cambiosPendientes = Object.values(editingAssignments).filter(
-      ea => ea.numero_taquilla_nuevo && ea.numero_taquilla_nuevo !== ea.numero_taquilla_actual
-    ).length;
+
+    const pendientesNotificacion = lockerAssignments.filter(la => {
+      const tieneTaquilla = la.numero_taquilla_actual && 
+                           la.numero_taquilla_actual.toString().trim() !== "";
+      return !la.notificacion_enviada && tieneTaquilla;
+    }).length;
+
+    const cambiosPendientes = Object.values(editingAssignments).filter(ea => {
+      const tieneNuevaTaquilla = ea.numero_taquilla_nuevo && 
+                                ea.numero_taquilla_nuevo.toString().trim() !== "";
+      const esDiferente = ea.numero_taquilla_nuevo !== ea.numero_taquilla_actual;
+      return tieneNuevaTaquilla && esDiferente;
+    }).length;
     
     return { conTaquilla, sinTaquilla, pendientesNotificacion, cambiosPendientes };
   }, [lockerAssignments, employees, editingAssignments]);
@@ -529,15 +527,17 @@ export default function LockerManagementPage() {
       const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
       const totalInstaladas = config?.numero_taquillas_instaladas || 0;
       
-      // CORREGIDO: Contar solo asignaciones que tengan numero_taquilla_actual
-      const asignadas = lockerAssignments.filter(la => 
-        la.vestuario === vestuario && 
-        la.numero_taquilla_actual &&
-        la.numero_taquilla_actual.toString().trim() !== "" &&
-        la.requiere_taquilla !== false
-      ).length;
+      const assignmentsInVestuario = lockerAssignments.filter(la => {
+        const esEsteVestuario = la.vestuario === vestuario;
+        const tieneNumero = la.numero_taquilla_actual && 
+                           la.numero_taquilla_actual.toString().trim() !== "";
+        const requiere = la.requiere_taquilla !== false;
+        
+        return esEsteVestuario && tieneNumero && requiere;
+      });
       
-      const libres = totalInstaladas - asignadas;
+      const asignadas = assignmentsInVestuario.length;
+      const libres = Math.max(0, totalInstaladas - asignadas);
       
       return {
         vestuario,

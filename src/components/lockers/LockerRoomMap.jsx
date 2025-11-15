@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, User, Settings } from "lucide-react";
+import { CheckCircle2, XCircle, User, Settings, Mail } from "lucide-react";
 
 export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs }) {
   const [selectedVestuario, setSelectedVestuario] = useState("Vestuario Femenino Planta Alta");
@@ -30,11 +30,15 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
     const data = [];
     
     for (let i = 1; i <= vestuarioConfig; i++) {
-      const assignment = lockerAssignments.find(la => 
-        la.vestuario === selectedVestuario && 
-        la.numero_taquilla_actual === i.toString() &&
-        la.requiere_taquilla !== false
-      );
+      // Buscar asignación para esta taquilla específica
+      const assignment = lockerAssignments.find(la => {
+        const esEsteVestuario = la.vestuario === selectedVestuario;
+        const esEstaTaquilla = la.numero_taquilla_actual && 
+                              la.numero_taquilla_actual.toString() === i.toString();
+        const requiere = la.requiere_taquilla !== false;
+        
+        return esEsteVestuario && esEstaTaquilla && requiere;
+      });
       
       const employee = assignment ? employees.find(e => e.id === assignment.employee_id) : null;
       
@@ -151,14 +155,14 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
             />
           </div>
 
-          <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-16 xl:grid-cols-20 gap-2">
+          <div className="grid grid-cols-6 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-3">
             {lockerData.map((locker) => (
               <button
                 key={locker.numero}
                 onClick={() => handleLockerClick(locker)}
                 className={`
-                  aspect-square rounded-lg border-2 flex items-center justify-center
-                  text-xs font-bold transition-all duration-200 hover:scale-110
+                  relative rounded-lg border-2 p-3 flex flex-col items-center justify-center
+                  text-xs font-bold transition-all duration-200 hover:scale-105 hover:shadow-lg
                   ${locker.ocupada 
                     ? 'bg-green-500 border-green-600 text-white hover:bg-green-600' 
                     : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300'
@@ -166,7 +170,12 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
                 `}
                 title={locker.ocupada ? `${locker.employee?.nombre}` : `Taquilla ${locker.numero} - Libre`}
               >
-                {locker.numero}
+                <div className="text-base font-bold mb-1">{locker.numero}</div>
+                {locker.ocupada && locker.employee && (
+                  <div className="text-[9px] leading-tight text-center line-clamp-2 font-normal">
+                    {locker.employee.nombre.split(' ').slice(0, 2).join(' ')}
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -178,7 +187,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
-                Taquilla #{selectedLocker.numero}
+                Taquilla #{selectedLocker.numero} - {selectedVestuario}
               </DialogTitle>
             </DialogHeader>
             
@@ -199,10 +208,21 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
                           {selectedLocker.employee.departamento}
                         </p>
                       )}
-                      {selectedLocker.employee?.codigo_empleado && (
-                        <p className="text-xs text-slate-500 font-mono">
-                          {selectedLocker.employee.codigo_empleado}
+                      {selectedLocker.employee?.puesto && (
+                        <p className="text-sm text-slate-600">
+                          {selectedLocker.employee.puesto}
                         </p>
+                      )}
+                      {selectedLocker.employee?.codigo_empleado && (
+                        <p className="text-xs text-slate-500 font-mono mt-2">
+                          Código: {selectedLocker.employee.codigo_empleado}
+                        </p>
+                      )}
+                      {selectedLocker.employee?.email && (
+                        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 mt-2">
+                          <Mail className="w-3 h-3" />
+                          {selectedLocker.employee.email}
+                        </div>
                       )}
                     </div>
                   </>
