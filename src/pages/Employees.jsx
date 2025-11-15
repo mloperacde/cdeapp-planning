@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, UserCog, Building2 } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, Building2 } from "lucide-react";
 import EmployeeForm from "../components/employees/EmployeeForm";
 import BirthdayPanel from "../components/employees/BirthdayPanel";
 import AnniversaryPanel from "../components/employees/AnniversaryPanel";
@@ -208,13 +208,6 @@ export default function EmployeesPage() {
       icon: UsersRound,
       url: createPageUrl("TeamConfiguration"),
       color: "purple"
-    },
-    {
-      title: "Asignaciones Operarios Máquinas",
-      description: "Asigna operarios a máquinas por equipo",
-      icon: UserCog,
-      url: createPageUrl("MachineAssignments"),
-      color: "blue"
     }
   ];
 
@@ -310,7 +303,7 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {subPages.map((page) => {
             const Icon = page.icon;
             return (
