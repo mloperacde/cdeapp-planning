@@ -60,6 +60,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     turno_partido_salida2: "",
     fecha_alta: "",
     tipo_contrato: "",
+    empresa_ett: "", // Added ETT field
     codigo_contrato: "",
     fecha_fin_contrato: "",
     salario_anual: 0,
@@ -202,6 +203,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
   const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
   const isMaintenanceDepartment = formData.departamento === "MANTENIMIENTO";
+  const isETT = formData.tipo_contrato?.toUpperCase().includes("ETT");
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -873,6 +875,18 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     onChange={(e) => setFormData({ ...formData, tipo_contrato: e.target.value })}
                   />
                 </div>
+
+                {isETT && (
+                  <div className="space-y-2">
+                    <Label htmlFor="empresa_ett">Empresa ETT</Label>
+                    <Input
+                      id="empresa_ett"
+                      value={formData.empresa_ett || ""}
+                      onChange={(e) => setFormData({ ...formData, empresa_ett: e.target.value })}
+                      placeholder="Nombre de la empresa de trabajo temporal"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="codigo_contrato">Código de Contrato</Label>

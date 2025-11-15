@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +33,8 @@ export default function ETTTemporaryEmployeesPage() {
     searchTerm: "",
     tipoContrato: "all",
     departamento: "all",
-    alertaDias: "all"
+    alertaDias: "all",
+    empresaETT: "all"
   });
 
   const { data: employees } = useQuery({
@@ -115,6 +117,14 @@ export default function ETTTemporaryEmployeesPage() {
     };
   }, [ettAndTemporaryEmployees]);
 
+  const empresasETT = useMemo(() => {
+    const empresas = new Set();
+    ettAndTemporaryEmployees.forEach(emp => {
+      if (emp.empresa_ett) empresas.add(emp.empresa_ett);
+    });
+    return Array.from(empresas).sort();
+  }, [ettAndTemporaryEmployees]);
+
   // Departamentos únicos
   const departments = useMemo(() => {
     const depts = new Set();
@@ -136,13 +146,15 @@ export default function ETTTemporaryEmployeesPage() {
       
       const matchesDept = filters.departamento === "all" || emp.departamento === filters.departamento;
       
+      const matchesEmpresaETT = filters.empresaETT === "all" || emp.empresa_ett === filters.empresaETT;
+      
       const matchesAlerta = filters.alertaDias === "all" ||
         (filters.alertaDias === "vencido" && emp.vencido) ||
         (filters.alertaDias === "7" && !emp.vencido && emp.diasRestantes !== null && emp.diasRestantes <= 7) ||
         (filters.alertaDias === "30" && !emp.vencido && emp.diasRestantes !== null && emp.diasRestantes > 7 && emp.diasRestantes <= 30) ||
         (filters.alertaDias === "sinFecha" && !emp.fecha_fin_contrato);
       
-      return matchesSearch && matchesTipo && matchesDept && matchesAlerta;
+      return matchesSearch && matchesTipo && matchesDept && matchesAlerta && matchesEmpresaETT;
     });
   }, [ettAndTemporaryEmployees, filters]);
 
@@ -164,16 +176,17 @@ export default function ETTTemporaryEmployeesPage() {
 
   const handleExportCSV = () => {
     const csv = [
-      "Empleado,Tipo Contrato,Departamento,Fecha Alta,Fecha Fin Contrato,Días Restantes,Estado",
+      "Empleado,Tipo Contrato,Empresa ETT,Departamento,Fecha Alta,Fecha Fin Contrato,Días Restantes,Estado",
       ...filteredEmployees.map(emp => [
         emp.nombre,
         emp.tipo_contrato || "",
+        emp.empresa_ett || "", // Added Empresa ETT to export
         emp.departamento || "",
         emp.fecha_alta ? format(new Date(emp.fecha_alta), "dd/MM/yyyy") : "",
         emp.fecha_fin_contrato ? format(new Date(emp.fecha_fin_contrato), "dd/MM/yyyy") : "",
         emp.diasRestantes !== null ? emp.diasRestantes : "Sin fecha",
         emp.vencido ? "Vencido" : emp.estadoAlerta === "critico" ? "Crítico" : emp.estadoAlerta === "proximo" ? "Próximo" : "OK"
-      ].join(','))
+      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')) // Ensure fields are quoted and escaped
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -267,7 +280,7 @@ export default function ETTTemporaryEmployeesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="space-y-2">
                 <Label>Buscar por Nombre</Label>
                 <Input
@@ -290,6 +303,25 @@ export default function ETTTemporaryEmployeesPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {filters.tipoContrato !== "TEMPORAL" && (
+                <div className="space-y-2">
+                  <Label>Empresa ETT</Label>
+                  <Select value={filters.empresaETT} onValueChange={(value) => setFilters({...filters, empresaETT: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {empresasETT.map((empresa) => (
+                        <SelectItem key={empresa} value={empresa}>
+                          {empresa}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Departamento</Label>
@@ -341,6 +373,7 @@ export default function ETTTemporaryEmployeesPage() {
                   <TableRow className="bg-slate-50">
                     <TableHead>Empleado</TableHead>
                     <TableHead>Tipo Contrato</TableHead>
+                    <TableHead>Empresa ETT</TableHead> {/* New column */}
                     <TableHead>Departamento</TableHead>
                     <TableHead>Fecha Alta</TableHead>
                     <TableHead>Fecha Fin Contrato</TableHead>
@@ -352,7 +385,7 @@ export default function ETTTemporaryEmployeesPage() {
                 <TableBody>
                   {filteredEmployees.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                      <TableCell colSpan={9} className="text-center py-12 text-slate-500"> {/* Colspan updated */}
                         <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-slate-300" />
                         No hay empleados con los filtros seleccionados
                       </TableCell>
@@ -380,6 +413,9 @@ export default function ETTTemporaryEmployeesPage() {
                           }>
                             {employee.tipo_contrato || "No especificado"}
                           </Badge>
+                        </TableCell>
+                        <TableCell> {/* New Cell */}
+                          <div className="text-sm text-slate-700">{employee.empresa_ett || "-"}</div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm text-slate-700">{employee.departamento || "-"}</div>

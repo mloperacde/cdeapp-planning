@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ export default function EmployeesPage() {
     departamento: "all",
     puesto: "all",
     tipo_contrato: "all",
+    empresa_ett: "all", // Added new filter state
   });
   const queryClient = useQueryClient();
 
@@ -114,6 +116,15 @@ export default function EmployeesPage() {
     return Array.from(tipos).sort();
   }, [employees]);
 
+  // New useMemo for empresas ETT
+  const empresasETT = useMemo(() => {
+    const empresas = new Set();
+    employees.forEach(emp => {
+      if (emp.empresa_ett) empresas.add(emp.empresa_ett);
+    });
+    return Array.from(empresas).sort();
+  }, [employees]);
+
   const hasActiveAbsenceToday = (employeeId) => {
     const now = new Date();
     now.setHours(0, 0, 0, 0); 
@@ -158,8 +169,10 @@ export default function EmployeesPage() {
       const matchesDepartamento = filters.departamento === "all" || emp.departamento === filters.departamento;
       const matchesPuesto = filters.puesto === "all" || emp.puesto === filters.puesto;
       const matchesTipoContrato = filters.tipo_contrato === "all" || emp.tipo_contrato === filters.tipo_contrato;
+      // Added new filter condition
+      const matchesEmpresaETT = filters.empresa_ett === "all" || emp.empresa_ett === filters.empresa_ett;
       
-      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto && matchesTipoContrato;
+      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto && matchesTipoContrato && matchesEmpresaETT;
     });
   }, [employees, searchTerm, filters]);
 
@@ -376,7 +389,14 @@ export default function EmployeesPage() {
 
               <div className="space-y-2">
                 <Label>Tipo Contrato</Label>
-                <Select value={filters.tipo_contrato} onValueChange={(value) => setFilters({...filters, tipo_contrato: value})}>
+                <Select value={filters.tipo_contrato} onValueChange={(value) => {
+                  const newFilters = { ...filters, tipo_contrato: value };
+                  // If "Tipo Contrato" is not "ETT" related or "all", reset "Empresa ETT"
+                  if (value === "all" || !value?.toUpperCase().includes('ETT')) {
+                    newFilters.empresa_ett = "all";
+                  }
+                  setFilters(newFilters);
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -390,6 +410,26 @@ export default function EmployeesPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Conditionally render "Empresa ETT" filter */}
+              {filters.tipo_contrato !== "all" && filters.tipo_contrato?.toUpperCase().includes('ETT') && (
+                <div className="space-y-2">
+                  <Label>Empresa ETT</Label>
+                  <Select value={filters.empresa_ett || "all"} onValueChange={(value) => setFilters({...filters, empresa_ett: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {empresasETT.map((empresa) => (
+                        <SelectItem key={empresa} value={empresa}>
+                          {empresa}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Tipo Jornada</Label>
