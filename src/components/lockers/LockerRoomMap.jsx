@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, User, Settings, Mail } from "lucide-react";
+import { CheckCircle2, XCircle, User, Settings, Mail, Briefcase } from "lucide-react";
 
 export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs }) {
   const [selectedVestuario, setSelectedVestuario] = useState("Vestuario Femenino Planta Alta");
@@ -30,7 +30,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
     const data = [];
     
     for (let i = 1; i <= vestuarioConfig; i++) {
-      // Buscar asignación para esta taquilla específica
+      // Buscar asignación para esta taquilla específica en este vestuario
       const assignment = lockerAssignments.find(la => {
         const esEsteVestuario = la.vestuario === selectedVestuario;
         const esEstaTaquilla = la.numero_taquilla_actual && 
@@ -55,7 +55,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
 
   const stats = useMemo(() => {
     const ocupadas = lockerData.filter(l => l.ocupada).length;
-    const libres = lockerData.filter(l => !l.ocupada).length;
+    const libres = vestuarioConfig - ocupadas;
     const porcentaje = vestuarioConfig > 0 ? Math.round((ocupadas / vestuarioConfig) * 100) : 0;
     
     return { ocupadas, libres, porcentaje };
@@ -75,9 +75,9 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Vestuario Femenino Planta Baja">Vestuario Femenino Planta Baja</SelectItem>
-              <SelectItem value="Vestuario Femenino Planta Alta">Vestuario Femenino Planta Alta</SelectItem>
-              <SelectItem value="Vestuario Masculino Planta Baja">Vestuario Masculino Planta Baja</SelectItem>
+              <SelectItem value="Vestuario Femenino Planta Baja">Vestuario Femenino Planta Baja (56 taquillas)</SelectItem>
+              <SelectItem value="Vestuario Femenino Planta Alta">Vestuario Femenino Planta Alta (163 taquillas)</SelectItem>
+              <SelectItem value="Vestuario Masculino Planta Baja">Vestuario Masculino Planta Baja (28 taquillas)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -155,25 +155,30 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
             />
           </div>
 
-          <div className="grid grid-cols-6 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-3">
+          <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
             {lockerData.map((locker) => (
               <button
                 key={locker.numero}
                 onClick={() => handleLockerClick(locker)}
                 className={`
-                  relative rounded-lg border-2 p-3 flex flex-col items-center justify-center
-                  text-xs font-bold transition-all duration-200 hover:scale-105 hover:shadow-lg
+                  relative rounded-lg border-2 p-2 flex flex-col items-center justify-center
+                  min-h-[70px] text-xs font-bold transition-all duration-200 hover:scale-105 hover:shadow-lg
                   ${locker.ocupada 
                     ? 'bg-green-500 border-green-600 text-white hover:bg-green-600' 
                     : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300'
                   }
                 `}
-                title={locker.ocupada ? `${locker.employee?.nombre}` : `Taquilla ${locker.numero} - Libre`}
+                title={locker.ocupada ? `Taquilla ${locker.numero} - ${locker.employee?.nombre}` : `Taquilla ${locker.numero} - Libre`}
               >
-                <div className="text-base font-bold mb-1">{locker.numero}</div>
+                <div className="text-lg font-bold mb-1">#{locker.numero}</div>
                 {locker.ocupada && locker.employee && (
-                  <div className="text-[9px] leading-tight text-center line-clamp-2 font-normal">
+                  <div className="text-[8px] leading-tight text-center line-clamp-2 font-normal px-1">
                     {locker.employee.nombre.split(' ').slice(0, 2).join(' ')}
+                  </div>
+                )}
+                {!locker.ocupada && (
+                  <div className="text-[8px] text-slate-500">
+                    Libre
                   </div>
                 )}
               </button>
@@ -195,18 +200,19 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
               <div className="text-center p-8">
                 {selectedLocker.ocupada ? (
                   <>
-                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                      <User className="w-8 h-8 text-green-600" />
+                    <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                      <User className="w-10 h-10 text-green-600" />
                     </div>
-                    <Badge className="bg-green-600 text-white mb-4">Ocupada</Badge>
-                    <div className="space-y-2">
-                      <p className="font-bold text-lg text-slate-900">
+                    <Badge className="bg-green-600 text-white mb-4 text-base px-4 py-1">Ocupada</Badge>
+                    <div className="space-y-3 bg-slate-50 rounded-lg p-4">
+                      <p className="font-bold text-xl text-slate-900">
                         {selectedLocker.employee?.nombre}
                       </p>
                       {selectedLocker.employee?.departamento && (
-                        <p className="text-sm text-slate-600">
+                        <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
+                          <Briefcase className="w-4 h-4" />
                           {selectedLocker.employee.departamento}
-                        </p>
+                        </div>
                       )}
                       {selectedLocker.employee?.puesto && (
                         <p className="text-sm text-slate-600">
@@ -214,12 +220,12 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
                         </p>
                       )}
                       {selectedLocker.employee?.codigo_empleado && (
-                        <p className="text-xs text-slate-500 font-mono mt-2">
+                        <p className="text-xs text-slate-500 font-mono mt-2 bg-white px-3 py-1 rounded">
                           Código: {selectedLocker.employee.codigo_empleado}
                         </p>
                       )}
                       {selectedLocker.employee?.email && (
-                        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 mt-2">
+                        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 mt-2 bg-white px-3 py-1 rounded">
                           <Mail className="w-3 h-3" />
                           {selectedLocker.employee.email}
                         </div>
@@ -228,11 +234,11 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
                   </>
                 ) : (
                   <>
-                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                      <XCircle className="w-8 h-8 text-slate-400" />
+                    <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                      <XCircle className="w-10 h-10 text-slate-400" />
                     </div>
-                    <Badge variant="outline" className="mb-4">Disponible</Badge>
-                    <p className="text-slate-600">
+                    <Badge variant="outline" className="mb-4 text-base px-4 py-1">Disponible</Badge>
+                    <p className="text-slate-600 text-sm">
                       Esta taquilla está disponible para asignación
                     </p>
                   </>
