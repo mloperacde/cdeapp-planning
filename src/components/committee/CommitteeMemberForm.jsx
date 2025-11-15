@@ -26,21 +26,30 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
   const queryClient = useQueryClient();
 
   const saveMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       if (member?.id) {
-        return base44.entities.CommitteeMember.update(member.id, data);
+        return await base44.entities.CommitteeMember.update(member.id, data);
       }
-      return base44.entities.CommitteeMember.create(data);
+      return await base44.entities.CommitteeMember.create(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['committeeMembers'] });
-      toast.success(member ? "Miembro actualizado" : "Miembro añadido");
+      toast.success(member ? "Miembro actualizado correctamente" : "Miembro añadido correctamente");
       onClose();
     },
+    onError: (error) => {
+      toast.error("Error al guardar: " + error.message);
+    }
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!formData.employee_id || !formData.tipo_comite || !formData.fecha_inicio) {
+      toast.error("Por favor, completa todos los campos requeridos");
+      return;
+    }
+    
     saveMutation.mutate(formData);
   };
 
@@ -58,7 +67,6 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
               <Select
                 value={formData.employee_id}
                 onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar empleado" />
@@ -78,7 +86,6 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
               <Select
                 value={formData.tipo_comite}
                 onValueChange={(value) => setFormData({ ...formData, tipo_comite: value })}
-                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar tipo" />
@@ -96,7 +103,7 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
             <div className="space-y-2">
               <Label>Cargo</Label>
               <Input
-                value={formData.cargo}
+                value={formData.cargo || ""}
                 onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                 placeholder="Presidente, Secretario, Vocal..."
               />
@@ -106,9 +113,8 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
               <Label>Fecha de Inicio *</Label>
               <Input
                 type="date"
-                value={formData.fecha_inicio}
+                value={formData.fecha_inicio || ""}
                 onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
-                required
               />
             </div>
 
@@ -116,7 +122,7 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
               <Label>Fecha de Fin</Label>
               <Input
                 type="date"
-                value={formData.fecha_fin}
+                value={formData.fecha_fin || ""}
                 onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
               />
             </div>
@@ -125,15 +131,15 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
               <Label>Horas Sindicales Mensuales</Label>
               <Input
                 type="number"
-                value={formData.horas_sindicales_mensuales}
-                onChange={(e) => setFormData({ ...formData, horas_sindicales_mensuales: parseFloat(e.target.value) })}
+                value={formData.horas_sindicales_mensuales || 0}
+                onChange={(e) => setFormData({ ...formData, horas_sindicales_mensuales: parseFloat(e.target.value) || 0 })}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Teléfono de Contacto</Label>
               <Input
-                value={formData.contacto_emergencia_comite}
+                value={formData.contacto_emergencia_comite || ""}
                 onChange={(e) => setFormData({ ...formData, contacto_emergencia_comite: e.target.value })}
                 placeholder="Teléfono para funciones del comité"
               />
@@ -143,7 +149,7 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
           <div className="space-y-2">
             <Label>Funciones y Responsabilidades</Label>
             <Textarea
-              value={formData.funciones}
+              value={formData.funciones || ""}
               onChange={(e) => setFormData({ ...formData, funciones: e.target.value })}
               rows={3}
             />
@@ -152,7 +158,7 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
           <div className="space-y-2">
             <Label>Notas</Label>
             <Textarea
-              value={formData.notas}
+              value={formData.notas || ""}
               onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
               rows={2}
             />
