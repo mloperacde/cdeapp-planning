@@ -72,10 +72,19 @@ export default function PRLDocumentManager() {
     today.setHours(0, 0, 0, 0); // Normalize today to start of day for accurate differenceInDays comparison
     return documents.filter(doc => {
       if (!doc.fecha_caducidad || doc.estado === "Caducado" || doc.estado === "Archivado") return false;
-      const fechaCaducidad = new Date(doc.fecha_caducidad);
-      fechaCaducidad.setHours(0, 0, 0, 0); // Normalize expiration date as well
-      const diasRestantes = differenceInDays(fechaCaducidad, today);
-      return diasRestantes >= 0 && diasRestantes <= (doc.recordatorio_dias_antes || 30);
+      
+      try {
+        const fechaCaducidad = new Date(doc.fecha_caducidad);
+        if (isNaN(fechaCaducidad.getTime())) return false;
+        
+        fechaCaducidad.setHours(0, 0, 0, 0); // Normalize expiration date as well
+        const diasRestantes = differenceInDays(fechaCaducidad, today);
+        return diasRestantes >= 0 && diasRestantes <= (doc.recordatorio_dias_antes || 30);
+      } catch (error) {
+        // Log the error if needed, but return false to exclude the document
+        console.error("Error parsing date for document:", doc.id, doc.fecha_caducidad, error);
+        return false;
+      }
     }).sort((a, b) => new Date(a.fecha_caducidad) - new Date(b.fecha_caducidad));
   }, [documents]);
 

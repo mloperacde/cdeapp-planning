@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -35,23 +36,34 @@ export default function EmergencyTrainingManager({ employees = [] }) {
       (member.formacion_recibida || []).forEach(formacion => {
         if (!formacion.fecha_caducidad) return;
 
-        const fechaCaducidad = new Date(formacion.fecha_caducidad);
-        const diasRestantes = differenceInDays(fechaCaducidad, today);
+        try {
+          const fechaCaducidad = new Date(formacion.fecha_caducidad);
+          // Check if the date is valid after parsing
+          if (isNaN(fechaCaducidad.getTime())) {
+            console.warn(`Invalid date string encountered: ${formacion.fecha_caducidad}`);
+            return; // Skip invalid dates
+          }
+          
+          const diasRestantes = differenceInDays(fechaCaducidad, today);
 
-        if (isBefore(fechaCaducidad, today)) {
-          caducadas.push({
-            member,
-            employee,
-            formacion,
-            diasRestantes: Math.abs(diasRestantes)
-          });
-        } else if (diasRestantes <= 60) {
-          proximasCaducar.push({
-            member,
-            employee,
-            formacion,
-            diasRestantes
-          });
+          if (isBefore(fechaCaducidad, today)) {
+            caducadas.push({
+              member,
+              employee,
+              formacion,
+              diasRestantes: Math.abs(diasRestantes)
+            });
+          } else if (diasRestantes <= 60) {
+            proximasCaducar.push({
+              member,
+              employee,
+              formacion,
+              diasRestantes
+            });
+          }
+        } catch (error) {
+          console.error("Error processing training date:", error, "for date string:", formacion.fecha_caducidad);
+          // Skip invalid dates
         }
       });
     });

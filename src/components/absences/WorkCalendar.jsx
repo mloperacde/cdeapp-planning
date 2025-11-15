@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -31,14 +32,24 @@ export default function WorkCalendar() {
     const dateStr = format(date, 'yyyy-MM-dd');
     
     const isHoliday = holidays.some(h => {
-      const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
-      return hDate === dateStr;
+      if (!h.fecha) return false; // Added null/undefined check
+      try {
+        const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
+        return hDate === dateStr;
+      } catch {
+        return false; // Handle invalid date format
+      }
     });
 
     const isVacation = vacations.some(v => {
-      const vStart = new Date(v.fecha_inicio);
-      const vEnd = new Date(v.fecha_fin);
-      return date >= vStart && date <= vEnd;
+      if (!v.fecha_inicio || !v.fecha_fin) return false; // Added null/undefined checks
+      try {
+        const vStart = new Date(v.fecha_inicio);
+        const vEnd = new Date(v.fecha_fin);
+        return date >= vStart && date <= vEnd;
+      } catch {
+        return false; // Handle invalid date format
+      }
     });
 
     const dayOfWeek = getDay(date);
@@ -50,8 +61,13 @@ export default function WorkCalendar() {
   const getHolidayName = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const holiday = holidays.find(h => {
-      const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
-      return hDate === dateStr;
+      if (!h.fecha) return false; // Added null/undefined check
+      try {
+        const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
+        return hDate === dateStr;
+      } catch {
+        return false; // Handle invalid date format
+      }
     });
     return holiday?.nombre;
   };

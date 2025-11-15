@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -21,17 +22,36 @@ export default function LongAbsenceAlert({ employees, absences }) {
     const today = new Date();
     
     return absences.filter(abs => {
-      const start = new Date(abs.fecha_inicio);
-      const end = abs.fecha_fin_desconocida ? today : new Date(abs.fecha_fin);
-      const days = differenceInDays(today, start);
+      if (!abs.fecha_inicio) return false;
       
-      const isActive = today >= start && today <= end;
-      return isActive && days > 30;
+      try {
+        const start = new Date(abs.fecha_inicio);
+        if (isNaN(start.getTime())) return false;
+        
+        const end = abs.fecha_fin_desconocida ? today : (abs.fecha_fin ? new Date(abs.fecha_fin) : today);
+        if (isNaN(end.getTime())) return false;
+        
+        const days = differenceInDays(today, start);
+        
+        const isActive = today >= start && today <= end;
+        return isActive && days > 30;
+      } catch {
+        return false;
+      }
     }).map(abs => {
       const employee = employees.find(e => e.id === abs.employee_id);
       const locker = lockerAssignments.find(la => la.employee_id === abs.employee_id);
       const hasLocker = locker?.numero_taquilla_actual?.replace(/['"]/g, '').trim();
-      const days = differenceInDays(new Date(), new Date(abs.fecha_inicio));
+      
+      let days = 0;
+      try {
+        const startDate = new Date(abs.fecha_inicio);
+        if (!isNaN(startDate.getTime())) {
+          days = differenceInDays(new Date(), startDate);
+        }
+      } catch {
+        days = 0;
+      }
       
       return {
         absence: abs,
