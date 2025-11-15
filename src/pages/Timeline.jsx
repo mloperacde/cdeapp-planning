@@ -7,9 +7,9 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
-import MachineRequirements from "../components/timeline/MachineRequirements";
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { Sparkles } from "lucide-react";
+import WorkCalendar from "../components/absences/WorkCalendar";
 
 export default function Timeline() {
   const now = new Date();
@@ -89,27 +89,7 @@ export default function Timeline() {
     return Array.from(depts).sort();
   }, [employees]);
 
-  const handleCallSchedulingAssistant = async () => {
-    setIsCalling(true);
-    try {
-      // Aquí llamaríamos al agente scheduling_assistant
-      // Por ahora solo mostramos un mensaje
-      alert('Llamando al asistente de programación inteligente...\n\nEl asistente analizará:\n- Disponibilidad de máquinas\n- Habilidades de operadores\n- Mantenimientos planificados\n- Preferencias de empleados\n- Minimización de horas extra');
-      
-      // Simulamos la llamada al agente
-      // await base44.agents.schedulingAssistant.generate({ 
-      //   startDate, 
-      //   endDate, 
-      //   team: selectedTeam 
-      // });
-      
-    } catch (error) {
-      console.error('Error al llamar al agente:', error);
-      alert('Error al ejecutar el asistente de programación');
-    } finally {
-      setIsCalling(false);
-    }
-  };
+  // Removed handleCallSchedulingAssistant as per instructions
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
@@ -120,25 +100,12 @@ export default function Timeline() {
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex-1">
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                Planning / Línea de Tiempo
-              </h1>
-              <p className="text-slate-600 text-lg mt-2">
-                Visualiza la disponibilidad de empleados y requisitos de máquinas
-              </p>
-            </div>
-            <Button
-              onClick={handleCallSchedulingAssistant}
-              disabled={isCalling}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg"
-              size="lg"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              {isCalling ? "Generando..." : "Asistente de Programación IA"}
-            </Button>
-          </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            Planning / Línea de Tiempo
+          </h1>
+          <p className="text-slate-600 text-lg mt-2">
+            Visualiza la disponibilidad de empleados
+          </p>
         </motion.div>
 
         <motion.div
@@ -183,7 +150,7 @@ export default function Timeline() {
             />
           </Card>
 
-          <MachineRequirements />
+          <WorkCalendar holidays={holidays} vacations={vacations} />
         </motion.div>
       </div>
     </div>

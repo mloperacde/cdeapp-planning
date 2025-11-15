@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Factory, Wrench, Package, ClipboardCheck, Eye } from "lucide-react";
+import { Calendar, Factory, Wrench, Package, ClipboardCheck, Eye, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
@@ -22,6 +22,7 @@ export default function DailyPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTeam, setSelectedTeam] = useState('team_1');
   const [activeTab, setActiveTab] = useState('production');
+  const [isCalling, setIsCalling] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: teams } = useQuery({
@@ -62,17 +63,39 @@ export default function DailyPlanningPage() {
     return team?.team_name || teamKey;
   };
 
+  const handleCallSchedulingAssistant = async () => {
+    setIsCalling(true);
+    try {
+      alert('Llamando al asistente de programación inteligente...\n\nEl asistente analizará:\n- Disponibilidad de máquinas\n- Habilidades de operadores\n- Mantenimientos planificados\n- Preferencias de empleados\n- Minimización de horas extra');
+    } catch (error) {
+      console.error('Error al llamar al agente:', error);
+      alert('Error al ejecutar el asistente de programación');
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Calendar className="w-8 h-8 text-blue-600" />
-            Planning Diario
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Planificación diaria de producción, mantenimiento, almacén y calidad
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <Calendar className="w-8 h-8 text-blue-600" />
+              Planning Diario
+            </h1>
+            <p className="text-slate-600 mt-1">
+              Planificación diaria de producción, mantenimiento, almacén y calidad
+            </p>
+          </div>
+          <Button
+            onClick={handleCallSchedulingAssistant}
+            disabled={isCalling}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+          >
+            <Sparkles className="w-5 h-5 mr-2" />
+            {isCalling ? "Generando..." : "Asistente Programación IA"}
+          </Button>
         </div>
 
         {/* Filtros Globales */}

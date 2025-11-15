@@ -40,7 +40,6 @@ import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
 import PaidLeaveBalance from "../components/absences/PaidLeaveBalance";
 import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
-import WorkCalendar from "../components/absences/WorkCalendar";
 import { debounce } from "lodash";
 
 // Sugerencias de motivos frecuentes por tipo
@@ -400,7 +399,7 @@ export default function AbsenceManagementPage() {
         </div>
 
         <Tabs defaultValue="absences" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="absences">
               <UserX className="w-4 h-4 mr-2" />
               Registro
@@ -412,10 +411,6 @@ export default function AbsenceManagementPage() {
             <TabsTrigger value="balance">
               <UserX className="w-4 h-4 mr-2" />
               Balance Permisos
-            </TabsTrigger>
-            <TabsTrigger value="calendar">
-              <UserX className="w-4 h-4 mr-2" />
-              Calendario Laboral
             </TabsTrigger>
           </TabsList>
 
@@ -649,10 +644,6 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="balance">
             <PaidLeaveBalance employees={employees} />
-          </TabsContent>
-
-          <TabsContent value="calendar">
-            <WorkCalendar />
           </TabsContent>
         </Tabs>
       </div>
