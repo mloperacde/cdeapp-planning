@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown } from "lucide-react";
+import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -36,6 +36,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import LockerRoomMap from "../components/lockers/LockerRoomMap";
 
 export default function LockerManagementPage() {
   const [filters, setFilters] = useState({
@@ -455,6 +456,17 @@ export default function LockerManagementPage() {
     setHasChanges(true);
   };
 
+  const handleClearNewLocker = (employeeId) => {
+    setEditingAssignments(prev => ({
+      ...prev,
+      [employeeId]: {
+        ...(prev[employeeId] || {}),
+        numero_taquilla_nuevo: ""
+      }
+    }));
+    setHasChanges(true);
+  };
+
   const handleSendNotification = (employeeId) => {
     const editData = editingAssignments[employeeId];
     if (editData) {
@@ -499,9 +511,12 @@ export default function LockerManagementPage() {
     const pendientesNotificacion = lockerAssignments.filter(la => 
       !la.notificacion_enviada && la.numero_taquilla_actual
     ).length;
+    const cambiosPendientes = Object.values(editingAssignments).filter(
+      ea => ea.numero_taquilla_nuevo && ea.numero_taquilla_nuevo !== ea.numero_taquilla_actual
+    ).length;
     
-    return { conTaquilla, sinTaquilla, pendientesNotificacion };
-  }, [lockerAssignments, employees]);
+    return { conTaquilla, sinTaquilla, pendientesNotificacion, cambiosPendientes };
+  }, [lockerAssignments, employees, editingAssignments]);
 
   const lockerRoomStats = useMemo(() => {
     const vestuarios = [
@@ -581,9 +596,16 @@ export default function LockerManagementPage() {
           <Card className="mb-6 bg-amber-50 border-2 border-amber-300">
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
-                <p className="text-sm text-amber-800">
-                  <strong>⚠️ Hay cambios sin guardar.</strong> Recuerda hacer clic en "Guardar Cambios" para aplicar las modificaciones.
-                </p>
+                <div>
+                  <p className="text-sm text-amber-800">
+                    <strong>⚠️ Hay cambios sin guardar.</strong> Recuerda hacer clic en "Guardar Cambios" para aplicar las modificaciones.
+                  </p>
+                  {stats.cambiosPendientes > 0 && (
+                    <p className="text-xs text-amber-700 mt-1">
+                      {stats.cambiosPendientes} reasignación(es) pendiente(s) • Se notificará automáticamente
+                    </p>
+                  )}
+                </div>
                 <Button
                   onClick={handleSaveAll}
                   disabled={saveAllMutation.isPending}
@@ -598,10 +620,14 @@ export default function LockerManagementPage() {
         )}
 
         <Tabs defaultValue="estadisticas" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="estadisticas">
               <BarChart3 className="w-4 h-4 mr-2" />
               Estadísticas
+            </TabsTrigger>
+            <TabsTrigger value="mapa">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Mapa Vestuarios
             </TabsTrigger>
             <TabsTrigger value="importar">
               <Upload className="w-4 h-4 mr-2" />
@@ -717,6 +743,14 @@ export default function LockerManagementPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="mapa">
+            <LockerRoomMap 
+              lockerAssignments={lockerAssignments}
+              employees={employees}
+              lockerRoomConfigs={lockerRoomConfigs}
+            />
+          </TabsContent>
+
           <TabsContent value="importar">
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
@@ -743,7 +777,7 @@ export default function LockerManagementPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Seleccionar Archivo *</Label>
+                    <Label htmlFor="locker-import">Seleccionar Archivo *</Label>
                     <input
                       type="file"
                       id="locker-import"
@@ -1049,13 +1083,23 @@ export default function LockerManagementPage() {
                                     <Input
                                       value={editData.numero_taquilla_nuevo}
                                       onChange={(e) => handleFieldChange(employee.id, 'numero_taquilla_nuevo', e.target.value)}
-                                      placeholder="Nº"
-                                      className="w-20 font-mono"
+                                      placeholder="Nº o vacío"
+                                      className="w-24 font-mono"
                                     />
                                     {hasNewLocker && (
-                                      <Badge className="bg-orange-100 text-orange-800">
-                                        Cambio
-                                      </Badge>
+                                      <div className="flex gap-1">
+                                        <Badge className="bg-orange-100 text-orange-800">
+                                          Cambio
+                                        </Badge>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleClearNewLocker(employee.id)}
+                                          title="Cancelar reasignación"
+                                        >
+                                          <XCircle className="w-4 h-4 text-slate-500" />
+                                        </Button>
+                                      </div>
                                     )}
                                   </div>
                                 )}
@@ -1068,6 +1112,7 @@ export default function LockerManagementPage() {
                                       onClick={() => handleSendNotification(employee.id)}
                                       disabled={sendNotificationMutation.isPending}
                                       className="bg-orange-600 hover:bg-orange-700"
+                                      title="Enviar notificación de asignación"
                                     >
                                       <Bell className="w-4 h-4" />
                                     </Button>
@@ -1077,6 +1122,7 @@ export default function LockerManagementPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleShowHistory(employee)}
+                                      title="Ver historial de cambios"
                                     >
                                       <History className="w-4 h-4" />
                                     </Button>
