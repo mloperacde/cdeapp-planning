@@ -6,13 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+
+const tiposComite = [
+  "Comité de Empresa",
+  "Delegado Personal",
+  "Comité Seguridad y Salud",
+  "Comité Prevención Acoso",
+  "Equipo de Emergencia"
+];
 
 export default function CommitteeMemberForm({ member, employees, onClose }) {
   const [formData, setFormData] = useState(member || {
     employee_id: "",
-    tipo_comite: "",
+    tipos_comite: [],
     cargo: "",
     fecha_inicio: "",
     fecha_fin: "",
@@ -45,12 +54,20 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.employee_id || !formData.tipo_comite || !formData.fecha_inicio) {
+    if (!formData.employee_id || !formData.tipos_comite || formData.tipos_comite.length === 0 || !formData.fecha_inicio) {
       toast.error("Por favor, completa todos los campos requeridos");
       return;
     }
     
     saveMutation.mutate(formData);
+  };
+
+  const toggleTipoComite = (tipo) => {
+    const current = formData.tipos_comite || [];
+    const updated = current.includes(tipo)
+      ? current.filter(t => t !== tipo)
+      : [...current, tipo];
+    setFormData({ ...formData, tipos_comite: updated });
   };
 
   return (
@@ -62,7 +79,7 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-2">
               <Label>Empleado *</Label>
               <Select
                 value={formData.employee_id}
@@ -81,23 +98,21 @@ export default function CommitteeMemberForm({ member, employees, onClose }) {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Tipo de Comité *</Label>
-              <Select
-                value={formData.tipo_comite}
-                onValueChange={(value) => setFormData({ ...formData, tipo_comite: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Comité de Empresa">Comité de Empresa</SelectItem>
-                  <SelectItem value="Delegado Personal">Delegado Personal</SelectItem>
-                  <SelectItem value="Comité Seguridad y Salud">Comité Seguridad y Salud</SelectItem>
-                  <SelectItem value="Comité Prevención Acoso">Comité Prevención Acoso</SelectItem>
-                  <SelectItem value="Equipo de Emergencia">Equipo de Emergencia</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-2 col-span-2">
+              <Label>Tipos de Comité * (puede seleccionar varios)</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 border rounded">
+                {tiposComite.map((tipo) => (
+                  <div key={tipo} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={(formData.tipos_comite || []).includes(tipo)}
+                      onCheckedChange={() => toggleTipoComite(tipo)}
+                    />
+                    <label className="text-sm cursor-pointer" onClick={() => toggleTipoComite(tipo)}>
+                      {tipo}
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
