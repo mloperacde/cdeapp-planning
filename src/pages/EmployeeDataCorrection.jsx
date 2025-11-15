@@ -23,6 +23,74 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+const smartCorrect = (fieldName, value) => {
+  if (!value || typeof value !== 'string' || !value.includes('?')) {
+    return value;
+  }
+
+  // Nacionalidad: siempre Ñ
+  if (fieldName === 'nacionalidad') {
+    return value.replace(/\?/g, 'Ñ');
+  }
+
+  // Dirección: reglas específicas
+  if (fieldName === 'direccion') {
+    let corrected = value;
+    // Ma?ana -> Mañana
+    corrected = corrected.replace(/Ma\?ana/gi, 'Mañana');
+    // Alcal?? -> Alcalá (dos interrogaciones seguidas)
+    corrected = corrected.replace(/Alcal\?\?/gi, 'Alcalá');
+    // planificaci?n -> planificación
+    corrected = corrected.replace(/planificaci\?n/gi, 'planificación');
+    // Cualquier otro ? -> Ñ como fallback
+    corrected = corrected.replace(/\?/g, 'Ñ');
+    return corrected;
+  }
+
+  // Nombre: análisis inteligente
+  if (fieldName === 'nombre') {
+    let corrected = value;
+    
+    // Patrones comunes con tildes
+    const tildedPatterns = [
+      { pattern: /Jos\?/gi, replacement: 'José' },
+      { pattern: /Mar\?a/gi, replacement: 'María' },
+      { pattern: /V\?ctor/gi, replacement: 'Víctor' },
+      { pattern: /\?ngel/gi, replacement: 'Ángel' },
+      { pattern: /Ra\?l/gi, replacement: 'Raúl' },
+      { pattern: /Andr\?s/gi, replacement: 'Andrés' },
+      { pattern: /Jes\?s/gi, replacement: 'Jesús' },
+      { pattern: /\?scar/gi, replacement: 'Óscar' },
+      { pattern: /I\?aki/gi, replacement: 'Iñaki' },
+      { pattern: /Bego\?a/gi, replacement: 'Begoña' },
+    ];
+
+    // Aplicar patrones de tildes
+    tildedPatterns.forEach(({ pattern, replacement }) => {
+      corrected = corrected.replace(pattern, replacement);
+    });
+
+    // Si después de las tildes aún quedan ?, probablemente sean Ñ
+    // Patrón para detectar Ñ: ? entre consonantes o al inicio seguido de vocal
+    corrected = corrected.replace(/([bcdfghjklmnpqrstvwxyz])\?([aeiou])/gi, (match, before, after) => {
+      return before + 'ñ' + after;
+    });
+    
+    // ? al inicio de palabra seguido de vocal (ej: ?OÑEZ -> ÑOÑEZ)
+    corrected = corrected.replace(/\b\?([aeiou])/gi, (match, after) => {
+      return 'Ñ' + after;
+    });
+
+    // Cualquier ? restante -> Ñ
+    corrected = corrected.replace(/\?/g, 'Ñ');
+    
+    return corrected;
+  }
+
+  // Default: reemplazar por Ñ
+  return value.replace(/\?/g, 'Ñ');
+};
+
 export default function EmployeeDataCorrection() {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [editedData, setEditedData] = useState({});
@@ -40,13 +108,12 @@ export default function EmployeeDataCorrection() {
     employees.forEach(emp => {
       const fieldsWithQuestionMark = [];
       
-      // Revisar todos los campos de texto
       Object.entries(emp).forEach(([key, value]) => {
         if (typeof value === 'string' && value.includes('?')) {
           fieldsWithQuestionMark.push({
             field: key,
             value: value,
-            suggestion: value.replace(/\?/g, 'Ñ') // Sugerencia común
+            suggestion: smartCorrect(key, value)
           });
         }
       });
@@ -81,7 +148,7 @@ export default function EmployeeDataCorrection() {
     setEditingEmployee(item);
     const initialData = {};
     item.fields.forEach(field => {
-      initialData[field.field] = field.value;
+      initialData[field.field] = field.suggestion;
     });
     setEditedData(initialData);
   };
@@ -124,8 +191,28 @@ export default function EmployeeDataCorrection() {
             Corrección de Datos - Caracteres Especiales
           </h1>
           <p className="text-slate-600 mt-1">
-            Empleados con el carácter "?" en sus datos
+            Corrección inteligente de caracteres "?" en datos de empleados
           </p>
+        </div>
+
+        <div className="mb-6">
+          <Card className="bg-blue-50 border-2 border-blue-200 shadow-lg">
+            <CardContent className="p-4">
+              <div className="space-y-2 text-sm text-blue-900">
+                <p className="font-semibold">🤖 Corrección Automática Inteligente:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><strong>Nacionalidad:</strong> ? → Ñ (ej: ESPA?OLA → ESPAÑOLA)</li>
+                  <li><strong>Nombres:</strong> Análisis inteligente
+                    <ul className="list-circle list-inside ml-4 text-xs">
+                      <li>Jos?, Mar?a, ?ngel → José, María, Ángel (tildes)</li>
+                      <li>Mu?oz, Pe?a → Muñoz, Peña (Ñ entre consonantes)</li>
+                    </ul>
+                  </li>
+                  <li><strong>Dirección:</strong> Ma?ana → Mañana, Alcal?? → Alcalá, planificaci?n → planificación</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="mb-6">
@@ -144,7 +231,7 @@ export default function EmployeeDataCorrection() {
                         {employeesWithQuestionMarks.length} empleado(s) con caracteres "?" detectados
                       </p>
                       <p className="text-sm text-amber-800">
-                        Revisa y corrige cada campo manualmente
+                        Revisa las sugerencias automáticas y ajusta si es necesario
                       </p>
                     </div>
                   </>
@@ -215,7 +302,7 @@ export default function EmployeeDataCorrection() {
                             className="bg-blue-600 hover:bg-blue-700"
                           >
                             <Edit2 className="w-3 h-3 mr-1" />
-                            Corregir
+                            Revisar y Corregir
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -238,10 +325,10 @@ export default function EmployeeDataCorrection() {
             </DialogHeader>
 
             <div className="space-y-4">
-              <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-amber-800">
-                  <strong>ℹ️ Información:</strong> Revisa cada campo y corrige el carácter "?" por el carácter correcto (generalmente Ñ).
-                  La sugerencia automática reemplaza "?" por "Ñ", pero puedes ajustar manualmente.
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>✨ Sugerencias Automáticas:</strong> Las correcciones se han aplicado automáticamente según reglas inteligentes.
+                  Puedes ajustar manualmente cualquier campo si la sugerencia no es correcta.
                 </p>
               </div>
 
@@ -253,19 +340,19 @@ export default function EmployeeDataCorrection() {
                   
                   <div className="space-y-2">
                     <div className="bg-red-50 border border-red-200 rounded p-2">
-                      <p className="text-xs text-red-700 font-medium mb-1">Valor Actual:</p>
+                      <p className="text-xs text-red-700 font-medium mb-1">❌ Valor Actual:</p>
                       <p className="text-sm font-mono text-red-900">{field.value}</p>
                     </div>
                     
-                    <div className="bg-green-50 border border-green-200 rounded p-2">
-                      <p className="text-xs text-green-700 font-medium mb-1">Sugerencia (editable):</p>
+                    <div className="bg-green-50 border-2 border-green-300 rounded p-2">
+                      <p className="text-xs text-green-700 font-medium mb-1">✅ Corrección Sugerida (editable):</p>
                       <Input
                         value={editedData[field.field] || field.suggestion}
                         onChange={(e) => setEditedData({
                           ...editedData,
                           [field.field]: e.target.value
                         })}
-                        className="font-mono bg-white"
+                        className="font-mono bg-white border-green-400"
                       />
                     </div>
                   </div>
