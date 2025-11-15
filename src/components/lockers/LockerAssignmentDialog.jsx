@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,40 +25,36 @@ import { toast } from "sonner";
 export default function LockerAssignmentDialog({ 
   locker, 
   vestuario, 
-  employees,
-  employeesWithoutLocker,
-  lockerAssignments,
+  employees = [], 
+  employeesWithoutLocker = [], // Kept as per original props, but its internal use is removed/changed
+  lockerAssignments = [], 
   onClose 
 }) {
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(locker.draggedEmployeeId || "");
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
 
-  // Si viene un empleado arrastrado, pre-seleccionarlo
-  useEffect(() => {
-    if (locker.draggedEmployeeId) {
-      setSelectedEmployeeId(locker.draggedEmployeeId);
-    }
-  }, [locker.draggedEmployeeId]);
-
   const availableEmployees = useMemo(() => {
-    const baseList = employeesWithoutLocker || employees.filter(emp => {
-      const existingAssignment = lockerAssignments.find(la => 
-        la.employee_id === emp.id && 
-        la.numero_taquilla_actual &&
-        la.requiere_taquilla !== false
-      );
-      return !existingAssignment;
-    });
+    if (!employees || !Array.isArray(employees)) return [];
+    
+    return employees
+      .filter(emp => {
+        const hasAssignment = lockerAssignments.find(la => la.employee_id === emp.id);
+        if (!hasAssignment) return true; // Employee has no assignment, thus is available
 
-    return baseList.filter(emp => {
-      const matchesSearch = !searchTerm || 
-        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return matchesSearch;
-    });
-  }, [employees, employeesWithoutLocker, lockerAssignments, searchTerm]);
+        // If an assignment exists, check if it's an "empty" one or if they don't require a locker
+        const hasLocker = hasAssignment.numero_taquilla_actual && 
+                         hasAssignment.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
+        const requiresLocker = hasAssignment.requiere_taquilla !== false; // requires_taquilla defaults to true if not specified as false
+        
+        return !hasLocker && requiresLocker; // Available if no current locker AND requires one
+      })
+      .filter(emp => {
+        if (!searchTerm) return true;
+        return emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase());
+      });
+  }, [employees, lockerAssignments, searchTerm]);
 
   const assignMutation = useMutation({
     mutationFn: async () => {

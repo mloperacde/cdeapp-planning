@@ -14,15 +14,16 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, Printer, Download } from "lucide-react";
+import { Plus, X, FileText } from "lucide-react"; // Changed Download to FileText
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import MaintenanceWorkOrderPDF from "./MaintenanceWorkOrderPDF";
 
-function SignaturePad({ onSave, existingSignature }) {
+const SignaturePad = ({ value, onChange, label }) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -30,42 +31,43 @@ function SignaturePad({ onSave, existingSignature }) {
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
-    // Set canvas dimensions explicitly for high-DPI screens if necessary,
-    // but for drawing, default context styles are usually fine.
-    // The width/height attributes in JSX already set the drawing buffer size.
-    // Make sure the canvas is clear initially if no signature.
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous content
 
-    ctx.strokeStyle = '#000';
+    // Set drawing styles
+    ctx.strokeStyle = '#1e293b'; // slate-800
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    ctx.lineJoin = 'round'; // Add lineJoin for smoother corners
+    ctx.lineJoin = 'round';
 
-    if (existingSignature) {
+    // Clear canvas before drawing or if signature is removed
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (value) {
       const img = new Image();
       img.onload = () => {
-        // Clear canvas before drawing new image to prevent stacking
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw image if value exists
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       };
-      img.src = existingSignature;
+      img.src = value;
     }
-  }, [existingSignature]);
+  }, [value]); // Depend on value to re-render if it changes
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
+    // Calculate scaling factors because the canvas element might be stretched by CSS
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
     if (e.touches && e.touches.length > 0) { // Touch event
       return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top,
+        x: (e.touches[0].clientX - rect.left) * scaleX,
+        y: (e.touches[0].clientY - rect.top) * scaleY,
       };
     } else { // Mouse event
       return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
       };
     }
   };
@@ -74,79 +76,85 @@ function SignaturePad({ onSave, existingSignature }) {
     e.preventDefault(); // Prevent scrolling on touch devices
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
-    const { x, y } = getCoordinates(e);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+
+    const pos = getCoordinates(e);
     setIsDrawing(true);
+    setLastPos(pos);
+    ctx.beginPath(); // Start a new path
+    ctx.moveTo(pos.x, pos.y);
   };
 
   const draw = (e) => {
     if (!isDrawing) return;
     e.preventDefault(); // Prevent scrolling on touch devices
-    
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
-    const { x, y } = getCoordinates(e);
-    ctx.lineTo(x, y);
+
+    const pos = getCoordinates(e);
+
+    ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
+
+    setLastPos(pos); // Update last position for the next segment
   };
 
   const stopDrawing = () => {
     if (!isDrawing) {
-      setIsDrawing(false);
       return;
     }
-    
     const canvas = canvasRef.current;
     if (canvas) {
-      onSave(canvas.toDataURL());
+      onChange(canvas.toDataURL());
     }
     setIsDrawing(false);
   };
 
-  const clear = () => {
+  const clearSignature = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onSave(''); // Clear the saved signature data
+    onChange(''); // Clear the saved signature data
   };
 
   return (
     <div className="space-y-2">
-      <canvas
-        ref={canvasRef}
-        width={600}
-        height={150}
-        className="border-2 border-slate-200 rounded-lg w-full cursor-crosshair bg-white"
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onTouchStart={startDrawing}
-        onTouchMove={draw}
-        onTouchEnd={stopDrawing}
-        onTouchCancel={stopDrawing}
-      />
-      <Button type="button" variant="outline" size="sm" onClick={clear}>
-        Limpiar
-      </Button>
+      <Label>{label}</Label>
+      <div className="border-2 border-slate-300 rounded-lg bg-white p-2">
+        <canvas
+          ref={canvasRef}
+          width={600} // Internal resolution of the canvas
+          height={150}
+          className="w-full touch-none cursor-crosshair bg-white rounded"
+          style={{ maxHeight: '150px' }} // CSS max height for responsive sizing
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing} // Stop drawing if mouse leaves canvas
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+          onTouchCancel={stopDrawing} // Handles cases like incoming calls on mobile
+        />
+        <Button type="button" variant="outline" size="sm" onClick={clearSignature} className="mt-2 w-full">
+          Limpiar Firma
+        </Button>
+      </div>
     </div>
   );
-}
+};
 
-export default function MaintenanceWorkOrder({ maintenance, machines, employees, maintenanceTypes, onClose }) {
+export default function MaintenanceWorkOrder({ maintenance, machines, employees, maintenanceTypes, onClose, onUpdate }) {
   const [fechaInicio, setFechaInicio] = useState(maintenance.fecha_inicio || "");
   const [fechaFin, setFechaFin] = useState(maintenance.fecha_finalizacion || "");
   const [tareas, setTareas] = useState([]);
@@ -155,7 +163,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
   const [firmaTecnico, setFirmaTecnico] = useState(maintenance.firma_tecnico || "");
   const [firmaRevisado, setFirmaRevisado] = useState(maintenance.firma_revisado || "");
   const [firmaVerificado, setFirmaVerificado] = useState(maintenance.firma_verificado || "");
-  const [showPDFView, setShowPDFView] = useState(false);
+  // Removed showPDFView state
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -165,12 +173,12 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
       const selectedType = maintenanceTypes.find(mt => mt.id === maintenance.maintenance_type_id);
       if (selectedType) {
         const importedTareas = [];
-        
+
         for (let i = 1; i <= 6; i++) {
           const tarea = selectedType[`tarea_${i}`];
           if (tarea && tarea.nombre) {
             const subtareas = [];
-            
+
             for (let j = 1; j <= 8; j++) {
               const subtarea = tarea[`subtarea_${j}`];
               if (subtarea) {
@@ -180,7 +188,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                 });
               }
             }
-            
+
             importedTareas.push({
               titulo: tarea.nombre,
               descripcion: "",
@@ -189,7 +197,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
             });
           }
         }
-        
+
         setTareas(importedTareas);
       }
     }
@@ -200,6 +208,12 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenances'] });
       toast.success("Orden de trabajo actualizada");
+      onUpdate && onUpdate(); // Notify parent of update
+    },
+    onError: (error) => {
+      toast.error("Error al actualizar la orden de trabajo.", {
+        description: error.message || "Por favor, inténtelo de nuevo.",
+      });
     },
   });
 
@@ -209,6 +223,12 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
       queryClient.invalidateQueries({ queryKey: ['maintenances'] });
       onClose();
       toast.success("Mantenimiento completado");
+      onUpdate && onUpdate(); // Notify parent of update
+    },
+    onError: (error) => {
+      toast.error("Error al completar el mantenimiento.", {
+        description: error.message || "Por favor, inténtelo de nuevo.",
+      });
     },
   });
 
@@ -244,8 +264,8 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
   };
 
   const handleSave = () => {
-    const duracionReal = fechaInicio && fechaFin 
-      ? (new Date(fechaFin) - new Date(fechaInicio)) / (1000 * 60 * 60) 
+    const duracionReal = fechaInicio && fechaFin
+      ? (new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)
       : 0;
 
     updateMutation.mutate({
@@ -260,8 +280,8 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
   };
 
   const handleComplete = () => {
-    const duracionReal = fechaInicio && fechaFin 
-      ? (new Date(fechaFin) - new Date(fechaInicio)) / (1000 * 60 * 60) 
+    const duracionReal = fechaInicio && fechaFin
+      ? (new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)
       : 0;
 
     completeMutation.mutate({
@@ -274,19 +294,6 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
       firma_revisado: firmaRevisado,
       firma_verificado: firmaVerificado,
     });
-  };
-
-  const handleExportPDF = () => {
-    // First, save any pending changes to ensure the PDF includes the latest data
-    handleSave();
-    setShowPDFView(true);
-    // Give a short delay for the component to render the PDF view before printing
-    setTimeout(() => {
-      window.print();
-      // Optionally, hide the PDF view after print dialog is closed
-      // or keep it open until user manually closes it.
-      // setShowPDFView(false); // Can uncomment if you want it to auto-close after print
-    }, 500);
   };
 
   const getMachineName = (machineId) => {
@@ -305,6 +312,11 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
     return emp?.nombre || "No asignado";
   };
 
+  const getEmployeeById = (employeeId) => {
+    if (!employeeId) return null;
+    return employees.find(e => e.id === employeeId) || null;
+  };
+
   const tareasCompletadas = tareas.filter(t => t.completada).length;
   const progresoTareas = tareas.length > 0 ? (tareasCompletadas / tareas.length) * 100 : 0;
 
@@ -314,8 +326,8 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
     ...maintenance,
     fecha_inicio: fechaInicio,
     fecha_finalizacion: fechaFin,
-    duracion_real: fechaInicio && fechaFin 
-      ? (new Date(fechaFin) - new Date(fechaInicio)) / (1000 * 60 * 60) 
+    duracion_real: fechaInicio && fechaFin
+      ? (new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)
       : 0,
     tareas: tareas,
     firma_tecnico: firmaTecnico,
@@ -323,32 +335,88 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
     firma_verificado: firmaVerificado,
   };
 
-  if (showPDFView) {
-    const selectedMachine = machines.find(m => m.id === maintenance.machine_id);
-    const selectedMaintenanceType = maintenanceTypes?.find(mt => mt.id === maintenance.maintenance_type_id);
+  // Data for PDF component
+  const machine = machines.find(m => m.id === maintenance.machine_id);
+  const selectedMaintenanceType = maintenanceTypes?.find(mt => mt.id === maintenance.maintenance_type_id);
+  const technician = getEmployeeById(maintenance.tecnico_asignado);
+  const reviewer = getEmployeeById(maintenance.revisado_por);
+  const verifier = getEmployeeById(maintenance.verificado_por);
 
-    return (
-      <Dialog open={true} onOpenChange={() => setShowPDFView(false)}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto print:max-w-full print:max-h-full print:overflow-visible">
-          <MaintenanceWorkOrderPDF
-            maintenance={currentMaintenance}
-            machine={selectedMachine}
-            employees={employees}
-            maintenanceType={selectedMaintenanceType}
-            getEmployeeName={getEmployeeName} // Pass utility functions if needed by PDF component
-            getMachineName={getMachineName}
-            getMachineCode={getMachineCode}
-          />
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  const handleDownloadPDF = () => {
+    // First, save any pending changes to ensure the PDF includes the latest data
+    // This is optional, but ensures the PDF is up-to-date with current form inputs.
+    // However, for a download/print action, we might just use the current state
+    // and rely on a separate save action. For this implementation, we'll just generate
+    // the PDF from the current state without an explicit save mutation call here,
+    // to avoid potential race conditions or unnecessary server calls on PDF view.
+    // If saving is critical before PDF generation, uncomment handleSave()
+    // handleSave(); // This would trigger a mutation, which might be too slow or not desired.
+
+    const printWindow = window.open('', '_blank');
+
+    if (printWindow) {
+      // Find the hidden PDF content element
+      const pdfContentElement = document.getElementById('maintenance-pdf-content');
+
+      if (pdfContentElement) {
+        // Create a full HTML document for printing
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Orden de Trabajo - ${machine?.nombre || 'Máquina'}</title>
+              <link href="${window.location.origin}/tailwind.css" rel="stylesheet">
+              <style>
+                /* Add specific print styles here if needed */
+                body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; }
+                @media print {
+                  @page { margin: 1cm; size: A4; }
+                  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+                  /* Ensure elements like images (signatures) are printed */
+                  img { max-width: 100%; height: auto; page-break-inside: avoid; }
+                  .no-print { display: none !important; }
+                  /* Force display of hidden content if needed, though the hidden div approach might already handle it */
+                  #maintenance-pdf-content { display: block !important; }
+                }
+              </style>
+            </head>
+            <body>
+              <div id="print-container">
+                ${pdfContentElement.innerHTML}
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close(); // Close the document to finish writing
+
+        // Give the browser a moment to render the content before printing
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.onafterprint = () => {
+            printWindow.close();
+          };
+        }, 250);
+      } else {
+        toast.error("Error al generar PDF: Contenido no encontrado.");
+        printWindow.close();
+      }
+    } else {
+      toast.error("Error al abrir ventana para PDF. Por favor, permita pop-ups.");
+    }
+  };
+
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Orden de Trabajo de Mantenimiento</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Orden de Trabajo - {machine?.nombre || 'Máquina'}</DialogTitle>
+            <Button onClick={handleDownloadPDF} variant="outline" size="sm">
+              <FileText className="w-4 h-4 mr-2" />
+              Descargar PDF
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -456,7 +524,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
                     }}
                   />
                   <Button type="button" variant="outline" size="sm" onClick={handleAddSubtarea}>
-                    + Subtarea
+                    <Plus className="w-4 h-4 mr-1" /> Subtarea
                   </Button>
                 </div>
 
@@ -550,7 +618,7 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
               {fechaInicio && fechaFin && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <span className="text-sm font-semibold text-blue-900">
-                    Duración: {((new Date(fechaFin) - new Date(fechaInicio)) / (1000 * 60 * 60)).toFixed(2)} horas
+                    Duración: {((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)).toFixed(2)} horas
                   </span>
                 </div>
               )}
@@ -562,37 +630,27 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
               <CardTitle className="text-lg">Firmas y Validación</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Firma Técnico Asignado: {getEmployeeName(maintenance.tecnico_asignado)}</Label>
-                <SignaturePad 
-                  onSave={setFirmaTecnico}
-                  existingSignature={firmaTecnico}
-                />
-              </div>
+              <SignaturePad
+                value={firmaTecnico}
+                onChange={setFirmaTecnico}
+                label={`Firma Técnico Asignado: ${getEmployeeName(maintenance.tecnico_asignado)}`}
+              />
 
-              <div className="space-y-2">
-                <Label>Firma Supervisado Por: {getEmployeeName(maintenance.revisado_por)}</Label>
-                <SignaturePad 
-                  onSave={setFirmaRevisado}
-                  existingSignature={firmaRevisado}
-                />
-              </div>
+              <SignaturePad
+                value={firmaRevisado}
+                onChange={setFirmaRevisado}
+                label={`Firma Supervisado Por: ${getEmployeeName(maintenance.revisado_por)}`}
+              />
 
-              <div className="space-y-2">
-                <Label>Firma Verificado Por: {getEmployeeName(maintenance.verificado_por)}</Label>
-                <SignaturePad 
-                  onSave={setFirmaVerificado}
-                  existingSignature={firmaVerificado}
-                />
-              </div>
+              <SignaturePad
+                value={firmaVerificado}
+                onChange={setFirmaVerificado}
+                label={`Firma Verificado Por: ${getEmployeeName(maintenance.verificado_por)}`}
+              />
             </CardContent>
           </Card>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={handleExportPDF}>
-              <Download className="w-4 h-4 mr-2" />
-              Ver/Exportar PDF
-            </Button>
             <Button type="button" variant="outline" onClick={onClose}>
               Cerrar
             </Button>
@@ -612,6 +670,23 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
               {completeMutation.isPending ? "Completando..." : "Completar Mantenimiento"}
             </Button>
           </div>
+        </div>
+
+        {/* Hidden component to generate PDF content for download/print */}
+        <div id="maintenance-pdf-content" className="hidden">
+          <MaintenanceWorkOrderPDF
+            maintenance={currentMaintenance}
+            workOrder={currentMaintenance} // Use currentMaintenance as workOrder
+            machine={machine}
+            technician={technician}
+            reviewer={reviewer}
+            verifier={verifier}
+            maintenanceType={selectedMaintenanceType}
+            employees={employees} // Pass employees for utility functions if needed
+            getEmployeeName={getEmployeeName}
+            getMachineName={getMachineName}
+            getMachineCode={getMachineCode}
+          />
         </div>
       </DialogContent>
     </Dialog>

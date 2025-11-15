@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import RiskAssessmentManager from "../components/committee/RiskAssessmentManager
 import IncidentManager from "../components/committee/IncidentManager";
 import EmergencyTeamManager from "../components/committee/EmergencyTeamManager";
 import PRLDocumentManager from "../components/committee/PRLDocumentManager";
+import EmergencyTrainingManager from "../components/committee/EmergencyTrainingManager"; // Added import
 
 export default function CommitteeManagementPage() {
   const [showForm, setShowForm] = useState(false);
@@ -187,7 +189,20 @@ export default function CommitteeManagementPage() {
           </TabsContent>
 
           <TabsContent value="emergency">
-            <EmergencyTeamManager employees={employees} />
+            <Tabs defaultValue="team" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="team">Equipo de Emergencia</TabsTrigger>
+                <TabsTrigger value="training">Estado de Formaciones</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="team">
+                <EmergencyTeamManager employees={employees} />
+              </TabsContent>
+
+              <TabsContent value="training">
+                <EmergencyTrainingManager employees={employees} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="documents">
