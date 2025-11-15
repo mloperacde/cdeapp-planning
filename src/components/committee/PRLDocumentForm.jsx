@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge"; // Added Badge component import
+import { Badge } from "@/components/ui/badge";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,30 +21,29 @@ export default function PRLDocumentForm({ document, onClose }) {
     fecha_documento: "",
     fecha_caducidad: "",
     departamento_afectado: "",
-    puestos_afectados: [], // New field
-    roles_afectados: [], // New field
+    puestos_afectados: [],
+    roles_afectados: [],
     estado: "Vigente",
     version: "1.0",
     requiere_accion: false,
     accion_requerida: "",
     fecha_limite_accion: "",
-    recordatorio_dias_antes: 30, // New field with default
+    recordatorio_dias_antes: 30,
     notas: ""
   });
   const [uploading, setUploading] = useState(false);
   const [fileUrl, setFileUrl] = useState(document?.archivo_url || "");
-  const [cambiosVersion, setCambiosVersion] = useState(""); // New state for version changes description
+  const [cambiosVersion, setCambiosVersion] = useState("");
   const queryClient = useQueryClient();
 
-  // New: useQuery to fetch employees for dynamic puestos
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
     initialData: [],
   });
 
-  // New: useMemo to extract unique puestos from employees
   const puestos = useMemo(() => {
+    if (!employees || !Array.isArray(employees)) return [];
     const psts = new Set();
     employees.forEach(emp => {
       if (emp.puesto) psts.add(emp.puesto);
@@ -53,23 +51,21 @@ export default function PRLDocumentForm({ document, onClose }) {
     return Array.from(psts).sort();
   }, [employees]);
 
-  const [puestoInput, setPuestoInput] = useState(""); // State for current puesto input
-  const [rolInput, setRolInput] = useState(""); // State for current rol input
+  const [puestoInput, setPuestoInput] = useState("");
+  const [rolInput, setRolInput] = useState("");
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const dataToSave = { ...data };
       
-      // Logic to handle historical versions if file URL changes on an existing document
       if (document?.id && fileUrl !== document.archivo_url) {
         const historial = document.historial_versiones || [];
         historial.push({
-          version: document.version, // Use the *old* version for the history entry
+          version: document.version,
           fecha: new Date().toISOString(),
-          archivo_url: document.archivo_url, // Use the *old* file URL for the history entry
-          cambios: cambiosVersion || "Nueva versión", // Use changes description or default
-          // Assuming `subido_por` would come from the current user context or form data if applicable
-          subido_por: data.subido_por // This assumes 'subido_por' is part of the data object
+          archivo_url: document.archivo_url,
+          cambios: cambiosVersion || "Nueva versión",
+          subido_por: data.subido_por
         });
         dataToSave.historial_versiones = historial;
       }
@@ -117,16 +113,14 @@ export default function PRLDocumentForm({ document, onClose }) {
       ...formData,
       archivo_url: fileUrl,
       fecha_subida: new Date().toISOString()
-      // `subido_por` could be added here from user context if available
     });
   };
 
-  // New: Functions to manage puestos_afectados
   const addPuesto = () => {
-    if (puestoInput && !formData.puestos_afectados.includes(puestoInput)) {
+    if (puestoInput && !(formData.puestos_afectados || []).includes(puestoInput)) {
       setFormData({
         ...formData,
-        puestos_afectados: [...formData.puestos_afectados, puestoInput]
+        puestos_afectados: [...(formData.puestos_afectados || []), puestoInput]
       });
       setPuestoInput("");
     }
@@ -135,16 +129,15 @@ export default function PRLDocumentForm({ document, onClose }) {
   const removePuesto = (puesto) => {
     setFormData({
       ...formData,
-      puestos_afectados: formData.puestos_afectados.filter(p => p !== puesto)
+      puestos_afectados: (formData.puestos_afectados || []).filter(p => p !== puesto)
     });
   };
 
-  // New: Functions to manage roles_afectados
   const addRol = () => {
-    if (rolInput && !formData.roles_afectados.includes(rolInput)) {
+    if (rolInput && !(formData.roles_afectados || []).includes(rolInput)) {
       setFormData({
         ...formData,
-        roles_afectados: [...formData.roles_afectados, rolInput]
+        roles_afectados: [...(formData.roles_afectados || []), rolInput]
       });
       setRolInput("");
     }
@@ -153,13 +146,13 @@ export default function PRLDocumentForm({ document, onClose }) {
   const removeRol = (rol) => {
     setFormData({
       ...formData,
-      roles_afectados: formData.roles_afectados.filter(r => r !== rol)
+      roles_afectados: (formData.roles_afectados || []).filter(r => r !== rol)
     });
   };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"> {/* Updated max-width */}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {document ? 'Editar Documento' : 'Subir Nuevo Documento PRL'}
@@ -250,17 +243,16 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Días para Recordatorio</Label> {/* New field */}
+              <Label>Días para Recordatorio</Label>
               <Input
                 type="number"
-                value={formData.recordatorio_dias_antes === 0 ? 0 : formData.recordatorio_dias_antes || ""} // Display 0 correctly, empty for null/undefined
-                onChange={(e) => setFormData({ ...formData, recordatorio_dias_antes: parseInt(e.target.value) || 0 })} // Parse to int, default to 0 for invalid input
-                placeholder="30 (días antes de la caducidad)"
+                value={formData.recordatorio_dias_antes || 30}
+                onChange={(e) => setFormData({ ...formData, recordatorio_dias_antes: parseInt(e.target.value) })}
               />
             </div>
 
             <div className="space-y-2 col-span-2">
-              <Label>Puestos Afectados</Label> {/* New section for Puestos Afectados */}
+              <Label>Puestos Afectados</Label>
               <div className="flex gap-2">
                 <Select value={puestoInput} onValueChange={setPuestoInput}>
                   <SelectTrigger className="flex-1">
@@ -279,7 +271,7 @@ export default function PRLDocumentForm({ document, onClose }) {
                 </Button>
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
-                {formData.puestos_afectados.map((puesto, idx) => (
+                {(formData.puestos_afectados || []).map((puesto, idx) => (
                   <Badge key={idx} variant="outline" className="cursor-pointer" onClick={() => removePuesto(puesto)}>
                     {puesto} ×
                   </Badge>
@@ -288,7 +280,7 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2 col-span-2">
-              <Label>Roles/Categorías Afectados</Label> {/* New section for Roles/Categorías Afectados */}
+              <Label>Roles/Categorías Afectados</Label>
               <div className="flex gap-2">
                 <Input
                   value={rolInput}
@@ -306,7 +298,7 @@ export default function PRLDocumentForm({ document, onClose }) {
                 </Button>
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
-                {formData.roles_afectados.map((rol, idx) => (
+                {(formData.roles_afectados || []).map((rol, idx) => (
                   <Badge key={idx} className="bg-blue-100 text-blue-700 cursor-pointer" onClick={() => removeRol(rol)}>
                     {rol} ×
                   </Badge>
@@ -373,7 +365,6 @@ export default function PRLDocumentForm({ document, onClose }) {
               />
             </div>
             
-            {/* Conditional field for describing changes when updating an existing document and the file has changed */}
             {document && fileUrl !== document.archivo_url && (
               <div className="space-y-2 col-span-2">
                 <Label>Descripción de Cambios (Nueva Versión)</Label>

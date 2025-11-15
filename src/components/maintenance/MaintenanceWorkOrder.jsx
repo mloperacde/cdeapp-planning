@@ -138,10 +138,11 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
     initialData: [],
   });
 
-  const machine = machines.find(m => m.id === maintenance.machine_id);
-  const technician = employees.find(e => e.id === maintenance.tecnico_asignado);
-  const reviewer = employees.find(e => e.id === maintenance.revisado_por);
-  const verifier = employees.find(e => e.id === maintenance.verificado_por);
+  const machine = machines?.find(m => m.id === maintenance.machine_id);
+  const technician = employees?.find(e => e.id === maintenance.tecnico_asignado);
+  const reviewer = employees?.find(e => e.id === maintenance.revisado_por);
+  const verifier = employees?.find(e => e.id === maintenance.verificado_por);
+  const creator = employees?.find(e => e.id === maintenance.creado_por);
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, data),
@@ -184,9 +185,11 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
 
   const handleSubtaskToggle = (taskIndex, subtaskIndex) => {
     const updatedTasks = [...workOrder.tareas];
-    updatedTasks[taskIndex].subtareas[subtaskIndex].completada = 
-      !updatedTasks[taskIndex].subtareas[subtaskIndex].completada;
-    setWorkOrder({ ...workOrder, tareas: updatedTasks });
+    if (updatedTasks[taskIndex].subtareas && updatedTasks[taskIndex].subtareas[subtaskIndex]) {
+      updatedTasks[taskIndex].subtareas[subtaskIndex].completada = 
+        !updatedTasks[taskIndex].subtareas[subtaskIndex].completada;
+      setWorkOrder({ ...workOrder, tareas: updatedTasks });
+    }
   };
 
   const handleRecordTime = () => {
@@ -242,8 +245,8 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
     }
   };
 
-  const tareasCompletadas = workOrder.tareas.filter(t => t.completada).length;
-  const totalTareas = workOrder.tareas.length;
+  const tareasCompletadas = (workOrder.tareas || []).filter(t => t.completada).length;
+  const totalTareas = (workOrder.tareas || []).length;
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -392,7 +395,7 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
               </div>
               <div>
                 <span className="text-sm text-slate-600">Creado Por:</span>
-                <div className="font-bold">{employees.find(e => e.id === maintenance.creado_por)?.nombre || "N/A"}</div>
+                <div className="font-bold">{creator?.nombre || "N/A"}</div>
               </div>
               <div>
                 <span className="text-sm text-slate-600">Supervisado Por:</span>

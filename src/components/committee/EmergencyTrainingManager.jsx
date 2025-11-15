@@ -23,7 +23,12 @@ export default function EmergencyTrainingManager({ employees = [] }) {
     const caducadas = [];
     const proximasCaducar = [];
 
+    if (!emergencyMembers || !Array.isArray(emergencyMembers)) {
+      return { caducadas, proximasCaducar };
+    }
+
     emergencyMembers.forEach(member => {
+      if (!employees || !Array.isArray(employees)) return;
       const employee = employees.find(e => e.id === member.employee_id);
       if (!employee) return;
 
@@ -75,10 +80,10 @@ export default function EmergencyTrainingManager({ employees = [] }) {
               <div className="space-y-2">
                 {trainingStatus.caducadas.map((item, idx) => (
                   <div key={idx} className="p-3 bg-white rounded border border-red-200">
-                    <div className="font-semibold text-sm text-red-900">{item.employee.nombre}</div>
-                    <div className="text-xs text-slate-600">{item.member.rol_emergencia}</div>
+                    <div className="font-semibold text-sm text-red-900">{item.employee?.nombre || "Desconocido"}</div>
+                    <div className="text-xs text-slate-600">{item.member?.rol_emergencia || ""}</div>
                     <div className="text-xs text-red-700 mt-1">
-                      <strong>{item.formacion.nombre_curso}</strong>
+                      <strong>{item.formacion?.nombre_curso || ""}</strong>
                     </div>
                     <div className="text-xs text-red-600 mt-1">
                       ⚠️ Caducada hace {item.diasRestantes} días
@@ -108,10 +113,10 @@ export default function EmergencyTrainingManager({ employees = [] }) {
               <div className="space-y-2">
                 {trainingStatus.proximasCaducar.map((item, idx) => (
                   <div key={idx} className="p-3 bg-white rounded border border-amber-200">
-                    <div className="font-semibold text-sm text-amber-900">{item.employee.nombre}</div>
-                    <div className="text-xs text-slate-600">{item.member.rol_emergencia}</div>
+                    <div className="font-semibold text-sm text-amber-900">{item.employee?.nombre || "Desconocido"}</div>
+                    <div className="text-xs text-slate-600">{item.member?.rol_emergencia || ""}</div>
                     <div className="text-xs text-amber-700 mt-1">
-                      <strong>{item.formacion.nombre_curso}</strong>
+                      <strong>{item.formacion?.nombre_curso || ""}</strong>
                     </div>
                     <div className="text-xs text-amber-600 mt-1">
                       ⏰ Caduca en {item.diasRestantes} días
