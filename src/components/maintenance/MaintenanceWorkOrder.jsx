@@ -1,410 +1,249 @@
-
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, FileText } from "lucide-react"; // Changed Download to FileText
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, FileText, Printer, Download } from "lucide-react";
 import { toast } from "sonner";
-import MaintenanceWorkOrderPDF from "./MaintenanceWorkOrderPDF";
+import { format, differenceInHours } from "date-fns";
+import { es } from "date-fns/locale";
 
 const SignaturePad = ({ value, onChange, label }) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
+  React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
+    
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set drawing styles
-    ctx.strokeStyle = '#1e293b'; // slate-800
+    ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
-    // Clear canvas before drawing or if signature is removed
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    
     if (value) {
       const img = new Image();
-      img.onload = () => {
-        // Draw image if value exists
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      };
+      img.onload = () => ctx.drawImage(img, 0, 0);
       img.src = value;
     }
-  }, [value]); // Depend on value to re-render if it changes
+  }, [value]);
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    // Calculate scaling factors because the canvas element might be stretched by CSS
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-
-    if (e.touches && e.touches.length > 0) { // Touch event
+    
+    if (e.touches) {
       return {
         x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY,
-      };
-    } else { // Mouse event
-      return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
+        y: (e.touches[0].clientY - rect.top) * scaleY
       };
     }
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
   };
 
   const startDrawing = (e) => {
-    e.preventDefault(); // Prevent scrolling on touch devices
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
+    e.preventDefault();
     const pos = getCoordinates(e);
-    setIsDrawing(true);
-    setLastPos(pos);
-    ctx.beginPath(); // Start a new path
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
+    setIsDrawing(true);
   };
 
   const draw = (e) => {
     if (!isDrawing) return;
-    e.preventDefault(); // Prevent scrolling on touch devices
-
+    e.preventDefault();
+    
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     const pos = getCoordinates(e);
-
+    
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
-
-    setLastPos(pos); // Update last position for the next segment
   };
 
   const stopDrawing = () => {
-    if (!isDrawing) {
-      return;
-    }
-    const canvas = canvasRef.current;
-    if (canvas) {
-      onChange(canvas.toDataURL());
-    }
+    if (!isDrawing) return;
     setIsDrawing(false);
+    const canvas = canvasRef.current;
+    onChange(canvas.toDataURL());
   };
 
   const clearSignature = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onChange(''); // Clear the saved signature data
+    onChange('');
   };
 
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="border-2 border-slate-300 rounded-lg bg-white p-2">
+      <div className="border-2 border-slate-300 rounded-lg bg-white overflow-hidden">
         <canvas
           ref={canvasRef}
-          width={600} // Internal resolution of the canvas
-          height={150}
-          className="w-full touch-none cursor-crosshair bg-white rounded"
-          style={{ maxHeight: '150px' }} // CSS max height for responsive sizing
+          width={500}
+          height={120}
+          className="w-full touch-none cursor-crosshair"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing} // Stop drawing if mouse leaves canvas
+          onMouseLeave={stopDrawing}
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
-          onTouchCancel={stopDrawing} // Handles cases like incoming calls on mobile
         />
-        <Button type="button" variant="outline" size="sm" onClick={clearSignature} className="mt-2 w-full">
-          Limpiar Firma
+        <Button type="button" variant="ghost" size="sm" onClick={clearSignature} className="w-full border-t">
+          Limpiar
         </Button>
       </div>
     </div>
   );
 };
 
-export default function MaintenanceWorkOrder({ maintenance, machines, employees, maintenanceTypes, onClose, onUpdate }) {
-  const [fechaInicio, setFechaInicio] = useState(maintenance.fecha_inicio || "");
-  const [fechaFin, setFechaFin] = useState(maintenance.fecha_finalizacion || "");
-  const [tareas, setTareas] = useState([]);
-  const [nuevaTarea, setNuevaTarea] = useState({ titulo: "", descripcion: "", subtareas: [] });
-  const [nuevaSubtarea, setNuevaSubtarea] = useState("");
-  const [firmaTecnico, setFirmaTecnico] = useState(maintenance.firma_tecnico || "");
-  const [firmaRevisado, setFirmaRevisado] = useState(maintenance.firma_revisado || "");
-  const [firmaVerificado, setFirmaVerificado] = useState(maintenance.firma_verificado || "");
-  // Removed showPDFView state
+export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate }) {
+  const [workOrder, setWorkOrder] = useState({
+    fecha_inicio: maintenance.fecha_inicio || "",
+    fecha_finalizacion: maintenance.fecha_finalizacion || "",
+    duracion_real: maintenance.duracion_real || 0,
+    tareas: maintenance.tareas || [],
+    notas: maintenance.notas || "",
+    firma_tecnico: maintenance.firma_tecnico || "",
+    firma_revisado: maintenance.firma_revisado || "",
+    firma_verificado: maintenance.firma_verificado || ""
+  });
+
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (maintenance.tareas && maintenance.tareas.length > 0) {
-      setTareas(maintenance.tareas);
-    } else if (maintenance.maintenance_type_id && maintenanceTypes) {
-      const selectedType = maintenanceTypes.find(mt => mt.id === maintenance.maintenance_type_id);
-      if (selectedType) {
-        const importedTareas = [];
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
+  });
 
-        for (let i = 1; i <= 6; i++) {
-          const tarea = selectedType[`tarea_${i}`];
-          if (tarea && tarea.nombre) {
-            const subtareas = [];
+  const { data: machines } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list(),
+    initialData: [],
+  });
 
-            for (let j = 1; j <= 8; j++) {
-              const subtarea = tarea[`subtarea_${j}`];
-              if (subtarea) {
-                subtareas.push({
-                  titulo: subtarea,
-                  completada: false
-                });
-              }
-            }
-
-            importedTareas.push({
-              titulo: tarea.nombre,
-              descripcion: "",
-              completada: false,
-              subtareas: subtareas
-            });
-          }
-        }
-
-        setTareas(importedTareas);
-      }
-    }
-  }, [maintenance, maintenanceTypes]);
+  const machine = machines.find(m => m.id === maintenance.machine_id);
+  const technician = employees.find(e => e.id === maintenance.tecnico_asignado);
+  const reviewer = employees.find(e => e.id === maintenance.revisado_por);
+  const verifier = employees.find(e => e.id === maintenance.verificado_por);
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenances'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
       toast.success("Orden de trabajo actualizada");
-      onUpdate && onUpdate(); // Notify parent of update
-    },
-    onError: (error) => {
-      toast.error("Error al actualizar la orden de trabajo.", {
-        description: error.message || "Por favor, inténtelo de nuevo.",
-      });
+      if (onUpdate) onUpdate();
     },
   });
 
   const completeMutation = useMutation({
-    mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, data),
+    mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, {
+      ...data,
+      estado: "Completado"
+    }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenances'] });
-      onClose();
+      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
       toast.success("Mantenimiento completado");
-      onUpdate && onUpdate(); // Notify parent of update
-    },
-    onError: (error) => {
-      toast.error("Error al completar el mantenimiento.", {
-        description: error.message || "Por favor, inténtelo de nuevo.",
-      });
+      onClose();
     },
   });
 
-  const handleAddTarea = () => {
-    if (!nuevaTarea.titulo) return;
-    setTareas([...tareas, { ...nuevaTarea, completada: false }]);
-    setNuevaTarea({ titulo: "", descripcion: "", subtareas: [] });
-  };
-
-  const handleAddSubtarea = () => {
-    if (!nuevaSubtarea) return;
-    setNuevaTarea({
-      ...nuevaTarea,
-      subtareas: [...nuevaTarea.subtareas, { titulo: nuevaSubtarea, completada: false }]
-    });
-    setNuevaSubtarea("");
-  };
-
-  const handleToggleTarea = (index) => {
-    const newTareas = [...tareas];
-    newTareas[index].completada = !newTareas[index].completada;
-    setTareas(newTareas);
-  };
-
-  const handleToggleSubtarea = (tareaIndex, subtareaIndex) => {
-    const newTareas = [...tareas];
-    newTareas[tareaIndex].subtareas[subtareaIndex].completada = !newTareas[tareaIndex].subtareas[subtareaIndex].completada;
-    setTareas(newTareas);
-  };
-
-  const handleRemoveTarea = (index) => {
-    setTareas(tareas.filter((_, i) => i !== index));
-  };
-
-  const handleSave = () => {
-    const duracionReal = fechaInicio && fechaFin
-      ? (new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)
-      : 0;
-
-    updateMutation.mutate({
-      fecha_inicio: fechaInicio,
-      fecha_finalizacion: fechaFin,
-      duracion_real: duracionReal,
-      tareas: tareas,
-      firma_tecnico: firmaTecnico,
-      firma_revisado: firmaRevisado,
-      firma_verificado: firmaVerificado,
-    });
+  const handleSaveProgress = () => {
+    updateMutation.mutate(workOrder);
   };
 
   const handleComplete = () => {
-    const duracionReal = fechaInicio && fechaFin
-      ? (new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)
-      : 0;
-
-    completeMutation.mutate({
-      estado: "Completado",
-      fecha_inicio: fechaInicio,
-      fecha_finalizacion: fechaFin,
-      duracion_real: duracionReal,
-      tareas: tareas,
-      firma_tecnico: firmaTecnico,
-      firma_revisado: firmaRevisado,
-      firma_verificado: firmaVerificado,
-    });
+    if (!workOrder.firma_tecnico || !workOrder.firma_revisado || !workOrder.firma_verificado) {
+      toast.error("Todas las firmas son requeridas para completar");
+      return;
+    }
+    completeMutation.mutate(workOrder);
   };
 
-  const getMachineName = (machineId) => {
-    const machine = machines.find(m => m.id === machineId);
-    return machine?.nombre || "Máquina desconocida";
+  const handleTaskToggle = (taskIndex) => {
+    const updatedTasks = [...workOrder.tareas];
+    updatedTasks[taskIndex].completada = !updatedTasks[taskIndex].completada;
+    setWorkOrder({ ...workOrder, tareas: updatedTasks });
   };
 
-  const getMachineCode = (machineId) => {
-    const machine = machines.find(m => m.id === machineId);
-    return machine?.codigo || "N/A";
+  const handleSubtaskToggle = (taskIndex, subtaskIndex) => {
+    const updatedTasks = [...workOrder.tareas];
+    updatedTasks[taskIndex].subtareas[subtaskIndex].completada = 
+      !updatedTasks[taskIndex].subtareas[subtaskIndex].completada;
+    setWorkOrder({ ...workOrder, tareas: updatedTasks });
   };
 
-  const getEmployeeName = (employeeId) => {
-    if (!employeeId) return "No asignado";
-    const emp = employees.find(e => e.id === employeeId);
-    return emp?.nombre || "No asignado";
-  };
-
-  const getEmployeeById = (employeeId) => {
-    if (!employeeId) return null;
-    return employees.find(e => e.id === employeeId) || null;
-  };
-
-  const tareasCompletadas = tareas.filter(t => t.completada).length;
-  const progresoTareas = tareas.length > 0 ? (tareasCompletadas / tareas.length) * 100 : 0;
-
-  // Create an object that represents the current state of maintenance data
-  // to pass to the PDF component.
-  const currentMaintenance = {
-    ...maintenance,
-    fecha_inicio: fechaInicio,
-    fecha_finalizacion: fechaFin,
-    duracion_real: fechaInicio && fechaFin
-      ? (new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)
-      : 0,
-    tareas: tareas,
-    firma_tecnico: firmaTecnico,
-    firma_revisado: firmaRevisado,
-    firma_verificado: firmaVerificado,
-  };
-
-  // Data for PDF component
-  const machine = machines.find(m => m.id === maintenance.machine_id);
-  const selectedMaintenanceType = maintenanceTypes?.find(mt => mt.id === maintenance.maintenance_type_id);
-  const technician = getEmployeeById(maintenance.tecnico_asignado);
-  const reviewer = getEmployeeById(maintenance.revisado_por);
-  const verifier = getEmployeeById(maintenance.verificado_por);
-
-  const handleDownloadPDF = () => {
-    // First, save any pending changes to ensure the PDF includes the latest data
-    // This is optional, but ensures the PDF is up-to-date with current form inputs.
-    // However, for a download/print action, we might just use the current state
-    // and rely on a separate save action. For this implementation, we'll just generate
-    // the PDF from the current state without an explicit save mutation call here,
-    // to avoid potential race conditions or unnecessary server calls on PDF view.
-    // If saving is critical before PDF generation, uncomment handleSave()
-    // handleSave(); // This would trigger a mutation, which might be too slow or not desired.
-
-    const printWindow = window.open('', '_blank');
-
-    if (printWindow) {
-      // Find the hidden PDF content element
-      const pdfContentElement = document.getElementById('maintenance-pdf-content');
-
-      if (pdfContentElement) {
-        // Create a full HTML document for printing
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Orden de Trabajo - ${machine?.nombre || 'Máquina'}</title>
-              <link href="${window.location.origin}/tailwind.css" rel="stylesheet">
-              <style>
-                /* Add specific print styles here if needed */
-                body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; }
-                @media print {
-                  @page { margin: 1cm; size: A4; }
-                  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-                  /* Ensure elements like images (signatures) are printed */
-                  img { max-width: 100%; height: auto; page-break-inside: avoid; }
-                  .no-print { display: none !important; }
-                  /* Force display of hidden content if needed, though the hidden div approach might already handle it */
-                  #maintenance-pdf-content { display: block !important; }
-                }
-              </style>
-            </head>
-            <body>
-              <div id="print-container">
-                ${pdfContentElement.innerHTML}
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close(); // Close the document to finish writing
-
-        // Give the browser a moment to render the content before printing
-        setTimeout(() => {
-          printWindow.print();
-          printWindow.onafterprint = () => {
-            printWindow.close();
-          };
-        }, 250);
-      } else {
-        toast.error("Error al generar PDF: Contenido no encontrado.");
-        printWindow.close();
-      }
-    } else {
-      toast.error("Error al abrir ventana para PDF. Por favor, permita pop-ups.");
+  const handleRecordTime = () => {
+    const now = new Date().toISOString();
+    if (!workOrder.fecha_inicio) {
+      setWorkOrder({ ...workOrder, fecha_inicio: now });
+      toast.success("Tiempo de inicio registrado");
+    } else if (!workOrder.fecha_finalizacion) {
+      const duracion = differenceInHours(new Date(now), new Date(workOrder.fecha_inicio));
+      setWorkOrder({ ...workOrder, fecha_finalizacion: now, duracion_real: duracion });
+      toast.success(`Tiempo finalizado. Duración: ${duracion.toFixed(2)} horas`);
     }
   };
 
+  const handleDownloadPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const pdfContent = document.getElementById('maintenance-pdf-content');
+    
+    if (printWindow && pdfContent) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Orden de Trabajo - ${machine?.nombre || 'Máquina'}</title>
+            <meta charset="UTF-8">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: Arial, sans-serif; 
+                background: white;
+              }
+              @media print {
+                @page { 
+                  margin: 15mm; 
+                  size: A4; 
+                }
+                body { 
+                  print-color-adjust: exact; 
+                  -webkit-print-color-adjust: exact; 
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${pdfContent.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
+  const tareasCompletadas = workOrder.tareas.filter(t => t.completada).length;
+  const totalTareas = workOrder.tareas.length;
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -412,282 +251,376 @@ export default function MaintenanceWorkOrder({ maintenance, machines, employees,
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Orden de Trabajo - {machine?.nombre || 'Máquina'}</DialogTitle>
-            <Button onClick={handleDownloadPDF} variant="outline" size="sm">
-              <FileText className="w-4 h-4 mr-2" />
-              Descargar PDF
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleDownloadPDF} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Descargar PDF
+              </Button>
+              <Button onClick={() => window.print()} variant="outline" size="sm">
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Información del Mantenimiento</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm">
+        <div id="maintenance-pdf-content" className="bg-white p-8">
+          {/* Encabezado */}
+          <div className="border-4 border-blue-900 p-6 mb-6">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-blue-900 mb-2">
+                  ORDEN DE TRABAJO DE MANTENIMIENTO
+                </h1>
+                <p className="text-lg text-blue-700">
+                  OT-{maintenance.id?.substring(0, 8).toUpperCase() || "N/A"}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-slate-600">Fecha de Emisión:</div>
+                <div className="font-bold">{format(new Date(), "dd/MM/yyyy", { locale: es })}</div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t-2 border-blue-200">
               <div>
-                <span className="font-semibold">Máquina:</span> {getMachineName(maintenance.machine_id)}
+                <span className="font-semibold">Estado:</span>
+                <span className={`ml-2 px-2 py-1 rounded ${
+                  maintenance.estado === "Completado" ? "bg-green-100 text-green-800" :
+                  maintenance.estado === "En Proceso" ? "bg-blue-100 text-blue-800" :
+                  "bg-amber-100 text-amber-800"
+                }`}>
+                  {maintenance.estado || "N/A"}
+                </span>
               </div>
               <div>
-                <span className="font-semibold">Código:</span> {getMachineCode(maintenance.machine_id)}
+                <span className="font-semibold">Prioridad:</span>
+                <span className={`ml-2 px-2 py-1 rounded ${
+                  maintenance.prioridad === "Urgente" ? "bg-red-100 text-red-800" :
+                  maintenance.prioridad === "Alta" ? "bg-orange-100 text-orange-800" :
+                  "bg-blue-100 text-blue-800"
+                }`}>
+                  {maintenance.prioridad || "Media"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Información de la Máquina */}
+          <div className="border-2 border-slate-300 mb-6">
+            <div className="bg-blue-900 text-white p-3">
+              <h2 className="text-lg font-bold">1. INFORMACIÓN DE LA MÁQUINA</h2>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div>
+                  <span className="text-sm text-slate-600">Máquina:</span>
+                  <div className="font-bold text-lg">{machine?.nombre || "N/A"}</div>
+                </div>
+                <div>
+                  <span className="text-sm text-slate-600">Código:</span>
+                  <div className="font-bold">{machine?.codigo || "N/A"}</div>
+                </div>
+                <div>
+                  <span className="text-sm text-slate-600">Ubicación:</span>
+                  <div className="font-bold">{machine?.ubicacion || "N/A"}</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-sm text-slate-600">Marca/Modelo:</span>
+                  <div className="font-bold">{machine?.marca || "N/A"} {machine?.modelo || ""}</div>
+                </div>
+                <div>
+                  <span className="text-sm text-slate-600">Nº Serie:</span>
+                  <div className="font-bold">{machine?.numero_serie || "N/A"}</div>
+                </div>
+                <div>
+                  <span className="text-sm text-slate-600">Estado:</span>
+                  <div className="font-bold">{machine?.estado || "N/A"}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Información del Mantenimiento */}
+          <div className="border-2 border-slate-300 mb-6">
+            <div className="bg-blue-900 text-white p-3">
+              <h2 className="text-lg font-bold">2. DETALLES DEL MANTENIMIENTO</h2>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-slate-600">Tipo:</span>
+                <div className="font-bold">{maintenance.tipo || "N/A"}</div>
               </div>
               <div>
-                <span className="font-semibold">Tipo:</span> {maintenance.tipo}
+                <span className="text-sm text-slate-600">Fecha Programada:</span>
+                <div className="font-bold">
+                  {maintenance.fecha_programada 
+                    ? format(new Date(maintenance.fecha_programada), "dd/MM/yyyy HH:mm", { locale: es })
+                    : "N/A"}
+                </div>
               </div>
               <div>
-                <span className="font-semibold">Prioridad:</span> {maintenance.prioridad}
+                <span className="text-sm text-slate-600">Duración Estimada:</span>
+                <div className="font-bold">{maintenance.duracion_estimada || 0} horas</div>
               </div>
-              <div>
-                <span className="font-semibold">Fecha Programada:</span>{" "}
-                {format(new Date(maintenance.fecha_programada), "dd/MM/yyyy HH:mm", { locale: es })}
-              </div>
-              <div>
-                <span className="font-semibold">Estado:</span> {maintenance.estado}
-              </div>
+              {workOrder.duracion_real > 0 && (
+                <div>
+                  <span className="text-sm text-slate-600">Duración Real:</span>
+                  <div className="font-bold">{workOrder.duracion_real.toFixed(2)} horas</div>
+                </div>
+              )}
               {maintenance.descripcion && (
                 <div className="col-span-2">
-                  <span className="font-semibold">Descripción:</span> {maintenance.descripcion}
+                  <span className="text-sm text-slate-600">Descripción:</span>
+                  <div className="mt-1 p-2 bg-slate-50 rounded">{maintenance.descripcion}</div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Personal Asignado</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm">
+          {/* Personal Asignado */}
+          <div className="border-2 border-slate-300 mb-6">
+            <div className="bg-blue-900 text-white p-3">
+              <h2 className="text-lg font-bold">3. PERSONAL ASIGNADO</h2>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-4">
               <div>
-                <span className="font-semibold">Técnico Asignado:</span>{" "}
-                {getEmployeeName(maintenance.tecnico_asignado)}
-              </div>
-              <div>
-                <span className="font-semibold">Creado Por:</span>{" "}
-                {getEmployeeName(maintenance.creado_por)}
+                <span className="text-sm text-slate-600">Técnico Asignado:</span>
+                <div className="font-bold">{technician?.nombre || "No asignado"}</div>
               </div>
               <div>
-                <span className="font-semibold">Supervisado Por:</span>{" "}
-                {getEmployeeName(maintenance.revisado_por)}
+                <span className="text-sm text-slate-600">Creado Por:</span>
+                <div className="font-bold">{employees.find(e => e.id === maintenance.creado_por)?.nombre || "N/A"}</div>
               </div>
               <div>
-                <span className="font-semibold">Verificado Por:</span>{" "}
-                {getEmployeeName(maintenance.verificado_por)}
+                <span className="text-sm text-slate-600">Supervisado Por:</span>
+                <div className="font-bold">{reviewer?.nombre || "No asignado"}</div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span>Lista de Tareas ({tareasCompletadas}/{tareas.length} completadas)</span>
-                <span className="text-sm font-normal">{progresoTareas.toFixed(0)}%</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3 border-2 border-dashed border-blue-200 rounded-lg p-4 bg-blue-50">
-                <div className="space-y-2">
-                  <Label>Nueva Tarea</Label>
-                  <Input
-                    placeholder="Título de la tarea..."
-                    value={nuevaTarea.titulo}
-                    onChange={(e) => setNuevaTarea({ ...nuevaTarea, titulo: e.target.value })}
-                  />
-                  <Textarea
-                    placeholder="Descripción (opcional)..."
-                    value={nuevaTarea.descripcion}
-                    onChange={(e) => setNuevaTarea({ ...nuevaTarea, descripcion: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-
-                {nuevaTarea.subtareas.length > 0 && (
-                  <div className="space-y-1">
-                    <Label className="text-xs">Subtareas:</Label>
-                    {nuevaTarea.subtareas.map((st, idx) => (
-                      <div key={idx} className="text-xs bg-white p-2 rounded border">
-                        • {st.titulo}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Añadir subtarea..."
-                    value={nuevaSubtarea}
-                    onChange={(e) => setNuevaSubtarea(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSubtarea();
-                      }
-                    }}
-                  />
-                  <Button type="button" variant="outline" size="sm" onClick={handleAddSubtarea}>
-                    <Plus className="w-4 h-4 mr-1" /> Subtarea
-                  </Button>
-                </div>
-
-                <Button type="button" onClick={handleAddTarea} className="w-full bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Añadir Tarea
-                </Button>
+              <div>
+                <span className="text-sm text-slate-600">Verificado Por:</span>
+                <div className="font-bold">{verifier?.nombre || "No asignado"}</div>
               </div>
+            </div>
+          </div>
 
-              {tareas.length === 0 ? (
-                <p className="text-center text-slate-400 py-8">No hay tareas definidas</p>
-              ) : (
-                <div className="space-y-3">
-                  {tareas.map((tarea, index) => (
-                    <Card key={index} className={`${tarea.completada ? 'bg-green-50 border-green-200' : 'bg-slate-50'}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={tarea.completada}
-                            onCheckedChange={() => handleToggleTarea(index)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1">
-                            <div className={`font-semibold ${tarea.completada ? 'line-through text-slate-500' : ''}`}>
-                              {index + 1}. {tarea.titulo}
-                            </div>
-                            {tarea.descripcion && (
-                              <p className="text-sm text-slate-600 mt-1">{tarea.descripcion}</p>
-                            )}
-
-                            {tarea.subtareas && tarea.subtareas.length > 0 && (
-                              <div className="mt-3 ml-4 space-y-2">
-                                {tarea.subtareas.map((subtarea, subIndex) => (
-                                  <div key={subIndex} className="flex items-center gap-2">
-                                    <Checkbox
-                                      checked={subtarea.completada}
-                                      onCheckedChange={() => handleToggleSubtarea(index, subIndex)}
-                                      className="h-3 w-3"
-                                    />
-                                    <span className={`text-sm ${subtarea.completada ? 'line-through text-slate-500' : ''}`}>
-                                      {subtarea.titulo}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+          {/* Tareas */}
+          <div className="border-2 border-slate-300 mb-6">
+            <div className="bg-blue-900 text-white p-3">
+              <h2 className="text-lg font-bold">
+                4. TAREAS REALIZADAS ({tareasCompletadas}/{totalTareas} completadas)
+              </h2>
+            </div>
+            <div className="p-4">
+              {workOrder.tareas && workOrder.tareas.length > 0 ? (
+                <div className="space-y-4">
+                  {workOrder.tareas.map((tarea, index) => (
+                    <div key={index} className="border border-slate-200 rounded p-3">
+                      <div className="flex items-start gap-3 mb-2">
+                        <Checkbox
+                          checked={tarea.completada}
+                          onCheckedChange={() => handleTaskToggle(index)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <div className="font-bold text-base">
+                            {index + 1}. {tarea.titulo || "Tarea sin título"}
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveTarea(index)}
-                            className="text-red-600 hover:bg-red-50"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
+                          {tarea.descripcion && (
+                            <div className="text-sm text-slate-600 mt-1">{tarea.descripcion}</div>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+
+                      {tarea.subtareas && tarea.subtareas.length > 0 && (
+                        <div className="ml-8 mt-2 space-y-1.5 border-l-2 border-slate-200 pl-4">
+                          {tarea.subtareas.map((subtarea, subIndex) => (
+                            <div key={subIndex} className="flex items-start gap-2">
+                              <Checkbox
+                                checked={subtarea.completada}
+                                onCheckedChange={() => handleSubtaskToggle(index, subIndex)}
+                                className="mt-0.5"
+                              />
+                              <span className="text-sm">{subtarea.titulo || "Subtarea"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
+              ) : (
+                <div className="text-center text-slate-400 py-4">
+                  No hay tareas definidas
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Registro de Tiempos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+          {/* Registro de Tiempos */}
+          <div className="border-2 border-slate-300 mb-6">
+            <div className="bg-blue-900 text-white p-3">
+              <h2 className="text-lg font-bold">5. REGISTRO DE TIEMPOS</h2>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
+                  <Label>Fecha/Hora Inicio</Label>
                   <Input
-                    id="fecha_inicio"
                     type="datetime-local"
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
+                    value={workOrder.fecha_inicio ? format(new Date(workOrder.fecha_inicio), "yyyy-MM-dd'T'HH:mm") : ""}
+                    onChange={(e) => setWorkOrder({ ...workOrder, fecha_inicio: new Date(e.target.value).toISOString() })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fecha_fin">Fecha y Hora de Finalización</Label>
+                  <Label>Fecha/Hora Finalización</Label>
                   <Input
-                    id="fecha_fin"
                     type="datetime-local"
-                    value={fechaFin}
-                    onChange={(e) => setFechaFin(e.target.value)}
+                    value={workOrder.fecha_finalizacion ? format(new Date(workOrder.fecha_finalizacion), "yyyy-MM-dd'T'HH:mm") : ""}
+                    onChange={(e) => setWorkOrder({ ...workOrder, fecha_finalizacion: new Date(e.target.value).toISOString() })}
                   />
                 </div>
               </div>
-              {fechaInicio && fechaFin && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <span className="text-sm font-semibold text-blue-900">
-                    Duración: {((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60)).toFixed(2)} horas
+              
+              <Button type="button" onClick={handleRecordTime} variant="outline" className="w-full mb-4">
+                {!workOrder.fecha_inicio ? "Registrar Inicio" : !workOrder.fecha_finalizacion ? "Registrar Finalización" : "Tiempo Registrado"}
+              </Button>
+
+              {workOrder.duracion_real > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 text-center">
+                  <span className="text-sm text-blue-900 font-semibold">
+                    Duración Total: {workOrder.duracion_real.toFixed(2)} horas
                   </span>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Firmas y Validación</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <SignaturePad
-                value={firmaTecnico}
-                onChange={setFirmaTecnico}
-                label={`Firma Técnico Asignado: ${getEmployeeName(maintenance.tecnico_asignado)}`}
+          {/* Firmas */}
+          <div className="border-2 border-slate-300 mb-6">
+            <div className="bg-blue-900 text-white p-3">
+              <h2 className="text-lg font-bold">6. VALIDACIÓN Y FIRMAS</h2>
+            </div>
+            <div className="p-4 space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="border border-slate-300 p-4">
+                  <div className="font-semibold mb-2">Técnico Ejecutor:</div>
+                  <div className="text-sm text-slate-600 mb-2">{technician?.nombre || "No asignado"}</div>
+                  <SignaturePad
+                    value={workOrder.firma_tecnico}
+                    onChange={(sig) => setWorkOrder({ ...workOrder, firma_tecnico: sig })}
+                    label=""
+                  />
+                  <div className="text-xs text-slate-500 mt-2">
+                    Fecha: {workOrder.fecha_finalizacion ? format(new Date(workOrder.fecha_finalizacion), "dd/MM/yyyy", { locale: es }) : "_______________"}
+                  </div>
+                </div>
+
+                <div className="border border-slate-300 p-4">
+                  <div className="font-semibold mb-2">Supervisor:</div>
+                  <div className="text-sm text-slate-600 mb-2">{reviewer?.nombre || "No asignado"}</div>
+                  <SignaturePad
+                    value={workOrder.firma_revisado}
+                    onChange={(sig) => setWorkOrder({ ...workOrder, firma_revisado: sig })}
+                    label=""
+                  />
+                  <div className="text-xs text-slate-500 mt-2">
+                    Fecha: _______________
+                  </div>
+                </div>
+
+                <div className="border border-slate-300 p-4">
+                  <div className="font-semibold mb-2">Verificación Final:</div>
+                  <div className="text-sm text-slate-600 mb-2">{verifier?.nombre || "No asignado"}</div>
+                  <SignaturePad
+                    value={workOrder.firma_verificado}
+                    onChange={(sig) => setWorkOrder({ ...workOrder, firma_verificado: sig })}
+                    label=""
+                  />
+                  <div className="text-xs text-slate-500 mt-2">
+                    Fecha: _______________
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Observaciones */}
+          <div className="border-2 border-slate-300 mb-6">
+            <div className="bg-blue-900 text-white p-3">
+              <h2 className="text-lg font-bold">7. OBSERVACIONES Y NOTAS</h2>
+            </div>
+            <div className="p-4">
+              <Textarea
+                value={workOrder.notas}
+                onChange={(e) => setWorkOrder({ ...workOrder, notas: e.target.value })}
+                rows={4}
+                placeholder="Añadir observaciones..."
+                className="w-full"
               />
+            </div>
+          </div>
 
-              <SignaturePad
-                value={firmaRevisado}
-                onChange={setFirmaRevisado}
-                label={`Firma Supervisado Por: ${getEmployeeName(maintenance.revisado_por)}`}
-              />
-
-              <SignaturePad
-                value={firmaVerificado}
-                onChange={setFirmaVerificado}
-                label={`Firma Verificado Por: ${getEmployeeName(maintenance.verificado_por)}`}
-              />
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cerrar
-            </Button>
-            <Button
-              onClick={handleSave}
-              variant="outline"
-              className="bg-blue-50 hover:bg-blue-100"
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-            </Button>
-            <Button
-              onClick={handleComplete}
-              className="bg-green-600 hover:bg-green-700"
-              disabled={completeMutation.isPending}
-            >
-              {completeMutation.isPending ? "Completando..." : "Completar Mantenimiento"}
-            </Button>
+          {/* Pie */}
+          <div className="border-t-4 border-blue-900 pt-4 mt-8 text-center text-xs text-slate-500">
+            <p className="mb-2">
+              Documento generado el {format(new Date(), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+            </p>
+            <p className="font-semibold">
+              Este documento es válido con las firmas digitales de las partes implicadas
+            </p>
+            <p className="mt-2 text-slate-400">
+              Código OT: {maintenance.id || "N/A"} | Sistema de Gestión de Mantenimiento
+            </p>
           </div>
         </div>
 
-        {/* Hidden component to generate PDF content for download/print */}
-        <div id="maintenance-pdf-content" className="hidden">
-          <MaintenanceWorkOrderPDF
-            maintenance={currentMaintenance}
-            workOrder={currentMaintenance} // Use currentMaintenance as workOrder
-            machine={machine}
-            technician={technician}
-            reviewer={reviewer}
-            verifier={verifier}
-            maintenanceType={selectedMaintenanceType}
-            employees={employees} // Pass employees for utility functions if needed
-            getEmployeeName={getEmployeeName}
-            getMachineName={getMachineName}
-            getMachineCode={getMachineCode}
-          />
+        <div className="flex justify-end gap-3 pt-4 border-t print:hidden">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cerrar
+          </Button>
+          <Button 
+            type="button" 
+            onClick={handleSaveProgress}
+            disabled={updateMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Guardar Progreso
+          </Button>
+          <Button 
+            type="button" 
+            onClick={handleComplete}
+            disabled={completeMutation.isPending}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle2 className="w-4 h-4 mr-2" />
+            Completar Mantenimiento
+          </Button>
         </div>
+
+        <style>{`
+          @media print {
+            @page {
+              size: A4;
+              margin: 15mm;
+            }
+            
+            body {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
+
+            .print\\:hidden {
+              display: none !important;
+            }
+            
+            .bg-blue-900, .bg-green-100, .bg-red-100, .bg-amber-100, .bg-orange-100, .bg-blue-100, .bg-slate-50, .bg-blue-50 {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
+          }
+        `}</style>
       </DialogContent>
     </Dialog>
   );
