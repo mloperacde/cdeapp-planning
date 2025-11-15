@@ -16,15 +16,14 @@ export default function LockerDiagnostics({ lockerAssignments, lockerRoomConfigs
     const problemas = [];
 
     lockerAssignments.forEach(la => {
-      if (!la.numero_taquilla_actual || la.requiere_taquilla === false) return;
+      const numero = (la.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+      if (!numero || la.requiere_taquilla === false) return;
 
       const config = lockerRoomConfigs.find(c => c.vestuario === la.vestuario);
       if (!config) return;
 
       const identificadoresValidos = config.identificadores_taquillas || [];
-      const numero = la.numero_taquilla_actual.toString();
       
-      // Verificar si está fuera de rango o no es válido
       let esProblematico = false;
       let motivo = "";
 
@@ -34,7 +33,7 @@ export default function LockerDiagnostics({ lockerAssignments, lockerRoomConfigs
           motivo = "ID no existe en configuración";
         }
       } else {
-        const numeroInt = parseInt(numero);
+        const numeroInt = parseInt(numero, 10);
         if (!isNaN(numeroInt) && numeroInt > config.numero_taquillas_instaladas) {
           esProblematico = true;
           motivo = `Número ${numeroInt} > máximo ${config.numero_taquillas_instaladas}`;
@@ -52,12 +51,12 @@ export default function LockerDiagnostics({ lockerAssignments, lockerRoomConfigs
       }
     });
 
-    // Detectar duplicados
     const duplicados = new Map();
     lockerAssignments.forEach(la => {
-      if (!la.numero_taquilla_actual || la.requiere_taquilla === false) return;
+      const numero = (la.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+      if (!numero || la.requiere_taquilla === false) return;
       
-      const key = `${la.vestuario}-${la.numero_taquilla_actual}`;
+      const key = `${la.vestuario}-${numero}`;
       if (!duplicados.has(key)) {
         duplicados.set(key, []);
       }
@@ -74,7 +73,8 @@ export default function LockerDiagnostics({ lockerAssignments, lockerRoomConfigs
             employee,
             motivo: `Taquilla duplicada (${assignments.length} empleados)`,
             vestuario,
-            isDuplicate: true
+            isDuplicate: true,
+            duplicateGroup: assignments
           });
         });
       }
@@ -93,21 +93,70 @@ export default function LockerDiagnostics({ lockerAssignments, lockerRoomConfigs
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      toast.success("Asignación corregida");
+      toast.success("Asignación limpiada");
     },
+  });
+
+  const cleanAllDuplicatesMutation = useMutation({
+    mutationFn: async () => {
+      const duplicateGroups = new Map();
+      
+      problematicAssignments.filter(p => p.isDuplicate).forEach(p => {
+        const key = `${p.vestuario}-${p.assignment.numero_taquilla_actual}`;
+        if (!duplicateGroups.has(key)) {
+          duplicateGroups.set(key, p.duplicateGroup);
+        }
+      });
+
+      const promises = [];
+      duplicateGroups.forEach(assignments => {
+        assignments.slice(1).forEach(la => {
+          promises.push(
+            base44.entities.LockerAssignment.update(la.id, {
+              numero_taquilla_actual: "",
+              numero_taquilla_nuevo: "",
+              notificacion_enviada: false
+            })
+          );
+        });
+      });
+
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      toast.success("Duplicados eliminados");
+    }
   });
 
   if (problematicAssignments.length === 0) {
     return null;
   }
 
+  const duplicatesCount = problematicAssignments.filter(p => p.isDuplicate).length;
+
   return (
     <Card className="bg-red-50 border-2 border-red-300">
       <CardHeader className="border-b border-red-200">
-        <CardTitle className="flex items-center gap-2 text-red-900">
-          <AlertTriangle className="w-5 h-5" />
-          Asignaciones Problemáticas Detectadas ({problematicAssignments.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-red-900">
+            <AlertTriangle className="w-5 h-5" />
+            Asignaciones Problemáticas Detectadas ({problematicAssignments.length})
+          </CardTitle>
+          {duplicatesCount > 0 && (
+            <Button
+              onClick={() => {
+                if (window.confirm(`¿Eliminar ${duplicatesCount} taquillas duplicadas? Se mantendrá solo la primera asignación de cada taquilla.`)) {
+                  cleanAllDuplicatesMutation.mutate();
+                }
+              }}
+              disabled={cleanAllDuplicatesMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {cleanAllDuplicatesMutation.isPending ? "Eliminando..." : "Eliminar Todos los Duplicados"}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="p-6">
         <div className="bg-white rounded-lg p-4 mb-4">
@@ -142,7 +191,7 @@ export default function LockerDiagnostics({ lockerAssignments, lockerRoomConfigs
                       {problema.vestuario}
                     </Badge>
                     <Badge className={problema.isDuplicate ? "bg-orange-600" : "bg-red-600"}>
-                      Taquilla: {problema.assignment.numero_taquilla_actual}
+                      Taquilla: {(problema.assignment.numero_taquilla_actual || '').replace(/['"]/g, '').trim()}
                     </Badge>
                   </div>
                   <p className="text-xs text-slate-600">{problema.motivo}</p>
@@ -151,12 +200,12 @@ export default function LockerDiagnostics({ lockerAssignments, lockerRoomConfigs
                   size="sm"
                   variant="destructive"
                   onClick={() => {
-                    if (window.confirm(`¿Eliminar asignación de taquilla para ${problema.employee?.nombre}?`)) {
+                    if (window.confirm(`¿Limpiar asignación de taquilla para ${problema.employee?.nombre}?`)) {
                       fixAssignmentMutation.mutate(problema.assignment.id);
                     }
                   }}
                   disabled={fixAssignmentMutation.isPending}
-                  title="Limpiar asignación problemática"
+                  title="Limpiar esta asignación"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

@@ -4,22 +4,34 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, ChevronLeft, ChevronRight, Download, Edit2, Save, X } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Download, Edit2, Save, X, Plus, Settings } from "lucide-react";
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, 
   addYears, subYears, startOfYear, endOfYear, eachMonthOfInterval
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
-export default function WorkCalendar({ holidays = [], vacations = [] }) {
+export default function WorkCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingId, setEditingId] = useState(null);
   const [editingDesc, setEditingDesc] = useState("");
   const queryClient = useQueryClient();
+
+  const { data: holidays } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+    initialData: [],
+  });
+
+  const { data: vacations } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list(),
+    initialData: [],
+  });
 
   const updateHolidayMutation = useMutation({
     mutationFn: ({ id, descripcion }) => base44.entities.Holiday.update(id, { descripcion }),
@@ -88,7 +100,6 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
   const noLaborablesList = useMemo(() => {
     const list = [];
     
-    // Agregar festivos
     holidays.forEach(h => {
       if (!h.fecha) return;
       try {
@@ -108,7 +119,6 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
       } catch {}
     });
 
-    // Agregar vacaciones
     vacations.forEach(v => {
       if (!v.fecha_inicio || !v.fecha_fin) return;
       try {
@@ -182,6 +192,18 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
               Calendario Laboral - {format(currentDate, "yyyy", { locale: es })}
             </CardTitle>
             <div className="flex gap-2 print:hidden">
+              <Link to={createPageUrl("Timeline")}>
+                <Button variant="outline" size="sm">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurar Festivos
+                </Button>
+              </Link>
+              <Link to={createPageUrl("Timeline")}>
+                <Button variant="outline" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Configurar Vacaciones
+                </Button>
+              </Link>
               <Button onClick={() => setCurrentDate(subYears(currentDate, 1))} variant="outline" size="sm">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -196,7 +218,7 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 print:mb-4">
             <Card className="bg-green-50 border-green-200">
               <CardContent className="p-3 text-center">
                 <div className="text-2xl font-bold text-green-900">{stats.laborables}</div>
@@ -229,21 +251,21 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 print:gap-2">
             {months.map(monthDate => {
               const monthDays = getMonthDays(monthDate);
               
               return (
-                <Card key={monthDate.toString()} className="border-2 border-slate-200">
-                  <CardHeader className="pb-2 bg-slate-50 border-b">
-                    <CardTitle className="text-sm font-bold text-center">
+                <Card key={monthDate.toString()} className="border border-slate-200">
+                  <CardHeader className="pb-1 bg-slate-50 border-b print:pb-0.5">
+                    <CardTitle className="text-xs font-bold text-center print:text-[10px]">
                       {format(monthDate, 'MMMM', { locale: es }).toUpperCase()}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-2">
-                    <div className="grid grid-cols-7 gap-0.5 mb-1">
+                  <CardContent className="p-1.5 print:p-1">
+                    <div className="grid grid-cols-7 gap-0.5 mb-0.5">
                       {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(day => (
-                        <div key={day} className="text-center text-[8px] font-semibold text-slate-500">
+                        <div key={day} className="text-center text-[7px] font-semibold text-slate-500">
                           {day}
                         </div>
                       ))}
@@ -257,13 +279,12 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
                       {monthDays.map(day => {
                         const { isHoliday, isVacation, isWeekend, holiday, vacation } = getDayType(day);
                         const isToday = isSameDay(day, new Date());
-                        const isNoHabil = isHoliday || isVacation || isWeekend;
 
                         return (
                           <div
                             key={day.toString()}
-                            className={`aspect-square flex items-center justify-center text-[10px] font-semibold rounded ${
-                              isToday ? 'ring-2 ring-blue-500' :
+                            className={`aspect-square flex items-center justify-center text-[9px] font-semibold rounded print:text-[8px] ${
+                              isToday ? 'ring-1 ring-blue-500' :
                               isHoliday ? 'bg-red-200 text-red-900' :
                               isVacation ? 'bg-blue-200 text-blue-900' :
                               isWeekend ? 'bg-slate-200 text-slate-600' :
@@ -286,7 +307,7 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
             })}
           </div>
 
-          <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t print:hidden">
+          <div className="flex items-center justify-center gap-6 mt-4 pt-3 border-t print:hidden">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 bg-white border border-slate-300 rounded" />
               <span className="text-sm text-slate-700">Hábil</span>
@@ -308,39 +329,39 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
       </Card>
 
       <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm mt-6" id="no-laborables-list">
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
+        <CardHeader className="border-b print:pb-2">
+          <CardTitle className="flex items-center gap-2 print:text-base">
+            <Calendar className="w-5 h-5 text-blue-600 print:w-4 print:h-4" />
             Relación de Días No Laborables {format(currentDate, "yyyy")} ({noLaborablesList.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-6 print:p-4">
           {noLaborablesList.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               No hay días no laborables configurados para este año
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 print:space-y-1">
               {noLaborablesList.map((item, idx) => (
-                <div key={`${item.id}-${idx}`} className={`border-2 rounded-lg p-4 ${
+                <div key={`${item.id}-${idx}`} className={`border-2 rounded-lg p-3 print:p-2 print:border ${
                   item.type === 'festivo' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
                 }`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge className={item.type === 'festivo' ? 'bg-red-600' : 'bg-blue-600'}>
+                      <div className="flex items-center gap-2 mb-2 print:mb-1">
+                        <Badge className={`${item.type === 'festivo' ? 'bg-red-600' : 'bg-blue-600'} print:text-[10px] print:px-2 print:py-0.5`}>
                           {item.type === 'festivo' ? 'FESTIVO' : 'VACACIONES'}
                         </Badge>
-                        <span className="font-bold text-slate-900">
+                        <span className="font-bold text-slate-900 print:text-sm">
                           {format(item.fecha, "dd/MM/yyyy - EEEE", { locale: es })}
                         </span>
                         {item.fecha_fin && (
-                          <span className="text-sm text-slate-600">
+                          <span className="text-sm text-slate-600 print:text-xs">
                             al {format(item.fecha_fin, "dd/MM/yyyy", { locale: es })}
                           </span>
                         )}
                       </div>
-                      <div className="font-semibold text-slate-900 mb-1">{item.nombre}</div>
+                      <div className="font-semibold text-slate-900 mb-1 print:text-sm">{item.nombre}</div>
                       
                       {editingId === item.id ? (
                         <div className="space-y-2">
@@ -373,10 +394,10 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
                       ) : (
                         <>
                           {item.descripcion && (
-                            <p className="text-sm text-slate-600">{item.descripcion}</p>
+                            <p className="text-sm text-slate-600 print:text-xs">{item.descripcion}</p>
                           )}
                           {!item.descripcion && (
-                            <p className="text-sm text-slate-400 italic">Sin descripción</p>
+                            <p className="text-sm text-slate-400 italic print:text-xs">Sin descripción</p>
                           )}
                         </>
                       )}
@@ -403,8 +424,8 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
       <style>{`
         @media print {
           @page {
-            size: A4 portrait;
-            margin: 10mm;
+            size: A4 landscape;
+            margin: 8mm;
           }
           
           body * {
@@ -424,25 +445,24 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
             top: 0;
             width: 100%;
             page-break-after: always;
+            transform: scale(0.95);
           }
           
           #no-laborables-list {
             position: absolute;
             left: 0;
-            top: 100%;
+            top: 0;
             width: 100%;
-            margin-top: 20mm;
+            transform: scale(0.95);
           }
           
           .print\\:hidden {
             display: none !important;
           }
           
-          @media print {
-            .bg-red-200, .bg-blue-200, .bg-slate-200, .bg-red-50, .bg-blue-50, .bg-green-50, .bg-slate-50 {
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-            }
+          .bg-red-200, .bg-blue-200, .bg-slate-200, .bg-red-50, .bg-blue-50, .bg-green-50, .bg-slate-50, .bg-slate-100 {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
           }
         }
       `}</style>

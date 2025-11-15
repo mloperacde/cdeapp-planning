@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,12 +21,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, Building2 } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRound, Building2, Cake } from "lucide-react";
 import EmployeeForm from "../components/employees/EmployeeForm";
 import BirthdayPanel from "../components/employees/BirthdayPanel";
 import AnniversaryPanel from "../components/employees/AnniversaryPanel";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+
+// Helper function to check if two dates are the same day (ignoring time)
+const isSameDay = (date1, date2) => {
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate();
+};
 
 export default function EmployeesPage() {
   const [showForm, setShowForm] = useState(false);
@@ -123,6 +131,36 @@ export default function EmployeesPage() {
       if (emp.empresa_ett) empresas.add(emp.empresa_ett);
     });
     return Array.from(empresas).sort();
+  }, [employees]);
+
+  const upcomingBirthdays = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today to start of day
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    nextWeek.setHours(23, 59, 59, 999); // Normalize nextWeek to end of day
+
+    return employees.filter(emp => {
+      if (!emp.fecha_nacimiento) return false;
+      try {
+        const birthDate = new Date(emp.fecha_nacimiento);
+        // Create a date for the employee's birthday in the current year
+        const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        thisYearBirthday.setHours(0, 0, 0, 0); // Normalize to start of day
+
+        // Check if birthday is today or within the next 7 days
+        return (isSameDay(thisYearBirthday, today) || (thisYearBirthday >= today && thisYearBirthday <= nextWeek));
+      } catch {
+        return false;
+      }
+    }).sort((a, b) => {
+      // Sort by the upcoming birthday date
+      const aBirthDate = new Date(a.fecha_nacimiento);
+      const bBirthDate = new Date(b.fecha_nacimiento);
+      const aThisYearBirthday = new Date(today.getFullYear(), aBirthDate.getMonth(), aBirthDate.getDate());
+      const bThisYearBirthday = new Date(today.getFullYear(), bBirthDate.getMonth(), bBirthDate.getDate());
+      return aThisYearBirthday - bThisYearBirthday;
+    });
   }, [employees]);
 
   const hasActiveAbsenceToday = (employeeId) => {
@@ -251,7 +289,52 @@ export default function EmployeesPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           <div className="lg:col-span-1">
-            <BirthdayPanel employees={employees} compact={true} />
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm h-full">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Cake className="w-5 h-5 text-purple-600" />
+                  Próximos Cumpleaños
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {upcomingBirthdays.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-slate-500">No hay cumpleaños esta semana</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {upcomingBirthdays.map(emp => {
+                      const birthDate = new Date(emp.fecha_nacimiento);
+                      const thisYearBirthday = new Date(new Date().getFullYear(), birthDate.getMonth(), birthDate.getDate());
+                      const isToday = isSameDay(thisYearBirthday, new Date());
+                      
+                      return (
+                        <div 
+                          key={emp.id} 
+                          className={`p-2 rounded-lg ${
+                            isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-semibold text-sm text-slate-900">{emp.nombre}</div>
+                              <div className="text-xs text-slate-600">
+                                {format(thisYearBirthday, "d 'de' MMMM", { locale: es })}
+                              </div>
+                            </div>
+                            {isToday && (
+                              <Badge className="bg-purple-600 text-white">
+                                ¡HOY! 🎉
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
           
           <div className="lg:col-span-1">

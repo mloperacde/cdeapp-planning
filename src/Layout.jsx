@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Award,
   Shield,
+  MessageSquare, // Added MessageSquare icon
   // Removed UserCog import as it's no longer used for MasterEmployeeView
 } from "lucide-react";
 import {
@@ -300,6 +301,21 @@ export default function Layout({ children, currentPageName }) {
                       <Link to={createPageUrl("ShiftManagers")} className="flex items-center gap-3 px-3 py-2.5">
                         <UsersRound className="w-5 h-5" />
                         <span className="text-sm">Jefes de Turno</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  {/* New Messaging menu item */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("Messaging")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("Messaging")} className="flex items-center gap-3 px-3 py-2.5">
+                        <MessageSquare className="w-5 h-5" />
+                        <span className="text-sm">Mensajería</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
