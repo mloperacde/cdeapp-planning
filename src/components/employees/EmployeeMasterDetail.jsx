@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,16 +10,28 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   User, Briefcase, Clock, KeyRound, Award, Shield, 
-  Flame, FileText, ArrowLeft, Edit, Calendar, TrendingUp
+  Flame, FileText, ArrowLeft, Edit, Calendar, TrendingUp, Save
 } from "lucide-react";
-import { format, differenceInYears, differenceInMonths, differenceInDays } from "date-fns";
+import { format, differenceInYears, differenceInMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import LockerAssignmentPanel from "./LockerAssignmentPanel";
-import CommitteeMemberForm from "../committee/CommitteeMemberForm";
-import EmergencyTeamMemberForm from "../committee/EmergencyTeamMemberForm";
+import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const [activeTab, setActiveTab] = useState("general");
+  const [editingLocker, setEditingLocker] = useState(false);
+  const [lockerData, setLockerData] = useState({
+    requiere_taquilla: true, // Default to true if no existing locker
+    vestuario: "",
+    numero_taquilla_actual: ""
+  });
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
@@ -76,7 +89,48 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const employeeAbsences = absences.filter(a => a.employee_id === employee.id);
   const employeeTraining = trainingRecords.filter(tr => tr.employee_id === employee.id);
 
-  const antiguedad = React.useMemo(() => {
+  useEffect(() => {
+    if (locker) {
+      setLockerData({
+        requiere_taquilla: locker.requiere_taquilla !== false, // Treat undefined as true
+        vestuario: locker.vestuario || "",
+        numero_taquilla_actual: (locker.numero_taquilla_actual || '').replace(/['"]/g, '').trim()
+      });
+    } else {
+      setLockerData({
+        requiere_taquilla: true, // Default to true if no existing locker
+        vestuario: "",
+        numero_taquilla_actual: ""
+      });
+    }
+  }, [locker]);
+
+  const saveLockerMutation = useMutation({
+    mutationFn: async (data) => {
+      if (locker) {
+        return await base44.entities.LockerAssignment.update(locker.id, data);
+      }
+      return await base44.entities.LockerAssignment.create({
+        ...data,
+        employee_id: employee.id,
+        fecha_asignacion: new Date().toISOString()
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      toast.success("Asignación de taquilla actualizada");
+      setEditingLocker(false);
+    },
+    onError: (error) => {
+      toast.error(`Error al actualizar taquilla: ${error.message}`);
+    }
+  });
+
+  const handleSaveLocker = () => {
+    saveLockerMutation.mutate(lockerData);
+  };
+
+  const antiguedad = useMemo(() => {
     if (!employee.fecha_alta) return null;
     
     const fechaAlta = new Date(employee.fecha_alta);
@@ -92,7 +146,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     return result.length > 0 ? result.join(', ') : 'Menos de 1 mes';
   }, [employee.fecha_alta]);
 
-  const edad = React.useMemo(() => {
+  const edad = useMemo(() => {
     if (!employee.fecha_nacimiento) return null;
     
     const birthDate = new Date(employee.fecha_nacimiento);
@@ -340,7 +394,95 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
             </TabsContent>
 
             <TabsContent value="locker" className="mt-6">
-              <LockerAssignmentPanel employee={employee} />
+              <Card>
+                <CardHeader className="border-b border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <KeyRound className="w-5 h-5 text-blue-600" />
+                      Asignación de Taquilla
+                    </CardTitle>
+                    {!editingLocker && (
+                      <Button onClick={() => setEditingLocker(true)} variant="outline" size="sm">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Editar
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="requiere_taquilla"
+                        checked={lockerData.requiere_taquilla}
+                        onCheckedChange={(checked) => setLockerData({...lockerData, requiere_taquilla: checked})}
+                        disabled={!editingLocker}
+                      />
+                      <Label htmlFor="requiere_taquilla">Requiere Taquilla</Label>
+                    </div>
+
+                    {lockerData.requiere_taquilla && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="vestuario">Vestuario</Label>
+                          <Select
+                            value={lockerData.vestuario}
+                            onValueChange={(value) => setLockerData({...lockerData, vestuario: value})}
+                            disabled={!editingLocker}
+                          >
+                            <SelectTrigger id="vestuario">
+                              <SelectValue placeholder="Seleccionar vestuario" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Vestuario Femenino Planta Baja">Femenino P. Baja</SelectItem>
+                              <SelectItem value="Vestuario Femenino Planta Alta">Femenino P. Alta</SelectItem>
+                              <SelectItem value="Vestuario Masculino Planta Baja">Masculino P. Baja</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="numero_taquilla_actual">Número de Taquilla</Label>
+                          <Input
+                            id="numero_taquilla_actual"
+                            value={lockerData.numero_taquilla_actual}
+                            onChange={(e) => setLockerData({...lockerData, numero_taquilla_actual: e.target.value})}
+                            placeholder="Identificador de taquilla"
+                            disabled={!editingLocker}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {editingLocker && (
+                      <div className="flex gap-2 pt-4">
+                        <Button
+                          onClick={handleSaveLocker}
+                          disabled={saveLockerMutation.isPending}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          Guardar
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingLocker(false);
+                            // Reset lockerData to its original state or default if no locker
+                            setLockerData({
+                              requiere_taquilla: locker?.requiere_taquilla !== false,
+                              vestuario: locker?.vestuario || "",
+                              numero_taquilla_actual: (locker?.numero_taquilla_actual || '').replace(/['"]/g, '').trim()
+                            });
+                          }}
+                          variant="outline"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="skills" className="space-y-4 mt-6">

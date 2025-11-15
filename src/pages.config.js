@@ -38,6 +38,8 @@ import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
 import LockerDataCleanup from './pages/LockerDataCleanup';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import MasterEmployeeView from './pages/MasterEmployeeView';
+import AppUserManagement from './pages/AppUserManagement';
+import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
 import Layout from './Layout.jsx';
 
 
@@ -82,6 +84,8 @@ export const PAGES = {
     "LockerDataCleanup": LockerDataCleanup,
     "EmployeeDataCorrection": EmployeeDataCorrection,
     "MasterEmployeeView": MasterEmployeeView,
+    "AppUserManagement": AppUserManagement,
+    "LockerDuplicateCleanup": LockerDuplicateCleanup,
 }
 
 export const pagesConfig = {
