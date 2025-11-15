@@ -129,9 +129,9 @@ export default function Timeline() {
               selectedTeam={selectedTeam}
               onSelectedTeamChange={setSelectedTeam}
               teams={teams}
-              selectedDepartment={selectedDepartment} // New prop
-              onSelectedDepartmentChange={setSelectedDepartment} // New prop
-              departments={departments} // New prop
+              selectedDepartment={selectedDepartment}
+              onSelectedDepartmentChange={setSelectedDepartment}
+              departments={departments}
             />
           </Card>
 
@@ -146,11 +146,11 @@ export default function Timeline() {
               teams={teams}
               teamSchedules={teamSchedules}
               viewMode={viewMode}
-              selectedDepartment={selectedDepartment} // New prop
+              selectedDepartment={selectedDepartment}
             />
           </Card>
 
-          <WorkCalendar holidays={holidays} vacations={vacations} />
+          <WorkCalendar />
         </motion.div>
       </div>
     </div>
