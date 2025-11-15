@@ -34,6 +34,7 @@ import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import AttendanceManagement from './pages/AttendanceManagement';
 import SkillMatrix from './pages/SkillMatrix';
 import CommitteeManagement from './pages/CommitteeManagement';
+import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
 import Layout from './Layout.jsx';
 
 
@@ -74,6 +75,7 @@ export const PAGES = {
     "AttendanceManagement": AttendanceManagement,
     "SkillMatrix": SkillMatrix,
     "CommitteeManagement": CommitteeManagement,
+    "ETTTemporaryEmployees": ETTTemporaryEmployees,
 }
 
 export const pagesConfig = {

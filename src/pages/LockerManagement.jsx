@@ -43,7 +43,8 @@ export default function LockerManagementPage() {
     equipo: "all",
     sexo: "all",
     vestuario: "all",
-    searchTerm: ""
+    searchTerm: "",
+    numeroTaquilla: ""
   });
   const [sortConfig, setSortConfig] = useState({ field: "nombre", direction: "asc" });
   const [showHistory, setShowHistory] = useState(false);
@@ -383,8 +384,12 @@ export default function LockerManagementPage() {
       const assignment = getAssignment(emp.id);
       const vestuario = editData?.vestuario || assignment?.vestuario || "";
       const matchesVestuario = filters.vestuario === "all" || vestuario === filters.vestuario;
+
+      const numeroTaquilla = editData?.numero_taquilla_actual || assignment?.numero_taquilla_actual || "";
+      const matchesNumeroTaquilla = !filters.numeroTaquilla || 
+        numeroTaquilla.toString().includes(filters.numeroTaquilla);
       
-      return matchesDept && matchesTeam && matchesSex && matchesSearch && matchesVestuario;
+      return matchesDept && matchesTeam && matchesSex && matchesSearch && matchesVestuario && matchesNumeroTaquilla;
     });
 
     // Ordenar
@@ -509,9 +514,11 @@ export default function LockerManagementPage() {
       const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
       const totalInstaladas = config?.numero_taquillas_instaladas || 0;
       
+      // CORREGIDO: Contar solo asignaciones que tengan numero_taquilla_actual
       const asignadas = lockerAssignments.filter(la => 
         la.vestuario === vestuario && 
         la.numero_taquilla_actual &&
+        la.numero_taquilla_actual.toString().trim() !== "" &&
         la.requiere_taquilla !== false
       ).length;
       
@@ -529,7 +536,7 @@ export default function LockerManagementPage() {
 
   const SortableHeader = ({ field, label }) => (
     <TableHead 
-      className="cursor-pointer hover:bg-slate-100 transition-colors group" // Added 'group' class for hover effect
+      className="cursor-pointer hover:bg-slate-100 transition-colors"
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center gap-2">
@@ -538,7 +545,7 @@ export default function LockerManagementPage() {
           className={`w-4 h-4 transition-transform 
             ${sortConfig.field === field 
               ? `text-blue-600 ${sortConfig.direction === 'desc' ? 'rotate-180' : ''}` 
-              : 'text-slate-300 opacity-0 group-hover:opacity-100' // Icon is hidden until hovered, then appears
+              : 'text-slate-400'
             }`
           }
         />
@@ -842,13 +849,22 @@ export default function LockerManagementPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                   <div className="space-y-2">
                     <Label>Buscar por Nombre</Label>
                     <Input
-                      placeholder="Nombre del empleado..."
+                      placeholder="Nombre..."
                       value={filters.searchTerm}
                       onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Nº Taquilla</Label>
+                    <Input
+                      placeholder="Número..."
+                      value={filters.numeroTaquilla}
+                      onChange={(e) => setFilters({...filters, numeroTaquilla: e.target.value})}
                     />
                   </div>
 
