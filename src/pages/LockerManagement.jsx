@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown, XCircle, ExternalLink } from "lucide-react";
+import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown, XCircle, ExternalLink, Database, UserX } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -39,6 +39,8 @@ import { toast } from "sonner";
 import LockerRoomMap from "../components/lockers/LockerRoomMap";
 import LockerConfigForm from "../components/lockers/LockerConfigForm";
 import LockerDiagnostics from "../components/lockers/LockerDiagnostics";
+import LockerAudit from "../components/lockers/LockerAudit";
+import EmployeesWithoutLocker from "../components/lockers/EmployeesWithoutLocker";
 
 export default function LockerManagementPage() {
   const [filters, setFilters] = useState({
@@ -69,7 +71,7 @@ export default function LockerManagementPage() {
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
     initialData: [],
-    refetchInterval: 5000, // Refrescar cada 5 segundos
+    refetchInterval: 5000,
   });
 
   const { data: teams } = useQuery({
@@ -91,11 +93,15 @@ export default function LockerManagementPage() {
   React.useEffect(() => {
     const assignments = {};
     lockerAssignments.forEach(la => {
+      // Limpiar comillas del número de taquilla
+      const cleanActual = la.numero_taquilla_actual ? la.numero_taquilla_actual.replace(/['"]/g, '').trim() : '';
+      const cleanNuevo = la.numero_taquilla_nuevo ? la.numero_taquilla_nuevo.replace(/['']/g, '').trim() : '';
+      
       assignments[la.employee_id] = {
         requiere_taquilla: la.requiere_taquilla !== false,
         vestuario: la.vestuario || "",
-        numero_taquilla_actual: la.numero_taquilla_actual || "",
-        numero_taquilla_nuevo: ""
+        numero_taquilla_actual: cleanActual,
+        numero_taquilla_nuevo: cleanNuevo
       };
     });
     setEditingAssignments(assignments);
@@ -155,7 +161,7 @@ export default function LockerManagementPage() {
         const codigo = parts[0]?.trim();
         const nombre = parts[1]?.trim();
         const vestuario = parts[2]?.trim();
-        const numeroTaquilla = parts[3]?.trim();
+        const numeroTaquilla = parts[3]?.trim().replace(/['"]/g, ''); // Limpiar comillas
 
         let employee = null;
         
@@ -197,10 +203,9 @@ export default function LockerManagementPage() {
       const promises = importPreview.matched.map(async ({ employee, vestuario, numeroTaquilla }) => {
         const existing = lockerAssignments.find(la => la.employee_id === employee.id);
         
-        // Verificar duplicados antes de importar
         const duplicado = lockerAssignments.find(la => 
           la.vestuario === vestuario &&
-          la.numero_taquilla_actual === numeroTaquilla &&
+          la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === numeroTaquilla && // Clean quotes for comparison
           la.employee_id !== employee.id &&
           la.requiere_taquilla !== false
         );
@@ -211,7 +216,7 @@ export default function LockerManagementPage() {
         }
         
         const now = new Date().toISOString();
-        const hasChange = existing && existing.numero_taquilla_actual !== numeroTaquilla;
+        const hasChange = existing && existing.numero_taquilla_actual?.replace(/['"]/g, '').trim() !== numeroTaquilla;
 
         const dataToSave = {
           employee_id: employee.id,
@@ -256,32 +261,29 @@ export default function LockerManagementPage() {
 
   const saveAllMutation = useMutation({
     mutationFn: async () => {
-      // VALIDACIÓN: Detectar duplicados
       const errores = [];
       
       for (const [employeeId, data] of Object.entries(editingAssignments)) {
         if (!data.requiere_taquilla) continue;
         
-        const numeroAUsar = data.numero_taquilla_nuevo || data.numero_taquilla_actual;
-        if (!numeroAUsar || numeroAUsar.toString().trim() === "") continue;
+        const numeroAUsar = (data.numero_taquilla_nuevo || data.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+        if (!numeroAUsar) continue;
         
         const vestuario = data.vestuario;
         if (!vestuario) continue;
         
-        // Validar que el identificador existe en la configuración
         const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
         const identificadoresValidos = config?.identificadores_taquillas || [];
         
-        if (identificadoresValidos.length > 0 && !identificadoresValidos.includes(numeroAUsar.toString())) {
+        if (identificadoresValidos.length > 0 && !identificadoresValidos.includes(numeroAUsar)) {
           const emp = employees.find(e => e.id === employeeId);
           errores.push(`${emp?.nombre || 'Empleado'}: El identificador "${numeroAUsar}" no existe en ${vestuario}`);
           continue;
         }
         
-        // Validar duplicados (excluir el mismo empleado)
         const duplicado = lockerAssignments.find(la => 
           la.vestuario === vestuario &&
-          la.numero_taquilla_actual === numeroAUsar.toString() &&
+          la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === numeroAUsar &&
           la.employee_id !== employeeId &&
           la.requiere_taquilla !== false
         );
@@ -299,19 +301,20 @@ export default function LockerManagementPage() {
         throw new Error("Validación fallida");
       }
       
-      // Si no hay errores, proceder con el guardado
       const promises = Object.entries(editingAssignments).map(([employeeId, data]) => {
         const existing = lockerAssignments.find(la => la.employee_id === employeeId);
         
-        const hasLockerChange = data.numero_taquilla_nuevo && 
-          data.numero_taquilla_nuevo !== data.numero_taquilla_actual;
+        const numeroActualClean = (data.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+        const numeroNuevoClean = (data.numero_taquilla_nuevo || '').replace(/['']/g, '').trim();
+        
+        const hasLockerChange = numeroNuevoClean && numeroNuevoClean !== numeroActualClean;
         
         const now = new Date().toISOString();
         const updatedData = {
           employee_id: employeeId,
           requiere_taquilla: data.requiere_taquilla,
           vestuario: data.vestuario,
-          numero_taquilla_actual: hasLockerChange ? data.numero_taquilla_nuevo : data.numero_taquilla_actual,
+          numero_taquilla_actual: hasLockerChange ? numeroNuevoClean : numeroActualClean,
           numero_taquilla_nuevo: "",
           fecha_asignacion: now,
           notificacion_enviada: hasLockerChange ? false : (existing?.notificacion_enviada || false)
@@ -324,7 +327,7 @@ export default function LockerManagementPage() {
             vestuario_anterior: existing.vestuario,
             taquilla_anterior: existing.numero_taquilla_actual,
             vestuario_nuevo: data.vestuario,
-            taquilla_nueva: data.numero_taquilla_nuevo,
+            taquilla_nueva: numeroNuevoClean,
             motivo: "Reasignación manual"
           });
           updatedData.historial_cambios = historial;
@@ -393,9 +396,9 @@ export default function LockerManagementPage() {
       const vestuario = editData?.vestuario || assignment?.vestuario || "";
       const matchesVestuario = filters.vestuario === "all" || vestuario === filters.vestuario;
 
-      const numeroTaquilla = editData?.numero_taquilla_actual || assignment?.numero_taquilla_actual || "";
+      const numeroTaquilla = (editData?.numero_taquilla_actual || assignment?.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
       const matchesNumeroTaquilla = !filters.numeroTaquilla || 
-        numeroTaquilla.toString().includes(filters.numeroTaquilla);
+        numeroTaquilla.includes(filters.numeroTaquilla);
       
       return matchesDept && matchesTeam && matchesSex && matchesSearch && matchesVestuario && matchesNumeroTaquilla;
     });
@@ -415,8 +418,8 @@ export default function LockerManagementPage() {
       } else if (sortConfig.field === "taquilla") {
         const aAssign = editingAssignments[a.id] || getAssignment(a.id);
         const bAssign = editingAssignments[b.id] || getAssignment(b.id);
-        aVal = aAssign?.numero_taquilla_actual || "";
-        bVal = bAssign?.numero_taquilla_actual || "";
+        aVal = (aAssign?.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+        bVal = (bAssign?.numero_taquilla_actual || '').replace(/['']/g, '').trim();
       } else if (sortConfig.field === "departamento") {
         aVal = a.departamento || "";
         bVal = b.departamento || "";
@@ -448,11 +451,14 @@ export default function LockerManagementPage() {
   };
 
   const handleFieldChange = (employeeId, field, value) => {
+    // Limpiar comillas al editar
+    const cleanValue = typeof value === 'string' ? value.replace(/['"]/g, '').trim() : value;
+    
     setEditingAssignments(prev => ({
       ...prev,
       [employeeId]: {
         ...(prev[employeeId] || {}),
-        [field]: value
+        [field]: cleanValue
       }
     }));
     setHasChanges(true);
@@ -506,7 +512,7 @@ export default function LockerManagementPage() {
     const employeesConTaquilla = new Set();
     lockerAssignments.forEach(la => {
       const tieneTaquilla = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.toString().trim() !== "";
+                           la.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
       const requiere = la.requiere_taquilla !== false;
       if (tieneTaquilla && requiere) {
         employeesConTaquilla.add(la.employee_id);
@@ -518,18 +524,20 @@ export default function LockerManagementPage() {
       const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
       if (!assignment) return true;
       if (assignment.requiere_taquilla === false) return false;
-      return !assignment.numero_taquilla_actual || assignment.numero_taquilla_actual.toString().trim() === "";
+      const tieneTaquilla = assignment.numero_taquilla_actual && 
+                           assignment.numero_taquilla_actual.replace(/['']/g, '').trim() !== "";
+      return !tieneTaquilla;
     }).length;
 
     const pendientesNotificacion = lockerAssignments.filter(la => {
       const tieneTaquilla = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.toString().trim() !== "";
+                           la.numero_taquilla_actual.replace(/['']/g, '').trim() !== "";
       return !la.notificacion_enviada && tieneTaquilla;
     }).length;
 
     const cambiosPendientes = Object.values(editingAssignments).filter(ea => {
       const tieneNuevaTaquilla = ea.numero_taquilla_nuevo && 
-                                ea.numero_taquilla_nuevo.toString().trim() !== "";
+                                ea.numero_taquilla_nuevo.trim() !== "";
       const esDiferente = ea.numero_taquilla_nuevo !== ea.numero_taquilla_actual;
       return tieneNuevaTaquilla && esDiferente;
     }).length;
@@ -549,45 +557,43 @@ export default function LockerManagementPage() {
       const totalInstaladas = config?.numero_taquillas_instaladas || 0;
       const identificadoresValidos = config?.identificadores_taquillas || [];
       
-      const assignmentsEnVestuario = lockerAssignments.filter(la => {
-        const esEsteVestuario = la.vestuario === vestuario;
-        const tieneNumero = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.toString().trim() !== "";
-        const requiere = la.requiere_taquilla !== false;
+      const employeesWithValidAssignment = new Set();
+      let invalidIdentifierCount = 0;
+      
+      // Iterate through all assignments to determine status
+      lockerAssignments.forEach(la => {
+        // Only consider assignments for this vestuario that require a locker and have a locker ID
+        if (la.vestuario !== vestuario || la.requiere_taquilla === false) return;
         
-        return esEsteVestuario && tieneNumero && requiere;
+        const cleanedLockerId = (la.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+        if (!cleanedLockerId) return; // No locker ID assigned
+
+        let isValidId = false;
+        if (identificadoresValidos.length > 0) {
+          isValidId = identificadoresValidos.includes(cleanedLockerId);
+        } else {
+          // If no specific identifiers are configured, assume numeric IDs within range are valid
+          const numeroInt = parseInt(cleanedLockerId, 10);
+          isValidId = !isNaN(numeroInt) && numeroInt >= 1 && numeroInt <= totalInstaladas;
+        }
+
+        if (isValidId) {
+          employeesWithValidAssignment.add(la.employee_id);
+        } else {
+          // If it's not a valid ID for this configuration
+          invalidIdentifierCount++;
+        }
       });
       
-      // Contar solo asignaciones con identificadores VÁLIDOS
-      const asignadas = assignmentsEnVestuario.filter(la => {
-        const numero = la.numero_taquilla_actual.toString();
-        if (identificadoresValidos.length > 0) {
-          return identificadoresValidos.includes(numero);
-        } else {
-          const numeroInt = parseInt(numero);
-          return !isNaN(numeroInt) && numeroInt >= 1 && numeroInt <= totalInstaladas;
-        }
-      }).length;
-      
+      const asignadas = employeesWithValidAssignment.size;
       const libres = Math.max(0, totalInstaladas - asignadas);
-      
-      // Detectar identificadores no válidos
-      const fueraDeRango = assignmentsEnVestuario.filter(la => {
-        const numero = la.numero_taquilla_actual.toString();
-        if (identificadoresValidos.length > 0) {
-          return !identificadoresValidos.includes(numero);
-        } else {
-          const numeroInt = parseInt(numero);
-          return isNaN(numeroInt) || numeroInt < 1 || numeroInt > totalInstaladas;
-        }
-      }).length;
       
       return {
         vestuario,
         totalInstaladas,
         asignadas,
         libres,
-        fueraDeRango,
+        fueraDeRango: invalidIdentifierCount,
         porcentajeOcupacion: totalInstaladas > 0 ? Math.round((asignadas / totalInstaladas) * 100) : 0
       };
     });
@@ -689,14 +695,18 @@ export default function LockerManagementPage() {
         )}
 
         <Tabs defaultValue="estadisticas" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="estadisticas">
               <BarChart3 className="w-4 h-4 mr-2" />
               Estadísticas
             </TabsTrigger>
+            <TabsTrigger value="sin-taquilla">
+              <UserX className="w-4 h-4 mr-2" />
+              Sin Taquilla
+            </TabsTrigger>
             <TabsTrigger value="mapa">
               <KeyRound className="w-4 h-4 mr-2" />
-              Mapa Interactivo
+              Mapa
             </TabsTrigger>
             <TabsTrigger value="importar">
               <Upload className="w-4 h-4 mr-2" />
@@ -706,9 +716,13 @@ export default function LockerManagementPage() {
               <Users className="w-4 h-4 mr-2" />
               Asignaciones
             </TabsTrigger>
+            <TabsTrigger value="auditoria">
+              <Database className="w-4 h-4 mr-2" />
+              Auditoría
+            </TabsTrigger>
             <TabsTrigger value="configuracion">
               <Settings className="w-4 h-4 mr-2" />
-              Configuración
+              Config
             </TabsTrigger>
           </TabsList>
 
@@ -775,7 +789,7 @@ export default function LockerManagementPage() {
                           </Badge>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">Asignadas (válidas):</span>
+                          <span className="text-sm text-slate-600">Empleados Asignados:</span>
                           <Badge className="bg-green-600 text-white font-bold text-base">
                             {stat.asignadas}
                           </Badge>
@@ -794,7 +808,7 @@ export default function LockerManagementPage() {
                         {stat.fueraDeRango > 0 && (
                           <div className="pt-2 border-t border-red-300">
                             <Badge className="bg-red-600 text-white w-full justify-center">
-                              ⚠️ {stat.fueraDeRango} con ID no válido
+                              ⚠️ {stat.fueraDeRango} ID no válido
                             </Badge>
                           </div>
                         )}
@@ -820,6 +834,13 @@ export default function LockerManagementPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="sin-taquilla">
+            <EmployeesWithoutLocker 
+              employees={employees}
+              lockerAssignments={lockerAssignments}
+            />
           </TabsContent>
 
           <TabsContent value="mapa">
@@ -973,9 +994,9 @@ export default function LockerManagementPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Nº Taquilla</Label>
+                    <Label>ID Taquilla</Label>
                     <Input
-                      placeholder="Número..."
+                      placeholder="Identificador..."
                       value={filters.numeroTaquilla}
                       onChange={(e) => setFilters({...filters, numeroTaquilla: e.target.value})}
                     />
@@ -1074,7 +1095,7 @@ export default function LockerManagementPage() {
                         <TableHead>Sexo</TableHead>
                         <SortableHeader field="departamento" label="Departamento" />
                         <SortableHeader field="vestuario" label="Vestuario" />
-                        <SortableHeader field="taquilla" label="Taquilla Actual" />
+                        <SortableHeader field="taquilla" label="ID Taquilla Actual" />
                         <TableHead>Nueva Taquilla</TableHead>
                         <TableHead className="text-center">Acciones</TableHead>
                       </TableRow>
@@ -1092,7 +1113,7 @@ export default function LockerManagementPage() {
                           const editData = editingAssignments[employee.id] || {
                             requiere_taquilla: assignment?.requiere_taquilla !== false,
                             vestuario: assignment?.vestuario || "",
-                            numero_taquilla_actual: assignment?.numero_taquilla_actual || "",
+                            numero_taquilla_actual: (assignment?.numero_taquilla_actual || '').replace(/['"]/g, '').trim(),
                             numero_taquilla_nuevo: ""
                           };
                           
@@ -1121,7 +1142,7 @@ export default function LockerManagementPage() {
                                 <div className="flex items-center gap-2">
                                   <div className="font-semibold text-slate-900">{employee.nombre}</div>
                                   <Link to={createPageUrl(`Employees?id=${employee.id}`)}>
-                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Editar empleado">
                                       <ExternalLink className="w-3 h-3 text-blue-600" />
                                     </Button>
                                   </Link>
@@ -1169,7 +1190,7 @@ export default function LockerManagementPage() {
                                       value={editData.numero_taquilla_actual}
                                       onChange={(e) => handleFieldChange(employee.id, 'numero_taquilla_actual', e.target.value)}
                                       placeholder="ID"
-                                      className={`w-20 font-mono ${idNoValido ? 'border-red-500 bg-red-50' : ''}`}
+                                      className={`w-24 font-mono ${idNoValido ? 'border-red-500 bg-red-50' : ''}`}
                                     />
                                     {idNoValido && (
                                       <Badge className="bg-red-600 text-white text-xs">
@@ -1240,6 +1261,13 @@ export default function LockerManagementPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="auditoria">
+            <LockerAudit 
+              employees={employees}
+              lockerAssignments={lockerAssignments}
+            />
           </TabsContent>
 
           <TabsContent value="configuracion">
