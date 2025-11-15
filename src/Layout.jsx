@@ -22,7 +22,8 @@ import {
   UserPlus,
   ClipboardCheck,
   Award,
-  Shield
+  Shield,
+  UserCog // Added UserCog import
 } from "lucide-react";
 import {
   Sidebar,
@@ -154,7 +155,8 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Employees"),
-                              createPageUrl("ETTTemporaryEmployees"), // Added
+                              createPageUrl("MasterEmployeeView"), // Added
+                              createPageUrl("ETTTemporaryEmployees"),
                               createPageUrl("EmployeeOnboarding"),
                               createPageUrl("AttendanceManagement"),
                               createPageUrl("CommitteeManagement")
@@ -172,6 +174,17 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("MasterEmployeeView")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("MasterEmployeeView")} className="flex items-center gap-2 px-3 py-2">
+                              <UserCog className="w-4 h-4" />
+                              Vista Maestra Empleados
+                            </Link>
+                          </SidebarMenuButton>
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
