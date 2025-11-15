@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { differenceInDays, differenceInMonths, differenceInYears, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
+import LockerAssignmentPanel from "./LockerAssignmentPanel";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
@@ -213,14 +214,15 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="datos" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="datos">Datos</TabsTrigger>
               <TabsTrigger value="schedule">Horario</TabsTrigger>
+              <TabsTrigger value="taquilla">Taquilla</TabsTrigger>
               <TabsTrigger value="machines">
-                Máquinas {isMaintenanceDepartment && "(Mantenimiento)"}
+                Máquinas {isMaintenanceDepartment && "(Mant.)"}
               </TabsTrigger>
-              <TabsTrigger value="availability">Disponibilidad</TabsTrigger>
-              <TabsTrigger value="rrhh">Gestión RRHH</TabsTrigger>
+              <TabsTrigger value="availability">Disponib.</TabsTrigger>
+              <TabsTrigger value="rrhh">RRHH</TabsTrigger>
             </TabsList>
 
             <TabsContent value="datos" className="space-y-4 mt-4">
@@ -419,6 +421,19 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   )}
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="taquilla" className="space-y-4 mt-4">
+              {employee?.id ? (
+                <LockerAssignmentPanel employee={employee} />
+              ) : (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
+                  <AlertCircle className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+                  <p className="text-sm text-blue-800">
+                    La asignación de taquilla estará disponible después de crear el empleado
+                  </p>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="schedule" className="space-y-4 mt-4">
