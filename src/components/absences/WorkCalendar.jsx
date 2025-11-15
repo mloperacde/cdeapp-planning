@@ -1,61 +1,52 @@
 import React, { useState, useMemo } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Download, Edit2, Save, X } from "lucide-react";
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, 
-  addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks,
-  startOfYear, endOfYear, addYears, subYears, eachMonthOfInterval
+  addYears, subYears, startOfYear, endOfYear, eachMonthOfInterval
 } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function WorkCalendar({ holidays = [], vacations = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewType, setViewType] = useState('year');
+  const [editingId, setEditingId] = useState(null);
+  const [editingDesc, setEditingDesc] = useState("");
+  const queryClient = useQueryClient();
 
-  const getDateRange = () => {
-    switch (viewType) {
-      case 'week':
-        return {
-          start: startOfWeek(currentDate, { weekStartsOn: 1 }),
-          end: endOfWeek(currentDate, { weekStartsOn: 1 })
-        };
-      case 'year':
-        return {
-          start: startOfYear(currentDate),
-          end: endOfYear(currentDate)
-        };
-      default:
-        return {
-          start: startOfMonth(currentDate),
-          end: endOfMonth(currentDate)
-        };
+  const updateHolidayMutation = useMutation({
+    mutationFn: ({ id, descripcion }) => base44.entities.Holiday.update(id, { descripcion }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['holidays'] });
+      toast.success("Descripción actualizada");
+      setEditingId(null);
     }
-  };
+  });
 
-  const { start, end } = getDateRange();
-  const days = viewType === 'year' 
-    ? eachMonthOfInterval({ start, end })
-    : eachDayOfInterval({ start, end });
+  const updateVacationMutation = useMutation({
+    mutationFn: ({ id, descripcion }) => base44.entities.Vacation.update(id, { descripcion }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vacations'] });
+      toast.success("Descripción actualizada");
+      setEditingId(null);
+    }
+  });
 
-  const handlePrevious = () => {
-    if (viewType === 'week') setCurrentDate(subWeeks(currentDate, 1));
-    else if (viewType === 'month') setCurrentDate(subMonths(currentDate, 1));
-    else setCurrentDate(subYears(currentDate, 1));
-  };
-
-  const handleNext = () => {
-    if (viewType === 'week') setCurrentDate(addWeeks(currentDate, 1));
-    else if (viewType === 'month') setCurrentDate(addMonths(currentDate, 1));
-    else setCurrentDate(addYears(currentDate, 1));
-  };
+  const yearStart = startOfYear(currentDate);
+  const yearEnd = endOfYear(currentDate);
+  const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
 
   const getDayType = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     
-    const isHoliday = holidays.some(h => {
+    const holiday = holidays.find(h => {
       if (!h.fecha) return false;
       try {
         const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
@@ -65,7 +56,7 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
       }
     });
 
-    const isVacation = vacations.some(v => {
+    const vacation = vacations.find(v => {
       if (!v.fecha_inicio || !v.fecha_fin) return false;
       try {
         const vStart = new Date(v.fecha_inicio);
@@ -79,39 +70,68 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
     const dayOfWeek = getDay(date);
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    return { isHoliday, isVacation, isWeekend };
+    return { 
+      isHoliday: !!holiday, 
+      isVacation: !!vacation, 
+      isWeekend,
+      holiday,
+      vacation
+    };
   };
 
-  const getHolidayName = (date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const holiday = holidays.find(h => {
-      if (!h.fecha) return false;
-      try {
-        const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
-        return hDate === dateStr;
-      } catch {
-        return false;
-      }
-    });
-    return holiday?.nombre;
-  };
-
-  const getMonthStats = (monthDate) => {
+  const getMonthDays = (monthDate) => {
     const monthStart = startOfMonth(monthDate);
     const monthEnd = endOfMonth(monthDate);
-    const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    return eachDayOfInterval({ start: monthStart, end: monthEnd });
+  };
 
-    let laborables = 0;
-    let noHabiles = 0;
-
-    monthDays.forEach(day => {
-      const { isHoliday, isVacation, isWeekend } = getDayType(day);
-      if (isHoliday || isVacation || isWeekend) noHabiles++;
-      else laborables++;
+  const noLaborablesList = useMemo(() => {
+    const list = [];
+    
+    // Agregar festivos
+    holidays.forEach(h => {
+      if (!h.fecha) return;
+      try {
+        const date = new Date(h.fecha);
+        const year = date.getFullYear();
+        const currentYear = currentDate.getFullYear();
+        if (year === currentYear) {
+          list.push({
+            type: 'festivo',
+            fecha: date,
+            nombre: h.nombre,
+            descripcion: h.descripcion,
+            id: h.id,
+            entity: 'Holiday'
+          });
+        }
+      } catch {}
     });
 
-    return { laborables, noHabiles };
-  };
+    // Agregar vacaciones
+    vacations.forEach(v => {
+      if (!v.fecha_inicio || !v.fecha_fin) return;
+      try {
+        const start = new Date(v.fecha_inicio);
+        const end = new Date(v.fecha_fin);
+        const year = start.getFullYear();
+        const currentYear = currentDate.getFullYear();
+        if (year === currentYear) {
+          list.push({
+            type: 'vacaciones',
+            fecha: start,
+            nombre: v.nombre || `Vacaciones del ${format(start, 'dd/MM')} al ${format(end, 'dd/MM')}`,
+            descripcion: v.descripcion,
+            fecha_fin: end,
+            id: v.id,
+            entity: 'Vacation'
+          });
+        }
+      } catch {}
+    });
+
+    return list.sort((a, b) => a.fecha - b.fecha);
+  }, [holidays, vacations, currentDate]);
 
   const stats = useMemo(() => {
     let laborables = 0;
@@ -119,257 +139,271 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
     let vacaciones = 0;
     let finesSemana = 0;
 
-    if (viewType === 'year') {
-      days.forEach(monthDate => {
-        const monthStart = startOfMonth(monthDate);
-        const monthEnd = endOfMonth(monthDate);
-        const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        
-        monthDays.forEach(day => {
-          const { isHoliday, isVacation, isWeekend } = getDayType(day);
-          if (isHoliday) festivos++;
-          else if (isVacation) vacaciones++;
-          else if (isWeekend) finesSemana++;
-          else laborables++;
-        });
-      });
-    } else {
-      days.forEach(day => {
+    months.forEach(monthDate => {
+      const monthDays = getMonthDays(monthDate);
+      
+      monthDays.forEach(day => {
         const { isHoliday, isVacation, isWeekend } = getDayType(day);
         if (isHoliday) festivos++;
         else if (isVacation) vacaciones++;
         else if (isWeekend) finesSemana++;
         else laborables++;
       });
-    }
+    });
 
     const totalNoHabiles = festivos + vacaciones + finesSemana;
     return { laborables, festivos, vacaciones, finesSemana, totalNoHabiles };
-  }, [days, holidays, vacations, viewType]);
-
-  const getViewTitle = () => {
-    if (viewType === 'week') return format(currentDate, "'Semana del' d 'de' MMMM yyyy", { locale: es });
-    if (viewType === 'year') return format(currentDate, "yyyy", { locale: es });
-    return format(currentDate, "MMMM yyyy", { locale: es });
-  };
+  }, [months, holidays, vacations]);
 
   const handleDownloadPDF = () => {
     window.print();
   };
 
+  const handleEditDescription = (item) => {
+    setEditingId(item.id);
+    setEditingDesc(item.descripcion || "");
+  };
+
+  const handleSaveDescription = (item) => {
+    if (item.entity === 'Holiday') {
+      updateHolidayMutation.mutate({ id: item.id, descripcion: editingDesc });
+    } else {
+      updateVacationMutation.mutate({ id: item.id, descripcion: editingDesc });
+    }
+  };
+
   return (
-    <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm" id="work-calendar">
-      <CardHeader className="border-b border-slate-100">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            Calendario Laboral
-          </CardTitle>
-          <div className="flex gap-2">
-            <Select value={viewType} onValueChange={setViewType}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">Semana</SelectItem>
-                <SelectItem value="month">Mes</SelectItem>
-                <SelectItem value="year">Año</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleDownloadPDF} variant="outline" size="sm" className="print:hidden">
-              <Download className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
+    <>
+      <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm" id="work-calendar">
+        <CardHeader className="border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              Calendario Laboral - {format(currentDate, "yyyy", { locale: es })}
+            </CardTitle>
+            <div className="flex gap-2 print:hidden">
+              <Button onClick={() => setCurrentDate(subYears(currentDate, 1))} variant="outline" size="sm">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button onClick={() => setCurrentDate(addYears(currentDate, 1))} variant="outline" size="sm">
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <Button onClick={handleDownloadPDF} variant="default" size="sm" className="bg-blue-600">
+                <Download className="w-4 h-4 mr-2" />
+                Descargar PDF
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <Button onClick={handlePrevious} variant="outline" className="print:hidden">
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <h2 className="text-xl font-bold text-slate-900">
-            {getViewTitle()}
-          </h2>
-          <Button onClick={handleNext} variant="outline" className="print:hidden">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-3 text-center">
+                <div className="text-2xl font-bold text-green-900">{stats.laborables}</div>
+                <div className="text-xs text-green-700">Días Hábiles</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-slate-50 border-slate-300">
+              <CardContent className="p-3 text-center">
+                <div className="text-2xl font-bold text-slate-900">{stats.totalNoHabiles}</div>
+                <div className="text-xs text-slate-700">No Hábiles</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-red-50 border-red-200">
+              <CardContent className="p-3 text-center">
+                <div className="text-2xl font-bold text-red-900">{stats.festivos}</div>
+                <div className="text-xs text-red-700">Festivos</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-3 text-center">
+                <div className="text-2xl font-bold text-blue-900">{stats.vacaciones}</div>
+                <div className="text-xs text-blue-700">Vacaciones</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-slate-100 border-slate-200">
+              <CardContent className="p-3 text-center">
+                <div className="text-2xl font-bold text-slate-900">{stats.finesSemana}</div>
+                <div className="text-xs text-slate-700">Fines Semana</div>
+              </CardContent>
+            </Card>
+          </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-3 text-center">
-              <div className="text-xl font-bold text-green-900">{stats.laborables}</div>
-              <div className="text-xs text-green-700">Hábiles</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-50 border-slate-300">
-            <CardContent className="p-3 text-center">
-              <div className="text-xl font-bold text-slate-900">{stats.totalNoHabiles}</div>
-              <div className="text-xs text-slate-700">No Hábiles</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-red-50 border-red-200">
-            <CardContent className="p-3 text-center">
-              <div className="text-xl font-bold text-red-900">{stats.festivos}</div>
-              <div className="text-xs text-red-700">Festivos</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-3 text-center">
-              <div className="text-xl font-bold text-blue-900">{stats.vacaciones}</div>
-              <div className="text-xs text-blue-700">Vacaciones</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-100 border-slate-200">
-            <CardContent className="p-3 text-center">
-              <div className="text-xl font-bold text-slate-900">{stats.finesSemana}</div>
-              <div className="text-xs text-slate-700">Fines Semana</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {viewType === 'year' ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
-            {days.map(monthDate => {
-              const { laborables, noHabiles } = getMonthStats(monthDate);
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {months.map(monthDate => {
+              const monthDays = getMonthDays(monthDate);
+              
               return (
-                <Card key={monthDate.toString()} className="hover:shadow-lg transition-all border-2 border-slate-200">
-                  <CardContent className="p-4">
-                    <div className="text-base font-bold text-center text-slate-900 mb-3">
-                      {format(monthDate, 'MMMM', { locale: es })}
+                <Card key={monthDate.toString()} className="border-2 border-slate-200">
+                  <CardHeader className="pb-2 bg-slate-50 border-b">
+                    <CardTitle className="text-sm font-bold text-center">
+                      {format(monthDate, 'MMMM', { locale: es }).toUpperCase()}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-2">
+                    <div className="grid grid-cols-7 gap-0.5 mb-1">
+                      {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(day => (
+                        <div key={day} className="text-center text-[8px] font-semibold text-slate-500">
+                          {day}
+                        </div>
+                      ))}
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-green-700">✓ Hábiles:</span>
-                        <span className="font-bold text-green-900">{laborables}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-red-700">✗ No hábiles:</span>
-                        <span className="font-bold text-red-900">{noHabiles}</span>
-                      </div>
+                    
+                    <div className="grid grid-cols-7 gap-0.5">
+                      {Array.from({ length: getDay(monthDays[0]) === 0 ? 6 : getDay(monthDays[0]) - 1 }).map((_, i) => (
+                        <div key={`empty-${i}`} className="aspect-square" />
+                      ))}
+
+                      {monthDays.map(day => {
+                        const { isHoliday, isVacation, isWeekend, holiday, vacation } = getDayType(day);
+                        const isToday = isSameDay(day, new Date());
+                        const isNoHabil = isHoliday || isVacation || isWeekend;
+
+                        return (
+                          <div
+                            key={day.toString()}
+                            className={`aspect-square flex items-center justify-center text-[10px] font-semibold rounded ${
+                              isToday ? 'ring-2 ring-blue-500' :
+                              isHoliday ? 'bg-red-200 text-red-900' :
+                              isVacation ? 'bg-blue-200 text-blue-900' :
+                              isWeekend ? 'bg-slate-200 text-slate-600' :
+                              'text-slate-700'
+                            }`}
+                            title={
+                              holiday?.nombre || 
+                              vacation?.nombre || 
+                              (isWeekend ? 'Fin de semana' : '')
+                            }
+                          >
+                            {format(day, 'd')}
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
               );
             })}
           </div>
-        ) : (
-          <>
-            {viewType !== 'week' && (
-              <div className="grid grid-cols-7 gap-2 mb-2">
-                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
-                  <div key={day} className="text-center font-semibold text-xs text-slate-600 p-2">
-                    {day}
-                  </div>
-                ))}
-              </div>
-            )}
 
-            <div className={`grid gap-2 ${viewType === 'week' ? 'grid-cols-7' : 'grid-cols-7'}`}>
-              {viewType === 'month' && Array.from({ length: getDay(start) === 0 ? 6 : getDay(start) - 1 }).map((_, i) => (
-                <div key={`empty-${i}`} className="aspect-square" />
-              ))}
+          <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t print:hidden">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-white border border-slate-300 rounded" />
+              <span className="text-sm text-slate-700">Hábil</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-red-200 border border-red-400 rounded" />
+              <span className="text-sm text-slate-700">Festivo</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-blue-200 border border-blue-400 rounded" />
+              <span className="text-sm text-slate-700">Vacaciones</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-slate-200 border border-slate-300 rounded" />
+              <span className="text-sm text-slate-700">Fin de Semana</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-              {days.map(day => {
-                const { isHoliday, isVacation, isWeekend } = getDayType(day);
-                const isToday = isSameDay(day, new Date());
-                const holidayName = getHolidayName(day);
-                const isNoHabil = isHoliday || isVacation || isWeekend;
-
-                return (
-                  <div
-                    key={day.toString()}
-                    className={`${viewType === 'week' ? 'p-4' : 'aspect-square p-2'} border-2 rounded-lg transition-all ${
-                      isToday ? 'border-blue-500 ring-2 ring-blue-200' :
-                      isHoliday ? 'bg-red-100 border-red-400' :
-                      isVacation ? 'bg-blue-100 border-blue-400' :
-                      isWeekend ? 'bg-slate-100 border-slate-300' :
-                      'bg-white border-slate-200 hover:border-blue-300'
-                    }`}
-                    title={holidayName || (isNoHabil ? 'Día no hábil' : 'Día hábil')}
-                  >
-                    {viewType === 'week' ? (
-                      <div>
-                        <div className="text-xs text-slate-500 font-semibold">
-                          {format(day, 'EEEE', { locale: es })}
-                        </div>
-                        <div className={`text-2xl font-bold ${
-                          isHoliday ? 'text-red-900' :
-                          isVacation ? 'text-blue-900' :
-                          isWeekend ? 'text-slate-500' :
-                          'text-slate-900'
-                        }`}>
-                          {format(day, 'd')}
-                        </div>
-                        {isNoHabil && (
-                          <Badge className={`mt-2 text-xs ${
-                            isHoliday ? 'bg-red-600' :
-                            isVacation ? 'bg-blue-600' :
-                            'bg-slate-500'
-                          }`}>
-                            No hábil
-                          </Badge>
-                        )}
-                        {holidayName && (
-                          <div className="text-xs text-red-800 mt-1">
-                            {holidayName}
-                          </div>
+      <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm mt-6" id="no-laborables-list">
+        <CardHeader className="border-b">
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            Relación de Días No Laborables {format(currentDate, "yyyy")} ({noLaborablesList.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {noLaborablesList.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              No hay días no laborables configurados para este año
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {noLaborablesList.map((item, idx) => (
+                <div key={`${item.id}-${idx}`} className={`border-2 rounded-lg p-4 ${
+                  item.type === 'festivo' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
+                }`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge className={item.type === 'festivo' ? 'bg-red-600' : 'bg-blue-600'}>
+                          {item.type === 'festivo' ? 'FESTIVO' : 'VACACIONES'}
+                        </Badge>
+                        <span className="font-bold text-slate-900">
+                          {format(item.fecha, "dd/MM/yyyy - EEEE", { locale: es })}
+                        </span>
+                        {item.fecha_fin && (
+                          <span className="text-sm text-slate-600">
+                            al {format(item.fecha_fin, "dd/MM/yyyy", { locale: es })}
+                          </span>
                         )}
                       </div>
-                    ) : (
-                      <>
-                        <div className={`text-sm font-semibold text-center ${
-                          isHoliday ? 'text-red-900' :
-                          isVacation ? 'text-blue-900' :
-                          isWeekend ? 'text-slate-500' :
-                          'text-slate-900'
-                        }`}>
-                          {format(day, 'd')}
+                      <div className="font-semibold text-slate-900 mb-1">{item.nombre}</div>
+                      
+                      {editingId === item.id ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={editingDesc}
+                            onChange={(e) => setEditingDesc(e.target.value)}
+                            rows={2}
+                            className="text-sm"
+                            placeholder="Añadir descripción..."
+                          />
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleSaveDescription(item)}
+                              disabled={updateHolidayMutation.isPending || updateVacationMutation.isPending}
+                            >
+                              <Save className="w-3 h-3 mr-1" />
+                              Guardar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setEditingId(null)}
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              Cancelar
+                            </Button>
+                          </div>
                         </div>
-                        {isToday && (
-                          <div className="text-center">
-                            <Badge className="bg-blue-600 text-white text-xs mt-1">Hoy</Badge>
-                          </div>
-                        )}
-                        {holidayName && (
-                          <div className="text-[8px] text-center text-red-800 mt-1 line-clamp-2">
-                            {holidayName}
-                          </div>
-                        )}
-                      </>
+                      ) : (
+                        <>
+                          {item.descripcion && (
+                            <p className="text-sm text-slate-600">{item.descripcion}</p>
+                          )}
+                          {!item.descripcion && (
+                            <p className="text-sm text-slate-400 italic">Sin descripción</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    
+                    {editingId !== item.id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditDescription(item)}
+                        className="print:hidden"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
                     )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
-          </>
-        )}
-
-        <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-white border-2 border-slate-200 rounded" />
-            <span className="text-sm text-slate-700 font-medium">Día Hábil</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-red-100 border-2 border-red-400 rounded" />
-            <span className="text-sm text-slate-700">Festivo</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-100 border-2 border-blue-400 rounded" />
-            <span className="text-sm text-slate-700">Vacaciones</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-slate-100 border-2 border-slate-300 rounded" />
-            <span className="text-sm text-slate-700">Fin de Semana</span>
-          </div>
-        </div>
-      </CardContent>
+          )}
+        </CardContent>
+      </Card>
 
       <style>{`
         @media print {
           @page {
-            size: A4 landscape;
+            size: A4 portrait;
             margin: 10mm;
           }
           
@@ -378,7 +412,9 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
           }
           
           #work-calendar,
-          #work-calendar * {
+          #work-calendar *,
+          #no-laborables-list,
+          #no-laborables-list * {
             visibility: visible;
           }
           
@@ -387,13 +423,29 @@ export default function WorkCalendar({ holidays = [], vacations = [] }) {
             left: 0;
             top: 0;
             width: 100%;
+            page-break-after: always;
+          }
+          
+          #no-laborables-list {
+            position: absolute;
+            left: 0;
+            top: 100%;
+            width: 100%;
+            margin-top: 20mm;
           }
           
           .print\\:hidden {
             display: none !important;
           }
+          
+          @media print {
+            .bg-red-200, .bg-blue-200, .bg-slate-200, .bg-red-50, .bg-blue-50, .bg-green-50, .bg-slate-50 {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
+          }
         }
       `}</style>
-    </Card>
+    </>
   );
 }
