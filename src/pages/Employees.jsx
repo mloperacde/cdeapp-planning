@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,6 +39,7 @@ export default function EmployeesPage() {
     disponibilidad: "all",
     departamento: "all",
     puesto: "all",
+    tipo_contrato: "all",
   });
   const queryClient = useQueryClient();
 
@@ -106,17 +106,22 @@ export default function EmployeesPage() {
     return Array.from(psts).sort();
   }, [employees]);
 
-  // Check if employee has active absence today
+  const tiposContrato = useMemo(() => {
+    const tipos = new Set();
+    employees.forEach(emp => {
+      if (emp.tipo_contrato) tipos.add(emp.tipo_contrato);
+    });
+    return Array.from(tipos).sort();
+  }, [employees]);
+
   const hasActiveAbsenceToday = (employeeId) => {
     const now = new Date();
-    // Normalize `now` to just date for comparison
     now.setHours(0, 0, 0, 0); 
 
     return absences.some(absence => {
       if (absence.employee_id !== employeeId) return false;
       const start = new Date(absence.fecha_inicio);
       const end = new Date(absence.fecha_fin);
-      // Normalize absence dates to just date for comparison
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
       
@@ -137,7 +142,7 @@ export default function EmployeesPage() {
       }
     });
     return Object.entries(byDept).sort((a, b) => b[1].total - a[1].total);
-  }, [employees, absences]); // Added 'absences' to dependencies
+  }, [employees, absences]);
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
@@ -152,13 +157,13 @@ export default function EmployeesPage() {
       const matchesDisponibilidad = filters.disponibilidad === "all" || emp.disponibilidad === filters.disponibilidad;
       const matchesDepartamento = filters.departamento === "all" || emp.departamento === filters.departamento;
       const matchesPuesto = filters.puesto === "all" || emp.puesto === filters.puesto;
+      const matchesTipoContrato = filters.tipo_contrato === "all" || emp.tipo_contrato === filters.tipo_contrato;
       
-      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto;
+      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto && matchesTipoContrato;
     });
   }, [employees, searchTerm, filters]);
 
   const getAvailabilityBadge = (employee) => {
-    // This function still uses the employee.disponibilidad field directly
     if (employee.disponibilidad === "Ausente") {
       return <Badge variant="destructive">Ausente</Badge>;
     }
@@ -166,7 +171,6 @@ export default function EmployeesPage() {
   };
 
   const isEmployeeAbsent = (employee) => {
-    // This function still uses the employee.disponibilidad field directly
     return employee.disponibilidad === "Ausente";
   };
 
@@ -239,19 +243,15 @@ export default function EmployeesPage() {
           </Button>
         </div>
 
-        {/* Paneles Resumen */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-          {/* Cumpleaños - Reducido */}
           <div className="lg:col-span-1">
             <BirthdayPanel employees={employees} compact={true} />
           </div>
           
-          {/* Aniversarios - Reducido */}
           <div className="lg:col-span-1">
             <AnniversaryPanel employees={employees} compact={true} />
           </div>
 
-          {/* Empleados por Departamento - ACTUALIZADO */}
           <div className="lg:col-span-1">
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm h-full">
               <CardHeader className="border-b border-slate-100 pb-3">
@@ -269,7 +269,7 @@ export default function EmployeesPage() {
                         <span className="text-sm font-medium text-slate-700">{dept}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 font-semibold">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 font-semibold text-base">
                           {stats.total}
                         </Badge>
                         <Badge className="bg-green-600 text-white font-semibold">
@@ -297,7 +297,6 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        {/* Sub-páginas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {subPages.map((page) => {
             const Icon = page.icon;
@@ -319,7 +318,6 @@ export default function EmployeesPage() {
           })}
         </div>
 
-        {/* Filtros */}
         <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
             <CardTitle className="flex items-center gap-2">
@@ -370,6 +368,23 @@ export default function EmployeesPage() {
                     {puestos.map((puesto) => (
                       <SelectItem key={puesto} value={puesto}>
                         {puesto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo Contrato</Label>
+                <Select value={filters.tipo_contrato} onValueChange={(value) => setFilters({...filters, tipo_contrato: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {tiposContrato.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo}>
+                        {tipo}
                       </SelectItem>
                     ))}
                   </SelectContent>
