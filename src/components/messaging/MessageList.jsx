@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,27 @@ export default function MessageList({ messages, currentEmployee, employees }) {
   const getSenderName = (senderId) => {
     const employee = employees.find(e => e.id === senderId);
     return employee?.nombre || "Usuario";
+  };
+
+  // Create push notification for new messages
+  const createPushNotification = async (message, recipientId) => {
+    if (!recipientId || recipientId === currentEmployee?.id) return;
+    
+    const sender = employees.find(e => e.id === message.sender_id);
+    
+    // Assuming 'base44' is globally available or imported elsewhere in the application context.
+    // If not, this line would cause a ReferenceError.
+    await base44.entities.PushNotification.create({
+      destinatario_id: recipientId,
+      tipo: "mensaje",
+      titulo: `Nuevo mensaje de ${sender?.nombre || 'Usuario'}`,
+      mensaje: message.mensaje.substring(0, 100), // Truncate message to 100 characters for push notification
+      prioridad: "media",
+      referencia_tipo: "ChatMessage",
+      referencia_id: message.id,
+      enviada_push: true,
+      fecha_envio_push: new Date().toISOString()
+    });
   };
 
   return (

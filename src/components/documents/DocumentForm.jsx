@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from 'date-fns'; // Import format for date utility
 
 export default function DocumentForm({ document, onClose }) {
   const [formData, setFormData] = useState(document || {
@@ -65,21 +67,79 @@ export default function DocumentForm({ document, onClose }) {
           const historial = document.historial_versiones || [];
           historial.push({
             version: document.version,
-            fecha: document.fecha_creacion || document.created_date,
+            fecha: document.fecha_creacion || document.created_date, // Use existing document's creation date for its version history
             archivo_url: document.archivo_url,
             cambios: cambiosVersion,
-            subido_por: document.subido_por
+            subido_por: document.subido_por // Assuming this field exists on the document
           });
           
           data.historial_versiones = historial;
           data.ultima_modificacion = now;
+
+          // Notify affected users about new version
+          if (data.roles_acceso?.length > 0 || data.departamentos_acceso?.length > 0 || data.es_publico) {
+            const employeesData = await base44.entities.Employee.list();
+            const notificationPromises = employeesData
+              .filter(emp => {
+                if (data.es_publico) return true; // If public, all employees are affected.
+                // If specific departments are set AND the employee's department is NOT in the list, then exclude.
+                if (data.departamentos_acceso?.length > 0 && !data.departamentos_acceso.includes(emp.departamento)) {
+                    return false;
+                }
+                // The outline does not include filtering by roles_acceso for the employees here.
+                // It's assumed access is handled by department or public status for notification targeting.
+                return true; // Otherwise, include.
+              })
+              .map(emp => 
+                base44.entities.PushNotification.create({
+                  destinatario_id: emp.id,
+                  tipo: "documento",
+                  titulo: "Documento Actualizado",
+                  mensaje: `${data.titulo} - Nueva versión ${data.version}`,
+                  prioridad: "media",
+                  referencia_tipo: "Document",
+                  referencia_id: document.id,
+                  enviada_push: true,
+                  fecha_envio_push: now
+                })
+              );
+            await Promise.all(notificationPromises);
+          }
         }
         
         return base44.entities.Document.update(document.id, data);
       }
       
       data.fecha_creacion = now;
-      return base44.entities.Document.create(data);
+      const newDoc = await base44.entities.Document.create(data);
+
+      // Notify about new document expiry if applicable
+      if (data.fecha_caducidad) {
+        const caducidadDate = new Date(data.fecha_caducidad);
+        const notifyDate = new Date(caducidadDate);
+        notifyDate.setDate(notifyDate.getDate() - 30); // 30 days before expiry
+
+        // Only schedule if the notification date is in the future
+        if (notifyDate.getTime() > new Date().getTime()) {
+          const employeesData = await base44.entities.Employee.list(); // Get all employees for expiry notification
+          const notificationPromises = employeesData.map(emp => 
+            base44.entities.PushNotification.create({
+              destinatario_id: emp.id,
+              tipo: "documento",
+              titulo: "Documento Próximo a Caducar",
+              mensaje: `${data.titulo} caduca el ${format(caducidadDate, "dd/MM/yyyy")}`,
+              prioridad: "alta",
+              referencia_tipo: "Document",
+              referencia_id: newDoc.id,
+              enviada_push: false, // This notification will be sent later by a scheduler
+              fecha_programada_envio: notifyDate.toISOString() // Store when it should be sent
+            })
+          );
+          await Promise.all(notificationPromises);
+        }
+      }
+
+      return newDoc;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
@@ -226,7 +286,7 @@ export default function DocumentForm({ document, onClose }) {
               <Label>Fecha Caducidad</Label>
               <Input
                 type="date"
-                value={formData.fecha_caducidad}
+                value={formData.fecha_caducidad ? format(new Date(formData.fecha_caducidad), 'yyyy-MM-dd') : ''}
                 onChange={(e) => setFormData({...formData, fecha_caducidad: e.target.value})}
               />
             </div>

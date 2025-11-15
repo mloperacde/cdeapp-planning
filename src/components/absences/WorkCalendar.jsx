@@ -5,20 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, ChevronLeft, ChevronRight, Download, Edit2, Save, X, Plus, Settings } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Download, Edit2, Save, X, Plus } from "lucide-react";
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, 
   addYears, subYears, startOfYear, endOfYear, eachMonthOfInterval
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import HolidayManager from "../components/timeline/HolidayManager";
+import VacationManager from "../components/timeline/VacationManager";
 
 export default function WorkCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingId, setEditingId] = useState(null);
   const [editingDesc, setEditingDesc] = useState("");
+  const [showHolidayManager, setShowHolidayManager] = useState(false);
+  const [showVacationManager, setShowVacationManager] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: holidays } = useQuery({
@@ -192,18 +194,14 @@ export default function WorkCalendar() {
               Calendario Laboral - {format(currentDate, "yyyy", { locale: es })}
             </CardTitle>
             <div className="flex gap-2 print:hidden">
-              <Link to={createPageUrl("Timeline")}>
-                <Button variant="outline" size="sm">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configurar Festivos
-                </Button>
-              </Link>
-              <Link to={createPageUrl("Timeline")}>
-                <Button variant="outline" size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Configurar Vacaciones
-                </Button>
-              </Link>
+              <Button onClick={() => setShowHolidayManager(true)} variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Festivos
+              </Button>
+              <Button onClick={() => setShowVacationManager(true)} variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Vacaciones
+              </Button>
               <Button onClick={() => setCurrentDate(subYears(currentDate, 1))} variant="outline" size="sm">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -217,52 +215,52 @@ export default function WorkCalendar() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 print:mb-4">
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-green-900">{stats.laborables}</div>
-                <div className="text-xs text-green-700">Días Hábiles</div>
+        <CardContent className="p-6 print:p-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 print:mb-3 print:gap-2">
+            <Card className="bg-green-50 border-green-200 print:border">
+              <CardContent className="p-3 text-center print:p-2">
+                <div className="text-2xl font-bold text-green-900 print:text-lg">{stats.laborables}</div>
+                <div className="text-xs text-green-700 print:text-[10px]">Días Hábiles</div>
               </CardContent>
             </Card>
-            <Card className="bg-slate-50 border-slate-300">
-              <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-slate-900">{stats.totalNoHabiles}</div>
-                <div className="text-xs text-slate-700">No Hábiles</div>
+            <Card className="bg-slate-50 border-slate-300 print:border">
+              <CardContent className="p-3 text-center print:p-2">
+                <div className="text-2xl font-bold text-slate-900 print:text-lg">{stats.totalNoHabiles}</div>
+                <div className="text-xs text-slate-700 print:text-[10px]">No Hábiles</div>
               </CardContent>
             </Card>
-            <Card className="bg-red-50 border-red-200">
-              <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-red-900">{stats.festivos}</div>
-                <div className="text-xs text-red-700">Festivos</div>
+            <Card className="bg-red-50 border-red-200 print:border">
+              <CardContent className="p-3 text-center print:p-2">
+                <div className="text-2xl font-bold text-red-900 print:text-lg">{stats.festivos}</div>
+                <div className="text-xs text-red-700 print:text-[10px]">Festivos</div>
               </CardContent>
             </Card>
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-blue-900">{stats.vacaciones}</div>
-                <div className="text-xs text-blue-700">Vacaciones</div>
+            <Card className="bg-blue-50 border-blue-200 print:border">
+              <CardContent className="p-3 text-center print:p-2">
+                <div className="text-2xl font-bold text-blue-900 print:text-lg">{stats.vacaciones}</div>
+                <div className="text-xs text-blue-700 print:text-[10px]">Vacaciones</div>
               </CardContent>
             </Card>
-            <Card className="bg-slate-100 border-slate-200">
-              <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-slate-900">{stats.finesSemana}</div>
-                <div className="text-xs text-slate-700">Fines Semana</div>
+            <Card className="bg-slate-100 border-slate-200 print:border">
+              <CardContent className="p-3 text-center print:p-2">
+                <div className="text-2xl font-bold text-slate-900 print:text-lg">{stats.finesSemana}</div>
+                <div className="text-xs text-slate-700 print:text-[10px]">Fines Semana</div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 print:gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 print:gap-1.5">
             {months.map(monthDate => {
               const monthDays = getMonthDays(monthDate);
               
               return (
-                <Card key={monthDate.toString()} className="border border-slate-200">
-                  <CardHeader className="pb-1 bg-slate-50 border-b print:pb-0.5">
-                    <CardTitle className="text-xs font-bold text-center print:text-[10px]">
+                <Card key={monthDate.toString()} className="border border-slate-200 print:border-slate-400">
+                  <CardHeader className="pb-1 bg-slate-50 border-b print:pb-0.5 print:bg-slate-100">
+                    <CardTitle className="text-xs font-bold text-center print:text-[9px]">
                       {format(monthDate, 'MMMM', { locale: es }).toUpperCase()}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-1.5 print:p-1">
+                  <CardContent className="p-1.5 print:p-0.5">
                     <div className="grid grid-cols-7 gap-0.5 mb-0.5">
                       {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(day => (
                         <div key={day} className="text-center text-[7px] font-semibold text-slate-500">
@@ -283,7 +281,7 @@ export default function WorkCalendar() {
                         return (
                           <div
                             key={day.toString()}
-                            className={`aspect-square flex items-center justify-center text-[9px] font-semibold rounded print:text-[8px] ${
+                            className={`aspect-square flex items-center justify-center text-[9px] font-semibold rounded print:text-[7px] ${
                               isToday ? 'ring-1 ring-blue-500' :
                               isHoliday ? 'bg-red-200 text-red-900' :
                               isVacation ? 'bg-blue-200 text-blue-900' :
@@ -328,40 +326,40 @@ export default function WorkCalendar() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm mt-6" id="no-laborables-list">
-        <CardHeader className="border-b print:pb-2">
-          <CardTitle className="flex items-center gap-2 print:text-base">
+      <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm mt-6 print:mt-2" id="no-laborables-list">
+        <CardHeader className="border-b print:pb-1">
+          <CardTitle className="flex items-center gap-2 print:text-sm">
             <Calendar className="w-5 h-5 text-blue-600 print:w-4 print:h-4" />
             Relación de Días No Laborables {format(currentDate, "yyyy")} ({noLaborablesList.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 print:p-4">
+        <CardContent className="p-6 print:p-3">
           {noLaborablesList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 print:py-4 print:text-xs">
               No hay días no laborables configurados para este año
             </div>
           ) : (
             <div className="space-y-2 print:space-y-1">
               {noLaborablesList.map((item, idx) => (
-                <div key={`${item.id}-${idx}`} className={`border-2 rounded-lg p-3 print:p-2 print:border ${
+                <div key={`${item.id}-${idx}`} className={`border-2 rounded-lg p-3 print:p-1.5 print:border ${
                   item.type === 'festivo' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
                 }`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 print:mb-1">
-                        <Badge className={`${item.type === 'festivo' ? 'bg-red-600' : 'bg-blue-600'} print:text-[10px] print:px-2 print:py-0.5`}>
+                      <div className="flex items-center gap-2 mb-2 print:mb-0.5 print:gap-1">
+                        <Badge className={`${item.type === 'festivo' ? 'bg-red-600' : 'bg-blue-600'} print:text-[8px] print:px-1.5 print:py-0`}>
                           {item.type === 'festivo' ? 'FESTIVO' : 'VACACIONES'}
                         </Badge>
-                        <span className="font-bold text-slate-900 print:text-sm">
+                        <span className="font-bold text-slate-900 print:text-[10px]">
                           {format(item.fecha, "dd/MM/yyyy - EEEE", { locale: es })}
                         </span>
                         {item.fecha_fin && (
-                          <span className="text-sm text-slate-600 print:text-xs">
+                          <span className="text-sm text-slate-600 print:text-[9px]">
                             al {format(item.fecha_fin, "dd/MM/yyyy", { locale: es })}
                           </span>
                         )}
                       </div>
-                      <div className="font-semibold text-slate-900 mb-1 print:text-sm">{item.nombre}</div>
+                      <div className="font-semibold text-slate-900 mb-1 print:text-[10px] print:mb-0">{item.nombre}</div>
                       
                       {editingId === item.id ? (
                         <div className="space-y-2">
@@ -394,10 +392,10 @@ export default function WorkCalendar() {
                       ) : (
                         <>
                           {item.descripcion && (
-                            <p className="text-sm text-slate-600 print:text-xs">{item.descripcion}</p>
+                            <p className="text-sm text-slate-600 print:text-[9px]">{item.descripcion}</p>
                           )}
                           {!item.descripcion && (
-                            <p className="text-sm text-slate-400 italic print:text-xs">Sin descripción</p>
+                            <p className="text-sm text-slate-400 italic print:hidden">Sin descripción</p>
                           )}
                         </>
                       )}
@@ -421,10 +419,18 @@ export default function WorkCalendar() {
         </CardContent>
       </Card>
 
+      {showHolidayManager && (
+        <HolidayManager onClose={() => setShowHolidayManager(false)} />
+      )}
+
+      {showVacationManager && (
+        <VacationManager onClose={() => setShowVacationManager(false)} />
+      )}
+
       <style>{`
         @media print {
           @page {
-            size: A4 landscape;
+            size: A4 portrait;
             margin: 8mm;
           }
           
@@ -445,7 +451,6 @@ export default function WorkCalendar() {
             top: 0;
             width: 100%;
             page-break-after: always;
-            transform: scale(0.95);
           }
           
           #no-laborables-list {
@@ -453,7 +458,6 @@ export default function WorkCalendar() {
             left: 0;
             top: 0;
             width: 100%;
-            transform: scale(0.95);
           }
           
           .print\\:hidden {

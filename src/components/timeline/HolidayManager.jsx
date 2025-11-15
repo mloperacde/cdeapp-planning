@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -23,10 +24,10 @@ import { Plus, Trash2, CalendarOff, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function HolidayManager({ open, onOpenChange, holidays, onUpdate }) {
+export default function HolidayManager({ open, onOpenChange, holidays, onUpdate }) { // Preserving original props
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     date: "",
@@ -34,20 +35,63 @@ export default function HolidayManager({ open, onOpenChange, holidays, onUpdate 
     description: "",
   });
 
+  const queryClient = useQueryClient(); // Initialize useQueryClient
+
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Holiday.create(data),
-    onSuccess: () => {
-      onUpdate();
-      setFormData({ date: "", name: "", description: "" });
-      setShowForm(false);
+    mutationFn: async (data) => {
+      const holiday = await base44.entities.Holiday.create(data);
+      
+      // Create push notifications for all employees (7 days before)
+      const holidayDate = new Date(data.date); // Corrected from data.fecha to data.date
+      const notifyDate = new Date(holidayDate);
+      notifyDate.setDate(notifyDate.getDate() - 7);
+      
+      // Only create notifications if the notification date is in the future
+      if (notifyDate > new Date()) {
+        try {
+          const employeesData = await base44.entities.Employee.list();
+          const notificationPromises = employeesData.map(emp => 
+            base44.entities.PushNotification.create({
+              destinatario_id: emp.id,
+              tipo: "calendario",
+              titulo: "Festivo Próximo",
+              mensaje: `${data.name} - ${format(holidayDate, "d 'de' MMMM", { locale: es })}`, // Corrected from data.nombre to data.name
+              prioridad: "baja",
+              referencia_tipo: "Holiday",
+              referencia_id: holiday.id,
+              enviada_push: false
+            })
+          );
+          await Promise.all(notificationPromises);
+        } catch (error) {
+          console.error("Failed to create push notifications for holiday:", error);
+          // Decide whether to re-throw or just log. For now, just log and continue.
+        }
+      }
+
+      return holiday;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['holidays'] }); // Replaced onUpdate()
+      setFormData({ date: "", name: "", description: "" }); // Keep existing reset
+      setShowForm(false);
+      // setEditingHoliday(null); // Removed as 'editingHoliday' state is not defined in current code
+    },
+    onError: (error) => {
+      console.error("Error creating holiday:", error);
+      // Optionally display an error message to the user
+    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Holiday.delete(id),
     onSuccess: () => {
-      onUpdate();
+      queryClient.invalidateQueries({ queryKey: ['holidays'] }); // Replaced onUpdate()
     },
+    onError: (error) => {
+      console.error("Error deleting holiday:", error);
+      // Optionally display an error message to the user
+    }
   });
 
   const handleSubmit = (e) => {

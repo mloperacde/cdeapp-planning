@@ -1,12 +1,13 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Smartphone, CheckCircle, Settings, Users, 
-  Download, QrCode, AlertCircle, Zap, Lock, 
-  Bell, Calendar, Wrench, ArrowLeft
+import {
+  Smartphone, CheckCircle, Users, Download,
+  AlertCircle, Zap, Bell, Calendar, ArrowLeft,
+  CheckCircle2, MessageSquare, Clock, FileText, User, Award
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -16,67 +17,118 @@ export default function MobileAppConfigPage() {
 
   const features = [
     {
-      title: "Autenticación Segura",
-      description: "Registro mediante número de teléfono con código SMS temporal",
-      icon: Lock,
-      color: "blue"
-    },
-    {
-      title: "Solicitud de Ausencias",
-      description: "Comunica ausencias con adjuntos de documentos justificativos",
+      title: "Gestión de Ausencias",
+      description: "Solicitud y consulta de ausencias, permisos y vacaciones",
       icon: Calendar,
+      enabled: true,
       color: "green"
     },
     {
-      title: "Consulta de Asignaciones",
-      description: "Visualiza tu asignación diaria de máquinas y planificación",
-      icon: Settings,
+      title: "Consulta de Planning",
+      description: "Visualización de turnos, horarios y asignaciones",
+      icon: Clock,
+      enabled: true,
+      color: "blue"
+    },
+    {
+      title: "Mensajería Interna",
+      description: "Chat directo y canales de equipo/departamento",
+      icon: MessageSquare,
+      enabled: true,
       color: "purple"
     },
     {
-      title: "Gestión de Mantenimiento",
-      description: "Actualiza estado de máquinas y órdenes de trabajo",
-      icon: Wrench,
+      title: "Notificaciones Push",
+      description: "Alertas en tiempo real sobre mensajes, calendario y documentos",
+      icon: Bell,
+      enabled: true,
+      highlighted: true,
+      color: "red"
+    },
+    {
+      title: "Documentos",
+      description: "Acceso a documentación, manuales y políticas",
+      icon: FileText,
+      enabled: true,
       color: "orange"
     },
     {
-      title: "Notificaciones Push",
-      description: "Recibe alertas en tiempo real sobre cambios importantes",
-      icon: Bell,
-      color: "red"
+      title: "Perfil de Empleado",
+      description: "Consulta y actualización de datos personales",
+      icon: User,
+      enabled: true,
+      color: "indigo"
     }
   ];
 
   const setupSteps = [
     {
-      step: 1,
-      title: "Prepara los Datos de Empleados",
-      description: "Asegúrate de que todos los empleados tienen números de teléfono actualizados en su ficha",
-      action: "Ir a Vista Maestra",
-      url: createPageUrl("MasterEmployeeView"),
-      status: "required"
+      number: 1,
+      title: "Configurar Notificaciones Push",
+      description: "El sistema enviará automáticamente notificaciones push para:",
+      items: [
+        "Nuevos mensajes en chats directos y canales",
+        "Festivos y períodos de vacaciones próximos",
+        "Vencimiento de documentos importantes",
+        "Formaciones pendientes o caducadas",
+        "Cambios en el planning o turnos"
+      ],
+      status: "active"
     },
     {
-      step: 2,
-      title: "Configura Usuarios del Sistema",
-      description: "Invita a los empleados que necesitan acceso a la aplicación",
-      action: "Gestionar Usuarios",
-      url: createPageUrl("AppUserManagement"),
-      status: "required"
+      number: 2,
+      title: "Invitar Usuarios",
+      description: "Accede a Configuración > Gestión de Usuarios App para invitar empleados",
+      status: "pending"
     },
     {
-      step: 3,
-      title: "Activa Notificaciones",
-      description: "Configura qué notificaciones se enviarán a la app móvil",
-      action: "Configurar Notificaciones",
-      url: createPageUrl("EmailNotifications"),
-      status: "optional"
+      number: 3,
+      title: "Configurar Roles",
+      description: "Define qué puede ver y hacer cada usuario desde Configuración > Roles y Permisos",
+      status: "pending"
+    }
+  ];
+
+  const pushNotificationTypes = [
+    {
+      tipo: "Mensajes",
+      icon: MessageSquare,
+      color: "blue",
+      triggers: [
+        "Mensaje directo recibido",
+        "Mención en canal de equipo",
+        "Respuesta en conversación"
+      ]
     },
     {
-      step: 4,
-      title: "Comunica a los Empleados",
-      description: "Informa a tu equipo sobre la disponibilidad de la app móvil",
-      status: "manual"
+      tipo: "Calendario Laboral",
+      icon: Calendar,
+      color: "purple",
+      triggers: [
+        "Festivo próximo (7 días antes)",
+        "Inicio de período de vacaciones",
+        "Fin de semana largo"
+      ]
+    },
+    {
+      tipo: "Documentos",
+      icon: FileText,
+      color: "orange",
+      triggers: [
+        "Documento próximo a caducar (30 días)",
+        "Nuevo documento disponible",
+        "Versión actualizada de documento"
+      ]
+    },
+    {
+      tipo: "Formaciones",
+      icon: Award,
+      color: "green",
+      triggers: [
+        "Formación asignada pendiente",
+        "Certificado próximo a caducar (60 días)",
+        "Nueva formación disponible"
+      ]
     }
   ];
 
@@ -171,23 +223,15 @@ export default function MobileAppConfigPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">
-              <Smartphone className="w-4 h-4 mr-2" />
-              Resumen
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Vista General</TabsTrigger>
+            <TabsTrigger value="setup">Configuración</TabsTrigger>
+            <TabsTrigger value="notifications">
+              <Bell className="w-4 h-4 mr-2" />
+              Notificaciones Push
             </TabsTrigger>
-            <TabsTrigger value="setup">
-              <Zap className="w-4 h-4 mr-2" />
-              Activación
-            </TabsTrigger>
-            <TabsTrigger value="roles">
-              <Users className="w-4 h-4 mr-2" />
-              Roles y Permisos
-            </TabsTrigger>
-            <TabsTrigger value="guide">
-              <Download className="w-4 h-4 mr-2" />
-              Guía Usuario
-            </TabsTrigger>
+            <TabsTrigger value="roles">Roles</TabsTrigger>
+            <TabsTrigger value="guide">Guía</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -220,8 +264,8 @@ export default function MobileAppConfigPage() {
                   <div>
                     <h3 className="font-semibold text-green-900 mb-2">Estado: PWA (Progressive Web App)</h3>
                     <p className="text-sm text-green-800">
-                      La aplicación móvil funciona como PWA, accesible desde cualquier navegador móvil 
-                      sin necesidad de instalación desde tiendas de apps. Los usuarios pueden añadirla 
+                      La aplicación móvil funciona como PWA, accesible desde cualquier navegador móvil
+                      sin necesidad de instalación desde tiendas de apps. Los usuarios pueden añadirla
                       a su pantalla de inicio para una experiencia similar a una app nativa.
                     </p>
                   </div>
@@ -237,32 +281,28 @@ export default function MobileAppConfigPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {setupSteps.map((step) => (
-                  <div key={step.step} className="flex gap-4">
+                  <div key={step.number} className="flex gap-4">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center">
-                        {step.step}
+                      <div className={`w-10 h-10 rounded-full ${step.status === 'active' ? 'bg-green-600' : 'bg-blue-600'} text-white font-bold flex items-center justify-center`}>
+                        {step.number}
                       </div>
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900 mb-1">{step.title}</h4>
-                          <p className="text-sm text-slate-600 mb-2">{step.description}</p>
-                          {step.status === "required" && (
-                            <Badge className="bg-red-100 text-red-800 mb-2">Requerido</Badge>
-                          )}
-                          {step.status === "optional" && (
-                            <Badge className="bg-amber-100 text-amber-800 mb-2">Opcional</Badge>
-                          )}
-                        </div>
-                        {step.action && step.url && (
-                          <Link to={step.url}>
-                            <Button size="sm" className="ml-4">
-                              {step.action}
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
+                      <h4 className="font-semibold text-slate-900 mb-1">{step.title}</h4>
+                      <p className="text-sm text-slate-600 mb-2">{step.description}</p>
+                      {step.items && (
+                        <ul className="text-sm text-slate-700 space-y-1 ml-4 list-disc">
+                          {step.items.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {step.status === "active" && (
+                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 mt-2">Activo</Badge>
+                      )}
+                      {step.status === "pending" && (
+                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 mt-2">Pendiente</Badge>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -297,6 +337,71 @@ export default function MobileAppConfigPage() {
                     <span>Firma digital avanzada con certificado</span>
                   </li>
                 </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notifications" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-6 h-6 text-blue-600" />
+                  Sistema de Notificaciones Push
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                  <h3 className="font-bold text-blue-900 mb-2">✓ Sistema Activo y Configurado</h3>
+                  <p className="text-sm text-blue-800 mb-3">
+                    Las notificaciones push se envían automáticamente a la app móvil de los empleados cuando ocurren eventos importantes.
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Los usuarios pueden gestionar sus preferencias de notificación desde la app móvil en Configuración &gt; Notificaciones.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {pushNotificationTypes.map((type) => {
+                    const Icon = type.icon;
+                    const colorClasses = {
+                      blue: "from-blue-500 to-blue-600",
+                      purple: "from-purple-500 to-purple-600",
+                      orange: "from-orange-500 to-orange-600",
+                      green: "from-green-500 to-green-600"
+                    };
+
+                    return (
+                      <Card key={type.tipo} className="border-2 border-slate-200">
+                        <CardContent className="p-4">
+                          <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[type.color]} flex items-center justify-center mb-3 shadow-lg`}>
+                            <Icon className="w-6 h-6 text-white" />
+                          </div>
+                          <h3 className="font-bold text-slate-900 mb-2">{type.tipo}</h3>
+                          <div className="space-y-1">
+                            {type.triggers.map((trigger, idx) => (
+                              <div key={idx} className="flex items-start gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                <p className="text-xs text-slate-600">{trigger}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                <Card className="bg-amber-50 border-2 border-amber-300">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-amber-900 mb-2">📱 Configuración en la App Móvil</h4>
+                    <p className="text-sm text-amber-800">
+                      Los empleados pueden personalizar qué notificaciones recibir desde:
+                    </p>
+                    <p className="text-sm text-amber-800 font-mono mt-1 ml-4">
+                      App Móvil → Configuración → Notificaciones
+                    </p>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
           </TabsContent>

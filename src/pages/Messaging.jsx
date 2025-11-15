@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -64,6 +65,29 @@ export default function MessagingPage() {
       await base44.entities.ChatChannel.update(selectedChannel.id, {
         ultimo_mensaje_fecha: new Date().toISOString()
       });
+
+      // Create push notifications for channel participants
+      const participants = selectedChannel.participantes || [];
+      const notificationPromises = participants
+        .filter(pId => pId !== currentEmployee?.id)
+        .map(pId => 
+          base44.entities.PushNotification.create({
+            destinatario_id: pId,
+            tipo: "mensaje",
+            titulo: selectedChannel.tipo === "Direct" 
+              ? `Mensaje de ${currentEmployee?.nombre}`
+              : `Nuevo mensaje en ${selectedChannel.nombre}`,
+            mensaje: data.mensaje.substring(0, 100),
+            prioridad: "media",
+            referencia_tipo: "ChatMessage",
+            referencia_id: msg.id,
+            enviada_push: true,
+            fecha_envio_push: new Date().toISOString(),
+            accion_url: `/messaging?channel=${selectedChannel.id}`
+          })
+        );
+
+      await Promise.all(notificationPromises);
 
       return msg;
     },
