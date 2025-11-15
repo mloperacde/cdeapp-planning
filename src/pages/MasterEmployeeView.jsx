@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, Search, Plus, Edit, UserCog, KeyRound, 
-  Award, Shield, Briefcase, Calendar, ArrowLeft
+  Award, Shield, Briefcase, Calendar, ArrowLeft, Settings as SettingsIcon
 } from "lucide-react";
 import {
   Table,
@@ -18,16 +19,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import EmployeeForm from "../components/employees/EmployeeForm";
 import EmployeeMasterDetail from "../components/employees/EmployeeMasterDetail";
+import TeamPositionConfig from "../components/employees/TeamPositionConfig"; // Assuming this new component is in the same folder
 
 export default function MasterEmployeeView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [showTeamConfig, setShowTeamConfig] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: employees, isLoading } = useQuery({
@@ -66,23 +76,42 @@ export default function MasterEmployeeView() {
     initialData: [],
   });
 
+  const { data: userRoles } = useQuery({
+    queryKey: ['userRoles'],
+    queryFn: () => base44.entities.UserRole.list(),
+    initialData: [],
+  });
+
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => 
       emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.departamento?.toLowerCase().includes(searchTerm.toLowerCase())
+      emp.departamento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.equipo?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [employees, searchTerm]);
 
+  const lockersCount = useMemo(() => {
+    const uniqueEmployees = new Set();
+    lockerAssignments.forEach(la => {
+      const hasLocker = la.numero_taquilla_actual?.replace(/['"]/g, '').trim();
+      if (hasLocker && la.requiere_taquilla !== false) {
+        uniqueEmployees.add(la.employee_id);
+      }
+    });
+    return uniqueEmployees.size;
+  }, [lockerAssignments]);
+
   const getEmployeeExtendedInfo = (employee) => {
     const locker = lockerAssignments.find(la => la.employee_id === employee.id);
+    const hasLockerNumber = locker?.numero_taquilla_actual?.replace(/['"]/g, '').trim();
     const committee = committeeMembers.filter(cm => cm.employee_id === employee.id);
     const emergency = emergencyMembers.filter(em => em.employee_id === employee.id);
     const skills = employeeSkills.filter(es => es.employee_id === employee.id);
 
     return {
-      hasLocker: locker?.numero_taquilla_actual && locker.requiere_taquilla !== false,
+      hasLocker: hasLockerNumber && locker.requiere_taquilla !== false,
       isCommitteeMember: committee.length > 0,
       isEmergencyMember: emergency.length > 0,
       skillsCount: skills.length,
@@ -110,13 +139,17 @@ export default function MasterEmployeeView() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <Link to={createPageUrl("Employees")}>
             <Button variant="ghost">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver a Gestión de Empleados
             </Button>
           </Link>
+          <Button onClick={() => setShowTeamConfig(true)} variant="outline">
+            <SettingsIcon className="w-4 h-4 mr-2" />
+            Configurar Puestos por Equipo
+          </Button>
         </div>
 
         <div className="flex justify-between items-center mb-8">
@@ -181,9 +214,7 @@ export default function MasterEmployeeView() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-green-700 font-medium">Con Taquilla</p>
-                  <p className="text-2xl font-bold text-green-900">
-                    {lockerAssignments.filter(la => la.numero_taquilla_actual && la.requiere_taquilla !== false).length}
-                  </p>
+                  <p className="text-2xl font-bold text-green-900">{lockersCount}</p>
                 </div>
                 <KeyRound className="w-8 h-8 text-green-600" />
               </div>
@@ -200,7 +231,7 @@ export default function MasterEmployeeView() {
           </CardHeader>
           <CardContent className="p-6">
             <Input
-              placeholder="Buscar por nombre, email, código o departamento..."
+              placeholder="Buscar por nombre, email, código, departamento o equipo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="text-lg"
@@ -231,6 +262,7 @@ export default function MasterEmployeeView() {
                       <TableHead>Empleado</TableHead>
                       <TableHead>Departamento</TableHead>
                       <TableHead>Puesto</TableHead>
+                      <TableHead>Equipo</TableHead>
                       <TableHead>Tipo Turno</TableHead>
                       <TableHead>Información Adicional</TableHead>
                       <TableHead className="text-center">Acciones</TableHead>
@@ -239,13 +271,13 @@ export default function MasterEmployeeView() {
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                        <TableCell colSpan={7} className="text-center py-12 text-slate-500">
                           Cargando empleados...
                         </TableCell>
                       </TableRow>
                     ) : filteredEmployees.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                        <TableCell colSpan={7} className="text-center py-12 text-slate-500">
                           No se encontraron empleados
                         </TableCell>
                       </TableRow>
@@ -271,6 +303,15 @@ export default function MasterEmployeeView() {
                             </TableCell>
                             <TableCell onClick={() => handleViewDetail(employee)}>
                               <div className="text-sm">{employee.puesto || "-"}</div>
+                            </TableCell>
+                            <TableCell onClick={() => handleViewDetail(employee)}>
+                              {employee.equipo ? (
+                                <Badge className="bg-purple-100 text-purple-800">
+                                  {employee.equipo}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-slate-400">Sin equipo</span>
+                              )}
                             </TableCell>
                             <TableCell onClick={() => handleViewDetail(employee)}>
                               <Badge className="bg-blue-100 text-blue-800">
@@ -344,6 +385,10 @@ export default function MasterEmployeeView() {
           machines={machines}
           onClose={handleFormClose}
         />
+      )}
+
+      {showTeamConfig && (
+        <TeamPositionConfig onClose={() => setShowTeamConfig(false)} />
       )}
     </div>
   );

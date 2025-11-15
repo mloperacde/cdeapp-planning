@@ -40,6 +40,7 @@ import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import MasterEmployeeView from './pages/MasterEmployeeView';
 import AppUserManagement from './pages/AppUserManagement';
 import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
+import RoleManagement from './pages/RoleManagement';
 import Layout from './Layout.jsx';
 
 
@@ -86,6 +87,7 @@ export const PAGES = {
     "MasterEmployeeView": MasterEmployeeView,
     "AppUserManagement": AppUserManagement,
     "LockerDuplicateCleanup": LockerDuplicateCleanup,
+    "RoleManagement": RoleManagement,
 }
 
 export const pagesConfig = {

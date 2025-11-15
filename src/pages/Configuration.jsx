@@ -1,8 +1,9 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Calendar, Bell, FileText, Users, Search, Database, UserCog, UserPlus, Smartphone } from "lucide-react";
+import { Settings, Calendar, Bell, FileText, Users, Search, Database, UserCog, UserPlus, Smartphone, Shield } from "lucide-react";
 
 export default function ConfigurationPage() {
   const configModules = [
@@ -23,11 +24,27 @@ export default function ConfigurationPage() {
       featured: true
     },
     {
+      title: "Roles y Permisos",
+      description: "Sistema robusto de roles y control de accesos",
+      icon: Shield,
+      url: createPageUrl("RoleManagement"),
+      color: "purple",
+      featured: true
+    },
+    {
       title: "Configuración App Móvil",
       description: "Activa y configura la aplicación móvil",
       icon: Smartphone,
       url: createPageUrl("MobileAppConfig"),
-      color: "purple",
+      color: "green",
+      featured: true
+    },
+    {
+      title: "Limpieza Duplicados Taquillas",
+      description: "Detecta y elimina duplicados en taquillas",
+      icon: Database,
+      url: createPageUrl("LockerDuplicateCleanup"),
+      color: "red",
       featured: true
     },
     {
@@ -35,28 +52,21 @@ export default function ConfigurationPage() {
       description: "Configura permisos según el Estatuto de los Trabajadores",
       icon: FileText,
       url: createPageUrl("AbsenceTypeInfo"),
-      color: "green"
+      color: "orange"
     },
     {
       title: "Notificaciones Email",
       description: "Configura notificaciones automáticas por email",
       icon: Bell,
       url: createPageUrl("EmailNotifications"),
-      color: "orange"
+      color: "cyan"
     },
     {
       title: "Corrección de Datos",
       description: "Corrige caracteres especiales en datos de empleados",
       icon: Search,
       url: createPageUrl("EmployeeDataCorrection"),
-      color: "red"
-    },
-    {
-      title: "Limpieza Taquillas",
-      description: "Limpia comillas en identificadores de taquillas",
-      icon: Database,
-      url: createPageUrl("LockerDataCleanup"),
-      color: "cyan"
+      color: "amber"
     }
   ];
 
@@ -67,7 +77,8 @@ export default function ConfigurationPage() {
     green: "from-green-500 to-green-600",
     orange: "from-orange-500 to-orange-600",
     red: "from-red-500 to-red-600",
-    cyan: "from-cyan-500 to-cyan-600"
+    cyan: "from-cyan-500 to-cyan-600",
+    amber: "from-amber-500 to-amber-600"
   };
 
   const featuredModules = configModules.filter(m => m.featured);

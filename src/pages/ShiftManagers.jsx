@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -65,15 +66,43 @@ export default function ShiftManagersPage() {
     initialData: [],
   });
 
-  // Active absences today
+  // Active absences today - SOLO de empleados en equipos
   const activeAbsencesToday = useMemo(() => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    const employeesInTeams = employees.filter(e => e.equipo);
+    
     return absences.filter(abs => {
+      const employee = employeesInTeams.find(e => e.id === abs.employee_id);
+      if (!employee) return false;
+      
       const start = new Date(abs.fecha_inicio);
-      const end = new Date(abs.fecha_fin);
+      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      
       return now >= start && now <= end;
     });
-  }, [absences]);
+  }, [absences, employees]);
+
+  // Ausencias por equipo
+  const absencesByTeam = useMemo(() => {
+    const byTeam = {};
+    
+    teams.forEach(team => {
+      byTeam[team.team_name] = [];
+    });
+
+    activeAbsencesToday.forEach(abs => {
+      const employee = employees.find(e => e.id === abs.employee_id);
+      if (employee && employee.equipo && byTeam[employee.equipo]) {
+        byTeam[employee.equipo].push({ ...abs, employee });
+      }
+    });
+
+    return byTeam;
+  }, [activeAbsencesToday, employees, teams]);
 
   // Pending swap requests
   const pendingSwaps = useMemo(() => {
@@ -118,23 +147,25 @@ export default function ShiftManagersPage() {
     }).slice(0, 5);
   }, [employees]);
 
-  // Team stats
+  // Team stats with absences by team
   const teamStats = useMemo(() => {
     return teams.map(team => {
       const teamEmployees = employees.filter(emp => emp.equipo === team.team_name);
       const available = teamEmployees.filter(emp => emp.disponibilidad === "Disponible").length;
       const absent = teamEmployees.filter(emp => emp.disponibilidad === "Ausente").length;
       const shift = getTodayShift(team.team_key);
+      const absencesCount = absencesByTeam[team.team_name]?.length || 0;
       
       return {
         ...team,
         total: teamEmployees.length,
         available,
         absent,
-        shift
+        shift,
+        absencesCount
       };
     });
-  }, [teams, employees, teamSchedules]);
+  }, [teams, employees, teamSchedules, absencesByTeam]);
 
   const modules = [
     {
@@ -206,9 +237,9 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Empleados Disponibles</p>
+                  <p className="text-xs text-green-700 font-medium">Empleados Disponibles (en Equipos)</p>
                   <p className="text-2xl font-bold text-green-900">
-                    {employees.filter(e => e.disponibilidad === "Disponible").length}
+                    {employees.filter(e => e.disponibilidad === "Disponible" && e.equipo).length}
                   </p>
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
@@ -220,7 +251,7 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-red-700 font-medium">Ausentes Hoy</p>
+                  <p className="text-xs text-red-700 font-medium">Ausentes Hoy (en Equipos)</p>
                   <p className="text-2xl font-bold text-red-900">{activeAbsencesToday.length}</p>
                 </div>
                 <UserX className="w-8 h-8 text-red-600" />
@@ -310,10 +341,24 @@ export default function ShiftManagersPage() {
                       <div className="text-xs text-green-700">Disponibles</div>
                     </div>
                     <div className="text-center p-3 bg-red-50 rounded-lg">
-                      <div className="text-2xl font-bold text-red-900">{team.absent}</div>
+                      <div className="text-2xl font-bold text-red-900">{team.absencesCount}</div>
                       <div className="text-xs text-red-700">Ausentes</div>
                     </div>
                   </div>
+
+                  {team.absencesCount > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <p className="text-xs font-semibold text-slate-700 mb-2">Ausentes de este equipo:</p>
+                      {absencesByTeam[team.team_name]?.slice(0, 3).map(abs => (
+                        <div key={abs.id} className="text-xs text-slate-600 mb-1">
+                          • {abs.employee?.nombre} - {abs.tipo || abs.motivo}
+                        </div>
+                      ))}
+                      {team.absencesCount > 3 && (
+                        <p className="text-xs text-slate-500 mt-1">...y {team.absencesCount - 3} más</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -579,41 +624,43 @@ export default function ShiftManagersPage() {
           </Card>
         )}
 
-        {/* Resumen de Ausencias Hoy */}
+        {/* Resumen de Ausencias Hoy - Agrupado por Equipo */}
         {activeAbsencesToday.length > 0 && (
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100">
               <CardTitle className="flex items-center gap-2">
                 <UserX className="w-5 h-5 text-red-600" />
-                Empleados Ausentes Hoy ({activeAbsencesToday.length})
+                Empleados Ausentes Hoy (en Equipos) ({activeAbsencesToday.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {activeAbsencesToday.slice(0, 6).map(absence => {
-                  const employee = employees.find(e => e.id === absence.employee_id);
-                  if (!employee) return null;
+              <div className="space-y-4">
+                {Object.entries(absencesByTeam).map(([teamName, absences]) => {
+                  if (absences.length === 0) return null;
                   
                   return (
-                    <div key={absence.id} className="p-3 border rounded-lg bg-red-50 border-red-200">
-                      <div className="font-semibold text-sm text-slate-900">{employee.nombre}</div>
-                      <div className="text-xs text-slate-600 mt-1">
-                        {employee.departamento} - {employee.puesto}
+                    <div key={teamName}>
+                      <h4 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                        <Badge className="bg-purple-600">{teamName}</Badge>
+                        <span className="text-sm">({absences.length})</span>
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {absences.map(absence => (
+                          <div key={absence.id} className="p-3 border rounded-lg bg-red-50 border-red-200">
+                            <div className="font-semibold text-sm text-slate-900">{absence.employee?.nombre}</div>
+                            <div className="text-xs text-slate-600 mt-1">
+                              {absence.employee?.departamento} - {absence.employee?.puesto}
+                            </div>
+                            <Badge variant="outline" className="mt-2 text-xs">
+                              {absence.tipo}
+                            </Badge>
+                          </div>
+                        ))}
                       </div>
-                      <Badge variant="outline" className="mt-2 text-xs">
-                        {absence.tipo}
-                      </Badge>
                     </div>
                   );
                 })}
               </div>
-              {activeAbsencesToday.length > 6 && (
-                <Link to={createPageUrl("ShiftAbsenceReport")}>
-                  <Button variant="outline" className="w-full mt-4">
-                    Ver Todas y Comunicar Nuevas ({activeAbsencesToday.length})
-                  </Button>
-                </Link>
-              )}
             </CardContent>
           </Card>
         )}

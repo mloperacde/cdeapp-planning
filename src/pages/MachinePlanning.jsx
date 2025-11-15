@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -84,11 +85,11 @@ export default function MachinePlanningPage() {
   const savePlanningMutation = useMutation({
     mutationFn: async (data) => {
       const existing = plannings.find(
-        p => p.machine_id === data.machine_id && 
-        p.team_key === data.team_key && 
+        p => p.machine_id === data.machine_id &&
+        p.team_key === data.team_key &&
         p.fecha_planificacion === data.fecha_planificacion
       );
-      
+
       if (existing) {
         return base44.entities.MachinePlanning.update(existing.id, data);
       }
@@ -100,7 +101,7 @@ export default function MachinePlanningPage() {
   });
 
   const updateMachineOrderMutation = useMutation({
-    mutationFn: ({ machineId, newOrder }) => 
+    mutationFn: ({ machineId, newOrder }) =>
       base44.entities.Machine.update(machineId, { orden: newOrder }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machines'] });
@@ -116,9 +117,9 @@ export default function MachinePlanningPage() {
 
     items.forEach((machine, index) => {
       if (machine.orden !== index + 1) {
-        updateMachineOrderMutation.mutate({ 
-          machineId: machine.id, 
-          newOrder: index + 1 
+        updateMachineOrderMutation.mutate({
+          machineId: machine.id,
+          newOrder: index + 1
         });
       }
     });
@@ -126,22 +127,22 @@ export default function MachinePlanningPage() {
 
   const handleTogglePlanning = (machine) => {
     const planning = getPlanningForMachine(machine.id);
-    
+
     // Verificar operarios disponibles antes de activar
     if (!planning?.activa_planning) {
       const currentActiveMachines = plannings.filter(
-        p => p.activa_planning && 
-        p.team_key === selectedTeam && 
+        p => p.activa_planning &&
+        p.team_key === selectedTeam &&
         p.fecha_planificacion === selectedDate &&
         p.machine_id !== machine.id
       );
-      
+
       const currentTotalOperators = currentActiveMachines.reduce((sum, p) => sum + (p.operadores_necesarios || 0), 0);
-      
+
       // Necesitamos saber cuántos operadores necesita esta máquina
       const machineProcess = machineProcesses.find(mp => mp.machine_id === machine.id);
       const neededOperators = machineProcess?.operadores_requeridos || 1;
-      
+
       if (currentTotalOperators + neededOperators > availableOperators) {
         alert('⚠️ No hay suficientes operarios disponibles para activar esta máquina.\n\n' +
               `Operarios necesarios: ${currentTotalOperators + neededOperators}\n` +
@@ -149,7 +150,7 @@ export default function MachinePlanningPage() {
               'Por favor, desactiva otras máquinas o aumenta la disponibilidad de operarios.');
         return;
       }
-      
+
       setSelectedMachine(machine);
       setShowProcessDialog(true);
     } else {
@@ -157,6 +158,8 @@ export default function MachinePlanningPage() {
       savePlanningMutation.mutate({
         ...planning,
         activa_planning: false,
+        process_id: null, // Clear process when deactivating
+        operadores_necesarios: 0, // Clear operators when deactivating
       });
     }
   };
@@ -197,8 +200,8 @@ export default function MachinePlanningPage() {
 
   const getPlanningForMachine = (machineId) => {
     return plannings.find(
-      p => p.machine_id === machineId && 
-      p.team_key === selectedTeam && 
+      p => p.machine_id === machineId &&
+      p.team_key === selectedTeam &&
       p.fecha_planificacion === selectedDate
     );
   };
@@ -217,8 +220,8 @@ export default function MachinePlanningPage() {
 
   const activeMachines = useMemo(() => {
     return plannings.filter(
-      p => p.activa_planning && 
-      p.team_key === selectedTeam && 
+      p => p.activa_planning &&
+      p.team_key === selectedTeam &&
       p.fecha_planificacion === selectedDate
     );
   }, [plannings, selectedTeam, selectedDate]);
@@ -233,8 +236,8 @@ export default function MachinePlanningPage() {
     const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
     if (!teamName) return 0;
 
-    return employees.filter(emp => 
-      emp.equipo === teamName && 
+    return employees.filter(emp =>
+      emp.equipo === teamName &&
       emp.disponibilidad === "Disponible"
     ).length;
   }, [employees, selectedTeam, teams]);
@@ -263,8 +266,8 @@ export default function MachinePlanningPage() {
   const getActiveMachinesForDate = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return plannings.filter(
-      p => p.activa_planning && 
-      p.team_key === selectedTeam && 
+      p => p.activa_planning &&
+      p.team_key === selectedTeam &&
       p.fecha_planificacion === dateStr
     ).length;
   };
@@ -375,8 +378,8 @@ export default function MachinePlanningPage() {
           </Card>
 
           <Card className={`bg-gradient-to-br ${
-            operatorsDeficit > 0 
-              ? 'from-red-50 to-red-100 border-red-300' 
+            operatorsDeficit > 0
+              ? 'from-red-50 to-red-100 border-red-300'
               : 'from-green-50 to-green-100 border-green-200'
           }`}>
             <CardContent className="p-4">
@@ -414,7 +417,7 @@ export default function MachinePlanningPage() {
                     ⚠️ Déficit de Operadores: Faltan {operatorsDeficit} operador{operatorsDeficit !== 1 ? 'es' : ''}
                   </p>
                   <p className="text-sm text-red-800">
-                    No puedes activar más máquinas hasta que haya suficientes operarios disponibles. 
+                    No puedes activar más máquinas hasta que haya suficientes operarios disponibles.
                     Desactiva algunas máquinas o aumenta la disponibilidad de empleados.
                   </p>
                 </div>
@@ -423,12 +426,13 @@ export default function MachinePlanningPage() {
           </Card>
         )}
 
-        {/* Tabs: Lista y Calendario */}
+        {/* Tabs: Lista, Kanban y Calendario */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
           <Tabs value={currentTab} onValueChange={setCurrentTab}>
             <CardHeader className="border-b border-slate-100">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="list">Vista Lista</TabsTrigger>
+                <TabsTrigger value="kanban">Vista Kanban</TabsTrigger>
                 <TabsTrigger value="calendar">Vista Calendario</TabsTrigger>
               </TabsList>
             </CardHeader>
@@ -543,14 +547,103 @@ export default function MachinePlanningPage() {
               </CardContent>
             </TabsContent>
 
+            <TabsContent value="kanban" className="mt-0">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-lg mb-4">Máquinas en Tarjetas ({machines.length})</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                      <Power className="w-5 h-5" />
+                      Activas ({activeMachines.length})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {machines.filter(m => getPlanningForMachine(m.id)?.activa_planning).map(machine => {
+                        const planning = getPlanningForMachine(machine.id);
+                        return (
+                          <Card key={machine.id} className="bg-green-50 border-2 border-green-300 hover:shadow-lg transition-all cursor-pointer">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <h5 className="font-bold text-slate-900">{machine.nombre}</h5>
+                                  <p className="text-xs text-slate-600">{machine.codigo}</p>
+                                </div>
+                                <Power className="w-5 h-5 text-green-600" />
+                              </div>
+                              {planning?.process_id && (
+                                <Badge className="bg-blue-100 text-blue-700 text-xs mb-2">
+                                  {getProcessName(planning.process_id)}
+                                </Badge>
+                              )}
+                              {planning?.operadores_necesarios && (
+                                <div className="mt-2">
+                                  <Badge className="bg-purple-600 text-white">
+                                    {planning.operadores_necesarios} operadores
+                                  </Badge>
+                                </div>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleTogglePlanning(machine)}
+                                className="w-full mt-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <PowerOff className="w-4 h-4 mr-2" />
+                                Desactivar
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <PowerOff className="w-5 h-5" />
+                      Inactivas ({machines.length - activeMachines.length})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {machines.filter(m => !getPlanningForMachine(m.id)?.activa_planning).map(machine => (
+                        <Card key={machine.id} className="bg-slate-50 border-2 border-slate-200 hover:shadow-lg transition-all cursor-pointer">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h5 className="font-bold text-slate-900">{machine.nombre}</h5>
+                                <p className="text-xs text-slate-600">{machine.codigo}</p>
+                              </div>
+                              <PowerOff className="w-5 h-5 text-slate-400" />
+                            </div>
+                            <Badge variant="outline" className="text-xs mb-2">
+                              Inactiva
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleTogglePlanning(machine)}
+                              className="w-full mt-3 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <Power className="w-4 h-4 mr-2" />
+                              Activar
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </TabsContent>
+
+
             <TabsContent value="calendar" className="mt-0">
               <CardContent className="p-6">
                 <h3 className="font-semibold text-lg mb-4">
                   Calendario de Planificación - {viewMode === 'day' ? 'Día' : viewMode === 'week' ? 'Semana' : 'Mes'}
                 </h3>
                 <div className={`grid gap-3 ${
-                  viewMode === 'month' ? 'grid-cols-7' : 
-                  viewMode === 'week' ? 'grid-cols-7' : 
+                  viewMode === 'month' ? 'grid-cols-7' :
+                  viewMode === 'week' ? 'grid-cols-7' :
                   'grid-cols-1'
                 }`}>
                   {calendarDates.map((date) => {
@@ -564,8 +657,8 @@ export default function MachinePlanningPage() {
                         onClick={() => setSelectedDate(dateStr)}
                         className={`
                           p-4 border-2 rounded-lg cursor-pointer transition-all
-                          ${isSelected 
-                            ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                          ${isSelected
+                            ? 'border-blue-500 bg-blue-50 shadow-lg'
                             : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}
                           ${activeMachinesCount > 0 ? 'bg-green-50' : ''}
                         `}
@@ -609,12 +702,14 @@ export default function MachinePlanningPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeMachines.map((planning) => {
                   const machine = machines.find(m => m.id === planning.machine_id);
+                  if (!machine) return null; // Should not happen, but for safety
+
                   return (
                     <Card key={planning.id} className="bg-green-50 border-green-200">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="font-semibold text-slate-900">{machine?.nombre}</h3>
+                            <h3 className="font-semibold text-slate-900">{machine.nombre}</h3>
                             <p className="text-sm text-slate-600 mt-1">
                               {getProcessName(planning.process_id)}
                             </p>

@@ -1,12 +1,17 @@
+
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle2, ExternalLink, Users, Database } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Users, Database, Trash2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export default function LockerAudit({ employees, lockerAssignments }) {
+  const queryClient = useQueryClient();
+
   const auditResults = useMemo(() => {
     const results = {
       employeesWithoutAssignment: [],
@@ -64,6 +69,54 @@ export default function LockerAudit({ employees, lockerAssignments }) {
     return results;
   }, [employees, lockerAssignments]);
 
+  const deleteDuplicatesMutation = useMutation({
+    mutationFn: async (duplicates) => {
+      const promises = [];
+      
+      duplicates.forEach(dup => {
+        const sortedByDate = [...dup.assignments].sort((a, b) => 
+          new Date(b.fecha_asignacion || b.created_date) - new Date(a.fecha_asignacion || a.created_date)
+        );
+        
+        // Keep the most recent assignment, delete the rest
+        const toDelete = sortedByDate.slice(1);
+        toDelete.forEach(la => {
+          // Assuming 'base44' is globally available or passed via context
+          // In a real app, this would be an API call, e.g., api.deleteLockerAssignment(la.id)
+          promises.push(base44.entities.LockerAssignment.delete(la.id)); 
+        });
+      });
+      
+      return Promise.all(promises);
+    },
+    onSuccess: (_, duplicates) => {
+      const totalDeleted = duplicates.reduce((sum, d) => sum + (d.assignments.length - 1), 0);
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      toast.success(`✅ ${totalDeleted} duplicado(s) eliminado(s). Analizando de nuevo...`);
+      setTimeout(() => {
+        // Invalidate again after a short delay to ensure UI updates after potential re-fetch logic
+        queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      }, 1000);
+    },
+    onError: (error) => {
+      toast.error(`❌ Error al eliminar duplicados: ${error.message}`);
+    }
+  });
+
+  const deleteOrphanedMutation = useMutation({
+    mutationFn: async (assignments) => {
+      // Assuming 'base44' is globally available or passed via context
+      return Promise.all(assignments.map(la => base44.entities.LockerAssignment.delete(la.id)));
+    },
+    onSuccess: (_, assignments) => {
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      toast.success(`✅ ${assignments.length} asignación(es) huérfana(s) eliminada(s)`);
+    },
+    onError: (error) => {
+      toast.error(`❌ Error al eliminar asignaciones huérfanas: ${error.message}`);
+    }
+  });
+
   const totalProblems = 
     auditResults.employeesWithoutAssignment.length +
     auditResults.assignmentsWithoutEmployee.length +
@@ -75,10 +128,23 @@ export default function LockerAudit({ employees, lockerAssignments }) {
         totalProblems > 0 ? 'bg-amber-50 border-amber-300' : 'bg-green-50 border-green-300'
       }`}>
         <CardHeader className="border-b border-slate-100">
-          <CardTitle className="flex items-center gap-2">
-            <Database className="w-5 h-5" />
-            Auditoría de Datos
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Database className="w-5 h-5" />
+              Auditoría de Datos
+            </CardTitle>
+            {auditResults.duplicateAssignments.length > 0 && (
+              <Button
+                onClick={() => deleteDuplicatesMutation.mutate(auditResults.duplicateAssignments)}
+                disabled={deleteDuplicatesMutation.isPending}
+                className="bg-red-600 hover:bg-red-700"
+                size="sm"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {deleteDuplicatesMutation.isPending ? "Eliminando..." : "Eliminar Duplicados"}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -165,10 +231,21 @@ export default function LockerAudit({ employees, lockerAssignments }) {
 
               {auditResults.duplicateAssignments.length > 0 && (
                 <div className="border-2 border-red-300 rounded-lg p-4 bg-red-50">
-                  <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    Taquillas Duplicadas ({auditResults.duplicateAssignments.length})
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-red-900 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      Taquillas Duplicadas ({auditResults.duplicateAssignments.length})
+                    </h3>
+                    <Button
+                      onClick={() => deleteDuplicatesMutation.mutate(auditResults.duplicateAssignments)}
+                      disabled={deleteDuplicatesMutation.isPending}
+                      className="bg-red-600 hover:bg-red-700"
+                      size="sm"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {deleteDuplicatesMutation.isPending ? "Eliminando..." : "Limpiar Ahora"}
+                    </Button>
+                  </div>
                   <div className="space-y-3 max-h-48 overflow-y-auto">
                     {auditResults.duplicateAssignments.map((dup, idx) => (
                       <div key={idx} className="p-3 bg-white rounded border-2 border-red-200">
@@ -192,9 +269,20 @@ export default function LockerAudit({ employees, lockerAssignments }) {
 
               {auditResults.assignmentsWithoutEmployee.length > 0 && (
                 <div className="border-2 border-red-300 rounded-lg p-4 bg-red-50">
-                  <h3 className="font-semibold text-red-900 mb-3">
-                    Asignaciones Huérfanas ({auditResults.assignmentsWithoutEmployee.length})
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-red-900">
+                      Asignaciones Huérfanas ({auditResults.assignmentsWithoutEmployee.length})
+                    </h3>
+                    <Button
+                      onClick={() => deleteOrphanedMutation.mutate(auditResults.assignmentsWithoutEmployee)}
+                      disabled={deleteOrphanedMutation.isPending}
+                      className="bg-red-600 hover:bg-red-700"
+                      size="sm"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {deleteOrphanedMutation.isPending ? "Eliminando..." : "Eliminar"}
+                    </Button>
+                  </div>
                   <p className="text-xs text-red-800">
                     Hay {auditResults.assignmentsWithoutEmployee.length} asignación(es) sin empleado válido en la base de datos
                   </p>
