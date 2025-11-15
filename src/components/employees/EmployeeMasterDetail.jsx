@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  User, Briefcase, Clock, KeyRound, Award, Shield, 
+import {
+  User, Briefcase, Clock, KeyRound, Award, Shield,
   Flame, FileText, ArrowLeft, Edit, Calendar, TrendingUp, Save
 } from "lucide-react";
 import { format, differenceInYears, differenceInMonths } from "date-fns";
@@ -27,11 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const [activeTab, setActiveTab] = useState("general");
   const [editingLocker, setEditingLocker] = useState(false);
-  const [lockerData, setLockerData] = useState({
-    requiere_taquilla: true, // Default to true if no existing locker
-    vestuario: "",
-    numero_taquilla_actual: ""
-  });
+  const [lockerData, setLockerData] = useState({}); // Changed initial state to empty object
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
@@ -82,14 +78,16 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     initialData: [],
   });
 
-  const locker = lockerAssignments.find(la => la.employee_id === employee.id);
-  const committee = committeeMembers.filter(cm => cm.employee_id === employee.id && cm.activo);
-  const emergency = emergencyMembers.filter(em => em.employee_id === employee.id && em.activo);
-  const employeeSkillsList = employeeSkills.filter(es => es.employee_id === employee.id);
-  const employeeAbsences = absences.filter(a => a.employee_id === employee.id);
-  const employeeTraining = trainingRecords.filter(tr => tr.employee_id === employee.id);
+  // Added optional chaining or default empty arrays for robustness
+  const locker = lockerAssignments?.find(la => la.employee_id === employee.id);
+  const committee = (committeeMembers || []).filter(cm => cm.employee_id === employee.id && cm.activo);
+  const emergency = (emergencyMembers || []).filter(em => em.employee_id === employee.id && em.activo);
+  const employeeSkillsList = (employeeSkills || []).filter(es => es.employee_id === employee.id);
+  const employeeAbsences = (absences || []).filter(a => a.employee_id === employee.id);
+  const employeeTraining = (trainingRecords || []).filter(tr => tr.employee_id === employee.id); // Also apply here for consistency
 
-  useEffect(() => {
+  // Changed to React.useEffect as per outline
+  React.useEffect(() => {
     if (locker) {
       setLockerData({
         requiere_taquilla: locker.requiere_taquilla !== false, // Treat undefined as true
@@ -121,7 +119,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
       toast.success("Asignación de taquilla actualizada");
       setEditingLocker(false);
     },
-    onError: (error) => {
+    onError: (error) => { // Preserved existing onError handler
       toast.error(`Error al actualizar taquilla: ${error.message}`);
     }
   });
@@ -132,32 +130,32 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
 
   const antiguedad = useMemo(() => {
     if (!employee.fecha_alta) return null;
-    
+
     const fechaAlta = new Date(employee.fecha_alta);
     const hoy = new Date();
-    
+
     const years = differenceInYears(hoy, fechaAlta);
     const months = differenceInMonths(hoy, fechaAlta) % 12;
-    
+
     let result = [];
     if (years > 0) result.push(`${years} año${years !== 1 ? 's' : ''}`);
     if (months > 0) result.push(`${months} mes${months !== 1 ? 'es' : ''}`);
-    
+
     return result.length > 0 ? result.join(', ') : 'Menos de 1 mes';
   }, [employee.fecha_alta]);
 
   const edad = useMemo(() => {
     if (!employee.fecha_nacimiento) return null;
-    
+
     const birthDate = new Date(employee.fecha_nacimiento);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
   }, [employee.fecha_nacimiento]);
 
@@ -413,24 +411,23 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <Checkbox
-                        id="requiere_taquilla"
                         checked={lockerData.requiere_taquilla}
                         onCheckedChange={(checked) => setLockerData({...lockerData, requiere_taquilla: checked})}
                         disabled={!editingLocker}
                       />
-                      <Label htmlFor="requiere_taquilla">Requiere Taquilla</Label>
+                      <Label>Requiere Taquilla</Label>
                     </div>
 
                     {lockerData.requiere_taquilla && (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="vestuario">Vestuario</Label>
+                          <Label>Vestuario</Label>
                           <Select
                             value={lockerData.vestuario}
                             onValueChange={(value) => setLockerData({...lockerData, vestuario: value})}
                             disabled={!editingLocker}
                           >
-                            <SelectTrigger id="vestuario">
+                            <SelectTrigger>
                               <SelectValue placeholder="Seleccionar vestuario" />
                             </SelectTrigger>
                             <SelectContent>
@@ -442,9 +439,8 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="numero_taquilla_actual">Número de Taquilla</Label>
+                          <Label>Número de Taquilla</Label>
                           <Input
-                            id="numero_taquilla_actual"
                             value={lockerData.numero_taquilla_actual}
                             onChange={(e) => setLockerData({...lockerData, numero_taquilla_actual: e.target.value})}
                             placeholder="Identificador de taquilla"
@@ -467,12 +463,14 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
                         <Button
                           onClick={() => {
                             setEditingLocker(false);
-                            // Reset lockerData to its original state or default if no locker
-                            setLockerData({
-                              requiere_taquilla: locker?.requiere_taquilla !== false,
-                              vestuario: locker?.vestuario || "",
-                              numero_taquilla_actual: (locker?.numero_taquilla_actual || '').replace(/['"]/g, '').trim()
-                            });
+                            // Adjusted to outline's logic for reset, only if locker exists
+                            if (locker) {
+                              setLockerData({
+                                requiere_taquilla: locker.requiere_taquilla !== false,
+                                vestuario: locker.vestuario || "",
+                                numero_taquilla_actual: (locker.numero_taquilla_actual || '').replace(/['"]/g, '').trim()
+                              });
+                            }
                           }}
                           variant="outline"
                         >
@@ -502,7 +500,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {employeeSkillsList.map((es) => {
-                    const skill = skills.find(s => s.id === es.skill_id);
+                    const skill = (skills || []).find(s => s.id === es.skill_id); // Added optional chaining for skills
                     return (
                       <Card key={es.id}>
                         <CardContent className="p-4">

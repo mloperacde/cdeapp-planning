@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -124,10 +125,10 @@ export default function AppUserManagementPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedEmployees.size === filteredEmployees.length) {
+    if (selectedEmployees.size === filteredEmployees.filter(e => e.email && !e.hasUser).length) {
       setSelectedEmployees(new Set());
     } else {
-      setSelectedEmployees(new Set(filteredEmployees.map(e => e.id)));
+      setSelectedEmployees(new Set(filteredEmployees.filter(e => e.email && !e.hasUser).map(e => e.id)));
     }
   };
 
@@ -395,7 +396,7 @@ export default function AppUserManagementPage() {
                   size="sm"
                   onClick={handleSelectAll}
                 >
-                  {selectedEmployees.size === filteredEmployees.length ? "Deseleccionar Todo" : "Seleccionar Todo"}
+                  {selectedEmployees.size === filteredEmployees.filter(e => e.email && !e.hasUser).length && filteredEmployees.filter(e => e.email && !e.hasUser).length > 0 ? "Deseleccionar Todo" : "Seleccionar Todo"}
                 </Button>
               </div>
             </div>
@@ -407,8 +408,9 @@ export default function AppUserManagementPage() {
                   <TableRow className="bg-slate-50">
                     <TableHead className="w-12">
                       <Checkbox
-                        checked={selectedEmployees.size === filteredEmployees.length && filteredEmployees.length > 0}
+                        checked={selectedEmployees.size === filteredEmployees.filter(e => e.email && !e.hasUser).length && filteredEmployees.filter(e => e.email && !e.hasUser).length > 0}
                         onCheckedChange={handleSelectAll}
+                        disabled={filteredEmployees.filter(e => e.email && !e.hasUser).length === 0}
                       />
                     </TableHead>
                     <TableHead>Empleado</TableHead>
