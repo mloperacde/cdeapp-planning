@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,7 +24,8 @@ import { toast } from "sonner";
 export default function LockerAssignmentDialog({ 
   locker, 
   vestuario, 
-  employees, 
+  employees,
+  employeesWithoutLocker,
   lockerAssignments,
   onClose 
 }) {
@@ -32,25 +33,31 @@ export default function LockerAssignmentDialog({
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
 
-  const availableEmployees = useMemo(() => {
-    return employees.filter(emp => {
-      // Filtrar por búsqueda
-      const matchesSearch = !searchTerm || 
-        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      if (!matchesSearch) return false;
+  // Si viene un empleado arrastrado, pre-seleccionarlo
+  useEffect(() => {
+    if (locker.draggedEmployeeId) {
+      setSelectedEmployeeId(locker.draggedEmployeeId);
+    }
+  }, [locker.draggedEmployeeId]);
 
-      // Verificar si ya tiene taquilla asignada
+  const availableEmployees = useMemo(() => {
+    const baseList = employeesWithoutLocker || employees.filter(emp => {
       const existingAssignment = lockerAssignments.find(la => 
         la.employee_id === emp.id && 
         la.numero_taquilla_actual &&
         la.requiere_taquilla !== false
       );
-      
       return !existingAssignment;
     });
-  }, [employees, lockerAssignments, searchTerm]);
+
+    return baseList.filter(emp => {
+      const matchesSearch = !searchTerm || 
+        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesSearch;
+    });
+  }, [employees, employeesWithoutLocker, lockerAssignments, searchTerm]);
 
   const assignMutation = useMutation({
     mutationFn: async () => {
@@ -58,10 +65,9 @@ export default function LockerAssignmentDialog({
         throw new Error("Selecciona un empleado");
       }
 
-      // Verificar duplicados
       const duplicado = lockerAssignments.find(la => 
         la.vestuario === vestuario &&
-        la.numero_taquilla_actual === locker.numero.toString() &&
+        la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === locker.numero.toString() &&
         la.employee_id !== selectedEmployeeId &&
         la.requiere_taquilla !== false
       );
@@ -96,13 +102,20 @@ export default function LockerAssignmentDialog({
         });
         dataToSave.historial_cambios = historial;
         
-        return base44.entities.LockerAssignment.update(existing.id, dataToSave);
+        await base44.entities.LockerAssignment.update(existing.id, dataToSave);
+      } else {
+        await base44.entities.LockerAssignment.create(dataToSave);
       }
-      
-      return base44.entities.LockerAssignment.create(dataToSave);
+
+      // Actualizar Employee
+      await base44.entities.Employee.update(selectedEmployeeId, {
+        taquilla_vestuario: vestuario,
+        taquilla_numero: locker.numero.toString()
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
       const emp = employees.find(e => e.id === selectedEmployeeId);
       toast.success(`Taquilla ${locker.numero} asignada a ${emp?.nombre}`);
       onClose();
@@ -121,9 +134,18 @@ export default function LockerAssignmentDialog({
         numero_taquilla_nuevo: "",
         notificacion_enviada: false
       });
+
+      // Actualizar Employee
+      if (locker.employee?.id) {
+        await base44.entities.Employee.update(locker.employee.id, {
+          taquilla_vestuario: "",
+          taquilla_numero: ""
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
       toast.success("Taquilla liberada");
       onClose();
     },

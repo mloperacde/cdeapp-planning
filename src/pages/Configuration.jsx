@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Calendar, Bell, FileText, Users } from "lucide-react";
+import { Settings, Calendar, Bell, FileText, Users, Search, Database } from "lucide-react";
 
 export default function ConfigurationPage() {
   const configModules = [
@@ -33,6 +33,20 @@ export default function ConfigurationPage() {
       icon: Users,
       url: createPageUrl("UserManagement"),
       color: "orange"
+    },
+    {
+      title: "Corrección de Datos",
+      description: "Corrige caracteres especiales en datos de empleados",
+      icon: Search,
+      url: createPageUrl("EmployeeDataCorrection"),
+      color: "red"
+    },
+    {
+      title: "Limpieza Taquillas",
+      description: "Limpia comillas en identificadores de taquillas",
+      icon: Database,
+      url: createPageUrl("LockerDataCleanup"),
+      color: "cyan"
     }
   ];
 
@@ -40,7 +54,9 @@ export default function ConfigurationPage() {
     blue: "from-blue-500 to-blue-600",
     purple: "from-purple-500 to-purple-600",
     green: "from-green-500 to-green-600",
-    orange: "from-orange-500 to-orange-600"
+    orange: "from-orange-500 to-orange-600",
+    red: "from-red-500 to-red-600",
+    cyan: "from-cyan-500 to-cyan-600"
   };
 
   return (
@@ -56,7 +72,7 @@ export default function ConfigurationPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {configModules.map((module) => {
             const Icon = module.icon;
             return (
