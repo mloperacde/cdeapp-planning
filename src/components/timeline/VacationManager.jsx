@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -22,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Plane, AlertCircle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
-import { es } = from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
 import { useMutation } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -55,7 +54,6 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.start_date && formData.end_date && formData.name) {
-      // Validar que la fecha de fin no sea anterior a la de inicio
       if (new Date(formData.end_date) < new Date(formData.start_date)) {
         alert("La fecha de fin no puede ser anterior a la fecha de inicio");
         return;
