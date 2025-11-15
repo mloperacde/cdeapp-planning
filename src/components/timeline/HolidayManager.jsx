@@ -27,7 +27,7 @@ import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function HolidayManager({ open, onOpenChange, holidays, onUpdate }) { // Preserving original props
+export default function HolidayManager({ open, onOpenChange, holidays = [], onUpdate }) { // Added default empty array
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     date: "",
@@ -101,9 +101,9 @@ export default function HolidayManager({ open, onOpenChange, holidays, onUpdate 
     }
   };
 
-  const sortedHolidays = [...holidays].sort(
+  const sortedHolidays = Array.isArray(holidays) ? [...holidays].sort(
     (a, b) => new Date(a.date) - new Date(b.date)
-  );
+  ) : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

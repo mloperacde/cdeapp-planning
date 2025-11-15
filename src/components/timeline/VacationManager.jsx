@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -21,12 +22,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Plane, AlertCircle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
-import { es } from "date-fns/locale";
+import { es } = from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
 import { useMutation } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function VacationManager({ open, onOpenChange, vacations, onUpdate }) {
+export default function VacationManager({ open, onOpenChange, vacations = [], onUpdate }) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     start_date: "",
@@ -63,9 +64,9 @@ export default function VacationManager({ open, onOpenChange, vacations, onUpdat
     }
   };
 
-  const sortedVacations = [...vacations].sort(
+  const sortedVacations = Array.isArray(vacations) ? [...vacations].sort(
     (a, b) => new Date(a.start_date) - new Date(b.start_date)
-  );
+  ) : [];
 
   const calculateDays = (startDate, endDate) => {
     return differenceInDays(new Date(endDate), new Date(startDate)) + 1;
