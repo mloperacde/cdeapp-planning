@@ -36,6 +36,7 @@ import SkillMatrix from './pages/SkillMatrix';
 import CommitteeManagement from './pages/CommitteeManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
 import LockerDataCleanup from './pages/LockerDataCleanup';
+import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import Layout from './Layout.jsx';
 
 
@@ -78,6 +79,7 @@ export const PAGES = {
     "CommitteeManagement": CommitteeManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
     "LockerDataCleanup": LockerDataCleanup,
+    "EmployeeDataCorrection": EmployeeDataCorrection,
 }
 
 export const pagesConfig = {
