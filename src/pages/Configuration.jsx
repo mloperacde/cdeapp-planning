@@ -3,7 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Calendar, Bell, FileText, Users, Search, Database, UserCog, UserPlus, Smartphone, Shield } from "lucide-react";
+import { Settings, Bell, FileText, Search, Database, UserCog, UserPlus, Smartphone, Shield, Upload } from "lucide-react";
 
 export default function ConfigurationPage() {
   const configModules = [
@@ -16,11 +16,19 @@ export default function ConfigurationPage() {
       featured: true
     },
     {
+      title: "Gestión Documental",
+      description: "Repositorio centralizado de documentos con control de versiones",
+      icon: FileText,
+      url: createPageUrl("DocumentManagement"),
+      color: "indigo",
+      featured: true
+    },
+    {
       title: "Gestión de Usuarios App",
       description: "Configura accesos y permisos de usuarios del sistema",
       icon: UserPlus,
       url: createPageUrl("AppUserManagement"),
-      color: "indigo",
+      color: "cyan",
       featured: true
     },
     {
@@ -32,20 +40,26 @@ export default function ConfigurationPage() {
       featured: true
     },
     {
+      title: "Importar Datos",
+      description: "Importa datos masivos desde archivos Excel o CSV",
+      icon: Upload,
+      url: createPageUrl("DataImport"),
+      color: "green",
+      featured: true
+    },
+    {
       title: "Configuración App Móvil",
       description: "Activa y configura la aplicación móvil",
       icon: Smartphone,
       url: createPageUrl("MobileAppConfig"),
-      color: "green",
-      featured: true
+      color: "teal"
     },
     {
       title: "Limpieza Duplicados Taquillas",
       description: "Detecta y elimina duplicados en taquillas",
       icon: Database,
       url: createPageUrl("LockerDuplicateCleanup"),
-      color: "red",
-      featured: true
+      color: "red"
     },
     {
       title: "Tipos de Ausencias",
@@ -59,14 +73,14 @@ export default function ConfigurationPage() {
       description: "Configura notificaciones automáticas por email",
       icon: Bell,
       url: createPageUrl("EmailNotifications"),
-      color: "cyan"
+      color: "amber"
     },
     {
       title: "Corrección de Datos",
       description: "Corrige caracteres especiales en datos de empleados",
       icon: Search,
       url: createPageUrl("EmployeeDataCorrection"),
-      color: "amber"
+      color: "slate"
     }
   ];
 
@@ -78,7 +92,9 @@ export default function ConfigurationPage() {
     orange: "from-orange-500 to-orange-600",
     red: "from-red-500 to-red-600",
     cyan: "from-cyan-500 to-cyan-600",
-    amber: "from-amber-500 to-amber-600"
+    amber: "from-amber-500 to-amber-600",
+    teal: "from-teal-500 to-teal-600",
+    slate: "from-slate-500 to-slate-600"
   };
 
   const featuredModules = configModules.filter(m => m.featured);

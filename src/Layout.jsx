@@ -14,7 +14,7 @@ import {
   FileText,
   Bell,
   Smartphone,
-  Upload,
+  Upload, // Keep Upload icon as it might be used elsewhere or could be a previous oversight. If DataImport is removed, its direct usage here is gone.
   UsersRound,
   ChevronDown,
   ChevronRight,
@@ -304,6 +304,8 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
+                  {/* REMOVED DataImport from here as per instructions */}
+                  {/*
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -317,6 +319,7 @@ export default function Layout({ children, currentPageName }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  */}
 
                   <Collapsible open={openSections.informes} onOpenChange={() => toggleSection('informes')}>
                     <SidebarMenuItem>
