@@ -12,8 +12,8 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import HolidayManager from "../components/timeline/HolidayManager";
-import VacationManager from "../components/timeline/VacationManager";
+import HolidayManager from "../timeline/HolidayManager";
+import VacationManager from "../timeline/VacationManager";
 
 export default function WorkCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
