@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
-export default function UnionHoursTracker({ committeeMembers, employees }) {
+export default function UnionHoursTracker({ committeeMembers = [], employees = [] }) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     committee_member_id: "",
@@ -57,11 +57,12 @@ export default function UnionHoursTracker({ committeeMembers, employees }) {
   };
 
   const getEmployeeName = (employeeId) => {
+    if (!employees || !Array.isArray(employees)) return "Desconocido";
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Desconocido";
   };
 
-  const activeMembersWithHours = committeeMembers.filter(m => 
+  const activeMembersWithHours = (committeeMembers || []).filter(m => 
     m.activo && m.horas_sindicales_mensuales > 0
   );
 
@@ -104,7 +105,7 @@ export default function UnionHoursTracker({ committeeMembers, employees }) {
                     <SelectContent>
                       {activeMembersWithHours.map((member) => (
                         <SelectItem key={member.id} value={member.id}>
-                          {getEmployeeName(member.employee_id)} - {member.tipo_comite}
+                          {getEmployeeName(member.employee_id)} - {Array.isArray(member.tipos_comite) ? member.tipos_comite.join(', ') : member.tipos_comite}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -193,7 +194,9 @@ export default function UnionHoursTracker({ committeeMembers, employees }) {
                     <div className="font-semibold text-slate-900 mb-2">
                       {getEmployeeName(member.employee_id)}
                     </div>
-                    <div className="text-xs text-slate-600 mb-3">{member.tipo_comite}</div>
+                    <div className="text-xs text-slate-600 mb-3">
+                      {Array.isArray(member.tipos_comite) ? member.tipos_comite.join(', ') : member.tipos_comite}
+                    </div>
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">

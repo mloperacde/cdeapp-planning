@@ -12,13 +12,14 @@ import IncidentForm from "./IncidentForm";
 import IncidentDetail from "./IncidentDetail";
 import IncidentReport from "./IncidentReport";
 
-export default function IncidentManager({ incidents, employees }) {
+export default function IncidentManager({ incidents = [], employees = [] }) {
   const [showForm, setShowForm] = useState(false);
   const [editingIncident, setEditingIncident] = useState(null);
   const [viewingIncident, setViewingIncident] = useState(null);
   const [currentView, setCurrentView] = useState("list");
 
   const getEmployeeName = (employeeId) => {
+    if (!employees || !Array.isArray(employees)) return "Desconocido";
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Desconocido";
   };
@@ -40,16 +41,16 @@ export default function IncidentManager({ incidents, employees }) {
     );
   };
 
-  const activeIncidents = incidents.filter(i => 
+  const activeIncidents = (incidents || []).filter(i => 
     i.estado_investigacion !== "Cerrada" && i.estado_investigacion !== "Completada"
   );
   
-  const closedIncidents = incidents.filter(i => 
+  const closedIncidents = (incidents || []).filter(i => 
     i.estado_investigacion === "Cerrada" || i.estado_investigacion === "Completada"
   );
 
   const renderIncidentList = (incidentList) => {
-    if (incidentList.length === 0) {
+    if (!incidentList || incidentList.length === 0) {
       return (
         <div className="text-center py-12 text-slate-500">
           <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-slate-300" />
