@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tantml/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export default function LockerConfigForm({ vestuario, config, lockerRoomStats }) {
   const [numTaquillas, setNumTaquillas] = useState(config?.numero_taquillas_instaladas || 0);
   const [identificadores, setIdentificadores] = useState("");
-  const [modoEntrada, setModoEntrada] = useState("auto"); // "auto" o "manual"
+  const [modoEntrada, setModoEntrada] = useState("auto");
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -35,7 +35,6 @@ export default function LockerConfigForm({ vestuario, config, lockerRoomStats })
       let identificadoresArray = [];
       
       if (modoEntrada === "manual") {
-        // Parsear identificadores desde texto
         identificadoresArray = identificadores
           .split(',')
           .map(id => id.trim())
@@ -45,7 +44,6 @@ export default function LockerConfigForm({ vestuario, config, lockerRoomStats })
           throw new Error(`El número de identificadores (${identificadoresArray.length}) debe coincidir con el número de taquillas instaladas (${numTaquillas})`);
         }
         
-        // Verificar duplicados
         const duplicados = identificadoresArray.filter((item, index) => 
           identificadoresArray.indexOf(item) !== index
         );
@@ -54,7 +52,6 @@ export default function LockerConfigForm({ vestuario, config, lockerRoomStats })
           throw new Error(`Identificadores duplicados encontrados: ${duplicados.join(', ')}`);
         }
       } else {
-        // Generar automáticamente 1, 2, 3...
         identificadoresArray = Array.from({ length: numTaquillas }, (_, i) => (i + 1).toString());
       }
 
