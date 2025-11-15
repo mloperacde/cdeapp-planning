@@ -16,18 +16,18 @@ export default function TimelineControls({
   onViewModeChange,
   selectedDate,
   onSelectedDateChange,
-  holidays,
+  holidays = [],
   isLoadingHolidays,
   onHolidaysUpdate,
-  vacations,
+  vacations = [],
   isLoadingVacations,
   onVacationsUpdate,
   selectedTeam,
   onSelectedTeamChange,
-  teams,
+  teams = [],
   selectedDepartment,
   onSelectedDepartmentChange,
-  departments
+  departments = []
 }) {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showVacationManager, setShowVacationManager] = useState(false);

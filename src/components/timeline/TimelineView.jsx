@@ -13,12 +13,12 @@ const WORKING_DAY_END = 22 * 60;
 export default function TimelineView({ 
   startDate, 
   endDate, 
-  holidays, 
-  vacations, 
+  holidays = [], 
+  vacations = [], 
   selectedTeam,
-  employees,
-  teams,
-  teamSchedules,
+  employees = [],
+  teams = [],
+  teamSchedules = [],
   viewMode,
   selectedDepartment
 }) {
@@ -33,14 +33,26 @@ export default function TimelineView({
     current.setMilliseconds(0);
     
     const holidayDates = new Set(
-      holidays.map(h => format(new Date(h.date), "yyyy-MM-dd"))
+      holidays.filter(h => h.fecha).map(h => {
+        try {
+          return format(new Date(h.fecha), "yyyy-MM-dd");
+        } catch {
+          return null;
+        }
+      }).filter(Boolean)
     );
     
-    const vacationRanges = vacations.map(v => ({
-      start: new Date(v.start_date),
-      end: new Date(v.end_date),
-      employeeIds: v.aplica_todos ? null : v.employee_ids
-    }));
+    const vacationRanges = vacations.filter(v => v.fecha_inicio && v.fecha_fin).map(v => {
+      try {
+        return {
+          start: new Date(v.fecha_inicio),
+          end: new Date(v.fecha_fin),
+          employeeIds: v.aplica_todos ? null : v.employee_ids
+        };
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
 
     // Filtrar empleados por equipo, departamento y que estén incluidos en planning
     const getTeamName = (teamKey) => {
@@ -126,6 +138,7 @@ export default function TimelineView({
         if (employee.ausencia_inicio && employee.ausencia_fin) {
           const ausenciaStart = new Date(employee.ausencia_inicio);
           const ausenciaEnd = new Date(employee.ausencia_fin);
+          // Check if date is within the absence range (inclusive)
           if (date >= ausenciaStart && date <= ausenciaEnd) {
             return false;
           }
