@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
-export default function CommitteeMemberList({ members, employees, committeeType, onEdit }) {
+export default function CommitteeMemberList({ members, employees, onEdit }) {
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
@@ -35,7 +35,7 @@ export default function CommitteeMemberList({ members, employees, committeeType,
     return (
       <Card>
         <CardContent className="p-12 text-center text-slate-500">
-          No hay miembros en este comité
+          No hay miembros en comités
         </CardContent>
       </Card>
     );
@@ -59,6 +59,18 @@ export default function CommitteeMemberList({ members, employees, committeeType,
                 <Badge className="bg-green-600 text-white">Activo</Badge>
               ) : (
                 <Badge className="bg-slate-400 text-white">Inactivo</Badge>
+              )}
+            </div>
+
+            <div className="space-y-2 mb-3">
+              {member.tipos_comite && member.tipos_comite.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {member.tipos_comite.map((tipo, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {tipo}
+                    </Badge>
+                  ))}
+                </div>
               )}
             </div>
 
