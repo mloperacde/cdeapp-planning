@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -9,13 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, User, Settings, Mail, Briefcase } from "lucide-react";
+import { CheckCircle2, XCircle, Settings } from "lucide-react";
+import LockerAssignmentDialog from "./LockerAssignmentDialog";
 
 export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs }) {
   const [selectedVestuario, setSelectedVestuario] = useState("Vestuario Femenino Planta Alta");
@@ -23,43 +17,49 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
 
   const vestuarioConfig = useMemo(() => {
     const config = lockerRoomConfigs.find(c => c.vestuario === selectedVestuario);
-    return config?.numero_taquillas_instaladas || 163;
+    return {
+      total: config?.numero_taquillas_instaladas || 163,
+      identificadores: config?.identificadores_taquillas || []
+    };
   }, [selectedVestuario, lockerRoomConfigs]);
 
   const lockerData = useMemo(() => {
     const data = [];
     
-    for (let i = 1; i <= vestuarioConfig; i++) {
-      // Buscar asignación para esta taquilla específica en este vestuario
+    // Si hay identificadores específicos, usarlos; si no, usar números secuenciales
+    const identificadores = vestuarioConfig.identificadores.length > 0
+      ? vestuarioConfig.identificadores
+      : Array.from({ length: vestuarioConfig.total }, (_, i) => (i + 1).toString());
+    
+    identificadores.forEach((identificador) => {
       const assignment = lockerAssignments.find(la => {
         const esEsteVestuario = la.vestuario === selectedVestuario;
-        const esEstaTaquilla = la.numero_taquilla_actual && 
-                              la.numero_taquilla_actual.toString() === i.toString();
+        const esEstaIdentificacion = la.numero_taquilla_actual === identificador;
         const requiere = la.requiere_taquilla !== false;
         
-        return esEsteVestuario && esEstaTaquilla && requiere;
+        return esEsteVestuario && esEstaIdentificacion && requiere;
       });
       
       const employee = assignment ? employees.find(e => e.id === assignment.employee_id) : null;
       
       data.push({
-        numero: i,
+        numero: identificador,
         ocupada: !!assignment,
         employee,
         assignment
       });
-    }
+    });
     
     return data;
   }, [vestuarioConfig, lockerAssignments, selectedVestuario, employees]);
 
   const stats = useMemo(() => {
     const ocupadas = lockerData.filter(l => l.ocupada).length;
-    const libres = vestuarioConfig - ocupadas;
-    const porcentaje = vestuarioConfig > 0 ? Math.round((ocupadas / vestuarioConfig) * 100) : 0;
+    const libres = lockerData.length - ocupadas;
+    const porcentaje = lockerData.length > 0 ? Math.round((ocupadas / lockerData.length) * 100) : 0;
     
     return { ocupadas, libres, porcentaje };
-  }, [lockerData, vestuarioConfig]);
+  }, [lockerData]);
 
   const handleLockerClick = (locker) => {
     setSelectedLocker(locker);
@@ -75,9 +75,9 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Vestuario Femenino Planta Baja">Vestuario Femenino Planta Baja (56 taquillas)</SelectItem>
-              <SelectItem value="Vestuario Femenino Planta Alta">Vestuario Femenino Planta Alta (163 taquillas)</SelectItem>
-              <SelectItem value="Vestuario Masculino Planta Baja">Vestuario Masculino Planta Baja (28 taquillas)</SelectItem>
+              <SelectItem value="Vestuario Femenino Planta Baja">Vestuario Femenino Planta Baja</SelectItem>
+              <SelectItem value="Vestuario Femenino Planta Alta">Vestuario Femenino Planta Alta</SelectItem>
+              <SelectItem value="Vestuario Masculino Planta Baja">Vestuario Masculino Planta Baja</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -99,8 +99,8 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-600 font-medium">Total Instaladas</p>
-                <p className="text-2xl font-bold text-slate-900">{vestuarioConfig}</p>
+                <p className="text-xs text-slate-600 font-medium">Total Taquillas</p>
+                <p className="text-2xl font-bold text-slate-900">{lockerData.length}</p>
               </div>
               <Settings className="w-8 h-8 text-slate-400" />
             </div>
@@ -123,7 +123,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-blue-700 font-medium">Libres</p>
+                <p className="text-xs text-blue-700 font-medium">Disponibles</p>
                 <p className="text-2xl font-bold text-blue-900">{stats.libres}</p>
               </div>
               <XCircle className="w-8 h-8 text-blue-600" />
@@ -155,6 +155,12 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
             />
           </div>
 
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p className="text-xs text-blue-800">
+              💡 Haz clic en una taquilla <strong>libre</strong> para asignarla a un empleado, o en una <strong>ocupada</strong> para ver detalles o liberarla.
+            </p>
+          </div>
+
           <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
             {lockerData.map((locker) => (
               <button
@@ -165,10 +171,10 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
                   min-h-[70px] text-xs font-bold transition-all duration-200 hover:scale-105 hover:shadow-lg
                   ${locker.ocupada 
                     ? 'bg-green-500 border-green-600 text-white hover:bg-green-600' 
-                    : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300'
+                    : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:bg-blue-100'
                   }
                 `}
-                title={locker.ocupada ? `Taquilla ${locker.numero} - ${locker.employee?.nombre}` : `Taquilla ${locker.numero} - Libre`}
+                title={locker.ocupada ? `Taquilla ${locker.numero} - ${locker.employee?.nombre}` : `Taquilla ${locker.numero} - Disponible (clic para asignar)`}
               >
                 <div className="text-lg font-bold mb-1">#{locker.numero}</div>
                 {locker.ocupada && locker.employee && (
@@ -178,7 +184,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
                 )}
                 {!locker.ocupada && (
                   <div className="text-[8px] text-slate-500">
-                    Libre
+                    Disponible
                   </div>
                 )}
               </button>
@@ -188,71 +194,13 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
       </Card>
 
       {selectedLocker && (
-        <Dialog open={true} onOpenChange={() => setSelectedLocker(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                Taquilla #{selectedLocker.numero} - {selectedVestuario}
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="text-center p-8">
-                {selectedLocker.ocupada ? (
-                  <>
-                    <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                      <User className="w-10 h-10 text-green-600" />
-                    </div>
-                    <Badge className="bg-green-600 text-white mb-4 text-base px-4 py-1">Ocupada</Badge>
-                    <div className="space-y-3 bg-slate-50 rounded-lg p-4">
-                      <p className="font-bold text-xl text-slate-900">
-                        {selectedLocker.employee?.nombre}
-                      </p>
-                      {selectedLocker.employee?.departamento && (
-                        <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
-                          <Briefcase className="w-4 h-4" />
-                          {selectedLocker.employee.departamento}
-                        </div>
-                      )}
-                      {selectedLocker.employee?.puesto && (
-                        <p className="text-sm text-slate-600">
-                          {selectedLocker.employee.puesto}
-                        </p>
-                      )}
-                      {selectedLocker.employee?.codigo_empleado && (
-                        <p className="text-xs text-slate-500 font-mono mt-2 bg-white px-3 py-1 rounded">
-                          Código: {selectedLocker.employee.codigo_empleado}
-                        </p>
-                      )}
-                      {selectedLocker.employee?.email && (
-                        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 mt-2 bg-white px-3 py-1 rounded">
-                          <Mail className="w-3 h-3" />
-                          {selectedLocker.employee.email}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                      <XCircle className="w-10 h-10 text-slate-400" />
-                    </div>
-                    <Badge variant="outline" className="mb-4 text-base px-4 py-1">Disponible</Badge>
-                    <p className="text-slate-600 text-sm">
-                      Esta taquilla está disponible para asignación
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={() => setSelectedLocker(null)} variant="outline">
-                  Cerrar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <LockerAssignmentDialog
+          locker={selectedLocker}
+          vestuario={selectedVestuario}
+          employees={employees}
+          lockerAssignments={lockerAssignments}
+          onClose={() => setSelectedLocker(null)}
+        />
       )}
     </div>
   );

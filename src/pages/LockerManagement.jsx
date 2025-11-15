@@ -36,6 +36,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import LockerRoomMap from "../components/lockers/LockerRoomMap";
+import LockerConfigForm from "../components/lockers/LockerConfigForm";
 
 export default function LockerManagementPage() {
   const [filters, setFilters] = useState({
@@ -51,7 +52,6 @@ export default function LockerManagementPage() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [editingAssignments, setEditingAssignments] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
-  const [configFormData, setConfigFormData] = useState({});
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
@@ -194,6 +194,19 @@ export default function LockerManagementPage() {
       const promises = importPreview.matched.map(async ({ employee, vestuario, numeroTaquilla }) => {
         const existing = lockerAssignments.find(la => la.employee_id === employee.id);
         
+        // Verificar duplicados antes de importar
+        const duplicado = lockerAssignments.find(la => 
+          la.vestuario === vestuario &&
+          la.numero_taquilla_actual === numeroTaquilla &&
+          la.employee_id !== employee.id &&
+          la.requiere_taquilla !== false
+        );
+
+        if (duplicado) {
+          const empDuplicado = employees.find(e => e.id === duplicado.employee_id);
+          throw new Error(`Taquilla ${numeroTaquilla} en ${vestuario} ya asignada a ${empDuplicado?.nombre}`);
+        }
+        
         const now = new Date().toISOString();
         const hasChange = existing && existing.numero_taquilla_actual !== numeroTaquilla;
 
@@ -233,15 +246,14 @@ export default function LockerManagementPage() {
       setImportPreview(null);
       setImportFile(null);
     } catch (error) {
-      toast.error("Error al importar");
+      toast.error(error.message);
       console.error(error);
     }
   };
 
   const saveAllMutation = useMutation({
     mutationFn: async () => {
-      // VALIDACIÓN: Detectar duplicados y números fuera de rango
-      const duplicados = new Map();
+      // VALIDACIÓN: Detectar duplicados
       const errores = [];
       
       for (const [employeeId, data] of Object.entries(editingAssignments)) {
@@ -253,35 +265,34 @@ export default function LockerManagementPage() {
         const vestuario = data.vestuario;
         if (!vestuario) continue;
         
-        // Validar rango
+        // Validar que el identificador existe en la configuración
         const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
-        const maxTaquillas = config?.numero_taquillas_instaladas || 0;
-        const numeroInt = parseInt(numeroAUsar);
+        const identificadoresValidos = config?.identificadores_taquillas || [];
         
-        if (numeroInt > maxTaquillas) {
+        if (identificadoresValidos.length > 0 && !identificadoresValidos.includes(numeroAUsar.toString())) {
           const emp = employees.find(e => e.id === employeeId);
-          errores.push(`${emp?.nombre || 'Empleado'}: Taquilla ${numeroInt} excede el máximo de ${maxTaquillas} en ${vestuario}`);
+          errores.push(`${emp?.nombre || 'Empleado'}: El identificador "${numeroAUsar}" no existe en ${vestuario}`);
           continue;
         }
         
         // Validar duplicados (excluir el mismo empleado)
-        const key = `${vestuario}-${numeroAUsar}`;
-        const existingAssignment = lockerAssignments.find(la => 
-          la.vestuario === vestuario && 
+        const duplicado = lockerAssignments.find(la => 
+          la.vestuario === vestuario &&
           la.numero_taquilla_actual === numeroAUsar.toString() &&
-          la.employee_id !== employeeId
+          la.employee_id !== employeeId &&
+          la.requiere_taquilla !== false
         );
-        
-        if (existingAssignment) {
+
+        if (duplicado) {
           const emp1 = employees.find(e => e.id === employeeId);
-          const emp2 = employees.find(e => e.id === existingAssignment.employee_id);
-          errores.push(`Taquilla ${numeroAUsar} en ${vestuario}: ya asignada a ${emp2?.nombre || 'otro empleado'}. No se puede asignar a ${emp1?.nombre || 'este empleado'}.`);
+          const emp2 = employees.find(e => e.id === duplicado.employee_id);
+          errores.push(`⚠️ Taquilla "${numeroAUsar}" en ${vestuario}:\n   Ya asignada a: ${emp2?.nombre || 'otro empleado'}\n   No se puede asignar a: ${emp1?.nombre || 'este empleado'}`);
         }
       }
       
       if (errores.length > 0) {
-        const mensaje = "Errores de validación:\n\n" + errores.join('\n\n');
-        toast.error(mensaje, { duration: 8000 });
+        const mensaje = "❌ Errores de validación:\n\n" + errores.join('\n\n');
+        toast.error(mensaje, { duration: 10000 });
         throw new Error("Validación fallida");
       }
       
@@ -327,7 +338,7 @@ export default function LockerManagementPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
       setHasChanges(false);
-      toast.success("Cambios guardados correctamente");
+      toast.success("✅ Cambios guardados correctamente");
     },
     onError: (error) => {
       // Error ya mostrado en validación
@@ -357,47 +368,6 @@ export default function LockerManagementPage() {
       toast.success("Notificación enviada");
     },
   });
-
-  const saveConfigMutation = useMutation({
-    mutationFn: async (configs) => {
-      const promises = Object.entries(configs).map(([vestuario, numTaquillas]) => {
-        const existing = lockerRoomConfigs.find(c => c.vestuario === vestuario);
-        
-        if (existing) {
-          return base44.entities.LockerRoomConfig.update(existing.id, {
-            vestuario,
-            numero_taquillas_instaladas: parseInt(numTaquillas)
-          });
-        }
-        return base44.entities.LockerRoomConfig.create({
-          vestuario,
-          numero_taquillas_instaladas: parseInt(numTaquillas)
-        });
-      });
-
-      return Promise.all(promises);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lockerRoomConfigs'] });
-      toast.success("Configuración guardada");
-    },
-  });
-
-  React.useEffect(() => {
-    const defaultConfigs = {
-      "Vestuario Femenino Planta Baja": 56,
-      "Vestuario Femenino Planta Alta": 163,
-      "Vestuario Masculino Planta Baja": 28
-    };
-
-    const configs = {};
-    Object.keys(defaultConfigs).forEach(vestuario => {
-      const existing = lockerRoomConfigs.find(c => c.vestuario === vestuario);
-      configs[vestuario] = existing?.numero_taquillas_instaladas || defaultConfigs[vestuario];
-    });
-
-    setConfigFormData(configs);
-  }, [lockerRoomConfigs]);
 
   const departments = useMemo(() => {
     const depts = new Set();
@@ -452,10 +422,8 @@ export default function LockerManagementPage() {
       if (sortConfig.field === "taquilla") {
         const numA = parseInt(aVal, 10);
         const numB = parseInt(bVal, 10);
-        if (sortConfig.direction === "asc") {
-          return (isNaN(numA) ? Infinity : numA) - (isNaN(numB) ? Infinity : numB);
-        } else {
-          return (isNaN(numB) ? -Infinity : numB) - (isNaN(numA) ? -Infinity : numA);
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return sortConfig.direction === "asc" ? numA - numB : numB - numA;
         }
       }
 
@@ -531,9 +499,7 @@ export default function LockerManagementPage() {
     URL.revokeObjectURL(url);
   };
 
-  // ESTADÍSTICAS GLOBALES CORREGIDAS
   const stats = useMemo(() => {
-    // Contar empleados únicos con taquilla válida asignada
     const employeesConTaquilla = new Set();
     lockerAssignments.forEach(la => {
       const tieneTaquilla = la.numero_taquilla_actual && 
@@ -545,7 +511,6 @@ export default function LockerManagementPage() {
     });
     const conTaquilla = employeesConTaquilla.size;
 
-    // Contar empleados sin taquilla
     const sinTaquilla = employees.filter(emp => {
       const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
       if (!assignment) return true;
@@ -569,7 +534,6 @@ export default function LockerManagementPage() {
     return { conTaquilla, sinTaquilla, pendientesNotificacion, cambiosPendientes };
   }, [lockerAssignments, employees, editingAssignments]);
 
-  // ESTADÍSTICAS POR VESTUARIO CORREGIDAS
   const lockerRoomStats = useMemo(() => {
     const vestuarios = [
       "Vestuario Femenino Planta Baja",
@@ -581,7 +545,6 @@ export default function LockerManagementPage() {
       const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
       const totalInstaladas = config?.numero_taquillas_instaladas || 0;
       
-      // Contar solo asignaciones válidas en este vestuario
       const assignmentsEnVestuario = lockerAssignments.filter(la => {
         const esEsteVestuario = la.vestuario === vestuario;
         const tieneNumero = la.numero_taquilla_actual && 
@@ -594,11 +557,16 @@ export default function LockerManagementPage() {
       const asignadas = assignmentsEnVestuario.length;
       const libres = Math.max(0, totalInstaladas - asignadas);
       
-      // Detectar taquillas fuera de rango
-      const fueraDeRango = assignmentsEnVestuario.filter(la => {
-        const num = parseInt(la.numero_taquilla_actual);
-        return num > totalInstaladas;
-      }).length;
+      // Detectar identificadores no válidos
+      const identificadoresValidos = config?.identificadores_taquillas || [];
+      const fueraDeRango = identificadoresValidos.length > 0 
+        ? assignmentsEnVestuario.filter(la => 
+            !identificadoresValidos.includes(la.numero_taquilla_actual)
+          ).length
+        : assignmentsEnVestuario.filter(la => {
+            const num = parseInt(la.numero_taquilla_actual);
+            return num > totalInstaladas;
+          }).length;
       
       return {
         vestuario,
@@ -630,7 +598,6 @@ export default function LockerManagementPage() {
     </TableHead>
   );
 
-  // Detectar problemas en los datos
   const problemasDetectados = useMemo(() => {
     const problemas = [];
     
@@ -638,7 +605,7 @@ export default function LockerManagementPage() {
       if (stat.fueraDeRango > 0) {
         problemas.push({
           tipo: 'fuera_rango',
-          mensaje: `${stat.vestuario}: ${stat.fueraDeRango} taquilla(s) con números superiores al máximo (${stat.totalInstaladas})`
+          mensaje: `${stat.vestuario}: ${stat.fueraDeRango} taquilla(s) con identificadores no válidos`
         });
       }
       
@@ -690,7 +657,7 @@ export default function LockerManagementPage() {
                     ))}
                   </ul>
                   <p className="text-xs text-red-700 mt-2">
-                    Por favor, revisa y corrige las asignaciones en la pestaña "Asignaciones"
+                    Revisa y corrige las asignaciones en la pestaña "Asignaciones"
                   </p>
                 </div>
               </div>
@@ -733,7 +700,7 @@ export default function LockerManagementPage() {
             </TabsTrigger>
             <TabsTrigger value="mapa">
               <KeyRound className="w-4 h-4 mr-2" />
-              Mapa Vestuarios
+              Mapa Interactivo
             </TabsTrigger>
             <TabsTrigger value="importar">
               <Upload className="w-4 h-4 mr-2" />
@@ -835,7 +802,7 @@ export default function LockerManagementPage() {
                         {stat.fueraDeRango > 0 && (
                           <div className="pt-2 border-t border-red-300">
                             <Badge className="bg-red-600 text-white w-full justify-center">
-                              ⚠️ {stat.fueraDeRango} fuera de rango
+                              ⚠️ {stat.fueraDeRango} con ID no válido
                             </Badge>
                           </div>
                         )}
@@ -883,8 +850,8 @@ export default function LockerManagementPage() {
                   <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                     <li>Descarga la plantilla CSV o prepara tu archivo con: codigo_empleado, nombre, vestuario, numero_taquilla</li>
                     <li>El sistema busca coincidencias por código o nombre (soporta ? para Ñ y tildes)</li>
+                    <li>Valida que no haya taquillas duplicadas en el mismo vestuario</li>
                     <li>Se configura automáticamente vestuario y taquilla actual</li>
-                    <li>Los campos de "nueva taquilla" quedan vacíos para futuras reasignaciones</li>
                     <li>Se activan notificaciones pendientes para todos los cambios</li>
                   </ol>
                 </div>
@@ -1142,18 +1109,17 @@ export default function LockerManagementPage() {
                           const hasNewLocker = editData.numero_taquilla_nuevo && 
                             editData.numero_taquilla_nuevo !== editData.numero_taquilla_actual;
                           
-                          // Validar si el número está fuera de rango
+                          // Validar identificador
                           const config = lockerRoomConfigs.find(c => c.vestuario === editData.vestuario);
-                          const maxTaquillas = config?.numero_taquillas_instaladas || 0;
-                          const numActual = parseInt(editData.numero_taquilla_actual);
-                          const fueraDeRango = editData.numero_taquilla_actual && 
-                                             !isNaN(numActual) && 
-                                             numActual > maxTaquillas;
+                          const identificadoresValidos = config?.identificadores_taquillas || [];
+                          const idNoValido = editData.numero_taquilla_actual && 
+                                            identificadoresValidos.length > 0 &&
+                                            !identificadoresValidos.includes(editData.numero_taquilla_actual);
                           
                           return (
                             <TableRow key={employee.id} className={`hover:bg-slate-50 ${
                               !requiereTaquilla ? 'opacity-50' : 
-                              fueraDeRango ? 'bg-red-50' : ''
+                              idNoValido ? 'bg-red-50' : ''
                             }`}>
                               <TableCell>
                                 <Checkbox
@@ -1205,12 +1171,12 @@ export default function LockerManagementPage() {
                                     <Input
                                       value={editData.numero_taquilla_actual}
                                       onChange={(e) => handleFieldChange(employee.id, 'numero_taquilla_actual', e.target.value)}
-                                      placeholder="Nº"
-                                      className={`w-20 font-mono ${fueraDeRango ? 'border-red-500 bg-red-50' : ''}`}
+                                      placeholder="ID"
+                                      className={`w-20 font-mono ${idNoValido ? 'border-red-500 bg-red-50' : ''}`}
                                     />
-                                    {fueraDeRango && (
+                                    {idNoValido && (
                                       <Badge className="bg-red-600 text-white text-xs">
-                                        >{maxTaquillas}
+                                        No válido
                                       </Badge>
                                     )}
                                   </div>
@@ -1282,69 +1248,31 @@ export default function LockerManagementPage() {
           <TabsContent value="configuracion">
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
-                <CardTitle>Configuración de Vestuarios</CardTitle>
+                <CardTitle>Configuración de Vestuarios e Identificadores</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-blue-800">
-                    <strong>ℹ️ Información:</strong> Configura el número total de taquillas instaladas en cada vestuario.
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>ℹ️ Información:</strong> Configura el número total de taquillas y sus identificadores únicos por vestuario.
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Los identificadores pueden repetirse entre vestuarios diferentes (ej: "1" en Femenino y "1" en Masculino), 
+                    pero deben ser únicos dentro del mismo vestuario.
                   </p>
                 </div>
 
                 <div className="space-y-6">
-                  {Object.keys(configFormData).map((vestuario) => (
-                    <div key={vestuario} className="border-2 border-slate-200 rounded-lg p-5 bg-slate-50">
-                      <Label className="text-lg font-bold text-slate-900 mb-4 block">
-                        {vestuario}
-                      </Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor={`config-${vestuario}`}>Número de Taquillas Instaladas *</Label>
-                          <Input
-                            id={`config-${vestuario}`}
-                            type="number"
-                            min="0"
-                            value={configFormData[vestuario]}
-                            onChange={(e) => setConfigFormData({
-                              ...configFormData,
-                              [vestuario]: e.target.value
-                            })}
-                            required
-                            className="text-lg"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Estado Actual</Label>
-                          <div className="h-12 flex items-center gap-3">
-                            {(() => {
-                              const stat = lockerRoomStats.find(s => s.vestuario === vestuario);
-                              return (
-                                <>
-                                  <Badge className="bg-green-600 text-white text-base px-3 py-1">
-                                    {stat?.asignadas || 0} asignadas
-                                  </Badge>
-                                  <Badge variant="outline" className="text-base px-3 py-1">
-                                    {stat?.libres || 0} libres
-                                  </Badge>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-end gap-3 pt-6">
-                  <Button 
-                    onClick={() => saveConfigMutation.mutate(configFormData)}
-                    disabled={saveConfigMutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {saveConfigMutation.isPending ? "Guardando..." : "Guardar Configuración"}
-                  </Button>
+                  {["Vestuario Femenino Planta Baja", "Vestuario Femenino Planta Alta", "Vestuario Masculino Planta Baja"].map((vestuario) => {
+                    const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
+                    return (
+                      <LockerConfigForm
+                        key={vestuario}
+                        vestuario={vestuario}
+                        config={config}
+                        lockerRoomStats={lockerRoomStats}
+                      />
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
