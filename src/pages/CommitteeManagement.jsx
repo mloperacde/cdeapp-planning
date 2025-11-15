@@ -13,15 +13,15 @@ import {
   Flame,
   Plus,
   Clock,
-  Award,
-  FileText,
-  TrendingUp
+  FileText
 } from "lucide-react";
 import CommitteeMemberForm from "../components/committee/CommitteeMemberForm";
 import CommitteeMemberList from "../components/committee/CommitteeMemberList";
 import UnionHoursTracker from "../components/committee/UnionHoursTracker";
 import RiskAssessmentManager from "../components/committee/RiskAssessmentManager";
 import IncidentManager from "../components/committee/IncidentManager";
+import EmergencyTeamManager from "../components/committee/EmergencyTeamManager";
+import PRLDocumentManager from "../components/committee/PRLDocumentManager";
 
 export default function CommitteeManagementPage() {
   const [showForm, setShowForm] = useState(false);
@@ -52,37 +52,6 @@ export default function CommitteeManagementPage() {
     initialData: [],
   });
 
-  const committeeTypes = [
-    {
-      id: "company",
-      name: "Comité de Empresa",
-      icon: Users,
-      color: "blue",
-      filter: "Comité de Empresa"
-    },
-    {
-      id: "safety",
-      name: "Seguridad y Salud",
-      icon: Shield,
-      color: "green",
-      filter: "Comité Seguridad y Salud"
-    },
-    {
-      id: "harassment",
-      name: "Prevención Acoso",
-      icon: AlertTriangle,
-      color: "purple",
-      filter: "Comité Prevención Acoso"
-    },
-    {
-      id: "emergency",
-      name: "Equipos Emergencia",
-      icon: Flame,
-      color: "red",
-      filter: "Equipo de Emergencia"
-    }
-  ];
-
   const activeIncidents = incidents.filter(i => 
     i.estado_investigacion !== "Cerrada"
   ).length;
@@ -109,11 +78,10 @@ export default function CommitteeManagementPage() {
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Añadir Miembro
+            Añadir Miembro Comité
           </Button>
         </div>
 
-        {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-4">
@@ -167,74 +135,72 @@ export default function CommitteeManagementPage() {
         </div>
 
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            {committeeTypes.map((type) => {
-              const Icon = type.icon;
-              const count = committeeMembers.filter(m => 
-                m.tipo_comite === type.filter && m.activo
-              ).length;
-              
-              return (
-                <TabsTrigger key={type.id} value={type.id}>
-                  <Icon className="w-4 h-4 mr-2" />
-                  {type.name.split(' ')[0]}
-                  <Badge variant="outline" className="ml-2">{count}</Badge>
-                </TabsTrigger>
-              );
-            })}
-            <TabsTrigger value="hours">
-              <Clock className="w-4 h-4 mr-2" />
-              H. Sindicales
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="company">
+              <Users className="w-4 h-4 mr-2" />
+              Comités
             </TabsTrigger>
-            <TabsTrigger value="risks">
-              <Shield className="w-4 h-4 mr-2" />
-              Riesgos
+            <TabsTrigger value="emergency">
+              <Flame className="w-4 h-4 mr-2" />
+              Emergencias
+            </TabsTrigger>
+            <TabsTrigger value="documents">
+              <FileText className="w-4 h-4 mr-2" />
+              Documentos
+            </TabsTrigger>
+            <TabsTrigger value="incidents">
+              <HeartPulse className="w-4 h-4 mr-2" />
+              Incidentes
             </TabsTrigger>
           </TabsList>
 
-          {committeeTypes.map((type) => (
-            <TabsContent key={type.id} value={type.id}>
-              <CommitteeMemberList
-                members={committeeMembers.filter(m => m.tipo_comite === type.filter)}
-                employees={employees}
-                committeeType={type.filter}
-                onEdit={(member) => {
-                  setSelectedCommittee(member);
-                  setShowForm(true);
-                }}
-              />
-            </TabsContent>
-          ))}
+          <TabsContent value="company">
+            <Tabs defaultValue="list" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="list">Lista de Miembros</TabsTrigger>
+                <TabsTrigger value="hours">Horas Sindicales</TabsTrigger>
+                <TabsTrigger value="risks">Evaluaciones de Riesgos</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="hours">
-            <UnionHoursTracker
-              committeeMembers={committeeMembers}
+              <TabsContent value="list">
+                <CommitteeMemberList
+                  members={committeeMembers}
+                  employees={employees}
+                  onEdit={(member) => {
+                    setSelectedCommittee(member);
+                    setShowForm(true);
+                  }}
+                />
+              </TabsContent>
+
+              <TabsContent value="hours">
+                <UnionHoursTracker
+                  committeeMembers={committeeMembers}
+                  employees={employees}
+                />
+              </TabsContent>
+
+              <TabsContent value="risks">
+                <RiskAssessmentManager />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="emergency">
+            <EmergencyTeamManager employees={employees} />
+          </TabsContent>
+
+          <TabsContent value="documents">
+            <PRLDocumentManager />
+          </TabsContent>
+
+          <TabsContent value="incidents">
+            <IncidentManager 
+              incidents={incidents}
               employees={employees}
             />
           </TabsContent>
-
-          <TabsContent value="risks">
-            <RiskAssessmentManager />
-          </TabsContent>
         </Tabs>
-
-        {/* Sección de Incidentes */}
-        <div className="mt-6">
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2">
-                <HeartPulse className="w-5 h-5 text-red-600" />
-                Gestión de Incidentes y Accidentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <IncidentManager 
-                incidents={incidents}
-                employees={employees}
-              />
-            </CardContent>
-          </Card>
-        </div>
 
         {showForm && (
           <CommitteeMemberForm
