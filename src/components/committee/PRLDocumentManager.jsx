@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -6,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Plus, Download, Trash2, AlertTriangle, Upload, Filter, Search } from "lucide-react";
+import { FileText, Plus, Download, Trash2, AlertTriangle, Upload, Filter, Search, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import PRLDocumentForm from "./PRLDocumentForm";
 
@@ -36,6 +37,12 @@ export default function PRLDocumentManager() {
     },
   });
 
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
+  });
+
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => {
       const matchesTipo = filters.tipo_documento === "all" || doc.tipo_documento === filters.tipo_documento;
@@ -59,6 +66,26 @@ export default function PRLDocumentManager() {
     });
     return grouped;
   }, [filteredDocuments]);
+
+  const documentosProximosCaducar = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today to start of day for accurate differenceInDays comparison
+    return documents.filter(doc => {
+      if (!doc.fecha_caducidad || doc.estado === "Caducado" || doc.estado === "Archivado") return false;
+      const fechaCaducidad = new Date(doc.fecha_caducidad);
+      fechaCaducidad.setHours(0, 0, 0, 0); // Normalize expiration date as well
+      const diasRestantes = differenceInDays(fechaCaducidad, today);
+      return diasRestantes >= 0 && diasRestantes <= (doc.recordatorio_dias_antes || 30);
+    }).sort((a, b) => new Date(a.fecha_caducidad) - new Date(b.fecha_caducidad));
+  }, [documents]);
+
+  const puestos = useMemo(() => {
+    const psts = new Set();
+    employees.forEach(emp => {
+      if (emp.puesto) psts.add(emp.puesto);
+    });
+    return Array.from(psts).sort();
+  }, [employees]);
 
   const handleDelete = (id) => {
     if (window.confirm('¿Eliminar este documento?')) {
@@ -149,6 +176,44 @@ export default function PRLDocumentManager() {
         </Card>
       </div>
 
+      {documentosProximosCaducar.length > 0 && (
+        <Card className="bg-amber-50 border-2 border-amber-300">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-amber-600" />
+              Recordatorios de Caducidad ({documentosProximosCaducar.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {documentosProximosCaducar.map(doc => {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const fechaCaducidad = new Date(doc.fecha_caducidad);
+                fechaCaducidad.setHours(0,0,0,0);
+                const diasRestantes = differenceInDays(fechaCaducidad, today);
+                return (
+                  <div key={doc.id} className="p-3 bg-white rounded border border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-sm text-amber-900">{doc.titulo}</div>
+                        <div className="text-xs text-slate-600">{doc.tipo_documento}</div>
+                        <div className="text-xs text-amber-700 mt-1">
+                          ⏰ Caduca en {diasRestantes} días - {format(new Date(doc.fecha_caducidad), "dd/MM/yyyy", { locale: es })}
+                        </div>
+                      </div>
+                      <Badge className={diasRestantes <= 7 ? "bg-red-600" : "bg-amber-600"}>
+                        {diasRestantes} días
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="shadow-lg">
         <CardHeader className="border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -230,10 +295,30 @@ export default function PRLDocumentManager() {
                             Acción Requerida
                           </Badge>
                         )}
+                        {doc.version && (
+                          <Badge variant="outline" className="text-xs">
+                            v{doc.version}
+                          </Badge>
+                        )}
                       </div>
                       
                       {doc.descripcion && (
                         <p className="text-sm text-slate-600 mb-2">{doc.descripcion}</p>
+                      )}
+
+                      {(doc.puestos_afectados?.length > 0 || doc.roles_afectados?.length > 0) && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {doc.puestos_afectados?.map((puesto, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {puesto}
+                            </Badge>
+                          ))}
+                          {doc.roles_afectados?.map((rol, idx) => (
+                            <Badge key={idx} className="bg-blue-100 text-blue-700 text-xs">
+                              {rol}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                       
                       <div className="flex flex-wrap gap-2 text-xs text-slate-500">
@@ -241,7 +326,9 @@ export default function PRLDocumentManager() {
                         {doc.fecha_caducidad && (
                           <span>⏰ Caduca: {format(new Date(doc.fecha_caducidad), "dd/MM/yyyy", { locale: es })}</span>
                         )}
-                        {doc.version && <span>v{doc.version}</span>}
+                        {doc.historial_versiones && doc.historial_versiones.length > 0 && (
+                          <span>📝 {doc.historial_versiones.length + 1} versiones</span>
+                        )}
                       </div>
                     </div>
 

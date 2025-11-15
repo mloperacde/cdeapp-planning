@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge"; // Added Badge component import
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,23 +22,62 @@ export default function PRLDocumentForm({ document, onClose }) {
     fecha_documento: "",
     fecha_caducidad: "",
     departamento_afectado: "",
+    puestos_afectados: [], // New field
+    roles_afectados: [], // New field
     estado: "Vigente",
     version: "1.0",
     requiere_accion: false,
     accion_requerida: "",
     fecha_limite_accion: "",
+    recordatorio_dias_antes: 30, // New field with default
     notas: ""
   });
   const [uploading, setUploading] = useState(false);
   const [fileUrl, setFileUrl] = useState(document?.archivo_url || "");
+  const [cambiosVersion, setCambiosVersion] = useState(""); // New state for version changes description
   const queryClient = useQueryClient();
+
+  // New: useQuery to fetch employees for dynamic puestos
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
+  });
+
+  // New: useMemo to extract unique puestos from employees
+  const puestos = useMemo(() => {
+    const psts = new Set();
+    employees.forEach(emp => {
+      if (emp.puesto) psts.add(emp.puesto);
+    });
+    return Array.from(psts).sort();
+  }, [employees]);
+
+  const [puestoInput, setPuestoInput] = useState(""); // State for current puesto input
+  const [rolInput, setRolInput] = useState(""); // State for current rol input
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      if (document?.id) {
-        return await base44.entities.PRLDocument.update(document.id, data);
+      const dataToSave = { ...data };
+      
+      // Logic to handle historical versions if file URL changes on an existing document
+      if (document?.id && fileUrl !== document.archivo_url) {
+        const historial = document.historial_versiones || [];
+        historial.push({
+          version: document.version, // Use the *old* version for the history entry
+          fecha: new Date().toISOString(),
+          archivo_url: document.archivo_url, // Use the *old* file URL for the history entry
+          cambios: cambiosVersion || "Nueva versión", // Use changes description or default
+          // Assuming `subido_por` would come from the current user context or form data if applicable
+          subido_por: data.subido_por // This assumes 'subido_por' is part of the data object
+        });
+        dataToSave.historial_versiones = historial;
       }
-      return await base44.entities.PRLDocument.create(data);
+      
+      if (document?.id) {
+        return await base44.entities.PRLDocument.update(document.id, dataToSave);
+      }
+      return await base44.entities.PRLDocument.create(dataToSave);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prlDocuments'] });
@@ -76,12 +117,49 @@ export default function PRLDocumentForm({ document, onClose }) {
       ...formData,
       archivo_url: fileUrl,
       fecha_subida: new Date().toISOString()
+      // `subido_por` could be added here from user context if available
+    });
+  };
+
+  // New: Functions to manage puestos_afectados
+  const addPuesto = () => {
+    if (puestoInput && !formData.puestos_afectados.includes(puestoInput)) {
+      setFormData({
+        ...formData,
+        puestos_afectados: [...formData.puestos_afectados, puestoInput]
+      });
+      setPuestoInput("");
+    }
+  };
+
+  const removePuesto = (puesto) => {
+    setFormData({
+      ...formData,
+      puestos_afectados: formData.puestos_afectados.filter(p => p !== puesto)
+    });
+  };
+
+  // New: Functions to manage roles_afectados
+  const addRol = () => {
+    if (rolInput && !formData.roles_afectados.includes(rolInput)) {
+      setFormData({
+        ...formData,
+        roles_afectados: [...formData.roles_afectados, rolInput]
+      });
+      setRolInput("");
+    }
+  };
+
+  const removeRol = (rol) => {
+    setFormData({
+      ...formData,
+      roles_afectados: formData.roles_afectados.filter(r => r !== rol)
     });
   };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"> {/* Updated max-width */}
         <DialogHeader>
           <DialogTitle>
             {document ? 'Editar Documento' : 'Subir Nuevo Documento PRL'}
@@ -172,6 +250,71 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2">
+              <Label>Días para Recordatorio</Label> {/* New field */}
+              <Input
+                type="number"
+                value={formData.recordatorio_dias_antes === 0 ? 0 : formData.recordatorio_dias_antes || ""} // Display 0 correctly, empty for null/undefined
+                onChange={(e) => setFormData({ ...formData, recordatorio_dias_antes: parseInt(e.target.value) || 0 })} // Parse to int, default to 0 for invalid input
+                placeholder="30 (días antes de la caducidad)"
+              />
+            </div>
+
+            <div className="space-y-2 col-span-2">
+              <Label>Puestos Afectados</Label> {/* New section for Puestos Afectados */}
+              <div className="flex gap-2">
+                <Select value={puestoInput} onValueChange={setPuestoInput}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Seleccionar puesto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {puestos.map((puesto) => (
+                      <SelectItem key={puesto} value={puesto}>
+                        {puesto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" onClick={addPuesto} size="sm">
+                  Añadir
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {formData.puestos_afectados.map((puesto, idx) => (
+                  <Badge key={idx} variant="outline" className="cursor-pointer" onClick={() => removePuesto(puesto)}>
+                    {puesto} ×
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2 col-span-2">
+              <Label>Roles/Categorías Afectados</Label> {/* New section for Roles/Categorías Afectados */}
+              <div className="flex gap-2">
+                <Input
+                  value={rolInput}
+                  onChange={(e) => setRolInput(e.target.value)}
+                  placeholder="Rol o categoría..."
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addRol();
+                    }
+                  }}
+                />
+                <Button type="button" onClick={addRol} size="sm">
+                  Añadir
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {formData.roles_afectados.map((rol, idx) => (
+                  <Badge key={idx} className="bg-blue-100 text-blue-700 cursor-pointer" onClick={() => removeRol(rol)}>
+                    {rol} ×
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>Estado</Label>
               <Select
                 value={formData.estado}
@@ -229,6 +372,19 @@ export default function PRLDocumentForm({ document, onClose }) {
                 placeholder="Descripción del documento"
               />
             </div>
+            
+            {/* Conditional field for describing changes when updating an existing document and the file has changed */}
+            {document && fileUrl !== document.archivo_url && (
+              <div className="space-y-2 col-span-2">
+                <Label>Descripción de Cambios (Nueva Versión)</Label>
+                <Textarea
+                  value={cambiosVersion}
+                  onChange={(e) => setCambiosVersion(e.target.value)}
+                  placeholder="Describe los cambios realizados en esta versión..."
+                  rows={2}
+                />
+              </div>
+            )}
 
             <div className="space-y-2 col-span-2 flex items-center gap-2">
               <Checkbox
