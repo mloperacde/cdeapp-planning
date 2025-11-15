@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown, XCircle } from "lucide-react";
+import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown, XCircle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -37,6 +38,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import LockerRoomMap from "../components/lockers/LockerRoomMap";
 import LockerConfigForm from "../components/lockers/LockerConfigForm";
+import LockerDiagnostics from "../components/lockers/LockerDiagnostics";
 
 export default function LockerManagementPage() {
   const [filters, setFilters] = useState({
@@ -63,10 +65,11 @@ export default function LockerManagementPage() {
     initialData: [],
   });
 
-  const { data: lockerAssignments } = useQuery({
+  const { data: lockerAssignments, refetch: refetchAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
     initialData: [],
+    refetchInterval: 5000, // Refrescar cada 5 segundos
   });
 
   const { data: teams } = useQuery({
@@ -242,7 +245,7 @@ export default function LockerManagementPage() {
       await Promise.all(promises);
       
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      toast.success(`${importPreview.matched.length} asignaciones importadas con notificaciones pendientes`);
+      toast.success(`${importPreview.matched.length} asignaciones importadas`);
       setImportPreview(null);
       setImportFile(null);
     } catch (error) {
@@ -286,7 +289,7 @@ export default function LockerManagementPage() {
         if (duplicado) {
           const emp1 = employees.find(e => e.id === employeeId);
           const emp2 = employees.find(e => e.id === duplicado.employee_id);
-          errores.push(`⚠️ Taquilla "${numeroAUsar}" en ${vestuario}:\n   Ya asignada a: ${emp2?.nombre || 'otro empleado'}\n   No se puede asignar a: ${emp1?.nombre || 'este empleado'}`);
+          errores.push(`⚠️ Taquilla "${numeroAUsar}" en ${vestuario}:\n   Ya asignada a: ${emp2?.nombre}\n   No se puede asignar a: ${emp1?.nombre}`);
         }
       }
       
@@ -544,6 +547,7 @@ export default function LockerManagementPage() {
     return vestuarios.map(vestuario => {
       const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
       const totalInstaladas = config?.numero_taquillas_instaladas || 0;
+      const identificadoresValidos = config?.identificadores_taquillas || [];
       
       const assignmentsEnVestuario = lockerAssignments.filter(la => {
         const esEsteVestuario = la.vestuario === vestuario;
@@ -554,19 +558,29 @@ export default function LockerManagementPage() {
         return esEsteVestuario && tieneNumero && requiere;
       });
       
-      const asignadas = assignmentsEnVestuario.length;
+      // Contar solo asignaciones con identificadores VÁLIDOS
+      const asignadas = assignmentsEnVestuario.filter(la => {
+        const numero = la.numero_taquilla_actual.toString();
+        if (identificadoresValidos.length > 0) {
+          return identificadoresValidos.includes(numero);
+        } else {
+          const numeroInt = parseInt(numero);
+          return !isNaN(numeroInt) && numeroInt >= 1 && numeroInt <= totalInstaladas;
+        }
+      }).length;
+      
       const libres = Math.max(0, totalInstaladas - asignadas);
       
       // Detectar identificadores no válidos
-      const identificadoresValidos = config?.identificadores_taquillas || [];
-      const fueraDeRango = identificadoresValidos.length > 0 
-        ? assignmentsEnVestuario.filter(la => 
-            !identificadoresValidos.includes(la.numero_taquilla_actual)
-          ).length
-        : assignmentsEnVestuario.filter(la => {
-            const num = parseInt(la.numero_taquilla_actual);
-            return num > totalInstaladas;
-          }).length;
+      const fueraDeRango = assignmentsEnVestuario.filter(la => {
+        const numero = la.numero_taquilla_actual.toString();
+        if (identificadoresValidos.length > 0) {
+          return !identificadoresValidos.includes(numero);
+        } else {
+          const numeroInt = parseInt(numero);
+          return isNaN(numeroInt) || numeroInt < 1 || numeroInt > totalInstaladas;
+        }
+      }).length;
       
       return {
         vestuario,
@@ -608,13 +622,6 @@ export default function LockerManagementPage() {
           mensaje: `${stat.vestuario}: ${stat.fueraDeRango} taquilla(s) con identificadores no válidos`
         });
       }
-      
-      if (stat.asignadas > stat.totalInstaladas) {
-        problemas.push({
-          tipo: 'exceso',
-          mensaje: `${stat.vestuario}: ${stat.asignadas} asignadas vs ${stat.totalInstaladas} instaladas`
-        });
-      }
     });
     
     return problemas;
@@ -645,24 +652,13 @@ export default function LockerManagementPage() {
         </div>
 
         {problemasDetectados.length > 0 && (
-          <Card className="mb-6 bg-red-50 border-2 border-red-300">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="font-semibold text-red-900 mb-2">⚠️ Problemas Detectados en Asignaciones</p>
-                  <ul className="text-sm text-red-800 space-y-1">
-                    {problemasDetectados.map((p, idx) => (
-                      <li key={idx}>• {p.mensaje}</li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-red-700 mt-2">
-                    Revisa y corrige las asignaciones en la pestaña "Asignaciones"
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-6">
+            <LockerDiagnostics 
+              lockerAssignments={lockerAssignments}
+              lockerRoomConfigs={lockerRoomConfigs}
+              employees={employees}
+            />
+          </div>
         )}
 
         {hasChanges && (
@@ -671,7 +667,7 @@ export default function LockerManagementPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-sm text-amber-800">
-                    <strong>⚠️ Hay cambios sin guardar.</strong> Recuerda hacer clic en "Guardar Cambios" para aplicar las modificaciones.
+                    <strong>⚠️ Hay cambios sin guardar.</strong> Haz clic en "Guardar Cambios" para aplicar las modificaciones.
                   </p>
                   {stats.cambiosPendientes > 0 && (
                     <p className="text-xs text-amber-700 mt-1">
@@ -779,12 +775,8 @@ export default function LockerManagementPage() {
                           </Badge>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600">Asignadas:</span>
-                          <Badge className={`font-bold text-base ${
-                            stat.asignadas > stat.totalInstaladas 
-                              ? 'bg-red-600 text-white' 
-                              : 'bg-green-600 text-white'
-                          }`}>
+                          <span className="text-sm text-slate-600">Asignadas (válidas):</span>
+                          <Badge className="bg-green-600 text-white font-bold text-base">
                             {stat.asignadas}
                           </Badge>
                         </div>
@@ -814,7 +806,6 @@ export default function LockerManagementPage() {
                           <div className="w-full bg-slate-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                stat.porcentajeOcupacion > 100 ? 'bg-red-600' :
                                 stat.porcentajeOcupacion > 90 ? 'bg-red-500' :
                                 stat.porcentajeOcupacion > 75 ? 'bg-amber-500' :
                                 'bg-green-500'
@@ -1109,7 +1100,6 @@ export default function LockerManagementPage() {
                           const hasNewLocker = editData.numero_taquilla_nuevo && 
                             editData.numero_taquilla_nuevo !== editData.numero_taquilla_actual;
                           
-                          // Validar identificador
                           const config = lockerRoomConfigs.find(c => c.vestuario === editData.vestuario);
                           const identificadoresValidos = config?.identificadores_taquillas || [];
                           const idNoValido = editData.numero_taquilla_actual && 
@@ -1128,7 +1118,14 @@ export default function LockerManagementPage() {
                                 />
                               </TableCell>
                               <TableCell>
-                                <div className="font-semibold text-slate-900">{employee.nombre}</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="font-semibold text-slate-900">{employee.nombre}</div>
+                                  <Link to={createPageUrl(`Employees?id=${employee.id}`)}>
+                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                      <ExternalLink className="w-3 h-3 text-blue-600" />
+                                    </Button>
+                                  </Link>
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <Badge className={
