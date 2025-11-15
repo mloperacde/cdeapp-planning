@@ -23,13 +23,13 @@ export default function WorkCalendar() {
   const [showVacationManager, setShowVacationManager] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: holidays } = useQuery({
+  const { data: holidays = [] } = useQuery({
     queryKey: ['holidays'],
     queryFn: () => base44.entities.Holiday.list(),
     initialData: [],
   });
 
-  const { data: vacations } = useQuery({
+  const { data: vacations = [] } = useQuery({
     queryKey: ['vacations'],
     queryFn: () => base44.entities.Vacation.list(),
     initialData: [],
@@ -60,7 +60,7 @@ export default function WorkCalendar() {
   const getDayType = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     
-    const holiday = holidays.find(h => {
+    const holiday = Array.isArray(holidays) ? holidays.find(h => {
       if (!h.fecha) return false;
       try {
         const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
@@ -68,9 +68,9 @@ export default function WorkCalendar() {
       } catch {
         return false;
       }
-    });
+    }) : null;
 
-    const vacation = vacations.find(v => {
+    const vacation = Array.isArray(vacations) ? vacations.find(v => {
       if (!v.fecha_inicio || !v.fecha_fin) return false;
       try {
         const vStart = new Date(v.fecha_inicio);
@@ -79,7 +79,7 @@ export default function WorkCalendar() {
       } catch {
         return false;
       }
-    });
+    }) : null;
 
     const dayOfWeek = getDay(date);
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -102,45 +102,49 @@ export default function WorkCalendar() {
   const noLaborablesList = useMemo(() => {
     const list = [];
     
-    holidays.forEach(h => {
-      if (!h.fecha) return;
-      try {
-        const date = new Date(h.fecha);
-        const year = date.getFullYear();
-        const currentYear = currentDate.getFullYear();
-        if (year === currentYear) {
-          list.push({
-            type: 'festivo',
-            fecha: date,
-            nombre: h.nombre,
-            descripcion: h.descripcion,
-            id: h.id,
-            entity: 'Holiday'
-          });
-        }
-      } catch {}
-    });
+    if (Array.isArray(holidays)) {
+      holidays.forEach(h => {
+        if (!h.fecha) return;
+        try {
+          const date = new Date(h.fecha);
+          const year = date.getFullYear();
+          const currentYear = currentDate.getFullYear();
+          if (year === currentYear) {
+            list.push({
+              type: 'festivo',
+              fecha: date,
+              nombre: h.nombre,
+              descripcion: h.descripcion,
+              id: h.id,
+              entity: 'Holiday'
+            });
+          }
+        } catch {}
+      });
+    }
 
-    vacations.forEach(v => {
-      if (!v.fecha_inicio || !v.fecha_fin) return;
-      try {
-        const start = new Date(v.fecha_inicio);
-        const end = new Date(v.fecha_fin);
-        const year = start.getFullYear();
-        const currentYear = currentDate.getFullYear();
-        if (year === currentYear) {
-          list.push({
-            type: 'vacaciones',
-            fecha: start,
-            nombre: v.nombre || `Vacaciones del ${format(start, 'dd/MM')} al ${format(end, 'dd/MM')}`,
-            descripcion: v.descripcion,
-            fecha_fin: end,
-            id: v.id,
-            entity: 'Vacation'
-          });
-        }
-      } catch {}
-    });
+    if (Array.isArray(vacations)) {
+      vacations.forEach(v => {
+        if (!v.fecha_inicio || !v.fecha_fin) return;
+        try {
+          const start = new Date(v.fecha_inicio);
+          const end = new Date(v.fecha_fin);
+          const year = start.getFullYear();
+          const currentYear = currentDate.getFullYear();
+          if (year === currentYear) {
+            list.push({
+              type: 'vacaciones',
+              fecha: start,
+              nombre: v.nombre || `Vacaciones del ${format(start, 'dd/MM')} al ${format(end, 'dd/MM')}`,
+              descripcion: v.descripcion,
+              fecha_fin: end,
+              id: v.id,
+              entity: 'Vacation'
+            });
+          }
+        } catch {}
+      });
+    }
 
     return list.sort((a, b) => a.fecha - b.fecha);
   }, [holidays, vacations, currentDate]);
