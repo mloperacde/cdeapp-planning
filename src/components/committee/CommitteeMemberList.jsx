@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
-export default function CommitteeMemberList({ members, employees, onEdit }) {
+export default function CommitteeMemberList({ members = [], employees = [], onEdit }) {
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
@@ -27,11 +27,12 @@ export default function CommitteeMemberList({ members, employees, onEdit }) {
   };
 
   const getEmployeeName = (employeeId) => {
+    if (!employees || !Array.isArray(employees)) return "Desconocido";
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Desconocido";
   };
 
-  if (members.length === 0) {
+  if (!members || members.length === 0) {
     return (
       <Card>
         <CardContent className="p-12 text-center text-slate-500">
@@ -63,7 +64,7 @@ export default function CommitteeMemberList({ members, employees, onEdit }) {
             </div>
 
             <div className="space-y-2 mb-3">
-              {member.tipos_comite && member.tipos_comite.length > 0 && (
+              {member.tipos_comite && Array.isArray(member.tipos_comite) && member.tipos_comite.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {member.tipos_comite.map((tipo, idx) => (
                     <Badge key={idx} variant="outline" className="text-xs">
@@ -75,13 +76,15 @@ export default function CommitteeMemberList({ members, employees, onEdit }) {
             </div>
 
             <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-blue-600" />
-                <span className="text-slate-600">Desde:</span>
-                <span className="font-semibold">
-                  {format(new Date(member.fecha_inicio), "dd/MM/yyyy", { locale: es })}
-                </span>
-              </div>
+              {member.fecha_inicio && (
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-blue-600" />
+                  <span className="text-slate-600">Desde:</span>
+                  <span className="font-semibold">
+                    {format(new Date(member.fecha_inicio), "dd/MM/yyyy", { locale: es })}
+                  </span>
+                </div>
+              )}
 
               {member.horas_sindicales_mensuales > 0 && (
                 <div className="flex items-center gap-2">

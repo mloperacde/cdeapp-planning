@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-export default function EmergencyTeamMemberForm({ member, selectedRole, employees, onClose }) {
+export default function EmergencyTeamMemberForm({ member, selectedRole, employees = [], onClose }) {
   const [formData, setFormData] = useState(member || {
     employee_id: "",
     rol_emergencia: selectedRole || "",
@@ -72,7 +72,7 @@ export default function EmergencyTeamMemberForm({ member, selectedRole, employee
                   <SelectValue placeholder="Seleccionar empleado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map((emp) => (
+                  {Array.isArray(employees) && employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
                       {emp.nombre} - {emp.departamento}
                     </SelectItem>

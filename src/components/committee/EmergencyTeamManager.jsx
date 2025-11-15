@@ -53,7 +53,7 @@ const rolesEmergencia = [
   }
 ];
 
-export default function EmergencyTeamManager({ employees }) {
+export default function EmergencyTeamManager({ employees = [] }) {
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
@@ -84,6 +84,7 @@ export default function EmergencyTeamManager({ employees }) {
   }, [emergencyMembers]);
 
   const getEmployeeName = (employeeId) => {
+    if (!employees || !Array.isArray(employees)) return "Desconocido";
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Desconocido";
   };
