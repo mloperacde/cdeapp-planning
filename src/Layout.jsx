@@ -1,10 +1,11 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { 
-  Users, 
-  Clock, 
-  Settings, 
+import {
+  Users,
+  Clock,
+  Settings,
   Activity,
   Coffee,
   Cog,
@@ -57,7 +58,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const isActive = (url) => location.pathname === url;
-  
+
   const isParentActive = (urls) => urls.some(url => location.pathname === url);
 
   return (
@@ -75,7 +76,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </div>
           </SidebarHeader>
-          
+
           <SidebarContent className="p-2">
             <SidebarGroup>
               <SidebarGroupLabel className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">
@@ -84,8 +85,8 @@ export default function Layout({ children, currentPageName }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("Dashboard")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
@@ -100,7 +101,7 @@ export default function Layout({ children, currentPageName }) {
                   <Collapsible open={openSections.planning} onOpenChange={() => toggleSection('planning')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton 
+                        <SidebarMenuButton
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Timeline"),
@@ -119,8 +120,8 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("Timeline")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -130,8 +131,8 @@ export default function Layout({ children, currentPageName }) {
                               Línea de Tiempo
                             </Link>
                           </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("DailyPlanning")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -149,10 +150,11 @@ export default function Layout({ children, currentPageName }) {
                   <Collapsible open={openSections.empleados} onOpenChange={() => toggleSection('empleados')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton 
+                        <SidebarMenuButton
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Employees"),
+                              createPageUrl("ETTTemporaryEmployees"), // Added
                               createPageUrl("EmployeeOnboarding"),
                               createPageUrl("AttendanceManagement"),
                               createPageUrl("CommitteeManagement")
@@ -170,8 +172,8 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("Employees")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -181,8 +183,19 @@ export default function Layout({ children, currentPageName }) {
                               Gestión de Empleados
                             </Link>
                           </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("ETTTemporaryEmployees")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("ETTTemporaryEmployees")} className="flex items-center gap-2 px-3 py-2">
+                              <Clock className="w-4 h-4" />
+                              ETT y Temporales
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("EmployeeOnboarding")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -192,8 +205,8 @@ export default function Layout({ children, currentPageName }) {
                               Onboarding
                             </Link>
                           </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("AttendanceManagement")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -203,8 +216,8 @@ export default function Layout({ children, currentPageName }) {
                               Gestión de Presencia
                             </Link>
                           </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("CommitteeManagement")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -222,7 +235,7 @@ export default function Layout({ children, currentPageName }) {
                   <Collapsible open={openSections.maquinas} onOpenChange={() => toggleSection('maquinas')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton 
+                        <SidebarMenuButton
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Machines"),
@@ -244,8 +257,8 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("Machines")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -261,8 +274,8 @@ export default function Layout({ children, currentPageName }) {
                   </Collapsible>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("SkillMatrix")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
@@ -275,8 +288,8 @@ export default function Layout({ children, currentPageName }) {
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("ShiftManagers")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
@@ -289,8 +302,8 @@ export default function Layout({ children, currentPageName }) {
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("DataImport")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
@@ -305,7 +318,7 @@ export default function Layout({ children, currentPageName }) {
                   <Collapsible open={openSections.informes} onOpenChange={() => toggleSection('informes')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton 
+                        <SidebarMenuButton
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Reports"),
@@ -324,8 +337,8 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("Reports")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -335,8 +348,8 @@ export default function Layout({ children, currentPageName }) {
                               Reportes Generales
                             </Link>
                           </SidebarMenuButton>
-                          <SidebarMenuButton 
-                            asChild 
+                          <SidebarMenuButton
+                            asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("MLInsights")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
@@ -352,8 +365,8 @@ export default function Layout({ children, currentPageName }) {
                   </Collapsible>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("Notifications")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
@@ -366,8 +379,8 @@ export default function Layout({ children, currentPageName }) {
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("MobileAppConfig")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
@@ -380,8 +393,8 @@ export default function Layout({ children, currentPageName }) {
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("Configuration")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
