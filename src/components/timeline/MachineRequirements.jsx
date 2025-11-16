@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,44 +7,44 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
 export default function MachineRequirements() {
-  const { data: machines } = useQuery({
+  const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list(),
     initialData: [],
   });
 
-  const { data: machinePlannings } = useQuery({
+  const { data: machinePlannings = [] } = useQuery({
     queryKey: ['machinePlannings'],
     queryFn: () => base44.entities.MachinePlanning.list(),
     initialData: [],
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
     initialData: [],
   });
 
-  const activeMachines = machines.filter(m => {
-    const planning = machinePlannings.find(mp => mp.machine_id === m.id);
-    return planning?.activa_planning && m.estado === "Disponible";
-  });
+  const activeMachines = Array.isArray(machines) ? machines.filter(m => {
+    const planning = Array.isArray(machinePlannings) ? machinePlannings.find(mp => mp?.machine_id === m?.id) : null;
+    return planning?.activa_planning && m?.estado === "Disponible";
+  }) : [];
 
   const totalOperatorsNeeded = activeMachines.reduce((sum, m) => {
-    const planning = machinePlannings.find(mp => mp.machine_id === m.id);
+    const planning = Array.isArray(machinePlannings) ? machinePlannings.find(mp => mp?.machine_id === m?.id) : null;
     return sum + (planning?.operadores_necesarios || 0);
   }, 0);
 
   // Contar solo empleados de FABRICACIÓN con puestos específicos, disponibles e incluidos en planning
   const validPositions = ['responsable de linea', 'segunda de linea', 'operaria de linea'];
-  const availableOperators = employees.filter(emp => {
-    if (emp.departamento !== "FABRICACION") return false;
-    if (emp.disponibilidad !== "Disponible") return false;
-    if (emp.incluir_en_planning === false) return false;
+  const availableOperators = Array.isArray(employees) ? employees.filter(emp => {
+    if (emp?.departamento !== "FABRICACION") return false;
+    if (emp?.disponibilidad !== "Disponible") return false;
+    if (emp?.incluir_en_planning === false) return false;
     
-    const puesto = (emp.puesto || '').toLowerCase();
+    const puesto = (emp?.puesto || '').toLowerCase();
     return validPositions.some(vp => puesto.includes(vp));
-  }).length;
+  }).length : 0;
 
   if (activeMachines.length === 0) {
     return null;
