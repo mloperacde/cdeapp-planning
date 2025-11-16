@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,17 +15,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Users, Sunrise, Sunset, RefreshCw, Save, Filter, ArrowLeft, UsersRound, Edit, CheckCircle2, XCircle, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, Sunrise, Sunset, RefreshCw, Save, Filter, ArrowLeft, UsersRound, Edit, CheckCircle2, XCircle, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import EmployeeForm from "../components/employees/EmployeeForm";
+import { toast } from "sonner";
 
 export default function TeamConfigurationPage() {
   const [selectedWeek, setSelectedWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [positionOrders, setPositionOrders] = useState({});
@@ -91,13 +93,37 @@ export default function TeamConfigurationPage() {
   const saveTeamMutation = useMutation({
     mutationFn: async (data) => {
       const existing = teams.find(t => t.team_key === data.team_key);
+      
+      // Detectar si cambió el nombre del equipo
+      const oldName = existing?.team_name;
+      const newName = data.team_name;
+      
+      let result;
       if (existing) {
-        return base44.entities.TeamConfig.update(existing.id, data);
+        result = await base44.entities.TeamConfig.update(existing.id, data);
+      } else {
+        result = await base44.entities.TeamConfig.create(data);
       }
-      return base44.entities.TeamConfig.create(data);
+      
+      // Si el nombre cambió, actualizar todos los empleados con el equipo anterior
+      if (oldName && oldName !== newName) {
+        const employeesToUpdate = employees.filter(emp => emp.equipo === oldName);
+        
+        if (employeesToUpdate.length > 0) {
+          await Promise.all(
+            employeesToUpdate.map(emp => 
+              base44.entities.Employee.update(emp.id, { equipo: newName })
+            )
+          );
+          toast.success(`${employeesToUpdate.length} empleados actualizados con el nuevo nombre del equipo`);
+        }
+      }
+      
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
   });
 
@@ -140,9 +166,10 @@ export default function TeamConfigurationPage() {
     },
   });
 
-  const handleSaveTeams = () => {
-    saveTeamMutation.mutate(teamFormData.team_1);
-    saveTeamMutation.mutate(teamFormData.team_2);
+  const handleSaveTeams = async () => {
+    await saveTeamMutation.mutateAsync(teamFormData.team_1);
+    await saveTeamMutation.mutateAsync(teamFormData.team_2);
+    toast.success("Equipos guardados correctamente");
   };
 
   const getWeekSchedule = (teamKey, week) => {
@@ -183,6 +210,14 @@ export default function TeamConfigurationPage() {
     
     if (selectedDepartment !== "all") {
       teamEmployees = teamEmployees.filter(emp => emp.departamento === selectedDepartment);
+    }
+
+    if (searchTerm.trim()) {
+      teamEmployees = teamEmployees.filter(emp => 
+        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.puesto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
     
     return teamEmployees;
@@ -260,14 +295,12 @@ export default function TeamConfigurationPage() {
 
     const ordered = [];
     
-    // Add positions in saved order
     savedOrder.forEach(pos => {
       if (positionKeys.includes(pos)) {
         ordered.push(pos);
       }
     });
     
-    // Add any new positions not in saved order
     positionKeys.forEach(pos => {
       if (!ordered.includes(pos)) {
         ordered.push(pos);
@@ -312,15 +345,6 @@ export default function TeamConfigurationPage() {
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
   const departments = getDepartments();
 
-  // Helper to check if employee has active absence on today
-  const isEmployeeAvailableToday = (employee) => {
-    const now = new Date();
-    if (employee.disponibilidad !== "Disponible") return false;
-    // Additional check would require absence data - we'll use disponibilidad field
-    return true;
-  };
-
-  // Get department stats for a team
   const getDepartmentStats = (teamName) => {
     const teamEmployees = getTeamEmployees(teamName);
     const grouped = groupByDepartmentAndPosition(teamEmployees);
@@ -624,25 +648,46 @@ export default function TeamConfigurationPage() {
           </TabsContent>
 
           <TabsContent value="members">
-            <div className="mb-6">
+            <div className="mb-6 space-y-4">
               <Card className="bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <Filter className="w-5 h-5 text-blue-600" />
-                    <Label>Filtrar por Departamento:</Label>
-                    <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                      <SelectTrigger className="w-64">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos los Departamentos</SelectItem>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium">Fecha:</Label>
+                      <Input
+                        type="date"
+                        value={format(selectedDate, 'yyyy-MM-dd')}
+                        onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                        className="flex-1"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                      <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos los Departamentos</SelectItem>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept} value={dept}>
+                              {dept}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Buscar empleado..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -656,7 +701,6 @@ export default function TeamConfigurationPage() {
                     <CardTitle className="text-purple-900 mb-3">
                       {teamFormData.team_1.team_name}
                     </CardTitle>
-                    {/* Totalizadores por Departamento */}
                     {(() => {
                       const stats = getDepartmentStats(teamFormData.team_1.team_name);
                       return (
@@ -698,7 +742,7 @@ export default function TeamConfigurationPage() {
                     if (teamEmployees.length === 0) {
                       return (
                         <div className="text-center py-8 text-slate-500">
-                          No hay empleados asignados
+                          {searchTerm ? 'No se encontraron empleados' : 'No hay empleados asignados'}
                         </div>
                       );
                     }
@@ -840,7 +884,6 @@ export default function TeamConfigurationPage() {
                     <CardTitle className="text-pink-900 mb-3">
                       {teamFormData.team_2.team_name}
                     </CardTitle>
-                    {/* Totalizadores por Departamento */}
                     {(() => {
                       const stats = getDepartmentStats(teamFormData.team_2.team_name);
                       return (
@@ -882,7 +925,7 @@ export default function TeamConfigurationPage() {
                     if (teamEmployees.length === 0) {
                       return (
                         <div className="text-center py-8 text-slate-500">
-                          No hay empleados asignados
+                          {searchTerm ? 'No se encontraron empleados' : 'No hay empleados asignados'}
                         </div>
                       );
                     }
