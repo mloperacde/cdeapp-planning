@@ -3,16 +3,24 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Bell, FileText, Search, Database, UserCog, UserPlus, Smartphone, Shield, Upload, Award } from "lucide-react";
+import { Settings, Bell, FileText, Search, Database, UserCog, UserPlus, Smartphone, Shield, Upload, Award, Users, Cog } from "lucide-react";
 
 export default function ConfigurationPage() {
   const configModules = [
     {
-      title: "Vista Maestra Empleados",
-      description: "Gestión centralizada de todos los datos de empleados",
-      icon: UserCog,
+      title: "Vista Maestra de Empleados",
+      description: "Base de datos centralizada con filtros avanzados",
+      icon: Users,
       url: createPageUrl("MasterEmployeeView"),
       color: "blue",
+      featured: true
+    },
+    {
+      title: "Vista Maestra de Máquinas",
+      description: "Base de datos centralizada de máquinas",
+      icon: Cog,
+      url: createPageUrl("MasterMachineView"),
+      color: "purple",
       featured: true
     },
     {
