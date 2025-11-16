@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -21,9 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Download, Filter, Calendar } from "lucide-react";
+import { FileText, Download, Filter, Calendar, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import AIReportGenerator from "../components/reports/AIReportGenerator";
 
 export default function ReportsPage() {
   const [reportType, setReportType] = useState("employees");
@@ -201,12 +203,14 @@ export default function ReportsPage() {
             Informes y Reportes
           </h1>
           <p className="text-slate-600 mt-1">
-            Genera reportes personalizados con filtros avanzados
+            Genera reportes personalizados con filtros avanzados o usa IA
           </p>
         </div>
 
+        <AIReportGenerator />
+
         {/* Configuración del Reporte */}
-        <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <Card className="mb-6 mt-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
             <CardTitle className="flex items-center gap-2">
               <Filter className="w-5 h-5 text-blue-600" />
@@ -425,7 +429,6 @@ export default function ReportsPage() {
                             {maint.estado}
                           </Badge>
                         </TableCell>
-                        <TableCell>{format(new Date(maint.fecha_programada), "dd/MM/yyyy HH:mm")}</TableCell>
                         <TableCell>{getEmployeeName(maint.tecnico_asignado)}</TableCell>
                       </TableRow>
                     ))}
