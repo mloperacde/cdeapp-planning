@@ -7,13 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Download, Plus, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Upload, Download, Plus, User, Edit2, Save } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EmployeeResultsManager() {
   const [selectedPlan, setSelectedPlan] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: plans = [] } = useQuery({
@@ -48,13 +51,32 @@ export default function EmployeeResultsManager() {
 
   const departments = useMemo(() => {
     const depts = new Set();
-    employees.forEach(emp => {
-      if (emp.departamento) depts.add(emp.departamento);
+    configs.forEach(c => {
+      if (c.departamento) depts.add(c.departamento);
     });
     return Array.from(depts).sort();
-  }, [employees]);
+  }, [configs]);
 
   const selectedPlanData = plans.find(p => p.id === selectedPlan);
+
+  const employeesInPlan = useMemo(() => {
+    const empList = [];
+    configs.forEach(config => {
+      const applicable = config.empleados_aplicables?.length > 0
+        ? employees.filter(e => config.empleados_aplicables.includes(e.id))
+        : employees.filter(e => 
+            e.departamento === config.departamento && 
+            (!config.puesto || e.puesto === config.puesto)
+          );
+      
+      applicable.forEach(emp => {
+        if (!empList.find(e => e.id === emp.id)) {
+          empList.push({ ...emp, config });
+        }
+      });
+    });
+    return empList;
+  }, [configs, employees]);
 
   const handleProductivityImport = async (e) => {
     const file = e.target.files[0];
@@ -109,7 +131,12 @@ export default function EmployeeResultsManager() {
 
         if (!employee) continue;
 
-        const deptConfig = configs.find(c => c.departamento === employee.departamento);
+        const deptConfig = configs.find(c => 
+          c.departamento === employee.departamento &&
+          (!c.puesto || c.puesto === employee.puesto) &&
+          (!c.empleados_aplicables?.length || c.empleados_aplicables.includes(employee.id))
+        );
+        
         if (!deptConfig) continue;
 
         const objetivo = deptConfig.objetivos?.find(obj => obj.parametro === productivityParam.nombre);
@@ -158,7 +185,7 @@ export default function EmployeeResultsManager() {
       }
 
       queryClient.invalidateQueries({ queryKey: ['employeeIncentiveResults'] });
-      toast.success(`${updated} empleado(s) actualizado(s) con datos de productividad`);
+      toast.success(`${updated} empleado(s) actualizado(s)`);
       e.target.value = null;
     } catch (error) {
       console.error("Error importing:", error);
@@ -182,6 +209,11 @@ export default function EmployeeResultsManager() {
       selectedDepartment === "all" || r.departamento === selectedDepartment
     );
   }, [results, selectedDepartment]);
+
+  const handleManualEntry = (employee) => {
+    setSelectedEmployee(employee);
+    setShowManualEntry(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -249,48 +281,222 @@ export default function EmployeeResultsManager() {
       </Card>
 
       {selectedPlan && (
-        <div className="grid grid-cols-1 gap-3">
-          {filteredResults.map(result => {
-            const employee = employees.find(e => e.id === result.employee_id);
-            
-            return (
-              <Card key={result.id} className="border-2 border-slate-200">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <User className="w-5 h-5 text-blue-600" />
-                        <h4 className="font-bold text-slate-900">{employee?.nombre}</h4>
-                        <Badge variant="outline">{result.departamento}</Badge>
-                      </div>
+        <>
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <User className="w-5 h-5 text-blue-600" />
+                Empleados en el Plan ({employeesInPlan.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 max-h-64 overflow-y-auto">
+              {employeesInPlan.map(emp => (
+                <div key={emp.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                  <div>
+                    <span className="font-semibold text-slate-900">{emp.nombre}</span>
+                    <div className="flex gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">{emp.departamento}</Badge>
+                      {emp.puesto && <Badge variant="outline" className="text-xs">{emp.puesto}</Badge>}
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => handleManualEntry(emp)}>
+                    <Edit2 className="w-3 h-3 mr-1" />
+                    Ingresar Resultados
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
 
-                      <div className="grid grid-cols-3 gap-2">
-                        {result.resultados?.map((r, idx) => (
-                          <Card key={idx} className="bg-slate-50">
-                            <CardContent className="p-2">
-                              <p className="text-xs text-slate-600">{r.parametro}</p>
-                              <p className="text-lg font-bold text-slate-900">{r.valor_obtenido}</p>
-                              <p className="text-xs text-slate-500">Meta: {r.meta_objetivo}</p>
-                            </CardContent>
-                          </Card>
-                        ))}
+          <div className="grid grid-cols-1 gap-3">
+            {filteredResults.map(result => {
+              const employee = employees.find(e => e.id === result.employee_id);
+              
+              return (
+                <Card key={result.id} className="border-2 border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="w-5 h-5 text-blue-600" />
+                          <h4 className="font-bold text-slate-900">{employee?.nombre}</h4>
+                          <Badge variant="outline">{result.departamento}</Badge>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          {result.resultados?.map((r, idx) => (
+                            <Card key={idx} className="bg-slate-50">
+                              <CardContent className="p-2">
+                                <p className="text-xs text-slate-600">{r.parametro}</p>
+                                <p className="text-lg font-bold text-slate-900">{r.valor_obtenido}</p>
+                                <p className="text-xs text-slate-500">Meta: {r.meta_objetivo}</p>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
                       </div>
+                      <Button size="sm" variant="ghost" onClick={() => handleManualEntry(employee)}>
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {filteredResults.length === 0 && (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <p className="text-slate-500">No hay resultados registrados</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </>
+      )}
+
+      {showManualEntry && selectedEmployee && (
+        <ManualEntryDialog
+          employee={selectedEmployee}
+          plan={selectedPlanData}
+          configs={configs}
+          existingResult={results.find(r => r.employee_id === selectedEmployee.id)}
+          onClose={() => {
+            setShowManualEntry(false);
+            setSelectedEmployee(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ManualEntryDialog({ employee, plan, configs, existingResult, onClose }) {
+  const config = configs.find(c => 
+    c.departamento === employee.departamento &&
+    (!c.puesto || c.puesto === employee.puesto) &&
+    (!c.empleados_aplicables?.length || c.empleados_aplicables.includes(employee.id))
+  );
+
+  const [formData, setFormData] = useState(() => {
+    const base = {
+      incentive_plan_id: plan.id,
+      employee_id: employee.id,
+      departamento: employee.departamento,
+      periodo_evaluacion: `${plan.anio}`,
+      resultados: []
+    };
+
+    if (existingResult) {
+      return existingResult;
+    }
+
+    if (config) {
+      base.resultados = config.objetivos.map(obj => ({
+        parametro: obj.parametro,
+        valor_obtenido: 0,
+        meta_objetivo: obj.meta_objetivo,
+        peso_porcentaje: obj.peso_porcentaje,
+        porcentaje_cumplimiento: 0,
+        puntos_obtenidos: 0
+      }));
+    }
+
+    return base;
+  });
+
+  const queryClient = useQueryClient();
+
+  const saveMutation = useMutation({
+    mutationFn: (data) => {
+      const calculatedResults = data.resultados.map(r => {
+        const porcentajeCumplimiento = (r.valor_obtenido / r.meta_objetivo) * 100;
+        const puntosObtenidos = (porcentajeCumplimiento * r.peso_porcentaje) / 100;
+        return {
+          ...r,
+          porcentaje_cumplimiento: porcentajeCumplimiento,
+          puntos_obtenidos: puntosObtenidos
+        };
+      });
+
+      const finalData = {
+        ...data,
+        resultados: calculatedResults
+      };
+
+      if (existingResult?.id) {
+        return base44.entities.EmployeeIncentiveResult.update(existingResult.id, finalData);
+      }
+      return base44.entities.EmployeeIncentiveResult.create(finalData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employeeIncentiveResults'] });
+      toast.success("Resultados guardados");
+      onClose();
+    }
+  });
+
+  const updateResult = (index, value) => {
+    const updated = [...formData.resultados];
+    updated[index] = { ...updated[index], valor_obtenido: parseFloat(value) || 0 };
+    setFormData({ ...formData, resultados: updated });
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Ingresar Resultados - {employee.nombre}</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(formData); }} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Badge variant="outline">{formData.departamento}</Badge>
+            </div>
+            <div>
+              <Badge>{formData.periodo_evaluacion}</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {formData.resultados?.map((r, idx) => (
+              <Card key={idx} className="border-2 border-slate-200">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-3 gap-4 items-end">
+                    <div>
+                      <Label className="text-sm font-semibold">{r.parametro}</Label>
+                      <p className="text-xs text-slate-600">Peso: {r.peso_porcentaje}%</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Valor Obtenido</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={r.valor_obtenido}
+                        onChange={(e) => updateResult(idx, e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Meta: {r.meta_objetivo}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
+            ))}
+          </div>
 
-          {filteredResults.length === 0 && (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <p className="text-slate-500">No hay resultados registrados</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-    </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saveMutation.isPending} className="bg-emerald-600">
+              <Save className="w-4 h-4 mr-2" />
+              {saveMutation.isPending ? "Guardando..." : "Guardar Resultados"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

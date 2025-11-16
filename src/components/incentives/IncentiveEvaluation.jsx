@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Target, TrendingUp, Award, DollarSign } from "lucide-react";
+import { Target, TrendingUp, Award, DollarSign, Download } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function IncentiveEvaluation() {
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -48,7 +49,11 @@ export default function IncentiveEvaluation() {
   const calculateMutation = useMutation({
     mutationFn: async () => {
       for (const result of results) {
-        const config = configs.find(c => c.departamento === result.departamento);
+        const config = configs.find(c => 
+          c.departamento === result.departamento &&
+          (!c.empleados_aplicables?.length || c.empleados_aplicables.includes(result.employee_id))
+        );
+        
         if (!config) continue;
 
         let cumplimientoTotal = 0;
@@ -98,16 +103,48 @@ export default function IncentiveEvaluation() {
     return filteredResults.reduce((sum, r) => sum + (r.incentivo_calculado || 0), 0);
   }, [filteredResults]);
 
+  const exportCSV = () => {
+    const csv = [
+      "Empleado,Departamento,Puesto,Cumplimiento Total (%),Incentivo Calculado (€),Estado",
+      ...filteredResults.map(result => {
+        const emp = employees.find(e => e.id === result.employee_id);
+        return [
+          emp?.nombre || "Desconocido",
+          result.departamento,
+          emp?.puesto || "-",
+          (result.cumplimiento_total || 0).toFixed(2),
+          (result.incentivo_calculado || 0).toFixed(2),
+          result.estado || "Pendiente"
+        ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `evaluacion_incentivos_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    toast.success("CSV exportado");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-900">Evaluación de Cumplimiento</h2>
-        {selectedPlan && results.length > 0 && (
-          <Button onClick={() => calculateMutation.mutate()} className="bg-emerald-600">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Calcular Evaluaciones
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {selectedPlan && results.length > 0 && (
+            <>
+              <Button onClick={exportCSV} variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </Button>
+              <Button onClick={() => calculateMutation.mutate()} className="bg-emerald-600">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Calcular Evaluaciones
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -149,17 +186,48 @@ export default function IncentiveEvaluation() {
 
       {selectedPlan && (
         <>
-          <Card className="bg-emerald-50 border-2 border-emerald-300">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-emerald-700 font-medium">Total Incentivos</p>
-                  <p className="text-3xl font-bold text-emerald-900">{totalIncentivos.toFixed(2)}€</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-emerald-50 border-2 border-emerald-300">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-emerald-700 font-medium">Total Incentivos</p>
+                    <p className="text-3xl font-bold text-emerald-900">{totalIncentivos.toFixed(2)}€</p>
+                  </div>
+                  <DollarSign className="w-10 h-10 text-emerald-600" />
                 </div>
-                <DollarSign className="w-10 h-10 text-emerald-600" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-blue-50 border-2 border-blue-300">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-blue-700 font-medium">Empleados Evaluados</p>
+                    <p className="text-3xl font-bold text-blue-900">{filteredResults.length}</p>
+                  </div>
+                  <Award className="w-10 h-10 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-purple-50 border-2 border-purple-300">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-purple-700 font-medium">Promedio Cumplimiento</p>
+                    <p className="text-3xl font-bold text-purple-900">
+                      {filteredResults.length > 0 
+                        ? (filteredResults.reduce((sum, r) => sum + (r.cumplimiento_total || 0), 0) / filteredResults.length).toFixed(1)
+                        : 0
+                      }%
+                    </p>
+                  </div>
+                  <TrendingUp className="w-10 h-10 text-purple-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="space-y-3">
             {filteredResults.map(result => {
@@ -167,47 +235,49 @@ export default function IncentiveEvaluation() {
               const cumplimiento = result.cumplimiento_total || 0;
               
               return (
-                <Card key={result.id} className="border-2 border-slate-200">
+                <Card key={result.id} className="border-2 border-slate-200 hover:border-emerald-300 transition-colors">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h4 className="font-bold text-lg text-slate-900">{employee?.nombre}</h4>
-                        <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-lg text-slate-900">{employee?.nombre}</h4>
                           <Badge variant="outline">{result.departamento}</Badge>
-                          <Badge>{result.periodo_evaluacion}</Badge>
+                          {employee?.puesto && <Badge variant="outline">{employee.puesto}</Badge>}
                         </div>
+                        <Badge className="mt-2">{result.periodo_evaluacion}</Badge>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-slate-500">Incentivo</p>
-                        <p className="text-2xl font-bold text-emerald-900">
+                        <p className="text-xs text-slate-500">Incentivo a Percibir</p>
+                        <p className="text-3xl font-bold text-emerald-900">
                           {result.incentivo_calculado?.toFixed(2) || "0.00"}€
                         </p>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-4">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">Cumplimiento Total</span>
+                        <span className="text-slate-600 font-medium">Cumplimiento Total</span>
                         <span className="font-bold text-slate-900">{cumplimiento.toFixed(1)}%</span>
                       </div>
                       <Progress value={cumplimiento} className="h-3" />
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {result.resultados?.map((r, idx) => (
-                        <Card key={idx} className="bg-slate-50">
+                        <Card key={idx} className="bg-slate-50 border">
                           <CardContent className="p-3">
                             <div className="flex items-center gap-1 mb-1">
                               <Target className="w-3 h-3 text-blue-600" />
                               <p className="text-xs font-medium text-slate-700">{r.parametro}</p>
                             </div>
-                            <div className="flex items-baseline gap-1">
+                            <div className="flex items-baseline gap-1 mb-1">
                               <span className="text-lg font-bold text-slate-900">{r.valor_obtenido}</span>
                               <span className="text-xs text-slate-500">/ {r.meta_objetivo}</span>
                             </div>
-                            <div className="mt-1">
-                              <Progress value={r.porcentaje_cumplimiento} className="h-1.5" />
-                              <p className="text-xs text-slate-600 mt-1">{r.porcentaje_cumplimiento?.toFixed(1)}%</p>
+                            <Progress value={r.porcentaje_cumplimiento} className="h-1.5 mb-1" />
+                            <div className="flex justify-between items-center">
+                              <p className="text-xs text-slate-600">{r.porcentaje_cumplimiento?.toFixed(1)}%</p>
+                              <Badge variant="outline" className="text-xs">{r.peso_porcentaje}%</Badge>
                             </div>
                           </CardContent>
                         </Card>
