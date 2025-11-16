@@ -70,18 +70,18 @@ export default function MachineManagementPage() {
       return base44.entities.Machine.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(); // Invalidate all queries
+      queryClient.invalidateQueries();
       setShowForm(false);
       setEditingMachine(null);
-      toast.success("Máquina guardada - listas actualizadas en toda la aplicación");
+      // Removed toast.success as per outline: toast.success("Máquina guardada - listas actualizadas en toda la aplicación");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Machine.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(); // Invalidate all queries
-      toast.success("Máquina eliminada - listas actualizadas");
+      queryClient.invalidateQueries();
+      // Removed toast.success as per outline: toast.success("Máquina eliminada - listas actualizadas");
     },
   });
 

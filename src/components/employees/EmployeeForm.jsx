@@ -181,11 +181,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
-      // Invalidate all related queries to refresh data everywhere
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
-      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
-      queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
+      queryClient.invalidateQueries(); // This will invalidate all active queries
       onClose();
       toast({
         title: "Éxito",

@@ -115,10 +115,7 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
 
       return Promise.all(promises);
     },
-    onSuccess: (results) => {
-      const sent = results.filter(r => r).length;
-      // The line below was removed as per the outline:
-      // toast.success(`${sent} invitación(es) enviada(s) por ${inviteMethod === "email" ? "email" : "SMS"}`);
+    onSuccess: () => {
       setShowInviteDialog(false);
       setSelectedEmployees([]);
       setSearchTerm("");
@@ -508,6 +505,7 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
         {showInviteDialog && (
           <Dialog open={true} onOpenChange={() => {
             setShowInviteDialog(false);
+            setSelectedEmployees([]); // Reset selection on close
             setSearchTerm("");
           }}>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -590,6 +588,7 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button variant="outline" onClick={() => {
                     setShowInviteDialog(false);
+                    setSelectedEmployees([]); // Reset selection on cancel
                     setSearchTerm("");
                   }}>
                     Cancelar

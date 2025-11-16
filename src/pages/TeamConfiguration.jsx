@@ -98,9 +98,8 @@ export default function TeamConfigurationPage() {
       const updates = [];
       
       for (const [key, data] of Object.entries(teamFormData)) {
-        // Basic validation for team name
         if (!data.team_name || data.team_name.trim() === '') {
-          throw new Error(`El nombre del equipo ${key.replace('_', ' ').replace('team', 'Equipo')} no puede estar vacío.`);
+          throw new Error(`El nombre del equipo no puede estar vacío.`);
         }
         const existing = teams.find(t => t.team_key === key);
         if (existing) {
@@ -113,9 +112,6 @@ export default function TeamConfigurationPage() {
       return Promise.all(updates);
     },
     onSuccess: async () => {
-      // Invalidate all related queries to refresh everywhere
-      
-      // Update employee records with new team names
       const team1 = teamFormData.team_1;
       const team2 = teamFormData.team_2;
       
@@ -134,8 +130,7 @@ export default function TeamConfigurationPage() {
         await Promise.all(updatePromises);
       }
       
-      queryClient.invalidateQueries(); // Invalidate all queries after any team and employee updates
-      toast.success("Equipos guardados y sincronizados en toda la aplicación");
+      queryClient.invalidateQueries();
     },
     onError: (error) => {
       toast.error(`Error al guardar equipos: ${error.message}`);
@@ -317,11 +312,6 @@ export default function TeamConfigurationPage() {
         team_key: teamKey,
         orden_puestos: orden
       });
-    } else {
-      // If there's no order, it might mean the user wants to clear it or save an empty list
-      // For now, let's only save if there's content.
-      // If clearing is needed, explicitly save an empty array.
-      toast.info("No hay orden de puestos para guardar en este departamento/equipo.");
     }
   };
 

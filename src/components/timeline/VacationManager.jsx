@@ -56,7 +56,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
       setFormData({ start_date: "", end_date: "", name: "", notes: "" });
       setShowForm(false);
       setEditingVacation(null);
-      toast.success(editingVacation ? "Vacaciones actualizadas" : "Vacaciones creadas");
+      // Removed toast.success(editingVacation ? "Vacaciones actualizadas" : "Vacaciones creadas");
     },
   });
 
@@ -65,7 +65,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vacations'] });
       onUpdate();
-      toast.success("Período eliminado");
+      // Removed toast.success("Período eliminado");
     },
   });
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   UserPlus,
   Clock,
   CheckCircle2,
@@ -15,18 +23,23 @@ import {
   Search,
   Plus,
   BarChart3,
-  Calendar
+  Calendar,
+  BookOpen, // Added for 'training' tab
+  Bot // Added for 'AI Assistant' tab
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
+import OnboardingAIAssistant from "../components/onboarding/OnboardingAIAssistant";
 
 export default function EmployeeOnboardingPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [showWizard, setShowWizard] = useState(false);
+  // const [showWizard, setShowWizard] = useState(false); // Removed as wizard is now a tab
   const [selectedOnboarding, setSelectedOnboarding] = useState(null);
+  const [activeTab, setActiveTab] = useState("active"); // New state for active tab
+  const [selectedEmployee, setSelectedEmployee] = useState(null); // New state for AI assistant
   const queryClient = useQueryClient();
 
   const { data: onboardings, isLoading } = useQuery({
@@ -98,7 +111,7 @@ export default function EmployeeOnboardingPage() {
 
   const handleEdit = (onboarding) => {
     setSelectedOnboarding(onboarding);
-    setShowWizard(true);
+    setActiveTab("wizard"); // Navigate to wizard tab
   };
 
   const handleDelete = (onboarding) => {
@@ -108,8 +121,8 @@ export default function EmployeeOnboardingPage() {
   };
 
   const handleCloseWizard = () => {
-    setShowWizard(false);
     setSelectedOnboarding(null);
+    setActiveTab("active"); // Navigate back to the active list tab
   };
 
   const getStatusBadge = (estado) => {
@@ -142,7 +155,7 @@ export default function EmployeeOnboardingPage() {
             </p>
           </div>
           <Button
-            onClick={() => setShowWizard(true)}
+            onClick={() => { setSelectedOnboarding(null); setActiveTab("wizard"); }} // Navigate to wizard tab for new onboarding
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -150,19 +163,31 @@ export default function EmployeeOnboardingPage() {
           </Button>
         </div>
 
-        <Tabs defaultValue="list" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="list">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="active">
               <Users className="w-4 h-4 mr-2" />
-              Lista de Onboardings
+              Activos
             </TabsTrigger>
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
-              Dashboard y Estadísticas
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="wizard">
+              <UserPlus className="w-4 h-4 mr-2" />
+              Nuevo Onboarding
+            </TabsTrigger>
+            <TabsTrigger value="training">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Formaciones
+            </TabsTrigger>
+            <TabsTrigger value="ai">
+              <Bot className="w-4 h-4 mr-2" />
+              Asistente IA
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="list" className="space-y-6">
+          <TabsContent value="active" className="space-y-6">
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -413,21 +438,59 @@ export default function EmployeeOnboardingPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="dashboard">
+          <TabsContent value="dashboard" className="space-y-6">
             <OnboardingDashboard 
               onboardings={onboardings}
               employees={employees}
             />
           </TabsContent>
+
+          <TabsContent value="wizard" className="space-y-6">
+            <OnboardingWizard
+              onboarding={selectedOnboarding}
+              onClose={handleCloseWizard}
+            />
+          </TabsContent>
+
+          <TabsContent value="training" className="space-y-6">
+            <Card>
+              <CardContent className="p-12 text-center">
+                <p className="text-slate-500">Contenido para Formaciones (en desarrollo)</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ai" className="space-y-6">
+            {selectedEmployee ? (
+              <OnboardingAIAssistant employee={selectedEmployee} />
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center flex flex-col items-center">
+                  <p className="text-slate-500 mb-4">Selecciona un empleado para usar el asistente IA</p>
+                  <Select 
+                    value={selectedEmployee?.id || ""} 
+                    onValueChange={(value) => {
+                      const emp = employees.find(e => e.id === value);
+                      setSelectedEmployee(emp);
+                    }}
+                  >
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="Seleccionar empleado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
-
-      {showWizard && (
-        <OnboardingWizard
-          onboarding={selectedOnboarding}
-          onClose={handleCloseWizard}
-        />
-      )}
     </div>
   );
 }
