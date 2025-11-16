@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -7,16 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, AlertCircle, ChevronLeft, ChevronRight, Users, Wifi, WifiOff } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, isToday } from "date-fns";
 import { es } from "date-fns/locale";
+import { offlineStorage, isOnline } from "../utils/offlineStorage";
 
 export default function MobilePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("day");
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [cachedData, setCachedData] = useState(null);
+  const [online, setOnline] = useState(isOnline()); // Updated to use isOnline() from utils
+  const [cachedData, setCachedData] = useState({
+    employees: [],
+    assignments: [],
+    schedules: []
+  });
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => setOnline(true); // Updated setOnline
+    const handleOffline = () => setOnline(false); // Updated setOnline
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -27,97 +33,98 @@ export default function MobilePlanningPage() {
     };
   }, []);
 
-  const { data: currentUser } = useQuery({
+  const { data: user } = useQuery({ // Renamed currentUser to user
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    enabled: online, // Only fetch if online
   });
 
   const { data: employee } = useQuery({
-    queryKey: ['currentEmployee', currentUser?.email],
+    queryKey: ['employee', user?.id], // Updated query key to use user.id
     queryFn: async () => {
-      if (!currentUser?.email) return null;
-      const result = await base44.entities.Employee.filter({ email: currentUser.email });
-      const emp = result[0];
-      
-      // Cache employee data for offline use
-      if (emp) {
-        localStorage.setItem('cached_employee', JSON.stringify(emp));
+      if (online) {
+        const employees = await base44.entities.Employee.list(); // Fetch all employees
+        const emp = employees.find(e => e.email === user?.email); // Find current employee
+        if (emp) {
+          offlineStorage.saveEmployees([emp]); // Save to offline storage
+          setCachedData(prev => ({ ...prev, employees: [emp] })); // Update local cached state
+        }
+        return emp;
       }
-      return emp;
+      // If offline, try to get from cached storage
+      const cached = offlineStorage.getEmployees();
+      return cached[0] || null; // Assuming one employee per user
     },
-    enabled: !!currentUser?.email,
+    enabled: !!user, // Enabled when user is available
   });
 
   const weekStart = useMemo(() => startOfWeek(selectedDate, { weekStartsOn: 1 }), [selectedDate]);
   const weekEnd = useMemo(() => endOfWeek(selectedDate, { weekStartsOn: 1 }), [selectedDate]);
 
-  const { data: machineAssignments = [] } = useQuery({
-    queryKey: ['myMachineAssignments', employee?.id, selectedDate],
+  const { data: assignments = [] } = useQuery({ // Renamed machineAssignments to assignments
+    queryKey: ['machineAssignments', employee?.id, selectedDate.toDateString()], // Added selectedDate to key
     queryFn: async () => {
-      if (!employee?.id) return [];
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const assignments = await base44.entities.MachineAssignment.filter({
-        employee_id: employee.id,
-        fecha_asignacion: dateStr
-      });
-      
-      // Cache assignments
-      const cacheKey = `assignments_${employee.id}_${dateStr}`;
-      localStorage.setItem(cacheKey, JSON.stringify(assignments));
-      
-      return assignments;
+      if (online) {
+        const data = await base44.entities.MachineAssignment.filter({
+          employee_id: employee.id,
+          fecha_asignacion: format(selectedDate, 'yyyy-MM-dd') // Corrected field name as per existing code
+        });
+        offlineStorage.savePlanning(data); // Save to offline storage
+        setCachedData(prev => ({ ...prev, assignments: data })); // Update local cached state
+        return data;
+      }
+      // If offline, try to get from cached storage
+      // Note: offlineStorage.getPlanning() might need a date parameter for specific assignments
+      // For now, it returns all cached planning.
+      return offlineStorage.getPlanning().filter(
+        assignment => format(new Date(assignment.fecha_asignacion), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd') && assignment.employee_id === employee?.id
+      );
     },
     initialData: [],
     enabled: !!employee?.id,
   });
 
-  const { data: teamSchedule } = useQuery({
-    queryKey: ['myTeamSchedule', employee?.equipo],
+  const { data: teamSchedules = [] } = useQuery({ // Renamed teamSchedule to teamSchedules
+    queryKey: ['teamWeekSchedules'], // Changed query key
     queryFn: async () => {
-      if (!employee?.equipo) return null;
-      const result = await base44.entities.TeamWeekSchedule.filter({ team_name: employee.equipo });
-      const schedule = result[0];
-      
-      // Cache schedule
-      if (schedule) {
-        localStorage.setItem(`schedule_${employee.equipo}`, JSON.stringify(schedule));
+      if (online) {
+        const data = await base44.entities.TeamWeekSchedule.list(); // Fetch all schedules
+        offlineStorage.saveTeamSchedules(data); // Save to offline storage
+        setCachedData(prev => ({ ...prev, schedules: data })); // Update local cached state
+        return data;
       }
-      return schedule;
+      // If offline, try to get from cached storage
+      return offlineStorage.getTeamSchedules();
     },
-    enabled: !!employee?.equipo,
+    enabled: online, // Only fetch if online
   });
 
-  // Load cached data when offline
-  useEffect(() => {
-    if (!isOnline && !employee) {
-      const cached = localStorage.getItem('cached_employee');
-      if (cached) {
-        setCachedData(JSON.parse(cached));
-      }
-    }
-  }, [isOnline, employee]);
+  // Removed old useEffect for cachedData as queries now handle it
 
   const getDaySchedule = (date) => {
     const dayOfWeek = format(date, 'EEEE', { locale: es }).toLowerCase();
     
-    if (employee?.tipo_turno === "Rotativo" && teamSchedule) {
-      const daySchedule = teamSchedule[`${dayOfWeek}_shifts`];
+    // Find the relevant team schedule from the array based on the employee's team name
+    const currentTeamSchedule = teamSchedules.find(schedule => schedule.team_name === displayEmployee?.equipo);
+
+    if (displayEmployee?.tipo_turno === "Rotativo" && currentTeamSchedule) {
+      const daySchedule = currentTeamSchedule[`${dayOfWeek}_shifts`];
       return daySchedule || [];
     }
 
-    if (employee?.tipo_turno === "Fijo Mañana") {
+    if (displayEmployee?.tipo_turno === "Fijo Mañana") {
       return [{
         shift_name: "Mañana",
-        start_time: employee.horario_manana_inicio || "06:00",
-        end_time: employee.horario_manana_fin || "14:00"
+        start_time: displayEmployee.horario_manana_inicio || "06:00",
+        end_time: displayEmployee.horario_manana_fin || "14:00"
       }];
     }
 
-    if (employee?.tipo_turno === "Fijo Tarde") {
+    if (displayEmployee?.tipo_turno === "Fijo Tarde") {
       return [{
         shift_name: "Tarde",
-        start_time: employee.horario_tarde_inicio || "14:00",
-        end_time: employee.horario_tarde_fin || "22:00"
+        start_time: displayEmployee.horario_tarde_inicio || "14:00",
+        end_time: displayEmployee.horario_tarde_fin || "22:00"
       }];
     }
 
@@ -132,7 +139,8 @@ export default function MobilePlanningPage() {
     return days;
   }, [weekStart]);
 
-  const displayEmployee = employee || cachedData;
+  // Use employee data from query directly, it already handles offline cache from offlineStorage
+  const displayEmployee = employee;
 
   if (!displayEmployee) {
     return (
@@ -148,14 +156,19 @@ export default function MobilePlanningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 pb-20">
+      {!online && ( // Changed isOnline to online
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm">
+          Modo sin conexión - Mostrando datos guardados
+        </div>
+      )}
       <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-4 pb-6 shadow-lg">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Clock className="w-5 h-5" />
             Mi Planificación
           </h1>
-          {!isOnline && (
+          {!online && ( // Changed isOnline to online
             <Badge className="bg-amber-500 text-white gap-1">
               <WifiOff className="w-3 h-3" />
               Sin conexión
@@ -247,12 +260,12 @@ export default function MobilePlanningPage() {
               </CardContent>
             </Card>
 
-            {machineAssignments.length > 0 && (
+            {assignments.length > 0 && ( // Renamed machineAssignments to assignments
               <Card className="shadow-md">
                 <CardContent className="p-3">
                   <h3 className="font-bold text-slate-900 mb-2 text-sm">Máquinas Asignadas</h3>
                   <div className="space-y-2">
-                    {machineAssignments.map(assignment => (
+                    {assignments.map(assignment => ( // Renamed machineAssignments to assignments
                       <div key={assignment.id} className="bg-slate-50 p-2 rounded-lg">
                         <p className="font-semibold text-slate-900 text-sm">{assignment.machine_name}</p>
                         {assignment.turno && (
