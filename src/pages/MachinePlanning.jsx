@@ -36,6 +36,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { notifyMachinePlanningChange } from "../components/notifications/NotificationService";
+import AIDashboardSummary from "../components/reports/AIDashboardSummary";
 
 export default function MachinePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -369,6 +370,18 @@ export default function MachinePlanningPage() {
             </div>
           </CardContent>
         </Card>
+
+        <AIDashboardSummary 
+          data={{ 
+            machines, 
+            activeMachines, 
+            totalOperators, 
+            availableOperators,
+            operatorsDeficit,
+            plannings: activeMachines // Changed from `plannings` to `activeMachines` for more context on the current planning view
+          }} 
+          type="machines" 
+        />
 
         {/* Resumen con alerta si faltan operarios */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
