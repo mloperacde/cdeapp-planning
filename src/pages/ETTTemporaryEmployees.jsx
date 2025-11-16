@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -25,7 +24,7 @@ import {
 import { Calendar, AlertTriangle, CheckCircle2, Clock, Users, Filter, Download } from "lucide-react";
 import { format, differenceInDays, isBefore, addDays } from "date-fns";
 import { es } from "date-fns/locale";
-import EmployeeForm from "@/components/EmployeeForm"; // Assuming this path for EmployeeForm
+import EmployeeForm from "../components/employees/EmployeeForm";
 
 export default function ETTTemporaryEmployeesPage() {
   const [filters, setFilters] = useState({
@@ -85,7 +84,6 @@ export default function ETTTemporaryEmployeesPage() {
         };
       })
       .sort((a, b) => {
-        // Ordenar por días restantes (vencidos primero, luego próximos a vencer)
         if (a.vencido && !b.vencido) return -1;
         if (!a.vencido && b.vencido) return 1;
         if (a.diasRestantes === null && b.diasRestantes !== null) return 1;
@@ -133,7 +131,6 @@ export default function ETTTemporaryEmployeesPage() {
     return Array.from(empresas).sort();
   }, [ettAndTemporaryEmployees]);
 
-  // Departamentos únicos
   const departments = useMemo(() => {
     const depts = new Set();
     ettAndTemporaryEmployees.forEach(emp => {
@@ -142,7 +139,6 @@ export default function ETTTemporaryEmployeesPage() {
     return Array.from(depts).sort();
   }, [ettAndTemporaryEmployees]);
 
-  // Filtrado
   const filteredEmployees = useMemo(() => {
     return ettAndTemporaryEmployees.filter(emp => {
       const matchesSearch = !filters.searchTerm || 
@@ -188,13 +184,13 @@ export default function ETTTemporaryEmployeesPage() {
       ...filteredEmployees.map(emp => [
         emp.nombre,
         emp.tipo_contrato || "",
-        emp.empresa_ett || "", // Added Empresa ETT to export
+        emp.empresa_ett || "",
         emp.departamento || "",
         emp.fecha_alta ? format(new Date(emp.fecha_alta), "dd/MM/yyyy") : "",
         emp.fecha_fin_contrato ? format(new Date(emp.fecha_fin_contrato), "dd/MM/yyyy") : "",
         emp.diasRestantes !== null ? emp.diasRestantes : "Sin fecha",
         emp.vencido ? "Vencido" : emp.estadoAlerta === "critico" ? "Crítico" : emp.estadoAlerta === "proximo" ? "Próximo" : "OK"
-      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')) // Ensure fields are quoted and escaped
+      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -230,7 +226,6 @@ export default function ETTTemporaryEmployeesPage() {
           </Button>
         </div>
 
-        {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-4">
@@ -284,7 +279,6 @@ export default function ETTTemporaryEmployeesPage() {
           </Card>
         </div>
 
-        {/* Filtros */}
         <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
             <CardTitle className="flex items-center gap-2">
@@ -372,7 +366,6 @@ export default function ETTTemporaryEmployeesPage() {
           </CardContent>
         </Card>
 
-        {/* Tabla de empleados */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
             <CardTitle>
@@ -386,7 +379,7 @@ export default function ETTTemporaryEmployeesPage() {
                   <TableRow className="bg-slate-50">
                     <TableHead>Empleado</TableHead>
                     <TableHead>Tipo Contrato</TableHead>
-                    <TableHead>Empresa ETT</TableHead> {/* New column */}
+                    <TableHead>Empresa ETT</TableHead>
                     <TableHead>Departamento</TableHead>
                     <TableHead>Fecha Alta</TableHead>
                     <TableHead>Fecha Fin Contrato</TableHead>
@@ -398,7 +391,7 @@ export default function ETTTemporaryEmployeesPage() {
                 <TableBody>
                   {filteredEmployees.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 text-slate-500"> {/* Colspan updated */}
+                      <TableCell colSpan={9} className="text-center py-12 text-slate-500">
                         <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-slate-300" />
                         No hay empleados con los filtros seleccionados
                       </TableCell>
@@ -427,7 +420,7 @@ export default function ETTTemporaryEmployeesPage() {
                             {employee.tipo_contrato || "No especificado"}
                           </Badge>
                         </TableCell>
-                        <TableCell> {/* New Cell */}
+                        <TableCell>
                           <div className="text-sm text-slate-700">{employee.empresa_ett || "-"}</div>
                         </TableCell>
                         <TableCell>
