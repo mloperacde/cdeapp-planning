@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -56,7 +57,7 @@ export default function ConfigurationPage() {
     },
     {
       title: "Configuración App Móvil",
-      description: "Activa y configura la aplicación móvil",
+      description: "Registro con email o teléfono y configuración móvil",
       icon: Smartphone,
       url: createPageUrl("MobileAppConfig"),
       color: "teal"
