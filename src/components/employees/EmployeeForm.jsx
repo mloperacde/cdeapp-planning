@@ -25,6 +25,7 @@ import { differenceInDays, differenceInMonths, differenceInYears, format } from 
 import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
 import LockerAssignmentPanel from "./LockerAssignmentPanel";
+import AbsenteeismCard from "./AbsenteeismCard"; // New import
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
@@ -90,6 +91,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   }
 
   const [formData, setFormData] = useState(employee || initialNewEmployeeFormData);
+  const [activeTab, setActiveTab] = useState("datos"); // New state for active tab
 
   const queryClient = useQueryClient();
 
@@ -215,8 +217,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <Tabs defaultValue="datos" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="datos">Datos</TabsTrigger>
               <TabsTrigger value="schedule">Horario</TabsTrigger>
               <TabsTrigger value="taquilla">Taquilla</TabsTrigger>
@@ -224,6 +226,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 Máquinas {isMaintenanceDepartment && "(Mant.)"}
               </TabsTrigger>
               <TabsTrigger value="availability">Disponib.</TabsTrigger>
+              <TabsTrigger value="absentismo">Absentismo</TabsTrigger>
               <TabsTrigger value="rrhh">RRHH</TabsTrigger>
             </TabsList>
 
@@ -848,6 +851,10 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="absentismo" className="space-y-4 mt-4">
+              <AbsenteeismCard employee={employee || formData} />
             </TabsContent>
 
             <TabsContent value="rrhh" className="space-y-4 mt-4">

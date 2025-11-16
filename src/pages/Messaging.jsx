@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import CreateChannelDialog from "../components/messaging/CreateChannelDialog";
 import ChannelList from "../components/messaging/ChannelList";
 import MessageList from "../components/messaging/MessageList";
+import { notifyDirectMessage, sendPushNotification } from "../components/notifications/NotificationService";
 
 export default function MessagingPage() {
   const [selectedChannel, setSelectedChannel] = useState(null);
@@ -66,28 +67,27 @@ export default function MessagingPage() {
         ultimo_mensaje_fecha: new Date().toISOString()
       });
 
-      // Create push notifications for channel participants
+      // Enviar notificaciones push a participantes
       const participants = selectedChannel.participantes || [];
-      const notificationPromises = participants
-        .filter(pId => pId !== currentEmployee?.id)
-        .map(pId => 
-          base44.entities.PushNotification.create({
-            destinatario_id: pId,
-            tipo: "mensaje",
-            titulo: selectedChannel.tipo === "Direct" 
-              ? `Mensaje de ${currentEmployee?.nombre}`
-              : `Nuevo mensaje en ${selectedChannel.nombre}`,
-            mensaje: data.mensaje.substring(0, 100),
-            prioridad: "media",
-            referencia_tipo: "ChatMessage",
-            referencia_id: msg.id,
-            enviada_push: true,
-            fecha_envio_push: new Date().toISOString(),
-            accion_url: `/messaging?channel=${selectedChannel.id}`
-          })
-        );
-
-      await Promise.all(notificationPromises);
+      
+      for (const pId of participants) {
+        if (pId !== currentEmployee?.id) {
+          if (selectedChannel.tipo === "Direct") {
+            await notifyDirectMessage(currentEmployee?.id, pId, selectedChannel.id, data.mensaje.substring(0, 100));
+          } else {
+            await sendPushNotification({
+              destinatarioId: pId,
+              tipo: "mensaje",
+              titulo: `Nuevo mensaje en ${selectedChannel.nombre}`,
+              mensaje: data.mensaje.substring(0, 100),
+              prioridad: "media",
+              referenciaTipo: "ChatMessage",
+              referenciaId: msg.id,
+              accionUrl: `/messaging?channel=${selectedChannel.id}`
+            });
+          }
+        }
+      }
 
       return msg;
     },

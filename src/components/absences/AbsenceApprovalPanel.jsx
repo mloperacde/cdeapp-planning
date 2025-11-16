@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { Check, X, Clock, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { notifyAbsenceDecision } from "../notifications/NotificationService";
 
 export default function AbsenceApprovalPanel({ absences, employees, absenceTypes, currentUser }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -18,8 +20,8 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
   const pendingAbsences = absences.filter(abs => abs.estado_aprobacion === "Pendiente");
 
   const approvalMutation = useMutation({
-    mutationFn: async ({ absenceId, estado, comentario }) => {
-      return base44.entities.Absence.update(absenceId, {
+    mutationFn: async ({ absenceId, estado, comentario, employeeId }) => {
+      const result = await base44.entities.Absence.update(absenceId, {
         estado_aprobacion: estado,
         aprobado_por: currentUser?.id,
         fecha_aprobacion: new Date().toISOString(),
@@ -34,6 +36,11 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
           }
         ]
       });
+
+      // Enviar notificación al empleado
+      await notifyAbsenceDecision(absenceId, employeeId, estado === "Aprobada", comentario);
+
+      return result;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
@@ -43,8 +50,13 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
     }
   });
 
-  const handleApproval = (absenceId, estado) => {
-    approvalMutation.mutate({ absenceId, estado, comentario });
+  const handleApproval = (absence, estado) => {
+    approvalMutation.mutate({ 
+      absenceId: absence.id, 
+      estado, 
+      comentario,
+      employeeId: absence.employee_id 
+    });
   };
 
   const getEmployeeName = (employeeId) => {
@@ -153,7 +165,7 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
                       ) : (
                         <>
                           <Button
-                            onClick={() => handleApproval(absence.id, "Aprobada")}
+                            onClick={() => handleApproval(absence, "Aprobada")}
                             disabled={approvalMutation.isPending}
                             className="flex-1 bg-green-600 hover:bg-green-700"
                           >
@@ -161,7 +173,7 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
                             Aprobar
                           </Button>
                           <Button
-                            onClick={() => handleApproval(absence.id, "Rechazada")}
+                            onClick={() => handleApproval(absence, "Rechazada")}
                             disabled={approvalMutation.isPending}
                             variant="destructive"
                             className="flex-1"

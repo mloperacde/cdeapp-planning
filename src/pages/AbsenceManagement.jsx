@@ -207,12 +207,17 @@ export default function AbsenceManagementPage() {
         await calculateVacationPendingBalance(result, absenceType, vacations, holidays);
       }
 
+      // Actualizar absentismo del empleado
+      const { updateEmployeeAbsenteeismDaily } = await import("../components/absences/AbsenteeismCalculator");
+      await updateEmployeeAbsenteeismDaily(data.employee_id);
+
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
+      queryClient.invalidateQueries({ queryKey: ['globalAbsenteeism'] });
       handleClose();
     },
   });

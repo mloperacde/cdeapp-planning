@@ -35,6 +35,7 @@ import { es } from "date-fns/locale";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { notifyMachinePlanningChange } from "../components/notifications/NotificationService";
 
 export default function MachinePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -90,10 +91,28 @@ export default function MachinePlanningPage() {
         p.fecha_planificacion === data.fecha_planificacion
       );
 
+      let result;
       if (existing) {
-        return base44.entities.MachinePlanning.update(existing.id, data);
+        result = await base44.entities.MachinePlanning.update(existing.id, data);
+      } else {
+        result = await base44.entities.MachinePlanning.create(data);
       }
-      return base44.entities.MachinePlanning.create(data);
+
+      // Enviar notificaciones a empleados del equipo
+      const teamName = teams.find(t => t.team_key === data.team_key)?.team_name;
+      if (teamName) {
+        const teamEmployees = employees.filter(e => e.equipo === teamName);
+        const employeeIds = teamEmployees.map(e => e.id);
+        
+        await notifyMachinePlanningChange(
+          data.machine_id,
+          data.team_key,
+          data.activa_planning,
+          employeeIds
+        );
+      }
+
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
