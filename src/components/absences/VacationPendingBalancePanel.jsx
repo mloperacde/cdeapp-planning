@@ -9,7 +9,7 @@ import { CalendarDays, TrendingUp, AlertCircle, ChevronRight } from "lucide-reac
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-export default function VacationPendingBalancePanel({ employees, compact = false }) {
+export default function VacationPendingBalancePanel({ employees = [], compact = false }) {
   const currentYear = new Date().getFullYear();
 
   const { data: balances = [] } = useQuery({
@@ -18,11 +18,12 @@ export default function VacationPendingBalancePanel({ employees, compact = false
     initialData: [],
   });
 
-  // Filtrar solo empleados que tienen detalle de ausencias (tienen ausencias configuradas)
   const employeesWithBalance = useMemo(() => {
+    if (!Array.isArray(employees) || employees.length === 0 || !Array.isArray(balances)) return [];
+    
     return balances
       .map(balance => {
-        const employee = employees.find(e => e.id === balance.employee_id);
+        const employee = employees.find(e => e?.id === balance.employee_id);
         const diasDisponibles = (balance.dias_pendientes || 0) - (balance.dias_consumidos || 0);
         
         return {
@@ -31,7 +32,7 @@ export default function VacationPendingBalancePanel({ employees, compact = false
           dias_disponibles: diasDisponibles
         };
       })
-      .filter(b => b.employee && b.dias_disponibles > 0 && b.detalle_ausencias?.length > 0)
+      .filter(b => b.employee && b.dias_disponibles > 0 && Array.isArray(b.detalle_ausencias) && b.detalle_ausencias.length > 0)
       .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
 

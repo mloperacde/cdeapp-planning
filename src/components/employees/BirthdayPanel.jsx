@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,14 +6,16 @@ import { Cake, PartyPopper } from "lucide-react";
 import { format, isSameDay, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function BirthdayPanel({ employees }) {
+export default function BirthdayPanel({ employees = [] }) {
   const upcomingBirthdays = useMemo(() => {
+    if (!Array.isArray(employees) || employees.length === 0) return [];
+    
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
     
     return employees
-      .filter(emp => emp.fecha_nacimiento)
+      .filter(emp => emp?.fecha_nacimiento)
       .map(emp => {
         const birthDate = new Date(emp.fecha_nacimiento);
         const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());

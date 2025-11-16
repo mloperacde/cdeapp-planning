@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,31 +6,33 @@ import { Award, TrendingUp } from "lucide-react";
 import { format, differenceInYears, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function AnniversaryPanel({ employees }) {
+export default function AnniversaryPanel({ employees = [], compact = false }) {
   const upcomingAnniversaries = useMemo(() => {
+    if (!Array.isArray(employees) || employees.length === 0) return [];
+
     const today = new Date();
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const milestones = [5, 10, 15, 20, 25, 30, 35, 40];
-    
+
     return employees
-      .filter(emp => emp.fecha_alta)
+      .filter(emp => emp?.fecha_alta)
       .map(emp => {
         const hireDate = new Date(emp.fecha_alta);
         const yearsWorked = differenceInYears(today, hireDate);
         const thisYearAnniversary = new Date(today.getFullYear(), hireDate.getMonth(), hireDate.getDate());
-        
+
         if (thisYearAnniversary < today) {
           thisYearAnniversary.setFullYear(today.getFullYear() + 1);
         }
-        
+
         const nextMilestone = milestones.find(m => m > yearsWorked);
         if (!nextMilestone) return null;
-        
+
         const milestoneDate = new Date(hireDate);
         milestoneDate.setFullYear(hireDate.getFullYear() + nextMilestone);
-        
+
         const isUpcoming = milestoneDate <= endOfMonth && milestoneDate >= today;
-        
+
         return {
           ...emp,
           yearsWorked,
@@ -44,6 +47,8 @@ export default function AnniversaryPanel({ employees }) {
 
   // Estadísticas por tramo
   const employeesByTenure = useMemo(() => {
+    if (!Array.isArray(employees) || employees.length === 0) return [];
+
     const ranges = [
       { label: "0-2 años", min: 0, max: 2 },
       { label: "3-5 años", min: 3, max: 5 },
@@ -53,14 +58,14 @@ export default function AnniversaryPanel({ employees }) {
       { label: "21-30 años", min: 21, max: 30 },
       { label: "+30 años", min: 31, max: 999 },
     ];
-    
+
     return ranges.map(range => {
       const count = employees.filter(emp => {
-        if (!emp.fecha_alta) return false;
+        if (!emp?.fecha_alta) return false;
         const years = differenceInYears(new Date(), new Date(emp.fecha_alta));
         return years >= range.min && years <= range.max;
       }).length;
-      
+
       return { ...range, count };
     });
   }, [employees]);
