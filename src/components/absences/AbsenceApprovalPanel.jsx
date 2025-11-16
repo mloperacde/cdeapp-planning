@@ -9,7 +9,7 @@ import { Check, X, Clock, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { notifyAbsenceDecision } from "../notifications/NotificationService";
+import { notifyAbsenceDecisionAdvanced } from "../notifications/AdvancedNotificationService";
 import PayrollExportButton from "./PayrollExportButton";
 
 export default function AbsenceApprovalPanel({ absences, employees, absenceTypes, currentUser }) {
@@ -20,7 +20,7 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
   const pendingAbsences = absences.filter(abs => abs.estado_aprobacion === "Pendiente");
 
   const approvalMutation = useMutation({
-    mutationFn: async ({ absenceId, estado, comentario, employeeId }) => {
+    mutationFn: async ({ absenceId, estado, comentario, employeeId, absenceTypeId }) => {
       const result = await base44.entities.Absence.update(absenceId, {
         estado_aprobacion: estado,
         aprobado_por: currentUser?.id,
@@ -37,8 +37,15 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
         ]
       });
 
-      // Enviar notificación al empleado
-      await notifyAbsenceDecision(absenceId, employeeId, estado === "Aprobada", comentario);
+      // Notificación avanzada con tipo de ausencia
+      const absenceType = absenceTypes.find(t => t.id === absenceTypeId);
+      await notifyAbsenceDecisionAdvanced(
+        absenceId, 
+        employeeId, 
+        estado === "Aprobada", 
+        comentario,
+        absenceType
+      );
 
       return result;
     },
@@ -55,7 +62,8 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
       absenceId: absence.id, 
       estado, 
       comentario,
-      employeeId: absence.employee_id 
+      employeeId: absence.employee_id,
+      absenceTypeId: absence.absence_type_id
     });
   };
 
