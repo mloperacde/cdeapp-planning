@@ -13,7 +13,7 @@ export default function AbsenceTypeManager() {
   const [editingType, setEditingType] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: absenceTypes } = useQuery({
+  const { data: absenceTypes = [] } = useQuery({
     queryKey: ['absenceTypes'],
     queryFn: () => base44.entities.AbsenceType.list('orden'),
     initialData: [],
@@ -38,12 +38,14 @@ export default function AbsenceTypeManager() {
     }
   };
 
+  const sortedAbsenceTypes = [...absenceTypes].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Settings className="w-6 h-6 text-blue-600" />
-          Tipos de Ausencia Personalizados
+          Tipos de Ausencia y Permisos
         </h2>
         <Button onClick={() => setShowForm(true)} className="bg-blue-600">
           <Plus className="w-4 h-4 mr-2" />
@@ -52,13 +54,22 @@ export default function AbsenceTypeManager() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {absenceTypes.map((type) => (
-          <Card key={type.id} className={`border-l-4 ${!type.activo ? 'opacity-50' : ''}`} style={{ borderLeftColor: type.color || '#3B82F6' }}>
+        {sortedAbsenceTypes.map((type) => (
+          <Card 
+            key={type.id} 
+            className={`border-l-4 shadow-lg hover:shadow-xl transition-shadow ${!type.activo ? 'opacity-50' : ''}`} 
+            style={{ borderLeftColor: type.color || '#3B82F6' }}
+          >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <CardTitle className="text-lg mb-1">{type.nombre}</CardTitle>
-                  <Badge variant="outline" className="text-xs">{type.codigo}</Badge>
+                  <CardTitle className="text-lg mb-2">{type.nombre}</CardTitle>
+                  <Badge variant="outline" className="text-xs mb-2">{type.codigo}</Badge>
+                  <div className="flex flex-wrap gap-2 text-xs mt-2">
+                    {type.remunerada && <Badge className="bg-green-100 text-green-800">Remunerada</Badge>}
+                    {type.requiere_aprobacion && <Badge className="bg-orange-100 text-orange-800">Requiere Aprobación</Badge>}
+                    {type.es_critica && <Badge className="bg-red-100 text-red-800">Crítica</Badge>}
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" onClick={() => handleEdit(type)}>
@@ -71,22 +82,30 @@ export default function AbsenceTypeManager() {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="text-sm text-slate-600">{type.descripcion}</p>
-              <div className="flex flex-wrap gap-2 text-xs">
-                {type.remunerada && <Badge className="bg-green-100 text-green-800">Remunerada</Badge>}
-                {type.requiere_aprobacion && <Badge className="bg-orange-100 text-orange-800">Requiere Aprobación</Badge>}
-                {type.es_critica && <Badge className="bg-red-100 text-red-800">Crítica</Badge>}
-                <Badge variant="outline">{type.categoria}</Badge>
-              </div>
-              {type.duracion_descripcion && (
-                <p className="text-xs text-slate-500 mt-2">Duración: {type.duracion_descripcion}</p>
+              {type.descripcion && (
+                <p className="text-sm text-slate-600 mb-2">{type.descripcion}</p>
               )}
+              
+              <div className="space-y-1 text-xs">
+                <div className="flex gap-2">
+                  <Badge variant="outline" className="text-xs">{type.categoria_principal}</Badge>
+                  <Badge variant="outline" className="text-xs">{type.subcategoria}</Badge>
+                </div>
+                
+                {type.duracion_descripcion && (
+                  <p className="text-slate-600"><strong>Duración:</strong> {type.duracion_descripcion}</p>
+                )}
+                
+                {type.articulo_referencia && (
+                  <p className="text-slate-500 italic">{type.articulo_referencia}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {absenceTypes.length === 0 && (
+      {sortedAbsenceTypes.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <Settings className="w-12 h-12 text-slate-300 mx-auto mb-3" />

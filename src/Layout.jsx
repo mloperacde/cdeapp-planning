@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -26,7 +25,6 @@ import {
   MessageSquare,
   TrendingUp,
   Calendar as CalendarIcon,
-  UserCog, // Added UserCog icon
 } from "lucide-react";
 import {
   Sidebar,
@@ -46,20 +44,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-
-const configModules = [
-  {
-    title: "Vista Maestra Empleados",
-    url: createPageUrl("MasterEmployeeView"),
-    icon: UserCog,
-  },
-  {
-    title: "Panel de Control RRHH",
-    url: createPageUrl("HRDashboard"),
-    icon: TrendingUp,
-  },
-  // Other menu items would go here if they were part of configModules
-];
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -111,6 +95,20 @@ export default function Layout({ children, currentPageName }) {
                       <Link to={createPageUrl("Dashboard")} className="flex items-center gap-3 px-3 py-2.5">
                         <BarChart3 className="w-5 h-5" />
                         <span className="text-sm">Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("HRDashboard")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("HRDashboard")} className="flex items-center gap-3 px-3 py-2.5">
+                        <TrendingUp className="w-5 h-5" />
+                        <span className="text-sm">Panel RRHH</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
