@@ -1,70 +1,35 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Cog, CalendarRange, Wrench, Settings } from "lucide-react";
-import { useQuery } from '@tanstack/react-query'; // Assuming @tanstack/react-query for useQuery
-import { base44 } from '@/lib/base44'; // Assuming path for base44
-import { isOnline } from '@/lib/network'; // Assuming path for isOnline utility
-import { offlineStorage } from '@/lib/offlineStorage'; // Assuming path for offlineStorage utility
+import { Cog, Settings, Activity, Wrench } from "lucide-react";
 
 export default function MachinesPage() {
-  const { data: machines } = useQuery({
-    queryKey: ['machines'],
-    queryFn: async () => {
-      const data = await base44.entities.Machine.list('orden');
-      if (isOnline()) {
-        offlineStorage.saveMachines(data);
-      }
-      return data;
-    },
-    initialData: () => {
-      if (!isOnline()) {
-        return offlineStorage.getMachines();
-      }
-      return []; // Return empty array if online and no initial data from query cache
-    },
-  });
-
-  const { data: maintenanceLogs = [] } = useQuery({
-    queryKey: ['maintenanceLogs'],
-    queryFn: async () => {
-      const data = await base44.entities.MaintenanceSchedule.list('-created_date', 50);
-      if (isOnline()) {
-        offlineStorage.saveMaintenanceLogs(data);
-      }
-      return data;
-    },
-    enabled: isOnline(), // Only fetch if online
-    initialData: () => offlineStorage.getMaintenanceLogs(), // Provide initial data from offline storage regardless of online status
-  });
-
   const subPages = [
     {
       title: "Gestión de Máquinas",
-      description: "Añadir, editar y gestionar máquinas",
+      description: "Administra el inventario completo de máquinas",
       icon: Cog,
       url: createPageUrl("MachineManagement"),
       color: "blue"
     },
     {
       title: "Configuración de Procesos",
-      description: "Configura procesos y asigna a máquinas",
+      description: "Define procesos y requisitos de máquinas",
       icon: Settings,
       url: createPageUrl("ProcessConfiguration"),
       color: "purple"
     },
     {
-      title: "Planificación de Máquinas",
-      description: "Activa máquinas para planning diario",
-      icon: CalendarRange,
+      title: "Planning de Máquinas",
+      description: "Planifica asignaciones de máquinas por equipo",
+      icon: Activity,
       url: createPageUrl("MachinePlanning"),
-      color: "green"
+      color: "emerald"
     },
     {
       title: "Seguimiento de Mantenimiento",
-      description: "Gestiona mantenimientos y reparaciones",
+      description: "Programa y rastrea mantenimientos preventivos",
       icon: Wrench,
       url: createPageUrl("MaintenanceTracking"),
       color: "orange"
@@ -73,9 +38,9 @@ export default function MachinesPage() {
 
   const colorClasses = {
     blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600",
-    orange: "from-orange-500 to-orange-600",
-    purple: "from-purple-500 to-purple-600"
+    purple: "from-purple-500 to-purple-600",
+    emerald: "from-emerald-500 to-emerald-600",
+    orange: "from-orange-500 to-orange-600"
   };
 
   return (
@@ -87,7 +52,7 @@ export default function MachinesPage() {
             Gestión de Máquinas
           </h1>
           <p className="text-slate-600 mt-1">
-            Administra máquinas, procesos y mantenimiento
+            Administra máquinas, procesos, planificación y mantenimiento
           </p>
         </div>
 
@@ -101,7 +66,7 @@ export default function MachinesPage() {
                     <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${colorClasses[page.color]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                       <Icon className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="font-bold text-xl text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-semibold text-xl text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
                       {page.title}
                     </h3>
                     <p className="text-sm text-slate-600">{page.description}</p>
