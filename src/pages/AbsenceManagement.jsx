@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, BarChart3, Infinity } from "lucide-react";
+import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, BarChart3, Infinity, Settings, CalendarDays, CheckSquare, Upload } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -40,7 +40,11 @@ import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
 import PaidLeaveBalance from "../components/absences/PaidLeaveBalance";
 import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
+import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
+import AbsenceCalendar from "../components/absences/AbsenceCalendar";
+import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import { debounce } from "lodash";
+import { toast } from 'sonner'; // Assuming sonner is the toast library used
 
 // Sugerencias de motivos frecuentes por tipo
 const SUGGESTED_REASONS = {
@@ -105,6 +109,7 @@ export default function AbsenceManagementPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [fullDay, setFullDay] = useState(false);
   const [unknownEndDate, setUnknownEndDate] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -117,6 +122,7 @@ export default function AbsenceManagementPage() {
     absence_type_id: "",
     remunerada: true,
     notas: "",
+    documentos_adjuntos: [],
   });
 
   const { data: absences, isLoading } = useQuery({
@@ -141,6 +147,11 @@ export default function AbsenceManagementPage() {
     queryKey: ['absenceTypes'],
     queryFn: () => base44.entities.AbsenceType.filter({ activo: true }, 'orden'),
     initialData: [],
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
   });
 
   const departments = useMemo(() => {
@@ -170,11 +181,15 @@ export default function AbsenceManagementPage() {
       }
 
       // Actualizar estado del empleado
-      await updateEmployeeAvailability(data.employee_id, "Ausente", {
-        ausencia_inicio: data.fecha_inicio,
-        ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
-        ausencia_motivo: data.motivo,
-      });
+      // This part might need adjustment if approval is involved. For now, it assumes direct update.
+      // If approval is async, employee status should be updated upon approval.
+      if (!editingAbsence && !data.requires_approval) { // Simplified condition
+        await updateEmployeeAvailability(data.employee_id, "Ausente", {
+          ausencia_inicio: data.fecha_inicio,
+          ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
+          ausencia_motivo: data.motivo,
+        });
+      }
 
       return result;
     },
@@ -209,7 +224,8 @@ export default function AbsenceManagementPage() {
     setFormData({ 
       ...absence, 
       remunerada: absence.remunerada ?? true,
-      fecha_fin_desconocida: absence.fecha_fin_desconocida || false
+      fecha_fin_desconocida: absence.fecha_fin_desconocida || false,
+      documentos_adjuntos: absence.documentos_adjuntos || []
     });
     
     // Check if full day
@@ -241,6 +257,7 @@ export default function AbsenceManagementPage() {
       absence_type_id: "",
       remunerada: true,
       notas: "",
+      documentos_adjuntos: [],
     });
     setSearchTerm("");
   };
@@ -367,6 +384,45 @@ export default function AbsenceManagementPage() {
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setUploadingFiles(true);
+    try {
+      const uploadPromises = files.map(file => 
+        base44.integrations.Core.UploadFile({ file })
+      );
+      const results = await Promise.all(uploadPromises);
+      
+      const documentos = results.map((result, idx) => ({
+        nombre: files[idx].name,
+        url: result.file_url,
+        tipo: files[idx].type,
+        fecha_subida: new Date().toISOString()
+      }));
+
+      setFormData({
+        ...formData,
+        documentos_adjuntos: [...(formData.documentos_adjuntos || []), ...documentos]
+      });
+
+      toast.success(`${files.length} archivo(s) subido(s)`);
+      e.target.value = null; // Clear input
+    } catch (error) {
+      toast.error("Error al subir archivos");
+      console.error("Error uploading files:", error);
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const removeDocument = (index) => {
+    const updated = formData.documentos_adjuntos.filter((_, i) => i !== index);
+    setFormData({ ...formData, documentos_adjuntos: updated });
+    toast.info("Documento eliminado.");
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -399,18 +455,26 @@ export default function AbsenceManagementPage() {
         </div>
 
         <Tabs defaultValue="absences" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="absences">
               <UserX className="w-4 h-4 mr-2" />
               Registro
             </TabsTrigger>
+            <TabsTrigger value="approval">
+              <CheckSquare className="w-4 h-4 mr-2" />
+              Aprobaciones
+            </TabsTrigger>
+            <TabsTrigger value="calendar">
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Calendario
+            </TabsTrigger>
+            <TabsTrigger value="types">
+              <Settings className="w-4 h-4 mr-2" />
+              Tipos
+            </TabsTrigger>
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Estadísticas
-            </TabsTrigger>
-            <TabsTrigger value="balance">
-              <UserX className="w-4 h-4 mr-2" />
-              Balance Permisos
             </TabsTrigger>
           </TabsList>
 
@@ -638,12 +702,29 @@ export default function AbsenceManagementPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="dashboard">
-            <AbsenceDashboard absences={absences} employees={employees} />
+          <TabsContent value="approval">
+            <AbsenceApprovalPanel
+              absences={absences}
+              employees={employees}
+              absenceTypes={absenceTypes}
+              currentUser={currentUser}
+            />
           </TabsContent>
 
-          <TabsContent value="balance">
-            <PaidLeaveBalance employees={employees} />
+          <TabsContent value="calendar">
+            <AbsenceCalendar
+              absences={absences}
+              employees={employees}
+              absenceTypes={absenceTypes}
+            />
+          </TabsContent>
+
+          <TabsContent value="types">
+            <AbsenceTypeManager />
+          </TabsContent>
+
+          <TabsContent value="dashboard">
+            <AbsenceDashboard absences={absences} employees={employees} />
           </TabsContent>
         </Tabs>
       </div>
@@ -814,10 +895,54 @@ export default function AbsenceManagementPage() {
                 />
               </div>
 
+              {/* New Document Upload Section */}
+              <div className="space-y-2 border-t pt-4">
+                <Label className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  Documentos Adjuntos (Justificantes, Certificados, etc.)
+                </Label>
+                <input
+                  type="file"
+                  id="documents-upload"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('documents-upload').click()}
+                  disabled={uploadingFiles}
+                  className="w-full"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {uploadingFiles ? "Subiendo..." : "Adjuntar Documentos"}
+                </Button>
+                
+                {formData.documentos_adjuntos?.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {formData.documentos_adjuntos.map((doc, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-slate-50 p-2 rounded border">
+                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm truncate flex-1 text-blue-600 hover:underline">
+                          {doc.nombre}
+                        </a>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDocument(idx)}
+                        >
+                          <Trash2 className="w-3 h-3 text-red-600" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> Al guardar esta ausencia, el empleado será marcado automáticamente como "Ausente" 
-                  y los datos de la ausencia se copiarán a su ficha en la pestaña "Disponibilidad".
+                  <strong>Nota:</strong> Esta solicitud quedará pendiente de aprobación según el flujo configurado para este tipo de ausencia.
                 </p>
               </div>
 
