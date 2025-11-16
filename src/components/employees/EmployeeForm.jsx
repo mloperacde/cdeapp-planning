@@ -27,6 +27,7 @@ import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
 import LockerAssignmentPanel from "./LockerAssignmentPanel";
 import AbsenteeismCard from "./AbsenteeismCard"; // New import
+import { useToast } from "@/components/ui/use-toast"; // New import for toast
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
@@ -98,6 +99,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const [activeTab, setActiveTab] = useState("datos"); // New state for active tab
 
   const queryClient = useQueryClient();
+  const { toast } = useToast(); // Initialize useToast hook
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
@@ -179,8 +181,16 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
+      // Invalidate all related queries to refresh data everywhere
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
+      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
       onClose();
+      toast({
+        title: "Éxito",
+        description: "Empleado guardado - datos actualizados en toda la aplicación.",
+      });
     },
   });
 

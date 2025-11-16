@@ -48,7 +48,7 @@ import MobileAbsences from './pages/MobileAbsences';
 import MobileVacations from './pages/MobileVacations';
 import MobilePlanning from './pages/MobilePlanning';
 import MobileChat from './pages/MobileChat';
-import Layout from './Layout.jsx';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -107,5 +107,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "Timeline",
     Pages: PAGES,
-    Layout: Layout,
+    Layout: __Layout,
 };

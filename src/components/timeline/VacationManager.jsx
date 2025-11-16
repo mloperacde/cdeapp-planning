@@ -19,15 +19,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Plane, AlertCircle } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { Plus, Trash2, Plane, AlertCircle, Edit } from "lucide-react";
+import { format, differenceInDays, eachDayOfInterval, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 export default function VacationManager({ open, onOpenChange, vacations = [], onUpdate }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingVacation, setEditingVacation] = useState(null);
   const [formData, setFormData] = useState({
     start_date: "",
     end_date: "",
@@ -35,27 +37,53 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
     notes: "",
   });
 
+  const queryClient = useQueryClient();
+
+  const { data: holidays = [] } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+    initialData: [],
+  });
+
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Vacation.create(data),
+    mutationFn: (data) => editingVacation 
+      ? base44.entities.Vacation.update(editingVacation.id, data)
+      : base44.entities.Vacation.create(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vacations'] });
       onUpdate();
       setFormData({ start_date: "", end_date: "", name: "", notes: "" });
       setShowForm(false);
+      setEditingVacation(null);
+      toast.success(editingVacation ? "Vacaciones actualizadas" : "Vacaciones creadas");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Vacation.delete(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vacations'] });
       onUpdate();
+      toast.success("Período eliminado");
     },
   });
+
+  const handleEdit = (vacation) => {
+    setEditingVacation(vacation);
+    setFormData({
+      start_date: vacation.start_date,
+      end_date: vacation.end_date,
+      name: vacation.name,
+      notes: vacation.notes || "",
+    });
+    setShowForm(true);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.start_date && formData.end_date && formData.name) {
       if (new Date(formData.end_date) < new Date(formData.start_date)) {
-        alert("La fecha de fin no puede ser anterior a la fecha de inicio");
+        toast.error("La fecha de fin no puede ser anterior a la fecha de inicio");
         return;
       }
       createMutation.mutate(formData);
@@ -67,7 +95,19 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
   ) : [];
 
   const calculateDays = (startDate, endDate) => {
-    return differenceInDays(new Date(endDate), new Date(startDate)) + 1;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const allDays = eachDayOfInterval({ start, end });
+    const totalDays = allDays.length;
+    
+    const holidayDates = holidays.map(h => new Date(h.date).toDateString());
+    
+    const workableDays = allDays.filter(day => 
+      !isWeekend(day) && !holidayDates.includes(day.toDateString())
+    ).length;
+
+    return { total: totalDays, workable: workableDays };
   };
 
   return (
@@ -79,7 +119,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
             Gestión de Vacaciones
           </DialogTitle>
           <DialogDescription>
-            Añade o elimina períodos de vacaciones. Estos días no se mostrarán en la línea de tiempo.
+            Añade, edita o elimina períodos de vacaciones. Estos días no se mostrarán en la línea de tiempo.
           </DialogDescription>
         </DialogHeader>
 
@@ -87,6 +127,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
           <AlertCircle className="h-4 w-4 text-sky-600" />
           <AlertDescription className="text-sky-800">
             Los períodos de vacaciones se excluirán automáticamente de la línea de tiempo, junto con fines de semana y festivos.
+            Se muestran días totales y días laborables (excluyendo fines de semana y festivos).
           </AlertDescription>
         </Alert>
 
@@ -149,11 +190,19 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
 
               {formData.start_date && formData.end_date && new Date(formData.end_date) >= new Date(formData.start_date) && (
                 <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg">
-                  <p className="text-sm text-sky-800">
-                    Duración: <span className="font-semibold">
-                      {calculateDays(formData.start_date, formData.end_date)} días
-                    </span>
-                  </p>
+                  {(() => {
+                    const { total, workable } = calculateDays(formData.start_date, formData.end_date);
+                    return (
+                      <div className="space-y-1">
+                        <p className="text-sm text-sky-800">
+                          Días totales (naturales): <span className="font-semibold">{total} días</span>
+                        </p>
+                        <p className="text-sm text-sky-800">
+                          Días laborables: <span className="font-semibold">{workable} días</span>
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -163,13 +212,14 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
                   className="flex-1 bg-sky-600 hover:bg-sky-700"
                   disabled={createMutation.isPending}
                 >
-                  {createMutation.isPending ? "Guardando..." : "Guardar Vacaciones"}
+                  {createMutation.isPending ? "Guardando..." : editingVacation ? "Actualizar" : "Guardar Vacaciones"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
                     setShowForm(false);
+                    setEditingVacation(null);
                     setFormData({ start_date: "", end_date: "", name: "", notes: "" });
                   }}
                 >
@@ -186,54 +236,71 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
                   <TableRow className="bg-slate-50">
                     <TableHead>Período</TableHead>
                     <TableHead>Nombre</TableHead>
-                    <TableHead>Duración</TableHead>
+                    <TableHead>Días</TableHead>
                     <TableHead>Notas</TableHead>
-                    <TableHead className="w-20">Acciones</TableHead>
+                    <TableHead className="w-24">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedVacations.map((vacation) => (
-                    <TableRow key={vacation.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-sm">
-                            {format(new Date(vacation.start_date), "d MMM yyyy", { locale: es })}
-                          </span>
-                          <span className="text-xs text-slate-500">hasta</span>
-                          <span className="font-semibold text-sm">
-                            {format(new Date(vacation.end_date), "d MMM yyyy", { locale: es })}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-sky-100 text-sky-800">
-                          {vacation.name}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold text-sky-700">
-                            {calculateDays(vacation.start_date, vacation.end_date)}
-                          </span>
-                          <span className="text-sm text-slate-600">días</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600 max-w-xs truncate">
-                        {vacation.notes || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteMutation.mutate(vacation.id)}
-                          disabled={deleteMutation.isPending}
-                          className="hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {sortedVacations.map((vacation) => {
+                    const { total, workable } = calculateDays(vacation.start_date, vacation.end_date);
+                    return (
+                      <TableRow key={vacation.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-sm">
+                              {format(new Date(vacation.start_date), "d MMM yyyy", { locale: es })}
+                            </span>
+                            <span className="text-xs text-slate-500">hasta</span>
+                            <span className="font-semibold text-sm">
+                              {format(new Date(vacation.end_date), "d MMM yyyy", { locale: es })}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="bg-sky-100 text-sky-800">
+                            {vacation.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold text-sky-700">{total}</span>
+                              <span className="text-xs text-slate-600">días totales</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold text-emerald-700">{workable}</span>
+                              <span className="text-xs text-slate-600">laborables</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600 max-w-xs truncate">
+                          {vacation.notes || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(vacation)}
+                              className="hover:bg-blue-50 hover:text-blue-600"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteMutation.mutate(vacation.id)}
+                              disabled={deleteMutation.isPending}
+                              className="hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -662,9 +662,11 @@ export default function EmployeesPage() {
                             {employee.equipo ? (
                               <Badge className={
                                 isAbsent ? "bg-red-200 text-red-900" :
-                                employee.equipo === "Equipo Turno Isa"
+                                employee.equipo === "Turno 1 (Isa)"
                                   ? "bg-purple-100 text-purple-800" 
-                                  : "bg-pink-100 text-pink-800"
+                                  : employee.equipo === "Turno 2 (Sara)"
+                                  ? "bg-pink-100 text-pink-800"
+                                  : "bg-blue-100 text-blue-800"
                               }>
                                 {employee.equipo}
                               </Badge>

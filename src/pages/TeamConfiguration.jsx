@@ -91,41 +91,57 @@ export default function TeamConfigurationPage() {
     }
   }, [positionOrdersData]);
 
-  const saveTeamMutation = useMutation({
-    mutationFn: async (data) => {
-      const existing = teams.find(t => t.team_key === data.team_key);
+  const saveTeamsMutation = useMutation({
+    mutationFn: async () => {
+      const updates = [];
       
-      // Detectar si cambió el nombre del equipo
-      const oldName = existing?.team_name;
-      const newName = data.team_name;
-      
-      let result;
-      if (existing) {
-        result = await base44.entities.TeamConfig.update(existing.id, data);
-      } else {
-        result = await base44.entities.TeamConfig.create(data);
-      }
-      
-      // Si el nombre cambió, actualizar todos los empleados con el equipo anterior
-      if (oldName && oldName !== newName) {
-        const employeesToUpdate = employees.filter(emp => emp.equipo === oldName);
-        
-        if (employeesToUpdate.length > 0) {
-          await Promise.all(
-            employeesToUpdate.map(emp => 
-              base44.entities.Employee.update(emp.id, { equipo: newName })
-            )
-          );
-          toast.success(`${employeesToUpdate.length} empleados actualizados con el nuevo nombre del equipo`);
+      for (const [key, data] of Object.entries(teamFormData)) {
+        // Basic validation for team name
+        if (!data.team_name || data.team_name.trim() === '') {
+          throw new Error(`El nombre del equipo ${key.replace('_', ' ').replace('team', 'Equipo')} no puede estar vacío.`);
+        }
+        const existing = teams.find(t => t.team_key === key);
+        if (existing) {
+          updates.push(base44.entities.TeamConfig.update(existing.id, data));
+        } else {
+          updates.push(base44.entities.TeamConfig.create(data));
         }
       }
       
-      return result;
+      return Promise.all(updates);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate all related queries to refresh everywhere
       queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
+      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+      
+      // Update employee records with new team names
+      const team1 = teamFormData.team_1;
+      const team2 = teamFormData.team_2;
+      
+      const allEmployees = await base44.entities.Employee.list();
+      const updatePromises = [];
+      
+      allEmployees.forEach(emp => {
+        if (emp.equipo && emp.equipo.includes('Isa') && emp.equipo !== team1.team_name) {
+          updatePromises.push(base44.entities.Employee.update(emp.id, { equipo: team1.team_name }));
+        } else if (emp.equipo && emp.equipo.includes('Sara') && emp.equipo !== team2.team_name) {
+          updatePromises.push(base44.entities.Employee.update(emp.id, { equipo: team2.team_name }));
+        }
+      });
+      
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+        queryClient.invalidateQueries({ queryKey: ['employees'] });
+      }
+      
+      toast.success("Equipos guardados y sincronizados en toda la aplicación");
     },
+    onError: (error) => {
+      toast.error(`Error al guardar equipos: ${error.message}`);
+    }
   });
 
   const saveScheduleMutation = useMutation({
@@ -168,9 +184,12 @@ export default function TeamConfigurationPage() {
   });
 
   const handleSaveTeams = async () => {
-    await saveTeamMutation.mutateAsync(teamFormData.team_1);
-    await saveTeamMutation.mutateAsync(teamFormData.team_2);
-    toast.success("Equipos guardados correctamente");
+    try {
+      await saveTeamsMutation.mutateAsync();
+    } catch (error) {
+      // Error handling is done in mutation's onError callback
+      console.error("Failed to save teams:", error);
+    }
   };
 
   const getWeekSchedule = (teamKey, week) => {
@@ -282,6 +301,11 @@ export default function TeamConfigurationPage() {
         team_key: teamKey,
         orden_puestos: orden
       });
+    } else {
+      // If there's no order, it might mean the user wants to clear it or save an empty list
+      // For now, let's only save if there's content.
+      // If clearing is needed, explicitly save an empty array.
+      toast.info("No hay orden de puestos para guardar en este departamento/equipo.");
     }
   };
 
@@ -296,12 +320,14 @@ export default function TeamConfigurationPage() {
 
     const ordered = [];
     
+    // Add positions that are in savedOrder and still exist
     savedOrder.forEach(pos => {
       if (positionKeys.includes(pos)) {
         ordered.push(pos);
       }
     });
     
+    // Add new positions that were not in savedOrder
     positionKeys.forEach(pos => {
       if (!ordered.includes(pos)) {
         ordered.push(pos);
@@ -525,10 +551,10 @@ export default function TeamConfigurationPage() {
                     <Button
                       onClick={handleSaveTeams}
                       className="bg-blue-600 hover:bg-blue-700"
-                      disabled={saveTeamMutation.isPending}
+                      disabled={saveTeamsMutation.isPending}
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      {saveTeamMutation.isPending ? 'Guardando...' : 'Guardar Configuración'}
+                      {saveTeamsMutation.isPending ? 'Guardando...' : 'Guardar Configuración'}
                     </Button>
                   </div>
                 </div>

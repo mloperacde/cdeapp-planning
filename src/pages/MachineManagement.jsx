@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,13 +26,14 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
+TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, ArrowLeft, Settings, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
+import { toast } from "react-hot-toast"; // Assuming react-hot-toast is used for notifications
 
 export default function MachineManagementPage() {
   const [showForm, setShowForm] = useState(false);
@@ -68,8 +70,16 @@ export default function MachineManagementPage() {
       return base44.entities.Machine.create(data);
     },
     onSuccess: () => {
+      // Invalidate all machine-related queries across the app
       queryClient.invalidateQueries({ queryKey: ['machines'] });
-      handleClose();
+      queryClient.invalidateQueries({ queryKey: ['machinePlanning'] });
+      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
+      
+      setShowForm(false);
+      setEditingMachine(null);
+      toast.success("Máquina guardada - listas actualizadas en toda la aplicación");
     },
   });
 
@@ -77,6 +87,10 @@ export default function MachineManagementPage() {
     mutationFn: (id) => base44.entities.Machine.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machines'] });
+      queryClient.invalidateQueries({ queryKey: ['machinePlanning'] });
+      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success("Máquina eliminada - listas actualizadas");
     },
   });
 

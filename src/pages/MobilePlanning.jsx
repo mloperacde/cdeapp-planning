@@ -1,16 +1,31 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, AlertCircle, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { Calendar, Clock, AlertCircle, ChevronLeft, ChevronRight, Users, Wifi, WifiOff } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function MobilePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("day");
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [cachedData, setCachedData] = useState(null);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -19,9 +34,17 @@ export default function MobilePlanningPage() {
 
   const { data: employee } = useQuery({
     queryKey: ['currentEmployee', currentUser?.email],
-    queryFn: () => currentUser?.email 
-      ? base44.entities.Employee.filter({ email: currentUser.email }).then(r => r[0])
-      : null,
+    queryFn: async () => {
+      if (!currentUser?.email) return null;
+      const result = await base44.entities.Employee.filter({ email: currentUser.email });
+      const emp = result[0];
+      
+      // Cache employee data for offline use
+      if (emp) {
+        localStorage.setItem('cached_employee', JSON.stringify(emp));
+      }
+      return emp;
+    },
     enabled: !!currentUser?.email,
   });
 
@@ -30,13 +53,19 @@ export default function MobilePlanningPage() {
 
   const { data: machineAssignments = [] } = useQuery({
     queryKey: ['myMachineAssignments', employee?.id, selectedDate],
-    queryFn: () => {
+    queryFn: async () => {
       if (!employee?.id) return [];
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      return base44.entities.MachineAssignment.filter({
+      const assignments = await base44.entities.MachineAssignment.filter({
         employee_id: employee.id,
         fecha_asignacion: dateStr
       });
+      
+      // Cache assignments
+      const cacheKey = `assignments_${employee.id}_${dateStr}`;
+      localStorage.setItem(cacheKey, JSON.stringify(assignments));
+      
+      return assignments;
     },
     initialData: [],
     enabled: !!employee?.id,
@@ -44,11 +73,29 @@ export default function MobilePlanningPage() {
 
   const { data: teamSchedule } = useQuery({
     queryKey: ['myTeamSchedule', employee?.equipo],
-    queryFn: () => employee?.equipo
-      ? base44.entities.TeamWeekSchedule.filter({ team_name: employee.equipo }).then(r => r[0])
-      : null,
+    queryFn: async () => {
+      if (!employee?.equipo) return null;
+      const result = await base44.entities.TeamWeekSchedule.filter({ team_name: employee.equipo });
+      const schedule = result[0];
+      
+      // Cache schedule
+      if (schedule) {
+        localStorage.setItem(`schedule_${employee.equipo}`, JSON.stringify(schedule));
+      }
+      return schedule;
+    },
     enabled: !!employee?.equipo,
   });
+
+  // Load cached data when offline
+  useEffect(() => {
+    if (!isOnline && !employee) {
+      const cached = localStorage.getItem('cached_employee');
+      if (cached) {
+        setCachedData(JSON.parse(cached));
+      }
+    }
+  }, [isOnline, employee]);
 
   const getDaySchedule = (date) => {
     const dayOfWeek = format(date, 'EEEE', { locale: es }).toLowerCase();
@@ -85,7 +132,9 @@ export default function MobilePlanningPage() {
     return days;
   }, [weekStart]);
 
-  if (!employee) {
+  const displayEmployee = employee || cachedData;
+
+  if (!displayEmployee) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <Card className="max-w-md w-full">
@@ -100,31 +149,40 @@ export default function MobilePlanningPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 pb-8">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Clock className="w-6 h-6" />
-          Mi Planificación
-        </h1>
-        <p className="text-blue-100 text-sm mt-1">Consulta tus turnos y asignaciones</p>
+      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-4 pb-6 shadow-lg">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Mi Planificación
+          </h1>
+          {!isOnline && (
+            <Badge className="bg-amber-500 text-white gap-1">
+              <WifiOff className="w-3 h-3" />
+              Sin conexión
+            </Badge>
+          )}
+        </div>
+        <p className="text-blue-100 text-xs">Consulta tus turnos y asignaciones</p>
       </div>
 
-      <div className="px-4 -mt-4 space-y-4">
+      <div className="px-3 -mt-4 space-y-3">
         <Card className="shadow-lg">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between mb-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedDate(prev => addDays(prev, viewMode === "day" ? -1 : -7))}
+                className="h-8 px-2"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
 
               <div className="text-center">
-                <p className="font-bold text-slate-900">
+                <p className="font-bold text-slate-900 text-sm">
                   {viewMode === "day" 
                     ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })
-                    : `Semana ${format(weekStart, "d MMM", { locale: es })} - ${format(weekEnd, "d MMM", { locale: es })}`
+                    : `${format(weekStart, "d MMM", { locale: es })} - ${format(weekEnd, "d MMM", { locale: es })}`
                   }
                 </p>
                 {isToday(selectedDate) && viewMode === "day" && (
@@ -136,6 +194,7 @@ export default function MobilePlanningPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedDate(prev => addDays(prev, viewMode === "day" ? 1 : 7))}
+                className="h-8 px-2"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -146,7 +205,7 @@ export default function MobilePlanningPage() {
                 variant={viewMode === "day" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("day")}
-                className="flex-1"
+                className="flex-1 h-8 text-xs"
               >
                 Día
               </Button>
@@ -154,7 +213,7 @@ export default function MobilePlanningPage() {
                 variant={viewMode === "week" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("week")}
-                className="flex-1"
+                className="flex-1 h-8 text-xs"
               >
                 Semana
               </Button>
@@ -165,20 +224,20 @@ export default function MobilePlanningPage() {
         {viewMode === "day" ? (
           <div className="space-y-3">
             <Card className="shadow-md border-2 border-blue-200">
-              <CardContent className="p-4">
-                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-600" />
+              <CardContent className="p-3">
+                <h3 className="font-bold text-slate-900 mb-2 flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-blue-600" />
                   Turno Asignado
                 </h3>
 
                 {getDaySchedule(selectedDate).length === 0 ? (
-                  <p className="text-sm text-slate-500">Día libre / No asignado</p>
+                  <p className="text-xs text-slate-500">Día libre / No asignado</p>
                 ) : (
                   <div className="space-y-2">
                     {getDaySchedule(selectedDate).map((shift, idx) => (
-                      <div key={idx} className="bg-blue-50 p-3 rounded-lg">
-                        <p className="font-semibold text-blue-900">{shift.shift_name}</p>
-                        <p className="text-sm text-blue-700">
+                      <div key={idx} className="bg-blue-50 p-2 rounded-lg">
+                        <p className="font-semibold text-blue-900 text-sm">{shift.shift_name}</p>
+                        <p className="text-xs text-blue-700">
                           {shift.start_time} - {shift.end_time}
                         </p>
                       </div>
@@ -190,14 +249,14 @@ export default function MobilePlanningPage() {
 
             {machineAssignments.length > 0 && (
               <Card className="shadow-md">
-                <CardContent className="p-4">
-                  <h3 className="font-bold text-slate-900 mb-3">Máquinas Asignadas</h3>
+                <CardContent className="p-3">
+                  <h3 className="font-bold text-slate-900 mb-2 text-sm">Máquinas Asignadas</h3>
                   <div className="space-y-2">
                     {machineAssignments.map(assignment => (
-                      <div key={assignment.id} className="bg-slate-50 p-3 rounded-lg">
-                        <p className="font-semibold text-slate-900">{assignment.machine_name}</p>
+                      <div key={assignment.id} className="bg-slate-50 p-2 rounded-lg">
+                        <p className="font-semibold text-slate-900 text-sm">{assignment.machine_name}</p>
                         {assignment.turno && (
-                          <Badge variant="outline" className="mt-1">{assignment.turno}</Badge>
+                          <Badge variant="outline" className="mt-1 text-xs">{assignment.turno}</Badge>
                         )}
                       </div>
                     ))}
@@ -211,11 +270,11 @@ export default function MobilePlanningPage() {
             {weekDays.map(day => {
               const daySchedule = getDaySchedule(day);
               return (
-                <Card key={day.toString()} className={`shadow-md ${isToday(day) ? 'border-2 border-emerald-400' : ''}`}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between mb-2">
+                <Card key={day.toString()} className={`shadow-sm ${isToday(day) ? 'border-2 border-emerald-400' : ''}`}>
+                  <CardContent className="p-2">
+                    <div className="flex items-center justify-between mb-1">
                       <div>
-                        <p className="font-bold text-slate-900">
+                        <p className="font-bold text-slate-900 text-sm">
                           {format(day, "EEEE", { locale: es })}
                         </p>
                         <p className="text-xs text-slate-600">
@@ -223,7 +282,7 @@ export default function MobilePlanningPage() {
                         </p>
                       </div>
                       {isToday(day) && (
-                        <Badge className="bg-emerald-600 text-white">Hoy</Badge>
+                        <Badge className="bg-emerald-600 text-white text-xs">Hoy</Badge>
                       )}
                     </div>
 
@@ -245,14 +304,14 @@ export default function MobilePlanningPage() {
           </div>
         )}
 
-        {employee.equipo && (
+        {displayEmployee.equipo && (
           <Card className="shadow-md bg-purple-50 border-2 border-purple-200">
-            <CardContent className="p-4">
+            <CardContent className="p-3">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-600" />
+                <Users className="w-4 h-4 text-purple-600" />
                 <div>
-                  <p className="font-bold text-purple-900">Tu Equipo</p>
-                  <p className="text-sm text-purple-700">{employee.equipo}</p>
+                  <p className="font-bold text-purple-900 text-sm">Tu Equipo</p>
+                  <p className="text-xs text-purple-700">{displayEmployee.equipo}</p>
                 </div>
               </div>
             </CardContent>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -20,79 +19,84 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, CalendarOff, AlertCircle } from "lucide-react";
+import { Plus, Trash2, CalendarOff, AlertCircle, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
-export default function HolidayManager({ open, onOpenChange, holidays = [], onUpdate }) { // Added default empty array
+export default function HolidayManager({ open, onOpenChange, holidays = [], onUpdate }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingHoliday, setEditingHoliday] = useState(null);
   const [formData, setFormData] = useState({
     date: "",
     name: "",
     description: "",
   });
 
-  const queryClient = useQueryClient(); // Initialize useQueryClient
+  const queryClient = useQueryClient();
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
+      if (editingHoliday) {
+        return base44.entities.Holiday.update(editingHoliday.id, data);
+      }
+
       const holiday = await base44.entities.Holiday.create(data);
       
-      // Create push notifications for all employees (7 days before)
-      const holidayDate = new Date(data.date); // Corrected from data.fecha to data.date
+      const holidayDate = new Date(data.date);
       const notifyDate = new Date(holidayDate);
       notifyDate.setDate(notifyDate.getDate() - 7);
       
-      // Only create notifications if the notification date is in the future
       if (notifyDate > new Date()) {
-        try {
-          const employeesData = await base44.entities.Employee.list();
-          const notificationPromises = employeesData.map(emp => 
-            base44.entities.PushNotification.create({
-              destinatario_id: emp.id,
-              tipo: "calendario",
-              titulo: "Festivo Próximo",
-              mensaje: `${data.name} - ${format(holidayDate, "d 'de' MMMM", { locale: es })}`, // Corrected from data.nombre to data.name
-              prioridad: "baja",
-              referencia_tipo: "Holiday",
-              referencia_id: holiday.id,
-              enviada_push: false
-            })
-          );
-          await Promise.all(notificationPromises);
-        } catch (error) {
-          console.error("Failed to create push notifications for holiday:", error);
-          // Decide whether to re-throw or just log. For now, just log and continue.
-        }
+        const employeesData = await base44.entities.Employee.list();
+        const notificationPromises = employeesData.map(emp => 
+          base44.entities.PushNotification.create({
+            destinatario_id: emp.id,
+            tipo: "calendario",
+            titulo: "Festivo Próximo",
+            mensaje: `${data.name} - ${format(holidayDate, "d 'de' MMMM", { locale: es })}`,
+            prioridad: "baja",
+            referencia_tipo: "Holiday",
+            referencia_id: holiday.id,
+            enviada_push: false
+          })
+        );
+        await Promise.all(notificationPromises);
       }
 
       return holiday;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['holidays'] }); // Replaced onUpdate()
-      setFormData({ date: "", name: "", description: "" }); // Keep existing reset
+      queryClient.invalidateQueries({ queryKey: ['holidays'] });
+      onUpdate();
+      setFormData({ date: "", name: "", description: "" });
       setShowForm(false);
-      // setEditingHoliday(null); // Removed as 'editingHoliday' state is not defined in current code
+      setEditingHoliday(null);
+      toast.success(editingHoliday ? "Festivo actualizado" : "Festivo creado");
     },
-    onError: (error) => {
-      console.error("Error creating holiday:", error);
-      // Optionally display an error message to the user
-    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Holiday.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['holidays'] }); // Replaced onUpdate()
+      queryClient.invalidateQueries({ queryKey: ['holidays'] });
+      onUpdate();
+      toast.success("Festivo eliminado");
     },
-    onError: (error) => {
-      console.error("Error deleting holiday:", error);
-      // Optionally display an error message to the user
-    }
   });
+
+  const handleEdit = (holiday) => {
+    setEditingHoliday(holiday);
+    setFormData({
+      date: holiday.date,
+      name: holiday.name,
+      description: holiday.description || "",
+    });
+    setShowForm(true);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -114,7 +118,7 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
             Gestión de Días Festivos
           </DialogTitle>
           <DialogDescription>
-            Añade o elimina días festivos. Estos días no se mostrarán en la línea de tiempo.
+            Añade, edita o elimina días festivos. Estos días no se mostrarán en la línea de tiempo.
           </DialogDescription>
         </DialogHeader>
 
@@ -175,13 +179,14 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
                   className="flex-1 bg-orange-600 hover:bg-orange-700"
                   disabled={createMutation.isPending}
                 >
-                  {createMutation.isPending ? "Guardando..." : "Guardar Festivo"}
+                  {createMutation.isPending ? "Guardando..." : editingHoliday ? "Actualizar" : "Guardar Festivo"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
                     setShowForm(false);
+                    setEditingHoliday(null);
                     setFormData({ date: "", name: "", description: "" });
                   }}
                 >
@@ -199,7 +204,7 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
                     <TableHead>Fecha</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Descripción</TableHead>
-                    <TableHead className="w-20">Acciones</TableHead>
+                    <TableHead className="w-24">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -224,15 +229,25 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
                         {holiday.description || "-"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteMutation.mutate(holiday.id)}
-                          disabled={deleteMutation.isPending}
-                          className="hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(holiday)}
+                            className="hover:bg-blue-50 hover:text-blue-600"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(holiday.id)}
+                            disabled={deleteMutation.isPending}
+                            className="hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
