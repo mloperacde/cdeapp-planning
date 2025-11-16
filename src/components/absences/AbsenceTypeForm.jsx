@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ export default function AbsenceTypeForm({ type, onClose }) {
     categoria: "Permiso Retribuido",
     descripcion: "",
     remunerada: false,
+    no_consume_vacaciones: true, // Added new field
     requiere_aprobacion: true,
     duracion_descripcion: "",
     color: "#3B82F6",
@@ -145,6 +147,23 @@ export default function AbsenceTypeForm({ type, onClose }) {
                 onCheckedChange={(checked) => setFormData({...formData, remunerada: checked})}
               />
               <label className="text-sm cursor-pointer">Ausencia Remunerada</label>
+            </div>
+
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <Checkbox
+                checked={formData.no_consume_vacaciones}
+                onCheckedChange={(checked) => setFormData({...formData, no_consume_vacaciones: checked})}
+                id="no_consume_vacaciones" // Added ID for better accessibility with label
+              />
+              <div className="flex-1">
+                <label htmlFor="no_consume_vacaciones" className="text-sm font-medium cursor-pointer">
+                  NO consume vacaciones (genera saldo pendiente)
+                </label>
+                <p className="text-xs text-amber-700 mt-1">
+                  Si se activa, cuando esta ausencia coincida con vacaciones colectivas, 
+                  se sumará al saldo de vacaciones pendientes del empleado.
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">

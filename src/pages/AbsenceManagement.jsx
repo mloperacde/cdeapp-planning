@@ -43,6 +43,8 @@ import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
 import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
 import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
+import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
+import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
 import { debounce } from "lodash";
 import { toast } from 'sonner'; // Assuming sonner is the toast library used
 
@@ -149,6 +151,18 @@ export default function AbsenceManagementPage() {
     initialData: [],
   });
 
+  const { data: vacations = [] } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list(),
+    initialData: [],
+  });
+
+  const { data: holidays = [] } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+    initialData: [],
+  });
+
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -181,14 +195,16 @@ export default function AbsenceManagementPage() {
       }
 
       // Actualizar estado del empleado
-      // This part might need adjustment if approval is involved. For now, it assumes direct update.
-      // If approval is async, employee status should be updated upon approval.
-      if (!editingAbsence && !data.requires_approval) { // Simplified condition
-        await updateEmployeeAvailability(data.employee_id, "Ausente", {
-          ausencia_inicio: data.fecha_inicio,
-          ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
-          ausencia_motivo: data.motivo,
-        });
+      await updateEmployeeAvailability(data.employee_id, "Ausente", {
+        ausencia_inicio: data.fecha_inicio,
+        ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
+        ausencia_motivo: data.motivo,
+      });
+
+      // Calcular saldo de vacaciones pendientes si aplica
+      const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
+      if (absenceType) {
+        await calculateVacationPendingBalance(result, absenceType, vacations, holidays);
       }
 
       return result;
@@ -196,12 +212,17 @@ export default function AbsenceManagementPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
       handleClose();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (absence) => {
+      // Eliminar de balance si existe
+      const year = new Date(absence.fecha_inicio).getFullYear();
+      await removeAbsenceFromBalance(absence.id, absence.employee_id, year);
+
       await base44.entities.Absence.delete(absence.id);
       
       const remainingAbsences = absences.filter(
@@ -215,6 +236,7 @@ export default function AbsenceManagementPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
     },
   });
 
@@ -455,7 +477,7 @@ export default function AbsenceManagementPage() {
         </div>
 
         <Tabs defaultValue="absences" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="absences">
               <UserX className="w-4 h-4 mr-2" />
               Registro
@@ -463,6 +485,10 @@ export default function AbsenceManagementPage() {
             <TabsTrigger value="approval">
               <CheckSquare className="w-4 h-4 mr-2" />
               Aprobaciones
+            </TabsTrigger>
+            <TabsTrigger value="pending">
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Saldo Pendiente
             </TabsTrigger>
             <TabsTrigger value="calendar">
               <CalendarDays className="w-4 h-4 mr-2" />
@@ -709,6 +735,10 @@ export default function AbsenceManagementPage() {
               absenceTypes={absenceTypes}
               currentUser={currentUser}
             />
+          </TabsContent>
+
+          <TabsContent value="pending">
+            <VacationPendingBalancePanel employees={employees} />
           </TabsContent>
 
           <TabsContent value="calendar">

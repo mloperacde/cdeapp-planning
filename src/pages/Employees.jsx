@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ import { Plus, Edit, Trash2, Users, Search, Filter, UserX, TrendingUp, UsersRoun
 import EmployeeForm from "../components/employees/EmployeeForm";
 import BirthdayPanel from "../components/employees/BirthdayPanel";
 import AnniversaryPanel from "../components/employees/AnniversaryPanel";
+import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
@@ -342,49 +344,54 @@ export default function EmployeesPage() {
           </div>
 
           <div className="lg:col-span-1">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm h-full">
-              <CardHeader className="border-b border-slate-100 pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                  Empleados por Departamento
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {employeesByDepartment.map(([dept, stats], index) => (
-                    <div key={dept} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${departmentColors[index % departmentColors.length]}`} />
-                        <span className="text-sm font-medium text-slate-700">{dept}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 font-semibold text-base">
-                          {stats.total}
-                        </Badge>
-                        <Badge className="bg-green-600 text-white font-semibold">
-                          {stats.available} disp.
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                  {employeesByDepartment.length === 0 && (
-                    <p className="text-center text-slate-400 text-sm py-4">
-                      No hay empleados registrados
-                    </p>
-                  )}
-                </div>
-                <div className="mt-3 pt-3 border-t border-slate-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-slate-700">Total:</span>
-                    <Badge className="bg-blue-600 text-white text-base px-3">
-                      {employees.length}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <VacationPendingBalancePanel employees={employees} compact={true} />
           </div>
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 mb-6">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm h-full">
+            <CardHeader className="border-b border-slate-100 pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                Empleados por Departamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {employeesByDepartment.map(([dept, stats], index) => (
+                  <div key={dept} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${departmentColors[index % departmentColors.length]}`} />
+                      <span className="text-sm font-medium text-slate-700">{dept}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 font-semibold text-base">
+                        {stats.total}
+                      </Badge>
+                      <Badge className="bg-green-600 text-white font-semibold">
+                        {stats.available} disp.
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {employeesByDepartment.length === 0 && (
+                  <p className="text-center text-slate-400 text-sm py-4">
+                    No hay empleados registrados
+                  </p>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-slate-700">Total:</span>
+                  <Badge className="bg-blue-600 text-white text-base px-3">
+                    {employees.length}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {subPages.map((page) => {
