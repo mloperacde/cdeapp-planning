@@ -15,14 +15,18 @@ export default function TimelineView({
   endDate, 
   holidays = [], 
   vacations = [], 
-  selectedTeam,
+  selectedTeam = 'all',
   employees = [],
   teams = [],
   teamSchedules = [],
-  viewMode,
-  selectedDepartment
+  viewMode = 'day',
+  selectedDepartment = 'all'
 }) {
   const { workingIntervals, stats } = useMemo(() => {
+    if (!startDate || !endDate) {
+      return { workingIntervals: [], stats: { totalEmployees: 0, intervals: 0 } };
+    }
+
     const allIntervals = [];
     const stats = { totalEmployees: 0, intervals: 0 };
     const current = new Date(startDate);
@@ -33,7 +37,7 @@ export default function TimelineView({
     current.setMilliseconds(0);
     
     const holidayDates = new Set(
-      holidays.filter(h => h.date).map(h => {
+      (Array.isArray(holidays) ? holidays : []).filter(h => h?.date).map(h => {
         try {
           return format(new Date(h.date), "yyyy-MM-dd");
         } catch {
@@ -42,7 +46,7 @@ export default function TimelineView({
       }).filter(Boolean)
     );
     
-    const vacationRanges = vacations.filter(v => v.start_date && v.end_date).map(v => {
+    const vacationRanges = (Array.isArray(vacations) ? vacations : []).filter(v => v?.start_date && v?.end_date).map(v => {
       try {
         return {
           start: new Date(v.start_date),
@@ -56,44 +60,45 @@ export default function TimelineView({
 
     // Filtrar empleados por equipo, departamento y que estén incluidos en planning
     const getTeamName = (teamKey) => {
-      const team = teams.find(t => t.team_key === teamKey);
+      const team = Array.isArray(teams) ? teams.find(t => t?.team_key === teamKey) : null;
       return team?.team_name || '';
     };
 
-    let filteredEmployees = employees.filter(emp => emp.incluir_en_planning !== false);
+    let filteredEmployees = Array.isArray(employees) ? employees.filter(emp => emp?.incluir_en_planning !== false) : [];
     
     // Filtro por departamento
     if (selectedDepartment !== 'all') {
-      filteredEmployees = filteredEmployees.filter(emp => emp.departamento === selectedDepartment);
+      filteredEmployees = filteredEmployees.filter(emp => emp?.departamento === selectedDepartment);
     }
     
     // Filtro por equipo
     if (selectedTeam === 'team_1') {
       const teamName = getTeamName('team_1');
-      filteredEmployees = filteredEmployees.filter(emp => emp.equipo === teamName);
+      filteredEmployees = filteredEmployees.filter(emp => emp?.equipo === teamName);
     } else if (selectedTeam === 'team_2') {
       const teamName = getTeamName('team_2');
-      filteredEmployees = filteredEmployees.filter(emp => emp.equipo === teamName);
+      filteredEmployees = filteredEmployees.filter(emp => emp?.equipo === teamName);
     }
 
     stats.totalEmployees = filteredEmployees.length;
     
     const getEmployeeTeamKey = (employee) => {
-      const team1 = teams.find(t => t.team_key === 'team_1');
-      const team2 = teams.find(t => t.team_key === 'team_2');
+      const team1 = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_1') : null;
+      const team2 = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_2') : null;
       
-      if (team1 && employee.equipo === team1.team_name) return 'team_1';
-      if (team2 && employee.equipo === team2.team_name) return 'team_2';
+      if (team1 && employee?.equipo === team1.team_name) return 'team_1';
+      if (team2 && employee?.equipo === team2.team_name) return 'team_2';
       return null;
     };
 
     const getTeamScheduleForWeek = (teamKey, date) => {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
       const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-      return teamSchedules.find(s => s.team_key === teamKey && s.fecha_inicio_semana === weekStartStr);
+      return Array.isArray(teamSchedules) ? teamSchedules.find(s => s?.team_key === teamKey && s?.fecha_inicio_semana === weekStartStr) : null;
     };
     
     const getEmployeeShift = (employee, date) => {
+      if (!employee) return "Mañana";
       if (employee.tipo_turno === "Fijo Mañana") return "Mañana";
       if (employee.tipo_turno === "Fijo Tarde") return "Tarde";
       
@@ -110,6 +115,8 @@ export default function TimelineView({
     };
     
     const getEmployeeSchedule = (employee, shift) => {
+      if (!employee) return { start: 7 * 60, end: 15 * 60 };
+      
       if (employee.tipo_jornada === "Reducida" && employee.horario_personalizado_inicio && employee.horario_personalizado_fin) {
         const [startH, startM] = employee.horario_personalizado_inicio.split(':').map(Number);
         const [endH, endM] = employee.horario_personalizado_fin.split(':').map(Number);
@@ -128,6 +135,8 @@ export default function TimelineView({
     };
     
     const isEmployeeAvailable = (employee, date) => {
+      if (!employee || !date) return false;
+
       const dateStr = format(date, "yyyy-MM-dd");
       const dayOfWeek = date.getDay();
       
@@ -146,7 +155,7 @@ export default function TimelineView({
       }
       
       for (const vacRange of vacationRanges) {
-        if (vacRange.employeeIds === null || vacRange.employeeIds?.includes(employee.id)) {
+        if (vacRange?.employeeIds === null || vacRange?.employeeIds?.includes(employee.id)) {
           if (isWithinInterval(date, { start: vacRange.start, end: vacRange.end })) {
             return false;
           }
@@ -228,16 +237,16 @@ export default function TimelineView({
     );
   }
 
-  const maxEmployees = Math.max(...workingIntervals.map(i => i.availableEmployees), 1);
-  const avgEmployees = (workingIntervals.reduce((sum, i) => sum + i.availableEmployees, 0) / workingIntervals.length).toFixed(1);
+  const maxEmployees = Math.max(...workingIntervals.map(i => i?.availableEmployees || 0), 1);
+  const avgEmployees = (workingIntervals.reduce((sum, i) => sum + (i?.availableEmployees || 0), 0) / workingIntervals.length).toFixed(1);
 
   const getTeamColor = () => {
     if (selectedTeam === 'team_1') {
-      const team = teams.find(t => t.team_key === 'team_1');
+      const team = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_1') : null;
       return team?.color || '#8B5CF6';
     }
     if (selectedTeam === 'team_2') {
-      const team = teams.find(t => t.team_key === 'team_2');
+      const team = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_2') : null;
       return team?.color || '#EC4899';
     }
     return '#3B82F6';
