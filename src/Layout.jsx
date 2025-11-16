@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -25,6 +26,7 @@ import {
   MessageSquare,
   TrendingUp,
   Calendar as CalendarIcon,
+  UserCog, // Added UserCog icon
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,6 +46,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+
+const configModules = [
+  {
+    title: "Vista Maestra Empleados",
+    url: createPageUrl("MasterEmployeeView"),
+    icon: UserCog,
+  },
+  {
+    title: "Panel de Control RRHH",
+    url: createPageUrl("HRDashboard"),
+    icon: TrendingUp,
+  },
+  // Other menu items would go here if they were part of configModules
+];
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
