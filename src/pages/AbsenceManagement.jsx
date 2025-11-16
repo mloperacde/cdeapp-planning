@@ -52,6 +52,7 @@ import ApprovalFlowManager from "../components/absences/ApprovalFlowManager";
 import RecurringAbsenceMonitor from "../components/absences/RecurringAbsenceMonitor";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import { notifySupervisorsAbsenceRequest } from "../components/notifications/NotificationService";
+import ResidualDaysManager from "../components/absences/ResidualDaysManager";
 
 // Sugerencias de motivos frecuentes por tipo
 const SUGGESTED_REASONS = {
@@ -117,6 +118,7 @@ export default function AbsenceManagementPage() {
   const [fullDay, setFullDay] = useState(false);
   const [unknownEndDate, setUnknownEndDate] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [activeTab, setActiveTab] = useState("list"); // New state for active tab
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -492,43 +494,18 @@ export default function AbsenceManagementPage() {
           </Button>
         </div>
 
-        <Tabs defaultValue="absences" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="absences">
-              <UserX className="w-4 h-4 mr-2" />
-              Registro
-            </TabsTrigger>
-            <TabsTrigger value="approval">
-              <CheckSquare className="w-4 h-4 mr-2" />
-              Aprobaciones
-            </TabsTrigger>
-            <TabsTrigger value="pending">
-              <CalendarDays className="w-4 h-4 mr-2" />
-              Saldo Pendiente
-            </TabsTrigger>
-            <TabsTrigger value="recurring">
-              <Infinity className="w-4 h-4 mr-2" />
-              Recurrentes
-            </TabsTrigger>
-            <TabsTrigger value="calendar">
-              <CalendarDays className="w-4 h-4 mr-2" />
-              Calendario
-            </TabsTrigger>
-            <TabsTrigger value="types">
-              <Settings className="w-4 h-4 mr-2" />
-              Tipos
-            </TabsTrigger>
-            <TabsTrigger value="flows">
-              <GitFork className="w-4 h-4 mr-2" />
-              Flujos
-            </TabsTrigger>
-            <TabsTrigger value="reports">
-              <FileText className="w-4 h-4 mr-2" />
-              Reportes
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="list">Listado</TabsTrigger>
+            <TabsTrigger value="approval">Aprobar</TabsTrigger>
+            <TabsTrigger value="balance">Saldos</TabsTrigger>
+            <TabsTrigger value="residual">Días Residuales</TabsTrigger>
+            <TabsTrigger value="calendar">Calendario</TabsTrigger>
+            <TabsTrigger value="types">Tipos</TabsTrigger>
+            <TabsTrigger value="reports">Reportes</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="absences" className="space-y-6">
+          <TabsContent value="list" className="space-y-6">
             <LongAbsenceAlert employees={employees} absences={absences} />
             
             <AbsenceNotifications 
@@ -761,12 +738,12 @@ export default function AbsenceManagementPage() {
             />
           </TabsContent>
 
-          <TabsContent value="pending">
+          <TabsContent value="balance">
             <VacationPendingBalancePanel employees={employees} />
           </TabsContent>
 
-          <TabsContent value="recurring">
-            <RecurringAbsenceMonitor absences={absences} employees={employees} />
+          <TabsContent value="residual">
+            <ResidualDaysManager employees={employees} />
           </TabsContent>
 
           <TabsContent value="calendar">
@@ -781,16 +758,8 @@ export default function AbsenceManagementPage() {
             <AbsenceTypeManager />
           </TabsContent>
 
-          <TabsContent value="flows">
-            <ApprovalFlowManager />
-          </TabsContent>
-
           <TabsContent value="reports">
             <AdvancedReportGenerator />
-          </TabsContent>
-
-          <TabsContent value="dashboard">
-            <AbsenceDashboard absences={absences} employees={employees} />
           </TabsContent>
         </Tabs>
       </div>

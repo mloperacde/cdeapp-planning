@@ -183,10 +183,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     onSuccess: () => {
       queryClient.invalidateQueries(); // This will invalidate all active queries
       onClose();
-      toast({
-        title: "Éxito",
-        description: "Empleado guardado - datos actualizados en toda la aplicación.",
-      });
     },
   });
 

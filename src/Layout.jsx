@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -99,20 +100,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("HRDashboard")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("HRDashboard")} className="flex items-center gap-3 px-3 py-2.5">
-                        <TrendingUp className="w-5 h-5" />
-                        <span className="text-sm">Panel RRHH</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
                   <Collapsible open={openSections.planning} onOpenChange={() => toggleSection('planning')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
@@ -168,6 +155,7 @@ export default function Layout({ children, currentPageName }) {
                         <SidebarMenuButton
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
+                              createPageUrl("HRDashboard"), // Added HRDashboard here
                               createPageUrl("Employees"),
                               createPageUrl("ETTTemporaryEmployees"),
                               createPageUrl("EmployeeOnboarding"),
@@ -187,6 +175,18 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
+                          {/* HRDashboard moved here */}
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("HRDashboard")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("HRDashboard")} className="flex items-center gap-2 px-3 py-2">
+                              <TrendingUp className="w-4 h-4" />
+                              Panel RRHH
+                            </Link>
+                          </SidebarMenuButton>
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
