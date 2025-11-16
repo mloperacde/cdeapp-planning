@@ -52,6 +52,7 @@ import ApprovalFlowManager from "../components/absences/ApprovalFlowManager";
 import RecurringAbsenceMonitor from "../components/absences/RecurringAbsenceMonitor";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import { notifySupervisorsAbsenceRequest } from "../components/notifications/NotificationService";
+import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
 import ResidualDaysManager from "../components/absences/ResidualDaysManager";
 
 // Sugerencias de motivos frecuentes por tipo
@@ -200,10 +201,16 @@ export default function AbsenceManagementPage() {
       } else {
         result = await base44.entities.Absence.create(data);
         
-        // Notificar a supervisores sobre nueva solicitud
+        // Notificación en tiempo real a supervisores
         const employee = employees.find(e => e.id === data.employee_id);
-        if (employee) {
-          await notifySupervisorsAbsenceRequest(result.id, employee.nombre);
+        const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
+        if (employee && absenceType) {
+          await notifyAbsenceRequestRealtime(
+            result.id, 
+            employee.nombre, 
+            absenceType,
+            format(new Date(data.fecha_inicio), "dd/MM/yyyy", { locale: es })
+          );
         }
       }
 
