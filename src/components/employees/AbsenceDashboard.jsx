@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { startOfYear, endOfYear } from "date-fns";
 import { calculateGlobalAbsenteeism } from "../absences/AbsenteeismCalculator";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import AIDashboardSummary from "../reports/AIDashboardSummary";
 
 export default function AbsenceDashboard({ absences, employees }) {
   const { data: globalAbsenteeism, refetch: refetchAbsenteeism, isLoading: calculatingAbsenteeism } = useQuery({
@@ -54,6 +56,11 @@ export default function AbsenceDashboard({ absences, employees }) {
 
   return (
     <div className="space-y-6">
+      <AIDashboardSummary 
+        data={{ absences, employees, byType, byEmployee }} 
+        type="absences" 
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-4">
