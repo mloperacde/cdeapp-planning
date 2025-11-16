@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +10,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { notifyAbsenceDecision } from "../notifications/NotificationService";
+import PayrollExportButton from "./PayrollExportButton";
 
 export default function AbsenceApprovalPanel({ absences, employees, absenceTypes, currentUser }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -70,10 +70,13 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
   return (
     <Card className="shadow-xl border-orange-200">
       <CardHeader className="bg-orange-50 border-b">
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-orange-600" />
-          Ausencias Pendientes de Aprobación ({pendingAbsences.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-orange-600" />
+            Ausencias Pendientes de Aprobación ({pendingAbsences.length})
+          </CardTitle>
+          <PayrollExportButton absences={absences} employees={employees} />
+        </div>
       </CardHeader>
       <CardContent className="p-6">
         {pendingAbsences.length === 0 ? (
