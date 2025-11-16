@@ -43,6 +43,7 @@ import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
 import RoleManagement from './pages/RoleManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import Messaging from './pages/Messaging';
+import IncentiveManagement from './pages/IncentiveManagement';
 import Layout from './Layout.jsx';
 
 
@@ -92,6 +93,7 @@ export const PAGES = {
     "RoleManagement": RoleManagement,
     "DocumentManagement": DocumentManagement,
     "Messaging": Messaging,
+    "IncentiveManagement": IncentiveManagement,
 }
 
 export const pagesConfig = {
