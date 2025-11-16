@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -24,7 +23,8 @@ import {
   Award,
   Shield,
   MessageSquare,
-  TrendingUp, // Added TrendingUp import
+  TrendingUp,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,7 +52,6 @@ export default function Layout({ children, currentPageName }) {
     informes: false,
     maquinas: false,
     planning: false,
-    // habilidades: false // Removed as SkillMatrix is no longer a collapsible parent
   });
 
   const toggleSection = (section) => {
@@ -70,10 +69,10 @@ export default function Layout({ children, currentPageName }) {
           <SidebarHeader className="border-b border-slate-200 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                <Clock className="w-6 h-6 text-white" />
+                <CalendarIcon className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="font-bold text-lg text-slate-900">CDE PlanApp</h2>
+                <h2 className="font-bold text-lg text-slate-900">CdeApp Planning</h2>
                 <p className="text-xs text-slate-500">Gestión de Empleados y Planificador</p>
               </div>
             </div>
@@ -156,7 +155,6 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Employees"),
-                              // Removed createPageUrl("MasterEmployeeView"),
                               createPageUrl("ETTTemporaryEmployees"),
                               createPageUrl("EmployeeOnboarding"),
                               createPageUrl("AttendanceManagement"),
@@ -175,7 +173,6 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
-                          {/* Removed MasterEmployeeView menu item */}
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
@@ -277,23 +274,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
-                  {/* REMOVED SkillMatrix from here */}
-                  {/*
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("SkillMatrix")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("SkillMatrix")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Award className="w-5 h-5" />
-                        <span className="text-sm">Matriz de Habilidades</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  */}
-
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -308,7 +288,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* New Messaging menu item */}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -323,7 +302,6 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {/* New IncentiveManagement menu item */}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -337,23 +315,6 @@ export default function Layout({ children, currentPageName }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-
-                  {/* REMOVED DataImport from here as per instructions */}
-                  {/*
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("DataImport")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("DataImport")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Upload className="w-5 h-5" />
-                        <span className="text-sm">Importar Datos</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  */}
 
                   <Collapsible open={openSections.informes} onOpenChange={() => toggleSection('informes')}>
                     <SidebarMenuItem>
@@ -455,7 +416,7 @@ export default function Layout({ children, currentPageName }) {
           <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 px-6 py-4 md:hidden">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors duration-200" />
-              <h1 className="text-xl font-semibold text-slate-900">CDE PlanApp</h1>
+              <h1 className="text-xl font-semibold text-slate-900">CdeApp Planning</h1>
             </div>
           </header>
 

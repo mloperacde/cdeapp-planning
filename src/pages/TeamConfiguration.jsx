@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,8 +66,8 @@ export default function TeamConfigurationPage() {
   });
 
   const [teamFormData, setTeamFormData] = useState({
-    team_1: { team_key: 'team_1', team_name: 'Turno Equipo Isa', descripcion: '', activo: true, color: '#8B5CF6' },
-    team_2: { team_key: 'team_2', team_name: 'Turno Equipo Sara', descripcion: '', activo: true, color: '#EC4899' }
+    team_1: { team_key: 'team_1', team_name: 'Turno 1 (Isa)', descripcion: '', activo: true, color: '#8B5CF6' },
+    team_2: { team_key: 'team_2', team_name: 'Turno 2 (Sara)', descripcion: '', activo: true, color: '#EC4899' }
   });
 
   React.useEffect(() => {
@@ -423,7 +424,7 @@ export default function TeamConfigurationPage() {
                             ...teamFormData,
                             team_1: { ...teamFormData.team_1, team_name: e.target.value }
                           })}
-                          placeholder="ej. Turno Equipo Isa"
+                          placeholder="ej. Turno 1 (Isa)"
                         />
                       </div>
                       <div className="space-y-2">
@@ -478,7 +479,7 @@ export default function TeamConfigurationPage() {
                             ...teamFormData,
                             team_2: { ...teamFormData.team_2, team_name: e.target.value }
                           })}
-                          placeholder="ej. Turno Equipo Sara"
+                          placeholder="ej. Turno 2 (Sara)"
                         />
                       </div>
                       <div className="space-y-2">
