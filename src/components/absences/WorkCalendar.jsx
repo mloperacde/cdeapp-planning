@@ -59,20 +59,22 @@ export default function WorkCalendar() {
   const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
 
   const getDayType = (date) => {
+    if (!date) return { isHoliday: false, isVacation: false, isWeekend: false, holiday: null, vacation: null };
+    
     const dateStr = format(date, 'yyyy-MM-dd');
 
-    const holiday = holidays.find(h => {
-      if (!h.date) return false;
+    const holiday = Array.isArray(holidays) ? holidays.find(h => {
+      if (!h?.date) return false;
       try {
         const hDate = format(new Date(h.date), 'yyyy-MM-dd');
         return hDate === dateStr;
       } catch {
         return false;
       }
-    });
+    }) : null;
 
-    const vacation = vacations.find(v => {
-      if (!v.start_date || !v.end_date) return false;
+    const vacation = Array.isArray(vacations) ? vacations.find(v => {
+      if (!v?.start_date || !v?.end_date) return false;
       try {
         const vStart = new Date(v.start_date);
         const vEnd = new Date(v.end_date);
@@ -84,7 +86,7 @@ export default function WorkCalendar() {
       } catch {
         return false;
       }
-    });
+    }) : null;
 
     const dayOfWeek = getDay(date);
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -99,6 +101,7 @@ export default function WorkCalendar() {
   };
 
   const getMonthDays = (monthDate) => {
+    if (!monthDate) return [];
     const monthStart = startOfMonth(monthDate);
     const monthEnd = endOfMonth(monthDate);
     return eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -108,50 +111,54 @@ export default function WorkCalendar() {
     const festivos = [];
     const vacaciones = [];
 
-    holidays.forEach(h => {
-      if (!h.date) return;
-      try {
-        const date = new Date(h.date);
-        const year = date.getFullYear();
-        const currentYear = currentDate.getFullYear();
-        if (year === currentYear) {
-          festivos.push({
-            fecha: date,
-            nombre: h.name,
-            descripcion: h.description,
-            id: h.id,
-            entity: 'Holiday'
-          });
-        }
-      } catch {}
-    });
+    if (Array.isArray(holidays)) {
+      holidays.forEach(h => {
+        if (!h?.date) return;
+        try {
+          const date = new Date(h.date);
+          const year = date.getFullYear();
+          const currentYear = currentDate.getFullYear();
+          if (year === currentYear) {
+            festivos.push({
+              fecha: date,
+              nombre: h.name,
+              descripcion: h.description,
+              id: h.id,
+              entity: 'Holiday'
+            });
+          }
+        } catch {}
+      });
+    }
 
-    vacations.forEach(v => {
-      if (!v.start_date || !v.end_date) return;
-      try {
-        const start = new Date(v.start_date);
-        const end = new Date(v.end_date);
-        const year = start.getFullYear();
-        const currentYear = currentDate.getFullYear();
-        if (year === currentYear) {
-          const allDays = eachDayOfInterval({ start, end });
-          const dias = allDays.filter(d => {
-            const dayOfWeek = getDay(d);
-            return dayOfWeek !== 0 && dayOfWeek !== 6;
-          }).length;
-          
-          vacaciones.push({
-            fecha: start,
-            nombre: v.name || `Vacaciones`,
-            descripcion: v.notes,
-            fecha_fin: end,
-            dias: dias,
-            id: v.id,
-            entity: 'Vacation'
-          });
-        }
-      } catch {}
-    });
+    if (Array.isArray(vacations)) {
+      vacations.forEach(v => {
+        if (!v?.start_date || !v?.end_date) return;
+        try {
+          const start = new Date(v.start_date);
+          const end = new Date(v.end_date);
+          const year = start.getFullYear();
+          const currentYear = currentDate.getFullYear();
+          if (year === currentYear) {
+            const allDays = eachDayOfInterval({ start, end });
+            const dias = allDays.filter(d => {
+              const dayOfWeek = getDay(d);
+              return dayOfWeek !== 0 && dayOfWeek !== 6;
+            }).length;
+            
+            vacaciones.push({
+              fecha: start,
+              nombre: v.name || `Vacaciones`,
+              descripcion: v.notes,
+              fecha_fin: end,
+              dias: dias,
+              id: v.id,
+              entity: 'Vacation'
+            });
+          }
+        } catch {}
+      });
+    }
 
     return {
       festivosList: festivos.sort((a, b) => a.fecha - b.fecha),
@@ -165,17 +172,19 @@ export default function WorkCalendar() {
     let vacaciones = 0;
     let finesSemana = 0;
 
-    months.forEach(monthDate => {
-      const monthDays = getMonthDays(monthDate);
+    if (Array.isArray(months)) {
+      months.forEach(monthDate => {
+        const monthDays = getMonthDays(monthDate);
 
-      monthDays.forEach(day => {
-        const { isHoliday, isVacation, isWeekend } = getDayType(day);
-        if (isHoliday) festivos++;
-        else if (isVacation) vacaciones++;
-        else if (isWeekend) finesSemana++;
-        else laborables++;
+        monthDays.forEach(day => {
+          const { isHoliday, isVacation, isWeekend } = getDayType(day);
+          if (isHoliday) festivos++;
+          else if (isVacation) vacaciones++;
+          else if (isWeekend) finesSemana++;
+          else laborables++;
+        });
       });
-    });
+    }
 
     const totalNoHabiles = festivos + vacaciones + finesSemana;
     return { laborables, festivos, vacaciones, finesSemana, totalNoHabiles };
@@ -303,8 +312,8 @@ export default function WorkCalendar() {
                               'text-slate-700'
                             }`}
                             title={
-                              holiday?.name || // Changed from holiday?.nombre
-                              vacation?.name || // Changed from vacation?.nombre
+                              holiday?.name ||
+                              vacation?.name ||
                               (isWeekend ? 'Fin de semana' : '')
                             }
                           >
