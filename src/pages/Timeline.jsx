@@ -20,59 +20,60 @@ export default function Timeline() {
   const [isCalling, setIsCalling] = useState(false);
 
   const getDateRange = () => {
+    const dateCopy = new Date(selectedDate); // Create a copy to avoid mutating the state date
     switch (viewMode) {
       case 'day':
         return {
-          start: new Date(selectedDate.setHours(7, 0, 0, 0)),
-          end: new Date(selectedDate.setHours(22, 0, 0, 0))
+          start: new Date(dateCopy.setHours(7, 0, 0, 0)),
+          end: new Date(dateCopy.setHours(22, 0, 0, 0))
         };
       case 'week':
-        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-        const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+        const weekStart = startOfWeek(dateCopy, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(dateCopy, { weekStartsOn: 1 });
         weekStart.setHours(7, 0, 0, 0);
         weekEnd.setHours(22, 0, 0, 0);
         return { start: weekStart, end: weekEnd };
       case 'month':
-        const monthStart = startOfMonth(selectedDate);
-        const monthEnd = endOfMonth(selectedDate);
+        const monthStart = startOfMonth(dateCopy);
+        const monthEnd = endOfMonth(dateCopy);
         monthStart.setHours(7, 0, 0, 0);
         monthEnd.setHours(22, 0, 0, 0);
         return { start: monthStart, end: monthEnd };
       default:
         return {
-          start: new Date(selectedDate.setHours(7, 0, 0, 0)),
-          end: new Date(selectedDate.setHours(22, 0, 0, 0))
+          start: new Date(dateCopy.setHours(7, 0, 0, 0)),
+          end: new Date(dateCopy.setHours(22, 0, 0, 0))
         };
     }
   };
 
   const { start: startDate, end: endDate } = getDateRange();
 
-  const { data: holidays, isLoading: isLoadingHolidays, refetch: refetchHolidays } = useQuery({
+  const { data: holidays = [], isLoading: isLoadingHolidays, refetch: refetchHolidays } = useQuery({
     queryKey: ['holidays'],
     queryFn: () => base44.entities.Holiday.list(),
     initialData: [],
   });
 
-  const { data: vacations, isLoading: isLoadingVacations, refetch: refetchVacations } = useQuery({
+  const { data: vacations = [], isLoading: isLoadingVacations, refetch: refetchVacations } = useQuery({
     queryKey: ['vacations'],
     queryFn: () => base44.entities.Vacation.list(),
     initialData: [],
   });
 
-  const { data: employees, isLoading: isLoadingEmployees } = useQuery({
+  const { data: employees = [] } = useQuery({ // Removed isLoadingEmployees as per instructions
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
     initialData: [],
   });
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
 
-  const { data: teamSchedules } = useQuery({
+  const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
     initialData: [],
@@ -81,9 +82,9 @@ export default function Timeline() {
   // Get unique departments
   const departments = useMemo(() => {
     const depts = new Set();
-    if (employees) { // Ensure employees data is available
+    if (Array.isArray(employees)) { // Ensure employees data is available and is an array
       employees.forEach(emp => {
-        if (emp.departamento) depts.add(emp.departamento);
+        if (emp?.departamento) depts.add(emp.departamento); // Safely access departamento
       });
     }
     return Array.from(depts).sort();
@@ -120,15 +121,15 @@ export default function Timeline() {
               onViewModeChange={setViewMode}
               selectedDate={selectedDate}
               onSelectedDateChange={setSelectedDate}
-              holidays={holidays}
+              holidays={holidays || []}
               isLoadingHolidays={isLoadingHolidays}
               onHolidaysUpdate={refetchHolidays}
-              vacations={vacations}
+              vacations={vacations || []}
               isLoadingVacations={isLoadingVacations}
               onVacationsUpdate={refetchVacations}
               selectedTeam={selectedTeam}
               onSelectedTeamChange={setSelectedTeam}
-              teams={teams}
+              teams={teams || []}
               selectedDepartment={selectedDepartment}
               onSelectedDepartmentChange={setSelectedDepartment}
               departments={departments}
@@ -139,12 +140,12 @@ export default function Timeline() {
             <TimelineView 
               startDate={startDate} 
               endDate={endDate}
-              holidays={holidays}
-              vacations={vacations}
+              holidays={holidays || []}
+              vacations={vacations || []}
               selectedTeam={selectedTeam}
-              employees={employees}
-              teams={teams}
-              teamSchedules={teamSchedules}
+              employees={employees || []}
+              teams={teams || []}
+              teamSchedules={teamSchedules || []}
               viewMode={viewMode}
               selectedDepartment={selectedDepartment}
             />
