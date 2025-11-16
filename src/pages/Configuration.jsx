@@ -1,9 +1,8 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Bell, FileText, Search, Database, UserCog, UserPlus, Smartphone, Shield, Upload } from "lucide-react";
+import { Settings, Bell, FileText, Search, Database, UserCog, UserPlus, Smartphone, Shield, Upload, Award } from "lucide-react";
 
 export default function ConfigurationPage() {
   const configModules = [
@@ -37,6 +36,14 @@ export default function ConfigurationPage() {
       icon: Shield,
       url: createPageUrl("RoleManagement"),
       color: "purple",
+      featured: true
+    },
+    {
+      title: "Matriz de Habilidades",
+      description: "Gestión de competencias y formación de empleados",
+      icon: Award,
+      url: createPageUrl("SkillMatrix"),
+      color: "emerald",
       featured: true
     },
     {
@@ -89,6 +96,7 @@ export default function ConfigurationPage() {
     indigo: "from-indigo-500 to-indigo-600",
     purple: "from-purple-500 to-purple-600",
     green: "from-green-500 to-green-600",
+    emerald: "from-emerald-500 to-emerald-600",
     orange: "from-orange-500 to-orange-600",
     red: "from-red-500 to-red-600",
     cyan: "from-cyan-500 to-cyan-600",

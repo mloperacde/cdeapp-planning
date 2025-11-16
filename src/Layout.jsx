@@ -14,7 +14,7 @@ import {
   FileText,
   Bell,
   Smartphone,
-  Upload, // Keep Upload icon as it might be used elsewhere or could be a previous oversight. If DataImport is removed, its direct usage here is gone.
+  Upload,
   UsersRound,
   ChevronDown,
   ChevronRight,
@@ -23,7 +23,7 @@ import {
   ClipboardCheck,
   Award,
   Shield,
-  MessageSquare, // Added MessageSquare icon
+  MessageSquare,
   // Removed UserCog import as it's no longer used for MasterEmployeeView
 } from "lucide-react";
 import {
@@ -52,7 +52,7 @@ export default function Layout({ children, currentPageName }) {
     informes: false,
     maquinas: false,
     planning: false,
-    habilidades: false
+    // habilidades: false // Removed as SkillMatrix is no longer a collapsible parent
   });
 
   const toggleSection = (section) => {
@@ -277,6 +277,8 @@ export default function Layout({ children, currentPageName }) {
                     </SidebarMenuItem>
                   </Collapsible>
 
+                  {/* REMOVED SkillMatrix from here */}
+                  {/*
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -290,6 +292,7 @@ export default function Layout({ children, currentPageName }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  */}
 
                   <SidebarMenuItem>
                     <SidebarMenuButton

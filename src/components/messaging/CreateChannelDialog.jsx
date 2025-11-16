@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,7 +39,7 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
 
   const createChannelMutation = useMutation({
     mutationFn: async (data) => {
-      let participantes = data.participantes;
+      let participantes = [...data.participantes]; // Create a shallow copy to avoid direct mutation
       
       if (data.tipo === "Equipo" && data.equipo) {
         participantes = employees.filter(e => e.equipo === data.equipo).map(e => e.id);
@@ -46,12 +47,16 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
         participantes = employees.filter(e => e.departamento === data.departamento).map(e => e.id);
       }
 
-      if (!participantes.includes(currentEmployee?.id)) {
-        participantes.push(currentEmployee?.id);
+      if (currentEmployee?.id && !participantes.includes(currentEmployee.id)) {
+        participantes.push(currentEmployee.id);
       }
 
       return base44.entities.ChatChannel.create({
-        ...data,
+        nombre: data.nombre,
+        descripcion: data.descripcion,
+        tipo: data.tipo,
+        equipo: data.tipo === "Equipo" ? data.equipo : undefined, // Conditionally include equipo
+        departamento: data.tipo === "Departamento" ? data.departamento : undefined, // Conditionally include departamento
         participantes,
         admins: [currentEmployee?.id],
         activo: true
@@ -61,6 +66,10 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
       queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
       toast.success("Canal creado");
       onClose();
+    },
+    onError: (error) => {
+      console.error("Error creating channel:", error);
+      toast.error("Error al crear canal");
     }
   });
 

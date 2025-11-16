@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar, ChevronLeft, ChevronRight, Download, Edit2, Save, X, Plus } from "lucide-react";
-import { 
-  format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, 
+import {
+  format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay,
   addYears, subYears, startOfYear, endOfYear, eachMonthOfInterval
 } from "date-fns";
 import { es } from "date-fns/locale";
@@ -59,11 +60,11 @@ export default function WorkCalendar() {
 
   const getDayType = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    
+
     const holiday = Array.isArray(holidays) ? holidays.find(h => {
-      if (!h.fecha) return false;
+      if (!h.date) return false;
       try {
-        const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
+        const hDate = format(new Date(h.date), 'yyyy-MM-dd');
         return hDate === dateStr;
       } catch {
         return false;
@@ -71,10 +72,10 @@ export default function WorkCalendar() {
     }) : null;
 
     const vacation = Array.isArray(vacations) ? vacations.find(v => {
-      if (!v.fecha_inicio || !v.fecha_fin) return false;
+      if (!v.start_date || !v.end_date) return false;
       try {
-        const vStart = new Date(v.fecha_inicio);
-        const vEnd = new Date(v.fecha_fin);
+        const vStart = new Date(v.start_date);
+        const vEnd = new Date(v.end_date);
         return date >= vStart && date <= vEnd;
       } catch {
         return false;
@@ -84,9 +85,9 @@ export default function WorkCalendar() {
     const dayOfWeek = getDay(date);
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    return { 
-      isHoliday: !!holiday, 
-      isVacation: !!vacation, 
+    return {
+      isHoliday: !!holiday,
+      isVacation: !!vacation,
       isWeekend,
       holiday,
       vacation
@@ -101,12 +102,12 @@ export default function WorkCalendar() {
 
   const noLaborablesList = useMemo(() => {
     const list = [];
-    
+
     if (Array.isArray(holidays)) {
       holidays.forEach(h => {
-        if (!h.fecha) return;
+        if (!h.date) return;
         try {
-          const date = new Date(h.fecha);
+          const date = new Date(h.date);
           const year = date.getFullYear();
           const currentYear = currentDate.getFullYear();
           if (year === currentYear) {
@@ -125,10 +126,10 @@ export default function WorkCalendar() {
 
     if (Array.isArray(vacations)) {
       vacations.forEach(v => {
-        if (!v.fecha_inicio || !v.fecha_fin) return;
+        if (!v.start_date || !v.end_date) return;
         try {
-          const start = new Date(v.fecha_inicio);
-          const end = new Date(v.fecha_fin);
+          const start = new Date(v.start_date);
+          const end = new Date(v.end_date);
           const year = start.getFullYear();
           const currentYear = currentDate.getFullYear();
           if (year === currentYear) {
@@ -157,7 +158,7 @@ export default function WorkCalendar() {
 
     months.forEach(monthDate => {
       const monthDays = getMonthDays(monthDate);
-      
+
       monthDays.forEach(day => {
         const { isHoliday, isVacation, isWeekend } = getDayType(day);
         if (isHoliday) festivos++;
@@ -256,7 +257,7 @@ export default function WorkCalendar() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 print:gap-1.5">
             {months.map(monthDate => {
               const monthDays = getMonthDays(monthDate);
-              
+
               return (
                 <Card key={monthDate.toString()} className="border border-slate-200 print:border-slate-400">
                   <CardHeader className="pb-1 bg-slate-50 border-b print:pb-0.5 print:bg-slate-100">
@@ -272,7 +273,7 @@ export default function WorkCalendar() {
                         </div>
                       ))}
                     </div>
-                    
+
                     <div className="grid grid-cols-7 gap-0.5">
                       {Array.from({ length: getDay(monthDays[0]) === 0 ? 6 : getDay(monthDays[0]) - 1 }).map((_, i) => (
                         <div key={`empty-${i}`} className="aspect-square" />
@@ -293,8 +294,8 @@ export default function WorkCalendar() {
                               'text-slate-700'
                             }`}
                             title={
-                              holiday?.nombre || 
-                              vacation?.nombre || 
+                              holiday?.nombre ||
+                              vacation?.nombre ||
                               (isWeekend ? 'Fin de semana' : '')
                             }
                           >
@@ -364,7 +365,7 @@ export default function WorkCalendar() {
                         )}
                       </div>
                       <div className="font-semibold text-slate-900 mb-1 print:text-[10px] print:mb-0">{item.nombre}</div>
-                      
+
                       {editingId === item.id ? (
                         <div className="space-y-2">
                           <Textarea
@@ -375,17 +376,17 @@ export default function WorkCalendar() {
                             placeholder="Añadir descripción..."
                           />
                           <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={() => handleSaveDescription(item)}
                               disabled={updateHolidayMutation.isPending || updateVacationMutation.isPending}
                             >
                               <Save className="w-3 h-3 mr-1" />
                               Guardar
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
+                            <Button
+                              size="sm"
+                              variant="outline"
                               onClick={() => setEditingId(null)}
                             >
                               <X className="w-3 h-3 mr-1" />
@@ -404,7 +405,7 @@ export default function WorkCalendar() {
                         </>
                       )}
                     </div>
-                    
+
                     {editingId !== item.id && (
                       <Button
                         size="sm"
@@ -424,11 +425,21 @@ export default function WorkCalendar() {
       </Card>
 
       {showHolidayManager && (
-        <HolidayManager onClose={() => setShowHolidayManager(false)} />
+        <HolidayManager
+          open={showHolidayManager}
+          onOpenChange={setShowHolidayManager}
+          holidays={holidays}
+          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['holidays'] })}
+        />
       )}
 
       {showVacationManager && (
-        <VacationManager onClose={() => setShowVacationManager(false)} />
+        <VacationManager
+          open={showVacationManager}
+          onOpenChange={setShowVacationManager}
+          vacations={vacations}
+          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vacations'] })}
+        />
       )}
 
       <style>{`
@@ -437,18 +448,18 @@ export default function WorkCalendar() {
             size: A4 portrait;
             margin: 8mm;
           }
-          
+
           body * {
             visibility: hidden;
           }
-          
+
           #work-calendar,
           #work-calendar *,
           #no-laborables-list,
           #no-laborables-list * {
             visibility: visible;
           }
-          
+
           #work-calendar {
             position: absolute;
             left: 0;
@@ -456,18 +467,18 @@ export default function WorkCalendar() {
             width: 100%;
             page-break-after: always;
           }
-          
+
           #no-laborables-list {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
           }
-          
+
           .print\\:hidden {
             display: none !important;
           }
-          
+
           .bg-red-200, .bg-blue-200, .bg-slate-200, .bg-red-50, .bg-blue-50, .bg-green-50, .bg-slate-50, .bg-slate-100 {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
