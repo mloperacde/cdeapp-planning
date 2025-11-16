@@ -44,6 +44,10 @@ import RoleManagement from './pages/RoleManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import Messaging from './pages/Messaging';
 import IncentiveManagement from './pages/IncentiveManagement';
+import MobileAbsences from './pages/MobileAbsences';
+import MobileVacations from './pages/MobileVacations';
+import MobilePlanning from './pages/MobilePlanning';
+import MobileChat from './pages/MobileChat';
 import Layout from './Layout.jsx';
 
 
@@ -94,6 +98,10 @@ export const PAGES = {
     "DocumentManagement": DocumentManagement,
     "Messaging": Messaging,
     "IncentiveManagement": IncentiveManagement,
+    "MobileAbsences": MobileAbsences,
+    "MobileVacations": MobileVacations,
+    "MobilePlanning": MobilePlanning,
+    "MobileChat": MobileChat,
 }
 
 export const pagesConfig = {
