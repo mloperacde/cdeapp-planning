@@ -1,121 +1,99 @@
-
 import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Bell, FileText, Search, Database, UserCog, UserPlus, Smartphone, Shield, Upload, Award, Users, Cog } from "lucide-react";
 
 export default function ConfigurationPage() {
   const configModules = [
     {
-      title: "Vista Maestra de Empleados",
-      description: "Base de datos centralizada con filtros avanzados",
-      icon: Users,
-      url: createPageUrl("MasterEmployeeView"),
-      color: "blue",
-      featured: true
-    },
-    {
-      title: "Vista Maestra de Máquinas",
-      description: "Base de datos centralizada de máquinas",
-      icon: Cog,
-      url: createPageUrl("MasterMachineView"),
-      color: "purple",
-      featured: true
-    },
-    {
-      title: "Gestión Documental",
-      description: "Repositorio centralizado de documentos con control de versiones",
-      icon: FileText,
-      url: createPageUrl("DocumentManagement"),
-      color: "indigo",
-      featured: true
-    },
-    {
-      title: "Gestión de Usuarios App",
-      description: "Configura accesos y permisos de usuarios del sistema",
-      icon: UserPlus,
-      url: createPageUrl("AppUserManagement"),
-      color: "cyan",
+      title: "Tipos de Ausencias",
+      description: "Configura tipos de ausencias y permisos",
+      icon: Calendar,
+      url: createPageUrl("AbsenceTypeConfig"),
+      color: "red",
       featured: true
     },
     {
       title: "Roles y Permisos",
-      description: "Sistema robusto de roles y control de accesos",
+      description: "Gestiona roles de usuario y permisos de acceso",
       icon: Shield,
       url: createPageUrl("RoleManagement"),
+      color: "blue",
+      featured: true
+    },
+    {
+      title: "Notificaciones",
+      description: "Configura preferencias de notificaciones",
+      icon: Bell,
+      url: createPageUrl("Notifications"),
       color: "purple",
       featured: true
     },
     {
+      title: "Configuración de Equipos",
+      description: "Gestiona equipos y turnos rotativos",
+      icon: Users,
+      url: createPageUrl("TeamConfiguration"),
+      color: "green",
+      featured: false
+    },
+    {
+      title: "Gestión de Festivos y Vacaciones",
+      description: "Calendario laboral y días no laborables",
+      icon: Calendar,
+      url: createPageUrl("AbsenceManagement") + "?tab=calendar",
+      color: "orange",
+      featured: false
+    },
+    {
+      title: "Taquillas",
+      description: "Gestión de taquillas y vestuarios",
+      icon: FileText,
+      url: createPageUrl("LockerManagement"),
+      color: "indigo",
+      featured: false
+    },
+    {
+      title: "Mantenimiento",
+      description: "Tipos de mantenimiento y configuración",
+      icon: Wrench,
+      url: createPageUrl("MaintenanceTracking"),
+      color: "slate",
+      featured: false
+    },
+    {
+      title: "Plan de Incentivos",
+      description: "Configura objetivos y bonificaciones",
+      icon: DollarSign,
+      url: createPageUrl("IncentiveManagement"),
+      color: "emerald",
+      featured: false
+    },
+    {
       title: "Matriz de Habilidades",
-      description: "Gestión de competencias y formación de empleados",
+      description: "Gestión de competencias y formación",
       icon: Award,
       url: createPageUrl("SkillMatrix"),
-      color: "emerald",
-      featured: true
-    },
-    {
-      title: "Importar Datos",
-      description: "Importa datos masivos desde archivos Excel o CSV",
-      icon: Upload,
-      url: createPageUrl("DataImport"),
-      color: "green",
-      featured: true
-    },
-    {
-      title: "Configuración App Móvil",
-      description: "Registro con email o teléfono y configuración móvil",
-      icon: Smartphone,
-      url: createPageUrl("MobileAppConfig"),
-      color: "teal"
-    },
-    {
-      title: "Limpieza Duplicados Taquillas",
-      description: "Detecta y elimina duplicados en taquillas",
-      icon: Database,
-      url: createPageUrl("LockerDuplicateCleanup"),
-      color: "red"
-    },
-    {
-      title: "Tipos de Ausencias",
-      description: "Configura permisos según el Estatuto de los Trabajadores",
-      icon: FileText,
-      url: createPageUrl("AbsenceTypeInfo"),
-      color: "orange"
-    },
-    {
-      title: "Notificaciones Email",
-      description: "Configura notificaciones automáticas por email",
-      icon: Bell,
-      url: createPageUrl("EmailNotifications"),
-      color: "amber"
-    },
-    {
-      title: "Corrección de Datos",
-      description: "Corrige caracteres especiales en datos de empleados",
-      icon: Search,
-      url: createPageUrl("EmployeeDataCorrection"),
-      color: "slate"
+      color: "amber",
+      featured: false
     }
   ];
 
-  const colorClasses = {
-    blue: "from-blue-500 to-blue-600",
-    indigo: "from-indigo-500 to-indigo-600",
-    purple: "from-purple-500 to-purple-600",
-    green: "from-green-500 to-green-600",
-    emerald: "from-emerald-500 to-emerald-600",
-    orange: "from-orange-500 to-orange-600",
-    red: "from-red-500 to-red-600",
-    cyan: "from-cyan-500 to-cyan-600",
-    amber: "from-amber-500 to-amber-600",
-    teal: "from-teal-500 to-teal-600",
-    slate: "from-slate-500 to-slate-600"
-  };
-
   const featuredModules = configModules.filter(m => m.featured);
   const otherModules = configModules.filter(m => !m.featured);
+
+  const colorClasses = {
+    red: "from-red-500 to-red-600",
+    blue: "from-blue-500 to-blue-600",
+    green: "from-green-500 to-green-600",
+    purple: "from-purple-500 to-purple-600",
+    orange: "from-orange-500 to-orange-600",
+    indigo: "from-indigo-500 to-indigo-600",
+    slate: "from-slate-500 to-slate-600",
+    emerald: "from-emerald-500 to-emerald-600",
+    amber: "from-amber-500 to-amber-600"
+  };
 
   return (
     <div className="p-6 md:p-8">
@@ -123,27 +101,27 @@ export default function ConfigurationPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Settings className="w-8 h-8 text-blue-600" />
-            Configuración
+            Configuración del Sistema
           </h1>
           <p className="text-slate-600 mt-1">
-            Configura los ajustes del sistema y gestión centralizada
+            Accede a los diferentes módulos de configuración
           </p>
         </div>
 
-        {featuredModules.length > 0 && (
-          <>
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Módulos Principales</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-4">Configuración Principal</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {featuredModules.map((module) => {
                 const Icon = module.icon;
                 return (
                   <Link key={module.title} to={module.url}>
-                    <Card className="h-full hover:shadow-xl transition-all duration-300 border-2 border-blue-200 bg-white/90 backdrop-blur-sm cursor-pointer group">
+                    <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
                       <CardContent className="p-6">
-                        <div className={`w-20 h-20 rounded-xl bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                          <Icon className="w-10 h-10 text-white" />
+                        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                          <Icon className="w-7 h-7 text-white" />
                         </div>
-                        <h3 className="font-bold text-xl text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                        <h3 className="font-semibold text-lg text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
                           {module.title}
                         </h3>
                         <p className="text-sm text-slate-600">{module.description}</p>
@@ -153,29 +131,31 @@ export default function ConfigurationPage() {
                 );
               })}
             </div>
-          </>
-        )}
+          </div>
 
-        <h2 className="text-xl font-semibold text-slate-900 mb-4">Otras Configuraciones</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {otherModules.map((module) => {
-            const Icon = module.icon;
-            return (
-              <Link key={module.title} to={module.url}>
-                <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
-                  <CardContent className="p-6">
-                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                      <Icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="font-semibold text-xl text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {module.title}
-                    </h3>
-                    <p className="text-sm text-slate-600">{module.description}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-4">Otras Configuraciones</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {otherModules.map((module) => {
+                const Icon = module.icon;
+                return (
+                  <Link key={module.title} to={module.url}>
+                    <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
+                      <CardContent className="p-4">
+                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                          <Icon className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                          {module.title}
+                        </h3>
+                        <p className="text-xs text-slate-600">{module.description}</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
