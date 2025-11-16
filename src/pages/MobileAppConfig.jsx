@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input"; // Added Input component
 import {
   Smartphone, CheckCircle, Users, Download, Send,
   AlertCircle, Zap, Bell, Calendar, ArrowLeft,
-  CheckCircle2, MessageSquare, Clock, FileText, User, Award
+  CheckCircle2, MessageSquare, Clock, FileText, User, Award, Search // Added Search icon
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -21,6 +23,8 @@ export default function MobileAppConfigPage() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [sendingInvites, setSendingInvites] = useState(false);
+  const [inviteMethod, setInviteMethod] = useState("email"); // New state for invite method
+  const [searchTerm, setSearchTerm] = useState(""); // New state for search term
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
@@ -30,11 +34,34 @@ export default function MobileAppConfigPage() {
 
   const appUrl = window.location.origin + "/mobile";
 
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const hasContact = inviteMethod === "email"
+        ? emp.email
+        : emp.telefono_movil;
+
+      if (!hasContact) return false;
+
+      if (!searchTerm.trim()) return true;
+
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      return (
+        emp.nombre?.toLowerCase().includes(lowerCaseSearchTerm) ||
+        emp.email?.toLowerCase().includes(lowerCaseSearchTerm) ||
+        emp.departamento?.toLowerCase().includes(lowerCaseSearchTerm) ||
+        emp.puesto?.toLowerCase().includes(lowerCaseSearchTerm)
+      );
+    });
+  }, [employees, inviteMethod, searchTerm]);
+
   const sendInviteMutation = useMutation({
     mutationFn: async (employeeIds) => {
       const promises = employeeIds.map(async (empId) => {
         const employee = employees.find(e => e.id === empId);
-        if (!employee?.email && !employee?.telefono_movil) return;
+        if (!employee) return null;
+
+        const contactInfo = inviteMethod === "email" ? employee.email : employee.telefono_movil;
+        if (!contactInfo) return null; // Ensure contact info is available for the chosen method
 
         const guideText = `
 🌟 Bienvenido/a a CDE PlanApp Móvil 🌟
@@ -47,8 +74,8 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
 
 1. Abre tu navegador móvil (Chrome, Safari, Firefox)
 2. Visita: ${appUrl}
-3. Ingresa tu ${employee.email ? 'email' : 'teléfono móvil'}:
-   ${employee.email || employee.telefono_movil}
+3. Ingresa tu ${inviteMethod === "email" ? 'email' : 'teléfono móvil'}:
+   ${contactInfo}
 4. Recibirás un código de verificación
 5. ¡Listo! Ya tienes acceso
 
@@ -67,24 +94,50 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
 ¡Bienvenido/a!
         `;
 
-        if (employee.email) {
+        if (inviteMethod === "email" && employee.email) {
           await base44.integrations.Core.SendEmail({
             to: employee.email,
             subject: "🎉 Acceso a CDE PlanApp Móvil - Guía de Registro",
             body: guideText
           });
+          return employee;
         }
 
-        return employee;
+        // For SMS, we'd need an SMS integration - for now just email
+        // This part needs a real SMS integration. For now, it will only send if an email is also available as a fallback.
+        if (inviteMethod === "sms" && employee.telefono_movil) {
+          // Placeholder for actual SMS integration
+          // Example: await base44.integrations.SMS.SendSMS({ to: employee.telefono_movil, body: guideText });
+
+          // As per outline, if SMS is chosen but no actual SMS integration, we fall back to email if available.
+          if (employee.email) {
+            await base44.integrations.Core.SendEmail({
+              to: employee.email,
+              subject: "🎉 Acceso a CDE PlanApp Móvil - Guía de Registro",
+              body: guideText // Send the guide text via email as fallback
+            });
+            return employee; // Indicate success through email fallback
+          }
+          // If no email fallback, then no invitation was sent via preferred method or fallback
+          return null;
+        }
+
+        return null; // If no valid contact or method, return null
       });
 
-      return Promise.all(promises);
+      const sentResults = (await Promise.all(promises)).filter(r => r !== null);
+      return sentResults; // Return only successful sends
     },
     onSuccess: (results) => {
-      const sent = results.filter(r => r).length;
-      toast.success(`${sent} invitación(es) enviada(s)`);
+      const sent = results.length;
+      if (sent > 0) {
+        toast.success(`${sent} invitación(es) enviada(s) por ${inviteMethod === "email" ? "email" : "SMS (o email como fallback)"}`);
+      } else {
+        toast.warning("No se pudo enviar ninguna invitación con los métodos seleccionados.");
+      }
       setShowInviteDialog(false);
       setSelectedEmployees([]);
+      setSearchTerm(""); // Reset search term
     },
     onError: () => {
       toast.error("Error al enviar invitaciones");
@@ -92,16 +145,16 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
   });
 
   const toggleEmployee = (empId) => {
-    setSelectedEmployees(prev => 
+    setSelectedEmployees(prev =>
       prev.includes(empId) ? prev.filter(id => id !== empId) : [...prev, empId]
     );
   };
 
   const selectAll = () => {
-    if (selectedEmployees.length === employees.length) {
+    if (selectedEmployees.length === filteredEmployees.length && filteredEmployees.length > 0) {
       setSelectedEmployees([]);
     } else {
-      setSelectedEmployees(employees.map(e => e.id));
+      setSelectedEmployees(filteredEmployees.map(e => e.id));
     }
   };
 
@@ -162,7 +215,7 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
     {
       number: 1,
       title: "Enviar Invitaciones a Empleados",
-      description: "Usa el botón 'Invitar Empleados' para enviar la guía de acceso por email",
+      description: "Usa el botón 'Invitar Empleados' para enviar la guía de acceso por email o SMS", // Updated description
       status: "active",
       action: () => setShowInviteDialog(true)
     },
@@ -517,7 +570,11 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
         </Tabs>
 
         {showInviteDialog && (
-          <Dialog open={true} onOpenChange={() => setShowInviteDialog(false)}>
+          <Dialog open={true} onOpenChange={() => {
+            setShowInviteDialog(false);
+            setSearchTerm("");
+            setSelectedEmployees([]); // Clear selected employees when dialog closes
+          }}>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Enviar Invitaciones a Empleados</DialogTitle>
@@ -525,22 +582,50 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
 
               <div className="space-y-4">
                 <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    Se enviará un email con la guía de registro y la URL de acceso: <strong>{appUrl}</strong>
+                  <p className="text-sm text-blue-800 mb-3">
+                    Se enviará una guía de registro y la URL de acceso: <strong>{appUrl}</strong>
                   </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={inviteMethod === "email" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => { setInviteMethod("email"); setSelectedEmployees([]); }} // Clear selection on method change
+                      className="flex-1"
+                    >
+                      Enviar por Email
+                    </Button>
+                    <Button
+                      variant={inviteMethod === "sms" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => { setInviteMethod("sms"); setSelectedEmployees([]); }} // Clear selection on method change
+                      className="flex-1"
+                    >
+                      Enviar por SMS/Teléfono
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar empleados por nombre, email, departamento o puesto..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
 
                 <div className="flex items-center justify-between border-b pb-3">
                   <span className="font-semibold text-slate-900">
-                    Seleccionar Empleados ({selectedEmployees.length}/{employees.length})
+                    Seleccionar Empleados ({selectedEmployees.length}/{filteredEmployees.length})
                   </span>
-                  <Button size="sm" variant="outline" onClick={selectAll}>
-                    {selectedEmployees.length === employees.length ? "Deseleccionar Todos" : "Seleccionar Todos"}
+                  <Button size="sm" variant="outline" onClick={selectAll} disabled={filteredEmployees.length === 0}>
+                    {selectedEmployees.length === filteredEmployees.length && filteredEmployees.length > 0 ? "Deseleccionar Todos" : "Seleccionar Todos"}
                   </Button>
                 </div>
 
                 <div className="border rounded p-3 max-h-96 overflow-y-auto space-y-2">
-                  {employees.map(emp => (
+                  {filteredEmployees.map(emp => (
                     <div key={emp.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded">
                       <Checkbox
                         checked={selectedEmployees.includes(emp.id)}
@@ -549,18 +634,32 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-900">{emp.nombre}</p>
                         <p className="text-xs text-slate-500">
-                          {emp.email || emp.telefono_movil || "Sin contacto"}
+                          {inviteMethod === "email" ? emp.email : emp.telefono_movil}
+                          {(emp.departamento || emp.puesto) && " • "}
+                          {emp.departamento && emp.departamento}
+                          {emp.departamento && emp.puesto && " / "}
+                          {emp.puesto && emp.puesto}
                         </p>
                       </div>
-                      {!emp.email && !emp.telefono_movil && (
-                        <Badge variant="outline" className="text-red-600 border-red-300">Sin email/teléfono</Badge>
-                      )}
                     </div>
                   ))}
+
+                  {filteredEmployees.length === 0 && (
+                    <div className="text-center py-8 text-slate-500">
+                      {searchTerm
+                        ? "No se encontraron empleados con ese término de búsqueda para el método seleccionado."
+                        : `No hay empleados con ${inviteMethod === "email" ? "email" : "teléfono móvil"} registrado.`
+                      }
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+                  <Button variant="outline" onClick={() => {
+                    setShowInviteDialog(false);
+                    setSearchTerm("");
+                    setSelectedEmployees([]); // Clear selected employees when dialog closes
+                  }}>
                     Cancelar
                   </Button>
                   <Button
@@ -569,7 +668,10 @@ Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
                     className="bg-emerald-600"
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    {sendInviteMutation.isPending ? "Enviando..." : `Enviar a ${selectedEmployees.length} empleado(s)`}
+                    {sendInviteMutation.isPending
+                      ? "Enviando..."
+                      : `Enviar por ${inviteMethod === "email" ? "Email" : "SMS"} (${selectedEmployees.length})`
+                    }
                   </Button>
                 </div>
               </div>

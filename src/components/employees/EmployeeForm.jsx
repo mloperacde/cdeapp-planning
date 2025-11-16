@@ -33,6 +33,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const initialNewEmployeeFormData = {
     codigo_empleado: "",
     nombre: "",
+    estado_empleado: "Alta", // New field
+    fecha_baja: "", // New field
+    motivo_baja: "", // New field
     fecha_nacimiento: "",
     dni: "",
     nuss: "",
@@ -207,6 +210,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
   const isMaintenanceDepartment = formData.departamento === "MANTENIMIENTO";
   const isETT = formData.tipo_contrato?.toUpperCase().includes("ETT");
+  const isBaja = formData.estado_empleado === "Baja"; // New derived state
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -251,6 +255,48 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     required
                   />
                 </div>
+
+                {/* New Estado del Empleado and related fields */}
+                <div className="space-y-2">
+                  <Label htmlFor="estado_empleado">Estado del Empleado</Label>
+                  <Select
+                    value={formData.estado_empleado || "Alta"}
+                    onValueChange={(value) => setFormData({ ...formData, estado_empleado: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Baja">Baja</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {isBaja && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="fecha_baja">Fecha de Baja</Label>
+                      <Input
+                        id="fecha_baja"
+                        type="date"
+                        value={formData.fecha_baja || ""}
+                        onChange={(e) => setFormData({ ...formData, fecha_baja: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="motivo_baja">Motivo de Baja</Label>
+                      <Textarea
+                        id="motivo_baja"
+                        value={formData.motivo_baja || ""}
+                        onChange={(e) => setFormData({ ...formData, motivo_baja: e.target.value })}
+                        rows={2}
+                        placeholder="Especifica el motivo de la baja..."
+                      />
+                    </div>
+                  </>
+                )}
+                {/* End New fields */}
 
                 <div className="space-y-2">
                   <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento</Label>

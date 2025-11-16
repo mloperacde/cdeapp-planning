@@ -51,7 +51,8 @@ export default function EmployeesPage() {
     departamento: "all",
     puesto: "all",
     tipo_contrato: "all",
-    empresa_ett: "all", // Added new filter state
+    empresa_ett: "all",
+    estado_empleado: "all",
   });
   const queryClient = useQueryClient();
 
@@ -126,7 +127,6 @@ export default function EmployeesPage() {
     return Array.from(tipos).sort();
   }, [employees]);
 
-  // New useMemo for empresas ETT
   const empresasETT = useMemo(() => {
     const empresas = new Set();
     employees.forEach(emp => {
@@ -209,10 +209,10 @@ export default function EmployeesPage() {
       const matchesDepartamento = filters.departamento === "all" || emp.departamento === filters.departamento;
       const matchesPuesto = filters.puesto === "all" || emp.puesto === filters.puesto;
       const matchesTipoContrato = filters.tipo_contrato === "all" || emp.tipo_contrato === filters.tipo_contrato;
-      // Added new filter condition
       const matchesEmpresaETT = filters.empresa_ett === "all" || emp.empresa_ett === filters.empresa_ett;
+      const matchesEstado = filters.estado_empleado === "all" || (emp.estado_empleado || "Alta") === filters.estado_empleado;
       
-      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto && matchesTipoContrato && matchesEmpresaETT;
+      return matchesSearch && matchesTipoJornada && matchesTipoTurno && matchesEquipo && matchesDisponibilidad && matchesDepartamento && matchesPuesto && matchesTipoContrato && matchesEmpresaETT && matchesEstado;
     });
   }, [employees, searchTerm, filters]);
 
@@ -221,6 +221,14 @@ export default function EmployeesPage() {
       return <Badge variant="destructive">Ausente</Badge>;
     }
     return <Badge className="bg-green-100 text-green-800">Disponible</Badge>;
+  };
+
+  const getEstadoBadge = (employee) => {
+    const estado = employee.estado_empleado || "Alta";
+    if (estado === "Baja") {
+      return <Badge variant="destructive">Baja</Badge>;
+    }
+    return <Badge className="bg-green-600 text-white">Alta</Badge>;
   };
 
   const isEmployeeAbsent = (employee) => {
@@ -437,6 +445,20 @@ export default function EmployeesPage() {
               </div>
 
               <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select value={filters.estado_empleado} onValueChange={(value) => setFilters({...filters, estado_empleado: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                    <SelectItem value="Baja">Baja</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Departamento</Label>
                 <Select value={filters.departamento} onValueChange={(value) => setFilters({...filters, departamento: value})}>
                   <SelectTrigger>
@@ -596,6 +618,7 @@ export default function EmployeesPage() {
                   <TableHeader>
                     <TableRow className="bg-slate-50">
                       <TableHead>Nombre</TableHead>
+                      <TableHead>Estado</TableHead>
                       <TableHead>Tipo Jornada</TableHead>
                       <TableHead>Tipo Turno</TableHead>
                       <TableHead>Equipo</TableHead>
@@ -624,6 +647,7 @@ export default function EmployeesPage() {
                               )}
                             </div>
                           </TableCell>
+                          <TableCell>{getEstadoBadge(employee)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={isAbsent ? 'border-red-300 text-red-700' : ''}>
                               {employee.tipo_jornada}
@@ -635,14 +659,18 @@ export default function EmployeesPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge className={
-                              isAbsent ? "bg-red-200 text-red-900" :
-                              employee.equipo === "Equipo Turno Isa" 
-                                ? "bg-purple-100 text-purple-800" 
-                                : "bg-pink-100 text-pink-800"
-                            }>
-                              {employee.equipo}
-                            </Badge>
+                            {employee.equipo ? (
+                              <Badge className={
+                                isAbsent ? "bg-red-200 text-red-900" :
+                                employee.equipo === "Equipo Turno Isa"
+                                  ? "bg-purple-100 text-purple-800" 
+                                  : "bg-pink-100 text-pink-800"
+                              }>
+                                {employee.equipo}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-slate-400">Sin equipo</span>
+                            )}
                           </TableCell>
                           <TableCell>{getAvailabilityBadge(employee)}</TableCell>
                           <TableCell className="text-right">
