@@ -1,38 +1,135 @@
-
 import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Smartphone, CheckCircle, Users, Download,
+  Smartphone, CheckCircle, Users, Download, Send,
   AlertCircle, Zap, Bell, Calendar, ArrowLeft,
   CheckCircle2, MessageSquare, Clock, FileText, User, Award
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { toast } from "sonner";
 
 export default function MobileAppConfigPage() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [sendingInvites, setSendingInvites] = useState(false);
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
+  });
+
+  const appUrl = window.location.origin + "/mobile";
+
+  const sendInviteMutation = useMutation({
+    mutationFn: async (employeeIds) => {
+      const promises = employeeIds.map(async (empId) => {
+        const employee = employees.find(e => e.id === empId);
+        if (!employee?.email && !employee?.telefono_movil) return;
+
+        const guideText = `
+🌟 Bienvenido/a a CDE PlanApp Móvil 🌟
+
+Hola ${employee.nombre},
+
+Ya puedes acceder a la aplicación móvil de CDE PlanApp desde tu teléfono.
+
+📱 CÓMO ACCEDER:
+
+1. Abre tu navegador móvil (Chrome, Safari, Firefox)
+2. Visita: ${appUrl}
+3. Ingresa tu ${employee.email ? 'email' : 'teléfono móvil'}:
+   ${employee.email || employee.telefono_movil}
+4. Recibirás un código de verificación
+5. ¡Listo! Ya tienes acceso
+
+🎯 QUÉ PUEDES HACER:
+• Solicitar ausencias y permisos
+• Consultar tu saldo de vacaciones
+• Ver tu planificación diaria
+• Recibir notificaciones importantes
+• Chatear con tu equipo
+• Acceder a documentos
+
+💡 CONSEJO: Añade la app a tu pantalla de inicio para acceso rápido.
+
+¿Problemas? Contacta con RRHH.
+
+¡Bienvenido/a!
+        `;
+
+        if (employee.email) {
+          await base44.integrations.Core.SendEmail({
+            to: employee.email,
+            subject: "🎉 Acceso a CDE PlanApp Móvil - Guía de Registro",
+            body: guideText
+          });
+        }
+
+        return employee;
+      });
+
+      return Promise.all(promises);
+    },
+    onSuccess: (results) => {
+      const sent = results.filter(r => r).length;
+      toast.success(`${sent} invitación(es) enviada(s)`);
+      setShowInviteDialog(false);
+      setSelectedEmployees([]);
+    },
+    onError: () => {
+      toast.error("Error al enviar invitaciones");
+    }
+  });
+
+  const toggleEmployee = (empId) => {
+    setSelectedEmployees(prev => 
+      prev.includes(empId) ? prev.filter(id => id !== empId) : [...prev, empId]
+    );
+  };
+
+  const selectAll = () => {
+    if (selectedEmployees.length === employees.length) {
+      setSelectedEmployees([]);
+    } else {
+      setSelectedEmployees(employees.map(e => e.id));
+    }
+  };
 
   const features = [
     {
       title: "Gestión de Ausencias",
-      description: "Solicitud y consulta de ausencias, permisos y vacaciones",
+      description: "Solicitud y consulta de ausencias, permisos y vacaciones con justificantes",
       icon: Calendar,
       enabled: true,
       color: "green"
     },
     {
+      title: "Saldo de Vacaciones",
+      description: "Consulta días disponibles, consumidos y pendientes en tiempo real",
+      icon: CheckCircle2,
+      enabled: true,
+      color: "emerald"
+    },
+    {
       title: "Consulta de Planning",
-      description: "Visualización de turnos, horarios y asignaciones",
+      description: "Visualización de turnos, horarios y asignaciones diarias/semanales",
       icon: Clock,
       enabled: true,
       color: "blue"
     },
     {
       title: "Mensajería Interna",
-      description: "Chat directo y canales de equipo/departamento",
+      description: "Chat directo y canales de equipo/departamento con notificaciones push",
       icon: MessageSquare,
       enabled: true,
       color: "purple"
@@ -64,22 +161,16 @@ export default function MobileAppConfigPage() {
   const setupSteps = [
     {
       number: 1,
-      title: "Configurar Notificaciones Push",
-      description: "El sistema enviará automáticamente notificaciones push para:",
-      items: [
-        "Nuevos mensajes en chats directos y canales",
-        "Festivos y períodos de vacaciones próximos",
-        "Vencimiento de documentos importantes",
-        "Formaciones pendientes o caducadas",
-        "Cambios en el planning o turnos"
-      ],
-      status: "active"
+      title: "Enviar Invitaciones a Empleados",
+      description: "Usa el botón 'Invitar Empleados' para enviar la guía de acceso por email",
+      status: "active",
+      action: () => setShowInviteDialog(true)
     },
     {
       number: 2,
-      title: "Invitar Usuarios",
-      description: "Accede a Configuración > Gestión de Usuarios App para invitar empleados",
-      status: "pending"
+      title: "Configurar Notificaciones Push",
+      description: "El sistema enviará automáticamente notificaciones push para mensajes, ausencias y cambios de planning",
+      status: "active"
     },
     {
       number: 3,
@@ -107,7 +198,17 @@ export default function MobileAppConfigPage() {
       triggers: [
         "Festivo próximo (7 días antes)",
         "Inicio de período de vacaciones",
-        "Fin de semana largo"
+        "Ausencia aprobada/rechazada"
+      ]
+    },
+    {
+      tipo: "Planning",
+      icon: Clock,
+      color: "blue",
+      triggers: [
+        "Cambio en tu turno asignado",
+        "Nueva planificación publicada",
+        "Recordatorio de turno próximo"
       ]
     },
     {
@@ -138,24 +239,11 @@ export default function MobileAppConfigPage() {
       permissions: [
         "Acceso completo a todos los módulos",
         "Ver y aprobar ausencias de todos los empleados",
-        "Actualizar estado de todas las máquinas",
-        "Gestionar órdenes de trabajo",
-        "Recibir todas las notificaciones críticas",
-        "Modificar planificación y asignaciones"
+        "Ver planificación completa de todos los equipos",
+        "Enviar mensajes a todos los canales",
+        "Recibir todas las notificaciones críticas"
       ],
       color: "red"
-    },
-    {
-      role: "Técnico de Mantenimiento",
-      permissions: [
-        "Actualizar estado de máquinas asignadas",
-        "Registrar y completar órdenes de mantenimiento",
-        "Firmar órdenes de trabajo",
-        "Solicitar ausencias propias",
-        "Ver asignaciones de mantenimiento",
-        "Recibir alertas de mantenimiento"
-      ],
-      color: "orange"
     },
     {
       role: "Jefe de Turno",
@@ -163,7 +251,7 @@ export default function MobileAppConfigPage() {
         "Ver planificación del equipo asignado",
         "Aprobar ausencias de su equipo",
         "Ver disponibilidad de operarios",
-        "Actualizar asignaciones de su turno",
+        "Chat con su equipo",
         "Recibir notificaciones de su equipo"
       ],
       color: "blue"
@@ -171,24 +259,13 @@ export default function MobileAppConfigPage() {
     {
       role: "Operario de Producción",
       permissions: [
-        "Ver su asignación diaria de máquinas",
         "Solicitar ausencias con justificantes",
-        "Ver su horario y turno",
-        "Consultar su información de taquilla",
-        "Recibir notificaciones de cambios en su planificación"
+        "Consultar saldo de vacaciones",
+        "Ver su planificación diaria/semanal",
+        "Chat con su equipo",
+        "Recibir notificaciones personales"
       ],
       color: "green"
-    },
-    {
-      role: "Miembro de Comité",
-      permissions: [
-        "Acceso a documentación PRL",
-        "Gestionar horas sindicales",
-        "Ver evaluaciones de riesgo",
-        "Acceder a información de emergencias",
-        "Solicitar ausencias (permisos sindicales)"
-      ],
-      color: "purple"
     }
   ];
 
@@ -212,14 +289,20 @@ export default function MobileAppConfigPage() {
           </Link>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Smartphone className="w-8 h-8 text-blue-600" />
-            Configuración Aplicación Móvil
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Activa y configura la app móvil CDE PlanApp para tus empleados
-          </p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <Smartphone className="w-8 h-8 text-blue-600" />
+              Configuración Aplicación Móvil
+            </h1>
+            <p className="text-slate-600 mt-1">
+              Activa y configura la app móvil CDE PlanApp para tus empleados
+            </p>
+          </div>
+          <Button onClick={() => setShowInviteDialog(true)} className="bg-emerald-600">
+            <Send className="w-4 h-4 mr-2" />
+            Invitar Empleados
+          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -265,8 +348,7 @@ export default function MobileAppConfigPage() {
                     <h3 className="font-semibold text-green-900 mb-2">Estado: PWA (Progressive Web App)</h3>
                     <p className="text-sm text-green-800">
                       La aplicación móvil funciona como PWA, accesible desde cualquier navegador móvil
-                      sin necesidad de instalación desde tiendas de apps. Los usuarios pueden añadirla
-                      a su pantalla de inicio para una experiencia similar a una app nativa.
+                      sin necesidad de instalación desde tiendas de apps. Registro con email o teléfono móvil.
                     </p>
                   </div>
                 </div>
@@ -290,53 +372,18 @@ export default function MobileAppConfigPage() {
                     <div className="flex-1">
                       <h4 className="font-semibold text-slate-900 mb-1">{step.title}</h4>
                       <p className="text-sm text-slate-600 mb-2">{step.description}</p>
-                      {step.items && (
-                        <ul className="text-sm text-slate-700 space-y-1 ml-4 list-disc">
-                          {step.items.map((item, idx) => (
-                            <li key={idx}>{item}</li>
-                          ))}
-                        </ul>
+                      {step.action && (
+                        <Button size="sm" onClick={step.action} className="mt-2 bg-emerald-600">
+                          <Send className="w-3 h-3 mr-2" />
+                          Enviar Invitaciones
+                        </Button>
                       )}
                       {step.status === "active" && (
                         <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 mt-2">Activo</Badge>
                       )}
-                      {step.status === "pending" && (
-                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 mt-2">Pendiente</Badge>
-                      )}
                     </div>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  Próximas Mejoras Planificadas
-                </h3>
-                <ul className="text-sm text-purple-800 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Apps nativas iOS y Android con funcionalidad offline</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Escaneo de códigos QR para fichaje y acceso a máquinas</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Geolocalización para control de presencia</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Chat integrado para comunicación de equipo</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Firma digital avanzada con certificado</span>
-                  </li>
-                </ul>
               </CardContent>
             </Card>
           </TabsContent>
@@ -353,17 +400,14 @@ export default function MobileAppConfigPage() {
                 <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
                   <h3 className="font-bold text-blue-900 mb-2">✓ Sistema Activo y Configurado</h3>
                   <p className="text-sm text-blue-800 mb-3">
-                    Las notificaciones push se envían automáticamente a la app móvil de los empleados cuando ocurren eventos importantes.
-                  </p>
-                  <p className="text-xs text-blue-700">
-                    Los usuarios pueden gestionar sus preferencias de notificación desde la app móvil en Configuración &gt; Notificaciones.
+                    Las notificaciones push se envían automáticamente a la app móvil cuando ocurren eventos importantes.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {pushNotificationTypes.map((type) => {
                     const Icon = type.icon;
-                    const colorClasses = {
+                    const colorClasses2 = {
                       blue: "from-blue-500 to-blue-600",
                       purple: "from-purple-500 to-purple-600",
                       orange: "from-orange-500 to-orange-600",
@@ -373,7 +417,7 @@ export default function MobileAppConfigPage() {
                     return (
                       <Card key={type.tipo} className="border-2 border-slate-200">
                         <CardContent className="p-4">
-                          <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[type.color]} flex items-center justify-center mb-3 shadow-lg`}>
+                          <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses2[type.color]} flex items-center justify-center mb-3 shadow-lg`}>
                             <Icon className="w-6 h-6 text-white" />
                           </div>
                           <h3 className="font-bold text-slate-900 mb-2">{type.tipo}</h3>
@@ -390,18 +434,6 @@ export default function MobileAppConfigPage() {
                     );
                   })}
                 </div>
-
-                <Card className="bg-amber-50 border-2 border-amber-300">
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold text-amber-900 mb-2">📱 Configuración en la App Móvil</h4>
-                    <p className="text-sm text-amber-800">
-                      Los empleados pueden personalizar qué notificaciones recibir desde:
-                    </p>
-                    <p className="text-sm text-amber-800 font-mono mt-1 ml-4">
-                      App Móvil → Configuración → Notificaciones
-                    </p>
-                  </CardContent>
-                </Card>
               </CardContent>
             </Card>
           </TabsContent>
@@ -429,19 +461,6 @@ export default function MobileAppConfigPage() {
                 ))}
               </CardContent>
             </Card>
-
-            <Card className="bg-blue-50 border-2 border-blue-300">
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">💡 Recomendación de Accesos</h3>
-                <div className="space-y-2 text-sm text-blue-800">
-                  <p><strong>Acceso Completo:</strong> Gerencia, Jefes de Departamento, RRHH</p>
-                  <p><strong>Acceso Técnico:</strong> Departamento de Mantenimiento completo</p>
-                  <p><strong>Acceso Limitado:</strong> Jefes de Turno para su equipo específico</p>
-                  <p><strong>Acceso Básico:</strong> Operarios solo para consulta y solicitud de ausencias</p>
-                  <p><strong>Acceso PRL:</strong> Miembros de comités de seguridad y prevención</p>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="guide" className="space-y-6 mt-6">
@@ -458,7 +477,7 @@ export default function MobileAppConfigPage() {
                       Abre el navegador en tu teléfono móvil (Chrome, Safari, Firefox)
                     </p>
                     <p className="text-xs text-slate-500 mt-2 font-mono bg-white p-2 rounded border">
-                      URL: [TU_DOMINIO]/app
+                      {appUrl}
                     </p>
                   </div>
                 </div>
@@ -468,7 +487,7 @@ export default function MobileAppConfigPage() {
                   <div>
                     <h4 className="font-semibold text-slate-900">Ingresa tu Email o Teléfono</h4>
                     <p className="text-sm text-slate-600 mt-1">
-                      Debe coincidir exactamente con el registrado en tu ficha de empleado
+                      Puedes usar indistintamente tu email o número de teléfono móvil registrado
                     </p>
                   </div>
                 </div>
@@ -483,53 +502,80 @@ export default function MobileAppConfigPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg">
-                  <Badge className="bg-blue-600 text-white text-lg px-3 py-1 flex-shrink-0">4</Badge>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Añade a Pantalla de Inicio (Opcional)</h4>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Para una mejor experiencia, añade la app a tu pantalla de inicio:
-                    </p>
-                    <ul className="text-xs text-slate-600 mt-2 space-y-1 ml-4">
-                      <li><strong>iOS Safari:</strong> Menú → Añadir a Pantalla de Inicio</li>
-                      <li><strong>Android Chrome:</strong> Menú → Añadir a Pantalla de Inicio</li>
-                    </ul>
-                  </div>
-                </div>
-
                 <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border-2 border-green-300">
                   <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
                   <div>
                     <h4 className="font-semibold text-green-900">¡Listo!</h4>
                     <p className="text-sm text-green-800">
-                      Ya tienes acceso a la app móvil. Verás las funciones disponibles según tu rol.
+                      Ya tienes acceso a la app móvil. Podrás solicitar ausencias, ver tu planning, chatear con tu equipo y más.
                     </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-amber-50 border-2 border-amber-300">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-amber-900 mb-2">Soporte Técnico</h3>
-                    <p className="text-sm text-amber-800">
-                      Si tienes problemas para acceder:
-                    </p>
-                    <ul className="text-sm text-amber-800 mt-2 space-y-1 list-disc list-inside ml-4">
-                      <li>Verifica que tu email/teléfono está actualizado en tu ficha</li>
-                      <li>Asegúrate de tener buena conexión a internet</li>
-                      <li>Prueba desde otro navegador móvil</li>
-                      <li>Contacta con RRHH o tu supervisor</li>
-                    </ul>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {showInviteDialog && (
+          <Dialog open={true} onOpenChange={() => setShowInviteDialog(false)}>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Enviar Invitaciones a Empleados</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    Se enviará un email con la guía de registro y la URL de acceso: <strong>{appUrl}</strong>
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between border-b pb-3">
+                  <span className="font-semibold text-slate-900">
+                    Seleccionar Empleados ({selectedEmployees.length}/{employees.length})
+                  </span>
+                  <Button size="sm" variant="outline" onClick={selectAll}>
+                    {selectedEmployees.length === employees.length ? "Deseleccionar Todos" : "Seleccionar Todos"}
+                  </Button>
+                </div>
+
+                <div className="border rounded p-3 max-h-96 overflow-y-auto space-y-2">
+                  {employees.map(emp => (
+                    <div key={emp.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded">
+                      <Checkbox
+                        checked={selectedEmployees.includes(emp.id)}
+                        onCheckedChange={() => toggleEmployee(emp.id)}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-slate-900">{emp.nombre}</p>
+                        <p className="text-xs text-slate-500">
+                          {emp.email || emp.telefono_movil || "Sin contacto"}
+                        </p>
+                      </div>
+                      {!emp.email && !emp.telefono_movil && (
+                        <Badge variant="outline" className="text-red-600 border-red-300">Sin email/teléfono</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => sendInviteMutation.mutate(selectedEmployees)}
+                    disabled={selectedEmployees.length === 0 || sendInviteMutation.isPending}
+                    className="bg-emerald-600"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {sendInviteMutation.isPending ? "Enviando..." : `Enviar a ${selectedEmployees.length} empleado(s)`}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );
