@@ -193,6 +193,30 @@ export default function TimelineView({
     return { workingIntervals: allIntervals, stats };
   }, [startDate, endDate, holidays, vacations, selectedTeam, employees, teams, teamSchedules, selectedDepartment]);
 
+  const isDateInVacation = (date) => {
+    if (!vacations || vacations.length === 0) return false;
+    
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    return vacations.some(vacation => {
+      // Assuming 'fecha_inicio' and 'fecha_fin' are properties of vacation objects
+      const start = new Date(vacation.fecha_inicio);
+      const end = new Date(vacation.fecha_fin);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+      
+      return checkDate >= start && checkDate <= end;
+    });
+  };
+
+  const isDateHoliday = (date) => {
+    if (!holidays || holidays.length === 0) return false;
+    const dateStr = format(date, 'yyyy-MM-dd');
+    // Assuming 'fecha' is the property holding the date string for holidays
+    return holidays.some(h => format(new Date(h.fecha), 'yyyy-MM-dd') === dateStr);
+  };
+
   if (workingIntervals.length === 0) {
     return (
       <div className="p-12 text-center">

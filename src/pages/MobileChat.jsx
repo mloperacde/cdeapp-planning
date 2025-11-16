@@ -10,7 +10,7 @@ import { MessageSquare, Send, ArrowLeft, Users, Hash, AlertCircle, Bell } from "
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { offlineStorage, isOnline } from "../utils/offlineStorage";
+import { offlineStorage, isOnline } from "../components/utils/offlineStorage";
 
 export default function MobileChatPage() {
   const [selectedChannel, setSelectedChannel] = useState(null);

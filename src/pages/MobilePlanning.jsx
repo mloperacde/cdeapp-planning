@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, AlertCircle, ChevronLeft, ChevronRight, Users, Wifi, WifiOff } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { offlineStorage, isOnline } from "../utils/offlineStorage";
+import { offlineStorage, isOnline } from "../components/utils/offlineStorage";
 
 export default function MobilePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());

@@ -1,10 +1,45 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Cog, CalendarRange, Wrench, Settings } from "lucide-react";
+import { useQuery } from '@tanstack/react-query'; // Assuming @tanstack/react-query for useQuery
+import { base44 } from '@/lib/base44'; // Assuming path for base44
+import { isOnline } from '@/lib/network'; // Assuming path for isOnline utility
+import { offlineStorage } from '@/lib/offlineStorage'; // Assuming path for offlineStorage utility
 
 export default function MachinesPage() {
+  const { data: machines } = useQuery({
+    queryKey: ['machines'],
+    queryFn: async () => {
+      const data = await base44.entities.Machine.list('orden');
+      if (isOnline()) {
+        offlineStorage.saveMachines(data);
+      }
+      return data;
+    },
+    initialData: () => {
+      if (!isOnline()) {
+        return offlineStorage.getMachines();
+      }
+      return []; // Return empty array if online and no initial data from query cache
+    },
+  });
+
+  const { data: maintenanceLogs = [] } = useQuery({
+    queryKey: ['maintenanceLogs'],
+    queryFn: async () => {
+      const data = await base44.entities.MaintenanceSchedule.list('-created_date', 50);
+      if (isOnline()) {
+        offlineStorage.saveMaintenanceLogs(data);
+      }
+      return data;
+    },
+    enabled: isOnline(), // Only fetch if online
+    initialData: () => offlineStorage.getMaintenanceLogs(), // Provide initial data from offline storage regardless of online status
+  });
+
   const subPages = [
     {
       title: "Gestión de Máquinas",
