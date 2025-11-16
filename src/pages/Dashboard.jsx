@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -48,37 +49,37 @@ export default function DashboardPage() {
     base44.auth.me().then(setUser).catch(() => setUser(null));
   }, []);
 
-  const { data: absences } = useQuery({
+  const { data: absences = [] } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
     initialData: [],
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
     initialData: [],
   });
 
-  const { data: machines } = useQuery({
+  const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list(),
     initialData: [],
   });
 
-  const { data: maintenances } = useQuery({
+  const { data: maintenances = [] } = useQuery({
     queryKey: ['maintenances'],
     queryFn: () => base44.entities.MaintenanceSchedule.list(),
     initialData: [],
   });
 
-  const { data: productionPlannings } = useQuery({
+  const { data: productionPlannings = [] } = useQuery({
     queryKey: ['dailyProductionPlannings'],
     queryFn: () => base44.entities.DailyProductionPlanning.list(),
     initialData: [],
   });
 
-  const { data: widgetPreferences } = useQuery({
+  const { data: widgetPreferences = [] } = useQuery({
     queryKey: ['dashboardWidgets', user?.email],
     queryFn: () => base44.entities.DashboardWidget.list(),
     initialData: [],
@@ -87,8 +88,10 @@ export default function DashboardPage() {
 
   // Active absences
   const activeAbsences = useMemo(() => {
+    if (!Array.isArray(absences)) return [];
     const now = new Date();
     return absences.filter(abs => {
+      if (!abs?.fecha_inicio || !abs?.fecha_fin) return false;
       const start = new Date(abs.fecha_inicio);
       const end = new Date(abs.fecha_fin);
       return now >= start && now <= end;
@@ -97,23 +100,26 @@ export default function DashboardPage() {
 
   // Critical absences
   const criticalAbsences = useMemo(() => {
+    if (!Array.isArray(activeAbsences)) return [];
     return activeAbsences.filter(abs => 
-      abs.tipo === "Baja médica" || abs.tipo === "Ausencia injustificada"
+      abs?.tipo === "Baja médica" || abs?.tipo === "Ausencia injustificada"
     );
   }, [activeAbsences]);
 
   // Machine stats
   const machineStats = useMemo(() => {
-    const available = machines.filter(m => m.estado === "Disponible").length;
+    if (!Array.isArray(machines)) return { available: 0, unavailable: 0, total: 0 };
+    const available = machines.filter(m => m?.estado === "Disponible").length;
     const unavailable = machines.length - available;
     return { available, unavailable, total: machines.length };
   }, [machines]);
 
   // Maintenance alerts
   const maintenanceAlerts = useMemo(() => {
+    if (!Array.isArray(maintenances)) return [];
     const now = new Date();
     return maintenances.filter(m => {
-      if (m.estado !== "Pendiente") return false;
+      if (!m || m.estado !== "Pendiente" || !m.fecha_programada) return false;
       const scheduledDate = new Date(m.fecha_programada);
       const daysUntil = differenceInDays(scheduledDate, now);
       return daysUntil <= 7 && daysUntil >= 0;
@@ -122,12 +128,13 @@ export default function DashboardPage() {
 
   // Upcoming birthdays
   const upcomingBirthdays = useMemo(() => {
+    if (!Array.isArray(employees)) return [];
     const today = new Date();
     const nextWeek = new Date(today);
     nextWeek.setDate(today.getDate() + 7);
 
     return employees.filter(emp => {
-      if (!emp.fecha_nacimiento) return false;
+      if (!emp?.fecha_nacimiento) return false;
       const birthDate = new Date(emp.fecha_nacimiento);
       const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
       
@@ -138,14 +145,15 @@ export default function DashboardPage() {
 
   // Today's planning summary
   const todayPlanningSummary = useMemo(() => {
+    if (!Array.isArray(productionPlannings)) return { total: 0, completed: 0, inProgress: 0, pending: 0 };
     const today = format(new Date(), 'yyyy-MM-dd');
-    const todayPlannings = productionPlannings.filter(p => p.fecha === today);
+    const todayPlannings = productionPlannings.filter(p => p?.fecha === today);
     
     return {
       total: todayPlannings.length,
-      completed: todayPlannings.filter(p => p.estado === "Completado").length,
-      inProgress: todayPlannings.filter(p => p.estado === "En Curso").length,
-      pending: todayPlannings.filter(p => p.estado === "Planificado").length
+      completed: todayPlannings.filter(p => p?.estado === "Completado").length,
+      inProgress: todayPlannings.filter(p => p?.estado === "En Curso").length,
+      pending: todayPlannings.filter(p => p?.estado === "Planificado").length
     };
   }, [productionPlannings]);
 
@@ -153,19 +161,24 @@ export default function DashboardPage() {
   const enabledWidgets = useMemo(() => {
     if (!user) return AVAILABLE_WIDGETS;
     
-    const userPrefs = widgetPreferences.filter(w => w.user_email === user.email && w.enabled);
+    const userPrefs = Array.isArray(widgetPreferences) 
+      ? widgetPreferences.filter(w => w?.user_email === user.email && w?.enabled)
+      : [];
+      
     if (userPrefs.length === 0) return AVAILABLE_WIDGETS;
     
     return AVAILABLE_WIDGETS.filter(w => 
-      userPrefs.some(p => p.widget_id === w.id)
+      userPrefs.some(p => p?.widget_id === w?.id)
     ).sort((a, b) => {
-      const orderA = userPrefs.find(p => p.widget_id === a.id)?.order || 0;
-      const orderB = userPrefs.find(p => p.widget_id === b.id)?.order || 0;
+      const orderA = userPrefs.find(p => p?.widget_id === a?.id)?.order || 0;
+      const orderB = userPrefs.find(p => p?.widget_id === b?.id)?.order || 0;
       return orderA - orderB;
     });
   }, [widgetPreferences, user]);
 
   const renderWidget = (widget) => {
+    if (!widget) return null;
+    
     const Icon = widget.icon;
     const colorClasses = {
       red: 'from-red-500 to-red-600',
@@ -337,7 +350,7 @@ export default function DashboardPage() {
                   {maintenanceAlerts.slice(0, 5).map(maint => (
                     <div key={maint.id} className="p-2 bg-orange-50 rounded-lg border border-orange-200">
                       <div className="text-sm font-semibold text-orange-900">
-                        {machines.find(m => m.id === maint.machine_id)?.nombre || 'Máquina'}
+                        {machines.find(m => m?.id === maint?.machine_id)?.nombre || 'Máquina'}
                       </div>
                       <div className="text-xs text-orange-700">
                         {format(new Date(maint.fecha_programada), "d/MM/yyyy")} - {maint.tipo}
@@ -356,8 +369,10 @@ export default function DashboardPage() {
         );
 
       case 'team_summary':
-        const fabricacionEmployees = employees.filter(e => e.departamento === "FABRICACION");
-        const availableFabricacion = fabricacionEmployees.filter(e => e.disponibilidad === "Disponible").length;
+        const fabricacionEmployees = Array.isArray(employees) 
+          ? employees.filter(e => e?.departamento === "FABRICACION") 
+          : [];
+        const availableFabricacion = fabricacionEmployees.filter(e => e?.disponibilidad === "Disponible").length;
         
         return (
           <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -378,7 +393,7 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <span className="text-sm font-medium text-green-900">Disponibles</span>
                   <Badge className="bg-green-600 text-white text-lg px-3">
-                    {employees.filter(e => e.disponibilidad === "Disponible").length}
+                    {Array.isArray(employees) ? employees.filter(e => e?.disponibilidad === "Disponible").length : 0}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
