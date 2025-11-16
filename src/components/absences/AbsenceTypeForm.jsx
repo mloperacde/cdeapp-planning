@@ -18,7 +18,7 @@ export default function AbsenceTypeForm({ type, onClose }) {
     categoria: "Permiso Retribuido",
     descripcion: "",
     remunerada: false,
-    no_consume_vacaciones: true, // Added new field
+    no_consume_vacaciones: true,
     requiere_aprobacion: true,
     duracion_descripcion: "",
     color: "#3B82F6",
@@ -57,12 +57,12 @@ export default function AbsenceTypeForm({ type, onClose }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{type ? "Editar Tipo de Ausencia" : "Nuevo Tipo de Ausencia"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nombre *</Label>
@@ -140,40 +140,60 @@ export default function AbsenceTypeForm({ type, onClose }) {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="remunerada">¿Es Remunerada?</Label>
+              <Select
+                value={formData.remunerada ? "si" : "no"}
+                onValueChange={(value) => setFormData({ ...formData, remunerada: value === "si" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="si">Sí - Es remunerada</SelectItem>
+                  <SelectItem value="no">No - No es remunerada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="no_consume_vacaciones">¿Consume Días de Vacaciones?</Label>
+              <Select
+                value={formData.no_consume_vacaciones ? "no_consume" : "consume"}
+                onValueChange={(value) => setFormData({ ...formData, no_consume_vacaciones: value === "no_consume" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="consume">Consume Vacaciones (días perdidos)</SelectItem>
+                  <SelectItem value="no_consume">NO Consume Vacaciones (genera días pendientes)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                Si NO consume vacaciones, se generarán días pendientes cuando coincida con períodos vacacionales
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="requiere_aprobacion">¿Requiere Aprobación?</Label>
+              <Select
+                value={formData.requiere_aprobacion ? "si" : "no"}
+                onValueChange={(value) => setFormData({ ...formData, requiere_aprobacion: value === "si" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="si">Sí - Requiere aprobación</SelectItem>
+                  <SelectItem value="no">No - Aprobación automática</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
           <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formData.remunerada}
-                onCheckedChange={(checked) => setFormData({...formData, remunerada: checked})}
-              />
-              <label className="text-sm cursor-pointer">Ausencia Remunerada</label>
-            </div>
-
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <Checkbox
-                checked={formData.no_consume_vacaciones}
-                onCheckedChange={(checked) => setFormData({...formData, no_consume_vacaciones: checked})}
-                id="no_consume_vacaciones" // Added ID for better accessibility with label
-              />
-              <div className="flex-1">
-                <label htmlFor="no_consume_vacaciones" className="text-sm font-medium cursor-pointer">
-                  NO consume vacaciones (genera saldo pendiente)
-                </label>
-                <p className="text-xs text-amber-700 mt-1">
-                  Si se activa, cuando esta ausencia coincida con vacaciones colectivas, 
-                  se sumará al saldo de vacaciones pendientes del empleado.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formData.requiere_aprobacion}
-                onCheckedChange={(checked) => setFormData({...formData, requiere_aprobacion: checked})}
-              />
-              <label className="text-sm cursor-pointer">Requiere Aprobación</label>
-            </div>
-
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={formData.es_critica}

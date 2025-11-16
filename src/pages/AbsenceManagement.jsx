@@ -494,12 +494,13 @@ export default function AbsenceManagementPage() {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-8 mb-6">
             <TabsTrigger value="list">Listado</TabsTrigger>
             <TabsTrigger value="approval">Aprobar</TabsTrigger>
             <TabsTrigger value="balance">Saldos</TabsTrigger>
             <TabsTrigger value="residual">Días Residuales</TabsTrigger>
+            <TabsTrigger value="pending">Días Pendientes</TabsTrigger>
             <TabsTrigger value="calendar">Calendario</TabsTrigger>
             <TabsTrigger value="types">Tipos</TabsTrigger>
             <TabsTrigger value="reports">Reportes</TabsTrigger>
@@ -744,6 +745,10 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="residual">
             <ResidualDaysManager employees={employees} />
+          </TabsContent>
+
+          <TabsContent value="pending">
+            <VacationPendingBalancePanel employees={employees} compact={false} />
           </TabsContent>
 
           <TabsContent value="calendar">

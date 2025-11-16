@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Plane, AlertCircle, Edit } from "lucide-react";
-import { format, differenceInDays, eachDayOfInterval, isWeekend } from "date-fns";
+import { format, eachDayOfInterval, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -32,10 +32,10 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
   const [showForm, setShowForm] = useState(false);
   const [editingVacation, setEditingVacation] = useState(null);
   const [formData, setFormData] = useState({
-    start_date: "",
-    end_date: "",
-    name: "",
-    notes: "",
+    fecha_inicio: "",
+    fecha_fin: "",
+    nombre: "",
+    descripcion: "",
   });
 
   const queryClient = useQueryClient();
@@ -47,43 +47,49 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => editingVacation 
-      ? base44.entities.Vacation.update(editingVacation.id, data)
-      : base44.entities.Vacation.create(data),
+    mutationFn: async (data) => {
+      if (editingVacation) {
+        await base44.entities.Vacation.update(editingVacation.id, data);
+      } else {
+        await base44.entities.Vacation.create(data);
+      }
+      onUpdate();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vacations'] });
-      onUpdate();
-      setFormData({ start_date: "", end_date: "", name: "", notes: "" });
+      setFormData({ fecha_inicio: "", fecha_fin: "", nombre: "", descripcion: "" });
       setShowForm(false);
       setEditingVacation(null);
-      // Removed toast.success(editingVacation ? "Vacaciones actualizadas" : "Vacaciones creadas");
+      toast.success(editingVacation ? "Vacaciones actualizadas" : "Vacaciones creadas");
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Vacation.delete(id),
+    mutationFn: async (id) => {
+      await base44.entities.Vacation.delete(id);
+      onUpdate();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vacations'] });
-      onUpdate();
-      // Removed toast.success("Período eliminado");
+      toast.success("Período eliminado");
     },
   });
 
   const handleEdit = (vacation) => {
     setEditingVacation(vacation);
     setFormData({
-      start_date: vacation.start_date,
-      end_date: vacation.end_date,
-      name: vacation.name,
-      notes: vacation.notes || "",
+      fecha_inicio: vacation.fecha_inicio,
+      fecha_fin: vacation.fecha_fin,
+      nombre: vacation.nombre,
+      descripcion: vacation.descripcion || "",
     });
     setShowForm(true);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.start_date && formData.end_date && formData.name) {
-      if (new Date(formData.end_date) < new Date(formData.start_date)) {
+    if (formData.fecha_inicio && formData.fecha_fin && formData.nombre) {
+      if (new Date(formData.fecha_fin) < new Date(formData.fecha_inicio)) {
         toast.error("La fecha de fin no puede ser anterior a la fecha de inicio");
         return;
       }
@@ -92,7 +98,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
   };
 
   const sortedVacations = Array.isArray(vacations) ? [...vacations].sort(
-    (a, b) => new Date(a.start_date) - new Date(b.start_date)
+    (a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio)
   ) : [];
 
   const calculateDays = (startDate, endDate) => {
@@ -102,11 +108,14 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
     const allDays = eachDayOfInterval({ start, end });
     const totalDays = allDays.length;
     
-    const holidayDates = holidays.map(h => new Date(h.date).toDateString());
+    const holidayDates = holidays.map(h => format(new Date(h.fecha), 'yyyy-MM-dd'));
     
-    const workableDays = allDays.filter(day => 
-      !isWeekend(day) && !holidayDates.includes(day.toDateString())
-    ).length;
+    const workableDays = allDays.filter(day => {
+      const dayOfWeek = getDay(day);
+      const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6; // 0 for Sunday, 6 for Saturday
+      const isHolidayDay = holidayDates.includes(format(day, 'yyyy-MM-dd'));
+      return !isWeekendDay && !isHolidayDay;
+    }).length;
 
     return { total: totalDays, workable: workableDays };
   };
@@ -120,7 +129,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
             Gestión de Vacaciones
           </DialogTitle>
           <DialogDescription>
-            Añade, edita o elimina períodos de vacaciones. Estos días no se mostrarán en la línea de tiempo.
+            Configura períodos de vacaciones. Se guardarán automáticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -145,58 +154,58 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
             <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg bg-slate-50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Fecha de Inicio *</Label>
+                  <Label htmlFor="fecha_inicio">Fecha de Inicio *</Label>
                   <Input
-                    id="start_date"
+                    id="fecha_inicio"
                     type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    value={formData.fecha_inicio}
+                    onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="end_date">Fecha de Fin *</Label>
+                  <Label htmlFor="fecha_fin">Fecha de Fin *</Label>
                   <Input
-                    id="end_date"
+                    id="fecha_fin"
                     type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                    value={formData.fecha_fin}
+                    onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre del Período *</Label>
+                <Label htmlFor="nombre">Nombre del Período *</Label>
                 <Input
-                  id="name"
-                  placeholder="ej. Vacaciones de verano, Viaje familiar..."
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  id="nombre"
+                  placeholder="ej. Vacaciones de verano, Semana Santa..."
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notas (opcional)</Label>
+                <Label htmlFor="descripcion">Descripción (opcional)</Label>
                 <Textarea
-                  id="notes"
-                  placeholder="Información adicional sobre las vacaciones"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  id="descripcion"
+                  placeholder="Información adicional"
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   rows={2}
                 />
               </div>
 
-              {formData.start_date && formData.end_date && new Date(formData.end_date) >= new Date(formData.start_date) && (
+              {formData.fecha_inicio && formData.fecha_fin && new Date(formData.fecha_fin) >= new Date(formData.fecha_inicio) && (
                 <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg">
                   {(() => {
-                    const { total, workable } = calculateDays(formData.start_date, formData.end_date);
+                    const { total, workable } = calculateDays(formData.fecha_inicio, formData.fecha_fin);
                     return (
                       <div className="space-y-1">
                         <p className="text-sm text-sky-800">
-                          Días totales (naturales): <span className="font-semibold">{total} días</span>
+                          Días totales: <span className="font-semibold">{total} días</span>
                         </p>
                         <p className="text-sm text-sky-800">
                           Días laborables: <span className="font-semibold">{workable} días</span>
@@ -213,7 +222,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
                   className="flex-1 bg-sky-600 hover:bg-sky-700"
                   disabled={createMutation.isPending}
                 >
-                  {createMutation.isPending ? "Guardando..." : editingVacation ? "Actualizar" : "Guardar Vacaciones"}
+                  {createMutation.isPending ? "Guardando..." : editingVacation ? "Actualizar" : "Guardar"}
                 </Button>
                 <Button
                   type="button"
@@ -221,7 +230,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
                   onClick={() => {
                     setShowForm(false);
                     setEditingVacation(null);
-                    setFormData({ start_date: "", end_date: "", name: "", notes: "" });
+                    setFormData({ fecha_inicio: "", fecha_fin: "", nombre: "", descripcion: "" });
                   }}
                 >
                   Cancelar
@@ -244,23 +253,23 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
                 </TableHeader>
                 <TableBody>
                   {sortedVacations.map((vacation) => {
-                    const { total, workable } = calculateDays(vacation.start_date, vacation.end_date);
+                    const { total, workable } = calculateDays(vacation.fecha_inicio, vacation.fecha_fin);
                     return (
                       <TableRow key={vacation.id}>
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-semibold text-sm">
-                              {format(new Date(vacation.start_date), "d MMM yyyy", { locale: es })}
+                              {format(new Date(vacation.fecha_inicio), "d MMM yyyy", { locale: es })}
                             </span>
                             <span className="text-xs text-slate-500">hasta</span>
                             <span className="font-semibold text-sm">
-                              {format(new Date(vacation.end_date), "d MMM yyyy", { locale: es })}
+                              {format(new Date(vacation.fecha_fin), "d MMM yyyy", { locale: es })}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="bg-sky-100 text-sky-800">
-                            {vacation.name}
+                            {vacation.nombre}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -276,7 +285,7 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-slate-600 max-w-xs truncate">
-                          {vacation.notes || "-"}
+                          {vacation.descripcion || "-"}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">

@@ -32,48 +32,27 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
   const [showForm, setShowForm] = useState(false);
   const [editingHoliday, setEditingHoliday] = useState(null);
   const [formData, setFormData] = useState({
-    date: "",
-    name: "",
-    description: "",
+    fecha: "",
+    nombre: "",
+    descripcion: "",
   });
 
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
+      let result;
       if (editingHoliday) {
-        return base44.entities.Holiday.update(editingHoliday.id, data);
+        result = await base44.entities.Holiday.update(editingHoliday.id, data);
+      } else {
+        result = await base44.entities.Holiday.create(data);
       }
-
-      const holiday = await base44.entities.Holiday.create(data);
-      
-      const holidayDate = new Date(data.date);
-      const notifyDate = new Date(holidayDate);
-      notifyDate.setDate(notifyDate.getDate() - 7);
-      
-      if (notifyDate > new Date()) {
-        const employeesData = await base44.entities.Employee.list();
-        const notificationPromises = employeesData.map(emp => 
-          base44.entities.PushNotification.create({
-            destinatario_id: emp.id,
-            tipo: "calendario",
-            titulo: "Festivo Próximo",
-            mensaje: `${data.name} - ${format(holidayDate, "d 'de' MMMM", { locale: es })}`,
-            prioridad: "baja",
-            referencia_tipo: "Holiday",
-            referencia_id: holiday.id,
-            enviada_push: false
-          })
-        );
-        await Promise.all(notificationPromises);
-      }
-
-      return holiday;
+      onUpdate(); // Call onUpdate after successful operation
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['holidays'] });
-      onUpdate();
-      setFormData({ date: "", name: "", description: "" });
+      setFormData({ fecha: "", nombre: "", descripcion: "" });
       setShowForm(false);
       setEditingHoliday(null);
       toast.success(editingHoliday ? "Festivo actualizado" : "Festivo creado");
@@ -81,10 +60,12 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Holiday.delete(id),
+    mutationFn: async (id) => {
+      await base44.entities.Holiday.delete(id);
+      onUpdate(); // Call onUpdate after successful operation
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['holidays'] });
-      onUpdate();
       toast.success("Festivo eliminado");
     },
   });
@@ -92,22 +73,22 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
   const handleEdit = (holiday) => {
     setEditingHoliday(holiday);
     setFormData({
-      date: holiday.date,
-      name: holiday.name,
-      description: holiday.description || "",
+      fecha: holiday.fecha,
+      nombre: holiday.nombre,
+      descripcion: holiday.descripcion || "",
     });
     setShowForm(true);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.date && formData.name) {
+    if (formData.fecha && formData.nombre) {
       createMutation.mutate(formData);
     }
   };
 
   const sortedHolidays = Array.isArray(holidays) ? [...holidays].sort(
-    (a, b) => new Date(a.date) - new Date(b.date)
+    (a, b) => new Date(a.fecha) - new Date(b.fecha)
   ) : [];
 
   return (
@@ -119,7 +100,7 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
             Gestión de Días Festivos
           </DialogTitle>
           <DialogDescription>
-            Añade, edita o elimina días festivos. Estos días no se mostrarán en la línea de tiempo.
+            Configura los días festivos del año. Se guardarán automáticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -142,34 +123,34 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg bg-slate-50">
               <div className="space-y-2">
-                <Label htmlFor="date">Fecha del Festivo *</Label>
+                <Label htmlFor="fecha">Fecha del Festivo *</Label>
                 <Input
-                  id="date"
+                  id="fecha"
                   type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  value={formData.fecha}
+                  onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre del Festivo *</Label>
+                <Label htmlFor="nombre">Nombre del Festivo *</Label>
                 <Input
-                  id="name"
+                  id="nombre"
                   placeholder="ej. Año Nuevo, Navidad..."
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Descripción (opcional)</Label>
+                <Label htmlFor="descripcion">Descripción (opcional)</Label>
                 <Textarea
-                  id="description"
+                  id="descripcion"
                   placeholder="Información adicional sobre el festivo"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   rows={2}
                 />
               </div>
@@ -188,7 +169,7 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
                   onClick={() => {
                     setShowForm(false);
                     setEditingHoliday(null);
-                    setFormData({ date: "", name: "", description: "" });
+                    setFormData({ fecha: "", nombre: "", descripcion: "" });
                   }}
                 >
                   Cancelar
@@ -214,20 +195,20 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-semibold">
-                            {format(new Date(holiday.date), "d MMM yyyy", { locale: es })}
+                            {format(new Date(holiday.fecha), "d MMM yyyy", { locale: es })}
                           </span>
                           <span className="text-xs text-slate-500">
-                            {format(new Date(holiday.date), "EEEE", { locale: es })}
+                            {format(new Date(holiday.fecha), "EEEE", { locale: es })}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                          {holiday.name}
+                          {holiday.nombre}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
-                        {holiday.description || "-"}
+                        {holiday.descripcion || "-"}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">

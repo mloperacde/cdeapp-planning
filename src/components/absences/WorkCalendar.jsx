@@ -103,8 +103,9 @@ export default function WorkCalendar() {
     return eachDayOfInterval({ start: monthStart, end: monthEnd });
   };
 
-  const noLaborablesList = useMemo(() => {
-    const list = [];
+  const { festivosList, vacacionesList } = useMemo(() => {
+    const festivos = [];
+    const vacaciones = [];
 
     holidays.forEach(h => {
       if (!h.fecha) return;
@@ -113,8 +114,7 @@ export default function WorkCalendar() {
         const year = date.getFullYear();
         const currentYear = currentDate.getFullYear();
         if (year === currentYear) {
-          list.push({
-            type: 'festivo',
+          festivos.push({
             fecha: date,
             nombre: h.nombre,
             descripcion: h.descripcion,
@@ -133,14 +133,18 @@ export default function WorkCalendar() {
         const year = start.getFullYear();
         const currentYear = currentDate.getFullYear();
         if (year === currentYear) {
-          const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-          list.push({
-            type: 'vacaciones',
+          const allDays = eachDayOfInterval({ start, end });
+          const dias = allDays.filter(d => {
+            const dayOfWeek = getDay(d);
+            return dayOfWeek !== 0 && dayOfWeek !== 6;
+          }).length;
+          
+          vacaciones.push({
             fecha: start,
             nombre: v.nombre || `Vacaciones`,
             descripcion: v.descripcion,
             fecha_fin: end,
-            dias: daysDiff,
+            dias: dias,
             id: v.id,
             entity: 'Vacation'
           });
@@ -148,7 +152,10 @@ export default function WorkCalendar() {
       } catch {}
     });
 
-    return list.sort((a, b) => a.fecha - b.fecha);
+    return {
+      festivosList: festivos.sort((a, b) => a.fecha - b.fecha),
+      vacacionesList: vacaciones.sort((a, b) => a.fecha - b.fecha)
+    };
   }, [holidays, vacations, currentDate]);
 
   const stats = useMemo(() => {
@@ -202,11 +209,11 @@ export default function WorkCalendar() {
             <div className="flex gap-2 print:hidden">
               <Button onClick={() => setShowHolidayManager(true)} variant="outline" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
-                Festivos
+                Gestionar Festivos
               </Button>
               <Button onClick={() => setShowVacationManager(true)} variant="outline" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
-                Vacaciones
+                Gestionar Vacaciones
               </Button>
               <Button onClick={() => setCurrentDate(subYears(currentDate, 1))} variant="outline" size="sm">
                 <ChevronLeft className="w-4 h-4" />
@@ -336,90 +343,159 @@ export default function WorkCalendar() {
         <CardHeader className="border-b print:pb-1">
           <CardTitle className="flex items-center gap-2 print:text-sm">
             <Calendar className="w-5 h-5 text-blue-600 print:w-4 print:h-4" />
-            Relación de Días No Laborables {format(currentDate, "yyyy")} ({noLaborablesList.length})
+            Relación de Días No Laborables {format(currentDate, "yyyy")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 print:p-3">
-          {noLaborablesList.length === 0 ? (
+          {festivosList.length === 0 && vacacionesList.length === 0 ? (
             <div className="text-center py-8 text-slate-500 print:py-4 print:text-xs">
               No hay días no laborables configurados para este año
             </div>
           ) : (
-            <div className="space-y-2 print:space-y-1">
-              {noLaborablesList.map((item, idx) => (
-                <div key={`${item.id}-${idx}`} className={`border-2 rounded-lg p-3 print:p-1.5 print:border ${
-                  item.type === 'festivo' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
-                }`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 print:mb-0.5 print:gap-1">
-                        <Badge className={`${item.type === 'festivo' ? 'bg-red-600' : 'bg-blue-600'} print:text-[8px] print:px-1.5 print:py-0`}>
-                          {item.type === 'festivo' ? 'FESTIVO' : 'VACACIONES'}
-                        </Badge>
-                        <span className="font-bold text-slate-900 print:text-[10px]">
-                          {format(item.fecha, "dd/MM/yyyy - EEEE", { locale: es })}
-                        </span>
-                        {item.fecha_fin && (
-                          <span className="text-sm text-slate-600 print:text-[9px]">
-                            al {format(item.fecha_fin, "dd/MM/yyyy", { locale: es })} ({item.dias} días)
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-bold text-red-900 mb-3 text-sm print:text-xs flex items-center gap-2">
+                  <Badge className="bg-red-600 print:text-[8px]">FESTIVOS</Badge>
+                  ({festivosList.length})
+                </h3>
+                <div className="space-y-2 print:space-y-1">
+                  {festivosList.map((item, idx) => (
+                    <div key={`festivo-${item.id}-${idx}`} className="border-2 rounded-lg p-3 print:p-1.5 print:border bg-red-50 border-red-200">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <span className="font-bold text-slate-900 text-sm print:text-[10px] block">
+                            {format(item.fecha, "dd/MM/yyyy - EEEE", { locale: es })}
                           </span>
+                          <div className="font-semibold text-red-900 mt-1 text-xs print:text-[9px]">{item.nombre}</div>
+
+                          {editingId === item.id ? (
+                            <div className="space-y-2 mt-2">
+                              <Textarea
+                                value={editingDesc}
+                                onChange={(e) => setEditingDesc(e.target.value)}
+                                rows={2}
+                                className="text-sm"
+                                placeholder="Añadir descripción..."
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveDescription(item)}
+                                  disabled={updateHolidayMutation.isPending}
+                                >
+                                  <Save className="w-3 h-3 mr-1" />
+                                  Guardar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingId(null)}
+                                >
+                                  <X className="w-3 h-3 mr-1" />
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {item.descripcion && (
+                                <p className="text-xs text-slate-600 print:text-[8px] mt-1">{item.descripcion}</p>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {editingId !== item.id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditDescription(item)}
+                            className="print:hidden h-6 w-6 p-0"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
                         )}
                       </div>
-                      <div className="font-semibold text-slate-900 mb-1 print:text-[10px] print:mb-0">{item.nombre}</div>
-
-                      {editingId === item.id ? (
-                        <div className="space-y-2">
-                          <Textarea
-                            value={editingDesc}
-                            onChange={(e) => setEditingDesc(e.target.value)}
-                            rows={2}
-                            className="text-sm"
-                            placeholder="Añadir descripción..."
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleSaveDescription(item)}
-                              disabled={updateHolidayMutation.isPending || updateVacationMutation.isPending}
-                            >
-                              <Save className="w-3 h-3 mr-1" />
-                              Guardar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditingId(null)}
-                            >
-                              <X className="w-3 h-3 mr-1" />
-                              Cancelar
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {item.descripcion && (
-                            <p className="text-sm text-slate-600 print:text-[9px]">{item.descripcion}</p>
-                          )}
-                          {!item.descripcion && (
-                            <p className="text-sm text-slate-400 italic print:hidden">Sin descripción</p>
-                          )}
-                        </>
-                      )}
                     </div>
-
-                    {editingId !== item.id && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditDescription(item)}
-                        className="print:hidden"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
+                  ))}
+                  {festivosList.length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-4">Sin festivos configurados</p>
+                  )}
                 </div>
-              ))}
+              </div>
+
+              <div>
+                <h3 className="font-bold text-blue-900 mb-3 text-sm print:text-xs flex items-center gap-2">
+                  <Badge className="bg-blue-600 print:text-[8px]">VACACIONES</Badge>
+                  ({vacacionesList.length})
+                </h3>
+                <div className="space-y-2 print:space-y-1">
+                  {vacacionesList.map((item, idx) => (
+                    <div key={`vacacion-${item.id}-${idx}`} className="border-2 rounded-lg p-3 print:p-1.5 print:border bg-blue-50 border-blue-200">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <span className="font-bold text-slate-900 text-sm print:text-[10px] block">
+                            {format(item.fecha, "dd/MM/yyyy", { locale: es })} - {format(item.fecha_fin, "dd/MM/yyyy", { locale: es })}
+                          </span>
+                          <div className="font-semibold text-blue-900 mt-1 text-xs print:text-[9px]">
+                            {item.nombre} ({item.dias} días laborables)
+                          </div>
+
+                          {editingId === item.id ? (
+                            <div className="space-y-2 mt-2">
+                              <Textarea
+                                value={editingDesc}
+                                onChange={(e) => setEditingDesc(e.target.value)}
+                                rows={2}
+                                className="text-sm"
+                                placeholder="Añadir descripción..."
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveDescription(item)}
+                                  disabled={updateVacationMutation.isPending}
+                                >
+                                  <Save className="w-3 h-3 mr-1" />
+                                  Guardar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingId(null)}
+                                >
+                                  <X className="w-3 h-3 mr-1" />
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {item.descripcion && (
+                                <p className="text-xs text-slate-600 print:text-[8px] mt-1">{item.descripcion}</p>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {editingId !== item.id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditDescription(item)}
+                            className="print:hidden h-6 w-6 p-0"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {vacacionesList.length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-4">Sin vacaciones configuradas</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
