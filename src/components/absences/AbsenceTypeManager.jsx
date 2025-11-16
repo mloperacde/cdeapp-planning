@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Shield, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import AbsenceTypeForm from "./AbsenceTypeForm";
 
@@ -67,6 +67,12 @@ export default function AbsenceTypeManager() {
                   <Badge variant="outline" className="text-xs mb-2">{type.codigo}</Badge>
                   <div className="flex flex-wrap gap-2 text-xs mt-2">
                     {type.remunerada && <Badge className="bg-green-100 text-green-800">Remunerada</Badge>}
+                    {type.no_consume_vacaciones && (
+                      <Badge className="bg-amber-100 text-amber-800 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        No Consume Vacaciones
+                      </Badge>
+                    )}
                     {type.requiere_aprobacion && <Badge className="bg-orange-100 text-orange-800">Requiere Aprobación</Badge>}
                     {type.es_critica && <Badge className="bg-red-100 text-red-800">Crítica</Badge>}
                   </div>
@@ -94,6 +100,18 @@ export default function AbsenceTypeManager() {
                 
                 {type.duracion_descripcion && (
                   <p className="text-slate-600"><strong>Duración:</strong> {type.duracion_descripcion}</p>
+                )}
+
+                {type.no_consume_vacaciones && (
+                  <div className="bg-amber-50 border border-amber-200 rounded p-2 mt-2">
+                    <p className="text-amber-800 font-semibold flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Protección de Vacaciones
+                    </p>
+                    <p className="text-amber-700 text-[10px] mt-1">
+                      Si coincide con vacaciones colectivas, genera días pendientes para el empleado
+                    </p>
+                  </div>
                 )}
                 
                 {type.articulo_referencia && (

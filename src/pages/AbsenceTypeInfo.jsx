@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,35 +34,40 @@ import { FileText, Plus, Edit, Trash2, Save, Info, Download, ArrowLeft } from "l
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
+// Updated PERMISOS_PREDEFINIDOS to use `categoria_principal` and include new fields
 const PERMISOS_PREDEFINIDOS = [
   {
     nombre: "Matrimonio o registro pareja de hecho",
     codigo: "MATRIMONIO",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido", // Changed field name
     remunerada: true,
     hecho_causante: "Matrimonio o registro de pareja de hecho.",
     duracion_dias: 15,
     duracion_descripcion: "15 días naturales consecutivos",
     inicio_disfrute: "Con carácter general, desde el día del hecho causante o el siguiente día laborable",
     consideraciones: "Los 15 días son naturales consecutivos",
-    articulo_estatuto: "artículo 37.3.a) del Estatuto de los Trabajadores"
+    articulo_estatuto: "artículo 37.3.a) del Estatuto de los Trabajadores",
+    no_consume_vacaciones: false, // Added new field
+    color: '#3B82F6', // Added default color
   },
   {
     nombre: "Hospitalización familiar",
     codigo: "HOSPITALIZACION",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido", // Changed field name
     remunerada: true,
     hecho_causante: "Accidente o enfermedad graves, hospitalización o intervención quirúrgica sin hospitalización que precise reposo domiciliario del cónyuge, pareja de hecho o parientes hasta el segundo grado por consanguinidad o afinidad",
     duracion_dias: 5,
     duracion_descripcion: "5 días",
     inicio_disfrute: "El día del hecho causante o el siguiente día laborable y mientras continúe concurriendo este",
     consideraciones: "El permiso por hospitalización finaliza cuando esta termina, salvo que a pesar del alta hospitalaria un facultativo prescriba reposo domiciliario. Si finaliza antes de los 5 días, también lo hará el permiso retribuido.",
-    articulo_estatuto: "artículo 37.3.b) del Estatuto de los Trabajadores"
+    articulo_estatuto: "artículo 37.3.b) del Estatuto de los Trabajadores",
+    no_consume_vacaciones: false, // Added new field
+    color: '#3B82F6', // Added default color
   },
   {
     nombre: "Fallecimiento familiar",
     codigo: "FALLECIMIENTO",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido", // Changed field name
     remunerada: true,
     hecho_causante: "Fallecimiento del cónyuge, pareja de hecho o parientes hasta el segundo grado de consanguinidad o afinidad",
     duracion_dias: 2,
@@ -69,63 +75,71 @@ const PERMISOS_PREDEFINIDOS = [
     ampliacion_desplazamiento: true,
     dias_ampliacion: 2,
     inicio_disfrute: "El día del hecho causante o el siguiente día laborable",
-    articulo_estatuto: "artículo 37.3.b) bis del Estatuto de los Trabajadores"
+    articulo_estatuto: "artículo 37.3.b) bis del Estatuto de los Trabajadores",
+    no_consume_vacaciones: false, // Added new field
+    color: '#3B82F6', // Added default color
   },
   {
     nombre: "Mudanza",
     codigo: "MUDANZA",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido", // Changed field name
     remunerada: true,
     hecho_causante: "Traslado del domicilio habitual",
     duracion_dias: 1,
     duracion_descripcion: "1 día",
     inicio_disfrute: "El día de la mudanza",
-    articulo_estatuto: "artículo 37.3.c) del Estatuto de los Trabajadores"
+    articulo_estatuto: "artículo 37.3.c) del Estatuto de los Trabajadores",
+    no_consume_vacaciones: false, // Added new field
+    color: '#3B82F6', // Added default color
   },
   {
     nombre: "Deberes inexcusables carácter público",
     codigo: "DEBER_PUBLICO",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido", // Changed field name
     remunerada: true,
     hecho_causante: "Cumplimiento de un deber inexcusable de carácter público y personal, comprendido el ejercicio del sufragio activo",
     duracion_descripcion: "El tiempo indispensable que coincida con la jornada laboral",
     inicio_disfrute: "Cuando corresponda según la obligación",
     consideraciones: "Cuando el cumplimiento del deber suponga la imposibilidad de la prestación del trabajo debido en más del 20% de las horas laborables en un periodo de tres meses, podrá la empresa pasar al trabajador a excedencia. Si percibe indemnización o remuneración, se descontará del salario.",
-    articulo_estatuto: "artículo 37.3.d) del Estatuto de los Trabajadores"
+    articulo_estatuto: "artículo 37.3.d) del Estatuto de los Trabajadores",
+    no_consume_vacaciones: false, // Added new field
+    color: '#3B82F6', // Added default color
   },
   {
     nombre: "Exámenes prenatales",
     codigo: "EXAMENES_PRENATALES",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido", // Changed field name
     remunerada: true,
     hecho_causante: "Asistencia a exámenes prenatales y técnicas de preparación al parto y, en los casos de adopción, guarda con fines de adopción o acogimiento, para la asistencia a las preceptivas sesiones de información y preparación",
     duracion_descripcion: "El tiempo indispensable que coincida con la jornada laboral",
     inicio_disfrute: "Cuando deban tener lugar dentro de la jornada de trabajo",
-    articulo_estatuto: "artículo 37.3.f) del Estatuto de los Trabajadores"
+    articulo_estatuto: "artículo 37.3.f) del Estatuto de los Trabajadores",
+    no_consume_vacaciones: false, // Added new field
+    color: '#3B82F6', // Added default color
   },
   {
     nombre: "Lactancia",
     codigo: "LACTANCIA",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido", // Changed field name
     remunerada: true,
     hecho_causante: "Cuidado del lactante hasta que este cumpla 9 meses",
     duracion_dias: 270,
     duracion_descripcion: "9 meses desde el nacimiento. Puede sustituirse por reducción de jornada de media hora o acumularse en jornadas completas (10-15 días aprox.)",
     inicio_disfrute: "Desde la fecha en la que el trabajador lo solicite hasta que el menor cumpla 9 meses",
     consideraciones: "Es un derecho individual que no puede transferirse. Puede limitarse el ejercicio simultáneo cuando ambas personas trabajan en la misma empresa. Puede extenderse hasta 12 meses con reducción proporcional del salario.",
-    articulo_estatuto: "artículo 37.4 del Estatuto de los Trabajadores"
+    articulo_estatuto: "artículo 37.4 del Estatuto de los Trabajadores",
+    no_consume_vacaciones: false, // Added new field
+    color: '#3B82F6', // Added default color
   }
 ];
 
-export default function AbsenceTypeInfoPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingType, setEditingType] = useState(null);
-  const queryClient = useQueryClient();
 
+// New AbsenceTypeForm component
+function AbsenceTypeForm({ type, onClose, saveMutation }) {
   const [formData, setFormData] = useState({
     nombre: "",
     codigo: "",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido",
     remunerada: false,
     requiere_aprobacion: true,
     hecho_causante: "",
@@ -138,8 +152,267 @@ export default function AbsenceTypeInfoPage() {
     articulo_estatuto: "",
     descripcion: "",
     visible_empleados: true,
-    activo: true
+    activo: true,
+    no_consume_vacaciones: false, // New field
+    color: '#3B82F6', // Default color
   });
+
+  useEffect(() => {
+    if (type) {
+      setFormData(type);
+    } else {
+      setFormData({
+        nombre: "",
+        codigo: "",
+        categoria_principal: "Permiso Retribuido",
+        remunerada: false,
+        requiere_aprobacion: true,
+        hecho_causante: "",
+        duracion_dias: null,
+        duracion_descripcion: "",
+        ampliacion_desplazamiento: false,
+        dias_ampliacion: null,
+        inicio_disfrute: "",
+        consideraciones: "",
+        articulo_estatuto: "",
+        descripcion: "",
+        visible_empleados: true,
+        activo: true,
+        no_consume_vacaciones: false,
+        color: '#3B82F6',
+      });
+    }
+  }, [type]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    saveMutation.mutate(formData);
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {type ? 'Editar Tipo de Ausencia' : 'Nuevo Tipo de Ausencia'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="nombre">Nombre *</Label>
+              <Input
+                id="nombre"
+                value={formData.nombre}
+                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="codigo">Código *</Label>
+              <Input
+                id="codigo"
+                value={formData.codigo}
+                onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="categoria_principal">Categoría Principal</Label>
+              <Select
+                value={formData.categoria_principal}
+                onValueChange={(value) => setFormData({ ...formData, categoria_principal: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Permiso Retribuido">Permiso Retribuido</SelectItem>
+                  <SelectItem value="Permiso No Retribuido">Permiso No Retribuido</SelectItem>
+                  <SelectItem value="Vacaciones">Vacaciones</SelectItem>
+                  <SelectItem value="Baja Médica">Baja Médica</SelectItem>
+                  <SelectItem value="Suspensión Contrato">Suspensión Contrato</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duracion_dias">Duración (días)</Label>
+              <Input
+                id="duracion_dias"
+                type="number"
+                value={formData.duracion_dias || ""}
+                onChange={(e) => setFormData({ ...formData, duracion_dias: parseInt(e.target.value) || null })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="duracion_descripcion">Descripción de Duración</Label>
+            <Input
+              id="duracion_descripcion"
+              value={formData.duracion_descripcion || ""}
+              onChange={(e) => setFormData({ ...formData, duracion_descripcion: e.target.value })}
+              placeholder="Ej: 15 días naturales consecutivos"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hecho_causante">Hecho Causante</Label>
+            <Textarea
+              id="hecho_causante"
+              value={formData.hecho_causante || ""}
+              onChange={(e) => setFormData({ ...formData, hecho_causante: e.target.value })}
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="inicio_disfrute">Inicio y Periodo de Disfrute</Label>
+            <Textarea
+              id="inicio_disfrute"
+              value={formData.inicio_disfrute || ""}
+              onChange={(e) => setFormData({ ...formData, inicio_disfrute: e.target.value })}
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="consideraciones">Consideraciones</Label>
+            <Textarea
+              id="consideraciones"
+              value={formData.consideraciones || ""}
+              onChange={(e) => setFormData({ ...formData, consideraciones: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="articulo_estatuto">Artículo del Estatuto</Label>
+            <Input
+              id="articulo_estatuto"
+              value={formData.articulo_estatuto || ""}
+              onChange={(e) => setFormData({ ...formData, articulo_estatuto: e.target.value })}
+              placeholder="Ej: artículo 37.3.a) del Estatuto de los Trabajadores"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="descripcion">Descripción</Label>
+            <Textarea
+              id="descripcion"
+              value={formData.descripcion || ""}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.remunerada}
+                onCheckedChange={(checked) => setFormData({ ...formData, remunerada: checked })}
+                id="remunerada"
+              />
+              <Label htmlFor="remunerada">Remunerada</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.requiere_aprobacion}
+                onCheckedChange={(checked) => setFormData({ ...formData, requiere_aprobacion: checked })}
+                id="requiere_aprobacion"
+              />
+              <Label htmlFor="requiere_aprobacion">Requiere Aprobación</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.ampliacion_desplazamiento}
+                onCheckedChange={(checked) => setFormData({ ...formData, ampliacion_desplazamiento: checked })}
+                id="ampliacion_desplazamiento"
+              />
+              <Label htmlFor="ampliacion_desplazamiento">Ampliación por Desplazamiento</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.visible_empleados}
+                onCheckedChange={(checked) => setFormData({ ...formData, visible_empleados: checked })}
+                id="visible_empleados"
+              />
+              <Label htmlFor="visible_empleados">Visible para Empleados</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.activo}
+                onCheckedChange={(checked) => setFormData({ ...formData, activo: checked })}
+                id="activo"
+              />
+              <Label htmlFor="activo">Activo</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                checked={formData.no_consume_vacaciones}
+                onCheckedChange={(checked) => setFormData({ ...formData, no_consume_vacaciones: checked })}
+                id="no_consume_vacaciones"
+              />
+              <Label htmlFor="no_consume_vacaciones">NO Consume Vacaciones</Label>
+            </div>
+          </div>
+
+          {formData.ampliacion_desplazamiento && (
+            <div className="space-y-2">
+              <Label htmlFor="dias_ampliacion">Días de Ampliación</Label>
+              <Input
+                id="dias_ampliacion"
+                type="number"
+                value={formData.dias_ampliacion || ""}
+                onChange={(e) => setFormData({ ...formData, dias_ampliacion: parseInt(e.target.value) || null })}
+              />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="color">Color (Hex)</Label>
+            <Input
+              id="color"
+              type="color"
+              value={formData.color || '#3B82F6'}
+              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
+              <Save className="w-4 h-4 mr-2" />
+              {saveMutation.isPending ? "Guardando..." : "Guardar"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+export default function AbsenceTypeInfoPage() {
+  const [showForm, setShowForm] = useState(false);
+  const [editingType, setEditingType] = useState(null);
+  const queryClient = useQueryClient();
+
+  // Initial formData is now handled by the AbsenceTypeForm component internally when opened as 'new'
+  // When editing, the type object is passed directly.
+  // The state for formData is removed from here.
 
   const { data: absenceTypes } = useQuery({
     queryKey: ['absenceTypes'],
@@ -149,8 +422,8 @@ export default function AbsenceTypeInfoPage() {
 
   const saveTypeMutation = useMutation({
     mutationFn: (data) => {
-      if (editingType?.id) {
-        return base44.entities.AbsenceType.update(editingType.id, data);
+      if (data.id) { // Check for existing ID in the passed data
+        return base44.entities.AbsenceType.update(data.id, data);
       }
       return base44.entities.AbsenceType.create(data);
     },
@@ -169,11 +442,12 @@ export default function AbsenceTypeInfoPage() {
 
   const loadPredefinedMutation = useMutation({
     mutationFn: async () => {
-      const promises = PERMISOS_PREDEFINIDOS.map((permiso, index) => 
+      const promises = PERMISOS_PREDEFINIDOS.map((permiso, index) =>
         base44.entities.AbsenceType.create({
           ...permiso,
           orden: index,
-          color: '#3B82F6'
+          color: permiso.color || '#3B82F6', // Ensure color is set from predefined or default
+          no_consume_vacaciones: permiso.no_consume_vacaciones || false, // Ensure this field
         })
       );
       return Promise.all(promises);
@@ -185,36 +459,12 @@ export default function AbsenceTypeInfoPage() {
 
   const handleEdit = (type) => {
     setEditingType(type);
-    setFormData(type);
     setShowForm(true);
   };
 
   const handleClose = () => {
     setShowForm(false);
-    setEditingType(null);
-    setFormData({
-      nombre: "",
-      codigo: "",
-      categoria: "Permiso Retribuido",
-      remunerada: false,
-      requiere_aprobacion: true,
-      hecho_causante: "",
-      duracion_dias: null,
-      duracion_descripcion: "",
-      ampliacion_desplazamiento: false,
-      dias_ampliacion: null,
-      inicio_disfrute: "",
-      consideraciones: "",
-      articulo_estatuto: "",
-      descripcion: "",
-      visible_empleados: true,
-      activo: true
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    saveTypeMutation.mutate(formData);
+    setEditingType(null); // Clear editing type when closing form
   };
 
   const handleDelete = (id) => {
@@ -286,7 +536,7 @@ export default function AbsenceTypeInfoPage() {
                 <p><strong>ℹ️ Información:</strong></p>
                 <p>• Esta configuración se aplica al módulo de gestión de ausencias</p>
                 <p>• Los tipos marcados como "Visible para empleados" aparecerán en la app móvil</p>
-                <p>• Haz clic en "Cargar Predefinidos" para importar los permisos del Estatuto de los Trabajadores</p>
+                <p>• <strong>Campo "NO Consume Vacaciones":</strong> Si está activo, cuando el empleado esté ausente durante vacaciones colectivas, esos días se guardarán como pendientes para disfrutar después</p>
                 <p>• Los tipos configurados aquí se usarán para validar y aprobar ausencias</p>
               </div>
             </div>
@@ -308,7 +558,7 @@ export default function AbsenceTypeInfoPage() {
                     <TableHead>Categoría</TableHead>
                     <TableHead>Duración</TableHead>
                     <TableHead>Remunerada</TableHead>
-                    <TableHead>Artículo</TableHead>
+                    <TableHead>Consume Vac.</TableHead> {/* Updated column header */}
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -316,7 +566,7 @@ export default function AbsenceTypeInfoPage() {
                 <TableBody>
                   {absenceTypes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                      <TableCell colSpan={8} className="text-center py-8 text-slate-500"> {/* Updated colSpan */}
                         No hay tipos configurados. Haz clic en "Cargar Predefinidos" o "Nuevo Tipo"
                       </TableCell>
                     </TableRow>
@@ -333,7 +583,7 @@ export default function AbsenceTypeInfoPage() {
                           <span className="font-mono text-sm">{type.codigo}</span>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{type.categoria}</Badge>
+                          <Badge variant="outline">{type.categoria_principal}</Badge> {/* Updated to categoria_principal */}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
@@ -345,10 +595,13 @@ export default function AbsenceTypeInfoPage() {
                             {type.remunerada ? "Sí" : "No"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <div className="text-xs text-slate-600 max-w-xs truncate">
-                            {type.articulo_estatuto || "-"}
-                          </div>
+                        <TableCell> {/* New "Consume Vac." column */}
+                          <Badge className={type.no_consume_vacaciones ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-800"}>
+                            {type.no_consume_vacaciones ? "NO" : "SÍ"}
+                          </Badge>
+                          {type.no_consume_vacaciones && (
+                            <div className="text-[10px] text-amber-700 mt-1">Genera pendientes</div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -387,183 +640,11 @@ export default function AbsenceTypeInfoPage() {
 
       {/* Formulario */}
       {showForm && (
-        <Dialog open={true} onOpenChange={handleClose}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingType ? 'Editar Tipo de Ausencia' : 'Nuevo Tipo de Ausencia'}
-              </DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre *</Label>
-                  <Input
-                    id="nombre"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="codigo">Código *</Label>
-                  <Input
-                    id="codigo"
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({...formData, codigo: e.target.value})}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="categoria">Categoría</Label>
-                  <Select
-                    value={formData.categoria}
-                    onValueChange={(value) => setFormData({...formData, categoria: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Permiso Retribuido">Permiso Retribuido</SelectItem>
-                      <SelectItem value="Permiso No Retribuido">Permiso No Retribuido</SelectItem>
-                      <SelectItem value="Vacaciones">Vacaciones</SelectItem>
-                      <SelectItem value="Baja Médica">Baja Médica</SelectItem>
-                      <SelectItem value="Suspensión Contrato">Suspensión Contrato</SelectItem>
-                      <SelectItem value="Otro">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duracion_dias">Duración (días)</Label>
-                  <Input
-                    id="duracion_dias"
-                    type="number"
-                    value={formData.duracion_dias || ""}
-                    onChange={(e) => setFormData({...formData, duracion_dias: parseInt(e.target.value) || null})}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="duracion_descripcion">Descripción de Duración</Label>
-                <Input
-                  id="duracion_descripcion"
-                  value={formData.duracion_descripcion || ""}
-                  onChange={(e) => setFormData({...formData, duracion_descripcion: e.target.value})}
-                  placeholder="Ej: 15 días naturales consecutivos"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="hecho_causante">Hecho Causante</Label>
-                <Textarea
-                  id="hecho_causante"
-                  value={formData.hecho_causante || ""}
-                  onChange={(e) => setFormData({...formData, hecho_causante: e.target.value})}
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="inicio_disfrute">Inicio y Periodo de Disfrute</Label>
-                <Textarea
-                  id="inicio_disfrute"
-                  value={formData.inicio_disfrute || ""}
-                  onChange={(e) => setFormData({...formData, inicio_disfrute: e.target.value})}
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="consideraciones">Consideraciones</Label>
-                <Textarea
-                  id="consideraciones"
-                  value={formData.consideraciones || ""}
-                  onChange={(e) => setFormData({...formData, consideraciones: e.target.value})}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="articulo_estatuto">Artículo del Estatuto</Label>
-                <Input
-                  id="articulo_estatuto"
-                  value={formData.articulo_estatuto || ""}
-                  onChange={(e) => setFormData({...formData, articulo_estatuto: e.target.value})}
-                  placeholder="Ej: artículo 37.3.a) del Estatuto de los Trabajadores"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={formData.remunerada}
-                    onCheckedChange={(checked) => setFormData({...formData, remunerada: checked})}
-                  />
-                  <Label>Remunerada</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={formData.requiere_aprobacion}
-                    onCheckedChange={(checked) => setFormData({...formData, requiere_aprobacion: checked})}
-                  />
-                  <Label>Requiere Aprobación</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={formData.ampliacion_desplazamiento}
-                    onCheckedChange={(checked) => setFormData({...formData, ampliacion_desplazamiento: checked})}
-                  />
-                  <Label>Ampliación por Desplazamiento</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={formData.visible_empleados}
-                    onCheckedChange={(checked) => setFormData({...formData, visible_empleados: checked})}
-                  />
-                  <Label>Visible para Empleados</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={formData.activo}
-                    onCheckedChange={(checked) => setFormData({...formData, activo: checked})}
-                  />
-                  <Label>Activo</Label>
-                </div>
-              </div>
-
-              {formData.ampliacion_desplazamiento && (
-                <div className="space-y-2">
-                  <Label htmlFor="dias_ampliacion">Días de Ampliación</Label>
-                  <Input
-                    id="dias_ampliacion"
-                    type="number"
-                    value={formData.dias_ampliacion || ""}
-                    onChange={(e) => setFormData({...formData, dias_ampliacion: parseInt(e.target.value) || null})}
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveTypeMutation.isPending}>
-                  <Save className="w-4 h-4 mr-2" />
-                  {saveTypeMutation.isPending ? "Guardando..." : "Guardar"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <AbsenceTypeForm
+          type={editingType}
+          onClose={handleClose}
+          saveMutation={saveTypeMutation} // Pass the mutation object
+        />
       )}
     </div>
   );
