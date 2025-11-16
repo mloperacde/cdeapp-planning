@@ -24,7 +24,7 @@ import {
   Award,
   Shield,
   MessageSquare,
-  // Removed UserCog import as it's no longer used for MasterEmployeeView
+  TrendingUp, // Added TrendingUp import
 } from "lucide-react";
 import {
   Sidebar,
@@ -319,6 +319,21 @@ export default function Layout({ children, currentPageName }) {
                       <Link to={createPageUrl("Messaging")} className="flex items-center gap-3 px-3 py-2.5">
                         <MessageSquare className="w-5 h-5" />
                         <span className="text-sm">Mensajería</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  {/* New IncentiveManagement menu item */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("IncentiveManagement")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("IncentiveManagement")} className="flex items-center gap-3 px-3 py-2.5">
+                        <TrendingUp className="w-5 h-5" />
+                        <span className="text-sm">Plan de Incentivos</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -25,8 +25,7 @@ import {
 import { Calendar, AlertTriangle, CheckCircle2, Clock, Users, Filter, Download } from "lucide-react";
 import { format, differenceInDays, isBefore, addDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import EmployeeForm from "@/components/EmployeeForm"; // Assuming this path for EmployeeForm
 
 export default function ETTTemporaryEmployeesPage() {
   const [filters, setFilters] = useState({
@@ -36,10 +35,19 @@ export default function ETTTemporaryEmployeesPage() {
     alertaDias: "all",
     empresaETT: "all"
   });
+  
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [showEmployeeForm, setShowEmployeeForm] = useState(false);
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
+    initialData: [],
+  });
+
+  const { data: machines = [] } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list(),
     initialData: [],
   });
 
@@ -196,6 +204,11 @@ export default function ETTTemporaryEmployeesPage() {
     link.download = `empleados_ett_temporales_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleViewDetail = (employee) => {
+    setSelectedEmployee(employee);
+    setShowEmployeeForm(true);
   };
 
   return (
@@ -456,11 +469,13 @@ export default function ETTTemporaryEmployeesPage() {
                           {getEstadoBadge(employee.estadoAlerta, employee.diasRestantes, employee.vencido)}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Link to={createPageUrl("Employees")}>
-                            <Button variant="outline" size="sm">
-                              Ver Detalle
-                            </Button>
-                          </Link>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewDetail(employee)}
+                          >
+                            Ver Detalle
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -488,6 +503,17 @@ export default function ETTTemporaryEmployeesPage() {
           </Card>
         )}
       </div>
+
+      {showEmployeeForm && selectedEmployee && (
+        <EmployeeForm
+          employee={selectedEmployee}
+          machines={machines}
+          onClose={() => {
+            setShowEmployeeForm(false);
+            setSelectedEmployee(null);
+          }}
+        />
+      )}
     </div>
   );
 }
