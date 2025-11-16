@@ -11,22 +11,22 @@ import { Users } from "lucide-react";
 
 export default function TimeSlot({ 
   time, 
-  availableEmployees,
-  maxEmployees,
-  index, 
-  isFirst, 
-  isLast, 
-  totalIntervals,
-  viewMode,
+  availableEmployees = 0,
+  maxEmployees = 1,
+  index = 0, 
+  isFirst = false, 
+  isLast = false, 
+  totalIntervals = 0,
+  viewMode = 'day',
   teamColor = '#3B82F6'
 }) {
   const [isHovered, setIsHovered] = useState(false);
   
   const getColorByTeam = () => {
-    const ratio = availableEmployees / maxEmployees;
+    const ratio = maxEmployees > 0 ? availableEmployees / maxEmployees : 0;
     
-    // Convertir hex a RGB
     const hexToRgb = (hex) => {
+      if (!hex) return { r: 59, g: 130, b: 246 };
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       return result ? {
         r: parseInt(result[1], 16),
@@ -37,7 +37,6 @@ export default function TimeSlot({
     
     const baseColor = hexToRgb(teamColor);
     
-    // Ajustar opacidad basado en ratio
     if (ratio >= 0.8) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 1)`;
     if (ratio >= 0.5) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.8)`;
     if (ratio >= 0.3) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.6)`;
@@ -45,7 +44,7 @@ export default function TimeSlot({
   };
 
   const getSize = () => {
-    const ratio = availableEmployees / maxEmployees;
+    const ratio = maxEmployees > 0 ? availableEmployees / maxEmployees : 0;
     if (isFirst || isLast) return "w-4 h-4";
     if (ratio >= 0.8) return "w-4 h-4";
     if (ratio >= 0.5) return "w-3.5 h-3.5";
@@ -54,6 +53,10 @@ export default function TimeSlot({
 
   const showLabel = isFirst || isLast || (viewMode === 'day' && index % 12 === 0) || (viewMode === 'week' && index % 36 === 0) || (viewMode === 'month' && index % 72 === 0);
   
+  if (!time) {
+    return null;
+  }
+
   return (
     <HoverCard openDelay={100} closeDelay={100}>
       <HoverCardTrigger asChild>

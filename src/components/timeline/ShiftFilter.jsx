@@ -31,10 +31,11 @@ const SHIFTS = [
   },
 ];
 
-export default function ShiftFilter({ selectedShifts, onSelectedShiftsChange }) {
+export default function ShiftFilter({ selectedShifts = [], onSelectedShiftsChange }) {
   const toggleShift = (shiftId) => {
+    if (!Array.isArray(selectedShifts)) return;
+    
     if (selectedShifts.includes(shiftId)) {
-      // No permitir deseleccionar todos los turnos
       if (selectedShifts.length > 1) {
         onSelectedShiftsChange(selectedShifts.filter(id => id !== shiftId));
       }
@@ -48,8 +49,10 @@ export default function ShiftFilter({ selectedShifts, onSelectedShiftsChange }) 
   };
 
   const clearAllShifts = () => {
-    onSelectedShiftsChange([SHIFTS[0].id]); // Mantener al menos uno
+    onSelectedShiftsChange([SHIFTS[0].id]);
   };
+
+  const safeSelectedShifts = Array.isArray(selectedShifts) ? selectedShifts : [];
 
   return (
     <div className="space-y-4">
@@ -78,7 +81,7 @@ export default function ShiftFilter({ selectedShifts, onSelectedShiftsChange }) 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {SHIFTS.map((shift) => {
           const Icon = shift.icon;
-          const isSelected = selectedShifts.includes(shift.id);
+          const isSelected = safeSelectedShifts.includes(shift.id);
           
           return (
             <div
@@ -123,11 +126,11 @@ export default function ShiftFilter({ selectedShifts, onSelectedShiftsChange }) 
       </div>
 
       <div className="text-xs text-slate-500 mt-2">
-        {selectedShifts.length === SHIFTS.length ? (
+        {safeSelectedShifts.length === SHIFTS.length ? (
           <span>Mostrando todos los turnos</span>
         ) : (
           <span>
-            Mostrando {selectedShifts.length} de {SHIFTS.length} turnos
+            Mostrando {safeSelectedShifts.length} de {SHIFTS.length} turnos
           </span>
         )}
       </div>
