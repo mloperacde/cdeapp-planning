@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { differenceInDays, differenceInMonths, differenceInYears, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
@@ -220,12 +221,12 @@ export default function EmployeeForm({ employee, machines, onClose }) {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="datos">Datos</TabsTrigger>
-              <TabsTrigger value="schedule">Horario</TabsTrigger>
+              <TabsTrigger value="schedule">Schedule</TabsTrigger>
               <TabsTrigger value="taquilla">Taquilla</TabsTrigger>
               <TabsTrigger value="machines">
                 Máquinas {isMaintenanceDepartment && "(Mant.)"}
               </TabsTrigger>
-              <TabsTrigger value="availability">Disponib.</TabsTrigger>
+              <TabsTrigger value="availability">Availability</TabsTrigger>
               <TabsTrigger value="absentismo">Absentismo</TabsTrigger>
               <TabsTrigger value="rrhh">RRHH</TabsTrigger>
             </TabsList>
@@ -853,8 +854,16 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               </div>
             </TabsContent>
 
-            <TabsContent value="absentismo" className="space-y-4 mt-4">
-              <AbsenteeismCard employee={employee || formData} />
+            <TabsContent value="absentismo" className="space-y-4">
+              {employee?.id ? (
+                <AbsenteeismCard employee={employee} />
+              ) : (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <p className="text-slate-500">Guarda el empleado primero para ver estadísticas de absentismo</p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="rrhh" className="space-y-4 mt-4">

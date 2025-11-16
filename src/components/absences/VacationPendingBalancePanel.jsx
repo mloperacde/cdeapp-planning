@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ export default function VacationPendingBalancePanel({ employees, compact = false
     initialData: [],
   });
 
+  // Filtrar solo empleados que tienen detalle de ausencias (tienen ausencias configuradas)
   const employeesWithBalance = useMemo(() => {
     return balances
       .map(balance => {
@@ -29,7 +31,7 @@ export default function VacationPendingBalancePanel({ employees, compact = false
           dias_disponibles: diasDisponibles
         };
       })
-      .filter(b => b.employee && b.dias_disponibles > 0)
+      .filter(b => b.employee && b.dias_disponibles > 0 && b.detalle_ausencias?.length > 0)
       .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
 

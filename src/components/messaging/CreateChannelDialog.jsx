@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function CreateChannelDialog({ onClose, employees = [], currentEmployee }) {
@@ -38,44 +37,50 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
 
   const createChannelMutation = useMutation({
     mutationFn: async (data) => {
-      let participantes = [...data.participantes];
+      let participantes = [];
       
-      if (data.tipo === "Equipo" && data.equipo) {
+      if (data.tipo === "General") {
+        participantes = currentEmployee?.id ? [currentEmployee.id] : [];
+      } else if (data.tipo === "Equipo" && data.equipo) {
         participantes = employees.filter(e => e.equipo === data.equipo).map(e => e.id);
       } else if (data.tipo === "Departamento" && data.departamento) {
         participantes = employees.filter(e => e.departamento === data.departamento).map(e => e.id);
-      }
-
-      if (currentEmployee?.id && !participantes.includes(currentEmployee.id)) {
-        participantes.push(currentEmployee.id);
+      } else if (data.tipo === "Direct") {
+        participantes = [...data.participantes];
+        if (currentEmployee?.id && !participantes.includes(currentEmployee.id)) {
+          participantes.push(currentEmployee.id);
+        }
       }
 
       const channelData = {
         nombre: data.nombre,
-        descripcion: data.descripcion,
+        descripcion: data.descripcion || "",
         tipo: data.tipo,
         participantes,
-        admins: [currentEmployee?.id],
-        activo: true
+        admins: currentEmployee?.id ? [currentEmployee.id] : [],
+        activo: true,
+        ultimo_mensaje_fecha: new Date().toISOString()
       };
 
-      if (data.tipo === "Equipo") {
+      if (data.tipo === "Equipo" && data.equipo) {
         channelData.equipo = data.equipo;
       }
-      if (data.tipo === "Departamento") {
+      if (data.tipo === "Departamento" && data.departamento) {
         channelData.departamento = data.departamento;
       }
 
+      console.log("Creating channel with data:", channelData);
       return base44.entities.ChatChannel.create(channelData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Channel created successfully:", data);
       queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
       toast.success("Canal creado correctamente");
       onClose();
     },
     onError: (error) => {
       console.error("Error creating channel:", error);
-      toast.error("Error al crear canal");
+      toast.error(`Error al crear canal: ${error.message || 'Error desconocido'}`);
     }
   });
 
@@ -110,6 +115,7 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
       return;
     }
 
+    console.log("Submitting form with data:", formData);
     createChannelMutation.mutate(formData);
   };
 
@@ -173,11 +179,11 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
           )}
 
           <div className="space-y-2">
-            <Label>Nombre *</Label>
+            <Label>Nombre del Canal *</Label>
             <Input
               value={formData.nombre}
               onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-              placeholder="Nombre del canal"
+              placeholder="ej. Equipo Mañana, Departamento Producción..."
               required
             />
           </div>
@@ -187,22 +193,26 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
             <Textarea
               value={formData.descripcion}
               onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-              placeholder="Descripción del canal"
+              placeholder="Descripción del canal (opcional)"
               rows={2}
             />
           </div>
 
-          {formData.tipo === "Direct" && (
+          {formData.tipo === "Direct" && employees.length > 0 && (
             <div className="space-y-2">
               <Label>Seleccionar Participantes *</Label>
               <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-2">
                 {employees.filter(e => e.id !== currentEmployee?.id).map(emp => (
                   <div key={emp.id} className="flex items-center gap-2">
                     <Checkbox
+                      id={`participant-${emp.id}`}
                       checked={formData.participantes.includes(emp.id)}
                       onCheckedChange={() => toggleParticipant(emp.id)}
                     />
-                    <label className="text-sm cursor-pointer flex-1" onClick={() => toggleParticipant(emp.id)}>
+                    <label 
+                      htmlFor={`participant-${emp.id}`}
+                      className="text-sm cursor-pointer flex-1"
+                    >
                       {emp.nombre}
                     </label>
                   </div>
@@ -216,11 +226,15 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
             </div>
           )}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createChannelMutation.isPending}>
+            <Button 
+              type="submit" 
+              disabled={createChannelMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               {createChannelMutation.isPending ? "Creando..." : "Crear Canal"}
             </Button>
           </div>

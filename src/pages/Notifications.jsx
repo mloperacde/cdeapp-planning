@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,7 @@ export default function NotificationsPage() {
       : Promise.resolve([]),
     initialData: [],
     enabled: !!currentEmployee,
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
   const markAsReadMutation = useMutation({

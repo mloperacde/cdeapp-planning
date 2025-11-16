@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, BarChart3, Infinity, Settings, CalendarDays, CheckSquare, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, BarChart3, Infinity, Settings, CalendarDays, CheckSquare, Upload, GitFork, FileText } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -47,6 +47,11 @@ import VacationPendingBalancePanel from "../components/absences/VacationPendingB
 import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
 import { debounce } from "lodash";
 import { toast } from 'sonner'; // Assuming sonner is the toast library used
+
+import ApprovalFlowManager from "../components/absences/ApprovalFlowManager";
+import RecurringAbsenceMonitor from "../components/absences/RecurringAbsenceMonitor";
+import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
+import { notifySupervisorsAbsenceRequest } from "../components/notifications/NotificationService";
 
 // Sugerencias de motivos frecuentes por tipo
 const SUGGESTED_REASONS = {
@@ -192,6 +197,12 @@ export default function AbsenceManagementPage() {
         result = await base44.entities.Absence.update(editingAbsence.id, data);
       } else {
         result = await base44.entities.Absence.create(data);
+        
+        // Notificar a supervisores sobre nueva solicitud
+        const employee = employees.find(e => e.id === data.employee_id);
+        if (employee) {
+          await notifySupervisorsAbsenceRequest(result.id, employee.nombre);
+        }
       }
 
       // Actualizar estado del empleado
@@ -482,7 +493,7 @@ export default function AbsenceManagementPage() {
         </div>
 
         <Tabs defaultValue="absences" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="absences">
               <UserX className="w-4 h-4 mr-2" />
               Registro
@@ -495,6 +506,10 @@ export default function AbsenceManagementPage() {
               <CalendarDays className="w-4 h-4 mr-2" />
               Saldo Pendiente
             </TabsTrigger>
+            <TabsTrigger value="recurring">
+              <Infinity className="w-4 h-4 mr-2" />
+              Recurrentes
+            </TabsTrigger>
             <TabsTrigger value="calendar">
               <CalendarDays className="w-4 h-4 mr-2" />
               Calendario
@@ -503,9 +518,13 @@ export default function AbsenceManagementPage() {
               <Settings className="w-4 h-4 mr-2" />
               Tipos
             </TabsTrigger>
-            <TabsTrigger value="dashboard">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Estadísticas
+            <TabsTrigger value="flows">
+              <GitFork className="w-4 h-4 mr-2" />
+              Flujos
+            </TabsTrigger>
+            <TabsTrigger value="reports">
+              <FileText className="w-4 h-4 mr-2" />
+              Reportes
             </TabsTrigger>
           </TabsList>
 
@@ -746,6 +765,10 @@ export default function AbsenceManagementPage() {
             <VacationPendingBalancePanel employees={employees} />
           </TabsContent>
 
+          <TabsContent value="recurring">
+            <RecurringAbsenceMonitor absences={absences} employees={employees} />
+          </TabsContent>
+
           <TabsContent value="calendar">
             <AbsenceCalendar
               absences={absences}
@@ -756,6 +779,14 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="types">
             <AbsenceTypeManager />
+          </TabsContent>
+
+          <TabsContent value="flows">
+            <ApprovalFlowManager />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <AdvancedReportGenerator />
           </TabsContent>
 
           <TabsContent value="dashboard">
