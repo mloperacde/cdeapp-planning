@@ -33,20 +33,20 @@ export default function TimelineView({
     current.setMilliseconds(0);
     
     const holidayDates = new Set(
-      holidays.filter(h => h.fecha).map(h => {
+      holidays.filter(h => h.date).map(h => {
         try {
-          return format(new Date(h.fecha), "yyyy-MM-dd");
+          return format(new Date(h.date), "yyyy-MM-dd");
         } catch {
           return null;
         }
       }).filter(Boolean)
     );
     
-    const vacationRanges = vacations.filter(v => v.fecha_inicio && v.fecha_fin).map(v => {
+    const vacationRanges = vacations.filter(v => v.start_date && v.end_date).map(v => {
       try {
         return {
-          start: new Date(v.fecha_inicio),
-          end: new Date(v.fecha_fin),
+          start: new Date(v.start_date),
+          end: new Date(v.end_date),
           employeeIds: v.aplica_todos ? null : v.employee_ids
         };
       } catch {
@@ -200,9 +200,9 @@ export default function TimelineView({
     checkDate.setHours(0, 0, 0, 0);
     
     return vacations.some(vacation => {
-      // Assuming 'fecha_inicio' and 'fecha_fin' are properties of vacation objects
-      const start = new Date(vacation.fecha_inicio);
-      const end = new Date(vacation.fecha_fin);
+      if (!vacation.start_date || !vacation.end_date) return false;
+      const start = new Date(vacation.start_date);
+      const end = new Date(vacation.end_date);
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
       
@@ -213,8 +213,8 @@ export default function TimelineView({
   const isDateHoliday = (date) => {
     if (!holidays || holidays.length === 0) return false;
     const dateStr = format(date, 'yyyy-MM-dd');
-    // Assuming 'fecha' is the property holding the date string for holidays
-    return holidays.some(h => format(new Date(h.fecha), 'yyyy-MM-dd') === dateStr);
+    // Assuming 'date' is the property holding the date string for holidays
+    return holidays.some(h => h.date && format(new Date(h.date), 'yyyy-MM-dd') === dateStr);
   };
 
   if (workingIntervals.length === 0) {

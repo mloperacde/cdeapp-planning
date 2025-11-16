@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -61,9 +62,9 @@ export default function WorkCalendar() {
     const dateStr = format(date, 'yyyy-MM-dd');
 
     const holiday = holidays.find(h => {
-      if (!h.fecha) return false;
+      if (!h.date) return false;
       try {
-        const hDate = format(new Date(h.fecha), 'yyyy-MM-dd');
+        const hDate = format(new Date(h.date), 'yyyy-MM-dd');
         return hDate === dateStr;
       } catch {
         return false;
@@ -71,10 +72,10 @@ export default function WorkCalendar() {
     });
 
     const vacation = vacations.find(v => {
-      if (!v.fecha_inicio || !v.fecha_fin) return false;
+      if (!v.start_date || !v.end_date) return false;
       try {
-        const vStart = new Date(v.fecha_inicio);
-        const vEnd = new Date(v.fecha_fin);
+        const vStart = new Date(v.start_date);
+        const vEnd = new Date(v.end_date);
         vStart.setHours(0, 0, 0, 0);
         vEnd.setHours(0, 0, 0, 0);
         const checkDate = new Date(date);
@@ -108,16 +109,16 @@ export default function WorkCalendar() {
     const vacaciones = [];
 
     holidays.forEach(h => {
-      if (!h.fecha) return;
+      if (!h.date) return;
       try {
-        const date = new Date(h.fecha);
+        const date = new Date(h.date);
         const year = date.getFullYear();
         const currentYear = currentDate.getFullYear();
         if (year === currentYear) {
           festivos.push({
             fecha: date,
-            nombre: h.nombre,
-            descripcion: h.descripcion,
+            nombre: h.name,
+            descripcion: h.description,
             id: h.id,
             entity: 'Holiday'
           });
@@ -126,10 +127,10 @@ export default function WorkCalendar() {
     });
 
     vacations.forEach(v => {
-      if (!v.fecha_inicio || !v.fecha_fin) return;
+      if (!v.start_date || !v.end_date) return;
       try {
-        const start = new Date(v.fecha_inicio);
-        const end = new Date(v.fecha_fin);
+        const start = new Date(v.start_date);
+        const end = new Date(v.end_date);
         const year = start.getFullYear();
         const currentYear = currentDate.getFullYear();
         if (year === currentYear) {
@@ -141,8 +142,8 @@ export default function WorkCalendar() {
           
           vacaciones.push({
             fecha: start,
-            nombre: v.nombre || `Vacaciones`,
-            descripcion: v.descripcion,
+            nombre: v.name || `Vacaciones`,
+            descripcion: v.notes,
             fecha_fin: end,
             dias: dias,
             id: v.id,
@@ -302,8 +303,8 @@ export default function WorkCalendar() {
                               'text-slate-700'
                             }`}
                             title={
-                              holiday?.nombre ||
-                              vacation?.nombre ||
+                              holiday?.name || // Changed from holiday?.nombre
+                              vacation?.name || // Changed from vacation?.nombre
                               (isWeekend ? 'Fin de semana' : '')
                             }
                           >
