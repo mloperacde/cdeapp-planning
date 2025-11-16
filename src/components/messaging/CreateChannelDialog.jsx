@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tantml:react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Search, Filter } from "lucide-react";
 
 export default function CreateChannelDialog({ onClose, employees = [], currentEmployee }) {
   const [formData, setFormData] = useState({
@@ -19,6 +20,9 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
     departamento: "",
     participantes: []
   });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterEstado, setFilterEstado] = useState("all");
   const queryClient = useQueryClient();
 
   const { data: teams = [] } = useQuery({
@@ -34,6 +38,24 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
     });
     return Array.from(depts).sort();
   }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(e => {
+      if (e.id === currentEmployee?.id) return false;
+      
+      const matchesSearch = !searchTerm.trim() || (
+        e.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.dni?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.equipo?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      const matchesDept = filterDept === "all" || e.departamento === filterDept;
+      const matchesEstado = filterEstado === "all" || (e.estado_empleado || "Alta") === filterEstado;
+      
+      return matchesSearch && matchesDept && matchesEstado;
+    });
+  }, [employees, currentEmployee, searchTerm, filterDept, filterEstado]);
 
   const createChannelMutation = useMutation({
     mutationFn: async (data) => {
@@ -69,19 +91,12 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
         channelData.departamento = data.departamento;
       }
 
-      console.log("Creating channel with data:", channelData);
       return base44.entities.ChatChannel.create(channelData);
     },
-    onSuccess: (data) => {
-      console.log("Channel created successfully:", data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
-      toast.success("Canal creado correctamente");
       onClose();
     },
-    onError: (error) => {
-      console.error("Error creating channel:", error);
-      toast.error(`Error al crear canal: ${error.message || 'Error desconocido'}`);
-    }
   });
 
   const toggleParticipant = (empId) => {
@@ -94,34 +109,12 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (!formData.nombre.trim()) {
-      toast.error("El nombre es obligatorio");
-      return;
-    }
-
-    if (formData.tipo === "Direct" && formData.participantes.length === 0) {
-      toast.error("Selecciona al menos un participante");
-      return;
-    }
-
-    if (formData.tipo === "Equipo" && !formData.equipo) {
-      toast.error("Selecciona un equipo");
-      return;
-    }
-
-    if (formData.tipo === "Departamento" && !formData.departamento) {
-      toast.error("Selecciona un departamento");
-      return;
-    }
-
-    console.log("Submitting form with data:", formData);
     createChannelMutation.mutate(formData);
   };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Crear Nuevo Canal</DialogTitle>
         </DialogHeader>
@@ -201,9 +194,41 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
           {formData.tipo === "Direct" && employees.length > 0 && (
             <div className="space-y-2">
               <Label>Seleccionar Participantes *</Label>
-              <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-2">
-                {employees.filter(e => e.id !== currentEmployee?.id).map(emp => (
-                  <div key={emp.id} className="flex items-center gap-2">
+              
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="relative col-span-3">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar por nombre, DNI, código..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={filterDept} onValueChange={setFilterDept}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Departamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={filterEstado} onValueChange={setFilterEstado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                    <SelectItem value="Baja">Baja</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="border rounded p-3 max-h-64 overflow-y-auto space-y-2">
+                {filteredEmployees.map(emp => (
+                  <div key={emp.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded">
                     <Checkbox
                       id={`participant-${emp.id}`}
                       checked={formData.participantes.includes(emp.id)}
@@ -213,10 +238,19 @@ export default function CreateChannelDialog({ onClose, employees = [], currentEm
                       htmlFor={`participant-${emp.id}`}
                       className="text-sm cursor-pointer flex-1"
                     >
-                      {emp.nombre}
+                      <div className="font-medium">{emp.nombre}</div>
+                      <div className="text-xs text-slate-500">
+                        {emp.codigo_empleado && `${emp.codigo_empleado} • `}
+                        {emp.departamento || 'Sin dept.'} • {emp.puesto || 'Sin puesto'}
+                      </div>
                     </label>
                   </div>
                 ))}
+                {filteredEmployees.length === 0 && (
+                  <p className="text-center text-slate-500 text-sm py-4">
+                    No se encontraron empleados
+                  </p>
+                )}
               </div>
               {formData.participantes.length > 0 && (
                 <p className="text-xs text-slate-600">

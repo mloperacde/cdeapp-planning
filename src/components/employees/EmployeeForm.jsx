@@ -26,7 +26,7 @@ import { differenceInDays, differenceInMonths, differenceInYears, format } from 
 import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
 import LockerAssignmentPanel from "./LockerAssignmentPanel";
-import AbsenteeismCard from "./AbsenteeismCard"; // New import
+import AbsenteeismCard from "./AbsenteeismCard";
 import { useToast } from "@/components/ui/use-toast"; // New import for toast
 
 export default function EmployeeForm({ employee, machines, onClose }) {
@@ -235,12 +235,12 @@ export default function EmployeeForm({ employee, machines, onClose }) {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="datos">Datos</TabsTrigger>
-              <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              <TabsTrigger value="schedule">Horarios</TabsTrigger>
               <TabsTrigger value="taquilla">Taquilla</TabsTrigger>
               <TabsTrigger value="machines">
                 Máquinas {isMaintenanceDepartment && "(Mant.)"}
               </TabsTrigger>
-              <TabsTrigger value="availability">Availability</TabsTrigger>
+              <TabsTrigger value="availability">Disponibilidad</TabsTrigger>
               <TabsTrigger value="absentismo">Absentismo</TabsTrigger>
               <TabsTrigger value="rrhh">RRHH</TabsTrigger>
             </TabsList>
@@ -998,7 +998,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 <div className="space-y-2">
                   <Label>Tipo de Jornada</Label>
                   <Input value={formData.tipo_jornada || ""} disabled className="bg-slate-50" />
-                  <p className="text-xs text-slate-500">Desde pestaña Horario</p>
+                  <p className="text-xs text-slate-500">Desde pestaña Horarios</p>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -116,7 +117,8 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
     },
     onSuccess: (results) => {
       const sent = results.filter(r => r).length;
-      toast.success(`${sent} invitación(es) enviada(s) por ${inviteMethod === "email" ? "email" : "SMS"}`);
+      // The line below was removed as per the outline:
+      // toast.success(`${sent} invitación(es) enviada(s) por ${inviteMethod === "email" ? "email" : "SMS"}`);
       setShowInviteDialog(false);
       setSelectedEmployees([]);
       setSearchTerm("");

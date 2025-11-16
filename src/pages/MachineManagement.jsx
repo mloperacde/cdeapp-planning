@@ -70,13 +70,7 @@ export default function MachineManagementPage() {
       return base44.entities.Machine.create(data);
     },
     onSuccess: () => {
-      // Invalidate all machine-related queries across the app
-      queryClient.invalidateQueries({ queryKey: ['machines'] });
-      queryClient.invalidateQueries({ queryKey: ['machinePlanning'] });
-      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
-      
+      queryClient.invalidateQueries(); // Invalidate all queries
       setShowForm(false);
       setEditingMachine(null);
       toast.success("Máquina guardada - listas actualizadas en toda la aplicación");
@@ -86,10 +80,7 @@ export default function MachineManagementPage() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Machine.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['machines'] });
-      queryClient.invalidateQueries({ queryKey: ['machinePlanning'] });
-      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries(); // Invalidate all queries
       toast.success("Máquina eliminada - listas actualizadas");
     },
   });

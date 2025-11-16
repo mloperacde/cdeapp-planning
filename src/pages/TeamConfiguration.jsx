@@ -30,6 +30,8 @@ export default function TeamConfigurationPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterPuesto, setFilterPuesto] = useState("all");
+  const [filterEstado, setFilterEstado] = useState("Alta");
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [positionOrders, setPositionOrders] = useState({});
@@ -55,7 +57,7 @@ export default function TeamConfigurationPage() {
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
+    queryFn: () => base44.entities.Machine.list('orden'),
     initialData: [],
   });
 
@@ -112,10 +114,6 @@ export default function TeamConfigurationPage() {
     },
     onSuccess: async () => {
       // Invalidate all related queries to refresh everywhere
-      queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
-      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
       
       // Update employee records with new team names
       const team1 = teamFormData.team_1;
@@ -134,9 +132,9 @@ export default function TeamConfigurationPage() {
       
       if (updatePromises.length > 0) {
         await Promise.all(updatePromises);
-        queryClient.invalidateQueries({ queryKey: ['employees'] });
       }
       
+      queryClient.invalidateQueries(); // Invalidate all queries after any team and employee updates
       toast.success("Equipos guardados y sincronizados en toda la aplicación");
     },
     onError: (error) => {
@@ -232,11 +230,21 @@ export default function TeamConfigurationPage() {
       teamEmployees = teamEmployees.filter(emp => emp.departamento === selectedDepartment);
     }
 
+    if (filterPuesto !== "all") {
+      teamEmployees = teamEmployees.filter(emp => emp.puesto === filterPuesto);
+    }
+
+    if (filterEstado !== "all") {
+      teamEmployees = teamEmployees.filter(emp => (emp.estado_empleado || "Alta") === filterEstado);
+    }
+
     if (searchTerm.trim()) {
       teamEmployees = teamEmployees.filter(emp => 
         emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.puesto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase())
+        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.dni?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.equipo?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -251,6 +259,14 @@ export default function TeamConfigurationPage() {
       }
     });
     return Array.from(depts).sort();
+  };
+
+  const getPuestos = () => {
+    const puestos = new Set();
+    employees.forEach(emp => {
+      if (emp.puesto) puestos.add(emp.puesto);
+    });
+    return Array.from(puestos).sort();
   };
 
   const groupByDepartmentAndPosition = (teamEmployees) => {
@@ -371,6 +387,7 @@ export default function TeamConfigurationPage() {
 
   const weeks = Array.from({ length: 8 }, (_, i) => addWeeks(selectedWeek, i));
   const departments = getDepartments();
+  const puestos = getPuestos();
 
   const getDepartmentStats = (teamName) => {
     const teamEmployees = getTeamEmployees(teamName);
@@ -678,43 +695,53 @@ export default function TeamConfigurationPage() {
             <div className="mb-6 space-y-4">
               <Card className="bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium">Fecha:</Label>
-                      <Input
-                        type="date"
-                        value={format(selectedDate, 'yyyy-MM-dd')}
-                        onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                        className="flex-1"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                      <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los Departamentos</SelectItem>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept} value={dept}>
-                              {dept}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="relative">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div className="relative col-span-2">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <Input
-                        placeholder="Buscar empleado..."
+                        placeholder="Buscar por nombre, DNI, código, equipo..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10"
                       />
                     </div>
+
+                    <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los Departamentos</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filterPuesto} onValueChange={setFilterPuesto}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Puesto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los Puestos</SelectItem>
+                        {puestos.map((p) => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filterEstado} onValueChange={setFilterEstado}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los Estados</SelectItem>
+                        <SelectItem value="Alta">Alta</SelectItem>
+                        <SelectItem value="Baja">Baja</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
@@ -769,7 +796,7 @@ export default function TeamConfigurationPage() {
                     if (teamEmployees.length === 0) {
                       return (
                         <div className="text-center py-8 text-slate-500">
-                          {searchTerm ? 'No se encontraron empleados' : 'No hay empleados asignados'}
+                          {searchTerm || selectedDepartment !== "all" || filterPuesto !== "all" || filterEstado !== "Alta" ? 'No se encontraron empleados con estos filtros' : 'No hay empleados asignados a este equipo'}
                         </div>
                       );
                     }
@@ -952,7 +979,7 @@ export default function TeamConfigurationPage() {
                     if (teamEmployees.length === 0) {
                       return (
                         <div className="text-center py-8 text-slate-500">
-                          {searchTerm ? 'No se encontraron empleados' : 'No hay empleados asignados'}
+                          {searchTerm || selectedDepartment !== "all" || filterPuesto !== "all" || filterEstado !== "Alta" ? 'No se encontraron empleados con estos filtros' : 'No hay empleados asignados a este equipo'}
                         </div>
                       );
                     }
