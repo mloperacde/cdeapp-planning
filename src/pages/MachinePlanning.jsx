@@ -549,7 +549,7 @@ export default function MachinePlanningPage() {
 
             <TabsContent value="kanban" className="mt-0">
               <CardContent className="p-6">
-                <h3 className="font-semibold text-lg mb-4">Máquinas en Tarjetas ({machines.length})</h3>
+                <h3 className="font-semibold text-lg mb-4">Máquinas Planificadas ({machines.length})</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>

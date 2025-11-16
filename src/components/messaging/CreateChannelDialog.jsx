@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-export default function CreateChannelDialog({ onClose, employees, currentEmployee }) {
+export default function CreateChannelDialog({ onClose, employees = [], currentEmployee }) {
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -23,7 +22,7 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
   });
   const queryClient = useQueryClient();
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
@@ -39,7 +38,7 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
 
   const createChannelMutation = useMutation({
     mutationFn: async (data) => {
-      let participantes = [...data.participantes]; // Create a shallow copy to avoid direct mutation
+      let participantes = [...data.participantes];
       
       if (data.tipo === "Equipo" && data.equipo) {
         participantes = employees.filter(e => e.equipo === data.equipo).map(e => e.id);
@@ -51,20 +50,27 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
         participantes.push(currentEmployee.id);
       }
 
-      return base44.entities.ChatChannel.create({
+      const channelData = {
         nombre: data.nombre,
         descripcion: data.descripcion,
         tipo: data.tipo,
-        equipo: data.tipo === "Equipo" ? data.equipo : undefined, // Conditionally include equipo
-        departamento: data.tipo === "Departamento" ? data.departamento : undefined, // Conditionally include departamento
         participantes,
         admins: [currentEmployee?.id],
         activo: true
-      });
+      };
+
+      if (data.tipo === "Equipo") {
+        channelData.equipo = data.equipo;
+      }
+      if (data.tipo === "Departamento") {
+        channelData.departamento = data.departamento;
+      }
+
+      return base44.entities.ChatChannel.create(channelData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatChannels'] });
-      toast.success("Canal creado");
+      toast.success("Canal creado correctamente");
       onClose();
     },
     onError: (error) => {
@@ -83,10 +89,27 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
     if (!formData.nombre.trim()) {
       toast.error("El nombre es obligatorio");
       return;
     }
+
+    if (formData.tipo === "Direct" && formData.participantes.length === 0) {
+      toast.error("Selecciona al menos un participante");
+      return;
+    }
+
+    if (formData.tipo === "Equipo" && !formData.equipo) {
+      toast.error("Selecciona un equipo");
+      return;
+    }
+
+    if (formData.tipo === "Departamento" && !formData.departamento) {
+      toast.error("Selecciona un departamento");
+      return;
+    }
+
     createChannelMutation.mutate(formData);
   };
 
@@ -100,7 +123,7 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Tipo de Canal *</Label>
-            <Select value={formData.tipo} onValueChange={(value) => setFormData({...formData, tipo: value})}>
+            <Select value={formData.tipo} onValueChange={(value) => setFormData({...formData, tipo: value, equipo: "", departamento: "", participantes: []})}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -171,7 +194,7 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
 
           {formData.tipo === "Direct" && (
             <div className="space-y-2">
-              <Label>Seleccionar Destinatario *</Label>
+              <Label>Seleccionar Participantes *</Label>
               <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-2">
                 {employees.filter(e => e.id !== currentEmployee?.id).map(emp => (
                   <div key={emp.id} className="flex items-center gap-2">
@@ -185,6 +208,11 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
                   </div>
                 ))}
               </div>
+              {formData.participantes.length > 0 && (
+                <p className="text-xs text-slate-600">
+                  {formData.participantes.length} participante(s) seleccionado(s)
+                </p>
+              )}
             </div>
           )}
 
