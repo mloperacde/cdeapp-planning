@@ -47,7 +47,6 @@ import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../co
 import { debounce } from "lodash";
 import { toast } from 'sonner';
 import { checkAndExecuteWorkflows } from "../components/workflows/WorkflowAutomation";
-import { createTaskForAbsenceApproval } from "../components/workflows/AutomatedTaskCreator";
 
 import ApprovalFlowManager from "../components/absences/ApprovalFlowManager";
 import RecurringAbsenceMonitor from "../components/absences/RecurringAbsenceMonitor";
@@ -248,11 +247,6 @@ export default function AbsenceManagementPage() {
           referencia_tipo: "Absence",
           referencia_id: result.id
         });
-
-        // Crear tarea automática si requiere aprobación
-        if (absenceType?.requiere_aprobacion) {
-          await createTaskForAbsenceApproval(result, employee);
-        }
       }
 
       return result;

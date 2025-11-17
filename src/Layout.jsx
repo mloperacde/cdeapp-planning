@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -25,8 +26,7 @@ import {
   MessageSquare,
   TrendingUp,
   Calendar as CalendarIcon,
-  CheckSquare,
-  } from "lucide-react";
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -326,25 +326,11 @@ export default function Layout({ children, currentPageName }) {
                       <Link to={createPageUrl("IncentiveManagement")} className="flex items-center gap-3 px-3 py-2.5">
                         <TrendingUp className="w-5 h-5" />
                         <span className="text-sm">Plan de Incentivos</span>
-                        </Link>
-                        </SidebarMenuButton>
-                        </SidebarMenuItem>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-                        <SidebarMenuItem>
-                        <SidebarMenuButton
-                        asChild
-                        className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("TaskManagement")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                        }`}
-                        >
-                        <Link to={createPageUrl("TaskManagement")} className="flex items-center gap-3 px-3 py-2.5">
-                        <CheckSquare className="w-5 h-5" />
-                        <span className="text-sm">Tareas</span>
-                        </Link>
-                        </SidebarMenuButton>
-                        </SidebarMenuItem>
-
-                        <Collapsible open={openSections.informes} onOpenChange={() => toggleSection('informes')}>
+                  <Collapsible open={openSections.informes} onOpenChange={() => toggleSection('informes')}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton

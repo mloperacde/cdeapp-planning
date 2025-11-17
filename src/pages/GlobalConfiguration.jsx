@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, ArrowLeft, Building2, Briefcase, Users, FileText, GraduationCap, Globe, LayoutDashboard, Cog } from "lucide-react";
+import { Settings, ArrowLeft, Building2, Briefcase, Users, FileText, GraduationCap, Globe, LayoutDashboard } from "lucide-react";
 import ConfigListManager from "../components/config/ConfigListManager";
 import DashboardRoleConfigurator from "../components/config/DashboardRoleConfigurator";
-import MachinesMasterConfig from "../components/config/MachinesMasterConfig";
 
 export default function GlobalConfigurationPage() {
   const navigate = useNavigate();
@@ -56,14 +55,6 @@ export default function GlobalConfigurationPage() {
       color: "pink"
     },
     {
-      key: "maquinas",
-      label: "Máquinas",
-      icon: Settings,
-      description: "Archivo maestro de máquinas",
-      color: "slate",
-      masterFile: true
-    },
-    {
       key: "dashboard",
       label: "Dashboard por Roles",
       icon: LayoutDashboard,
@@ -93,7 +84,7 @@ export default function GlobalConfigurationPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-8 mb-6">
+          <TabsList className="grid w-full grid-cols-7 mb-6">
             {configSections.map(section => {
               const Icon = section.icon;
               return (
@@ -105,15 +96,11 @@ export default function GlobalConfigurationPage() {
             })}
           </TabsList>
 
-          {configSections.filter(s => !s.masterFile && s.key !== 'dashboard').map(section => (
+          {configSections.slice(0, -1).map(section => (
             <TabsContent key={section.key} value={section.key}>
               <ConfigListManager configKey={section.key} config={section} />
             </TabsContent>
           ))}
-
-          <TabsContent value="maquinas">
-            <MachinesMasterConfig />
-          </TabsContent>
 
           <TabsContent value="dashboard">
             <DashboardRoleConfigurator />

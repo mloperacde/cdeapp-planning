@@ -9,7 +9,6 @@ import { format, isSameDay, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import TaskWidget from "../tasks/TaskWidget";
 
 export default function DashboardWidgets({ dashboardConfig, employees }) {
   const { data: absences = [] } = useQuery({
@@ -91,8 +90,6 @@ export default function DashboardWidgets({ dashboardConfig, employees }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {isWidgetVisible("tareas") && <TaskWidget />}
-
       {isWidgetVisible("cumpleanos") && (
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b">
