@@ -53,38 +53,38 @@ export default function Timeline() {
   const { data: holidays = [], isLoading: isLoadingHolidays, refetch: refetchHolidays } = useQuery({
     queryKey: ['holidays'],
     queryFn: () => base44.entities.Holiday.list(),
-    initialData: [],
+    initialData: []
   });
 
   const { data: vacations = [], isLoading: isLoadingVacations, refetch: refetchVacations } = useQuery({
     queryKey: ['vacations'],
     queryFn: () => base44.entities.Vacation.list(),
-    initialData: [],
+    initialData: []
   });
 
   const { data: employees = [] } = useQuery({ // Removed isLoadingEmployees as per instructions
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
-    initialData: [],
+    initialData: []
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
+    initialData: []
   });
 
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
-    initialData: [],
+    initialData: []
   });
 
   // Get unique departments
   const departments = useMemo(() => {
     const depts = new Set();
-    if (Array.isArray(employees)) { // Ensure employees data is available and is an array
-      employees.forEach(emp => {
+    if (Array.isArray(employees)) {// Ensure employees data is available and is an array
+      employees.forEach((emp) => {
         if (emp?.departamento) depts.add(emp.departamento); // Safely access departamento
       });
     }
@@ -107,13 +107,13 @@ export default function Timeline() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-10"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-            Planning / Línea de Tiempo
+          className="text-center mb-10">
+
+          <h1 className="bg-clip-text text-transparent py-2 text-4xl font-bold md:text-5xl from-blue-600 to-blue-800">Planning / Línea de Tiempo
+
           </h1>
-          <p className="text-slate-600 text-lg mt-2">
-            Visualiza la disponibilidad de empleados
+          <p className="text-slate-600 mt-4 text-lg">Visualiza la disponibilidad de empleados
+
           </p>
         </motion.div>
 
@@ -121,8 +121,8 @@ export default function Timeline() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="space-y-6"
-        >
+          className="space-y-6">
+
           <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
             <TimelineControls
               viewMode={viewMode}
@@ -140,13 +140,13 @@ export default function Timeline() {
               teams={teams || []}
               selectedDepartment={selectedDepartment}
               onSelectedDepartmentChange={setSelectedDepartment}
-              departments={departments}
-            />
+              departments={departments} />
+
           </Card>
 
           <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 overflow-hidden">
-            <TimelineView 
-              startDate={startDate} 
+            <TimelineView
+              startDate={startDate}
               endDate={endDate}
               holidays={holidays || []}
               vacations={vacations || []}
@@ -155,13 +155,13 @@ export default function Timeline() {
               teams={teams || []}
               teamSchedules={teamSchedules || []}
               viewMode={viewMode}
-              selectedDepartment={selectedDepartment}
-            />
+              selectedDepartment={selectedDepartment} />
+
           </Card>
 
           <WorkCalendar />
         </motion.div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
