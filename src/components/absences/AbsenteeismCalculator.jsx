@@ -122,6 +122,31 @@ export async function calculateGlobalAbsenteeism(startDate, endDate) {
 }
 
 /**
+ * Calcula días de ausencia desde fecha inicio hasta HOY para ausencias activas
+ */
+export function calculateAbsenceDaysUntilNow(absence) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const startDate = new Date(absence.fecha_inicio);
+  startDate.setHours(0, 0, 0, 0);
+  
+  let endDate;
+  if (absence.fecha_fin_desconocida) {
+    endDate = now;
+  } else {
+    endDate = new Date(absence.fecha_fin);
+    endDate.setHours(0, 0, 0, 0);
+    if (endDate > now) endDate = now;
+  }
+  
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const workDays = days.filter(day => !isWeekend(day));
+  
+  return workDays.length;
+}
+
+/**
  * Actualiza diariamente el absentismo de un empleado
  */
 export async function updateEmployeeAbsenteeismDaily(employeeId) {
