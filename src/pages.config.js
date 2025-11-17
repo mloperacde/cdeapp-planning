@@ -52,7 +52,6 @@ import HRDashboard from './pages/HRDashboard';
 import MasterMachineView from './pages/MasterMachineView';
 import MessagingConfig from './pages/MessagingConfig';
 import GlobalConfiguration from './pages/GlobalConfiguration';
-import WorkflowConfiguration from './pages/WorkflowConfiguration';
 import __Layout from './Layout.jsx';
 
 
@@ -111,7 +110,6 @@ export const PAGES = {
     "MasterMachineView": MasterMachineView,
     "MessagingConfig": MessagingConfig,
     "GlobalConfiguration": GlobalConfiguration,
-    "WorkflowConfiguration": WorkflowConfiguration,
 }
 
 export const pagesConfig = {
