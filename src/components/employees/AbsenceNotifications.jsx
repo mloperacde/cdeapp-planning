@@ -3,10 +3,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bell, AlertTriangle, UserX, Calendar } from "lucide-react";
-import { format, differenceInDays, isPast, isFuture } from "date-fns";
+import { format, differenceInDays, isPast, isFuture, eachDayOfInterval, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+
+const calculateAbsenceDaysUntilNow = (absence) => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const startDate = new Date(absence.fecha_inicio);
+  startDate.setHours(0, 0, 0, 0);
+  
+  let endDate;
+  if (absence.fecha_fin_desconocida) {
+    endDate = now;
+  } else {
+    endDate = new Date(absence.fecha_fin);
+    endDate.setHours(0, 0, 0, 0);
+    if (endDate > now) endDate = now;
+  }
+  
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const workDays = days.filter(day => !isWeekend(day));
+  
+  return workDays.length;
+};
 
 export default function AbsenceNotifications({ absences, employees, absenceTypes }) {
   const notifications = useMemo(() => {
@@ -19,9 +41,9 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
 
       const absenceType = absenceTypes?.find(t => t.nombre === absence.tipo);
       const startDate = new Date(absence.fecha_inicio);
-      const endDate = new Date(absence.fecha_fin);
+      const endDate = absence.fecha_fin_desconocida ? now : new Date(absence.fecha_fin);
       const daysUntilStart = differenceInDays(startDate, now);
-      const duration = differenceInDays(endDate, startDate) + 1;
+      const workDaysAbsent = calculateAbsenceDaysUntilNow(absence);
 
       // Ausencia activa
       if (now >= startDate && now <= endDate) {
@@ -32,8 +54,8 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
           employee: employee.nombre,
           absenceType: absence.tipo,
           message: `${employee.nombre} está actualmente ausente`,
-          details: `${absence.tipo} - ${format(startDate, 'dd/MM/yyyy')} a ${format(endDate, 'dd/MM/yyyy')}`,
-          duration: `${duration} días`,
+          details: `${absence.tipo} - Desde ${format(startDate, 'dd/MM/yyyy')}`,
+          duration: `${workDaysAbsent} días laborables`,
           isCritical: absenceType?.es_critica || false,
           absenceId: absence.id,
         });
@@ -42,6 +64,8 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
       // Ausencia próxima a iniciar (según configuración del tipo)
       if (isFuture(startDate)) {
         const diasAviso = absenceType?.dias_aviso_previo || 0;
+        const plannedDuration = absence.fecha_fin_desconocida ? 0 : differenceInDays(new Date(absence.fecha_fin), startDate) + 1;
+        
         if (diasAviso > 0 && daysUntilStart <= diasAviso && daysUntilStart > 0) {
           alerts.push({
             id: `upcoming-${absence.id}`,
@@ -51,7 +75,7 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
             absenceType: absence.tipo,
             message: `${employee.nombre} iniciará ausencia en ${daysUntilStart} día${daysUntilStart !== 1 ? 's' : ''}`,
             details: `${absence.tipo} - Desde ${format(startDate, 'dd/MM/yyyy')}`,
-            duration: `${duration} días`,
+            duration: plannedDuration > 0 ? `${plannedDuration} días` : 'Desconocida',
             isCritical: absenceType?.es_critica || false,
             daysUntil: daysUntilStart,
             absenceId: absence.id,
@@ -59,8 +83,8 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
         }
       }
 
-      // Baja médica prolongada (más de 15 días)
-      if (absence.tipo === "Baja médica" && duration > 15 && now >= startDate && now <= endDate) {
+      // Baja médica prolongada (más de 15 días laborables)
+      if (absence.tipo === "Baja médica" && workDaysAbsent > 15 && now >= startDate && now <= endDate) {
         alerts.push({
           id: `prolonged-${absence.id}`,
           type: 'prolonged',
@@ -68,8 +92,8 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
           employee: employee.nombre,
           absenceType: absence.tipo,
           message: `Baja médica prolongada: ${employee.nombre}`,
-          details: `${duration} días - Inicio: ${format(startDate, 'dd/MM/yyyy')}`,
-          duration: `${duration} días`,
+          details: `${workDaysAbsent} días laborables - Inicio: ${format(startDate, 'dd/MM/yyyy')}`,
+          duration: `${workDaysAbsent} días laborables`,
           isCritical: true,
           absenceId: absence.id,
         });
@@ -85,7 +109,7 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
           absenceType: absence.tipo,
           message: `⚠️ Ausencia injustificada: ${employee.nombre}`,
           details: `Desde ${format(startDate, 'dd/MM/yyyy')}`,
-          duration: `${duration} días`,
+          duration: `${workDaysAbsent} días laborables`,
           isCritical: true,
           absenceId: absence.id,
         });

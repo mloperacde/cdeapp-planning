@@ -107,13 +107,13 @@ export default function Timeline() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-10">
-
-          <h1 className="bg-transparent text py-6 text-4xl font-bold opacity-100 md:text-5xl from-blue-600 to-blue-800">Planning / Línea de Tiempo
-
+          className="text-center mb-10"
+        >
+          <h1 className="text-4xl md:text-5xl font-bold text-blue-600">
+            Planning / Línea de Tiempo
           </h1>
-          <p className="text-slate-600 mt-4 text-lg">Visualiza la disponibilidad de empleados
-
+          <p className="text-slate-600 text-lg mt-2">
+            Visualiza la disponibilidad de empleados
           </p>
         </motion.div>
 
