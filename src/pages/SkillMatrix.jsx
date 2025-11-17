@@ -1,22 +1,19 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase, Cog, ArrowLeft } from "lucide-react";
+import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase } from "lucide-react";
 import SkillManagement from "../components/skillmatrix/SkillManagement";
 import EmployeeSkillsMatrix from "../components/skillmatrix/EmployeeSkillsMatrix";
 import ProcessSkillRequirements from "../components/skillmatrix/ProcessSkillRequirements";
 import SkillGapAnalysis from "../components/skillmatrix/SkillGapAnalysis";
 import TrainingNeedsView from "../components/skillmatrix/TrainingNeedsView";
 import DepartmentPositionSkillConfig from "../components/skillmatrix/DepartmentPositionSkillConfig";
-import MachineExperienceConfig from "../components/skillmatrix/MachineExperienceConfig";
 
 export default function SkillMatrixPage() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('matrix');
 
   const { data: employees } = useQuery({
@@ -54,13 +51,6 @@ export default function SkillMatrixPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver
-          </Button>
-        </div>
-
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Award className="w-8 h-8 text-blue-600" />
@@ -124,11 +114,7 @@ export default function SkillMatrixPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="machines">
-              <Cog className="w-4 h-4 mr-2" />
-              Experiencia
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="matrix">
               <Users className="w-4 h-4 mr-2" />
               Matriz
@@ -154,10 +140,6 @@ export default function SkillMatrixPage() {
               Habilidades
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="machines">
-            <MachineExperienceConfig />
-          </TabsContent>
 
           <TabsContent value="matrix">
             <EmployeeSkillsMatrix />
