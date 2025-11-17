@@ -5,10 +5,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, KeyRound, Calendar } from "lucide-react";
-import { differenceInDays, format } from "date-fns";
+import { differenceInDays, format, eachDayOfInterval, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+
+const calculateAbsenceDaysUntilNow = (absence) => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const startDate = new Date(absence.fecha_inicio);
+  startDate.setHours(0, 0, 0, 0);
+  
+  let endDate;
+  if (absence.fecha_fin_desconocida) {
+    endDate = now;
+  } else {
+    endDate = new Date(absence.fecha_fin);
+    endDate.setHours(0, 0, 0, 0);
+    if (endDate > now) endDate = now;
+  }
+  
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const workDays = days.filter(day => !isWeekend(day));
+  
+  return workDays.length;
+};
 
 export default function LongAbsenceAlert({ employees, absences }) {
   const { data: lockerAssignments } = useQuery({
@@ -18,7 +40,8 @@ export default function LongAbsenceAlert({ employees, absences }) {
   });
 
   const longAbsences = useMemo(() => {
-    const today = new Date();
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
     
     return absences.filter(abs => {
       if (!abs.fecha_inicio) return false;
@@ -27,13 +50,13 @@ export default function LongAbsenceAlert({ employees, absences }) {
         const start = new Date(abs.fecha_inicio);
         if (isNaN(start.getTime())) return false;
         
-        const end = abs.fecha_fin_desconocida ? today : (abs.fecha_fin ? new Date(abs.fecha_fin) : today);
+        const end = abs.fecha_fin_desconocida ? now : (abs.fecha_fin ? new Date(abs.fecha_fin) : now);
         if (isNaN(end.getTime())) return false;
         
-        const days = differenceInDays(today, start);
+        const isActive = now >= start && now <= end;
+        const workDays = calculateAbsenceDaysUntilNow(abs);
         
-        const isActive = today >= start && today <= end;
-        return isActive && days > 30;
+        return isActive && workDays > 30;
       } catch {
         return false;
       }
@@ -42,22 +65,12 @@ export default function LongAbsenceAlert({ employees, absences }) {
       const locker = lockerAssignments.find(la => la.employee_id === abs.employee_id);
       const hasLocker = locker?.numero_taquilla_actual?.replace(/['"]/g, '').trim();
       
-      let days = 0;
-      try {
-        const startDate = new Date(abs.fecha_inicio);
-        if (!isNaN(startDate.getTime())) {
-          days = differenceInDays(new Date(), startDate);
-        }
-      } catch {
-        days = 0;
-      }
-      
       return {
         absence: abs,
         employee,
         locker,
         hasLocker,
-        daysAbsent: days
+        daysAbsent: calculateAbsenceDaysUntilNow(abs)
       };
     }).sort((a, b) => b.daysAbsent - a.daysAbsent);
   }, [absences, employees, lockerAssignments]);
