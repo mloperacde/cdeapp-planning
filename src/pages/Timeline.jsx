@@ -1,17 +1,18 @@
-
 import React, { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useNavigate } from "react-router-dom";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowLeft } from "lucide-react";
 import WorkCalendar from "../components/absences/WorkCalendar";
 
 export default function Timeline() {
+  const navigate = useNavigate();
   const now = new Date();
   const [viewMode, setViewMode] = useState('day');
   const [selectedDate, setSelectedDate] = useState(now);
@@ -95,6 +96,13 @@ export default function Timeline() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       <div className="container mx-auto px-4 py-8 md:py-12">
+        <div className="mb-6">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}

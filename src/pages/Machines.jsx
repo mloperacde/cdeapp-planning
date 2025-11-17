@@ -1,10 +1,12 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Cog, Settings, Activity, Wrench } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Cog, Settings, Activity, Wrench, ArrowLeft } from "lucide-react";
 
 export default function MachinesPage() {
+  const navigate = useNavigate();
   const subPages = [
     {
       title: "Gestión de Máquinas",
@@ -46,6 +48,13 @@ export default function MachinesPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Cog className="w-8 h-8 text-blue-600" />

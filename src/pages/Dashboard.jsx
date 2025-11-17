@@ -43,7 +43,7 @@ export default function DashboardPage() {
       if (!userRole?.id) return null;
       const configs = await base44.entities.DashboardRoleConfig.filter({ role_id: userRole.id });
       return configs[0] || {
-        widgets_visibles: ["cumpleanos", "vacaciones", "departamentos", "solicitudes_ausencia"],
+        widgets_visibles: ["tareas", "cumpleanos", "vacaciones", "departamentos", "solicitudes_ausencia"],
         kpis_visibles: ["total_empleados", "empleados_disponibles", "ausencias_activas", "solicitudes_pendientes"],
         mostrar_kpis: true,
         layout: "grid"
