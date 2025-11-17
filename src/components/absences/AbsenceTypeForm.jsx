@@ -56,7 +56,11 @@ export default function AbsenceTypeForm({ type, onClose }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{type ? "Editar Tipo de Ausencia" : "Nuevo Tipo de Ausencia"}</DialogTitle>
         </DialogHeader>
