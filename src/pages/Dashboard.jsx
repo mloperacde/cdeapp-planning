@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -23,14 +22,7 @@ import { format, differenceInDays, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import DashboardWidgetConfig from "../components/dashboard/DashboardWidgetConfig";
 
 const AVAILABLE_WIDGETS = [
   { id: 'absence_kpis', name: 'KPIs de Ausencias', icon: UserX, color: 'red' },
@@ -80,8 +72,11 @@ export default function DashboardPage() {
   });
 
   const { data: widgetPreferences = [] } = useQuery({
-    queryKey: ['dashboardWidgets', user?.email],
-    queryFn: () => base44.entities.DashboardWidget.list(),
+    queryKey: ['dashboardWidgets', user?.role],
+    queryFn: async () => {
+      if (!user?.role) return [];
+      return base44.entities.DashboardWidget.filter({ role: user.role }, 'order');
+    },
     initialData: [],
     enabled: !!user,
   });
@@ -157,21 +152,19 @@ export default function DashboardPage() {
     };
   }, [productionPlannings]);
 
-  // Get enabled widgets
+  // Get enabled widgets based on role configuration
   const enabledWidgets = useMemo(() => {
-    if (!user) return AVAILABLE_WIDGETS;
+    if (!user || !Array.isArray(widgetPreferences)) return AVAILABLE_WIDGETS;
     
-    const userPrefs = Array.isArray(widgetPreferences) 
-      ? widgetPreferences.filter(w => w?.user_email === user.email && w?.enabled)
-      : [];
+    const rolePrefs = widgetPreferences.filter(w => w?.enabled);
       
-    if (userPrefs.length === 0) return AVAILABLE_WIDGETS;
+    if (rolePrefs.length === 0) return AVAILABLE_WIDGETS;
     
     return AVAILABLE_WIDGETS.filter(w => 
-      userPrefs.some(p => p?.widget_id === w?.id)
+      rolePrefs.some(p => p?.widget_id === w?.id)
     ).sort((a, b) => {
-      const orderA = userPrefs.find(p => p?.widget_id === a?.id)?.order || 0;
-      const orderB = userPrefs.find(p => p?.widget_id === b?.id)?.order || 0;
+      const orderA = rolePrefs.find(p => p?.widget_id === a?.id)?.order || 0;
+      const orderB = rolePrefs.find(p => p?.widget_id === b?.id)?.order || 0;
       return orderA - orderB;
     });
   }, [widgetPreferences, user]);
@@ -462,44 +455,11 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {showWidgetConfig && (
-        <Dialog open={true} onOpenChange={setShowWidgetConfig}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Configurar Widgets del Dashboard</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {AVAILABLE_WIDGETS.map(widget => {
-                const Icon = widget.icon;
-                const isEnabled = enabledWidgets.some(w => w.id === widget.id);
-                
-                return (
-                  <div key={widget.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-slate-50">
-                    <Checkbox
-                      checked={isEnabled}
-                      onCheckedChange={(checked) => {
-                        // TODO: Save preference to database
-                        console.log('Toggle widget:', widget.id, checked);
-                      }}
-                    />
-                    <Icon className="w-5 h-5 text-slate-600" />
-                    <Label className="flex-1 cursor-pointer">
-                      {widget.name}
-                    </Label>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-end gap-3 mt-4">
-              <Button variant="outline" onClick={() => setShowWidgetConfig(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={() => setShowWidgetConfig(false)}>
-                Guardar Configuración
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+      {showWidgetConfig && user && (
+        <DashboardWidgetConfig 
+          currentUser={user}
+          onClose={() => setShowWidgetConfig(false)}
+        />
       )}
     </div>
   );
