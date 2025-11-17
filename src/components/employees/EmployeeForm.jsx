@@ -106,6 +106,12 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     initialData: [],
   });
 
+  const { data: allMachines } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list(),
+    initialData: [],
+  });
+
   const { data: absences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
@@ -768,7 +774,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value={null}>Sin asignar</SelectItem>
-                              {machines.map((machine) => (
+                              {allMachines.map((machine) => (
                                 <SelectItem key={machine.id} value={machine.id}>
                                   {machine.nombre} ({machine.codigo})
                                 </SelectItem>
@@ -820,7 +826,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value={null}>Sin asignar</SelectItem>
-                            {machines.filter(m => m.estado === "Disponible").map((machine) => (
+                            {allMachines.filter(m => m.estado === "Disponible").map((machine) => (
                               <SelectItem key={machine.id} value={machine.id}>
                                 {machine.nombre} ({machine.codigo})
                               </SelectItem>

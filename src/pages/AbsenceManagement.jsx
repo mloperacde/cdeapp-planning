@@ -513,13 +513,15 @@ export default function AbsenceManagementPage() {
           </TabsList>
 
           <TabsContent value="list" className="space-y-6">
-            <LongAbsenceAlert employees={employees} absences={absences} />
-            
-            <AbsenceNotifications 
-              absences={absences}
-              employees={employees}
-              absenceTypes={absenceTypes}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <LongAbsenceAlert employees={employees} absences={absences} />
+
+              <AbsenceNotifications 
+                absences={absences}
+                employees={employees}
+                absenceTypes={absenceTypes}
+              />
+            </div>
 
             {expiredAbsences.length > 0 && (
               <Card className="mb-6 bg-amber-50 border-amber-200">

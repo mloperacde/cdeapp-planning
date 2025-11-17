@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Plus, Edit, ArrowLeft, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function MessagingConfigPage() {
+  const navigate = useNavigate();
   const [showTypeForm, setShowTypeForm] = useState(false);
   const [editingType, setEditingType] = useState(null);
 
@@ -58,12 +58,10 @@ export default function MessagingConfigPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Configuration")}>
-            <Button variant="ghost">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Configuración
-            </Button>
-          </Link>
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
         </div>
 
         <div className="flex justify-between items-center mb-8">

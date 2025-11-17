@@ -123,12 +123,10 @@ export default function RoleManagementPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Configuration")}>
-            <Button variant="ghost">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Configuración
-            </Button>
-          </Link>
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
         </div>
 
         <div className="flex justify-between items-center mb-8">

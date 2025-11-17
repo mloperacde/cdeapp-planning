@@ -107,33 +107,33 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
   }
 
   return (
-    <Card className="shadow-lg border-2 border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
-      <CardHeader className="border-b border-red-200 bg-red-100/50">
+    <Card className="shadow-lg border-2 border-red-200 bg-gradient-to-br from-red-50 to-orange-50 h-full">
+      <CardHeader className="border-b border-red-200 bg-red-100/50 pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2 text-red-900">
-            <Bell className="w-6 h-6 animate-pulse" />
+          <CardTitle className="flex items-center gap-2 text-red-900 text-sm">
+            <Bell className="w-4 h-4 animate-pulse" />
             Notificaciones de Ausencias
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             {criticalCount > 0 && (
-              <Badge className="bg-red-600 text-white">
-                {criticalCount} Crítica{criticalCount !== 1 ? 's' : ''}
+              <Badge className="bg-red-600 text-white text-xs">
+                {criticalCount}
               </Badge>
             )}
             {highCount > 0 && (
-              <Badge className="bg-orange-600 text-white">
-                {highCount} Prioritaria{highCount !== 1 ? 's' : ''}
+              <Badge className="bg-orange-600 text-white text-xs">
+                {highCount}
               </Badge>
             )}
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {notifications.map((notification) => (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {notifications.slice(0, 3).map((notification) => (
             <div
               key={notification.id}
-              className={`p-4 rounded-lg border-2 transition-all ${
+              className={`p-3 rounded-lg border transition-all ${
                 notification.priority === 'critical'
                   ? 'bg-red-50 border-red-300 hover:border-red-400'
                   : notification.priority === 'high'
@@ -141,65 +141,39 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
                   : 'bg-yellow-50 border-yellow-300 hover:border-yellow-400'
               }`}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-2 mb-1">
                   {notification.priority === 'critical' ? (
-                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                   ) : (
-                    <UserX className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <UserX className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
                   )}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className={`font-semibold ${
-                        notification.priority === 'critical' ? 'text-red-900' : 'text-orange-900'
-                      }`}>
-                        {notification.message}
-                      </p>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold text-xs ${
+                      notification.priority === 'critical' ? 'text-red-900' : 'text-orange-900'
+                    } truncate`}>
+                      {notification.employee}
+                    </p>
+                    <p className="text-xs text-slate-600 truncate">{notification.absenceType}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className="bg-red-600 text-white text-xs">{notification.duration}</Badge>
                       {notification.isCritical && (
-                        <Badge className="bg-red-600 text-white text-xs">
-                          CRÍTICA
-                        </Badge>
+                        <Badge className="bg-red-600 text-white text-xs">!</Badge>
                       )}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-slate-700">
-                        {notification.details}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-slate-600">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          Duración: {notification.duration}
-                        </span>
-                        {notification.type === 'upcoming' && notification.daysUntil && (
-                          <Badge variant="outline" className="bg-white">
-                            Inicia en {notification.daysUntil} día{notification.daysUntil !== 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {notification.type === 'active' && (
-                          <Badge className="bg-blue-100 text-blue-800">
-                            En curso
-                          </Badge>
-                        )}
-                      </div>
                     </div>
                   </div>
                 </div>
-                <Link to={createPageUrl("AbsenceManagement")}>
-                  <Button size="sm" variant="outline">
-                    Ver Detalles
-                  </Button>
-                </Link>
               </div>
             </div>
           ))}
         </div>
-
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-blue-800">
-            <strong>💡 Consejo:</strong> Las ausencias críticas y las bajas médicas prolongadas 
-            requieren atención inmediata para reorganizar recursos.
-          </p>
-        </div>
+        {notifications.length > 3 && (
+          <Link to={createPageUrl("AbsenceManagement")}>
+            <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
+              Ver {notifications.length - 3} más
+            </Button>
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
