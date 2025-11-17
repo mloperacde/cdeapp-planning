@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -203,8 +204,8 @@ export default function MessagingConfigPage() {
         <Dialog open={true} onOpenChange={() => {
           setShowTypeForm(false);
           setEditingType(null);
-        }} modal={false}>
-          <DialogContent>
+        }}>
+          <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Configurar Tipo de Mensaje</DialogTitle>
             </DialogHeader>
