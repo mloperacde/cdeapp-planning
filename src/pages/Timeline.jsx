@@ -109,7 +109,7 @@ export default function Timeline() {
           transition={{ duration: 0.6 }}
           className="text-center mb-10">
 
-          <h1 className="bg-clip-text text-transparent py-2 text-4xl font-bold md:text-5xl from-blue-600 to-blue-800">Planning / Línea de Tiempo
+          <h1 className="bg-blue-700 text-transparent py-2 text-4xl font-bold md:text-5xl from-blue-600 to-blue-800">Planning / Línea de Tiempo
 
           </h1>
           <p className="text-slate-600 mt-4 text-lg">Visualiza la disponibilidad de empleados
