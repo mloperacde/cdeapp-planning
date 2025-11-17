@@ -26,7 +26,9 @@ import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
 import LockerAssignmentPanel from "./LockerAssignmentPanel";
 import AbsenteeismCard from "./AbsenteeismCard";
-import { useToast } from "@/components/ui/use-toast"; // New import for toast
+import EmployeeHistory from "./EmployeeHistory";
+import EmployeeDocuments from "./EmployeeDocuments";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
@@ -173,20 +175,45 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      // Si es turno fijo, no debe tener equipo asignado
-      const finalData = { ...data };
-      if (data.tipo_turno === "Fijo Mañana" || data.tipo_turno === "Fijo Tarde") {
+    mutationFn: async (employeeData) => {
+      const finalData = { ...employeeData };
+      if (employeeData.tipo_turno === "Fijo Mañana" || employeeData.tipo_turno === "Fijo Tarde") {
         finalData.equipo = "";
       }
       
       if (employee?.id) {
-        return base44.entities.Employee.update(employee.id, finalData);
+        // Track history changes
+        const changedFields = [];
+        const fieldsToTrack = ['puesto', 'departamento', 'salario_anual', 'categoria', 'equipo', 'tipo_contrato'];
+        
+        for (const field of fieldsToTrack) {
+          if (employee[field] !== employeeData[field] && employeeData[field]) {
+            changedFields.push({
+              tipo_cambio: field === 'salario_anual' ? 'salario' : field,
+              campo_modificado: field,
+              valor_anterior: employee[field] || "N/A",
+              valor_nuevo: employeeData[field],
+              fecha_cambio: new Date().toISOString()
+            });
+          }
+        }
+
+        const result = await base44.entities.Employee.update(employee.id, finalData);
+
+        // Save history
+        for (const change of changedFields) {
+          await base44.entities.EmployeeHistory.create({
+            employee_id: employee.id,
+            ...change
+          });
+        }
+
+        return result;
       }
       return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(); // This will invalidate all active queries
+      queryClient.invalidateQueries();
       onClose();
     },
   });
@@ -234,7 +261,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-9">
               <TabsTrigger value="datos">Datos</TabsTrigger>
               <TabsTrigger value="schedule">Horarios</TabsTrigger>
               <TabsTrigger value="taquilla">Taquilla</TabsTrigger>
@@ -244,6 +271,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               <TabsTrigger value="availability">Disponibilidad</TabsTrigger>
               <TabsTrigger value="absentismo">Absentismo</TabsTrigger>
               <TabsTrigger value="rrhh">RRHH</TabsTrigger>
+              <TabsTrigger value="history">Historial</TabsTrigger>
+              <TabsTrigger value="documents">Documentos</TabsTrigger>
             </TabsList>
 
             <TabsContent value="datos" className="space-y-4 mt-4">
