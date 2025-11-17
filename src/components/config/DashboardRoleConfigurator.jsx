@@ -15,6 +15,7 @@ const AVAILABLE_WIDGETS = [
   { id: "empleados_disponibles", label: "Empleados Disponibles", category: "kpi" },
   { id: "ausencias_activas", label: "Ausencias Activas", category: "kpi" },
   { id: "solicitudes_pendientes", label: "Solicitudes Pendientes", category: "kpi" },
+  { id: "tareas", label: "Tareas Pendientes", category: "widget" },
   { id: "cumpleanos", label: "Próximos Cumpleaños", category: "widget" },
   { id: "aniversarios", label: "Aniversarios Laborales", category: "widget" },
   { id: "vacaciones", label: "Resumen de Vacaciones", category: "widget" },

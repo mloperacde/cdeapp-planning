@@ -53,6 +53,7 @@ import MasterMachineView from './pages/MasterMachineView';
 import MessagingConfig from './pages/MessagingConfig';
 import GlobalConfiguration from './pages/GlobalConfiguration';
 import WorkflowConfiguration from './pages/WorkflowConfiguration';
+import TaskManagement from './pages/TaskManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -112,6 +113,7 @@ export const PAGES = {
     "MessagingConfig": MessagingConfig,
     "GlobalConfiguration": GlobalConfiguration,
     "WorkflowConfiguration": WorkflowConfiguration,
+    "TaskManagement": TaskManagement,
 }
 
 export const pagesConfig = {
