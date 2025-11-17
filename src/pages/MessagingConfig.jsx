@@ -34,7 +34,6 @@ export default function MessagingConfigPage() {
   const { data: messageTypes = [] } = useQuery({
     queryKey: ['messageTypes'],
     queryFn: async () => {
-      // Simular tipos de mensajes (puedes crear una entidad MessageType si es necesario)
       return [
         {
           id: "1",
@@ -107,15 +106,15 @@ export default function MessagingConfigPage() {
             <CardContent className="p-6">
               <div className="space-y-4">
                 {messageTypes.map((type) => (
-                  <Card key={type.id} className="border-l-4" style={{ borderLeftColor: type.color }}>
+                  <Card key={type?.id} className="border-l-4" style={{ borderLeftColor: type?.color }}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900">{type.nombre}</h4>
-                          <p className="text-sm text-slate-600 mt-1">{type.descripcion}</p>
+                          <h4 className="font-semibold text-slate-900">{type?.nombre}</h4>
+                          <p className="text-sm text-slate-600 mt-1">{type?.descripcion}</p>
                           <div className="flex flex-wrap gap-2 mt-2">
                             <Badge variant="outline" className="text-xs">
-                              Permitido: {type.destinatarios_permitidos.join(", ")}
+                              Permitido: {type?.destinatarios_permitidos?.join(", ")}
                             </Badge>
                           </div>
                         </div>
@@ -142,17 +141,17 @@ export default function MessagingConfigPage() {
             <CardContent className="p-6">
               <div className="space-y-3">
                 {roles.map((role) => (
-                  <div key={role.id} className="p-3 bg-slate-50 rounded-lg border">
+                  <div key={role?.id} className="p-3 bg-slate-50 rounded-lg border">
                     <div className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                      {role.role_name}
-                      {role.is_admin && <Badge className="bg-red-600">Admin</Badge>}
+                      {role?.role_name}
+                      {role?.is_admin && <Badge className="bg-red-600">Admin</Badge>}
                     </div>
                     <div className="text-xs text-slate-600 space-y-1">
                       <p>✓ Puede enviar mensajes directos</p>
-                      {role.permissions?.acciones_ausencias?.aprobar && (
+                      {role?.permissions?.acciones_ausencias?.aprobar && (
                         <p>✓ Puede enviar alertas urgentes</p>
                       )}
-                      {role.is_admin && (
+                      {role?.is_admin && (
                         <p>✓ Acceso completo a todos los canales</p>
                       )}
                     </div>
@@ -204,7 +203,7 @@ export default function MessagingConfigPage() {
         <Dialog open={true} onOpenChange={() => {
           setShowTypeForm(false);
           setEditingType(null);
-        }}>
+        }} modal={false}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Configurar Tipo de Mensaje</DialogTitle>

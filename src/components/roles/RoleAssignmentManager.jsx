@@ -199,7 +199,7 @@ export default function RoleAssignmentManager({ roles = [] }) {
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.team_name}>{team.team_name}</SelectItem>
+                    <SelectItem key={team?.id} value={team?.team_name || ""}>{team?.team_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -233,10 +233,10 @@ export default function RoleAssignmentManager({ roles = [] }) {
             </TableHeader>
             <TableBody>
               {filteredEmployees.map((employee) => {
-                const userRoles = getUserRoles(employee.id);
+                const userRoles = getUserRoles(employee?.id);
                 
                 return (
-                  <TableRow key={employee.id}>
+                  <TableRow key={employee?.id}>
                     <TableCell className="font-medium">{employee?.nombre}</TableCell>
                     <TableCell className="text-sm text-slate-600">{employee?.email}</TableCell>
                     <TableCell>
@@ -256,10 +256,10 @@ export default function RoleAssignmentManager({ roles = [] }) {
                         ) : (
                           userRoles.map((ur) => (
                             <Badge 
-                              key={ur.id} 
-                              className={ur.role?.is_admin ? "bg-red-600 text-white" : "bg-blue-600 text-white"}
+                              key={ur?.id} 
+                              className={ur?.role?.is_admin ? "bg-red-600 text-white" : "bg-blue-600 text-white"}
                             >
-                              {ur.role?.role_name}
+                              {ur?.role?.role_name}
                             </Badge>
                           ))
                         )}
@@ -269,11 +269,11 @@ export default function RoleAssignmentManager({ roles = [] }) {
                       <div className="flex justify-end gap-2">
                         {userRoles.map((ur) => (
                           <Button
-                            key={ur.id}
+                            key={ur?.id}
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (window.confirm(`¿Eliminar rol "${ur.role?.role_name}" de ${employee.nombre}?`)) {
+                              if (window.confirm(`¿Eliminar rol "${ur?.role?.role_name}" de ${employee?.nombre}?`)) {
                                 removeAssignmentMutation.mutate(ur.id);
                               }
                             }}
@@ -292,63 +292,65 @@ export default function RoleAssignmentManager({ roles = [] }) {
         </CardContent>
       </Card>
 
-      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-blue-600" />
-              Asignar Rol a Empleado
-            </DialogTitle>
-          </DialogHeader>
+      {showAssignDialog && (
+        <Dialog open={true} onOpenChange={setShowAssignDialog} modal={false}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-blue-600" />
+                Asignar Rol a Empleado
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Empleado</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar empleado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.nombre} ({emp.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Empleado</Label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar empleado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp?.id} value={emp?.id || ""}>
+                        {emp?.nombre} ({emp?.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Rol</Label>
-              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar rol" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.role_name} {role.is_admin && "(Admin)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label>Rol</Label>
+                <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar rol" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role?.id} value={role?.id || ""}>
+                        {role?.role_name} {role?.is_admin && "(Admin)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleAssignRole}
-                disabled={assignRoleMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {assignRoleMutation.isPending ? "Asignando..." : "Asignar Rol"}
-              </Button>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleAssignRole}
+                  disabled={assignRoleMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {assignRoleMutation.isPending ? "Asignando..." : "Asignar Rol"}
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
