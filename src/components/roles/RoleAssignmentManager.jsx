@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Search, UserPlus } from "lucide-react";
+import { Plus, Trash2, Search, UserPlus, Filter } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -35,6 +35,9 @@ export default function RoleAssignmentManager({ roles = [] }) {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterDepartment, setFilterDepartment] = useState("all");
+  const [filterPuesto, setFilterPuesto] = useState("all");
+  const [filterEquipo, setFilterEquipo] = useState("all");
   const queryClient = useQueryClient();
 
   const { data: employees = [] } = useQuery({
@@ -46,6 +49,12 @@ export default function RoleAssignmentManager({ roles = [] }) {
   const { data: roleAssignments = [] } = useQuery({
     queryKey: ['userRoleAssignments'],
     queryFn: () => base44.entities.UserRoleAssignment.list(),
+    initialData: [],
+  });
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
 
@@ -68,13 +77,28 @@ export default function RoleAssignmentManager({ roles = [] }) {
     }
   });
 
+  const departments = useMemo(() => {
+    const depts = new Set();
+    employees.forEach(emp => {
+      if (emp?.departamento) depts.add(emp.departamento);
+    });
+    return Array.from(depts).sort();
+  }, [employees]);
+
+  const puestos = useMemo(() => {
+    const pts = new Set();
+    employees.forEach(emp => {
+      if (emp?.puesto) pts.add(emp.puesto);
+    });
+    return Array.from(pts).sort();
+  }, [employees]);
+
   const handleAssignRole = () => {
     if (!selectedUserId || !selectedRoleId) {
       toast.error("Selecciona un empleado y un rol");
       return;
     }
 
-    // Verificar si ya existe la asignación
     const exists = roleAssignments.some(
       ra => ra?.user_id === selectedUserId && ra?.role_id === selectedRoleId && ra?.activo
     );
@@ -100,23 +124,94 @@ export default function RoleAssignmentManager({ roles = [] }) {
     }).filter(ra => ra.role);
   };
 
-  const filteredEmployees = employees.filter(emp => 
-    emp?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const matchesSearch = emp?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesDepartment = filterDepartment === "all" || emp?.departamento === filterDepartment;
+      const matchesPuesto = filterPuesto === "all" || emp?.puesto === filterPuesto;
+      const matchesEquipo = filterEquipo === "all" || emp?.equipo === filterEquipo;
+      
+      return matchesSearch && matchesDepartment && matchesPuesto && matchesEquipo;
+    });
+  }, [employees, searchTerm, filterDepartment, filterPuesto, filterEquipo]);
 
   return (
     <div className="space-y-6">
+      <Card className="bg-blue-50 border-blue-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Filter className="w-4 h-4 text-blue-600" />
+            Filtros de Búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="space-y-2">
+              <Label>Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Nombre o email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Departamento</Label>
+              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Puesto</Label>
+              <Select value={filterPuesto} onValueChange={setFilterPuesto}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {puestos.map((puesto) => (
+                    <SelectItem key={puesto} value={puesto}>{puesto}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Equipo</Label>
+              <Select value={filterEquipo} onValueChange={setFilterEquipo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.team_name}>{team.team_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-between items-center">
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Buscar empleados..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <p className="text-sm text-slate-600">
+          Mostrando {filteredEmployees.length} de {employees.length} empleados
+        </p>
         <Button onClick={() => setShowAssignDialog(true)} className="bg-blue-600">
           <Plus className="w-4 h-4 mr-2" />
           Asignar Rol
@@ -130,6 +225,8 @@ export default function RoleAssignmentManager({ roles = [] }) {
               <TableRow className="bg-slate-50">
                 <TableHead>Empleado</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Departamento</TableHead>
+                <TableHead>Puesto</TableHead>
                 <TableHead>Roles Asignados</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -142,6 +239,16 @@ export default function RoleAssignmentManager({ roles = [] }) {
                   <TableRow key={employee.id}>
                     <TableCell className="font-medium">{employee?.nombre}</TableCell>
                     <TableCell className="text-sm text-slate-600">{employee?.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {employee?.departamento || "Sin departamento"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {employee?.puesto || "Sin puesto"}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {userRoles.length === 0 ? (

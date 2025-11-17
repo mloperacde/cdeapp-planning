@@ -1,6 +1,7 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -28,6 +29,14 @@ export default function ConfigurationPage() {
       icon: Bell,
       url: createPageUrl("Notifications"),
       color: "purple",
+      featured: true
+    },
+    {
+      title: "Mensajería",
+      description: "Configura tipos de mensajes y permisos de envío",
+      icon: MessageSquare,
+      url: createPageUrl("MessagingConfig"),
+      color: "indigo",
       featured: true
     },
     {

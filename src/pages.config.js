@@ -50,6 +50,7 @@ import MobilePlanning from './pages/MobilePlanning';
 import MobileChat from './pages/MobileChat';
 import HRDashboard from './pages/HRDashboard';
 import MasterMachineView from './pages/MasterMachineView';
+import MessagingConfig from './pages/MessagingConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -106,6 +107,7 @@ export const PAGES = {
     "MobileChat": MobileChat,
     "HRDashboard": HRDashboard,
     "MasterMachineView": MasterMachineView,
+    "MessagingConfig": MessagingConfig,
 }
 
 export const pagesConfig = {

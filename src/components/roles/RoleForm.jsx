@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +26,14 @@ export default function RoleForm({ role, onClose }) {
       acciones_maquinas: { ver: false, actualizar_estado: false, planificar: false },
       acciones_mantenimiento: { ver: false, crear: false, actualizar: false, completar: false },
       acciones_comites: { ver: false, gestionar_miembros: false, gestionar_documentos: false },
+      acciones_prl: {
+        ver_equipo_emergencias: false,
+        gestionar_equipo_emergencias: false,
+        ver_formaciones: false,
+        asignar_formaciones: false,
+        ver_documentacion: false,
+        subir_documentacion: false
+      },
       ui_visibilidad: {
         timeline: {
           botones_configuracion: false,
@@ -266,6 +275,68 @@ export default function RoleForm({ role, onClose }) {
                   ))}
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">PRL (Prevención de Riesgos Laborales)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={formData.permissions?.acciones_prl?.ver_equipo_emergencias || false}
+                      onCheckedChange={(checked) => updatePermission('acciones_prl', 'ver_equipo_emergencias', checked)}
+                    />
+                    <label className="text-sm cursor-pointer" onClick={() => updatePermission('acciones_prl', 'ver_equipo_emergencias', !(formData.permissions?.acciones_prl?.ver_equipo_emergencias))}>
+                      Ver Equipo de Emergencias
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={formData.permissions?.acciones_prl?.gestionar_equipo_emergencias || false}
+                      onCheckedChange={(checked) => updatePermission('acciones_prl', 'gestionar_equipo_emergencias', checked)}
+                    />
+                    <label className="text-sm cursor-pointer" onClick={() => updatePermission('acciones_prl', 'gestionar_equipo_emergencias', !(formData.permissions?.acciones_prl?.gestionar_equipo_emergencias))}>
+                      Gestionar Equipo de Emergencias
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={formData.permissions?.acciones_prl?.ver_formaciones || false}
+                      onCheckedChange={(checked) => updatePermission('acciones_prl', 'ver_formaciones', checked)}
+                    />
+                    <label className="text-sm cursor-pointer" onClick={() => updatePermission('acciones_prl', 'ver_formaciones', !(formData.permissions?.acciones_prl?.ver_formaciones))}>
+                      Ver Formaciones PRL
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={formData.permissions?.acciones_prl?.asignar_formaciones || false}
+                      onCheckedChange={(checked) => updatePermission('acciones_prl', 'asignar_formaciones', checked)}
+                    />
+                    <label className="text-sm cursor-pointer" onClick={() => updatePermission('acciones_prl', 'asignar_formaciones', !(formData.permissions?.acciones_prl?.asignar_formaciones))}>
+                      Asignar Formaciones
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={formData.permissions?.acciones_prl?.ver_documentacion || false}
+                      onCheckedChange={(checked) => updatePermission('acciones_prl', 'ver_documentacion', checked)}
+                    />
+                    <label className="text-sm cursor-pointer" onClick={() => updatePermission('acciones_prl', 'ver_documentacion', !(formData.permissions?.acciones_prl?.ver_documentacion))}>
+                      Ver Documentación PRL
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={formData.permissions?.acciones_prl?.subir_documentacion || false}
+                      onCheckedChange={(checked) => updatePermission('acciones_prl', 'subir_documentacion', checked)}
+                    />
+                    <label className="text-sm cursor-pointer" onClick={() => updatePermission('acciones_prl', 'subir_documentacion', !(formData.permissions?.acciones_prl?.subir_documentacion))}>
+                      Subir Documentación PRL
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="ui" className="space-y-4 mt-4">
@@ -282,7 +353,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.timeline?.botones_configuracion || false}
                       onCheckedChange={(checked) => updateUIPermission('timeline', 'botones_configuracion', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('timeline', 'botones_configuracion', !(formData.permissions?.ui_visibilidad?.timeline?.botones_configuracion))}>
                       Botones de configuración (Festivos/Vacaciones)
                     </label>
                   </div>
@@ -291,7 +362,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.timeline?.filtros_avanzados || false}
                       onCheckedChange={(checked) => updateUIPermission('timeline', 'filtros_avanzados', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('timeline', 'filtros_avanzados', !(formData.permissions?.ui_visibilidad?.timeline?.filtros_avanzados))}>
                       Filtros avanzados
                     </label>
                   </div>
@@ -311,7 +382,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.empleados?.boton_nuevo || false}
                       onCheckedChange={(checked) => updateUIPermission('empleados', 'boton_nuevo', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('empleados', 'boton_nuevo', !(formData.permissions?.ui_visibilidad?.empleados?.boton_nuevo))}>
                       Botón Nuevo Empleado
                     </label>
                   </div>
@@ -320,7 +391,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.empleados?.boton_editar || false}
                       onCheckedChange={(checked) => updateUIPermission('empleados', 'boton_editar', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('empleados', 'boton_editar', !(formData.permissions?.ui_visibilidad?.empleados?.boton_editar))}>
                       Botón Editar
                     </label>
                   </div>
@@ -329,7 +400,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.empleados?.boton_eliminar || false}
                       onCheckedChange={(checked) => updateUIPermission('empleados', 'boton_eliminar', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('empleados', 'boton_eliminar', !(formData.permissions?.ui_visibilidad?.empleados?.boton_eliminar))}>
                       Botón Eliminar
                     </label>
                   </div>
@@ -349,7 +420,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.maquinas?.boton_nuevo || false}
                       onCheckedChange={(checked) => updateUIPermission('maquinas', 'boton_nuevo', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('maquinas', 'boton_nuevo', !(formData.permissions?.ui_visibilidad?.maquinas?.boton_nuevo))}>
                       Botón Nueva Máquina
                     </label>
                   </div>
@@ -358,7 +429,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.maquinas?.boton_editar || false}
                       onCheckedChange={(checked) => updateUIPermission('maquinas', 'boton_editar', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('maquinas', 'boton_editar', !(formData.permissions?.ui_visibilidad?.maquinas?.boton_editar))}>
                       Botón Editar
                     </label>
                   </div>
@@ -367,7 +438,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.maquinas?.cambiar_estado || false}
                       onCheckedChange={(checked) => updateUIPermission('maquinas', 'cambiar_estado', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('maquinas', 'cambiar_estado', !(formData.permissions?.ui_visibilidad?.maquinas?.cambiar_estado))}>
                       Cambiar Estado
                     </label>
                   </div>
@@ -387,7 +458,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.ausencias?.boton_nueva || false}
                       onCheckedChange={(checked) => updateUIPermission('ausencias', 'boton_nueva', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('ausencias', 'boton_nueva', !(formData.permissions?.ui_visibilidad?.ausencias?.boton_nueva))}>
                       Botón Nueva Ausencia
                     </label>
                   </div>
@@ -396,7 +467,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.ausencias?.boton_aprobar || false}
                       onCheckedChange={(checked) => updateUIPermission('ausencias', 'boton_aprobar', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('ausencias', 'boton_aprobar', !(formData.permissions?.ui_visibilidad?.ausencias?.boton_aprobar))}>
                       Botón Aprobar
                     </label>
                   </div>
@@ -405,7 +476,7 @@ export default function RoleForm({ role, onClose }) {
                       checked={formData.permissions?.ui_visibilidad?.ausencias?.ver_todas || false}
                       onCheckedChange={(checked) => updateUIPermission('ausencias', 'ver_todas', checked)}
                     />
-                    <label className="text-sm cursor-pointer">
+                    <label className="text-sm cursor-pointer" onClick={() => updateUIPermission('ausencias', 'ver_todas', !(formData.permissions?.ui_visibilidad?.ausencias?.ver_todas))}>
                       Ver Todas las Ausencias
                     </label>
                   </div>
