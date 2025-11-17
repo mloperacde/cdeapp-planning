@@ -20,7 +20,9 @@ export default function EmployeeSkillsMatrix() {
 
   const [newSkill, setNewSkill] = useState({
     skill_id: "",
+    machine_id: "",
     nivel_competencia: "Básico",
+    experiencia_meses: 0,
     fecha_adquisicion: new Date().toISOString().split('T')[0],
     certificado: false,
   });
@@ -43,12 +45,25 @@ export default function EmployeeSkillsMatrix() {
     initialData: [],
   });
 
+  const { data: machines } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list('nombre'),
+    initialData: [],
+  });
+
   const addSkillMutation = useMutation({
     mutationFn: (data) => base44.entities.EmployeeSkill.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
       setShowAddSkillDialog(false);
-      setNewSkill({ skill_id: "", nivel_competencia: "Básico", fecha_adquisicion: new Date().toISOString().split('T')[0], certificado: false });
+      setNewSkill({ 
+        skill_id: "", 
+        machine_id: "",
+        nivel_competencia: "Básico", 
+        experiencia_meses: 0,
+        fecha_adquisicion: new Date().toISOString().split('T')[0], 
+        certificado: false 
+      });
       toast.success("Habilidad añadida correctamente");
     },
   });
@@ -104,10 +119,16 @@ export default function EmployeeSkillsMatrix() {
       return;
     }
 
-    addSkillMutation.mutate({
+    const skillData = {
       employee_id: selectedEmployee.id,
       ...newSkill
-    });
+    };
+    
+    if (!skillData.machine_id) {
+      delete skillData.machine_id;
+    }
+    
+    addSkillMutation.mutate(skillData);
   };
 
   const handleOpenAddSkill = (employee) => {
@@ -209,7 +230,11 @@ export default function EmployeeSkillsMatrix() {
 
       {showAddSkillDialog && selectedEmployee && (
         <Dialog open={true} onOpenChange={() => setShowAddSkillDialog(false)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent 
+            className="max-w-3xl max-h-[80vh] overflow-y-auto"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>Habilidades de {selectedEmployee.nombre}</DialogTitle>
             </DialogHeader>
@@ -223,15 +248,23 @@ export default function EmployeeSkillsMatrix() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {getEmployeeSkills(selectedEmployee.id).map((es) => (
-                      <div key={es.id} className="flex items-center justify-between p-3 bg-slate-50 rounded border">
-                        <div className="flex-1">
-                          <div className="font-medium">{getSkillName(es.skill_id)}</div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            Adquirida: {es.fecha_adquisicion || 'N/A'}
-                            {es.certificado && " • Certificada"}
-                          </div>
-                        </div>
+                    {getEmployeeSkills(selectedEmployee.id).map((es) => {
+                      const machine = machines.find(m => m.id === es.machine_id);
+                      return (
+                     <div key={es.id} className="flex items-center justify-between p-3 bg-slate-50 rounded border">
+                       <div className="flex-1">
+                         <div className="font-medium">{getSkillName(es.skill_id)}</div>
+                         {machine && (
+                           <div className="text-xs text-blue-600 font-medium mt-0.5">
+                             📍 {machine.nombre}
+                           </div>
+                         )}
+                         <div className="text-xs text-slate-500 mt-1">
+                           Adquirida: {es.fecha_adquisicion || 'N/A'}
+                           {es.experiencia_meses > 0 && ` • ${es.experiencia_meses} meses exp.`}
+                           {es.certificado && " • Certificada"}
+                         </div>
+                       </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getLevelColor(es.nivel_competencia)}>
                             {es.nivel_competencia}
@@ -250,7 +283,8 @@ export default function EmployeeSkillsMatrix() {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    );
+                     })}
                   </div>
                 )}
               </div>
@@ -293,6 +327,33 @@ export default function EmployeeSkillsMatrix() {
                       type="date"
                       value={newSkill.fecha_adquisicion}
                       onChange={(e) => setNewSkill({ ...newSkill, fecha_adquisicion: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Máquina (Opcional)</Label>
+                    <Select value={newSkill.machine_id} onValueChange={(value) => setNewSkill({ ...newSkill, machine_id: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sin máquina específica" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={null}>Sin máquina</SelectItem>
+                        {machines.map(machine => (
+                          <SelectItem key={machine.id} value={machine.id}>
+                            {machine.nombre} ({machine.codigo})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Experiencia (meses)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={newSkill.experiencia_meses}
+                      onChange={(e) => setNewSkill({ ...newSkill, experiencia_meses: parseInt(e.target.value) || 0 })}
                     />
                   </div>
                 </div>
