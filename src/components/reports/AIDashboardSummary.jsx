@@ -13,7 +13,7 @@ export default function AIDashboardSummary({ data, type = "absences" }) {
     setLoading(true);
     try {
       const contextData = JSON.stringify(data, null, 2);
-      
+
       let promptContent = "";
       if (type === "absences") {
         promptContent = `Analiza los siguientes datos de ausencias de empleados y genera un resumen ejecutivo conciso (máximo 150 palabras) destacando:
@@ -56,7 +56,7 @@ Datos: ${contextData}`;
   if (!summary && !loading) return null;
 
   return (
-    <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200">
+    <Card className="bg-gradient-to-br text-card-foreground mt-5 mr-1 mb-5 ml-1 px-3 rounded-xl shadow from-indigo-50 to-purple-50 border-2 border-indigo-200">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -67,28 +67,28 @@ Datos: ${contextData}`;
             variant="ghost"
             size="sm"
             onClick={generateSummary}
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
+            disabled={loading}>
+
+            {loading ?
+            <Loader2 className="w-4 h-4 animate-spin" /> :
+
+            <RefreshCw className="w-4 h-4" />
+            }
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm text-indigo-700">
+        {loading ?
+        <div className="flex items-center gap-2 text-sm text-indigo-700">
             <Loader2 className="w-4 h-4 animate-spin" />
             Analizando datos...
-          </div>
-        ) : (
-          <div className="text-sm text-slate-700 prose prose-sm max-w-none">
+          </div> :
+
+        <div className="text-sm text-slate-700 prose prose-sm max-w-none">
             <ReactMarkdown>{summary}</ReactMarkdown>
           </div>
-        )}
+        }
       </CardContent>
-    </Card>
-  );
+    </Card>);
+
 }
