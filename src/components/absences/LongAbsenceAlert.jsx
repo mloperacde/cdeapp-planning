@@ -103,6 +103,13 @@ export default function LongAbsenceAlert({ employees, absences }) {
             </div>
           ))}
         </div>
+        {longAbsences.length > 3 && (
+          <Link to={createPageUrl("AbsenceManagement")}>
+            <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
+              Ver {longAbsences.length - 3} más
+            </Button>
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
