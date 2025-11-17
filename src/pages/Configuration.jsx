@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare } from "lucide-react";
@@ -6,14 +7,6 @@ import { createPageUrl } from "@/utils";
 
 export default function ConfigurationPage() {
   const configModules = [
-    {
-      title: "Configuración Global",
-      description: "Configuraciones centralizadas de la aplicación",
-      icon: Settings,
-      url: createPageUrl("GlobalConfiguration"),
-      color: "slate",
-      featured: true
-    },
     {
       title: "Tipos de Ausencias",
       description: "Configura tipos de ausencias y permisos",
@@ -106,7 +99,7 @@ export default function ConfigurationPage() {
     purple: "from-purple-500 to-purple-600",
     orange: "from-orange-500 to-orange-600",
     indigo: "from-indigo-500 to-indigo-600",
-    slate: "from-slate-600 to-slate-700",
+    slate: "from-slate-500 to-slate-600",
     emerald: "from-emerald-500 to-emerald-600",
     amber: "from-amber-500 to-amber-600"
   };
