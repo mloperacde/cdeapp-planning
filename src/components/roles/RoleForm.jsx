@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye } from "lucide-react";
 
 export default function RoleForm({ role, onClose }) {
   const [formData, setFormData] = useState(role || {
@@ -126,10 +125,11 @@ export default function RoleForm({ role, onClose }) {
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose} modal={false}>
+    <Dialog open={true} onOpenChange={onClose}>
       <DialogContent 
         className="max-w-4xl max-h-[90vh] overflow-y-auto"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>{role ? "Editar Rol" : "Crear Nuevo Rol"}</DialogTitle>
