@@ -15,6 +15,14 @@ export default function ConfigurationPage() {
       featured: true
     },
     {
+      title: "Flujos de Trabajo",
+      description: "Automatización de procesos y notificaciones",
+      icon: Settings,
+      url: createPageUrl("WorkflowConfiguration"),
+      color: "blue",
+      featured: true
+    },
+    {
       title: "Tipos de Ausencias",
       description: "Configura tipos de ausencias y permisos",
       icon: Calendar,

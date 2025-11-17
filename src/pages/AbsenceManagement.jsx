@@ -45,7 +45,8 @@ import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
 import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
 import { debounce } from "lodash";
-import { toast } from 'sonner'; // Assuming sonner is the toast library used
+import { toast } from 'sonner';
+import { checkAndExecuteWorkflows } from "../components/workflows/WorkflowAutomation";
 
 import ApprovalFlowManager from "../components/absences/ApprovalFlowManager";
 import RecurringAbsenceMonitor from "../components/absences/RecurringAbsenceMonitor";
@@ -229,6 +230,24 @@ export default function AbsenceManagementPage() {
       // Actualizar absentismo del empleado
       const { updateEmployeeAbsenteeismDaily } = await import("../components/absences/AbsenteeismCalculator");
       await updateEmployeeAbsenteeismDaily(data.employee_id);
+
+      // Ejecutar flujos de trabajo automatizados
+      const employee = employees.find(e => e.id === data.employee_id);
+      if (employee && data.fecha_inicio && data.fecha_fin) {
+        const start = new Date(data.fecha_inicio);
+        const end = new Date(data.fecha_fin);
+        const diasAusencia = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+        await checkAndExecuteWorkflows("ausencia", {
+          absence_id: result.id,
+          employee_id: data.employee_id,
+          employee_name: employee.nombre,
+          tipo_ausencia: data.tipo,
+          diasAusencia,
+          referencia_tipo: "Absence",
+          referencia_id: result.id
+        });
+      }
 
       return result;
     },

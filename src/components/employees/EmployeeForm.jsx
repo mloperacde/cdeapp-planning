@@ -1119,8 +1119,28 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   ))}
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+
+              <TabsContent value="history" className="space-y-6">
+              {employee?.id ? (
+                <EmployeeHistory employeeId={employee.id} />
+              ) : (
+                <p className="text-center text-slate-500 py-8">
+                  Guarda el empleado primero para ver el historial
+                </p>
+              )}
+              </TabsContent>
+
+              <TabsContent value="documents" className="space-y-6">
+              {employee?.id ? (
+                <EmployeeDocuments employeeId={employee.id} />
+              ) : (
+                <p className="text-center text-slate-500 py-8">
+                  Guarda el empleado primero para añadir documentos
+                </p>
+              )}
+              </TabsContent>
+              </Tabs>
 
           <div className="flex justify-end gap-3 mt-6">
             <Button type="button" variant="outline" onClick={onClose}>
