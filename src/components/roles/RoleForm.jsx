@@ -77,7 +77,7 @@ export default function RoleForm({ role, onClose }) {
   const allModulos = ["Dashboard", "Empleados", "Planning", "Maquinas", "Mantenimiento", "Ausencias", "Comites", "PRL", "Taquillas", "Habilidades", "Informes", "Configuracion", "Usuarios"];
 
   const toggleModulo = (modulo) => {
-    const current = formData.permissions.modulos_acceso || [];
+    const current = formData.permissions?.modulos_acceso || [];
     const updated = current.includes(modulo)
       ? current.filter(m => m !== modulo)
       : [...current, modulo];
@@ -93,7 +93,7 @@ export default function RoleForm({ role, onClose }) {
       permissions: {
         ...formData.permissions,
         [category]: {
-          ...formData.permissions[category],
+          ...(formData.permissions?.[category] || {}),
           [key]: value
         }
       }
@@ -106,9 +106,9 @@ export default function RoleForm({ role, onClose }) {
       permissions: {
         ...formData.permissions,
         ui_visibilidad: {
-          ...formData.permissions.ui_visibilidad,
+          ...(formData.permissions?.ui_visibilidad || {}),
           [module]: {
-            ...formData.permissions.ui_visibilidad[module],
+            ...(formData.permissions?.ui_visibilidad?.[module] || {}),
             [key]: value
           }
         }
@@ -179,7 +179,7 @@ export default function RoleForm({ role, onClose }) {
                 {allModulos.map(mod => (
                   <div key={mod} className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.modulos_acceso?.includes(mod)}
+                      checked={formData.permissions?.modulos_acceso?.includes(mod)}
                       onCheckedChange={() => toggleModulo(mod)}
                     />
                     <label className="text-sm cursor-pointer" onClick={() => toggleModulo(mod)}>
@@ -196,13 +196,13 @@ export default function RoleForm({ role, onClose }) {
                   <CardTitle className="text-base">Empleados</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {Object.keys(formData.permissions.acciones_empleados).map(key => (
+                  {Object.keys(formData.permissions?.acciones_empleados || {}).map(key => (
                     <div key={key} className="flex items-center gap-2">
                       <Checkbox
-                        checked={formData.permissions.acciones_empleados[key]}
+                        checked={formData.permissions?.acciones_empleados?.[key] || false}
                         onCheckedChange={(checked) => updatePermission('acciones_empleados', key, checked)}
                       />
-                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_empleados', key, !formData.permissions.acciones_empleados[key])}>
+                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_empleados', key, !(formData.permissions?.acciones_empleados?.[key]))}>
                         {key.replace('_', ' ')}
                       </label>
                     </div>
@@ -215,13 +215,13 @@ export default function RoleForm({ role, onClose }) {
                   <CardTitle className="text-base">Ausencias</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {Object.keys(formData.permissions.acciones_ausencias).map(key => (
+                  {Object.keys(formData.permissions?.acciones_ausencias || {}).map(key => (
                     <div key={key} className="flex items-center gap-2">
                       <Checkbox
-                        checked={formData.permissions.acciones_ausencias[key]}
+                        checked={formData.permissions?.acciones_ausencias?.[key] || false}
                         onCheckedChange={(checked) => updatePermission('acciones_ausencias', key, checked)}
                       />
-                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_ausencias', key, !formData.permissions.acciones_ausencias[key])}>
+                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_ausencias', key, !(formData.permissions?.acciones_ausencias?.[key]))}>
                         {key.replace(/_/g, ' ')}
                       </label>
                     </div>
@@ -234,13 +234,13 @@ export default function RoleForm({ role, onClose }) {
                   <CardTitle className="text-base">Máquinas</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {Object.keys(formData.permissions.acciones_maquinas).map(key => (
+                  {Object.keys(formData.permissions?.acciones_maquinas || {}).map(key => (
                     <div key={key} className="flex items-center gap-2">
                       <Checkbox
-                        checked={formData.permissions.acciones_maquinas[key]}
+                        checked={formData.permissions?.acciones_maquinas?.[key] || false}
                         onCheckedChange={(checked) => updatePermission('acciones_maquinas', key, checked)}
                       />
-                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_maquinas', key, !formData.permissions.acciones_maquinas[key])}>
+                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_maquinas', key, !(formData.permissions?.acciones_maquinas?.[key]))}>
                         {key.replace(/_/g, ' ')}
                       </label>
                     </div>
@@ -253,13 +253,13 @@ export default function RoleForm({ role, onClose }) {
                   <CardTitle className="text-base">Mantenimiento</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {Object.keys(formData.permissions.acciones_mantenimiento).map(key => (
+                  {Object.keys(formData.permissions?.acciones_mantenimiento || {}).map(key => (
                     <div key={key} className="flex items-center gap-2">
                       <Checkbox
-                        checked={formData.permissions.acciones_mantenimiento[key]}
+                        checked={formData.permissions?.acciones_mantenimiento?.[key] || false}
                         onCheckedChange={(checked) => updatePermission('acciones_mantenimiento', key, checked)}
                       />
-                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_mantenimiento', key, !formData.permissions.acciones_mantenimiento[key])}>
+                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_mantenimiento', key, !(formData.permissions?.acciones_mantenimiento?.[key]))}>
                         {key}
                       </label>
                     </div>
@@ -279,7 +279,7 @@ export default function RoleForm({ role, onClose }) {
                 <CardContent className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.timeline?.botones_configuracion}
+                      checked={formData.permissions?.ui_visibilidad?.timeline?.botones_configuracion || false}
                       onCheckedChange={(checked) => updateUIPermission('timeline', 'botones_configuracion', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -288,7 +288,7 @@ export default function RoleForm({ role, onClose }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.timeline?.filtros_avanzados}
+                      checked={formData.permissions?.ui_visibilidad?.timeline?.filtros_avanzados || false}
                       onCheckedChange={(checked) => updateUIPermission('timeline', 'filtros_avanzados', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -308,7 +308,7 @@ export default function RoleForm({ role, onClose }) {
                 <CardContent className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.empleados?.boton_nuevo}
+                      checked={formData.permissions?.ui_visibilidad?.empleados?.boton_nuevo || false}
                       onCheckedChange={(checked) => updateUIPermission('empleados', 'boton_nuevo', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -317,7 +317,7 @@ export default function RoleForm({ role, onClose }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.empleados?.boton_editar}
+                      checked={formData.permissions?.ui_visibilidad?.empleados?.boton_editar || false}
                       onCheckedChange={(checked) => updateUIPermission('empleados', 'boton_editar', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -326,7 +326,7 @@ export default function RoleForm({ role, onClose }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.empleados?.boton_eliminar}
+                      checked={formData.permissions?.ui_visibilidad?.empleados?.boton_eliminar || false}
                       onCheckedChange={(checked) => updateUIPermission('empleados', 'boton_eliminar', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -346,7 +346,7 @@ export default function RoleForm({ role, onClose }) {
                 <CardContent className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.maquinas?.boton_nuevo}
+                      checked={formData.permissions?.ui_visibilidad?.maquinas?.boton_nuevo || false}
                       onCheckedChange={(checked) => updateUIPermission('maquinas', 'boton_nuevo', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -355,7 +355,7 @@ export default function RoleForm({ role, onClose }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.maquinas?.boton_editar}
+                      checked={formData.permissions?.ui_visibilidad?.maquinas?.boton_editar || false}
                       onCheckedChange={(checked) => updateUIPermission('maquinas', 'boton_editar', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -364,7 +364,7 @@ export default function RoleForm({ role, onClose }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.maquinas?.cambiar_estado}
+                      checked={formData.permissions?.ui_visibilidad?.maquinas?.cambiar_estado || false}
                       onCheckedChange={(checked) => updateUIPermission('maquinas', 'cambiar_estado', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -384,7 +384,7 @@ export default function RoleForm({ role, onClose }) {
                 <CardContent className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.ausencias?.boton_nueva}
+                      checked={formData.permissions?.ui_visibilidad?.ausencias?.boton_nueva || false}
                       onCheckedChange={(checked) => updateUIPermission('ausencias', 'boton_nueva', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -393,7 +393,7 @@ export default function RoleForm({ role, onClose }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.ausencias?.boton_aprobar}
+                      checked={formData.permissions?.ui_visibilidad?.ausencias?.boton_aprobar || false}
                       onCheckedChange={(checked) => updateUIPermission('ausencias', 'boton_aprobar', checked)}
                     />
                     <label className="text-sm cursor-pointer">
@@ -402,7 +402,7 @@ export default function RoleForm({ role, onClose }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={formData.permissions.ui_visibilidad?.ausencias?.ver_todas}
+                      checked={formData.permissions?.ui_visibilidad?.ausencias?.ver_todas || false}
                       onCheckedChange={(checked) => updateUIPermission('ausencias', 'ver_todas', checked)}
                     />
                     <label className="text-sm cursor-pointer">
