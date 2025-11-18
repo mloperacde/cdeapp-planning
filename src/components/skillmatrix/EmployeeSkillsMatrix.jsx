@@ -251,20 +251,20 @@ export default function EmployeeSkillsMatrix() {
                     {getEmployeeSkills(selectedEmployee.id).map((es) => {
                       const machine = machines.find(m => m.id === es.machine_id);
                       return (
-                     <div key={es.id} className="flex items-center justify-between p-3 bg-slate-50 rounded border">
-                       <div className="flex-1">
-                         <div className="font-medium">{getSkillName(es.skill_id)}</div>
-                         {machine && (
-                           <div className="text-xs text-blue-600 font-medium mt-0.5">
-                             📍 {machine.nombre}
+                       <div key={es.id} className="flex items-center justify-between p-3 bg-slate-50 rounded border">
+                         <div className="flex-1">
+                           <div className="font-medium">{getSkillName(es.skill_id)}</div>
+                           {machine && (
+                             <div className="text-xs text-blue-600 font-medium mt-0.5">
+                               📍 {machine.nombre}
+                             </div>
+                           )}
+                           <div className="text-xs text-slate-500 mt-1">
+                             Adquirida: {es.fecha_adquisicion || 'N/A'}
+                             {es.experiencia_meses > 0 && ` • ${es.experiencia_meses} meses exp.`}
+                             {es.certificado && " • Certificada"}
                            </div>
-                         )}
-                         <div className="text-xs text-slate-500 mt-1">
-                           Adquirida: {es.fecha_adquisicion || 'N/A'}
-                           {es.experiencia_meses > 0 && ` • ${es.experiencia_meses} meses exp.`}
-                           {es.certificado && " • Certificada"}
                          </div>
-                       </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getLevelColor(es.nivel_competencia)}>
                             {es.nivel_competencia}
@@ -281,9 +281,9 @@ export default function EmployeeSkillsMatrix() {
                           >
                             Eliminar
                           </Button>
+                          </div>
                         </div>
-                      </div>
-                    );
+                       );
                      })}
                   </div>
                 )}

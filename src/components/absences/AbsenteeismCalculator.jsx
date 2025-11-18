@@ -30,7 +30,7 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
   
   for (const absence of relevantAbsences) {
     const absStart = new Date(absence.fecha_inicio) < startDate ? startDate : new Date(absence.fecha_inicio);
-    const absEnd = absence.fecha_fin_desconocida ? endDate : (new Date(absence.fecha_fin) > endDate ? endDate : new Date(absence.fecha_fin));
+    const absEnd = absence.fecha_fin_desconocida ? new Date() : (new Date(absence.fecha_fin) > endDate ? endDate : new Date(absence.fecha_fin));
     
     const days = eachDayOfInterval({ start: absStart, end: absEnd });
     
