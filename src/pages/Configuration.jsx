@@ -113,9 +113,6 @@ export default function ConfigurationPage() {
     }
   ];
 
-  const featuredModules = configModules.filter(m => m.featured);
-  const otherModules = configModules.filter(m => !m.featured);
-
   const colorClasses = {
     red: "from-red-500 to-red-600",
     blue: "from-blue-500 to-blue-600",
@@ -144,53 +141,31 @@ export default function ConfigurationPage() {
         </div>
 
         <div className="space-y-8">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Configuración Principal</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {featuredModules.map((module) => {
-                const Icon = module.icon;
-                return (
-                  <Link key={module.title} to={module.url}>
-                    <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
-                      <CardContent className="p-6">
-                        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                          <Icon className="w-7 h-7 text-white" />
-                        </div>
-                        <h3 className="font-semibold text-lg text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-                          {module.title}
-                        </h3>
-                        <p className="text-sm text-slate-600">{module.description}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
+          {Object.entries(configModules).map(([key, category]) => (
+            <div key={key}>
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">{category.title}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {category.modules.map((module) => {
+                  const Icon = module.icon;
+                  return (
+                    <Link key={module.title} to={module.url}>
+                      <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
+                        <CardContent className="p-4">
+                          <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                            <Icon className="w-6 h-6 text-white" />
+                          </div>
+                          <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                            {module.title}
+                          </h3>
+                          <p className="text-xs text-slate-600">{module.description}</p>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Otras Configuraciones</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {otherModules.map((module) => {
-                const Icon = module.icon;
-                return (
-                  <Link key={module.title} to={module.url}>
-                    <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
-                      <CardContent className="p-4">
-                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
-                          {module.title}
-                        </h3>
-                        <p className="text-xs text-slate-600">{module.description}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
