@@ -24,6 +24,8 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import DashboardWidgetConfig from "../components/dashboard/DashboardWidgetConfig";
 import WorkCalendar from "../components/absences/WorkCalendar";
+import HolidayVacationPanel from "../components/absences/HolidayVacationPanel";
+import ProductionMonitor from "../components/machines/ProductionMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AVAILABLE_WIDGETS = [
@@ -435,22 +437,19 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        <Tabs defaultValue="widgets" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="widgets">Widgets</TabsTrigger>
-            <TabsTrigger value="calendar">Calendario Laboral</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {enabledWidgets.map(widget => renderWidget(widget))}
+        </div>
 
-          <TabsContent value="widgets">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {enabledWidgets.map(widget => renderWidget(widget))}
-            </div>
-          </TabsContent>
+        <ProductionMonitor />
 
-          <TabsContent value="calendar">
-            <WorkCalendar />
-          </TabsContent>
-        </Tabs>
+        <div className="mt-8">
+          <WorkCalendar />
+        </div>
+
+        <div className="mt-6">
+          <HolidayVacationPanel />
+        </div>
 
 
       </div>

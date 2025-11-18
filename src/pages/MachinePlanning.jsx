@@ -35,6 +35,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { notifyMachinePlanningChange } from "../components/notifications/NotificationService";
+import ProductionMonitor from "../components/machines/ProductionMonitor";
 
 export default function MachinePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -650,6 +651,12 @@ INSTRUCCIONES:
                                             }`}>
                                               {machineStatus.estado_produccion}
                                             </Badge>
+                                            {machineStatus.alerta_desviacion && (
+                                              <Badge className="bg-red-600 text-xs w-fit">
+                                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                                Alerta
+                                              </Badge>
+                                            )}
                                           </div>
                                         </TableCell>
                                         <TableCell>
