@@ -9,6 +9,8 @@ import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCirc
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useDebounce } from "../components/utils/useDebounce";
+import { usePagination } from "../components/utils/usePagination";
 import {
   Dialog,
   DialogContent,
@@ -58,12 +60,16 @@ export default function MachineManagement() {
     };
   };
 
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
   const filteredMachines = useMemo(() => {
     return machines.filter(m => 
-      m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
+      m.nombre?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      m.codigo?.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
-  }, [machines, searchTerm]);
+  }, [machines, debouncedSearch]);
+
+  const { currentPage, totalPages, paginatedItems, goToPage, nextPage, prevPage } = usePagination(filteredMachines, 24);
 
   const handleQuickToggle = (machineId, currentDisp) => {
     const newDisp = currentDisp === "Disponible" ? "No disponible" : "Disponible";
@@ -161,7 +167,18 @@ export default function MachineManagement() {
         <Card className="shadow-lg mb-6">
           <CardHeader className="border-b">
             <div className="flex justify-between items-center">
-              <CardTitle>Máquinas</CardTitle>
+              <div className="flex items-center gap-4">
+                <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-600">Página {currentPage} de {totalPages}</span>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={prevPage} disabled={currentPage === 1}>Anterior</Button>
+                      <Button size="sm" variant="outline" onClick={nextPage} disabled={currentPage === totalPages}>Siguiente</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
@@ -178,7 +195,7 @@ export default function MachineManagement() {
               <div className="p-12 text-center text-slate-500">Cargando...</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-                {filteredMachines.map(machine => {
+                {paginatedItems.map(machine => {
                   const status = getStatus(machine.id);
                   const isAvailable = status.estado_disponibilidad === "Disponible";
                   const prodStatus = status.estado_produccion;

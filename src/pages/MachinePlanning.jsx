@@ -545,9 +545,14 @@ export default function MachinePlanningPage() {
                                           <div>
                                             <span className="font-semibold text-slate-900">{machine.nombre}</span>
                                             <div className="text-xs text-slate-500">{machine.codigo}</div>
-                                            {!isAvailable && (
-                                              <Badge variant="destructive" className="text-xs mt-1">No disponible</Badge>
-                                            )}
+                                            <div className="flex gap-1 mt-1">
+                                              <Badge variant={isAvailable ? "outline" : "destructive"} className="text-xs">
+                                                {machineStatus.estado_disponibilidad}
+                                              </Badge>
+                                              <Badge variant="outline" className="text-xs">
+                                                {machineStatus.estado_produccion}
+                                              </Badge>
+                                            </div>
                                           </div>
                                         </TableCell>
                                         <TableCell>
@@ -792,8 +797,11 @@ export default function MachinePlanningPage() {
 
       {/* Dialog de Selección de Proceso */}
       {showProcessDialog && selectedMachine && (
-        <Dialog open={true} onOpenChange={() => setShowProcessDialog(false)}>
-          <DialogContent>
+        <Dialog open={true} onOpenChange={() => {
+          setShowProcessDialog(false);
+          setSelectedMachine(null);
+        }}>
+          <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Seleccionar Proceso para {selectedMachine.nombre}</DialogTitle>
             </DialogHeader>
@@ -805,6 +813,7 @@ export default function MachinePlanningPage() {
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => handleSelectProcess(process.id)}
+                  disabled={savePlanningMutation.isPending}
                 >
                   <div className="text-left">
                     <div className="font-semibold">{process.nombre}</div>

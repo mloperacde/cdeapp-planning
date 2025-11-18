@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { useDebounce } from "../components/utils/useDebounce";
+import { usePagination } from "../components/utils/usePagination";
 import {
   Select,
   SelectContent,
@@ -108,14 +110,16 @@ export default function MasterMachineView() {
     };
   }, [machines]);
 
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
   const filteredMachines = useMemo(() => {
     return machines.filter(machine => {
-      const matchesSearch = !searchTerm || 
-        machine.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.marca?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.numero_serie?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = !debouncedSearch || 
+        machine.nombre?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        machine.codigo?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        machine.marca?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        machine.modelo?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        machine.numero_serie?.toLowerCase().includes(debouncedSearch.toLowerCase());
 
       const matchesTipo = filters.tipo === "all" || machine.tipo === filters.tipo;
       const matchesUbicacion = filters.ubicacion === "all" || machine.ubicacion === filters.ubicacion;
@@ -123,7 +127,9 @@ export default function MasterMachineView() {
 
       return matchesSearch && matchesTipo && matchesUbicacion && matchesMarca;
     });
-  }, [machines, searchTerm, filters]);
+  }, [machines, debouncedSearch, filters]);
+
+  const { currentPage, totalPages, paginatedItems, goToPage, nextPage, prevPage } = usePagination(filteredMachines, 20);
 
   const handleEdit = (machine) => {
     setEditingMachine(machine);
@@ -344,7 +350,24 @@ export default function MasterMachineView() {
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b">
-            <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={prevPage} disabled={currentPage === 1}>
+                      Anterior
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={nextPage} disabled={currentPage === totalPages}>
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
@@ -367,7 +390,7 @@ export default function MasterMachineView() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredMachines.map((machine) => (
+                    {paginatedItems.map((machine) => (
                       <TableRow key={machine.id} className="hover:bg-slate-50">
                         <TableCell className="font-mono font-semibold">
                           {machine.codigo}
