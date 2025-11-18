@@ -4,11 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, UserCheck, UserX, Calendar, TrendingUp, FileText, Download, UserPlus, Award } from "lucide-react";
-import { format, differenceInDays, isSameDay } from "date-fns";
+import { Users, UserCheck, UserX, Calendar, TrendingUp, FileText, Download, UserPlus, Award, BarChart3, Clock } from "lucide-react";
+import { format, differenceInDays, startOfYear, endOfYear } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { calculateGlobalAbsenteeism } from "../components/absences/AbsenteeismCalculator";
 
 export default function HRDashboardPage() {
   const { data: employees = [] } = useQuery({
@@ -39,6 +40,29 @@ export default function HRDashboardPage() {
     queryKey: ['absenceTypes'],
     queryFn: () => base44.entities.AbsenceType.list('orden'),
     initialData: [],
+  });
+
+  const { data: employeeSkills = [] } = useQuery({
+    queryKey: ['employeeSkills'],
+    queryFn: () => base44.entities.EmployeeSkill.list(),
+    initialData: [],
+  });
+
+  const { data: trainingNeeds = [] } = useQuery({
+    queryKey: ['trainingNeeds'],
+    queryFn: () => base44.entities.TrainingNeed.list(),
+    initialData: [],
+  });
+
+  // Absentismo global
+  const { data: globalAbsenteeism } = useQuery({
+    queryKey: ['globalAbsenteeism'],
+    queryFn: async () => {
+      const now = new Date();
+      return calculateGlobalAbsenteeism(startOfYear(now), now);
+    },
+    initialData: { tasaAbsentismoGlobal: 0, totalHorasNoTrabajadas: 0, totalHorasDeberianTrabajarse: 0 },
+    staleTime: 60 * 60 * 1000, // Cache 1 hora
   });
 
   // Active absences today
@@ -116,6 +140,41 @@ export default function HRDashboardPage() {
       return endDate >= now && endDate <= threeMonthsFromNow;
     }).sort((a, b) => new Date(a.fecha_fin_contrato) - new Date(b.fecha_fin_contrato));
   }, [employees]);
+
+  // Absentismo por departamento
+  const absenteeismByDept = useMemo(() => {
+    const byDept = {};
+    employees.forEach(emp => {
+      const dept = emp.departamento || 'Sin Departamento';
+      if (!byDept[dept]) {
+        byDept[dept] = { 
+          total: 0, 
+          horasNoTrabajadas: 0, 
+          horasDeberianTrabajarse: 0,
+          tasa: 0 
+        };
+      }
+      byDept[dept].total++;
+      byDept[dept].horasNoTrabajadas += emp.horas_no_trabajadas || 0;
+      byDept[dept].horasDeberianTrabajarse += emp.horas_deberian_trabajarse || 0;
+      
+      if (byDept[dept].horasDeberianTrabajarse > 0) {
+        byDept[dept].tasa = (byDept[dept].horasNoTrabajadas / byDept[dept].horasDeberianTrabajarse) * 100;
+      }
+    });
+    return Object.entries(byDept)
+      .sort((a, b) => b[1].tasa - a[1].tasa)
+      .slice(0, 5);
+  }, [employees]);
+
+  // Skills summary
+  const skillsSummary = useMemo(() => {
+    const employeesWithSkills = new Set(employeeSkills.map(es => es.employee_id)).size;
+    const expertCount = employeeSkills.filter(es => es.nivel_competencia === "Experto").length;
+    const pendingTraining = trainingNeeds.filter(tn => tn.estado === "Pendiente").length;
+    
+    return { employeesWithSkills, expertCount, pendingTraining };
+  }, [employeeSkills, trainingNeeds]);
 
   const downloadAbsenceTypesPDF = () => {
     const printWindow = window.open('', '_blank');
@@ -418,6 +477,118 @@ export default function HRDashboardPage() {
               </div>
               <Link to={createPageUrl("Employees")}>
                 <Button className="w-full mt-4" variant="outline">Ver Empleados</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Absenteeism Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-red-600" />
+                Tasa de Absentismo General
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="text-center mb-6">
+                <div className="text-5xl font-bold text-red-600">
+                  {globalAbsenteeism.tasaAbsentismoGlobal.toFixed(2)}%
+                </div>
+                <div className="text-sm text-slate-600 mt-2">Acumulado año {new Date().getFullYear()}</div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-red-50 p-3 rounded-lg text-center">
+                  <div className="text-xs text-red-700 mb-1">Horas No Trabajadas</div>
+                  <div className="text-lg font-bold text-red-900">
+                    {Math.round(globalAbsenteeism.totalHorasNoTrabajadas)}h
+                  </div>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg text-center">
+                  <div className="text-xs text-blue-700 mb-1">Horas Deberían Trabajarse</div>
+                  <div className="text-lg font-bold text-blue-900">
+                    {Math.round(globalAbsenteeism.totalHorasDeberianTrabajarse)}h
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-orange-600" />
+                Absentismo por Departamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {absenteeismByDept.map(([dept, stats]) => (
+                  <div key={dept} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-slate-900">{dept}</div>
+                      <div className="text-xs text-slate-600">{stats.total} empleados</div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-lg font-bold ${
+                        stats.tasa > 5 ? 'text-red-600' : 
+                        stats.tasa > 3 ? 'text-orange-600' : 
+                        'text-green-600'
+                      }`}>
+                        {stats.tasa.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {Math.round(stats.horasNoTrabajadas)}h / {Math.round(stats.horasDeberianTrabajarse)}h
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Skills & Training Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Empleados con Habilidades</p>
+                  <p className="text-4xl font-bold mt-2">{skillsSummary.employeesWithSkills}</p>
+                </div>
+                <Award className="w-12 h-12 text-purple-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-0 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-indigo-100 text-sm font-medium">Habilidades Expertas</p>
+                  <p className="text-4xl font-bold mt-2">{skillsSummary.expertCount}</p>
+                </div>
+                <TrendingUp className="w-12 h-12 text-indigo-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-0 bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-amber-100 text-sm font-medium">Formación Pendiente</p>
+                  <p className="text-4xl font-bold mt-2">{skillsSummary.pendingTraining}</p>
+                </div>
+                <Clock className="w-12 h-12 text-amber-200" />
+              </div>
+              <Link to={createPageUrl("SkillMatrix")}>
+                <Button variant="secondary" size="sm" className="mt-3 w-full bg-white/20 hover:bg-white/30">
+                  Ver Matriz
+                </Button>
               </Link>
             </CardContent>
           </Card>

@@ -186,7 +186,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(); // This will invalidate all active queries
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
       onClose();
     },
   });

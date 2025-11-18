@@ -21,24 +21,28 @@ export default function SkillMatrixPage() {
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
   });
 
   const { data: skills } = useQuery({
     queryKey: ['skills'],
     queryFn: () => base44.entities.Skill.list(),
     initialData: [],
+    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
   });
 
   const { data: employeeSkills } = useQuery({
     queryKey: ['employeeSkills'],
     queryFn: () => base44.entities.EmployeeSkill.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: trainingNeeds } = useQuery({
     queryKey: ['trainingNeeds'],
     queryFn: () => base44.entities.TrainingNeed.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   // Estadísticas rápidas
