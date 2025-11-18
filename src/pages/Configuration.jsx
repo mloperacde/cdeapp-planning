@@ -54,14 +54,7 @@ export default function ConfigurationPage() {
       color: "green",
       featured: false
     },
-    {
-      title: "Gestión de Festivos y Vacaciones",
-      description: "Calendario laboral y días no laborables",
-      icon: Calendar,
-      url: createPageUrl("AbsenceManagement") + "?tab=calendar",
-      color: "orange",
-      featured: false
-    },
+
     {
       title: "Taquillas",
       description: "Gestión de taquillas y vestuarios",
