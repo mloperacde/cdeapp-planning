@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -93,6 +93,22 @@ export default function ConfigurationPage() {
       url: createPageUrl("SkillMatrix"),
       color: "amber",
       featured: false
+    },
+    {
+      title: "Configuración de Procesos",
+      description: "Define procesos y requisitos por máquina",
+      icon: Settings,
+      url: createPageUrl("ProcessConfiguration"),
+      color: "purple",
+      featured: false
+    },
+    {
+      title: "Catálogo de Artículos",
+      description: "Gestión de artículos/productos fabricables",
+      icon: Package,
+      url: createPageUrl("ArticleManagement"),
+      color: "teal",
+      featured: false
     }
   ];
 
@@ -108,7 +124,8 @@ export default function ConfigurationPage() {
     indigo: "from-indigo-500 to-indigo-600",
     slate: "from-slate-500 to-slate-600",
     emerald: "from-emerald-500 to-emerald-600",
-    amber: "from-amber-500 to-amber-600"
+    amber: "from-amber-500 to-amber-600",
+    teal: "from-teal-500 to-teal-600"
   };
 
   return (
