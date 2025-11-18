@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,12 +120,6 @@ export default function Timeline() {
               onViewModeChange={setViewMode}
               selectedDate={selectedDate}
               onSelectedDateChange={setSelectedDate}
-              holidays={holidays || []}
-              isLoadingHolidays={isLoadingHolidays}
-              onHolidaysUpdate={refetchHolidays}
-              vacations={vacations || []}
-              isLoadingVacations={isLoadingVacations}
-              onVacationsUpdate={refetchVacations}
               selectedTeam={selectedTeam}
               onSelectedTeamChange={setSelectedTeam}
               teams={teams || []}

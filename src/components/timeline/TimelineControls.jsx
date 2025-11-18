@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,22 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarOff, Plane, Calendar, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { format } from "date-fns";
-import HolidayManager from "./HolidayManager";
-import VacationManager from "./VacationManager";
 
 export default function TimelineControls({
   viewMode,
   onViewModeChange,
   selectedDate,
   onSelectedDateChange,
-  holidays,
-  isLoadingHolidays,
-  onHolidaysUpdate,
-  vacations,
-  isLoadingVacations,
-  onVacationsUpdate,
   selectedTeam,
   onSelectedTeamChange,
   teams = [],
@@ -32,8 +24,6 @@ export default function TimelineControls({
   onSelectedDepartmentChange,
   departments = [],
 }) {
-  const [showHolidayManager, setShowHolidayManager] = useState(false);
-  const [showVacationManager, setShowVacationManager] = useState(false);
 
   const handleReset = () => {
     onViewModeChange('day');
@@ -104,49 +94,11 @@ export default function TimelineControls({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => setShowHolidayManager(true)}
-          variant="outline"
-          size="sm"
-          disabled={isLoadingHolidays}
-        >
-          <CalendarOff className="w-4 h-4 mr-2" />
-          Configurar Festivos
-        </Button>
-
-        <Button
-          onClick={() => setShowVacationManager(true)}
-          variant="outline"
-          size="sm"
-          disabled={isLoadingVacations}
-        >
-          <Plane className="w-4 h-4 mr-2" />
-          Configurar Vacaciones
-        </Button>
-
         <Button onClick={handleReset} variant="outline" size="sm">
           <RotateCcw className="w-4 h-4 mr-2" />
           Resetear Filtros
         </Button>
       </div>
-
-      {showHolidayManager && (
-        <HolidayManager
-          open={showHolidayManager}
-          onOpenChange={setShowHolidayManager}
-          holidays={holidays}
-          onUpdate={onHolidaysUpdate}
-        />
-      )}
-
-      {showVacationManager && (
-        <VacationManager
-          open={showVacationManager}
-          onOpenChange={setShowVacationManager}
-          vacations={vacations}
-          onUpdate={onVacationsUpdate}
-        />
-      )}
     </div>
   );
 }
