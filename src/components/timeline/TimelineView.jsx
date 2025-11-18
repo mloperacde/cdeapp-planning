@@ -10,11 +10,11 @@ import { Badge } from "@/components/ui/badge";
 const WORKING_DAY_START = 7 * 60;
 const WORKING_DAY_END = 22 * 60;
 
-export default function TimelineView({ 
-  startDate, 
-  endDate, 
-  holidays = [], 
-  vacations = [], 
+export default function TimelineView({
+  startDate,
+  endDate,
+  holidays = [],
+  vacations = [],
   selectedTeam = 'all',
   employees = [],
   teams = [],
@@ -31,13 +31,13 @@ export default function TimelineView({
     const stats = { totalEmployees: 0, intervals: 0 };
     const current = new Date(startDate);
     const end = new Date(endDate);
-    
+
     current.setMinutes(Math.floor(current.getMinutes() / 5) * 5);
     current.setSeconds(0);
     current.setMilliseconds(0);
-    
+
     const holidayDates = new Set(
-      (Array.isArray(holidays) ? holidays : []).filter(h => h?.date).map(h => {
+      (Array.isArray(holidays) ? holidays : []).filter((h) => h?.date).map((h) => {
         try {
           return format(new Date(h.date), "yyyy-MM-dd");
         } catch {
@@ -45,8 +45,8 @@ export default function TimelineView({
         }
       }).filter(Boolean)
     );
-    
-    const vacationRanges = (Array.isArray(vacations) ? vacations : []).filter(v => v?.start_date && v?.end_date).map(v => {
+
+    const vacationRanges = (Array.isArray(vacations) ? vacations : []).filter((v) => v?.start_date && v?.end_date).map((v) => {
       try {
         return {
           start: new Date(v.start_date),
@@ -60,32 +60,32 @@ export default function TimelineView({
 
     // Filtrar empleados por equipo, departamento y que estén incluidos en planning
     const getTeamName = (teamKey) => {
-      const team = Array.isArray(teams) ? teams.find(t => t?.team_key === teamKey) : null;
+      const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === teamKey) : null;
       return team?.team_name || '';
     };
 
-    let filteredEmployees = Array.isArray(employees) ? employees.filter(emp => emp?.incluir_en_planning !== false) : [];
-    
+    let filteredEmployees = Array.isArray(employees) ? employees.filter((emp) => emp?.incluir_en_planning !== false) : [];
+
     // Filtro por departamento
     if (selectedDepartment !== 'all') {
-      filteredEmployees = filteredEmployees.filter(emp => emp?.departamento === selectedDepartment);
+      filteredEmployees = filteredEmployees.filter((emp) => emp?.departamento === selectedDepartment);
     }
-    
+
     // Filtro por equipo
     if (selectedTeam === 'team_1') {
       const teamName = getTeamName('team_1');
-      filteredEmployees = filteredEmployees.filter(emp => emp?.equipo === teamName);
+      filteredEmployees = filteredEmployees.filter((emp) => emp?.equipo === teamName);
     } else if (selectedTeam === 'team_2') {
       const teamName = getTeamName('team_2');
-      filteredEmployees = filteredEmployees.filter(emp => emp?.equipo === teamName);
+      filteredEmployees = filteredEmployees.filter((emp) => emp?.equipo === teamName);
     }
 
     stats.totalEmployees = filteredEmployees.length;
-    
+
     const getEmployeeTeamKey = (employee) => {
-      const team1 = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_1') : null;
-      const team2 = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_2') : null;
-      
+      const team1 = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_1') : null;
+      const team2 = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_2') : null;
+
       if (team1 && employee?.equipo === team1.team_name) return 'team_1';
       if (team2 && employee?.equipo === team2.team_name) return 'team_2';
       return null;
@@ -94,14 +94,14 @@ export default function TimelineView({
     const getTeamScheduleForWeek = (teamKey, date) => {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
       const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-      return Array.isArray(teamSchedules) ? teamSchedules.find(s => s?.team_key === teamKey && s?.fecha_inicio_semana === weekStartStr) : null;
+      return Array.isArray(teamSchedules) ? teamSchedules.find((s) => s?.team_key === teamKey && s?.fecha_inicio_semana === weekStartStr) : null;
     };
-    
+
     const getEmployeeShift = (employee, date) => {
       if (!employee) return "Mañana";
       if (employee.tipo_turno === "Fijo Mañana") return "Mañana";
       if (employee.tipo_turno === "Fijo Tarde") return "Tarde";
-      
+
       // Para rotativos, usar el horario del equipo
       if (employee.tipo_turno === "Rotativo") {
         const teamKey = getEmployeeTeamKey(employee);
@@ -110,19 +110,19 @@ export default function TimelineView({
           return schedule?.turno || "Mañana";
         }
       }
-      
+
       return "Mañana";
     };
-    
+
     const getEmployeeSchedule = (employee, shift) => {
       if (!employee) return { start: 7 * 60, end: 15 * 60 };
-      
+
       if (employee.tipo_jornada === "Reducida" && employee.horario_personalizado_inicio && employee.horario_personalizado_fin) {
         const [startH, startM] = employee.horario_personalizado_inicio.split(':').map(Number);
         const [endH, endM] = employee.horario_personalizado_fin.split(':').map(Number);
         return { start: startH * 60 + startM, end: endH * 60 + endM };
       }
-      
+
       if (shift === "Mañana") {
         return { start: 7 * 60, end: 15 * 60 };
       } else {
@@ -133,16 +133,16 @@ export default function TimelineView({
         }
       }
     };
-    
+
     const isEmployeeAvailable = (employee, date) => {
       if (!employee || !date) return false;
 
       const dateStr = format(date, "yyyy-MM-dd");
       const dayOfWeek = date.getDay();
-      
+
       if (dayOfWeek === 0 || dayOfWeek === 6) return false;
       if (holidayDates.has(dateStr)) return false;
-      
+
       if (employee.disponibilidad === "Ausente") {
         if (employee.ausencia_inicio && employee.ausencia_fin) {
           const ausenciaStart = new Date(employee.ausencia_inicio);
@@ -153,7 +153,7 @@ export default function TimelineView({
           }
         }
       }
-      
+
       for (const vacRange of vacationRanges) {
         if (vacRange?.employeeIds === null || vacRange?.employeeIds?.includes(employee.id)) {
           if (isWithinInterval(date, { start: vacRange.start, end: vacRange.end })) {
@@ -161,19 +161,19 @@ export default function TimelineView({
           }
         }
       }
-      
+
       const shift = getEmployeeShift(employee, date);
       const schedule = getEmployeeSchedule(employee, shift);
       const timeInMinutes = date.getHours() * 60 + date.getMinutes();
-      
+
       return timeInMinutes >= schedule.start && timeInMinutes < schedule.end;
     };
-    
+
     const isInWorkingHours = (date) => {
       const timeInMinutes = date.getHours() * 60 + date.getMinutes();
       return timeInMinutes >= WORKING_DAY_START && timeInMinutes < WORKING_DAY_END;
     };
-    
+
     let index = 0;
     while (current <= end && index < 10000) {
       const currentDate = new Date(current);
@@ -182,39 +182,39 @@ export default function TimelineView({
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayDates.has(dateStr);
       const inWorkingHours = isInWorkingHours(currentDate);
-      
+
       if (inWorkingHours && !isWeekend && !isHoliday) {
-        const availableCount = filteredEmployees.filter(emp => 
-          isEmployeeAvailable(emp, currentDate)
+        const availableCount = filteredEmployees.filter((emp) =>
+        isEmployeeAvailable(emp, currentDate)
         ).length;
-        
-        allIntervals.push({ 
-          date: currentDate, 
-          availableEmployees: availableCount 
+
+        allIntervals.push({
+          date: currentDate,
+          availableEmployees: availableCount
         });
         stats.intervals++;
       }
-      
+
       current.setMinutes(current.getMinutes() + 5);
       index++;
     }
-    
+
     return { workingIntervals: allIntervals, stats };
   }, [startDate, endDate, holidays, vacations, selectedTeam, employees, teams, teamSchedules, selectedDepartment]);
 
   const isDateInVacation = (date) => {
     if (!vacations || vacations.length === 0) return false;
-    
+
     const checkDate = new Date(date);
     checkDate.setHours(0, 0, 0, 0);
-    
-    return vacations.some(vacation => {
+
+    return vacations.some((vacation) => {
       if (!vacation.start_date || !vacation.end_date) return false;
       const start = new Date(vacation.start_date);
       const end = new Date(vacation.end_date);
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
-      
+
       return checkDate >= start && checkDate <= end;
     });
   };
@@ -223,7 +223,7 @@ export default function TimelineView({
     if (!holidays || holidays.length === 0) return false;
     const dateStr = format(date, 'yyyy-MM-dd');
     // Assuming 'date' is the property holding the date string for holidays
-    return holidays.some(h => h.date && format(new Date(h.date), 'yyyy-MM-dd') === dateStr);
+    return holidays.some((h) => h.date && format(new Date(h.date), 'yyyy-MM-dd') === dateStr);
   };
 
   if (workingIntervals.length === 0) {
@@ -233,20 +233,20 @@ export default function TimelineView({
         <p className="text-slate-600 mb-2">
           No hay intervalos laborables en el rango seleccionado
         </p>
-      </div>
-    );
+      </div>);
+
   }
 
-  const maxEmployees = Math.max(...workingIntervals.map(i => i?.availableEmployees || 0), 1);
+  const maxEmployees = Math.max(...workingIntervals.map((i) => i?.availableEmployees || 0), 1);
   const avgEmployees = (workingIntervals.reduce((sum, i) => sum + (i?.availableEmployees || 0), 0) / workingIntervals.length).toFixed(1);
 
   const getTeamColor = () => {
     if (selectedTeam === 'team_1') {
-      const team = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_1') : null;
+      const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_1') : null;
       return team?.color || '#8B5CF6';
     }
     if (selectedTeam === 'team_2') {
-      const team = Array.isArray(teams) ? teams.find(t => t?.team_key === 'team_2') : null;
+      const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_2') : null;
       return team?.color || '#EC4899';
     }
     return '#3B82F6';
@@ -257,21 +257,21 @@ export default function TimelineView({
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-2">
           Disponibilidad de Empleados
-          {selectedDepartment !== 'all' && (
-            <span className="text-orange-600 ml-2">- {selectedDepartment}</span>
-          )}
-          {selectedTeam !== 'all' && (
-            <span style={{ color: getTeamColor() }} className="ml-2">
-              - {teams.find(t => t.team_key === selectedTeam)?.team_name}
+          {selectedDepartment !== 'all' &&
+          <span className="text-orange-600 ml-2">- {selectedDepartment}</span>
+          }
+          {selectedTeam !== 'all' &&
+          <span style={{ color: getTeamColor() }} className="ml-2">
+              - {teams.find((t) => t.team_key === selectedTeam)?.team_name}
             </span>
-          )}
+          }
         </h3>
         <p className="text-sm text-slate-600 mb-3">
           Cada punto muestra el número de empleados disponibles en ese intervalo de 5 minutos
         </p>
         
         <div className="flex flex-wrap gap-2 mb-3">
-          <Badge variant="outline" style={{ 
+          <Badge variant="outline" style={{
             backgroundColor: `${getTeamColor()}20`,
             color: getTeamColor(),
             borderColor: getTeamColor()
@@ -298,24 +298,24 @@ export default function TimelineView({
         <div className="absolute top-8 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200" />
 
         <div className="overflow-x-auto pb-4">
-          <div className="flex gap-0 min-w-max">
-            {workingIntervals.map((interval, index) => (
-              <TimeSlot
-                key={index}
-                time={interval.date}
-                availableEmployees={interval.availableEmployees}
-                maxEmployees={maxEmployees}
-                index={index}
-                isFirst={index === 0}
-                isLast={index === workingIntervals.length - 1}
-                totalIntervals={workingIntervals.length}
-                viewMode={viewMode}
-                teamColor={getTeamColor()}
-              />
-            ))}
+          <div className="pt-24 flex gap-0 min-w-max">
+            {workingIntervals.map((interval, index) =>
+            <TimeSlot
+              key={index}
+              time={interval.date}
+              availableEmployees={interval.availableEmployees}
+              maxEmployees={maxEmployees}
+              index={index}
+              isFirst={index === 0}
+              isLast={index === workingIntervals.length - 1}
+              totalIntervals={workingIntervals.length}
+              viewMode={viewMode}
+              teamColor={getTeamColor()} />
+
+            )}
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
