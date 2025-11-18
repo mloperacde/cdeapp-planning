@@ -25,6 +25,8 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
     queryKey: ['machinePlannings'],
     queryFn: () => base44.entities.MachinePlanning.list(),
     initialData: [],
+    staleTime: 2 * 60 * 1000,
+    enabled: open, // Solo cargar cuando el diálogo esté abierto
   });
 
   const saveMutation = useMutation({

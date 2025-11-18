@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,36 +51,45 @@ export default function MachinePlanningPage() {
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list('orden'),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: processes } = useQuery({
     queryKey: ['processes'],
     queryFn: () => base44.entities.Process.list('nombre'),
     initialData: [],
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: machineProcesses } = useQuery({
     queryKey: ['machineProcesses'],
     queryFn: () => base44.entities.MachineProcess.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: plannings } = useQuery({
     queryKey: ['machinePlannings', selectedDate, selectedTeam],
-    queryFn: () => base44.entities.MachinePlanning.list(),
+    queryFn: () => base44.entities.MachinePlanning.filter({
+      team_key: selectedTeam,
+      fecha_planificacion: selectedDate
+    }),
     initialData: [],
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   const savePlanningMutation = useMutation({
@@ -99,24 +107,24 @@ export default function MachinePlanningPage() {
         result = await base44.entities.MachinePlanning.create(data);
       }
 
-      // Enviar notificaciones a empleados del equipo
-      const teamName = teams.find(t => t.team_key === data.team_key)?.team_name;
+      return result;
+    },
+    onSuccess: async (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
+      
+      // Notificaciones en segundo plano (no bloqueantes)
+      const teamName = teams.find(t => t.team_key === variables.team_key)?.team_name;
       if (teamName) {
         const teamEmployees = employees.filter(e => e.equipo === teamName);
         const employeeIds = teamEmployees.map(e => e.id);
         
-        await notifyMachinePlanningChange(
-          data.machine_id,
-          data.team_key,
-          data.activa_planning,
+        notifyMachinePlanningChange(
+          variables.machine_id,
+          variables.team_key,
+          variables.activa_planning,
           employeeIds
-        );
+        ).catch(err => console.error('Error al enviar notificaciones:', err));
       }
-
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
     },
   });
 
