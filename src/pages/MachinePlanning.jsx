@@ -35,7 +35,6 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { notifyMachinePlanningChange } from "../components/notifications/NotificationService";
-import AIDashboardSummary from "../components/reports/AIDashboardSummary";
 
 export default function MachinePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -45,6 +44,7 @@ export default function MachinePlanningPage() {
   const [isCalling, setIsCalling] = useState(false);
   const [viewMode, setViewMode] = useState('day');
   const [currentTab, setCurrentTab] = useState('list');
+  const [agentResult, setAgentResult] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: machines, isLoading: loadingMachines } = useQuery({
@@ -228,15 +228,99 @@ export default function MachinePlanningPage() {
     setSelectedMachine(null);
   };
 
+  const clearPlanningMutation = useMutation({
+    mutationFn: async () => {
+      const planningsToDelete = plannings.filter(
+        p => p.team_key === selectedTeam && p.fecha_planificacion === selectedDate
+      );
+      
+      for (const planning of planningsToDelete) {
+        await base44.entities.MachinePlanning.delete(planning.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
+      setAgentResult(null);
+    },
+  });
+
+  const handleClearPlanning = () => {
+    if (confirm('¿Eliminar todas las asignaciones de este día/equipo?')) {
+      clearPlanningMutation.mutate();
+    }
+  };
+
   const handleCallAgent = async () => {
     setIsCalling(true);
+    setAgentResult(null);
+    
     try {
-      alert('Llamando al agente de planificación automática...');
+      const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+      const availableEmployees = employees.filter(e => 
+        e.equipo === teamName && e.disponibilidad === "Disponible"
+      );
+
+      const activePlannings = activeMachines.map(p => {
+        const machine = machines.find(m => m.id === p.machine_id);
+        const process = processes.find(pr => pr.id === p.process_id);
+        return {
+          machine_id: p.machine_id,
+          machine_name: machine?.nombre,
+          machine_code: machine?.codigo,
+          process_name: process?.nombre,
+          operadores_necesarios: p.operadores_necesarios
+        };
+      });
+
+      const prompt = `Genera asignaciones para máquinas planificadas:
+      
+Fecha: ${selectedDate}
+Equipo: ${teamName}
+Máquinas activas: ${JSON.stringify(activePlannings)}
+Operadores disponibles: ${JSON.stringify(availableEmployees.map(e => ({ id: e.id, nombre: e.nombre, puesto: e.puesto })))}
+
+INSTRUCCIONES:
+1. Asigna a cada máquina: 1 responsable de línea, 1 segunda de línea, y los operadores necesarios
+2. Prioriza experiencia (campos maquina_1 a maquina_10 del empleado)
+3. Balancea carga de trabajo
+4. Retorna JSON con estructura exacta`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            asignaciones: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  machine_id: { type: "string" },
+                  responsable_linea_id: { type: "string" },
+                  segunda_linea_id: { type: "string" },
+                  operadores_ids: { type: "array", items: { type: "string" } }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      setAgentResult({
+        fecha: selectedDate,
+        equipo: teamName,
+        maquinas_activas: activeMachines.length,
+        total_operadores_necesarios: totalOperators,
+        total_operadores_asignados: response.asignaciones?.reduce((sum, a) => 
+          sum + (a.operadores_ids?.length || 0) + 2, 0
+        ) || 0,
+        asignaciones: response.asignaciones || []
+      });
+
     } catch (error) {
       console.error('Error al llamar al agente:', error);
-      alert('Error al ejecutar la planificación automática');
+      alert('Error: ' + error.message);
     } finally {
-      queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
       setIsCalling(false);
     }
   };
@@ -334,7 +418,7 @@ export default function MachinePlanningPage() {
           </Link>
         </div>
 
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <CalendarRange className="w-8 h-8 text-blue-600" />
@@ -344,14 +428,6 @@ export default function MachinePlanningPage() {
               Activa o desactiva máquinas para el planning diario
             </p>
           </div>
-          <Button
-            onClick={handleCallAgent}
-            disabled={isCalling}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            {isCalling ? "Planificando..." : "Planificar asignaciones"}
-          </Button>
         </div>
 
         {/* Filtros */}
@@ -398,20 +474,27 @@ export default function MachinePlanningPage() {
                 </Select>
               </div>
             </div>
+            <div className="flex justify-center gap-3 mt-4">
+              <Button
+                onClick={handleCallAgent}
+                disabled={isCalling || activeMachines.length === 0}
+                className="bg-purple-600 hover:bg-purple-700 text-lg px-8 py-6"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                {isCalling ? "Planificando asignaciones..." : "Planificar Asignaciones Automáticas"}
+              </Button>
+              
+              <Button
+                onClick={handleClearPlanning}
+                disabled={clearPlanningMutation.isPending || activeMachines.length === 0}
+                variant="destructive"
+                className="text-lg px-8 py-6"
+              >
+                {clearPlanningMutation.isPending ? "Limpiando..." : "Limpiar Planificación"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
-
-        <AIDashboardSummary 
-          data={{ 
-            machines, 
-            activeMachines, 
-            totalOperators, 
-            availableOperators,
-            operatorsDeficit,
-            plannings: activeMachines // Changed from `plannings` to `activeMachines` for more context on the current planning view
-          }} 
-          type="machines" 
-        />
 
         {/* Resumen con alerta si faltan operarios */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -803,6 +886,128 @@ export default function MachinePlanningPage() {
                     </Card>
                   );
                 })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Resultados del Agente */}
+        {agentResult && (
+          <Card className="shadow-lg border-2 border-purple-300 bg-purple-50">
+            <CardHeader className="border-b border-purple-200">
+              <CardTitle className="flex items-center gap-2 text-purple-900">
+                <Sparkles className="w-5 h-5" />
+                Asignaciones Generadas por IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 p-4 bg-white rounded-lg border-2 border-purple-200">
+                <div>
+                  <p className="text-xs text-slate-600">Fecha</p>
+                  <p className="font-bold text-slate-900">{format(new Date(agentResult.fecha), 'd MMM yyyy', { locale: es })}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-600">Equipo</p>
+                  <p className="font-bold text-slate-900">{agentResult.equipo}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-600">Máquinas Activas</p>
+                  <p className="font-bold text-purple-900">{agentResult.maquinas_activas}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-600">Op. Necesarios</p>
+                  <p className="font-bold text-orange-900">{agentResult.total_operadores_necesarios}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-600">Op. Asignados</p>
+                  <p className="font-bold text-green-900">{agentResult.total_operadores_asignados}</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Vista por Máquina</h3>
+                  <div className="space-y-3">
+                    {agentResult.asignaciones?.map((asig, idx) => {
+                      const machine = machines.find(m => m.id === asig.machine_id);
+                      const responsable = employees.find(e => e.id === asig.responsable_linea_id);
+                      const segunda = employees.find(e => e.id === asig.segunda_linea_id);
+                      const operadores = asig.operadores_ids?.map(id => employees.find(e => e.id === id)).filter(Boolean);
+                      
+                      return (
+                        <Card key={idx} className="bg-white">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h4 className="font-bold text-slate-900">{machine?.nombre}</h4>
+                                <p className="text-xs text-slate-500">{machine?.codigo}</p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                              <div>
+                                <p className="text-xs text-slate-600 mb-1">Responsable Línea</p>
+                                <p className="font-semibold text-blue-900">{responsable?.nombre || 'No asignado'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-600 mb-1">Segunda Línea</p>
+                                <p className="font-semibold text-purple-900">{segunda?.nombre || 'No asignado'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-600 mb-1">Operadores</p>
+                                <div className="space-y-1">
+                                  {operadores?.map((op, i) => (
+                                    <p key={i} className="text-slate-700">• {op.nombre}</p>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Vista por Empleado</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(() => {
+                      const employeeAssignments = {};
+                      agentResult.asignaciones?.forEach(asig => {
+                        const machine = machines.find(m => m.id === asig.machine_id);
+                        
+                        [
+                          { id: asig.responsable_linea_id, role: 'Responsable Línea' },
+                          { id: asig.segunda_linea_id, role: 'Segunda Línea' },
+                          ...(asig.operadores_ids || []).map(id => ({ id, role: 'Operador' }))
+                        ].forEach(({ id, role }) => {
+                          if (!id) return;
+                          if (!employeeAssignments[id]) {
+                            employeeAssignments[id] = [];
+                          }
+                          employeeAssignments[id].push({ machine: machine?.nombre, role });
+                        });
+                      });
+                      
+                      return Object.entries(employeeAssignments).map(([empId, assignments]) => {
+                        const emp = employees.find(e => e.id === empId);
+                        return (
+                          <Card key={empId} className="bg-white">
+                            <CardContent className="p-3">
+                              <p className="font-bold text-slate-900 mb-2">{emp?.nombre}</p>
+                              {assignments.map((a, i) => (
+                                <div key={i} className="text-sm flex justify-between items-center">
+                                  <span className="text-slate-700">{a.machine}</span>
+                                  <Badge variant="outline" className="text-xs">{a.role}</Badge>
+                                </div>
+                              ))}
+                            </CardContent>
+                          </Card>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
