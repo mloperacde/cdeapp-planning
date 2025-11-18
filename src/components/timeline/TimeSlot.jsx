@@ -5,26 +5,26 @@ import { es } from "date-fns/locale";
 import {
   HoverCard,
   HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
+  HoverCardTrigger } from
+"@/components/ui/hover-card";
 import { Users } from "lucide-react";
 
-export default function TimeSlot({ 
-  time, 
+export default function TimeSlot({
+  time,
   availableEmployees = 0,
   maxEmployees = 1,
-  index = 0, 
-  isFirst = false, 
-  isLast = false, 
+  index = 0,
+  isFirst = false,
+  isLast = false,
   totalIntervals = 0,
   viewMode = 'day',
   teamColor = '#3B82F6'
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   const getColorByTeam = () => {
     const ratio = maxEmployees > 0 ? availableEmployees / maxEmployees : 0;
-    
+
     const hexToRgb = (hex) => {
       if (!hex) return { r: 59, g: 130, b: 246 };
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -34,9 +34,9 @@ export default function TimeSlot({
         b: parseInt(result[3], 16)
       } : { r: 59, g: 130, b: 246 };
     };
-    
+
     const baseColor = hexToRgb(teamColor);
-    
+
     if (ratio >= 0.8) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 1)`;
     if (ratio >= 0.5) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.8)`;
     if (ratio >= 0.3) return `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.6)`;
@@ -51,8 +51,8 @@ export default function TimeSlot({
     return "w-3 h-3";
   };
 
-  const showLabel = isFirst || isLast || (viewMode === 'day' && index % 12 === 0) || (viewMode === 'week' && index % 36 === 0) || (viewMode === 'month' && index % 72 === 0);
-  
+  const showLabel = isFirst || isLast || viewMode === 'day' && index % 12 === 0 || viewMode === 'week' && index % 36 === 0 || viewMode === 'month' && index % 72 === 0;
+
   if (!time) {
     return null;
   }
@@ -63,27 +63,27 @@ export default function TimeSlot({
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: Math.min(index * 0.01, 0.5) }}
-          className="flex flex-col items-center relative"
+          transition={{ duration: 0.3, delay: Math.min(index * 0.01, 0.5) }} className="mx-1 my-2 pt-5 pb-5 flex flex-col items-center relative"
+
           style={{ minWidth: totalIntervals > 200 ? "30px" : totalIntervals > 100 ? "40px" : "60px" }}
           onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
+          onMouseLeave={() => setIsHovered(false)}>
+
           <motion.div
             className={`${getSize()} rounded-full shadow-lg z-10 cursor-pointer transition-all duration-300 flex items-center justify-center`}
             style={{ backgroundColor: getColorByTeam() }}
             whileHover={{ scale: 1.4, y: -2 }}
             animate={{
-              boxShadow: isHovered
-                ? `0 10px 25px -5px ${teamColor}80`
-                : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            {(isHovered || availableEmployees > 0) && (
-              <span className="text-[8px] font-bold text-white">
+              boxShadow: isHovered ?
+              `0 10px 25px -5px ${teamColor}80` :
+              "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+            }}>
+
+            {(isHovered || availableEmployees > 0) &&
+            <span className="text-[8px] font-bold text-white">
                 {availableEmployees}
               </span>
-            )}
+            }
           </motion.div>
 
           <motion.div
@@ -91,26 +91,26 @@ export default function TimeSlot({
             style={{ backgroundColor: teamColor }}
             animate={{
               height: isHovered ? "32px" : "20px",
-              opacity: showLabel || isHovered ? 1 : 0.3,
-            }}
-          />
+              opacity: showLabel || isHovered ? 1 : 0.3
+            }} />
 
-          {showLabel && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-1 text-center"
-            >
+
+          {showLabel &&
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-1 text-center">
+
               <div className="text-xs font-semibold text-slate-700">
                 {format(time, "HH:mm")}
               </div>
-              {(isFirst || isLast) && (
-                <div className="text-[10px] text-slate-500 mt-0.5">
+              {(isFirst || isLast) &&
+            <div className="text-[10px] text-slate-500 mt-0.5">
                   {format(time, "d MMM", { locale: es })}
                 </div>
-              )}
+            }
             </motion.div>
-          )}
+          }
         </motion.div>
       </HoverCardTrigger>
       
@@ -142,13 +142,13 @@ export default function TimeSlot({
               <div className="flex justify-between">
                 <span>Disponibilidad:</span>
                 <span className="font-semibold" style={{ color: teamColor }}>
-                  {maxEmployees > 0 ? Math.round((availableEmployees / maxEmployees) * 100) : 0}%
+                  {maxEmployees > 0 ? Math.round(availableEmployees / maxEmployees * 100) : 0}%
                 </span>
               </div>
             </div>
           </div>
         </div>
       </HoverCardContent>
-    </HoverCard>
-  );
+    </HoverCard>);
+
 }
