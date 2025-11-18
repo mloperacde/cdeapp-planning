@@ -23,6 +23,8 @@ import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import DashboardWidgetConfig from "../components/dashboard/DashboardWidgetConfig";
+import WorkCalendar from "../components/absences/WorkCalendar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AVAILABLE_WIDGETS = [
   { id: 'absence_kpis', name: 'KPIs de Ausencias', icon: UserX, color: 'red' },
