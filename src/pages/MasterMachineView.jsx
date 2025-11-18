@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "../components/utils/useDebounce";
-import { usePagination } from "../components/utils/usePagination";
 import {
   Select,
   SelectContent,
@@ -145,8 +144,6 @@ export default function MasterMachineView() {
       return matchesSearch && matchesTipo && matchesUbicacion && matchesMarca;
     });
   }, [machines, debouncedSearch, filters]);
-
-  const { currentPage, totalPages, paginatedItems, goToPage, nextPage, prevPage } = usePagination(filteredMachines, 20);
 
   const handleEdit = (machine) => {
     setEditingMachine(machine);
@@ -375,24 +372,7 @@ export default function MasterMachineView() {
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b">
-            <div className="flex justify-between items-center">
-              <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600">
-                    Página {currentPage} de {totalPages}
-                  </span>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={prevPage} disabled={currentPage === 1}>
-                      Anterior
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={nextPage} disabled={currentPage === totalPages}>
-                      Siguiente
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
@@ -415,7 +395,7 @@ export default function MasterMachineView() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedItems.map((machine) => (
+                    {filteredMachines.map((machine) => (
                       <TableRow key={machine.id} className="hover:bg-slate-50">
                         <TableCell className="font-mono font-semibold">
                           {machine.codigo}

@@ -109,6 +109,14 @@ export default function ConfigurationPage() {
       url: createPageUrl("ArticleManagement"),
       color: "teal",
       featured: false
+    },
+    {
+      title: "Calendario Laboral",
+      description: "Configuración de festivos y vacaciones",
+      icon: Calendar,
+      url: createPageUrl("WorkCalendarConfig"),
+      color: "green",
+      featured: false
     }
   ];
 
@@ -125,7 +133,8 @@ export default function ConfigurationPage() {
     slate: "from-slate-500 to-slate-600",
     emerald: "from-emerald-500 to-emerald-600",
     amber: "from-amber-500 to-amber-600",
-    teal: "from-teal-500 to-teal-600"
+    teal: "from-teal-500 to-teal-600",
+    green: "from-green-500 to-green-600"
   };
 
   return (
