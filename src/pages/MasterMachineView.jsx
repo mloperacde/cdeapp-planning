@@ -34,6 +34,9 @@ import { Plus, Edit, Trash2, Cog, Search, Filter, Download, X, ChevronDown, Chev
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function MasterMachineView() {
   const [showForm, setShowForm] = useState(false);
@@ -58,6 +61,10 @@ export default function MasterMachineView() {
     descripcion: "",
     programa_mantenimiento: "",
     orden: 0,
+    procesos_ids: [],
+    articulos_ids: [],
+    parametros_sobres: {},
+    parametros_frascos: {},
   });
 
   const queryClient = useQueryClient();
@@ -66,6 +73,16 @@ export default function MasterMachineView() {
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list('orden'),
     initialData: [],
+  });
+
+  const { data: processes = [] } = useQuery({
+    queryKey: ['processes'],
+    queryFn: () => base44.entities.Process.list('nombre'),
+  });
+
+  const { data: articles = [] } = useQuery({
+    queryKey: ['articles'],
+    queryFn: () => base44.entities.Article.list(),
   });
 
   const saveMutation = useMutation({
@@ -145,6 +162,10 @@ export default function MasterMachineView() {
       descripcion: machine.descripcion || "",
       programa_mantenimiento: machine.programa_mantenimiento || "",
       orden: machine.orden || 0,
+      procesos_ids: machine.procesos_ids || [],
+      articulos_ids: machine.articulos_ids || [],
+      parametros_sobres: machine.parametros_sobres || {},
+      parametros_frascos: machine.parametros_frascos || {},
     });
     setShowForm(true);
   };
@@ -173,6 +194,10 @@ export default function MasterMachineView() {
       descripcion: "",
       programa_mantenimiento: "",
       orden: 0,
+      procesos_ids: [],
+      articulos_ids: [],
+      parametros_sobres: {},
+      parametros_frascos: {},
     });
   };
 
@@ -452,114 +477,301 @@ export default function MasterMachineView() {
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="codigo">Código *</Label>
-                  <Input
-                    id="codigo"
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                    required
-                  />
-                </div>
+              <Tabs defaultValue="basico" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="basico">Datos Básicos</TabsTrigger>
+                  <TabsTrigger value="procesos">Procesos</TabsTrigger>
+                  <TabsTrigger value="articulos">Artículos</TabsTrigger>
+                  <TabsTrigger value="parametros">Parámetros</TabsTrigger>
+                </TabsList>
 
-                <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre *</Label>
-                  <Input
-                    id="nombre"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="marca">Marca</Label>
-                  <Input
-                    id="marca"
-                    value={formData.marca}
-                    onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="modelo">Modelo</Label>
-                  <Input
-                    id="modelo"
-                    value={formData.modelo}
-                    onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="numero_serie">Número de Serie</Label>
-                  <Input
-                    id="numero_serie"
-                    value={formData.numero_serie}
-                    onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fecha_compra">Fecha de Compra</Label>
-                  <Input
-                    id="fecha_compra"
-                    type="date"
-                    value={formData.fecha_compra}
-                    onChange={(e) => setFormData({ ...formData, fecha_compra: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo</Label>
-                  <Input
-                    id="tipo"
-                    value={formData.tipo}
-                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ubicacion">Ubicación</Label>
-                  <Input
-                    id="ubicacion"
-                    value={formData.ubicacion}
-                    onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
-                    />
+                <TabsContent value="basico" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="codigo">Código *</Label>
+                      <Input
+                        id="codigo"
+                        value={formData.codigo}
+                        onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                        required
+                      />
                     </div>
 
                     <div className="space-y-2">
-                  <Label htmlFor="orden">Orden</Label>
-                  <Input
-                    id="orden"
-                    type="number"
-                    value={formData.orden}
-                    onChange={(e) => setFormData({ ...formData, orden: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
+                      <Label htmlFor="nombre">Nombre *</Label>
+                      <Input
+                        id="nombre"
+                        value={formData.nombre}
+                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                        required
+                      />
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="descripcion">Descripción</Label>
-                <Textarea
-                  id="descripcion"
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  rows={3}
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="marca">Marca</Label>
+                      <Input
+                        id="marca"
+                        value={formData.marca}
+                        onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                      />
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="programa_mantenimiento">Programa de Mantenimiento</Label>
-                <Textarea
-                  id="programa_mantenimiento"
-                  value={formData.programa_mantenimiento}
-                  onChange={(e) => setFormData({ ...formData, programa_mantenimiento: e.target.value })}
-                  rows={2}
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="modelo">Modelo</Label>
+                      <Input
+                        id="modelo"
+                        value={formData.modelo}
+                        onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
+                      />
+                    </div>
 
-              <div className="flex justify-end gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="numero_serie">Número de Serie</Label>
+                      <Input
+                        id="numero_serie"
+                        value={formData.numero_serie}
+                        onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="fecha_compra">Fecha de Compra</Label>
+                      <Input
+                        id="fecha_compra"
+                        type="date"
+                        value={formData.fecha_compra}
+                        onChange={(e) => setFormData({ ...formData, fecha_compra: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo">Tipo</Label>
+                      <Select
+                        value={formData.tipo}
+                        onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar tipo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Sobres">Sobres</SelectItem>
+                          <SelectItem value="Frascos">Frascos</SelectItem>
+                          <SelectItem value="Otro">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ubicacion">Ubicación</Label>
+                      <Input
+                        id="ubicacion"
+                        value={formData.ubicacion}
+                        onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="orden">Orden</Label>
+                      <Input
+                        id="orden"
+                        type="number"
+                        value={formData.orden}
+                        onChange={(e) => setFormData({ ...formData, orden: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="descripcion">Descripción</Label>
+                    <Textarea
+                      id="descripcion"
+                      value={formData.descripcion}
+                      onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="programa_mantenimiento">Programa de Mantenimiento</Label>
+                    <Textarea
+                      id="programa_mantenimiento"
+                      value={formData.programa_mantenimiento}
+                      onChange={(e) => setFormData({ ...formData, programa_mantenimiento: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="procesos" className="space-y-4 mt-4">
+                  <h4 className="font-semibold">Procesos que puede realizar esta máquina</h4>
+                  <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-4">
+                    {processes.map(process => (
+                      <div key={process.id} className="flex items-center space-x-2 p-2 hover:bg-slate-50 rounded">
+                        <Checkbox
+                          id={`process-${process.id}`}
+                          checked={formData.procesos_ids?.includes(process.id)}
+                          onCheckedChange={(checked) => {
+                            const updated = checked
+                              ? [...(formData.procesos_ids || []), process.id]
+                              : formData.procesos_ids?.filter(id => id !== process.id) || [];
+                            setFormData({ ...formData, procesos_ids: updated });
+                          }}
+                        />
+                        <label htmlFor={`process-${process.id}`} className="cursor-pointer flex-1">
+                          <span className="font-medium">{process.nombre}</span>
+                          <span className="text-sm text-slate-500 ml-2">({process.codigo})</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="articulos" className="space-y-4 mt-4">
+                  <h4 className="font-semibold">Artículos que puede fabricar esta máquina</h4>
+                  <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-4">
+                    {articles.map(article => (
+                      <div key={article.id} className="flex items-center space-x-2 p-2 hover:bg-slate-50 rounded">
+                        <Checkbox
+                          id={`article-${article.id}`}
+                          checked={formData.articulos_ids?.includes(article.id)}
+                          onCheckedChange={(checked) => {
+                            const updated = checked
+                              ? [...(formData.articulos_ids || []), article.id]
+                              : formData.articulos_ids?.filter(id => id !== article.id) || [];
+                            setFormData({ ...formData, articulos_ids: updated });
+                          }}
+                        />
+                        <label htmlFor={`article-${article.id}`} className="cursor-pointer flex-1">
+                          <span className="font-medium">{article.nombre}</span>
+                          <span className="text-sm text-slate-500 ml-2">({article.codigo})</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="parametros" className="space-y-4 mt-4">
+                  {formData.tipo === "Sobres" && (
+                    <div className="p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+                      <h4 className="font-semibold mb-4 text-blue-900">Parámetros para Máquina de Sobres</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Ancho Paso Mínimo (mm)</Label>
+                          <Input
+                            type="number"
+                            value={formData.parametros_sobres?.ancho_paso_minimo || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              parametros_sobres: { ...formData.parametros_sobres, ancho_paso_minimo: parseFloat(e.target.value) }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Ancho Paso Máximo (mm)</Label>
+                          <Input
+                            type="number"
+                            value={formData.parametros_sobres?.ancho_paso_maximo || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              parametros_sobres: { ...formData.parametros_sobres, ancho_paso_maximo: parseFloat(e.target.value) }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Dosis Mínima</Label>
+                          <Input
+                            type="number"
+                            value={formData.parametros_sobres?.dosis_minima || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              parametros_sobres: { ...formData.parametros_sobres, dosis_minima: parseFloat(e.target.value) }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Dosis Máxima</Label>
+                          <Input
+                            type="number"
+                            value={formData.parametros_sobres?.dosis_maxima || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              parametros_sobres: { ...formData.parametros_sobres, dosis_maxima: parseFloat(e.target.value) }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-2 flex items-center gap-2">
+                          <Switch
+                            checked={formData.parametros_sobres?.cargador || false}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              parametros_sobres: { ...formData.parametros_sobres, cargador: checked }
+                            })}
+                          />
+                          <Label>¿Tiene Cargador?</Label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.tipo === "Frascos" && (
+                    <div className="p-4 border-2 border-purple-200 rounded-lg bg-purple-50">
+                      <h4 className="font-semibold mb-4 text-purple-900">Parámetros para Máquina de Frascos</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Dosis Mínima</Label>
+                          <Input
+                            type="number"
+                            value={formData.parametros_frascos?.dosis_minima || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              parametros_frascos: { ...formData.parametros_frascos, dosis_minima: parseFloat(e.target.value) }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Dosis Máxima</Label>
+                          <Input
+                            type="number"
+                            value={formData.parametros_frascos?.dosis_maxima || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              parametros_frascos: { ...formData.parametros_frascos, dosis_maxima: parseFloat(e.target.value) }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-2 flex items-center gap-2">
+                          <Switch
+                            checked={formData.parametros_frascos?.roscado || false}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              parametros_frascos: { ...formData.parametros_frascos, roscado: checked }
+                            })}
+                          />
+                          <Label>¿Tiene Roscado?</Label>
+                        </div>
+                        <div className="space-y-2 flex items-center gap-2">
+                          <Switch
+                            checked={formData.parametros_frascos?.grafado || false}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              parametros_frascos: { ...formData.parametros_frascos, grafado: checked }
+                            })}
+                          />
+                          <Label>¿Tiene Grafado?</Label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!formData.tipo || (formData.tipo !== "Sobres" && formData.tipo !== "Frascos") && (
+                    <div className="p-8 text-center text-slate-500 border-2 border-dashed rounded-lg">
+                      Selecciona "Sobres" o "Frascos" en el tipo de máquina para configurar parámetros específicos
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end gap-3 border-t pt-4">
                 <Button type="button" variant="outline" onClick={handleClose}>
                   Cancelar
                 </Button>

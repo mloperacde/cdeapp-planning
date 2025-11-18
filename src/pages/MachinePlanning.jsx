@@ -255,9 +255,16 @@ export default function MachinePlanningPage() {
   };
 
   const getAvailableProcesses = (machineId) => {
-    return machineProcesses
-      .filter(mp => mp.machine_id === machineId && mp.activo)
-      .map(mp => processes.find(p => p.id === mp.process_id))
+    const machine = machines.find(m => m.id === machineId);
+    if (!machine?.procesos_ids || machine.procesos_ids.length === 0) {
+      return machineProcesses
+        .filter(mp => mp.machine_id === machineId && mp.activo)
+        .map(mp => processes.find(p => p.id === mp.process_id))
+        .filter(p => p);
+    }
+    
+    return machine.procesos_ids
+      .map(pid => processes.find(p => p.id === pid))
       .filter(p => p);
   };
 
@@ -510,9 +517,10 @@ export default function MachinePlanningPage() {
                               <TableRow className="bg-slate-50">
                                 <TableHead className="w-12"></TableHead>
                                 <TableHead>Máquina</TableHead>
+                                <TableHead>Estados</TableHead>
                                 <TableHead>Proceso</TableHead>
                                 <TableHead>Operadores</TableHead>
-                                <TableHead>Estado</TableHead>
+                                <TableHead>Estado Planning</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -545,14 +553,20 @@ export default function MachinePlanningPage() {
                                           <div>
                                             <span className="font-semibold text-slate-900">{machine.nombre}</span>
                                             <div className="text-xs text-slate-500">{machine.codigo}</div>
-                                            <div className="flex gap-1 mt-1">
-                                              <Badge variant={isAvailable ? "outline" : "destructive"} className="text-xs">
-                                                {machineStatus.estado_disponibilidad}
-                                              </Badge>
-                                              <Badge variant="outline" className="text-xs">
-                                                {machineStatus.estado_produccion}
-                                              </Badge>
-                                            </div>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex flex-col gap-1">
+                                            <Badge variant={isAvailable ? "outline" : "destructive"} className="text-xs w-fit">
+                                              {machineStatus.estado_disponibilidad}
+                                            </Badge>
+                                            <Badge variant="outline" className={`text-xs w-fit ${
+                                              machineStatus.estado_produccion === "Orden en curso" ? "bg-blue-100 text-blue-800" :
+                                              machineStatus.estado_produccion === "Orden nueva" ? "bg-purple-100 text-purple-800" :
+                                              "bg-slate-100 text-slate-600"
+                                            }`}>
+                                              {machineStatus.estado_produccion}
+                                            </Badge>
                                           </div>
                                         </TableCell>
                                         <TableCell>
@@ -576,10 +590,10 @@ export default function MachinePlanningPage() {
                                         <TableCell>
                                           <Badge className={
                                             isActive
-                                              ? "bg-green-100 text-green-800"
+                                              ? "bg-green-600 text-white"
                                               : "bg-slate-100 text-slate-600"
                                           }>
-                                            {isActive ? "Activa" : "Inactiva"}
+                                            {isActive ? "Planificada" : "No planificada"}
                                           </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
