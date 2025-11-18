@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -37,6 +36,14 @@ export default function ConfigurationPage() {
       icon: MessageSquare,
       url: createPageUrl("MessagingConfig"),
       color: "indigo",
+      featured: true
+    },
+    {
+      title: "Archivo Maestro de Máquinas",
+      description: "Gestión centralizada del catálogo de máquinas",
+      icon: Cog,
+      url: createPageUrl("MasterMachineView"),
+      color: "slate",
       featured: true
     },
     {

@@ -42,7 +42,6 @@ export default function MasterMachineView() {
   const [filters, setFilters] = useState({
     tipo: "all",
     ubicacion: "all",
-    estado: "all",
     marca: "all",
   });
   const [formData, setFormData] = useState({
@@ -54,7 +53,6 @@ export default function MasterMachineView() {
     fecha_compra: "",
     tipo: "",
     ubicacion: "",
-    estado: "Disponible",
     descripcion: "",
     programa_mantenimiento: "",
     orden: 0,
@@ -121,10 +119,9 @@ export default function MasterMachineView() {
 
       const matchesTipo = filters.tipo === "all" || machine.tipo === filters.tipo;
       const matchesUbicacion = filters.ubicacion === "all" || machine.ubicacion === filters.ubicacion;
-      const matchesEstado = filters.estado === "all" || machine.estado === filters.estado;
       const matchesMarca = filters.marca === "all" || machine.marca === filters.marca;
 
-      return matchesSearch && matchesTipo && matchesUbicacion && matchesEstado && matchesMarca;
+      return matchesSearch && matchesTipo && matchesUbicacion && matchesMarca;
     });
   }, [machines, searchTerm, filters]);
 
@@ -139,7 +136,6 @@ export default function MasterMachineView() {
       fecha_compra: machine.fecha_compra || "",
       tipo: machine.tipo || "",
       ubicacion: machine.ubicacion || "",
-      estado: machine.estado || "Disponible",
       descripcion: machine.descripcion || "",
       programa_mantenimiento: machine.programa_mantenimiento || "",
       orden: machine.orden || 0,
@@ -168,7 +164,6 @@ export default function MasterMachineView() {
       fecha_compra: "",
       tipo: "",
       ubicacion: "",
-      estado: "Disponible",
       descripcion: "",
       programa_mantenimiento: "",
       orden: 0,
@@ -185,7 +180,6 @@ export default function MasterMachineView() {
     setFilters({
       tipo: "all",
       ubicacion: "all",
-      estado: "all",
       marca: "all",
     });
     setSearchTerm("");
@@ -194,7 +188,7 @@ export default function MasterMachineView() {
   const exportToCSV = () => {
     const headers = [
       "Código", "Nombre", "Marca", "Modelo", "Nº Serie", "Tipo", "Ubicación", 
-      "Estado", "Fecha Compra", "Programa Mantenimiento", "Orden"
+      "Fecha Compra", "Programa Mantenimiento", "Orden"
     ];
 
     const rows = filteredMachines.map(machine => [
@@ -205,7 +199,6 @@ export default function MasterMachineView() {
       machine.numero_serie || "",
       machine.tipo || "",
       machine.ubicacion || "",
-      machine.estado || "",
       machine.fecha_compra ? format(new Date(machine.fecha_compra), "dd/MM/yyyy") : "",
       machine.programa_mantenimiento || "",
       machine.orden || 0
@@ -289,7 +282,7 @@ export default function MasterMachineView() {
           
           {showFilters && (
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
@@ -344,20 +337,6 @@ export default function MasterMachineView() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Select value={filters.estado} onValueChange={(value) => setFilters({...filters, estado: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Disponible">Disponible</SelectItem>
-                      <SelectItem value="No disponible">No disponible</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </CardContent>
           )}
@@ -384,7 +363,6 @@ export default function MasterMachineView() {
                       <TableHead>Marca/Modelo</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Ubicación</TableHead>
-                      <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -404,15 +382,6 @@ export default function MasterMachineView() {
                         </TableCell>
                         <TableCell>{machine.tipo || "-"}</TableCell>
                         <TableCell>{machine.ubicacion || "-"}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            machine.estado === "Disponible"
-                              ? "bg-green-600"
-                              : "bg-red-600"
-                          }>
-                            {machine.estado}
-                          </Badge>
-                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button
@@ -533,26 +502,10 @@ export default function MasterMachineView() {
                     id="ubicacion"
                     value={formData.ubicacion}
                     onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
-                  />
-                </div>
+                    />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
-                  <Select
-                    value={formData.estado}
-                    onValueChange={(value) => setFormData({ ...formData, estado: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Disponible">Disponible</SelectItem>
-                      <SelectItem value="No disponible">No disponible</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
+                    <div className="space-y-2">
                   <Label htmlFor="orden">Orden</Label>
                   <Input
                     id="orden"

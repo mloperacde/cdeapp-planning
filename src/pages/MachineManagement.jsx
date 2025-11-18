@@ -1,411 +1,325 @@
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Edit, Trash2, ArrowLeft, Settings, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import MachineDetailCard from "../components/machines/MachineDetailCard";
-import { toast } from "react-hot-toast"; // Assuming react-hot-toast is used for notifications
 
-export default function MachineManagementPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingMachine, setEditingMachine] = useState(null);
-  const [viewingMachine, setViewingMachine] = useState(null);
+export default function MachineManagement() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingStatus, setEditingStatus] = useState(null);
   const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
-    nombre: "",
-    codigo: "",
-    marca: "",
-    modelo: "",
-    numero_serie: "",
-    fecha_compra: "",
-    tipo: "",
-    ubicacion: "",
-    estado: "Disponible",
-    descripcion: "",
-    programa_mantenimiento: "",
-    orden: 0,
-  });
-
-  const { data: machines, isLoading } = useQuery({
+  const { data: machines = [], isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list('orden'),
-    initialData: [],
+    staleTime: 10 * 60 * 1000,
   });
 
-  const saveMutation = useMutation({
-    mutationFn: (data) => {
-      if (editingMachine?.id) {
-        return base44.entities.Machine.update(editingMachine.id, data);
+  const { data: machineStatuses = [] } = useQuery({
+    queryKey: ['machineStatuses'],
+    queryFn: () => base44.entities.MachineStatus.list(),
+    staleTime: 1 * 60 * 1000,
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ machineId, statusData }) => {
+      const existing = machineStatuses.find(ms => ms.machine_id === machineId);
+      
+      if (existing) {
+        return base44.entities.MachineStatus.update(existing.id, statusData);
       }
-      return base44.entities.Machine.create(data);
+      return base44.entities.MachineStatus.create({
+        machine_id: machineId,
+        ...statusData
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
-      setShowForm(false);
-      setEditingMachine(null);
-      // Removed toast.success as per outline: toast.success("Máquina guardada - listas actualizadas en toda la aplicación");
+      queryClient.invalidateQueries({ queryKey: ['machineStatuses'] });
+      setEditingStatus(null);
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Machine.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries();
-      // Removed toast.success as per outline: toast.success("Máquina eliminada - listas actualizadas");
-    },
-  });
-
-  const handleEdit = (machine) => {
-    setEditingMachine(machine);
-    setFormData({
-      nombre: machine.nombre || "",
-      codigo: machine.codigo || "",
-      marca: machine.marca || "",
-      modelo: machine.modelo || "",
-      numero_serie: machine.numero_serie || "",
-      fecha_compra: machine.fecha_compra || "",
-      tipo: machine.tipo || "",
-      ubicacion: machine.ubicacion || "",
-      estado: machine.estado || "Disponible",
-      descripcion: machine.descripcion || "",
-      programa_mantenimiento: machine.programa_mantenimiento || "",
-      orden: machine.orden || 0,
-    });
-    setShowForm(true);
+  const getStatus = (machineId) => {
+    return machineStatuses.find(ms => ms.machine_id === machineId) || {
+      estado_disponibilidad: "Disponible",
+      estado_produccion: "Sin orden"
+    };
   };
 
-  const handleClose = () => {
-    setShowForm(false);
-    setEditingMachine(null);
-    setFormData({
-      nombre: "",
-      codigo: "",
-      marca: "",
-      modelo: "",
-      numero_serie: "",
-      fecha_compra: "",
-      tipo: "",
-      ubicacion: "",
-      estado: "Disponible",
-      descripcion: "",
-      programa_mantenimiento: "",
-      orden: 0,
+  const filteredMachines = useMemo(() => {
+    return machines.filter(m => 
+      m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [machines, searchTerm]);
+
+  const handleQuickToggle = (machineId, currentDisp) => {
+    const newDisp = currentDisp === "Disponible" ? "No disponible" : "Disponible";
+    updateStatusMutation.mutate({
+      machineId,
+      statusData: {
+        estado_disponibilidad: newDisp,
+        fecha_actualizacion: new Date().toISOString()
+      }
     });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    saveMutation.mutate(formData);
+  const handleEditStatus = (machine) => {
+    const status = getStatus(machine.id);
+    setEditingStatus({
+      machine,
+      ...status
+    });
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta máquina?')) {
-      deleteMutation.mutate(id);
-    }
+  const handleSaveStatus = () => {
+    if (!editingStatus) return;
+    
+    updateStatusMutation.mutate({
+      machineId: editingStatus.machine.id,
+      statusData: {
+        estado_disponibilidad: editingStatus.estado_disponibilidad,
+        estado_produccion: editingStatus.estado_produccion,
+        notas_estado: editingStatus.notas_estado,
+        fecha_actualizacion: new Date().toISOString()
+      }
+    });
   };
+
+  const availableCount = filteredMachines.filter(m => 
+    getStatus(m.id).estado_disponibilidad === "Disponible"
+  ).length;
+
+  const ordenesCount = filteredMachines.filter(m => {
+    const status = getStatus(m.id);
+    return status.estado_produccion === "Orden en curso" || status.estado_produccion === "Orden nueva";
+  }).length;
 
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to={createPageUrl("Machines")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Máquinas
-            </Button>
-          </Link>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <Cog className="w-8 h-8 text-blue-600" />
+            Gestión de Estados de Máquinas
+          </h1>
+          <p className="text-slate-600 mt-1">
+            Control de disponibilidad y órdenes de producción
+          </p>
         </div>
 
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <Settings className="w-8 h-8 text-blue-600" />
-              Gestión de Máquinas
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Administra el catálogo de máquinas
-            </p>
-          </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Máquina
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-700 font-medium">Total Máquinas</p>
+                  <p className="text-2xl font-bold text-blue-900">{filteredMachines.length}</p>
+                </div>
+                <Cog className="w-8 h-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-green-700 font-medium">Disponibles</p>
+                  <p className="text-2xl font-bold text-green-900">{availableCount}</p>
+                </div>
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-orange-700 font-medium">Con Órdenes</p>
+                  <p className="text-2xl font-bold text-orange-900">{ordenesCount}</p>
+                </div>
+                <Package className="w-8 h-8 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle>Lista de Máquinas ({machines.length})</CardTitle>
+        <Card className="shadow-lg mb-6">
+          <CardHeader className="border-b">
+            <div className="flex justify-between items-center">
+              <CardTitle>Máquinas</CardTitle>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar máquina..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-12 text-center text-slate-500">Cargando máquinas...</div>
-            ) : machines.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">No hay máquinas registradas</div>
+            {loadingMachines ? (
+              <div className="p-12 text-center text-slate-500">Cargando...</div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead>Código</TableHead>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Marca/Modelo</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Ubicación</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {machines.map((machine) => (
-                      <TableRow key={machine.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          <span className="font-mono font-semibold text-slate-900">
-                            {machine.codigo}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-slate-900">{machine.nombre}</span>
-                        </TableCell>
-                        <TableCell>
-                          {machine.marca && machine.modelo ? (
-                            <span className="text-sm">{machine.marca} {machine.modelo}</span>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{machine.tipo || '-'}</TableCell>
-                        <TableCell>{machine.ubicacion || '-'}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            machine.estado === "Disponible"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }>
-                            {machine.estado}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setViewingMachine(machine)}
-                              title="Ver ficha completa"
-                            >
-                              <FileText className="w-4 h-4 text-blue-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(machine)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(machine.id)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                {filteredMachines.map(machine => {
+                  const status = getStatus(machine.id);
+                  const isAvailable = status.estado_disponibilidad === "Disponible";
+                  const prodStatus = status.estado_produccion;
+                  
+                  return (
+                    <Card 
+                      key={machine.id} 
+                      className={`border-2 transition-all cursor-pointer ${
+                        isAvailable ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+                      }`}
+                      onClick={() => handleEditStatus(machine)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-bold text-slate-900">{machine.nombre}</h3>
+                            <p className="text-xs text-slate-600">{machine.codigo}</p>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickToggle(machine.id, status.estado_disponibilidad);
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            {isAvailable ? (
+                              <Power className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <PowerOff className="w-5 h-5 text-red-600" />
+                            )}
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-600">Disponibilidad</span>
+                            <Badge className={isAvailable ? "bg-green-600" : "bg-red-600"}>
+                              {status.estado_disponibilidad}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-600">Producción</span>
+                            <Badge variant="outline" className={
+                              prodStatus === "Orden en curso" ? "bg-blue-100 text-blue-800" :
+                              prodStatus === "Orden nueva" ? "bg-purple-100 text-purple-800" :
+                              "bg-slate-100 text-slate-600"
+                            }>
+                              {prodStatus}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {showForm && (
-        <Dialog open={true} onOpenChange={handleClose}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      {editingStatus && (
+        <Dialog open={true} onOpenChange={() => setEditingStatus(null)}>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingMachine ? 'Editar Máquina' : 'Nueva Máquina'}
+                Estado: {editingStatus.machine.nombre}
               </DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="codigo">Código *</Label>
-                  <Input
-                    id="codigo"
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre *</Label>
-                  <Input
-                    id="nombre"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="marca">Marca</Label>
-                  <Input
-                    id="marca"
-                    value={formData.marca}
-                    onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="modelo">Modelo</Label>
-                  <Input
-                    id="modelo"
-                    value={formData.modelo}
-                    onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="numero_serie">Número de Serie</Label>
-                  <Input
-                    id="numero_serie"
-                    value={formData.numero_serie}
-                    onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fecha_compra">Fecha de Compra</Label>
-                  <Input
-                    id="fecha_compra"
-                    type="date"
-                    value={formData.fecha_compra}
-                    onChange={(e) => setFormData({ ...formData, fecha_compra: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo</Label>
-                  <Input
-                    id="tipo"
-                    value={formData.tipo}
-                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ubicacion">Ubicación</Label>
-                  <Input
-                    id="ubicacion"
-                    value={formData.ubicacion}
-                    onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
-                  <Select
-                    value={formData.estado}
-                    onValueChange={(value) => setFormData({ ...formData, estado: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Disponible">Disponible</SelectItem>
-                      <SelectItem value="No disponible">No disponible</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="orden">Orden de Visualización</Label>
-                  <Input
-                    id="orden"
-                    type="number"
-                    value={formData.orden}
-                    onChange={(e) => setFormData({ ...formData, orden: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Estado de Disponibilidad</Label>
+                <Select
+                  value={editingStatus.estado_disponibilidad}
+                  onValueChange={(value) => setEditingStatus({
+                    ...editingStatus,
+                    estado_disponibilidad: value
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Disponible">Disponible</SelectItem>
+                    <SelectItem value="No disponible">No disponible</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descripcion">Descripción</Label>
+                <Label>Estado de Producción</Label>
+                <Select
+                  value={editingStatus.estado_produccion}
+                  onValueChange={(value) => setEditingStatus({
+                    ...editingStatus,
+                    estado_produccion: value
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sin orden">Sin orden</SelectItem>
+                    <SelectItem value="Orden nueva">Orden nueva</SelectItem>
+                    <SelectItem value="Orden en curso">Orden en curso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notas</Label>
                 <Textarea
-                  id="descripcion"
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                  value={editingStatus.notas_estado || ""}
+                  onChange={(e) => setEditingStatus({
+                    ...editingStatus,
+                    notas_estado: e.target.value
+                  })}
                   rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="programa_mantenimiento">Programa de Mantenimiento</Label>
-                <Textarea
-                  id="programa_mantenimiento"
-                  value={formData.programa_mantenimiento}
-                  onChange={(e) => setFormData({ ...formData, programa_mantenimiento: e.target.value })}
-                  rows={2}
-                  placeholder="Descripción del programa de mantenimiento aplicable..."
+                  placeholder="Notas sobre el estado actual..."
                 />
               </div>
 
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleClose}>
+                <Button variant="outline" onClick={() => setEditingStatus(null)}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Guardando..." : "Guardar"}
+                <Button
+                  onClick={handleSaveStatus}
+                  disabled={updateStatusMutation.isPending}
+                  className="bg-blue-600"
+                >
+                  {updateStatusMutation.isPending ? "Guardando..." : "Guardar"}
                 </Button>
               </div>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
-      )}
-
-      {viewingMachine && (
-        <MachineDetailCard
-          machine={viewingMachine}
-          onClose={() => setViewingMachine(null)}
-        />
       )}
     </div>
   );

@@ -54,6 +54,19 @@ export default function MachinePlanningPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: machineStatuses = [] } = useQuery({
+    queryKey: ['machineStatuses'],
+    queryFn: () => base44.entities.MachineStatus.list(),
+    staleTime: 1 * 60 * 1000,
+  });
+
+  const getMachineStatus = (machineId) => {
+    return machineStatuses.find(ms => ms.machine_id === machineId) || {
+      estado_disponibilidad: "Disponible",
+      estado_produccion: "Sin orden"
+    };
+  };
+
   const { data: processes } = useQuery({
     queryKey: ['processes'],
     queryFn: () => base44.entities.Process.list('nombre'),
@@ -193,6 +206,8 @@ export default function MachinePlanningPage() {
   };
 
   const handleSelectProcess = (processId) => {
+    if (!selectedMachine) return;
+    
     const machineProcess = machineProcesses.find(
       mp => mp.machine_id === selectedMachine.id && mp.process_id === processId
     );
@@ -505,6 +520,8 @@ export default function MachinePlanningPage() {
                               {machines.map((machine, index) => {
                                 const planning = getPlanningForMachine(machine.id);
                                 const isActive = planning?.activa_planning;
+                                const machineStatus = getMachineStatus(machine.id);
+                                const isAvailable = machineStatus.estado_disponibilidad === "Disponible";
 
                                 return (
                                   <Draggable
@@ -528,6 +545,9 @@ export default function MachinePlanningPage() {
                                           <div>
                                             <span className="font-semibold text-slate-900">{machine.nombre}</span>
                                             <div className="text-xs text-slate-500">{machine.codigo}</div>
+                                            {!isAvailable && (
+                                              <Badge variant="destructive" className="text-xs mt-1">No disponible</Badge>
+                                            )}
                                           </div>
                                         </TableCell>
                                         <TableCell>
@@ -563,11 +583,12 @@ export default function MachinePlanningPage() {
                                             size="icon"
                                             onClick={() => handleTogglePlanning(machine)}
                                             title={isActive ? "Desactivar" : "Activar"}
+                                            disabled={!isAvailable && !isActive}
                                           >
                                             {isActive ? (
                                               <PowerOff className="w-4 h-4 text-red-600" />
                                             ) : (
-                                              <Power className="w-4 h-4 text-green-600" />
+                                              <Power className={`w-4 h-4 ${isAvailable ? 'text-green-600' : 'text-slate-300'}`} />
                                             )}
                                           </Button>
                                         </TableCell>
