@@ -15,6 +15,7 @@ export default function MachineExperienceManager() {
   const [filterPosition, setFilterPosition] = useState("all");
   const [filterTeam, setFilterTeam] = useState("all");
   const [machineConfigs, setMachineConfigs] = useState({});
+  const [expandedEmployee, setExpandedEmployee] = useState(null); // Solo mostrar uno a la vez
   const queryClient = useQueryClient();
 
   const { data: employees = [] } = useQuery({
@@ -201,63 +202,84 @@ export default function MachineExperienceManager() {
             </div>
           </div>
 
-          {/* Vista en Tarjetas */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Lista simplificada con expansión */}
+          <div className="space-y-3">
             {filteredEmployees.map(employee => {
               const currentConfig = machineConfigs[employee.id] || Array(10).fill("");
+              const isExpanded = expandedEmployee === employee.id;
+              const assignedCount = currentConfig.filter(m => m).length;
               
               return (
                 <Card key={employee.id} className="bg-slate-50 border-slate-200">
-                  <CardHeader className="pb-3 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-slate-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-slate-900 text-lg">{employee.nombre}</div>
-                        <div className="text-sm text-slate-600 mt-1">
-                          {employee.puesto} • {employee.departamento}
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                    <div 
+                      className="flex justify-between items-center"
+                      onClick={() => setExpandedEmployee(isExpanded ? null : employee.id)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="font-bold text-slate-900">{employee.nombre}</div>
+                          <div className="text-sm text-slate-600">
+                            {employee.puesto} • {employee.departamento}
+                          </div>
+                        </div>
+                        <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          {assignedCount}/10 máquinas
                         </div>
                       </div>
-                      {hasChanges(employee.id) && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSave(employee.id)}
-                          disabled={saveMutation.isPending}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Save className="w-3 h-3 mr-2" />
-                          Guardar
+                      <div className="flex items-center gap-2">
+                        {hasChanges(employee.id) && (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSave(employee.id);
+                            }}
+                            disabled={saveMutation.isPending}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Save className="w-3 h-3 mr-2" />
+                            Guardar
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm">
+                          {isExpanded ? "Cerrar" : "Editar"}
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 gap-3">
-                      {[...Array(10)].map((_, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                            {index + 1}
+                  
+                  {isExpanded && (
+                    <CardContent className="p-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[...Array(10)].map((_, index) => (
+                          <div key={index} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <Select
+                                value={currentConfig[index]}
+                                onValueChange={(value) => updateMachineConfig(employee.id, index, value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar máquina..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={null}>Sin asignar</SelectItem>
+                                  {machines.map(machine => (
+                                    <SelectItem key={machine.id} value={machine.id}>
+                                      {machine.nombre} ({machine.codigo})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <Select
-                              value={currentConfig[index]}
-                              onValueChange={(value) => updateMachineConfig(employee.id, index, value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar máquina..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={null}>Sin asignar</SelectItem>
-                                {machines.map(machine => (
-                                  <SelectItem key={machine.id} value={machine.id}>
-                                    {machine.nombre} ({machine.codigo})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
+                        ))}
+                      </div>
+                    </CardContent>
+                  )}
                 </Card>
               );
             })}
