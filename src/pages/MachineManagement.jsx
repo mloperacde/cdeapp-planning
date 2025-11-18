@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle, Activity, TrendingUp, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,12 @@ export default function MachineManagement() {
     queryKey: ['machineStatuses'],
     queryFn: () => base44.entities.MachineStatus.list(),
     staleTime: 1 * 60 * 1000,
+    refetchInterval: 30000,
+  });
+
+  const { data: articles = [] } = useQuery({
+    queryKey: ['articles'],
+    queryFn: () => base44.entities.Article.list(),
   });
 
   const updateStatusMutation = useMutation({
@@ -86,21 +92,49 @@ export default function MachineManagement() {
     const status = getStatus(machine.id);
     setEditingStatus({
       machine,
-      ...status
+      estado_disponibilidad: status.estado_disponibilidad || "Disponible",
+      estado_produccion: status.estado_produccion || "Sin orden",
+      notas_estado: status.notas_estado || "",
+      articulo_en_curso: status.articulo_en_curso || "",
+      lotes_producidos: status.lotes_producidos || 0,
+      tiempo_ciclo_actual: status.tiempo_ciclo_actual || null,
+      tiempo_ciclo_estandar: status.tiempo_ciclo_estandar || null,
+      hora_inicio_produccion: status.hora_inicio_produccion || "",
+      alerta_desviacion: status.alerta_desviacion || false,
+      motivo_desviacion: status.motivo_desviacion || "",
     });
   };
 
   const handleSaveStatus = () => {
     if (!editingStatus) return;
     
+    const statusData = {
+      estado_disponibilidad: editingStatus.estado_disponibilidad,
+      estado_produccion: editingStatus.estado_produccion,
+      notas_estado: editingStatus.notas_estado,
+      articulo_en_curso: editingStatus.articulo_en_curso,
+      lotes_producidos: editingStatus.lotes_producidos,
+      tiempo_ciclo_actual: editingStatus.tiempo_ciclo_actual,
+      tiempo_ciclo_estandar: editingStatus.tiempo_ciclo_estandar,
+      hora_inicio_produccion: editingStatus.hora_inicio_produccion,
+      motivo_desviacion: editingStatus.motivo_desviacion,
+      fecha_actualizacion: new Date().toISOString()
+    };
+
+    // Auto-detectar alertas
+    if (editingStatus.tiempo_ciclo_actual && editingStatus.tiempo_ciclo_estandar) {
+      const desviacion = ((editingStatus.tiempo_ciclo_actual - editingStatus.tiempo_ciclo_estandar) / editingStatus.tiempo_ciclo_estandar) * 100;
+      statusData.alerta_desviacion = desviacion > 20;
+      if (desviacion > 20 && !statusData.motivo_desviacion) {
+        statusData.motivo_desviacion = `Tiempo de ciclo ${desviacion.toFixed(1)}% por encima del estándar`;
+      }
+    } else {
+      statusData.alerta_desviacion = false;
+    }
+    
     updateStatusMutation.mutate({
       machineId: editingStatus.machine.id,
-      statusData: {
-        estado_disponibilidad: editingStatus.estado_disponibilidad,
-        estado_produccion: editingStatus.estado_produccion,
-        notas_estado: editingStatus.notas_estado,
-        fecha_actualizacion: new Date().toISOString()
-      }
+      statusData
     });
   };
 
@@ -321,6 +355,97 @@ export default function MachineManagement() {
                   placeholder="Notas sobre el estado actual..."
                 />
               </div>
+
+              {editingStatus.estado_produccion !== "Sin orden" && (
+                <div className="border-t pt-4 space-y-4">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-blue-600" />
+                    Datos de Producción en Tiempo Real
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Artículo en Curso</Label>
+                      <Select
+                        value={editingStatus.articulo_en_curso}
+                        onValueChange={(value) => setEditingStatus({ ...editingStatus, articulo_en_curso: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar artículo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {articles.map(art => (
+                            <SelectItem key={art.id} value={art.id}>
+                              {art.nombre} ({art.codigo})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Lotes Producidos</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={editingStatus.lotes_producidos}
+                        onChange={(e) => setEditingStatus({ ...editingStatus, lotes_producidos: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Tiempo Ciclo Estándar (min)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={editingStatus.tiempo_ciclo_estandar || ""}
+                        onChange={(e) => setEditingStatus({ ...editingStatus, tiempo_ciclo_estandar: parseFloat(e.target.value) || null })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Tiempo Ciclo Actual (min)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={editingStatus.tiempo_ciclo_actual || ""}
+                        onChange={(e) => setEditingStatus({ ...editingStatus, tiempo_ciclo_actual: parseFloat(e.target.value) || null })}
+                      />
+                    </div>
+
+                    <div className="space-y-2 col-span-2">
+                      <Label>Hora Inicio Producción</Label>
+                      <Input
+                        type="datetime-local"
+                        value={editingStatus.hora_inicio_produccion}
+                        onChange={(e) => setEditingStatus({ ...editingStatus, hora_inicio_produccion: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2 col-span-2">
+                      <Label>Motivo Desviación (si aplica)</Label>
+                      <Input
+                        value={editingStatus.motivo_desviacion}
+                        onChange={(e) => setEditingStatus({ ...editingStatus, motivo_desviacion: e.target.value })}
+                        placeholder="Ej: Parada por ajuste de máquina"
+                      />
+                    </div>
+                  </div>
+
+                  {editingStatus.tiempo_ciclo_actual && editingStatus.tiempo_ciclo_estandar && (
+                    <div className={`p-3 rounded-lg ${
+                      ((editingStatus.tiempo_ciclo_actual - editingStatus.tiempo_ciclo_estandar) / editingStatus.tiempo_ciclo_estandar * 100) > 20
+                        ? 'bg-red-50 border-2 border-red-300'
+                        : 'bg-green-50 border-2 border-green-300'
+                    }`}>
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4" />
+                        Desviación: {(((editingStatus.tiempo_ciclo_actual - editingStatus.tiempo_ciclo_estandar) / editingStatus.tiempo_ciclo_estandar) * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setEditingStatus(null)}>
