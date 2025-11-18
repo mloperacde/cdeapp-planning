@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import HolidayManager from "../components/timeline/HolidayManager";
 import VacationManager from "../components/timeline/VacationManager";
+import CalendarStyleConfig from "../components/absences/CalendarStyleConfig";
 
 export default function WorkCalendarConfig() {
   const [activeTab, setActiveTab] = useState("holidays");
@@ -34,9 +35,10 @@ export default function WorkCalendarConfig() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="holidays">Días Festivos</TabsTrigger>
             <TabsTrigger value="vacations">Períodos de Vacaciones</TabsTrigger>
+            <TabsTrigger value="styles">Estilos del Calendario</TabsTrigger>
           </TabsList>
 
           <TabsContent value="holidays" className="mt-6">
@@ -59,6 +61,10 @@ export default function WorkCalendarConfig() {
                 <VacationManager embedded={true} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="styles" className="mt-6">
+            <CalendarStyleConfig />
           </TabsContent>
         </Tabs>
       </div>
