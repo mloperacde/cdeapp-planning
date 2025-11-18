@@ -5,113 +5,114 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 export default function ConfigurationPage() {
-  const configModules = [
-    {
-      title: "Tipos de Ausencias",
-      description: "Configura tipos de ausencias y permisos",
-      icon: Calendar,
-      url: createPageUrl("AbsenceTypeConfig"),
-      color: "red",
-      featured: true
+  const configModules = {
+    rrhh: {
+      title: "Recursos Humanos",
+      modules: [
+        {
+          title: "Tipos de Ausencias",
+          description: "Configura tipos de ausencias y permisos",
+          icon: Calendar,
+          url: createPageUrl("AbsenceTypeConfig"),
+          color: "red"
+        },
+        {
+          title: "Configuración de Equipos",
+          description: "Gestiona equipos y turnos rotativos",
+          icon: Users,
+          url: createPageUrl("TeamConfiguration"),
+          color: "green"
+        },
+        {
+          title: "Calendario Laboral",
+          description: "Configuración de festivos y vacaciones",
+          icon: Calendar,
+          url: createPageUrl("WorkCalendarConfig"),
+          color: "green"
+        },
+        {
+          title: "Taquillas",
+          description: "Gestión de taquillas y vestuarios",
+          icon: FileText,
+          url: createPageUrl("LockerManagement"),
+          color: "indigo"
+        },
+        {
+          title: "Matriz de Habilidades",
+          description: "Gestión de competencias y formación",
+          icon: Award,
+          url: createPageUrl("SkillMatrix"),
+          color: "amber"
+        },
+        {
+          title: "Plan de Incentivos",
+          description: "Configura objetivos y bonificaciones",
+          icon: DollarSign,
+          url: createPageUrl("IncentiveManagement"),
+          color: "emerald"
+        }
+      ]
     },
-    {
-      title: "Roles y Permisos",
-      description: "Gestiona roles de usuario y permisos de acceso",
-      icon: Shield,
-      url: createPageUrl("RoleManagement"),
-      color: "blue",
-      featured: true
+    produccion: {
+      title: "Producción",
+      modules: [
+        {
+          title: "Archivo Maestro de Máquinas",
+          description: "Gestión centralizada del catálogo de máquinas",
+          icon: Cog,
+          url: createPageUrl("MasterMachineView"),
+          color: "slate"
+        },
+        {
+          title: "Configuración de Procesos",
+          description: "Define procesos y requisitos por máquina",
+          icon: Settings,
+          url: createPageUrl("ProcessConfiguration"),
+          color: "purple"
+        },
+        {
+          title: "Catálogo de Artículos",
+          description: "Gestión de artículos/productos fabricables",
+          icon: Package,
+          url: createPageUrl("ArticleManagement"),
+          color: "teal"
+        },
+        {
+          title: "Mantenimiento",
+          description: "Tipos de mantenimiento y configuración",
+          icon: Wrench,
+          url: createPageUrl("MaintenanceTracking"),
+          color: "slate"
+        }
+      ]
     },
-    {
-      title: "Notificaciones",
-      description: "Configura preferencias de notificaciones",
-      icon: Bell,
-      url: createPageUrl("Notifications"),
-      color: "purple",
-      featured: true
-    },
-    {
-      title: "Mensajería",
-      description: "Configura tipos de mensajes y permisos de envío",
-      icon: MessageSquare,
-      url: createPageUrl("MessagingConfig"),
-      color: "indigo",
-      featured: true
-    },
-    {
-      title: "Archivo Maestro de Máquinas",
-      description: "Gestión centralizada del catálogo de máquinas",
-      icon: Cog,
-      url: createPageUrl("MasterMachineView"),
-      color: "slate",
-      featured: true
-    },
-    {
-      title: "Configuración de Equipos",
-      description: "Gestiona equipos y turnos rotativos",
-      icon: Users,
-      url: createPageUrl("TeamConfiguration"),
-      color: "green",
-      featured: false
-    },
-
-    {
-      title: "Taquillas",
-      description: "Gestión de taquillas y vestuarios",
-      icon: FileText,
-      url: createPageUrl("LockerManagement"),
-      color: "indigo",
-      featured: false
-    },
-    {
-      title: "Mantenimiento",
-      description: "Tipos de mantenimiento y configuración",
-      icon: Wrench,
-      url: createPageUrl("MaintenanceTracking"),
-      color: "slate",
-      featured: false
-    },
-    {
-      title: "Plan de Incentivos",
-      description: "Configura objetivos y bonificaciones",
-      icon: DollarSign,
-      url: createPageUrl("IncentiveManagement"),
-      color: "emerald",
-      featured: false
-    },
-    {
-      title: "Matriz de Habilidades",
-      description: "Gestión de competencias y formación",
-      icon: Award,
-      url: createPageUrl("SkillMatrix"),
-      color: "amber",
-      featured: false
-    },
-    {
-      title: "Configuración de Procesos",
-      description: "Define procesos y requisitos por máquina",
-      icon: Settings,
-      url: createPageUrl("ProcessConfiguration"),
-      color: "purple",
-      featured: false
-    },
-    {
-      title: "Catálogo de Artículos",
-      description: "Gestión de artículos/productos fabricables",
-      icon: Package,
-      url: createPageUrl("ArticleManagement"),
-      color: "teal",
-      featured: false
-    },
-    {
-      title: "Calendario Laboral",
-      description: "Configuración de festivos y vacaciones",
-      icon: Calendar,
-      url: createPageUrl("WorkCalendarConfig"),
-      color: "green",
-      featured: false
+    sistema: {
+      title: "Sistema",
+      modules: [
+        {
+          title: "Roles y Permisos",
+          description: "Gestiona roles de usuario y permisos de acceso",
+          icon: Shield,
+          url: createPageUrl("RoleManagement"),
+          color: "blue"
+        },
+        {
+          title: "Notificaciones",
+          description: "Configura preferencias de notificaciones",
+          icon: Bell,
+          url: createPageUrl("Notifications"),
+          color: "purple"
+        },
+        {
+          title: "Mensajería",
+          description: "Configura tipos de mensajes y permisos de envío",
+          icon: MessageSquare,
+          url: createPageUrl("MessagingConfig"),
+          color: "indigo"
+        }
+      ]
     }
-  ];
+  };
 
   const colorClasses = {
     red: "from-red-500 to-red-600",
