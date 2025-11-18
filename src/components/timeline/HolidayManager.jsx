@@ -13,7 +13,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function HolidayManager({ open, onOpenChange, holidays = [], onUpdate }) {
+export default function HolidayManager({ open, onOpenChange, holidays = [], onUpdate, embedded = false }) {
   const [showForm, setShowForm] = useState(false);
   const [editingHoliday, setEditingHoliday] = useState(null);
   const [formData, setFormData] = useState({
@@ -74,27 +74,18 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
     (a, b) => new Date(a.date) - new Date(b.date)
   );
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <CalendarOff className="w-6 h-6 text-orange-600" />
-            Gestión de Días Festivos
-          </DialogTitle>
-          <DialogDescription>
-            Configura los días festivos del año. Se guardarán automáticamente.
-          </DialogDescription>
-        </DialogHeader>
-
-        <Alert>
+  const content = (
+    <>
+      {!embedded && (
+        <Alert className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Los fines de semana se excluyen automáticamente del calendario laboral.
           </AlertDescription>
         </Alert>
+      )}
 
-        <div className="space-y-6">
+      <div className="space-y-6">
           {!showForm ? (
             <Button
               onClick={() => setShowForm(true)}
@@ -207,7 +198,27 @@ export default function HolidayManager({ open, onOpenChange, holidays = [], onUp
               </Table>
             </div>
           )}
-        </div>
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <CalendarOff className="w-6 h-6 text-orange-600" />
+            Gestión de Días Festivos
+          </DialogTitle>
+          <DialogDescription>
+            Configura los días festivos del año. Se guardarán automáticamente.
+          </DialogDescription>
+        </DialogHeader>
+        {content}
       </DialogContent>
     </Dialog>
   );

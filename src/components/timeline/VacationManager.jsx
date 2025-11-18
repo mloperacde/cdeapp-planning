@@ -13,7 +13,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function VacationManager({ open, onOpenChange, vacations = [], onUpdate }) {
+export default function VacationManager({ open, onOpenChange, vacations = [], onUpdate, embedded = false }) {
   const [showForm, setShowForm] = useState(false);
   const [editingVacation, setEditingVacation] = useState(null);
   const [formData, setFormData] = useState({
@@ -105,28 +105,18 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
     return { total: totalDays, workable: workableDays };
   };
 
-  return (
+  const content = (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <Plane className="w-6 h-6 text-sky-600" />
-              Gestión de Vacaciones
-            </DialogTitle>
-            <DialogDescription>
-              Configura períodos de vacaciones. Se guardarán automáticamente.
-            </DialogDescription>
-          </DialogHeader>
+      {!embedded && (
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Los fines de semana y festivos se excluyen automáticamente del cálculo de días laborables.
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Los fines de semana y festivos se excluyen automáticamente del cálculo de días laborables.
-            </AlertDescription>
-          </Alert>
-
-          <div className="space-y-6">
+      <div className="space-y-6">
             {!showForm ? (
               <Button
                 onClick={() => setShowForm(true)}
@@ -277,9 +267,28 @@ export default function VacationManager({ open, onOpenChange, vacations = [], on
                 </Table>
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      </div>
     </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <Plane className="w-6 h-6 text-sky-600" />
+            Gestión de Vacaciones
+          </DialogTitle>
+          <DialogDescription>
+            Configura períodos de vacaciones. Se guardarán automáticamente.
+          </DialogDescription>
+        </DialogHeader>
+        {content}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, ArrowLeft } from "lucide-react";
@@ -11,6 +12,16 @@ import CalendarStyleConfig from "../components/absences/CalendarStyleConfig";
 
 export default function WorkCalendarConfig() {
   const [activeTab, setActiveTab] = useState("holidays");
+
+  const { data: holidays = [], refetch: refetchHolidays } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+  });
+
+  const { data: vacations = [], refetch: refetchVacations } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list(),
+  });
 
   return (
     <div className="p-6 md:p-8">
@@ -42,25 +53,19 @@ export default function WorkCalendarConfig() {
           </TabsList>
 
           <TabsContent value="holidays" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gestión de Días Festivos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <HolidayManager embedded={true} />
-              </CardContent>
-            </Card>
+            <HolidayManager 
+              embedded={true} 
+              holidays={holidays}
+              onUpdate={refetchHolidays}
+            />
           </TabsContent>
 
           <TabsContent value="vacations" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gestión de Períodos de Vacaciones</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <VacationManager embedded={true} />
-              </CardContent>
-            </Card>
+            <VacationManager 
+              embedded={true} 
+              vacations={vacations}
+              onUpdate={refetchVacations}
+            />
           </TabsContent>
 
           <TabsContent value="styles" className="mt-6">
