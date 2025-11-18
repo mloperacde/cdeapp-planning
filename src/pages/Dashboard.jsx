@@ -433,26 +433,24 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {enabledWidgets.map(widget => renderWidget(widget))}
-        </div>
+        <Tabs defaultValue="widgets" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="widgets">Widgets</TabsTrigger>
+            <TabsTrigger value="calendar">Calendario Laboral</TabsTrigger>
+          </TabsList>
 
-        {enabledWidgets.length === 0 && (
-          <Card className="bg-amber-50 border-2 border-amber-300">
-            <CardContent className="p-8 text-center">
-              <AlertTriangle className="w-12 h-12 text-amber-600 mx-auto mb-3" />
-              <p className="text-amber-900 font-semibold mb-2">
-                No hay widgets configurados
-              </p>
-              <p className="text-amber-800 text-sm mb-4">
-                Haz clic en "Configurar Widgets" para seleccionar qué información quieres ver
-              </p>
-              <Button onClick={() => setShowWidgetConfig(true)}>
-                Configurar Ahora
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="widgets">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {enabledWidgets.map(widget => renderWidget(widget))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <WorkCalendar />
+          </TabsContent>
+        </Tabs>
+
+
       </div>
 
       {showWidgetConfig && user && (
