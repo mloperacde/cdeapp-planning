@@ -137,15 +137,38 @@ export default function DataImportPage() {
       setImportProgress({ stage: 'parse', message: 'Analizando datos del archivo...' });
       console.log('Leyendo archivo:', selectedFile.name);
       
-      const text = await selectedFile.text();
-      const delimiter = text.includes(';') ? ';' : ',';
+      let text = await selectedFile.text();
+      
+      // Detectar delimitador
+      const firstLine = text.split('\n')[0];
+      const delimiter = firstLine.split(';').length > firstLine.split(',').length ? ';' : ',';
+      console.log('Delimitador detectado:', delimiter);
+      
       const extractedData = parseCSV(text, delimiter);
       
-      console.log(`Datos parseados: ${extractedData.length} registros`, extractedData[0]);
+      console.log(`Datos parseados: ${extractedData.length} registros`);
+      if (extractedData.length > 0) {
+        console.log('Primer registro:', extractedData[0]);
+      }
 
       // Validar que hay datos
       if (!Array.isArray(extractedData) || extractedData.length === 0) {
-        throw new Error("No se encontraron datos válidos en el archivo. Verifica que el CSV tenga encabezados y datos.");
+        throw new Error("❌ No se encontraron datos válidos.\n\n✅ Verifica que:\n• El archivo tenga una fila de encabezados\n• Haya al menos una fila de datos\n• Los nombres de columna coincidan con la plantilla");
+      }
+      
+      // Validar campos obligatorios según entidad
+      const requiredFields = {
+        "Employee": ["nombre", "tipo_jornada", "tipo_turno"],
+        "Machine": ["nombre", "codigo"],
+        "MaintenanceSchedule": ["machine_id", "tipo", "fecha_programada"]
+      };
+      
+      const required = requiredFields[entityName] || [];
+      const firstRow = extractedData[0];
+      const missingFields = required.filter(field => !firstRow[field]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`❌ Faltan columnas obligatorias: ${missingFields.join(', ')}\n\n📋 Columnas detectadas: ${Object.keys(firstRow).join(', ')}\n\n💡 Descarga la plantilla para ver el formato correcto.`);
       }
 
       // Crear registros uno por uno para manejar errores individuales
