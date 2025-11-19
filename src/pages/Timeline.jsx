@@ -48,34 +48,39 @@ export default function Timeline() {
 
   const { start: startDate, end: endDate } = getDateRange();
 
-  const { data: holidays = [], isLoading: isLoadingHolidays, refetch: refetchHolidays } = useQuery({
+  const { data: holidays = [] } = useQuery({
     queryKey: ['holidays'],
     queryFn: () => base44.entities.Holiday.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: vacations = [], isLoading: isLoadingVacations, refetch: refetchVacations } = useQuery({
+  const { data: vacations = [] } = useQuery({
     queryKey: ['vacations'],
     queryFn: () => base44.entities.Vacation.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: employees = [] } = useQuery({ // Removed isLoadingEmployees as per instructions
+  const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
     initialData: [],
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   // Get unique departments
