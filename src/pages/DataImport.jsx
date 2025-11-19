@@ -22,6 +22,7 @@ export default function DataImportPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [selectedEntity, setSelectedEntity] = useState("employees");
+  const [importProgress, setImportProgress] = useState(null);
   const [lockerFile, setLockerFile] = useState(null);
   const [importingLockers, setImportingLockers] = useState(false);
   const [lockerImportResult, setLockerImportResult] = useState(null);
@@ -48,10 +49,15 @@ export default function DataImportPage() {
     }
 
     setImporting(true);
+    setImportProgress({ stage: 'upload', message: 'Subiendo archivo...' });
+    console.log('Iniciando importación...');
+    
     try {
       // Subir archivo
+      console.log('Subiendo archivo:', selectedFile.name);
       const uploadResult = await base44.integrations.Core.UploadFile({ file: selectedFile });
       const fileUrl = uploadResult.file_url;
+      console.log('Archivo subido:', fileUrl);
 
       // Definir esquema según entidad seleccionada
       let jsonSchema = {};
@@ -143,16 +149,22 @@ export default function DataImportPage() {
       }
 
       // Extraer datos del archivo
+      setImportProgress({ stage: 'extract', message: 'Analizando archivo y extrayendo datos...' });
+      console.log('Extrayendo datos con esquema:', jsonSchema);
+      
       const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
         file_url: fileUrl,
         json_schema: jsonSchema
       });
+
+      console.log('Resultado de extracción:', extractResult);
 
       if (extractResult.status === "error") {
         throw new Error(extractResult.details || "Error extrayendo datos del archivo");
       }
 
       const extractedData = extractResult.output;
+      console.log(`Datos extraídos: ${extractedData?.length || 0} registros`);
 
       // Validar que hay datos
       if (!Array.isArray(extractedData) || extractedData.length === 0) {
@@ -160,17 +172,27 @@ export default function DataImportPage() {
       }
 
       // Crear registros uno por uno para manejar errores individuales
+      setImportProgress({ stage: 'create', message: `Creando registros (0/${extractedData.length})...` });
       let createdCount = 0;
       let errors = [];
       
       for (let i = 0; i < extractedData.length; i++) {
         try {
+          console.log(`Creando registro ${i + 1}/${extractedData.length}:`, extractedData[i]);
           await base44.entities[entityName].create(extractedData[i]);
           createdCount++;
+          setImportProgress({ 
+            stage: 'create', 
+            message: `Creando registros (${createdCount}/${extractedData.length})...`,
+            progress: Math.round((createdCount / extractedData.length) * 100)
+          });
         } catch (err) {
+          console.error(`Error en fila ${i + 1}:`, err);
           errors.push(`Fila ${i + 1}: ${err.message}`);
         }
       }
+      
+      console.log(`Importación completada. Creados: ${createdCount}, Errores: ${errors.length}`);
 
       setImportResult({
         success: createdCount > 0,
@@ -192,10 +214,12 @@ export default function DataImportPage() {
       console.error('Error importando:', error);
       setImportResult({
         success: false,
-        message: error.message || 'Error al importar datos'
+        message: error.message || 'Error al importar datos',
+        details: error.toString()
       });
     } finally {
       setImporting(false);
+      setImportProgress(null);
     }
   };
 
@@ -586,18 +610,37 @@ export default function DataImportPage() {
                 </div>
 
                 {selectedFile && selectedEntity === "employees" && (
-                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <span className="text-sm font-medium text-green-900">{selectedFile.name}</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        <span className="text-sm font-medium text-green-900">{selectedFile.name}</span>
+                      </div>
+                      <Button
+                        onClick={handleImport}
+                        disabled={importing}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {importing ? "Procesando..." : "Importar Datos"}
+                      </Button>
                     </div>
-                    <Button
-                      onClick={handleImport}
-                      disabled={importing}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {importing ? "Importando..." : "Importar Datos"}
-                    </Button>
+
+                    {importProgress && (
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span className="text-sm font-medium text-blue-900">{importProgress.message}</span>
+                        </div>
+                        {importProgress.progress && (
+                          <div className="w-full bg-blue-200 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${importProgress.progress}%` }}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
