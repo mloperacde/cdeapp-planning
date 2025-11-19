@@ -38,6 +38,13 @@ export default function ConfigurationPage() {
           color: "indigo"
         },
         {
+          title: "Base de Datos de Empleados",
+          description: "Archivo maestro centralizado de empleados",
+          icon: Users,
+          url: createPageUrl("MasterEmployeeDatabase"),
+          color: "blue"
+        },
+        {
           title: "Matriz de Habilidades",
           description: "Gestión de competencias y formación",
           icon: Award,
