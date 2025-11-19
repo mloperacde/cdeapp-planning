@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -26,6 +25,7 @@ import {
   MessageSquare,
   TrendingUp,
   Calendar as CalendarIcon,
+  Factory,
 } from "lucide-react";
 import {
   Sidebar,
@@ -90,12 +90,26 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuButton
                       asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("ProductionDashboard")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("ProductionDashboard")} className="flex items-center gap-3 px-3 py-2.5">
+                        <Factory className="w-5 h-5" />
+                        <span className="text-sm">Dashboard de Producción</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                         isActive(createPageUrl("Dashboard")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
                     >
                       <Link to={createPageUrl("Dashboard")} className="flex items-center gap-3 px-3 py-2.5">
                         <BarChart3 className="w-5 h-5" />
-                        <span className="text-sm">Dashboard</span>
+                        <span className="text-sm">Dashboard RRHH</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
