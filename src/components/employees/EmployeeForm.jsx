@@ -52,7 +52,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     categoria: "",
     tipo_jornada: "Jornada Completa",
     num_horas_jornada: 40,
-    shift_id: "",
+    tipo_turno: "Rotativo",
     equipo: "",
     disponibilidad: "Disponible",
     horario_manana_inicio: "07:00",
@@ -122,11 +122,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     queryFn: () => base44.entities.Position.list('nombre'),
   });
 
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts'],
-    queryFn: () => base44.entities.Shift.list('nombre'),
-  });
-
   const { data: absences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
@@ -191,8 +186,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     mutationFn: async (data) => {
       // Si es turno fijo, no debe tener equipo asignado
       const finalData = { ...data };
-      const shift = shifts.find(s => s.id === data.shift_id);
-      if (shift?.tipo?.includes("Fijo")) {
+      if (data.tipo_turno === "Fijo Mañana" || data.tipo_turno === "Fijo Tarde") {
         finalData.equipo = "";
       }
       
@@ -230,8 +224,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
   const isAbsent = formData.disponibilidad === "Ausente";
   const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
-  const selectedShift = shifts.find(s => s.id === formData.shift_id);
-  const isTurnoFijo = selectedShift?.tipo?.includes("Fijo");
+  const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
   const selectedDept = departments.find(d => d.id === formData.department_id);
   const isMaintenanceDepartment = selectedDept?.nombre?.toUpperCase().includes("MANTENIMIENTO");
   const isETT = formData.tipo_contrato?.toUpperCase().includes("ETT");
@@ -571,52 +564,26 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="shift_id">Turno Asignado *</Label>
+                  <Label htmlFor="tipo_turno">Tipo de Turno *</Label>
                   <Select
-                    value={formData.shift_id || ""}
-                    onValueChange={(value) => setFormData({ ...formData, shift_id: value })}
+                    value={formData.tipo_turno}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_turno: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar turno" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {shifts.filter(s => s.activo !== false).map((shift) => (
-                        <SelectItem key={shift.id} value={shift.id}>
-                          {shift.nombre} ({shift.tipo})
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="Rotativo">Rotativo</SelectItem>
+                      <SelectItem value="Fijo Mañana">Fijo Mañana</SelectItem>
+                      <SelectItem value="Fijo Tarde">Fijo Tarde</SelectItem>
+                      <SelectItem value="Turno Partido">Turno Partido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {selectedShift && (
-                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                  <h4 className="font-semibold text-blue-900 mb-2">Información del Turno</h4>
-                  <div className="text-sm space-y-1">
-                    <p><strong>Turno:</strong> {selectedShift.nombre}</p>
-                    <p><strong>Tipo:</strong> {selectedShift.tipo}</p>
-                    {selectedShift.tipo === "Rotativo" && (
-                      <>
-                        <p><strong>Mañana:</strong> {selectedShift.horario_manana_inicio} - {selectedShift.horario_manana_fin}</p>
-                        <p><strong>Tarde:</strong> {selectedShift.horario_tarde_inicio} - {selectedShift.horario_tarde_fin}</p>
-                      </>
-                    )}
-                    {selectedShift.tipo?.includes("Fijo") && (
-                      <p><strong>Horario:</strong> {selectedShift.hora_inicio} - {selectedShift.hora_fin}</p>
-                    )}
-                    {selectedShift.tipo === "Turno Partido" && (
-                      <>
-                        <p><strong>Primera parte:</strong> {selectedShift.hora_inicio} - {selectedShift.hora_fin}</p>
-                        <p><strong>Segunda parte:</strong> {selectedShift.hora_inicio_2} - {selectedShift.hora_fin_2}</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* Jornada Reducida + Fijo Mañana */}
-              {formData.tipo_jornada === "Reducción de Jornada" && selectedShift?.tipo === "Fijo Mañana" && (
+              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Fijo Mañana" && (
                 <div className="p-4 border-2 border-amber-200 rounded-lg bg-amber-50 space-y-4">
                   <h4 className="font-semibold text-amber-900">Configuración Turno Fijo Mañana - Jornada Reducida</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -641,7 +608,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               )}
 
               {/* Jornada Reducida + Fijo Tarde */}
-              {formData.tipo_jornada === "Reducción de Jornada" && selectedShift?.tipo === "Fijo Tarde" && (
+              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Fijo Tarde" && (
                 <div className="p-4 border-2 border-indigo-200 rounded-lg bg-indigo-50 space-y-4">
                   <h4 className="font-semibold text-indigo-900">Configuración Turno Fijo Tarde - Jornada Reducida</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -666,7 +633,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               )}
 
               {/* Configuración de horarios para Reducción de Jornada con Rotativo */}
-              {formData.tipo_jornada === "Reducción de Jornada" && selectedShift?.tipo === "Rotativo" && (
+              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Rotativo" && (
                 <div className="p-4 border-2 border-orange-200 rounded-lg bg-orange-50 space-y-4">
                   <h4 className="font-semibold text-orange-900">Configuración de Horario Especial - Jornada Reducida</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -750,7 +717,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
               )}
 
-              {selectedShift?.tipo === "Turno Partido" && (
+              {formData.tipo_turno === "Turno Partido" && (
                 <div className="md:col-span-2 space-y-4 p-4 border-2 border-purple-200 rounded-lg bg-purple-50">
                   <h4 className="font-semibold text-purple-900">Configuración de Turno Partido</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

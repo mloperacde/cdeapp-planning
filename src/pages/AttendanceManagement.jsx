@@ -242,7 +242,9 @@ export default function AttendanceManagementPage() {
             />
           </TabsContent>
 
-
+          <TabsContent value="monitor">
+            <AttendanceMonitor />
+          </TabsContent>
 
           <TabsContent value="dashboard">
             <AttendanceDashboard />
