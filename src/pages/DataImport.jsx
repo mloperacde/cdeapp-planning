@@ -658,17 +658,41 @@ export default function DataImportPage() {
                     </div>
 
                     {importProgress && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                        <div className="flex items-center gap-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                           <span className="text-sm font-medium text-blue-900">{importProgress.message}</span>
                         </div>
-                        {importProgress.progress && (
-                          <div className="w-full bg-blue-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${importProgress.progress}%` }}
-                            ></div>
+                        
+                        {importProgress.progress !== undefined && (
+                          <div>
+                            <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${importProgress.progress}%` }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-blue-700">{importProgress.progress}%</div>
+                          </div>
+                        )}
+                        
+                        {importProgress.logs && importProgress.logs.length > 0 && (
+                          <div className="max-h-60 overflow-y-auto bg-white rounded border border-blue-200 p-2">
+                            <div className="text-xs space-y-1">
+                              {importProgress.logs.slice(-20).map((log, i) => (
+                                <div key={i} className={`flex items-center gap-2 ${
+                                  log.status === 'success' ? 'text-green-700' : 
+                                  log.status === 'error' ? 'text-red-700' : 'text-slate-500'
+                                }`}>
+                                  <span className="font-mono">#{log.fila}</span>
+                                  <span className="flex-1 truncate">{log.nombre}</span>
+                                  {log.status === 'success' && <span>✅</span>}
+                                  {log.status === 'error' && (
+                                    <span className="text-red-600 text-xs" title={log.error}>❌ {log.error}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
