@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Clock } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Clock, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -71,6 +71,13 @@ export default function ConfigurationPage() {
           icon: Clock,
           url: createPageUrl("ShiftManagement"),
           color: "amber"
+        },
+        {
+          title: "Importación Masiva de Empleados",
+          description: "Carga masiva de empleados desde Excel/CSV",
+          icon: Upload,
+          url: createPageUrl("EmployeeBulkImport"),
+          color: "blue"
         }
       ]
     },
