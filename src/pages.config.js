@@ -55,6 +55,7 @@ import ArticleManagement from './pages/ArticleManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import PositionManagement from './pages/PositionManagement';
 import DepartmentManagement from './pages/DepartmentManagement';
+import ProductionDashboard from './pages/ProductionDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -116,6 +117,7 @@ export const PAGES = {
     "WorkCalendarConfig": WorkCalendarConfig,
     "PositionManagement": PositionManagement,
     "DepartmentManagement": DepartmentManagement,
+    "ProductionDashboard": ProductionDashboard,
 }
 
 export const pagesConfig = {
