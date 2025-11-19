@@ -50,6 +50,20 @@ export default function ConfigurationPage() {
           icon: DollarSign,
           url: createPageUrl("IncentiveManagement"),
           color: "emerald"
+        },
+        {
+          title: "Gestión de Puestos",
+          description: "Configura puestos de trabajo",
+          icon: Award,
+          url: createPageUrl("PositionManagement"),
+          color: "blue"
+        },
+        {
+          title: "Gestión de Departamentos",
+          description: "Configura departamentos de la empresa",
+          icon: Users,
+          url: createPageUrl("DepartmentManagement"),
+          color: "indigo"
         }
       ]
     },
