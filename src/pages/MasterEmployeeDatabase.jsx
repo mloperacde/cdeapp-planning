@@ -23,17 +23,23 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Upload
+  Upload,
+  FileText
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import MasterEmployeeImport from "../components/master/MasterEmployeeImport";
+import SyncComparisonDialog from "../components/master/SyncComparisonDialog";
+import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 
 export default function MasterEmployeeDatabasePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: masterEmployees = [], isLoading } = useQuery({
@@ -55,80 +61,37 @@ export default function MasterEmployeeDatabasePage() {
     },
   });
 
-  const syncMutation = useMutation({
-    mutationFn: async (masterEmployee) => {
-      const employeeData = {
-        codigo_empleado: masterEmployee.codigo_empleado,
-        nombre: masterEmployee.nombre,
-        dni: masterEmployee.dni,
-        nuss: masterEmployee.nuss,
-        email: masterEmployee.email,
-        telefono_movil: masterEmployee.telefono_movil,
-        fecha_nacimiento: masterEmployee.fecha_nacimiento,
-        sexo: masterEmployee.sexo,
-        nacionalidad: masterEmployee.nacionalidad,
-        direccion: masterEmployee.direccion,
-        departamento: masterEmployee.departamento,
-        puesto: masterEmployee.puesto,
-        categoria: masterEmployee.categoria,
-        tipo_jornada: masterEmployee.tipo_jornada || 'Jornada Completa',
-        num_horas_jornada: masterEmployee.num_horas_jornada,
-        tipo_turno: masterEmployee.tipo_turno || 'Rotativo',
-        equipo: masterEmployee.equipo,
-        fecha_alta: masterEmployee.fecha_alta,
-        tipo_contrato: masterEmployee.tipo_contrato,
-        fecha_fin_contrato: masterEmployee.fecha_fin_contrato,
-        salario_anual: masterEmployee.salario_anual,
-        estado_empleado: masterEmployee.estado_empleado,
-        disponibilidad: masterEmployee.disponibilidad,
-      };
-
-      let employeeId;
-
-      if (masterEmployee.employee_id) {
-        await base44.entities.Employee.update(masterEmployee.employee_id, employeeData);
-        employeeId = masterEmployee.employee_id;
-      } else if (masterEmployee.codigo_empleado) {
-        const existing = await base44.entities.Employee.filter({ 
-          codigo_empleado: masterEmployee.codigo_empleado 
-        });
-        if (existing.length > 0) {
-          await base44.entities.Employee.update(existing[0].id, employeeData);
-          employeeId = existing[0].id;
-        } else {
-          const newEmployee = await base44.entities.Employee.create(employeeData);
-          employeeId = newEmployee.id;
-        }
-      } else {
-        const newEmployee = await base44.entities.Employee.create(employeeData);
-        employeeId = newEmployee.id;
+  const openSyncDialog = async (masterEmployee) => {
+    let existingEmployee = null;
+    
+    if (masterEmployee.employee_id) {
+      try {
+        existingEmployee = await base44.entities.Employee.filter({ id: masterEmployee.employee_id });
+        existingEmployee = existingEmployee[0] || null;
+      } catch (e) {
+        existingEmployee = null;
       }
-
-      await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
-        employee_id: employeeId,
-        ultimo_sincronizado: new Date().toISOString(),
-        estado_sincronizacion: 'Sincronizado'
+    } else if (masterEmployee.codigo_empleado) {
+      const existing = await base44.entities.Employee.filter({ 
+        codigo_empleado: masterEmployee.codigo_empleado 
       });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-    },
-  });
+      existingEmployee = existing[0] || null;
+    }
+    
+    setSelectedEmployee({ master: masterEmployee, existing: existingEmployee });
+    setSyncDialogOpen(true);
+  };
 
   const handleSyncAll = async () => {
+    if (!confirm(`¿Sincronizar ${masterEmployees.filter(e => e.estado_sincronizacion !== 'Sincronizado').length} empleados?`)) {
+      return;
+    }
+    
     setSyncing(true);
     const pending = masterEmployees.filter(e => e.estado_sincronizacion !== 'Sincronizado');
     
     for (const employee of pending) {
-      try {
-        await syncMutation.mutateAsync(employee);
-      } catch (error) {
-        console.error('Error syncing:', error);
-        await base44.entities.EmployeeMasterDatabase.update(employee.id, {
-          estado_sincronizacion: 'Error'
-        });
-      }
+      await openSyncDialog(employee);
     }
     
     setSyncing(false);
@@ -221,7 +184,7 @@ export default function MasterEmployeeDatabasePage() {
         </div>
 
         <Tabs defaultValue="import" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="import">
               <Upload className="w-4 h-4 mr-2" />
               Importar Datos
@@ -229,6 +192,10 @@ export default function MasterEmployeeDatabasePage() {
             <TabsTrigger value="database">
               <Database className="w-4 h-4 mr-2" />
               Base de Datos ({stats.total})
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <FileText className="w-4 h-4 mr-2" />
+              Historial
             </TabsTrigger>
           </TabsList>
 
@@ -328,17 +295,21 @@ export default function MasterEmployeeDatabasePage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
-                                {emp.estado_sincronizacion !== 'Sincronizado' && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => syncMutation.mutate(emp)}
-                                    disabled={syncMutation.isPending}
-                                  >
-                                    <RefreshCw className="w-3 h-3 mr-1" />
-                                    Sincronizar
-                                  </Button>
-                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openSyncDialog(emp)}
+                                >
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                  Sincronizar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setHistoryEmployeeId(emp.id)}
+                                >
+                                  <FileText className="w-3 h-3" />
+                                </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -361,8 +332,47 @@ export default function MasterEmployeeDatabasePage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="history">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle>Historial de Sincronizaciones</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {historyEmployeeId ? (
+                  <div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setHistoryEmployeeId(null)}
+                      className="mb-4"
+                    >
+                      ← Volver a la lista
+                    </Button>
+                    <SyncHistoryPanel masterEmployeeId={historyEmployeeId} />
+                  </div>
+                ) : (
+                  <p className="text-center text-slate-500 py-8">
+                    Selecciona un empleado desde la tabla para ver su historial
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
+
+      {syncDialogOpen && selectedEmployee && (
+        <SyncComparisonDialog
+          masterEmployee={selectedEmployee.master}
+          existingEmployee={selectedEmployee.existing}
+          open={syncDialogOpen}
+          onClose={() => {
+            setSyncDialogOpen(false);
+            setSelectedEmployee(null);
+          }}
+        />
+      )}
     </div>
   );
 }
