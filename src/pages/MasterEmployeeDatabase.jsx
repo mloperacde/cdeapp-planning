@@ -83,18 +83,114 @@ export default function MasterEmployeeDatabasePage() {
   };
 
   const handleSyncAll = async () => {
-    if (!confirm(`¿Sincronizar ${masterEmployees.filter(e => e.estado_sincronizacion !== 'Sincronizado').length} empleados?`)) {
+    const pending = masterEmployees.filter(e => e.estado_sincronizacion !== 'Sincronizado');
+    
+    if (!confirm(`¿Sincronizar automáticamente ${pending.length} empleados? Se sincronizarán todos los campos disponibles.`)) {
       return;
     }
     
     setSyncing(true);
-    const pending = masterEmployees.filter(e => e.estado_sincronizacion !== 'Sincronizado');
+    const user = await base44.auth.me().catch(() => null);
+    let successCount = 0;
+    let errorCount = 0;
     
-    for (const employee of pending) {
-      await openSyncDialog(employee);
+    try {
+      for (const masterEmployee of pending) {
+        try {
+          // Buscar empleado existente
+          let existingEmployee = null;
+          if (masterEmployee.employee_id) {
+            const result = await base44.entities.Employee.filter({ id: masterEmployee.employee_id });
+            existingEmployee = result[0] || null;
+          } else if (masterEmployee.codigo_empleado) {
+            const result = await base44.entities.Employee.filter({ 
+              codigo_empleado: masterEmployee.codigo_empleado 
+            });
+            existingEmployee = result[0] || null;
+          }
+
+          // Preparar datos para sincronizar
+          const dataToSync = {};
+          Object.keys(masterEmployee).forEach(key => {
+            if (!['id', 'created_date', 'updated_date', 'created_by', 'employee_id', 'ultimo_sincronizado', 'estado_sincronizacion'].includes(key)) {
+              if (masterEmployee[key] !== null && masterEmployee[key] !== undefined && masterEmployee[key] !== '') {
+                dataToSync[key] = masterEmployee[key];
+              }
+            }
+          });
+
+          let employeeId;
+          let syncType;
+
+          // Crear o actualizar en Employee
+          if (existingEmployee) {
+            await base44.entities.Employee.update(existingEmployee.id, dataToSync);
+            employeeId = existingEmployee.id;
+            syncType = 'Sincronización Total';
+          } else {
+            const newEmployee = await base44.entities.Employee.create(dataToSync);
+            employeeId = newEmployee.id;
+            syncType = 'Creación';
+          }
+
+          // Actualizar estado en MasterDatabase
+          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
+            employee_id: employeeId,
+            ultimo_sincronizado: new Date().toISOString(),
+            estado_sincronizacion: 'Sincronizado'
+          });
+
+          // Crear historial
+          await base44.entities.EmployeeSyncHistory.create({
+            master_employee_id: masterEmployee.id,
+            employee_id: employeeId,
+            sync_date: new Date().toISOString(),
+            sync_type: syncType,
+            fields_synced: Object.keys(dataToSync),
+            status: 'Exitoso',
+            synced_by: user?.email || 'Sistema'
+          });
+
+          successCount++;
+
+          // Delay para evitar rate limit
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+        } catch (error) {
+          console.error('Error syncing employee:', masterEmployee.nombre, error);
+          
+          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
+            estado_sincronizacion: 'Error'
+          });
+
+          await base44.entities.EmployeeSyncHistory.create({
+            master_employee_id: masterEmployee.id,
+            sync_date: new Date().toISOString(),
+            sync_type: 'Sincronización Total',
+            status: 'Error',
+            error_message: error.message,
+            synced_by: user?.email || 'Sistema'
+          });
+
+          errorCount++;
+          
+          // Delay incluso en error
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['syncHistory'] });
+
+      alert(`Sincronización completada:\n✅ ${successCount} exitosos\n❌ ${errorCount} errores`);
+
+    } catch (error) {
+      console.error('Error general en sincronización:', error);
+      alert('Error durante la sincronización masiva: ' + error.message);
+    } finally {
+      setSyncing(false);
     }
-    
-    setSyncing(false);
   };
 
   const filteredEmployees = masterEmployees.filter(emp =>
