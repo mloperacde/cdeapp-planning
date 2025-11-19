@@ -448,13 +448,23 @@ export default function DataImportPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Upload className="w-8 h-8 text-blue-600" />
-            Importación de Datos
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Importa datos masivos desde archivos Excel o CSV
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                <Upload className="w-8 h-8 text-blue-600" />
+                Importación de Datos
+              </h1>
+              <p className="text-slate-600 mt-1">
+                Importa datos masivos desde archivos Excel o CSV
+              </p>
+            </div>
+            <Link to={createPageUrl("DirectDataEntry")}>
+              <Button variant="outline" className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Entrada Manual (Alternativa)
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Tabs defaultValue="employees" className="space-y-6">
