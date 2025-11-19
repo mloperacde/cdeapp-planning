@@ -182,6 +182,9 @@ export default function MasterEmployeeImport() {
             createdCount++;
           }
 
+          // Delay para evitar rate limit
+          await new Promise(resolve => setTimeout(resolve, 200));
+
         } catch (error) {
           errors.push({ 
             fila: i + 1, 
