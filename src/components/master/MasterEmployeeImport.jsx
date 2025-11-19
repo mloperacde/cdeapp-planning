@@ -79,32 +79,85 @@ export default function MasterEmployeeImport() {
         });
 
         try {
-          const employeeData = {
-            codigo_empleado: row['Código Empleado'] || row['codigo_empleado'] || '',
-            nombre: row['Nombre'] || row['nombre'] || '',
-            dni: row['DNI'] || row['dni'] || '',
-            nuss: row['NUSS'] || row['nuss'] || '',
-            email: row['Email'] || row['email'] || '',
-            telefono_movil: row['Teléfono'] || row['telefono_movil'] || '',
-            fecha_nacimiento: row['Fecha Nacimiento'] || row['fecha_nacimiento'] || '',
-            sexo: row['Sexo'] || row['sexo'] || '',
-            nacionalidad: row['Nacionalidad'] || row['nacionalidad'] || '',
-            direccion: row['Dirección'] || row['direccion'] || '',
-            departamento: row['Departamento'] || row['departamento'] || '',
-            puesto: row['Puesto'] || row['puesto'] || '',
-            categoria: row['Categoría'] || row['categoria'] || '',
-            tipo_jornada: row['Tipo Jornada'] || row['tipo_jornada'] || 'Jornada Completa',
-            num_horas_jornada: row['Horas Jornada'] || row['num_horas_jornada'] || '',
-            tipo_turno: row['Tipo Turno'] || row['tipo_turno'] || 'Rotativo',
-            equipo: row['Equipo'] || row['equipo'] || '',
-            fecha_alta: row['Fecha Alta'] || row['fecha_alta'] || '',
-            tipo_contrato: row['Tipo Contrato'] || row['tipo_contrato'] || '',
-            fecha_fin_contrato: row['Fecha Fin Contrato'] || row['fecha_fin_contrato'] || '',
-            salario_anual: row['Salario Anual'] || row['salario_anual'] || '',
-            estado_empleado: row['Estado'] || row['estado_empleado'] || 'Alta',
-            disponibilidad: row['Disponibilidad'] || row['disponibilidad'] || 'Disponible',
-            estado_sincronizacion: 'Pendiente'
+          const employeeData = {};
+          
+          // Mapear todos los campos del CSV a la entidad
+          const fieldMapping = {
+            'codigo_empleado': row['codigo_empleado'] || '',
+            'nombre': row['nombre'] || '',
+            'estado_empleado': row['estado_empleado'] || 'Alta',
+            'fecha_baja': row['fecha_baja'] || '',
+            'motivo_baja': row['motivo_baja'] || '',
+            'tasa_absentismo': row['tasa_absentismo'] ? parseFloat(row['tasa_absentismo']) : null,
+            'horas_no_trabajadas': row['horas_no_trabajadas'] ? parseFloat(row['horas_no_trabajadas']) : 0,
+            'horas_deberian_trabajarse': row['horas_deberian_trabajarse'] ? parseFloat(row['horas_deberian_trabajarse']) : 0,
+            'ultima_actualizacion_absentismo': row['ultima_actualizacion_absentismo'] || '',
+            'fecha_nacimiento': row['fecha_nacimiento'] || '',
+            'dni': row['dni'] || '',
+            'nuss': row['nuss'] || '',
+            'sexo': row['sexo'] || '',
+            'nacionalidad': row['nacionalidad'] || '',
+            'direccion': row['direccion'] || '',
+            'formacion': row['formacion'] || '',
+            'email': row['email'] || '',
+            'telefono_movil': row['telefono_movil'] || '',
+            'contacto_emergencia_nombre': row['contacto_emergencia_nombre'] || '',
+            'contacto_emergencia_telefono': row['contacto_emergencia_telefono'] || '',
+            'department_id': row['department_id'] || '',
+            'position_id': row['position_id'] || '',
+            'categoria': row['categoria'] || '',
+            'tipo_jornada': row['tipo_jornada'] || 'Jornada Completa',
+            'num_horas_jornada': row['num_horas_jornada'] ? parseFloat(row['num_horas_jornada']) : null,
+            'tipo_turno': row['tipo_turno'] || 'Rotativo',
+            'team_id': row['team_id'] || '',
+            'horario_manana_inicio': row['horario_manana_inicio'] || '',
+            'horario_manana_fin': row['horario_manana_fin'] || '',
+            'horario_tarde_inicio': row['horario_tarde_inicio'] || '',
+            'horario_tarde_fin': row['horario_tarde_fin'] || '',
+            'turno_partido_entrada1': row['turno_partido_entrada1'] || '',
+            'turno_partido_salida1': row['turno_partido_salida1'] || '',
+            'turno_partido_entrada2': row['turno_partido_entrada2'] || '',
+            'turno_partido_salida2': row['turno_partido_salida2'] || '',
+            'taquilla_vestuario': row['taquilla_vestuario'] || '',
+            'taquilla_numero': row['taquilla_numero'] || '',
+            'disponibilidad': row['disponibilidad'] || 'Disponible',
+            'ausencia_inicio': row['ausencia_inicio'] || '',
+            'ausencia_fin': row['ausencia_fin'] || '',
+            'ausencia_motivo': row['ausencia_motivo'] || '',
+            'incluir_en_planning': row['incluir_en_planning'] === 'true' || row['incluir_en_planning'] === '1' || row['incluir_en_planning'] === 'si',
+            'fecha_alta': row['fecha_alta'] || '',
+            'tipo_contrato': row['tipo_contrato'] || '',
+            'codigo_contrato': row['codigo_contrato'] || '',
+            'fecha_fin_contrato': row['fecha_fin_contrato'] || '',
+            'empresa_ett': row['empresa_ett'] || '',
+            'salario_anual': row['salario_anual'] ? parseFloat(row['salario_anual']) : null,
+            'evaluacion_responsable': row['evaluacion_responsable'] || '',
+            'propuesta_cambio_categoria': row['propuesta_cambio_categoria'] || '',
+            'propuesta_cambio_quien': row['propuesta_cambio_quien'] || '',
+            'horas_causa_mayor_consumidas': row['horas_causa_mayor_consumidas'] ? parseFloat(row['horas_causa_mayor_consumidas']) : 0,
+            'horas_causa_mayor_limite': row['horas_causa_mayor_limite'] ? parseFloat(row['horas_causa_mayor_limite']) : null,
+            'ultimo_reset_causa_mayor': row['ultimo_reset_causa_mayor'] || '',
+            'maquina_1': row['maquina_1'] || '',
+            'maquina_2': row['maquina_2'] || '',
+            'maquina_3': row['maquina_3'] || '',
+            'maquina_4': row['maquina_4'] || '',
+            'maquina_5': row['maquina_5'] || '',
+            'maquina_6': row['maquina_6'] || '',
+            'maquina_7': row['maquina_7'] || '',
+            'maquina_8': row['maquina_8'] || '',
+            'maquina_9': row['maquina_9'] || '',
+            'maquina_10': row['maquina_10'] || ''
           };
+          
+          // Solo agregar campos que no estén vacíos (o que sean números válidos)
+          Object.keys(fieldMapping).forEach(key => {
+            const value = fieldMapping[key];
+            if (value !== '' && value !== null && value !== undefined) {
+              employeeData[key] = value;
+            }
+          });
+          
+          employeeData.estado_sincronizacion = 'Pendiente';
 
           if (!employeeData.nombre) {
             errors.push({ fila: i + 1, error: 'Nombre es obligatorio', row });
