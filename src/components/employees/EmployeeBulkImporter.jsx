@@ -37,9 +37,9 @@ export default function EmployeeBulkImporter() {
     initialData: [],
   });
 
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts'],
-    queryFn: () => base44.entities.Shift.list(),
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
 
@@ -53,9 +53,9 @@ export default function EmployeeBulkImporter() {
   };
 
   const downloadTemplate = () => {
-    const template = `codigo_empleado,nombre,email,telefono_movil,fecha_nacimiento,dni,nuss,sexo,nacionalidad,direccion,formacion,departamento,puesto,categoria,tipo_jornada,num_horas_jornada,tipo_turno,turno,fecha_alta,tipo_contrato,codigo_contrato,empresa_ett,salario_anual,estado_empleado
-EMP001,Juan Pérez,juan.perez@empresa.com,666111222,1990-05-15,12345678A,123456789012,Masculino,Española,Calle Falsa 123,Grado en Ingeniería,Fabricación,Operador de Línea,Operario,Jornada Completa,40,Fijo Mañana,,2020-01-15,Indefinido,CONT001,,25000,Alta
-EMP002,María García,maria.garcia@empresa.com,666333444,1985-08-20,87654321B,210987654321,Femenino,Española,Avenida Principal 456,Formación Profesional,Fabricación,Segunda de Línea,Técnico,Jornada Completa,40,Rotativo,,2019-03-10,Indefinido,CONT002,,30000,Alta`;
+    const template = `codigo_empleado,nombre,email,telefono_movil,fecha_nacimiento,dni,nuss,sexo,nacionalidad,direccion,formacion,departamento,puesto,categoria,tipo_jornada,num_horas_jornada,tipo_turno,equipo,horario_manana_inicio,horario_manana_fin,horario_tarde_inicio,horario_tarde_fin,turno_partido_entrada1,turno_partido_salida1,turno_partido_entrada2,turno_partido_salida2,taquilla_vestuario,taquilla_numero,disponibilidad,incluir_en_planning,fecha_alta,tipo_contrato,codigo_contrato,fecha_fin_contrato,empresa_ett,salario_anual,evaluacion_responsable,propuesta_cambio_categoria,propuesta_cambio_quien,contacto_emergencia_nombre,contacto_emergencia_telefono,maquina_1,maquina_2,maquina_3,maquina_4,maquina_5,maquina_6,maquina_7,maquina_8,maquina_9,maquina_10,estado_empleado,fecha_baja,motivo_baja
+EMP001,Juan Pérez,juan.perez@empresa.com,666111222,1990-05-15,12345678A,123456789012,Masculino,Española,Calle Falsa 123,Grado en Ingeniería,Fabricación,Operador de Línea,Operario,Jornada Completa,40,Fijo Mañana,Equipo 1,06:00,14:00,14:00,22:00,,,,,,,,Disponible,true,2020-01-15,Indefinido,CONT001,,ETT S.L.,25000,,,,,,,,,,,,,,,Alta,,
+EMP002,María García,maria.garcia@empresa.com,666333444,1985-08-20,87654321B,210987654321,Femenino,Española,Avenida Principal 456,Formación Profesional,Fabricación,Segunda de Línea,Técnico,Jornada Completa,40,Rotativo,Equipo 2,06:00,14:00,14:00,22:00,,,,,,,,Disponible,true,2019-03-10,Indefinido,CONT002,,ETT S.L.,30000,,,,,,,,,,,,,,,Alta,,`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -118,10 +118,11 @@ EMP002,María García,maria.garcia@empresa.com,666333444,1985-08-20,87654321B,21
       }
     }
 
-    if (emp.turno) {
-      const shift = shifts.find(s => s.nombre === emp.turno || s.codigo === emp.turno);
-      if (shift) {
-        emp.shift_id = shift.id;
+    // Buscar team_id por nombre de equipo
+    if (emp.equipo) {
+      const team = queryClient.getQueryData(['teamConfigs'])?.find(t => t.team_name === emp.equipo || t.team_key === emp.equipo);
+      if (team) {
+        emp.team_id = team.id;
       }
     }
 
@@ -169,13 +170,43 @@ EMP002,María García,maria.garcia@empresa.com,666333444,1985-08-20,87654321B,21
             tipo_jornada: { type: "string" },
             num_horas_jornada: { type: "number" },
             tipo_turno: { type: "string" },
-            turno: { type: "string" },
+            equipo: { type: "string" },
+            horario_manana_inicio: { type: "string" },
+            horario_manana_fin: { type: "string" },
+            horario_tarde_inicio: { type: "string" },
+            horario_tarde_fin: { type: "string" },
+            turno_partido_entrada1: { type: "string" },
+            turno_partido_salida1: { type: "string" },
+            turno_partido_entrada2: { type: "string" },
+            turno_partido_salida2: { type: "string" },
+            taquilla_vestuario: { type: "string" },
+            taquilla_numero: { type: "string" },
+            disponibilidad: { type: "string" },
+            incluir_en_planning: { type: "boolean" },
             fecha_alta: { type: "string" },
             tipo_contrato: { type: "string" },
             codigo_contrato: { type: "string" },
+            fecha_fin_contrato: { type: "string" },
             empresa_ett: { type: "string" },
             salario_anual: { type: "number" },
-            estado_empleado: { type: "string" }
+            evaluacion_responsable: { type: "string" },
+            propuesta_cambio_categoria: { type: "string" },
+            propuesta_cambio_quien: { type: "string" },
+            contacto_emergencia_nombre: { type: "string" },
+            contacto_emergencia_telefono: { type: "string" },
+            maquina_1: { type: "string" },
+            maquina_2: { type: "string" },
+            maquina_3: { type: "string" },
+            maquina_4: { type: "string" },
+            maquina_5: { type: "string" },
+            maquina_6: { type: "string" },
+            maquina_7: { type: "string" },
+            maquina_8: { type: "string" },
+            maquina_9: { type: "string" },
+            maquina_10: { type: "string" },
+            estado_empleado: { type: "string" },
+            fecha_baja: { type: "string" },
+            motivo_baja: { type: "string" }
           }
         }
       };
@@ -208,10 +239,10 @@ EMP002,María García,maria.garcia@empresa.com,666333444,1985-08-20,87654321B,21
         if (empErrors.length > 0) {
           allErrors.push(...empErrors);
         } else {
-          // Limpiar campos que no deben ir a la BD
+          // Limpiar campos de texto que se convirtieron a IDs
           delete emp.departamento;
           delete emp.puesto;
-          delete emp.turno;
+          delete emp.equipo;
           
           // Establecer valores por defecto
           if (!emp.estado_empleado) emp.estado_empleado = "Alta";
@@ -373,7 +404,7 @@ EMP002,María García,maria.garcia@empresa.com,666333444,1985-08-20,87654321B,21
                 <p className="font-medium">Puestos: {positions.length}</p>
               </div>
               <div className="p-2 bg-slate-50 rounded">
-                <p className="font-medium">Turnos: {shifts.length}</p>
+                <p className="font-medium">Equipos: {teams.length}</p>
               </div>
             </div>
             <p className="text-xs text-slate-600 italic">
