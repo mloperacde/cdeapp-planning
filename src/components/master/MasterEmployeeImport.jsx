@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Download, CheckCircle2, AlertCircle, Loader2, Users, Database } from "lucide-react";
-import * as XLSX from 'xlsx';
 
 export default function MasterEmployeeImport() {
   const [file, setFile] = useState(null);
@@ -51,17 +50,8 @@ export default function MasterEmployeeImport() {
     setProgress({ stage: 'reading', message: 'Leyendo archivo...' });
 
     try {
-      let extractedData = [];
-
-      if (file.name.endsWith('.csv')) {
-        const text = await file.text();
-        extractedData = parseCSV(text);
-      } else {
-        const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        extractedData = XLSX.utils.sheet_to_json(firstSheet);
-      }
+      const text = await file.text();
+      const extractedData = parseCSV(text);
 
       if (extractedData.length === 0) {
         throw new Error('El archivo no contiene datos');
@@ -172,38 +162,29 @@ export default function MasterEmployeeImport() {
   };
 
   const downloadTemplate = () => {
-    const template = [
-      {
-        'Código Empleado': 'EMP001',
-        'Nombre': 'Juan Pérez García',
-        'DNI': '12345678A',
-        'NUSS': '12-3456789012-34',
-        'Email': 'juan.perez@empresa.com',
-        'Teléfono': '600123456',
-        'Fecha Nacimiento': '1990-01-15',
-        'Sexo': 'Masculino',
-        'Nacionalidad': 'Española',
-        'Dirección': 'Calle Principal 123',
-        'Departamento': 'FABRICACION',
-        'Puesto': 'Operario',
-        'Categoría': 'Categoría 1',
-        'Tipo Jornada': 'Jornada Completa',
-        'Horas Jornada': '40',
-        'Tipo Turno': 'Rotativo',
-        'Equipo': 'Equipo Turno Isa',
-        'Fecha Alta': '2024-01-01',
-        'Tipo Contrato': 'Indefinido',
-        'Fecha Fin Contrato': '',
-        'Salario Anual': '25000',
-        'Estado': 'Alta',
-        'Disponibilidad': 'Disponible'
-      }
+    const headers = [
+      'Código Empleado', 'Nombre', 'DNI', 'NUSS', 'Email', 'Teléfono',
+      'Fecha Nacimiento', 'Sexo', 'Nacionalidad', 'Dirección', 'Departamento',
+      'Puesto', 'Categoría', 'Tipo Jornada', 'Horas Jornada', 'Tipo Turno',
+      'Equipo', 'Fecha Alta', 'Tipo Contrato', 'Fecha Fin Contrato',
+      'Salario Anual', 'Estado', 'Disponibilidad'
+    ];
+    
+    const exampleData = [
+      'EMP001', 'Juan Pérez García', '12345678A', '12-3456789012-34',
+      'juan.perez@empresa.com', '600123456', '1990-01-15', 'Masculino',
+      'Española', 'Calle Principal 123', 'FABRICACION', 'Operario',
+      'Categoría 1', 'Jornada Completa', '40', 'Rotativo',
+      'Equipo Turno Isa', '2024-01-01', 'Indefinido', '',
+      '25000', 'Alta', 'Disponible'
     ];
 
-    const ws = XLSX.utils.json_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
-    XLSX.writeFile(wb, 'Plantilla_Base_Datos_Empleados.xlsx');
+    const csvContent = headers.join(',') + '\n' + exampleData.join(',');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'Plantilla_Base_Datos_Empleados.csv';
+    link.click();
   };
 
   return (
@@ -214,7 +195,7 @@ export default function MasterEmployeeImport() {
           Base de Datos Maestra de Empleados
         </CardTitle>
         <p className="text-sm text-slate-600 mt-1">
-          Importa y gestiona el archivo maestro de empleados desde Excel o CSV
+          Importa y gestiona el archivo maestro de empleados desde CSV
         </p>
       </CardHeader>
       <CardContent className="p-6">
@@ -225,7 +206,7 @@ export default function MasterEmployeeImport() {
               <Download className="w-5 h-5 text-blue-600" />
               <div>
                 <p className="font-semibold text-blue-900">Plantilla de Importación</p>
-                <p className="text-xs text-blue-700">Descarga la plantilla Excel con el formato correcto</p>
+                <p className="text-xs text-blue-700">Descarga la plantilla CSV con el formato correcto</p>
               </div>
             </div>
             <Button onClick={downloadTemplate} variant="outline" className="border-blue-300">
@@ -236,11 +217,11 @@ export default function MasterEmployeeImport() {
 
           {/* File Upload */}
           <div className="space-y-2">
-            <Label htmlFor="file">Seleccionar archivo Excel o CSV</Label>
+            <Label htmlFor="file">Seleccionar archivo CSV</Label>
             <Input
               id="file"
               type="file"
-              accept=".xlsx,.xls,.csv"
+              accept=".csv"
               onChange={handleFileChange}
               disabled={importing}
             />
@@ -339,7 +320,8 @@ export default function MasterEmployeeImport() {
             <AlertDescription className="text-sm text-slate-700">
               <p className="font-semibold mb-1">📋 Instrucciones:</p>
               <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>Descarga la plantilla Excel y complétala con los datos de empleados</li>
+                <li>Descarga la plantilla CSV y complétala con los datos de empleados</li>
+                <li>Usa comas (,) o punto y coma (;) como separador de campos</li>
                 <li>Cada fila representa un empleado en la base de datos maestra</li>
                 <li>Los empleados con código existente serán actualizados, los nuevos serán creados</li>
                 <li>Los datos importados quedarán pendientes de sincronización con el sistema operativo</li>
