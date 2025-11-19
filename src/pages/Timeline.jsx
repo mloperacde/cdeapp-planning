@@ -8,6 +8,7 @@ import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { Sparkles } from "lucide-react";
+import WorkCalendar from "../components/absences/WorkCalendar";
 
 export default function Timeline() {
   const now = new Date();
@@ -142,6 +143,8 @@ export default function Timeline() {
               selectedDepartment={selectedDepartment}
             />
           </Card>
+
+          <WorkCalendar />
         </motion.div>
       </div>
     </div>

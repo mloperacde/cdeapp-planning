@@ -106,24 +106,6 @@ export default function MachinePlanningPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: departments = [] } = useQuery({
-    queryKey: ['departments'],
-    queryFn: () => base44.entities.Department.list(),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const { data: positions = [] } = useQuery({
-    queryKey: ['positions'],
-    queryFn: () => base44.entities.Position.list(),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const { data: absences = [] } = useQuery({
-    queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list(),
-    staleTime: 2 * 60 * 1000,
-  });
-
   const savePlanningMutation = useMutation({
     mutationFn: async (data) => {
       const existing = plannings.find(
@@ -145,9 +127,9 @@ export default function MachinePlanningPage() {
       queryClient.invalidateQueries({ queryKey: ['machinePlannings'] });
       
       // Notificaciones en segundo plano (no bloqueantes)
-      const selectedTeamConfig = teams.find(t => t.team_key === variables.team_key);
-      if (selectedTeamConfig) {
-        const teamEmployees = employees.filter(e => e.team_id === selectedTeamConfig.id);
+      const teamName = teams.find(t => t.team_key === variables.team_key)?.team_name;
+      if (teamName) {
+        const teamEmployees = employees.filter(e => e.equipo === teamName);
         const employeeIds = teamEmployees.map(e => e.id);
         
         notifyMachinePlanningChange(
@@ -274,39 +256,10 @@ export default function MachinePlanningPage() {
     setAgentResult(null);
     
     try {
-      const selectedTeamConfig = teams.find(t => t.team_key === selectedTeam);
-      
-      // Filtrar empleados según criterios del agente y verificar ausencias
-      const fabricacionDept = departments.find(d => d.nombre === "Fabricación");
-      const planningDate = new Date(selectedDate);
-      planningDate.setHours(0, 0, 0, 0);
-
-      const availableEmployees = employees.filter(e => {
-        if (e.team_id !== selectedTeamConfig?.id) return false;
-        if (e.department_id !== fabricacionDept?.id) return false;
-        if (e.incluir_en_planning === false) return false;
-        if (e.estado_empleado === "Baja") return false;
-
-        // Verificar ausencias
-        const hasAbsence = absences.some(abs => {
-          if (abs.employee_id !== e.id) return false;
-          if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
-          
-          const absStart = new Date(abs.fecha_inicio);
-          absStart.setHours(0, 0, 0, 0);
-          
-          const absEnd = abs.fecha_fin ? new Date(abs.fecha_fin) : null;
-          if (absEnd) absEnd.setHours(23, 59, 59, 999);
-          
-          if (absEnd) {
-            return planningDate >= absStart && planningDate <= absEnd;
-          } else {
-            return planningDate >= absStart;
-          }
-        });
-
-        return !hasAbsence;
-      });
+      const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+      const availableEmployees = employees.filter(e => 
+        e.equipo === teamName && e.disponibilidad === "Disponible"
+      );
 
       const activePlannings = activeMachines.map(p => {
         const machine = machines.find(m => m.id === p.machine_id);
@@ -320,52 +273,18 @@ export default function MachinePlanningPage() {
         };
       });
 
-      const employeesData = availableEmployees.map(e => {
-        const position = positions.find(p => p.id === e.position_id);
-        return {
-          id: e.id,
-          nombre: e.nombre,
-          position_id: e.position_id,
-          position_tipo: position?.tipo,
-          department_id: e.department_id,
-          team_id: e.team_id,
-          maquina_1: e.maquina_1,
-          maquina_2: e.maquina_2,
-          maquina_3: e.maquina_3,
-          maquina_4: e.maquina_4,
-          maquina_5: e.maquina_5,
-          maquina_6: e.maquina_6,
-          maquina_7: e.maquina_7,
-          maquina_8: e.maquina_8,
-          maquina_9: e.maquina_9,
-          maquina_10: e.maquina_10
-        };
-      });
-
       const prompt = `Genera asignaciones para máquinas planificadas:
       
 Fecha: ${selectedDate}
-Equipo: ${selectedTeamConfig?.team_name}
-Team ID: ${selectedTeamConfig?.id}
-Departamento Fabricación ID: ${fabricacionDept?.id}
-
+Equipo: ${teamName}
 Máquinas activas: ${JSON.stringify(activePlannings)}
+Operadores disponibles: ${JSON.stringify(availableEmployees.map(e => ({ id: e.id, nombre: e.nombre, puesto: e.puesto })))}
 
-Empleados disponibles (ya filtrados por departamento Fabricación y equipo correcto):
-${JSON.stringify(employeesData)}
-
-Posiciones disponibles:
-${JSON.stringify(positions.map(p => ({ id: p.id, nombre: p.nombre, tipo: p.tipo })))}
-
-INSTRUCCIONES CRÍTICAS:
-1. FILTRAR por puesto (position_tipo):
-   - Responsable de Línea: SOLO empleados con position_tipo="Responsable de Línea"
-   - Segunda de Línea: SOLO empleados con position_tipo="Segunda de Línea"
-   - Operadores: SOLO empleados con position_tipo="Operador de Línea"
-2. Cada empleado SOLO en UNA máquina (sin repeticiones)
-3. Prioriza experiencia (maquina_1 es la máquina con más experiencia)
-4. Si no hay suficientes empleados del puesto requerido, deja como null
-5. Retorna JSON con estructura exacta`;
+INSTRUCCIONES:
+1. Asigna a cada máquina: 1 responsable de línea, 1 segunda de línea, y los operadores necesarios
+2. Prioriza experiencia (campos maquina_1 a maquina_10 del empleado)
+3. Balancea carga de trabajo
+4. Retorna JSON con estructura exacta`;
 
       const response = await base44.integrations.Core.InvokeLLM({
         prompt,
@@ -390,7 +309,7 @@ INSTRUCCIONES CRÍTICAS:
 
       setAgentResult({
         fecha: selectedDate,
-        equipo: selectedTeamConfig?.team_name,
+        equipo: teamName,
         maquinas_activas: activeMachines.length,
         total_operadores_necesarios: totalOperators,
         total_operadores_asignados: response.asignaciones?.reduce((sum, a) => 
@@ -446,45 +365,17 @@ INSTRUCCIONES CRÍTICAS:
     return activeMachines.reduce((sum, p) => sum + (p.operadores_necesarios || 0), 0);
   }, [activeMachines]);
 
-  // Calcular operarios disponibles del departamento Fabricación verificando ausencias
+  // Calcular operarios disponibles
   const availableOperators = useMemo(() => {
-    const selectedTeamConfig = teams.find(t => t.team_key === selectedTeam);
-    if (!selectedTeamConfig) return 0;
+    // Filtrar empleados del equipo seleccionado que estén disponibles
+    const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+    if (!teamName) return 0;
 
-    const fabricacionDept = departments.find(d => d.nombre === "Fabricación");
-    if (!fabricacionDept) return 0;
-
-    const planningDate = new Date(selectedDate);
-    planningDate.setHours(0, 0, 0, 0);
-
-    return employees.filter(emp => {
-      // Filtros básicos
-      if (emp.team_id !== selectedTeamConfig.id) return false;
-      if (emp.department_id !== fabricacionDept.id) return false;
-      if (emp.incluir_en_planning === false) return false;
-      if (emp.estado_empleado === "Baja") return false;
-
-      // Verificar ausencias en la fecha de planificación
-      const hasAbsence = absences.some(abs => {
-        if (abs.employee_id !== emp.id) return false;
-        if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
-        
-        const absStart = new Date(abs.fecha_inicio);
-        absStart.setHours(0, 0, 0, 0);
-        
-        const absEnd = abs.fecha_fin ? new Date(abs.fecha_fin) : null;
-        if (absEnd) absEnd.setHours(23, 59, 59, 999);
-        
-        if (absEnd) {
-          return planningDate >= absStart && planningDate <= absEnd;
-        } else {
-          return planningDate >= absStart;
-        }
-      });
-
-      return !hasAbsence;
-    }).length;
-  }, [employees, selectedTeam, teams, departments, absences, selectedDate]);
+    return employees.filter(emp =>
+      emp.equipo === teamName &&
+      emp.disponibilidad === "Disponible"
+    ).length;
+  }, [employees, selectedTeam, teams]);
 
   const operatorsDeficit = totalOperators - availableOperators;
 

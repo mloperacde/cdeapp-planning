@@ -112,16 +112,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     initialData: [],
   });
 
-  const { data: departments = [] } = useQuery({
-    queryKey: ['departments'],
-    queryFn: () => base44.entities.Department.list('nombre'),
-  });
-
-  const { data: positions = [] } = useQuery({
-    queryKey: ['positions'],
-    queryFn: () => base44.entities.Position.list('nombre'),
-  });
-
   const { data: absences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
@@ -225,8 +215,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const isAbsent = formData.disponibilidad === "Ausente";
   const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
   const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
-  const selectedDept = departments.find(d => d.id === formData.department_id);
-  const isMaintenanceDepartment = selectedDept?.nombre?.toUpperCase().includes("MANTENIMIENTO");
+  const isMaintenanceDepartment = formData.departamento === "MANTENIMIENTO";
   const isETT = formData.tipo_contrato?.toUpperCase().includes("ETT");
   const isBaja = formData.estado_empleado === "Baja"; // New derived state
 
@@ -444,41 +433,21 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="department_id">Departamento</Label>
-                  <Select
-                    value={formData.department_id || ""}
-                    onValueChange={(value) => setFormData({ ...formData, department_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar departamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {dept.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="departamento">Departamento</Label>
+                  <Input
+                    id="departamento"
+                    value={formData.departamento || ""}
+                    onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="position_id">Puesto</Label>
-                  <Select
-                    value={formData.position_id || ""}
-                    onValueChange={(value) => setFormData({ ...formData, position_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar puesto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {positions.map((pos) => (
-                        <SelectItem key={pos.id} value={pos.id}>
-                          {pos.nombre} {pos.tipo && `(${pos.tipo})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="puesto">Puesto</Label>
+                  <Input
+                    id="puesto"
+                    value={formData.puesto || ""}
+                    onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
+                  />
                 </div>
 
                 <div className="space-y-2">
