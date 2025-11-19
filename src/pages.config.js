@@ -56,6 +56,7 @@ import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import PositionManagement from './pages/PositionManagement';
 import DepartmentManagement from './pages/DepartmentManagement';
 import ProductionDashboard from './pages/ProductionDashboard';
+import EmployeeBulkImport from './pages/EmployeeBulkImport';
 import __Layout from './Layout.jsx';
 
 
@@ -118,6 +119,7 @@ export const PAGES = {
     "PositionManagement": PositionManagement,
     "DepartmentManagement": DepartmentManagement,
     "ProductionDashboard": ProductionDashboard,
+    "EmployeeBulkImport": EmployeeBulkImport,
 }
 
 export const pagesConfig = {
