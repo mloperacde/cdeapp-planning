@@ -118,6 +118,12 @@ export default function MachinePlanningPage() {
     staleTime: 10 * 60 * 1000,
   });
 
+  const { data: absences = [] } = useQuery({
+    queryKey: ['absences'],
+    queryFn: () => base44.entities.Absence.list(),
+    staleTime: 2 * 60 * 1000,
+  });
+
   const savePlanningMutation = useMutation({
     mutationFn: async (data) => {
       const existing = plannings.find(
@@ -270,13 +276,37 @@ export default function MachinePlanningPage() {
     try {
       const selectedTeamConfig = teams.find(t => t.team_key === selectedTeam);
       
-      // Filtrar empleados según criterios del agente
+      // Filtrar empleados según criterios del agente y verificar ausencias
       const fabricacionDept = departments.find(d => d.nombre === "Fabricación");
-      const availableEmployees = employees.filter(e => 
-        e.team_id === selectedTeamConfig?.id &&
-        e.disponibilidad === "Disponible" &&
-        e.department_id === fabricacionDept?.id
-      );
+      const planningDate = new Date(selectedDate);
+      planningDate.setHours(0, 0, 0, 0);
+
+      const availableEmployees = employees.filter(e => {
+        if (e.team_id !== selectedTeamConfig?.id) return false;
+        if (e.department_id !== fabricacionDept?.id) return false;
+        if (e.incluir_en_planning === false) return false;
+        if (e.estado_empleado === "Baja") return false;
+
+        // Verificar ausencias
+        const hasAbsence = absences.some(abs => {
+          if (abs.employee_id !== e.id) return false;
+          if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
+          
+          const absStart = new Date(abs.fecha_inicio);
+          absStart.setHours(0, 0, 0, 0);
+          
+          const absEnd = abs.fecha_fin ? new Date(abs.fecha_fin) : null;
+          if (absEnd) absEnd.setHours(23, 59, 59, 999);
+          
+          if (absEnd) {
+            return planningDate >= absStart && planningDate <= absEnd;
+          } else {
+            return planningDate >= absStart;
+          }
+        });
+
+        return !hasAbsence;
+      });
 
       const activePlannings = activeMachines.map(p => {
         const machine = machines.find(m => m.id === p.machine_id);
@@ -416,7 +446,7 @@ INSTRUCCIONES CRÍTICAS:
     return activeMachines.reduce((sum, p) => sum + (p.operadores_necesarios || 0), 0);
   }, [activeMachines]);
 
-  // Calcular operarios disponibles del departamento Fabricación
+  // Calcular operarios disponibles del departamento Fabricación verificando ausencias
   const availableOperators = useMemo(() => {
     const selectedTeamConfig = teams.find(t => t.team_key === selectedTeam);
     if (!selectedTeamConfig) return 0;
@@ -424,13 +454,37 @@ INSTRUCCIONES CRÍTICAS:
     const fabricacionDept = departments.find(d => d.nombre === "Fabricación");
     if (!fabricacionDept) return 0;
 
-    return employees.filter(emp =>
-      emp.team_id === selectedTeamConfig.id &&
-      emp.disponibilidad === "Disponible" &&
-      emp.department_id === fabricacionDept.id &&
-      emp.incluir_en_planning !== false
-    ).length;
-  }, [employees, selectedTeam, teams, departments]);
+    const planningDate = new Date(selectedDate);
+    planningDate.setHours(0, 0, 0, 0);
+
+    return employees.filter(emp => {
+      // Filtros básicos
+      if (emp.team_id !== selectedTeamConfig.id) return false;
+      if (emp.department_id !== fabricacionDept.id) return false;
+      if (emp.incluir_en_planning === false) return false;
+      if (emp.estado_empleado === "Baja") return false;
+
+      // Verificar ausencias en la fecha de planificación
+      const hasAbsence = absences.some(abs => {
+        if (abs.employee_id !== emp.id) return false;
+        if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
+        
+        const absStart = new Date(abs.fecha_inicio);
+        absStart.setHours(0, 0, 0, 0);
+        
+        const absEnd = abs.fecha_fin ? new Date(abs.fecha_fin) : null;
+        if (absEnd) absEnd.setHours(23, 59, 59, 999);
+        
+        if (absEnd) {
+          return planningDate >= absStart && planningDate <= absEnd;
+        } else {
+          return planningDate >= absStart;
+        }
+      });
+
+      return !hasAbsence;
+    }).length;
+  }, [employees, selectedTeam, teams, departments, absences, selectedDate]);
 
   const operatorsDeficit = totalOperators - availableOperators;
 
