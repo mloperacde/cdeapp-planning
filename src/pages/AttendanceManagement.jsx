@@ -24,6 +24,7 @@ import AttendanceConfig from "../components/attendance/AttendanceConfig";
 import AttendanceList from "../components/attendance/AttendanceList";
 import AttendancePredictions from "../components/attendance/AttendancePredictions";
 import AttendanceAnalysisReport from "../components/attendance/AttendanceAnalysisReport";
+import AttendanceMonitor from "../components/attendance/AttendanceMonitor";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -196,7 +197,7 @@ export default function AttendanceManagementPage() {
         )}
 
         <Tabs defaultValue="import" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="import">
               <Upload className="w-4 h-4 mr-2" />
               Importar
@@ -216,10 +217,6 @@ export default function AttendanceManagementPage() {
             <TabsTrigger value="predictions">
               <Brain className="w-4 h-4 mr-2" />
               Predicciones ML
-            </TabsTrigger>
-            <TabsTrigger value="config">
-              <Settings className="w-4 h-4 mr-2" />
-              Configuración
             </TabsTrigger>
           </TabsList>
 
@@ -242,10 +239,6 @@ export default function AttendanceManagementPage() {
             />
           </TabsContent>
 
-          <TabsContent value="monitor">
-            <AttendanceMonitor />
-          </TabsContent>
-
           <TabsContent value="dashboard">
             <AttendanceDashboard />
           </TabsContent>
@@ -253,11 +246,15 @@ export default function AttendanceManagementPage() {
           <TabsContent value="predictions">
             <AttendancePredictions />
           </TabsContent>
-
-          <TabsContent value="config">
-            <AttendanceConfig config={config} />
-          </TabsContent>
         </Tabs>
+
+        <div className="mt-6">
+          <AttendanceMonitor />
+        </div>
+        
+        <div className="mt-6">
+          <AttendanceConfig config={config} />
+        </div>
       </div>
     </div>
   );
