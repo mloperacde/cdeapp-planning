@@ -64,6 +64,13 @@ export default function ConfigurationPage() {
           icon: Users,
           url: createPageUrl("DepartmentManagement"),
           color: "indigo"
+        },
+        {
+          title: "Gestión de Turnos",
+          description: "Configura turnos de trabajo y horarios",
+          icon: Clock,
+          url: createPageUrl("ShiftManagement"),
+          color: "amber"
         }
       ]
     },

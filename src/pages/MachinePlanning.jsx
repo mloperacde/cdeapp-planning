@@ -40,6 +40,7 @@ import ProductionMonitor from "../components/machines/ProductionMonitor";
 export default function MachinePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTeam, setSelectedTeam] = useState('team_1');
+  const [selectedShift, setSelectedShift] = useState('all');
   const [showProcessDialog, setShowProcessDialog] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [isCalling, setIsCalling] = useState(false);
@@ -122,6 +123,12 @@ export default function MachinePlanningPage() {
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
     staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: shifts = [] } = useQuery({
+    queryKey: ['shifts'],
+    queryFn: () => base44.entities.Shift.list('nombre'),
+    staleTime: 10 * 60 * 1000,
   });
 
   const savePlanningMutation = useMutation({
@@ -463,6 +470,9 @@ INSTRUCCIONES CRÍTICAS:
       if (emp.department_id !== fabricacionDept.id) return false;
       if (emp.incluir_en_planning === false) return false;
       if (emp.estado_empleado === "Baja") return false;
+      
+      // Filtro por turno
+      if (selectedShift !== 'all' && emp.shift_id !== selectedShift) return false;
 
       // Verificar ausencias en la fecha de planificación
       const hasAbsence = absences.some(abs => {
@@ -483,8 +493,8 @@ INSTRUCCIONES CRÍTICAS:
       });
 
       return !hasAbsence;
-    }).length;
-  }, [employees, selectedTeam, teams, departments, absences, selectedDate]);
+      }).length;
+      }, [employees, selectedTeam, teams, departments, absences, selectedDate, selectedShift]);
 
   const operatorsDeficit = totalOperators - availableOperators;
 
@@ -564,6 +574,23 @@ INSTRUCCIONES CRÍTICAS:
                     {teams.map((team) => (
                       <SelectItem key={team.team_key} value={team.team_key}>
                         {team.team_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="shift">Turno</Label>
+                <Select value={selectedShift} onValueChange={setSelectedShift}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los turnos</SelectItem>
+                    {shifts.filter(s => s.activo !== false).map((shift) => (
+                      <SelectItem key={shift.id} value={shift.id}>
+                        {shift.nombre} ({shift.tipo})
                       </SelectItem>
                     ))}
                   </SelectContent>
