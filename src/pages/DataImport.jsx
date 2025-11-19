@@ -46,25 +46,65 @@ export default function DataImportPage() {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length === 0) return [];
     
-    const headers = lines[0].split(delimiter).map(h => h.trim().replace(/['"]/g, ''));
+    // Parse headers
+    const headers = lines[0].split(delimiter).map(h => 
+      h.trim().replace(/^["']|["']$/g, '').toLowerCase().replace(/\s+/g, '_')
+    );
+    
+    console.log('Headers detectados:', headers);
+    
     const data = [];
     
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(delimiter).map(v => v.trim().replace(/['"]/g, ''));
-      if (values.length === headers.length) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Split respetando comillas
+      const values = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        
+        if (char === '"' || char === "'") {
+          inQuotes = !inQuotes;
+        } else if (char === delimiter && !inQuotes) {
+          values.push(current.trim().replace(/^["']|["']$/g, ''));
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim().replace(/^["']|["']$/g, ''));
+      
+      // Crear objeto solo si tiene datos válidos
+      if (values.some(v => v && v !== '')) {
         const obj = {};
         headers.forEach((header, index) => {
           let value = values[index];
-          if (value && !isNaN(value) && header.includes('num_') || header.includes('salario')) {
-            value = parseFloat(value);
-          }
+          
           if (value && value !== '') {
+            // Convertir números
+            if (!isNaN(value) && (
+              header.includes('num_') || 
+              header.includes('horas') || 
+              header.includes('salario') ||
+              header.includes('orden')
+            )) {
+              value = parseFloat(value);
+            }
             obj[header] = value;
           }
         });
-        data.push(obj);
+        
+        if (Object.keys(obj).length > 0) {
+          data.push(obj);
+        }
       }
     }
+    
+    console.log(`Parseados ${data.length} registros válidos`);
     return data;
   };
 
