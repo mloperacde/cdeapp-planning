@@ -736,16 +736,19 @@ export default function DataImportPage() {
                               )}
                             </div>
                             {importResult.errorDetails && importResult.errorDetails.length > 0 && (
-                              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded">
-                                <p className="text-xs font-semibold text-red-900 mb-2">Detalles de errores:</p>
-                                <ul className="text-xs text-red-800 space-y-1">
+                              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded max-h-60 overflow-y-auto">
+                                <p className="text-xs font-semibold text-red-900 mb-2">Detalles de errores ({importResult.errors} total):</p>
+                                <div className="text-xs text-red-800 space-y-1">
                                   {importResult.errorDetails.map((err, i) => (
-                                    <li key={i} className="font-mono">{err}</li>
+                                    <div key={i} className="border-b border-red-200 pb-1">
+                                      <div className="font-semibold">Fila {err.fila}: {err.nombre}</div>
+                                      <div className="text-red-700 ml-2">→ {err.error}</div>
+                                    </div>
                                   ))}
                                   {importResult.errors > importResult.errorDetails.length && (
-                                    <li className="text-red-600">... y {importResult.errors - importResult.errorDetails.length} errores más</li>
+                                    <div className="text-red-600 font-semibold pt-2">... y {importResult.errors - importResult.errorDetails.length} errores más</div>
                                   )}
-                                </ul>
+                                </div>
                               </div>
                             )}
                           </div>
