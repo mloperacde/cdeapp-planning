@@ -230,10 +230,10 @@ export default function DataImportPage() {
         total: extractedData.length,
         created: createdCount,
         errors: errors.length,
-        errorDetails: errors.slice(0, 10),
+        errorDetails: errors,
         message: createdCount === extractedData.length 
-          ? `Se importaron ${createdCount} registros exitosamente`
-          : `Se importaron ${createdCount} de ${extractedData.length} registros. ${errors.length} errores encontrados.`
+          ? `✅ Se importaron ${createdCount} registros exitosamente`
+          : `⚠️ Se importaron ${createdCount} de ${extractedData.length} registros. ${errors.length} errores encontrados.`
       });
 
       // Invalidar queries para refrescar datos
