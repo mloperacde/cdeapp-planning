@@ -172,24 +172,55 @@ export default function DataImportPage() {
       }
 
       // Crear registros uno por uno para manejar errores individuales
-      setImportProgress({ stage: 'create', message: `Creando registros (0/${extractedData.length})...` });
+      setImportProgress({ 
+        stage: 'create', 
+        message: `Creando registros (0/${extractedData.length})...`,
+        logs: []
+      });
       let createdCount = 0;
       let errors = [];
+      let logs = [];
       
       for (let i = 0; i < extractedData.length; i++) {
+        const registro = extractedData[i];
+        const logEntry = { fila: i + 1, nombre: registro.nombre || 'Sin nombre', status: 'pending' };
+        
         try {
-          console.log(`Creando registro ${i + 1}/${extractedData.length}:`, extractedData[i]);
-          await base44.entities[entityName].create(extractedData[i]);
+          console.log(`\n📝 Fila ${i + 1}/${extractedData.length}:`, registro);
+          
+          // Validar campos requeridos
+          if (entityName === "Employee") {
+            if (!registro.nombre) throw new Error("Falta campo 'nombre'");
+            if (!registro.tipo_jornada) throw new Error("Falta campo 'tipo_jornada'");
+            if (!registro.tipo_turno) throw new Error("Falta campo 'tipo_turno'");
+          }
+          
+          await base44.entities[entityName].create(registro);
           createdCount++;
-          setImportProgress({ 
-            stage: 'create', 
-            message: `Creando registros (${createdCount}/${extractedData.length})...`,
-            progress: Math.round((createdCount / extractedData.length) * 100)
-          });
+          logEntry.status = 'success';
+          console.log(`✅ Registro ${i + 1} creado exitosamente`);
+          
         } catch (err) {
-          console.error(`Error en fila ${i + 1}:`, err);
-          errors.push(`Fila ${i + 1}: ${err.message}`);
+          logEntry.status = 'error';
+          logEntry.error = err.message;
+          console.error(`❌ Error fila ${i + 1}:`, err.message, registro);
+          errors.push({ fila: i + 1, nombre: registro.nombre || 'Sin nombre', error: err.message });
         }
+        
+        logs.push(logEntry);
+        
+        setImportProgress({ 
+          stage: 'create', 
+          message: `Procesando: ${createdCount} ✅ | ${errors.length} ❌ (${i + 1}/${extractedData.length})`,
+          progress: Math.round(((i + 1) / extractedData.length) * 100),
+          logs: [...logs],
+          currentRow: i + 1,
+          created: createdCount,
+          failed: errors.length
+        });
+        
+        // Pequeña pausa para evitar sobrecarga
+        if (i % 10 === 0) await new Promise(r => setTimeout(r, 100));
       }
       
       console.log(`Importación completada. Creados: ${createdCount}, Errores: ${errors.length}`);
