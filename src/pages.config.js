@@ -53,6 +53,7 @@ import MasterMachineView from './pages/MasterMachineView';
 import MessagingConfig from './pages/MessagingConfig';
 import ArticleManagement from './pages/ArticleManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import DirectDataEntry from './pages/DirectDataEntry';
 import __Layout from './Layout.jsx';
 
 
@@ -112,6 +113,7 @@ export const PAGES = {
     "MessagingConfig": MessagingConfig,
     "ArticleManagement": ArticleManagement,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "DirectDataEntry": DirectDataEntry,
 }
 
 export const pagesConfig = {
