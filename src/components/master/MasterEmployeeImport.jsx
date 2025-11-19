@@ -163,20 +163,37 @@ export default function MasterEmployeeImport() {
 
   const downloadTemplate = () => {
     const headers = [
-      'Código Empleado', 'Nombre', 'DNI', 'NUSS', 'Email', 'Teléfono',
-      'Fecha Nacimiento', 'Sexo', 'Nacionalidad', 'Dirección', 'Departamento',
-      'Puesto', 'Categoría', 'Tipo Jornada', 'Horas Jornada', 'Tipo Turno',
-      'Equipo', 'Fecha Alta', 'Tipo Contrato', 'Fecha Fin Contrato',
-      'Salario Anual', 'Estado', 'Disponibilidad'
+      'codigo_empleado', 'nombre', 'estado_empleado', 'fecha_baja', 'motivo_baja',
+      'tasa_absentismo', 'horas_no_trabajadas', 'horas_deberian_trabajarse', 'ultima_actualizacion_absentismo',
+      'fecha_nacimiento', 'dni', 'nuss', 'sexo', 'nacionalidad', 'direccion', 'formacion',
+      'email', 'telefono_movil', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
+      'department_id', 'position_id', 'categoria', 'tipo_jornada', 'num_horas_jornada',
+      'tipo_turno', 'team_id', 'horario_manana_inicio', 'horario_manana_fin',
+      'horario_tarde_inicio', 'horario_tarde_fin', 'turno_partido_entrada1', 'turno_partido_salida1',
+      'turno_partido_entrada2', 'turno_partido_salida2', 'taquilla_vestuario', 'taquilla_numero',
+      'disponibilidad', 'ausencia_inicio', 'ausencia_fin', 'ausencia_motivo', 'incluir_en_planning',
+      'fecha_alta', 'tipo_contrato', 'codigo_contrato', 'fecha_fin_contrato', 'empresa_ett',
+      'salario_anual', 'evaluacion_responsable', 'propuesta_cambio_categoria', 'propuesta_cambio_quien',
+      'horas_causa_mayor_consumidas', 'horas_causa_mayor_limite', 'ultimo_reset_causa_mayor',
+      'maquina_1', 'maquina_2', 'maquina_3', 'maquina_4', 'maquina_5',
+      'maquina_6', 'maquina_7', 'maquina_8', 'maquina_9', 'maquina_10'
     ];
     
     const exampleData = [
-      'EMP001', 'Juan Pérez García', '12345678A', '12-3456789012-34',
-      'juan.perez@empresa.com', '600123456', '1990-01-15', 'Masculino',
-      'Española', 'Calle Principal 123', 'FABRICACION', 'Operario',
-      'Categoría 1', 'Jornada Completa', '40', 'Rotativo',
-      'Equipo Turno Isa', '2024-01-01', 'Indefinido', '',
-      '25000', 'Alta', 'Disponible'
+      'EMP001', 'Juan Pérez García', 'Alta', '', '',
+      '0', '0', '0', '',
+      '1990-01-15', '12345678A', '12-3456789012-34', 'Masculino', 'Española', 'Calle Principal 123', 'Grado en Ingeniería',
+      'juan.perez@empresa.com', '600123456', 'María Pérez', '600654321',
+      '', '', 'Categoría 1', 'Jornada Completa', '40',
+      'Rotativo', '', '07:00', '15:00',
+      '14:00', '22:00', '', '',
+      '', '', 'Vestuario Masculino Planta Baja', '101',
+      'Disponible', '', '', '', 'true',
+      '2024-01-01', 'Indefinido', 'CONT001', '', '',
+      '25000', '', '', '',
+      '0', '20', '',
+      '', '', '', '', '',
+      '', '', '', '', ''
     ];
 
     const csvContent = headers.join(',') + '\n' + exampleData.join(',');
