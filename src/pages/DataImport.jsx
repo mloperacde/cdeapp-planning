@@ -159,13 +159,28 @@ export default function DataImportPage() {
         throw new Error("No se encontraron datos válidos en el archivo");
       }
 
-      // Crear registros en masa
-      const createResult = await base44.entities[entityName].bulkCreate(extractedData);
+      // Crear registros uno por uno para manejar errores individuales
+      let createdCount = 0;
+      let errors = [];
+      
+      for (let i = 0; i < extractedData.length; i++) {
+        try {
+          await base44.entities[entityName].create(extractedData[i]);
+          createdCount++;
+        } catch (err) {
+          errors.push(`Fila ${i + 1}: ${err.message}`);
+        }
+      }
 
       setImportResult({
-        success: true,
+        success: createdCount > 0,
         total: extractedData.length,
-        message: `Se importaron ${extractedData.length} registros exitosamente`
+        created: createdCount,
+        errors: errors.length,
+        errorDetails: errors.slice(0, 10),
+        message: createdCount === extractedData.length 
+          ? `Se importaron ${createdCount} registros exitosamente`
+          : `Se importaron ${createdCount} de ${extractedData.length} registros. ${errors.length} errores encontrados.`
       });
 
       // Invalidar queries para refrescar datos
@@ -386,21 +401,21 @@ export default function DataImportPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="lockers" onValueChange={setSelectedEntity} className="space-y-6">
+        <Tabs defaultValue="employees" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="lockers">
-              <KeyRound className="w-4 h-4 mr-2" />
-              Taquillas
-            </TabsTrigger>
-            <TabsTrigger value="employees">
+            <TabsTrigger value="employees" onClick={() => setSelectedEntity("employees")}>
               <Users className="w-4 h-4 mr-2" />
               Empleados
             </TabsTrigger>
-            <TabsTrigger value="machines">
+            <TabsTrigger value="lockers" onClick={() => setSelectedEntity("lockers")}>
+              <KeyRound className="w-4 h-4 mr-2" />
+              Taquillas
+            </TabsTrigger>
+            <TabsTrigger value="machines" onClick={() => setSelectedEntity("machines")}>
               <Cog className="w-4 h-4 mr-2" />
               Máquinas
             </TabsTrigger>
-            <TabsTrigger value="maintenances">
+            <TabsTrigger value="maintenances" onClick={() => setSelectedEntity("maintenances")}>
               <Wrench className="w-4 h-4 mr-2" />
               Mantenimientos
             </TabsTrigger>
@@ -598,7 +613,7 @@ export default function DataImportPage() {
                       ) : (
                         <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
                       )}
-                      <div>
+                      <div className="flex-1">
                         <p className={`font-semibold ${
                           importResult.success ? 'text-green-900' : 'text-red-900'
                         }`}>
@@ -609,10 +624,32 @@ export default function DataImportPage() {
                         }`}>
                           {importResult.message}
                         </p>
-                        {importResult.success && importResult.total && (
-                          <Badge className="bg-green-600 mt-2">
-                            {importResult.total} registros importados
-                          </Badge>
+                        {importResult.created > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <div className="flex gap-2">
+                              <Badge className="bg-green-600">
+                                {importResult.created} registros creados
+                              </Badge>
+                              {importResult.errors > 0 && (
+                                <Badge className="bg-red-600">
+                                  {importResult.errors} errores
+                                </Badge>
+                              )}
+                            </div>
+                            {importResult.errorDetails && importResult.errorDetails.length > 0 && (
+                              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded">
+                                <p className="text-xs font-semibold text-red-900 mb-2">Detalles de errores:</p>
+                                <ul className="text-xs text-red-800 space-y-1">
+                                  {importResult.errorDetails.map((err, i) => (
+                                    <li key={i} className="font-mono">{err}</li>
+                                  ))}
+                                  {importResult.errors > importResult.errorDetails.length && (
+                                    <li className="text-red-600">... y {importResult.errors - importResult.errorDetails.length} errores más</li>
+                                  )}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
