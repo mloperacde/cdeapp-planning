@@ -42,6 +42,32 @@ export default function DataImportPage() {
     }
   };
 
+  const parseCSV = (text, delimiter = ',') => {
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length === 0) return [];
+    
+    const headers = lines[0].split(delimiter).map(h => h.trim().replace(/['"]/g, ''));
+    const data = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(delimiter).map(v => v.trim().replace(/['"]/g, ''));
+      if (values.length === headers.length) {
+        const obj = {};
+        headers.forEach((header, index) => {
+          let value = values[index];
+          if (value && !isNaN(value) && header.includes('num_') || header.includes('salario')) {
+            value = parseFloat(value);
+          }
+          if (value && value !== '') {
+            obj[header] = value;
+          }
+        });
+        data.push(obj);
+      }
+    }
+    return data;
+  };
+
   const handleImport = async () => {
     if (!selectedFile) {
       alert('Por favor selecciona un archivo primero');
@@ -49,126 +75,37 @@ export default function DataImportPage() {
     }
 
     setImporting(true);
-    setImportProgress({ stage: 'upload', message: 'Subiendo archivo...' });
+    setImportProgress({ stage: 'reading', message: 'Leyendo archivo...' });
     console.log('Iniciando importación...');
     
     try {
-      // Subir archivo
-      console.log('Subiendo archivo:', selectedFile.name);
-      const uploadResult = await base44.integrations.Core.UploadFile({ file: selectedFile });
-      const fileUrl = uploadResult.file_url;
-      console.log('Archivo subido:', fileUrl);
-
-      // Definir esquema según entidad seleccionada
-      let jsonSchema = {};
       let entityName = "";
-
+      
       switch (selectedEntity) {
         case "employees":
           entityName = "Employee";
-          jsonSchema = {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                codigo_empleado: { type: "string" },
-                nombre: { type: "string" },
-                fecha_nacimiento: { type: "string" },
-                dni: { type: "string" },
-                nuss: { type: "string" },
-                sexo: { type: "string" },
-                nacionalidad: { type: "string" },
-                direccion: { type: "string" },
-                formacion: { type: "string" },
-                email: { type: "string" },
-                telefono_movil: { type: "string" },
-                contacto_emergencia_nombre: { type: "string" },
-                contacto_emergencia_telefono: { type: "string" },
-                departamento: { type: "string" },
-                puesto: { type: "string" },
-                categoria: { type: "string" },
-                tipo_jornada: { type: "string" },
-                num_horas_jornada: { type: "number" },
-                tipo_turno: { type: "string" },
-                equipo: { type: "string" },
-                horario_manana_inicio: { type: "string" },
-                horario_manana_fin: { type: "string" },
-                horario_tarde_inicio: { type: "string" },
-                horario_tarde_fin: { type: "string" },
-                fecha_alta: { type: "string" },
-                tipo_contrato: { type: "string" },
-                codigo_contrato: { type: "string" },
-                fecha_fin_contrato: { type: "string" },
-                salario_anual: { type: "number" },
-                disponibilidad: { type: "string" }
-              },
-              required: ["nombre", "tipo_jornada", "tipo_turno"]
-            }
-          };
           break;
-
         case "machines":
           entityName = "Machine";
-          jsonSchema = {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                nombre: { type: "string" },
-                codigo: { type: "string" },
-                tipo: { type: "string" },
-                ubicacion: { type: "string" },
-                estado: { type: "string" },
-                descripcion: { type: "string" },
-                orden: { type: "number" }
-              },
-              required: ["nombre", "codigo", "estado"]
-            }
-          };
           break;
-
         case "maintenances":
           entityName = "MaintenanceSchedule";
-          jsonSchema = {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                machine_id: { type: "string" },
-                tipo: { type: "string" },
-                prioridad: { type: "string" },
-                estado: { type: "string" },
-                fecha_programada: { type: "string" },
-                duracion_estimada: { type: "number" },
-                descripcion: { type: "string" }
-              },
-              required: ["machine_id", "tipo", "fecha_programada"]
-            }
-          };
           break;
       }
 
-      // Extraer datos del archivo
-      setImportProgress({ stage: 'extract', message: 'Analizando archivo y extrayendo datos...' });
-      console.log('Extrayendo datos con esquema:', jsonSchema);
+      // Leer archivo CSV directamente
+      setImportProgress({ stage: 'parse', message: 'Analizando datos del archivo...' });
+      console.log('Leyendo archivo:', selectedFile.name);
       
-      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url: fileUrl,
-        json_schema: jsonSchema
-      });
-
-      console.log('Resultado de extracción:', extractResult);
-
-      if (extractResult.status === "error") {
-        throw new Error(extractResult.details || "Error extrayendo datos del archivo");
-      }
-
-      const extractedData = extractResult.output;
-      console.log(`Datos extraídos: ${extractedData?.length || 0} registros`);
+      const text = await selectedFile.text();
+      const delimiter = text.includes(';') ? ';' : ',';
+      const extractedData = parseCSV(text, delimiter);
+      
+      console.log(`Datos parseados: ${extractedData.length} registros`, extractedData[0]);
 
       // Validar que hay datos
       if (!Array.isArray(extractedData) || extractedData.length === 0) {
-        throw new Error("No se encontraron datos válidos en el archivo");
+        throw new Error("No se encontraron datos válidos en el archivo. Verifica que el CSV tenga encabezados y datos.");
       }
 
       // Crear registros uno por uno para manejar errores individuales
