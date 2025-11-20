@@ -166,9 +166,26 @@ export default function MasterEmployeeImport() {
       let createdCount = 0;
       let updatedCount = 0;
 
+      // Función de reintento con backoff exponencial
+      const retryWithBackoff = async (fn, maxRetries = 3) => {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            return await fn();
+          } catch (error) {
+            const isRateLimit = error.message?.toLowerCase().includes('rate limit');
+            if (!isRateLimit || attempt === maxRetries - 1) {
+              throw error;
+            }
+            // Esperar más tiempo con cada intento (1s, 2s, 4s)
+            const delay = Math.pow(2, attempt) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      };
+
       for (let i = 0; i < parsedData.length; i++) {
         const row = parsedData[i];
-        
+
         setProgress({
           stage: 'creating',
           message: `Procesando registro ${i + 1} de ${parsedData.length}...`,
@@ -179,12 +196,12 @@ export default function MasterEmployeeImport() {
 
         try {
           const employeeData = {};
-          
+
           // Aplicar el mapeo configurado
           Object.entries(fieldMapping).forEach(([csvHeader, targetField]) => {
             if (targetField && row[csvHeader]) {
               const value = row[csvHeader].trim();
-              
+
               // Conversiones especiales
               if (['tasa_absentismo', 'horas_no_trabajadas', 'horas_deberian_trabajarse', 
                    'num_horas_jornada', 'salario_anual', 'horas_causa_mayor_consumidas', 
@@ -198,7 +215,7 @@ export default function MasterEmployeeImport() {
               }
             }
           });
-          
+
           employeeData.estado_sincronizacion = 'Pendiente';
 
           if (!employeeData.nombre) {
@@ -206,26 +223,28 @@ export default function MasterEmployeeImport() {
             continue;
           }
 
-          // Check if employee exists by codigo_empleado
-          if (employeeData.codigo_empleado) {
-            const existing = await base44.entities.EmployeeMasterDatabase.filter({ 
-              codigo_empleado: employeeData.codigo_empleado 
-            });
-            
-            if (existing.length > 0) {
-              await base44.entities.EmployeeMasterDatabase.update(existing[0].id, employeeData);
-              updatedCount++;
+          // Check if employee exists by codigo_empleado con reintentos
+          await retryWithBackoff(async () => {
+            if (employeeData.codigo_empleado) {
+              const existing = await base44.entities.EmployeeMasterDatabase.filter({ 
+                codigo_empleado: employeeData.codigo_empleado 
+              });
+
+              if (existing.length > 0) {
+                await base44.entities.EmployeeMasterDatabase.update(existing[0].id, employeeData);
+                updatedCount++;
+              } else {
+                await base44.entities.EmployeeMasterDatabase.create(employeeData);
+                createdCount++;
+              }
             } else {
               await base44.entities.EmployeeMasterDatabase.create(employeeData);
               createdCount++;
             }
-          } else {
-            await base44.entities.EmployeeMasterDatabase.create(employeeData);
-            createdCount++;
-          }
+          });
 
-          // Delay para evitar rate limit
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // Delay aumentado para evitar rate limit
+          await new Promise(resolve => setTimeout(resolve, 800));
 
         } catch (error) {
           errors.push({ 
