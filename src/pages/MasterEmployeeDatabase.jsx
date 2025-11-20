@@ -79,6 +79,41 @@ export default function MasterEmployeeDatabasePage() {
     }
   };
 
+  const handleCleanOperationalData = async () => {
+    if (!confirm('⚠️ LIMPIEZA COMPLETA DEL SISTEMA OPERATIVO\n\nEsta acción eliminará:\n• Todos los empleados del sistema operativo\n• Todas las asignaciones de taquillas\n• Todas las ausencias registradas\n• Todas las asignaciones de máquinas\n• Todas las asignaciones de turnos\n• Todas las habilidades de empleados\n• Todo el historial de sincronización\n\nLa Base de Datos Maestra se mantendrá intacta.\n\n¿Continuar?')) {
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      const response = await base44.functions.invoke('cleanEmployeeOperationalData', {});
+      
+      if (response.data.success) {
+        const { results } = response.data;
+        alert(`✅ Limpieza completada:\n\n` +
+          `• Empleados eliminados: ${results.employees}\n` +
+          `• Taquillas liberadas: ${results.lockerAssignments}\n` +
+          `• Ausencias eliminadas: ${results.absences}\n` +
+          `• Asignaciones de máquinas: ${results.machineAssignments}\n` +
+          `• Asignaciones de turnos: ${results.shiftAssignments}\n` +
+          `• Habilidades eliminadas: ${results.employeeSkills}\n` +
+          `• Historial limpiado: ${results.syncHistory}\n\n` +
+          `Base de Datos Maestra lista para sincronizar.`
+        );
+        
+        queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+        queryClient.invalidateQueries({ queryKey: ['employees'] });
+        queryClient.invalidateQueries({ queryKey: ['syncHistory'] });
+      } else {
+        alert('❌ Error: ' + response.data.error);
+      }
+    } catch (error) {
+      alert('❌ Error al limpiar datos: ' + error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const openSyncDialog = async (masterEmployee) => {
     let existingEmployee = null;
     
@@ -333,7 +368,7 @@ export default function MasterEmployeeDatabasePage() {
               <CardHeader className="border-b border-slate-100">
                 <div className="flex items-center justify-between">
                   <CardTitle>Registros en Base de Datos Maestra</CardTitle>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       onClick={handleSyncAll}
                       disabled={syncing || stats.pendientes === 0}
@@ -341,6 +376,14 @@ export default function MasterEmployeeDatabasePage() {
                     >
                       <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
                       Sincronizar Pendientes ({stats.pendientes})
+                    </Button>
+                    <Button
+                      onClick={handleCleanOperationalData}
+                      disabled={syncing}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Limpiar Sistema Operativo
                     </Button>
                     <Button
                       onClick={() => {
@@ -352,7 +395,7 @@ export default function MasterEmployeeDatabasePage() {
                       className="bg-red-600 hover:bg-red-700"
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Limpiar Todo ({stats.total})
+                      Borrar BD Maestra ({stats.total})
                     </Button>
                   </div>
                 </div>
