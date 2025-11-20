@@ -57,6 +57,7 @@ import DirectDataEntry from './pages/DirectDataEntry';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import SystemReset from './pages/SystemReset';
+import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import __Layout from './Layout.jsx';
 
 
@@ -120,6 +121,7 @@ export const PAGES = {
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
     "EmployeeDataCompletion": EmployeeDataCompletion,
     "SystemReset": SystemReset,
+    "AdvancedConfiguration": AdvancedConfiguration,
 }
 
 export const pagesConfig = {
