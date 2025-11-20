@@ -51,7 +51,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     puesto: "",
     categoria: "",
     tipo_jornada: "Jornada Completa",
-    num_horas_jornada: 40,
+    num_horas_jornada: 8,
     tipo_turno: "Rotativo",
     equipo: "",
     disponibilidad: "Disponible",
@@ -154,19 +154,47 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     const newData = { ...formData, tipo_jornada: value };
     
     if (value === "Jornada Completa") {
-      newData.num_horas_jornada = 40;
+      newData.num_horas_jornada = 8;
       newData.horario_manana_inicio = "07:00";
       newData.horario_manana_fin = "15:00";
       newData.horario_tarde_inicio = "14:00";
       newData.horario_tarde_fin = "22:00";
     } else if (value === "Jornada Parcial") {
-      // num_horas_jornada for partial is left for manual input
-      newData.horario_manana_inicio = "07:00";
-      newData.horario_manana_fin = "15:00";
-      newData.horario_tarde_inicio = "15:00";
-      newData.horario_tarde_fin = "22:00";
+      if (formData.tipo_turno === "Rotativo") {
+        newData.num_horas_jornada = 7.5;
+        newData.horario_manana_inicio = "07:00";
+        newData.horario_manana_fin = "15:00";
+        newData.horario_tarde_inicio = "15:00";
+        newData.horario_tarde_fin = "22:00";
+      } else if (formData.tipo_turno === "Fijo Tarde") {
+        newData.num_horas_jornada = 7;
+        newData.horario_tarde_inicio = "15:00";
+        newData.horario_tarde_fin = "22:00";
+      }
     }
-    // For "Reducción de Jornada", specific time inputs will be shown based on turno type.
+    
+    setFormData(newData);
+  };
+
+  const handleTipoTurnoChange = (value) => {
+    const newData = { ...formData, tipo_turno: value };
+    
+    if (formData.tipo_jornada === "Jornada Parcial") {
+      if (value === "Rotativo") {
+        newData.num_horas_jornada = 7.5;
+        newData.horario_manana_inicio = "07:00";
+        newData.horario_manana_fin = "15:00";
+        newData.horario_tarde_inicio = "15:00";
+        newData.horario_tarde_fin = "22:00";
+      } else if (value === "Fijo Tarde") {
+        newData.num_horas_jornada = 7;
+        newData.horario_tarde_inicio = "15:00";
+        newData.horario_tarde_fin = "22:00";
+      } else if (value === "Fijo Mañana") {
+        newData.horario_manana_inicio = "07:00";
+        newData.horario_manana_fin = "15:00";
+      }
+    }
     
     setFormData(newData);
   };
@@ -522,6 +550,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   <Input
                     id="num_horas"
                     type="number"
+                    step="0.5"
                     min="1"
                     max="40"
                     value={formData.num_horas_jornada || 0}
@@ -535,7 +564,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   <Label htmlFor="tipo_turno">Tipo de Turno *</Label>
                   <Select
                     value={formData.tipo_turno}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_turno: value })}
+                    onValueChange={handleTipoTurnoChange}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -736,10 +765,10 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
                 <h5 className="font-semibold text-slate-900 mb-2">Horarios Estándar por Jornada</h5>
                 <div className="text-sm text-slate-700 space-y-1">
-                  <p><strong>Jornada Completa:</strong> Mañana 7:00-15:00, Tarde 14:00-22:00</p>
-                  <p><strong>Jornada Parcial:</strong> Mañana 7:00-15:00, Tarde 15:00-22:00 (configurable)</p>
-                  <p><strong>Jornada Reducida:</strong> Horario configurado específicamente</p>
-                  <p><strong>Turnos Fijos:</strong> Disponibles para cualquier equipo en su horario</p>
+                  <p><strong>Jornada Completa (8h):</strong> Mañana 7:00-15:00, Tarde 14:00-22:00</p>
+                  <p><strong>Jornada Parcial Rotativo (7.5h):</strong> Mañana 7:00-15:00, Tarde 15:00-22:00</p>
+                  <p><strong>Jornada Parcial Fijo Tarde (7h):</strong> Tarde 15:00-22:00</p>
+                  <p><strong>Jornada Reducida y Fijo Mañana:</strong> Horario configurable manualmente</p>
                 </div>
               </div>
             </TabsContent>
