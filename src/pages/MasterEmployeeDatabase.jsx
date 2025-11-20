@@ -61,6 +61,24 @@ export default function MasterEmployeeDatabasePage() {
     },
   });
 
+  const handleDeleteAll = async () => {
+    setSyncing(true);
+    try {
+      let deletedCount = 0;
+      for (const emp of masterEmployees) {
+        await base44.entities.EmployeeMasterDatabase.delete(emp.id);
+        deletedCount++;
+      }
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['syncHistory'] });
+      alert(`✅ Eliminados ${deletedCount} registros de la Base de Datos Maestra`);
+    } catch (error) {
+      alert('❌ Error al eliminar: ' + error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const openSyncDialog = async (masterEmployee) => {
     let existingEmployee = null;
     
@@ -315,14 +333,28 @@ export default function MasterEmployeeDatabasePage() {
               <CardHeader className="border-b border-slate-100">
                 <div className="flex items-center justify-between">
                   <CardTitle>Registros en Base de Datos Maestra</CardTitle>
-                  <Button
-                    onClick={handleSyncAll}
-                    disabled={syncing || stats.pendientes === 0}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                    Sincronizar Pendientes ({stats.pendientes})
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSyncAll}
+                      disabled={syncing || stats.pendientes === 0}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                      Sincronizar Pendientes ({stats.pendientes})
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (confirm(`¿ELIMINAR TODOS LOS REGISTROS de la Base de Datos Maestra?\n\nSe eliminarán ${stats.total} registros.\n\nEsta acción NO se puede deshacer.`)) {
+                          handleDeleteAll();
+                        }
+                      }}
+                      disabled={syncing || stats.total === 0}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Limpiar Todo ({stats.total})
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
