@@ -56,6 +56,7 @@ import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import DirectDataEntry from './pages/DirectDataEntry';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
+import SystemReset from './pages/SystemReset';
 import __Layout from './Layout.jsx';
 
 
@@ -118,6 +119,7 @@ export const PAGES = {
     "DirectDataEntry": DirectDataEntry,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
     "EmployeeDataCompletion": EmployeeDataCompletion,
+    "SystemReset": SystemReset,
 }
 
 export const pagesConfig = {

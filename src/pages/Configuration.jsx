@@ -52,6 +52,13 @@ export default function ConfigurationPage() {
           color: "purple"
         },
         {
+          title: "Reiniciar Sistema",
+          description: "Borrar todo y empezar de cero con archivo maestro",
+          icon: Settings,
+          url: createPageUrl("SystemReset"),
+          color: "red"
+        },
+        {
           title: "Matriz de Habilidades",
           description: "Gestión de competencias y formación",
           icon: Award,
