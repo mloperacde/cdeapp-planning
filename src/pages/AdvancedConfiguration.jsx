@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Building2, Briefcase, Clock, RefreshCw, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { Settings, Building2, Briefcase, Clock, RefreshCw, FileSpreadsheet, ArrowLeft, Gavel, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -9,6 +9,8 @@ import DepartmentPositionManager from "../components/config/DepartmentPositionMa
 import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import SyncParametersConfig from "../components/config/SyncParametersConfig";
 import CSVFieldMapper from "../components/config/CSVFieldMapper";
+import BusinessRulesConfig from "../components/config/BusinessRulesConfig";
+import CustomFieldTemplates from "../components/config/CustomFieldTemplates";
 
 export default function AdvancedConfigurationPage() {
   const [activeTab, setActiveTab] = useState("departments");
@@ -36,7 +38,7 @@ export default function AdvancedConfigurationPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="departments">
               <Building2 className="w-4 h-4 mr-2" />
               Departamentos
@@ -52,6 +54,14 @@ export default function AdvancedConfigurationPage() {
             <TabsTrigger value="csv">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Mapeo CSV
+            </TabsTrigger>
+            <TabsTrigger value="rules">
+              <Gavel className="w-4 h-4 mr-2" />
+              Reglas
+            </TabsTrigger>
+            <TabsTrigger value="templates">
+              <FileCode className="w-4 h-4 mr-2" />
+              Plantillas
             </TabsTrigger>
           </TabsList>
 
@@ -119,6 +129,40 @@ export default function AdvancedConfigurationPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <CSVFieldMapper />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="rules">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2">
+                  <Gavel className="w-5 h-5 text-indigo-600" />
+                  Reglas de Negocio
+                </CardTitle>
+                <p className="text-sm text-slate-600 mt-1">
+                  Define reglas automáticas para validaciones y asignaciones
+                </p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <BusinessRulesConfig />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2">
+                  <FileCode className="w-5 h-5 text-pink-600" />
+                  Plantillas de Campos Personalizados
+                </CardTitle>
+                <p className="text-sm text-slate-600 mt-1">
+                  Crea plantillas con campos personalizados para diferentes tipos de empleados
+                </p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <CustomFieldTemplates />
               </CardContent>
             </Card>
           </TabsContent>
