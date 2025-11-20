@@ -369,9 +369,11 @@ export default function HRDashboard() {
                       <TableHead>Nombre</TableHead>
                       <TableHead>Departamento</TableHead>
                       <TableHead>Puesto</TableHead>
+                      <TableHead>Equipo</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Jornada</TableHead>
                       <TableHead>Turno</TableHead>
+                      <TableHead>Taquilla</TableHead>
                       <TableHead>Sincronización</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -394,8 +396,21 @@ export default function HRDashboard() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{employee.departamento || '-'}</TableCell>
-                        <TableCell>{employee.puesto || '-'}</TableCell>
+                        <TableCell>
+                          <span className="text-sm">{employee.departamento || '-'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{employee.puesto || '-'}</span>
+                        </TableCell>
+                        <TableCell>
+                          {employee.equipo ? (
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                              {employee.equipo}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-slate-400">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge className={
                             (employee.estado_empleado || "Alta") === "Alta" 
@@ -406,14 +421,26 @@ export default function HRDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="text-xs">
                             {employee.tipo_jornada || '-'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
                             {employee.tipo_turno || '-'}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {employee.taquilla_vestuario && employee.taquilla_numero ? (
+                            <div className="text-xs">
+                              <div className="font-semibold text-slate-700">{employee.taquilla_numero}</div>
+                              <div className="text-slate-500 truncate max-w-[120px]">
+                                {employee.taquilla_vestuario.replace('Vestuario ', '')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge className={
