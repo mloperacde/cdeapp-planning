@@ -1,0 +1,519 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench } from "lucide-react";
+
+export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
+  const [formData, setFormData] = useState(employee);
+  const queryClient = useQueryClient();
+
+  const saveMutation = useMutation({
+    mutationFn: (data) => base44.entities.EmployeeMasterDatabase.update(employee.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      onClose();
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    saveMutation.mutate(formData);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Editar Empleado - {employee.nombre}</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit}>
+          <Tabs defaultValue="personal" className="w-full">
+            <TabsList className="grid w-full grid-cols-7">
+              <TabsTrigger value="personal">
+                <User className="w-4 h-4 mr-1" />
+                Personal
+              </TabsTrigger>
+              <TabsTrigger value="organizacion">
+                <Briefcase className="w-4 h-4 mr-1" />
+                Organización
+              </TabsTrigger>
+              <TabsTrigger value="horarios">
+                <Clock className="w-4 h-4 mr-1" />
+                Horarios
+              </TabsTrigger>
+              <TabsTrigger value="taquilla">
+                <Home className="w-4 h-4 mr-1" />
+                Taquilla
+              </TabsTrigger>
+              <TabsTrigger value="contrato">
+                <FileText className="w-4 h-4 mr-1" />
+                Contrato
+              </TabsTrigger>
+              <TabsTrigger value="absentismo">
+                <Calendar className="w-4 h-4 mr-1" />
+                Absentismo
+              </TabsTrigger>
+              <TabsTrigger value="maquinas">
+                <Wrench className="w-4 h-4 mr-1" />
+                Máquinas
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="personal" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Código Empleado</Label>
+                  <Input
+                    value={formData.codigo_empleado || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo_empleado: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nombre Completo *</Label>
+                  <Input
+                    value={formData.nombre}
+                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Estado</Label>
+                  <Select
+                    value={formData.estado_empleado || "Alta"}
+                    onValueChange={(value) => setFormData({ ...formData, estado_empleado: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Baja">Baja</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Fecha Nacimiento</Label>
+                  <Input
+                    type="date"
+                    value={formData.fecha_nacimiento || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_nacimiento: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>DNI/NIE</Label>
+                  <Input
+                    value={formData.dni || ""}
+                    onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>NUSS</Label>
+                  <Input
+                    value={formData.nuss || ""}
+                    onChange={(e) => setFormData({ ...formData, nuss: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Sexo</Label>
+                  <Select
+                    value={formData.sexo || ""}
+                    onValueChange={(value) => setFormData({ ...formData, sexo: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Masculino">Masculino</SelectItem>
+                      <SelectItem value="Femenino">Femenino</SelectItem>
+                      <SelectItem value="Otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nacionalidad</Label>
+                  <Input
+                    value={formData.nacionalidad || ""}
+                    onChange={(e) => setFormData({ ...formData, nacionalidad: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Dirección</Label>
+                  <Input
+                    value={formData.direccion || ""}
+                    onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={formData.email || ""}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Teléfono Móvil</Label>
+                  <Input
+                    value={formData.telefono_movil || ""}
+                    onChange={(e) => setFormData({ ...formData, telefono_movil: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Contacto Emergencia</Label>
+                  <Input
+                    placeholder="Nombre"
+                    value={formData.contacto_emergencia_nombre || ""}
+                    onChange={(e) => setFormData({ ...formData, contacto_emergencia_nombre: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Teléfono Emergencia</Label>
+                  <Input
+                    value={formData.contacto_emergencia_telefono || ""}
+                    onChange={(e) => setFormData({ ...formData, contacto_emergencia_telefono: e.target.value })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="organizacion" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Departamento</Label>
+                  <Input
+                    value={formData.departamento || ""}
+                    onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Puesto</Label>
+                  <Input
+                    value={formData.puesto || ""}
+                    onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Categoría</Label>
+                  <Input
+                    value={formData.categoria || ""}
+                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Equipo</Label>
+                  <Input
+                    value={formData.equipo || ""}
+                    onChange={(e) => setFormData({ ...formData, equipo: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Formación</Label>
+                  <Textarea
+                    value={formData.formacion || ""}
+                    onChange={(e) => setFormData({ ...formData, formacion: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="horarios" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo Jornada</Label>
+                  <Select
+                    value={formData.tipo_jornada || ""}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_jornada: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Jornada Completa">Jornada Completa</SelectItem>
+                      <SelectItem value="Jornada Parcial">Jornada Parcial</SelectItem>
+                      <SelectItem value="Reducción de Jornada">Reducción de Jornada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horas Jornada</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={formData.num_horas_jornada || ""}
+                    onChange={(e) => setFormData({ ...formData, num_horas_jornada: parseFloat(e.target.value) })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tipo Turno</Label>
+                  <Select
+                    value={formData.tipo_turno || ""}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_turno: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Rotativo">Rotativo</SelectItem>
+                      <SelectItem value="Fijo Mañana">Fijo Mañana</SelectItem>
+                      <SelectItem value="Fijo Tarde">Fijo Tarde</SelectItem>
+                      <SelectItem value="Turno Partido">Turno Partido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horario Mañana Inicio</Label>
+                  <Input
+                    type="time"
+                    value={formData.horario_manana_inicio || ""}
+                    onChange={(e) => setFormData({ ...formData, horario_manana_inicio: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horario Mañana Fin</Label>
+                  <Input
+                    type="time"
+                    value={formData.horario_manana_fin || ""}
+                    onChange={(e) => setFormData({ ...formData, horario_manana_fin: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horario Tarde Inicio</Label>
+                  <Input
+                    type="time"
+                    value={formData.horario_tarde_inicio || ""}
+                    onChange={(e) => setFormData({ ...formData, horario_tarde_inicio: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horario Tarde Fin</Label>
+                  <Input
+                    type="time"
+                    value={formData.horario_tarde_fin || ""}
+                    onChange={(e) => setFormData({ ...formData, horario_tarde_fin: e.target.value })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="taquilla" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Vestuario</Label>
+                  <Select
+                    value={formData.taquilla_vestuario || ""}
+                    onValueChange={(value) => setFormData({ ...formData, taquilla_vestuario: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar vestuario" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Vestuario Femenino Planta Baja">Vestuario Femenino Planta Baja</SelectItem>
+                      <SelectItem value="Vestuario Femenino Planta Alta">Vestuario Femenino Planta Alta</SelectItem>
+                      <SelectItem value="Vestuario Masculino Planta Baja">Vestuario Masculino Planta Baja</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Número Taquilla</Label>
+                  <Input
+                    value={formData.taquilla_numero || ""}
+                    onChange={(e) => setFormData({ ...formData, taquilla_numero: e.target.value })}
+                    placeholder="Ej: 101, A-15, etc."
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="contrato" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Fecha Alta</Label>
+                  <Input
+                    type="date"
+                    value={formData.fecha_alta || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_alta: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tipo Contrato</Label>
+                  <Input
+                    value={formData.tipo_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, tipo_contrato: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Código Contrato</Label>
+                  <Input
+                    value={formData.codigo_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Fecha Fin Contrato</Label>
+                  <Input
+                    type="date"
+                    value={formData.fecha_fin_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_fin_contrato: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Empresa ETT</Label>
+                  <Input
+                    value={formData.empresa_ett || ""}
+                    onChange={(e) => setFormData({ ...formData, empresa_ett: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Salario Anual (€)</Label>
+                  <Input
+                    type="number"
+                    value={formData.salario_anual || ""}
+                    onChange={(e) => setFormData({ ...formData, salario_anual: parseFloat(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="absentismo" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tasa Absentismo (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.tasa_absentismo || ""}
+                    onChange={(e) => setFormData({ ...formData, tasa_absentismo: parseFloat(e.target.value) })}
+                    disabled
+                    className="bg-slate-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horas No Trabajadas</Label>
+                  <Input
+                    type="number"
+                    value={formData.horas_no_trabajadas || ""}
+                    onChange={(e) => setFormData({ ...formData, horas_no_trabajadas: parseFloat(e.target.value) })}
+                    disabled
+                    className="bg-slate-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horas Deberían Trabajarse</Label>
+                  <Input
+                    type="number"
+                    value={formData.horas_deberian_trabajarse || ""}
+                    onChange={(e) => setFormData({ ...formData, horas_deberian_trabajarse: parseFloat(e.target.value) })}
+                    disabled
+                    className="bg-slate-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Última Actualización</Label>
+                  <Input
+                    type="date"
+                    value={formData.ultima_actualizacion_absentismo || ""}
+                    disabled
+                    className="bg-slate-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horas Causa Mayor Consumidas</Label>
+                  <Input
+                    type="number"
+                    value={formData.horas_causa_mayor_consumidas || ""}
+                    onChange={(e) => setFormData({ ...formData, horas_causa_mayor_consumidas: parseFloat(e.target.value) })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horas Causa Mayor Límite</Label>
+                  <Input
+                    type="number"
+                    value={formData.horas_causa_mayor_limite || ""}
+                    onChange={(e) => setFormData({ ...formData, horas_causa_mayor_limite: parseFloat(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="maquinas" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                  <div key={num} className="space-y-2">
+                    <Label>Máquina {num}</Label>
+                    <Input
+                      value={formData[`maquina_${num}`] || ""}
+                      onChange={(e) => setFormData({ ...formData, [`maquina_${num}`]: e.target.value })}
+                      placeholder="ID de máquina"
+                    />
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
