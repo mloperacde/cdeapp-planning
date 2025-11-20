@@ -45,6 +45,13 @@ export default function ConfigurationPage() {
           color: "blue"
         },
         {
+          title: "Completar Datos de Empleados",
+          description: "Completa automáticamente campos vacíos",
+          icon: Award,
+          url: createPageUrl("EmployeeDataCompletion"),
+          color: "purple"
+        },
+        {
           title: "Matriz de Habilidades",
           description: "Gestión de competencias y formación",
           icon: Award,

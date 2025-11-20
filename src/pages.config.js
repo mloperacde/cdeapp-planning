@@ -55,6 +55,7 @@ import ArticleManagement from './pages/ArticleManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import DirectDataEntry from './pages/DirectDataEntry';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
+import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import __Layout from './Layout.jsx';
 
 
@@ -116,6 +117,7 @@ export const PAGES = {
     "WorkCalendarConfig": WorkCalendarConfig,
     "DirectDataEntry": DirectDataEntry,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
+    "EmployeeDataCompletion": EmployeeDataCompletion,
 }
 
 export const pagesConfig = {
