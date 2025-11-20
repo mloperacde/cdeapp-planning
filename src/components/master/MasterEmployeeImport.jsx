@@ -171,10 +171,10 @@ export default function MasterEmployeeImport() {
         
         setProgress({
           stage: 'creating',
-          message: `Procesando registro ${i + 1} de ${extractedData.length}...`,
+          message: `Procesando registro ${i + 1} de ${parsedData.length}...`,
           current: i + 1,
-          total: extractedData.length,
-          progress: Math.round(((i + 1) / extractedData.length) * 100)
+          total: parsedData.length,
+          progress: Math.round(((i + 1) / parsedData.length) * 100)
         });
 
         try {
@@ -240,7 +240,7 @@ export default function MasterEmployeeImport() {
 
       setResult({
         success: true,
-        total: extractedData.length,
+        total: parsedData.length,
         created: createdCount,
         updated: updatedCount,
         errors: errors.length,
