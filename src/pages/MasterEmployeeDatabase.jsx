@@ -66,14 +66,25 @@ export default function MasterEmployeeDatabasePage() {
     
     if (masterEmployee.employee_id) {
       try {
-        existingEmployee = await base44.entities.Employee.filter({ id: masterEmployee.employee_id });
-        existingEmployee = existingEmployee[0] || null;
+        const result = await base44.entities.Employee.filter({ id: masterEmployee.employee_id });
+        existingEmployee = result[0] || null;
       } catch (e) {
         existingEmployee = null;
       }
-    } else if (masterEmployee.codigo_empleado) {
+    }
+    
+    // Si no hay employee_id, buscar por código
+    if (!existingEmployee && masterEmployee.codigo_empleado) {
       const existing = await base44.entities.Employee.filter({ 
         codigo_empleado: masterEmployee.codigo_empleado 
+      });
+      existingEmployee = existing[0] || null;
+    }
+    
+    // Si no hay código, buscar por nombre exacto
+    if (!existingEmployee && masterEmployee.nombre) {
+      const existing = await base44.entities.Employee.filter({ 
+        nombre: masterEmployee.nombre 
       });
       existingEmployee = existing[0] || null;
     }

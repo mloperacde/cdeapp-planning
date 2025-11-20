@@ -29,48 +29,91 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const SYNCABLE_FIELDS = [
-  { key: 'codigo_empleado', label: 'Código Empleado' },
-  { key: 'nombre', label: 'Nombre' },
-  { key: 'estado_empleado', label: 'Estado' },
-  { key: 'fecha_baja', label: 'Fecha Baja' },
-  { key: 'motivo_baja', label: 'Motivo Baja' },
-  { key: 'tasa_absentismo', label: 'Tasa Absentismo' },
-  { key: 'horas_no_trabajadas', label: 'Horas No Trabajadas' },
-  { key: 'horas_deberian_trabajarse', label: 'Horas Deberían Trabajarse' },
-  { key: 'fecha_nacimiento', label: 'Fecha Nacimiento' },
-  { key: 'dni', label: 'DNI' },
-  { key: 'nuss', label: 'NUSS' },
-  { key: 'sexo', label: 'Sexo' },
-  { key: 'nacionalidad', label: 'Nacionalidad' },
-  { key: 'direccion', label: 'Dirección' },
-  { key: 'formacion', label: 'Formación' },
-  { key: 'email', label: 'Email' },
-  { key: 'telefono_movil', label: 'Teléfono Móvil' },
-  { key: 'contacto_emergencia_nombre', label: 'Contacto Emergencia' },
-  { key: 'contacto_emergencia_telefono', label: 'Teléfono Emergencia' },
-  { key: 'categoria', label: 'Categoría' },
-  { key: 'tipo_jornada', label: 'Tipo Jornada' },
-  { key: 'num_horas_jornada', label: 'Horas Jornada' },
-  { key: 'tipo_turno', label: 'Tipo Turno' },
-  { key: 'horario_manana_inicio', label: 'Horario Mañana Inicio' },
-  { key: 'horario_manana_fin', label: 'Horario Mañana Fin' },
-  { key: 'horario_tarde_inicio', label: 'Horario Tarde Inicio' },
-  { key: 'horario_tarde_fin', label: 'Horario Tarde Fin' },
-  { key: 'taquilla_vestuario', label: 'Taquilla Vestuario' },
-  { key: 'taquilla_numero', label: 'Número Taquilla' },
-  { key: 'disponibilidad', label: 'Disponibilidad' },
-  { key: 'incluir_en_planning', label: 'Incluir en Planning' },
-  { key: 'fecha_alta', label: 'Fecha Alta' },
-  { key: 'tipo_contrato', label: 'Tipo Contrato' },
-  { key: 'codigo_contrato', label: 'Código Contrato' },
-  { key: 'fecha_fin_contrato', label: 'Fecha Fin Contrato' },
-  { key: 'empresa_ett', label: 'Empresa ETT' },
-  { key: 'salario_anual', label: 'Salario Anual' },
-  { key: 'evaluacion_responsable', label: 'Evaluación Responsable' },
-  { key: 'propuesta_cambio_categoria', label: 'Propuesta Cambio Categoría' },
-  { key: 'maquina_1', label: 'Máquina 1' },
-  { key: 'maquina_2', label: 'Máquina 2' },
-  { key: 'maquina_3', label: 'Máquina 3' },
+  // Datos Básicos
+  { key: 'codigo_empleado', label: 'Código Empleado', category: 'Básicos' },
+  { key: 'nombre', label: 'Nombre', category: 'Básicos' },
+  { key: 'estado_empleado', label: 'Estado', category: 'Básicos' },
+  { key: 'fecha_baja', label: 'Fecha Baja', category: 'Básicos' },
+  { key: 'motivo_baja', label: 'Motivo Baja', category: 'Básicos' },
+  
+  // Absentismo
+  { key: 'tasa_absentismo', label: 'Tasa Absentismo', category: 'Absentismo' },
+  { key: 'horas_no_trabajadas', label: 'Horas No Trabajadas', category: 'Absentismo' },
+  { key: 'horas_deberian_trabajarse', label: 'Horas Deberían Trabajarse', category: 'Absentismo' },
+  { key: 'ultima_actualizacion_absentismo', label: 'Última Act. Absentismo', category: 'Absentismo' },
+  
+  // Datos Personales
+  { key: 'fecha_nacimiento', label: 'Fecha Nacimiento', category: 'Personales' },
+  { key: 'dni', label: 'DNI', category: 'Personales' },
+  { key: 'nuss', label: 'NUSS', category: 'Personales' },
+  { key: 'sexo', label: 'Sexo', category: 'Personales' },
+  { key: 'nacionalidad', label: 'Nacionalidad', category: 'Personales' },
+  { key: 'direccion', label: 'Dirección', category: 'Personales' },
+  { key: 'formacion', label: 'Formación', category: 'Personales' },
+  { key: 'email', label: 'Email', category: 'Personales' },
+  { key: 'telefono_movil', label: 'Teléfono Móvil', category: 'Personales' },
+  { key: 'contacto_emergencia_nombre', label: 'Contacto Emergencia', category: 'Personales' },
+  { key: 'contacto_emergencia_telefono', label: 'Teléfono Emergencia', category: 'Personales' },
+  
+  // Organización
+  { key: 'departamento', label: 'Departamento', category: 'Organización' },
+  { key: 'puesto', label: 'Puesto', category: 'Organización' },
+  { key: 'categoria', label: 'Categoría', category: 'Organización' },
+  { key: 'equipo', label: 'Equipo', category: 'Organización' },
+  
+  // Jornada y Horarios
+  { key: 'tipo_jornada', label: 'Tipo Jornada', category: 'Horarios' },
+  { key: 'num_horas_jornada', label: 'Horas Jornada', category: 'Horarios' },
+  { key: 'tipo_turno', label: 'Tipo Turno', category: 'Horarios' },
+  { key: 'horario_manana_inicio', label: 'Horario Mañana Inicio', category: 'Horarios' },
+  { key: 'horario_manana_fin', label: 'Horario Mañana Fin', category: 'Horarios' },
+  { key: 'horario_tarde_inicio', label: 'Horario Tarde Inicio', category: 'Horarios' },
+  { key: 'horario_tarde_fin', label: 'Horario Tarde Fin', category: 'Horarios' },
+  { key: 'turno_partido_entrada1', label: 'Turno Partido Entrada 1', category: 'Horarios' },
+  { key: 'turno_partido_salida1', label: 'Turno Partido Salida 1', category: 'Horarios' },
+  { key: 'turno_partido_entrada2', label: 'Turno Partido Entrada 2', category: 'Horarios' },
+  { key: 'turno_partido_salida2', label: 'Turno Partido Salida 2', category: 'Horarios' },
+  
+  // Taquilla
+  { key: 'taquilla_vestuario', label: 'Vestuario', category: 'Taquilla' },
+  { key: 'taquilla_numero', label: 'Número Taquilla', category: 'Taquilla' },
+  
+  // Disponibilidad
+  { key: 'disponibilidad', label: 'Disponibilidad', category: 'Disponibilidad' },
+  { key: 'ausencia_inicio', label: 'Ausencia Inicio', category: 'Disponibilidad' },
+  { key: 'ausencia_fin', label: 'Ausencia Fin', category: 'Disponibilidad' },
+  { key: 'ausencia_motivo', label: 'Ausencia Motivo', category: 'Disponibilidad' },
+  { key: 'incluir_en_planning', label: 'Incluir en Planning', category: 'Disponibilidad' },
+  
+  // Contrato
+  { key: 'fecha_alta', label: 'Fecha Alta', category: 'Contrato' },
+  { key: 'tipo_contrato', label: 'Tipo Contrato', category: 'Contrato' },
+  { key: 'codigo_contrato', label: 'Código Contrato', category: 'Contrato' },
+  { key: 'fecha_fin_contrato', label: 'Fecha Fin Contrato', category: 'Contrato' },
+  { key: 'empresa_ett', label: 'Empresa ETT', category: 'Contrato' },
+  { key: 'salario_anual', label: 'Salario Anual', category: 'Contrato' },
+  
+  // Evaluación
+  { key: 'evaluacion_responsable', label: 'Evaluación Responsable', category: 'Evaluación' },
+  { key: 'propuesta_cambio_categoria', label: 'Propuesta Cambio Categoría', category: 'Evaluación' },
+  { key: 'propuesta_cambio_quien', label: 'Propuesto Por', category: 'Evaluación' },
+  
+  // Causa Mayor
+  { key: 'horas_causa_mayor_consumidas', label: 'Horas Causa Mayor Consumidas', category: 'Causa Mayor' },
+  { key: 'horas_causa_mayor_limite', label: 'Horas Causa Mayor Límite', category: 'Causa Mayor' },
+  { key: 'ultimo_reset_causa_mayor', label: 'Último Reset Causa Mayor', category: 'Causa Mayor' },
+  
+  // Máquinas
+  { key: 'maquina_1', label: 'Máquina 1', category: 'Máquinas' },
+  { key: 'maquina_2', label: 'Máquina 2', category: 'Máquinas' },
+  { key: 'maquina_3', label: 'Máquina 3', category: 'Máquinas' },
+  { key: 'maquina_4', label: 'Máquina 4', category: 'Máquinas' },
+  { key: 'maquina_5', label: 'Máquina 5', category: 'Máquinas' },
+  { key: 'maquina_6', label: 'Máquina 6', category: 'Máquinas' },
+  { key: 'maquina_7', label: 'Máquina 7', category: 'Máquinas' },
+  { key: 'maquina_8', label: 'Máquina 8', category: 'Máquinas' },
+  { key: 'maquina_9', label: 'Máquina 9', category: 'Máquinas' },
+  { key: 'maquina_10', label: 'Máquina 10', category: 'Máquinas' },
 ];
 
 export default function SyncComparisonDialog({ masterEmployee, existingEmployee, open, onClose }) {
@@ -355,90 +398,142 @@ export default function SyncComparisonDialog({ masterEmployee, existingEmployee,
                 </div>
 
                 <ScrollArea className="flex-1 border rounded-lg bg-slate-50 p-3">
-                  <div className="grid grid-cols-1 gap-3 pr-3">
-                    {SYNCABLE_FIELDS.map(field => {
-                      const isDifferent = differences.includes(field.key);
-                      const masterValue = masterEmployee[field.key];
-                      const employeeValue = existingEmployee?.[field.key];
-                      const isExpanded = expandedField === field.key;
-                      const showDiff = isDifferent && (isLongText(masterValue) || isLongText(employeeValue));
-
+                  <div className="space-y-4 pr-3">
+                    {/* Agrupar por categoría */}
+                    {Object.entries(
+                      SYNCABLE_FIELDS.reduce((acc, field) => {
+                        if (!acc[field.category]) acc[field.category] = [];
+                        acc[field.category].push(field);
+                        return acc;
+                      }, {})
+                    ).map(([category, fields]) => {
+                      const categoryDiffs = fields.filter(f => differences.includes(f.key)).length;
+                      const categorySelected = fields.filter(f => selectedFields.includes(f.key)).length;
+                      
                       return (
-                        <div
-                          key={field.key}
-                          className={`p-3 rounded-lg border transition-all ${
-                            isDifferent 
-                              ? 'bg-amber-50 border-amber-300' 
-                              : 'bg-white border-slate-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <Checkbox
-                              id={field.key}
-                              checked={selectedFields.includes(field.key)}
-                              onCheckedChange={() => toggleField(field.key)}
-                            />
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <Label 
-                                  htmlFor={field.key} 
-                                  className="font-semibold cursor-pointer flex items-center gap-2"
-                                >
-                                  {field.label}
-                                  {isDifferent && (
-                                    <Badge className="bg-amber-600 text-xs">
-                                      Modificado
-                                    </Badge>
-                                  )}
-                                </Label>
-                                {showDiff && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setExpandedField(isExpanded ? null : field.key)}
-                                    className="h-6 px-2"
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronUp className="w-3 h-3" />
-                                    ) : (
-                                      <>
-                                        <Eye className="w-3 h-3 mr-1" />
-                                        Ver diff
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                              </div>
-                              
-                              {isDifferent && !isExpanded && (
-                                <div className="space-y-1">
-                                  <div className="flex items-start gap-2 text-xs">
-                                    <span className="text-slate-500 min-w-[50px]">Actual:</span>
-                                    <span className="text-red-700 font-mono flex-1 break-words">
-                                      {String(employeeValue || '(vacío)').substring(0, 60)}
-                                      {String(employeeValue || '').length > 60 ? '...' : ''}
-                                    </span>
-                                  </div>
-                                  <ArrowRight className="w-3 h-3 text-slate-400 ml-12" />
-                                  <div className="flex items-start gap-2 text-xs">
-                                    <span className="text-slate-500 min-w-[50px]">Nuevo:</span>
-                                    <span className="text-green-700 font-mono font-semibold flex-1 break-words">
-                                      {String(masterValue || '(vacío)').substring(0, 60)}
-                                      {String(masterValue || '').length > 60 ? '...' : ''}
-                                    </span>
-                                  </div>
-                                </div>
+                        <div key={category} className="space-y-2">
+                          <div className="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-lg">
+                            <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                              {category}
+                              {categoryDiffs > 0 && (
+                                <Badge className="bg-amber-600 text-xs">
+                                  {categoryDiffs} diferencias
+                                </Badge>
                               )}
-
-                              {isExpanded && renderDiffView(employeeValue, masterValue)}
-                              
-                              {!isDifferent && masterValue && (
-                                <div className="text-xs text-slate-600 font-mono break-words">
-                                  {String(masterValue).substring(0, 80)}
-                                  {String(masterValue).length > 80 ? '...' : ''}
-                                </div>
-                              )}
+                            </h4>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-xs"
+                                onClick={() => {
+                                  const categoryKeys = fields.map(f => f.key);
+                                  setSelectedFields(prev => {
+                                    const withoutCategory = prev.filter(k => !categoryKeys.includes(k));
+                                    return [...withoutCategory, ...categoryKeys];
+                                  });
+                                }}
+                              >
+                                Todos
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-xs"
+                                onClick={() => {
+                                  const categoryKeys = fields.map(f => f.key);
+                                  setSelectedFields(prev => prev.filter(k => !categoryKeys.includes(k)));
+                                }}
+                              >
+                                Ninguno
+                              </Button>
                             </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {fields.map(field => {
+                              const isDifferent = differences.includes(field.key);
+                              const masterValue = masterEmployee[field.key];
+                              const employeeValue = existingEmployee?.[field.key];
+                              const isExpanded = expandedField === field.key;
+                              const showDiff = isDifferent && (isLongText(masterValue) || isLongText(employeeValue));
+
+                              return (
+                                <div
+                                  key={field.key}
+                                  className={`p-2 rounded-lg border transition-all ${
+                                    isDifferent 
+                                      ? 'bg-amber-50 border-amber-300' 
+                                      : 'bg-white border-slate-200'
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <Checkbox
+                                      id={field.key}
+                                      checked={selectedFields.includes(field.key)}
+                                      onCheckedChange={() => toggleField(field.key)}
+                                      className="mt-1"
+                                    />
+                                    <div className="flex-1 space-y-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <Label 
+                                          htmlFor={field.key} 
+                                          className="text-xs font-semibold cursor-pointer flex items-center gap-1"
+                                        >
+                                          {field.label}
+                                          {isDifferent && (
+                                            <Badge className="bg-amber-600 text-[10px] px-1 py-0">
+                                              ✓
+                                            </Badge>
+                                          )}
+                                        </Label>
+                                        {showDiff && (
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setExpandedField(isExpanded ? null : field.key)}
+                                            className="h-5 px-1"
+                                          >
+                                            {isExpanded ? (
+                                              <ChevronUp className="w-3 h-3" />
+                                            ) : (
+                                              <Eye className="w-3 h-3" />
+                                            )}
+                                          </Button>
+                                        )}
+                                      </div>
+                                      
+                                      {isDifferent && !isExpanded && (
+                                        <div className="text-[11px] space-y-0.5">
+                                          <div className="flex items-start gap-1">
+                                            <span className="text-red-700 font-mono flex-1 break-words line-through">
+                                              {String(employeeValue || '(vacío)').substring(0, 35)}
+                                              {String(employeeValue || '').length > 35 ? '...' : ''}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-start gap-1">
+                                            <ArrowRight className="w-2.5 h-2.5 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-green-700 font-mono font-semibold flex-1 break-words">
+                                              {String(masterValue || '(vacío)').substring(0, 35)}
+                                              {String(masterValue || '').length > 35 ? '...' : ''}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {isExpanded && renderDiffView(employeeValue, masterValue)}
+                                      
+                                      {!isDifferent && masterValue && (
+                                        <div className="text-[11px] text-slate-600 font-mono break-words">
+                                          {String(masterValue).substring(0, 40)}
+                                          {String(masterValue).length > 40 ? '...' : ''}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );
