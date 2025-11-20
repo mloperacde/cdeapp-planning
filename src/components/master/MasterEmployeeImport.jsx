@@ -7,13 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Download, CheckCircle2, AlertCircle, Loader2, Users, Database } from "lucide-react";
+import { Upload, Download, CheckCircle2, AlertCircle, Loader2, Users, Database, ArrowLeftRight, RefreshCw } from "lucide-react";
 
 export default function MasterEmployeeImport() {
   const [file, setFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
   const [progress, setProgress] = useState(null);
+  const [showMapping, setShowMapping] = useState(false);
+  const [detectedHeaders, setDetectedHeaders] = useState([]);
+  const [previewData, setPreviewData] = useState([]);
+  const [fieldMapping, setFieldMapping] = useState({});
+  const [parsedData, setParsedData] = useState([]);
   const queryClient = useQueryClient();
 
   const parseCSV = (text) => {
@@ -35,40 +40,134 @@ export default function MasterEmployeeImport() {
     return data;
   };
 
-  const handleFileChange = (e) => {
+  const AVAILABLE_FIELDS = [
+    { value: '', label: '-- No importar --' },
+    { value: 'codigo_empleado', label: 'Código Empleado' },
+    { value: 'nombre', label: 'Nombre' },
+    { value: 'estado_empleado', label: 'Estado' },
+    { value: 'fecha_baja', label: 'Fecha Baja' },
+    { value: 'motivo_baja', label: 'Motivo Baja' },
+    { value: 'tasa_absentismo', label: 'Tasa Absentismo' },
+    { value: 'horas_no_trabajadas', label: 'Horas No Trabajadas' },
+    { value: 'horas_deberian_trabajarse', label: 'Horas Deberían Trabajarse' },
+    { value: 'ultima_actualizacion_absentismo', label: 'Última Act. Absentismo' },
+    { value: 'fecha_nacimiento', label: 'Fecha Nacimiento' },
+    { value: 'dni', label: 'DNI' },
+    { value: 'nuss', label: 'NUSS' },
+    { value: 'sexo', label: 'Sexo' },
+    { value: 'nacionalidad', label: 'Nacionalidad' },
+    { value: 'direccion', label: 'Dirección' },
+    { value: 'formacion', label: 'Formación' },
+    { value: 'email', label: 'Email' },
+    { value: 'telefono_movil', label: 'Teléfono Móvil' },
+    { value: 'contacto_emergencia_nombre', label: 'Contacto Emergencia' },
+    { value: 'contacto_emergencia_telefono', label: 'Teléfono Emergencia' },
+    { value: 'departamento', label: 'Departamento' },
+    { value: 'puesto', label: 'Puesto' },
+    { value: 'categoria', label: 'Categoría' },
+    { value: 'tipo_jornada', label: 'Tipo Jornada' },
+    { value: 'num_horas_jornada', label: 'Horas Jornada' },
+    { value: 'tipo_turno', label: 'Tipo Turno' },
+    { value: 'equipo', label: 'Equipo' },
+    { value: 'horario_manana_inicio', label: 'Horario Mañana Inicio' },
+    { value: 'horario_manana_fin', label: 'Horario Mañana Fin' },
+    { value: 'horario_tarde_inicio', label: 'Horario Tarde Inicio' },
+    { value: 'horario_tarde_fin', label: 'Horario Tarde Fin' },
+    { value: 'turno_partido_entrada1', label: 'Turno Partido Entrada 1' },
+    { value: 'turno_partido_salida1', label: 'Turno Partido Salida 1' },
+    { value: 'turno_partido_entrada2', label: 'Turno Partido Entrada 2' },
+    { value: 'turno_partido_salida2', label: 'Turno Partido Salida 2' },
+    { value: 'taquilla_vestuario', label: 'Vestuario' },
+    { value: 'taquilla_numero', label: 'Número Taquilla' },
+    { value: 'disponibilidad', label: 'Disponibilidad' },
+    { value: 'ausencia_inicio', label: 'Ausencia Inicio' },
+    { value: 'ausencia_fin', label: 'Ausencia Fin' },
+    { value: 'ausencia_motivo', label: 'Ausencia Motivo' },
+    { value: 'incluir_en_planning', label: 'Incluir en Planning' },
+    { value: 'fecha_alta', label: 'Fecha Alta' },
+    { value: 'tipo_contrato', label: 'Tipo Contrato' },
+    { value: 'codigo_contrato', label: 'Código Contrato' },
+    { value: 'fecha_fin_contrato', label: 'Fecha Fin Contrato' },
+    { value: 'empresa_ett', label: 'Empresa ETT' },
+    { value: 'salario_anual', label: 'Salario Anual' },
+    { value: 'evaluacion_responsable', label: 'Evaluación Responsable' },
+    { value: 'propuesta_cambio_categoria', label: 'Propuesta Cambio Categoría' },
+    { value: 'propuesta_cambio_quien', label: 'Propuesto Por' },
+    { value: 'horas_causa_mayor_consumidas', label: 'Horas Causa Mayor Consumidas' },
+    { value: 'horas_causa_mayor_limite', label: 'Horas Causa Mayor Límite' },
+    { value: 'ultimo_reset_causa_mayor', label: 'Último Reset Causa Mayor' },
+    { value: 'maquina_1', label: 'Máquina 1' },
+    { value: 'maquina_2', label: 'Máquina 2' },
+    { value: 'maquina_3', label: 'Máquina 3' },
+    { value: 'maquina_4', label: 'Máquina 4' },
+    { value: 'maquina_5', label: 'Máquina 5' },
+    { value: 'maquina_6', label: 'Máquina 6' },
+    { value: 'maquina_7', label: 'Máquina 7' },
+    { value: 'maquina_8', label: 'Máquina 8' },
+    { value: 'maquina_9', label: 'Máquina 9' },
+    { value: 'maquina_10', label: 'Máquina 10' },
+  ];
+
+  const autoMapField = (header) => {
+    const normalized = header.toLowerCase().trim();
+    const match = AVAILABLE_FIELDS.find(f => 
+      f.value && (
+        f.value === normalized ||
+        f.label.toLowerCase() === normalized ||
+        normalized.includes(f.value) ||
+        f.value.includes(normalized)
+      )
+    );
+    return match ? match.value : '';
+  };
+
+  const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
     setResult(null);
     setProgress(null);
+    setShowMapping(false);
+
+    if (selectedFile) {
+      try {
+        const text = await selectedFile.text();
+        const data = parseCSV(text);
+        
+        if (data.length > 0) {
+          const headers = Object.keys(data[0]);
+          setDetectedHeaders(headers);
+          setParsedData(data);
+          setPreviewData(data.slice(0, 3));
+          
+          // Auto-mapeo inicial
+          const initialMapping = {};
+          headers.forEach(header => {
+            initialMapping[header] = autoMapField(header);
+          });
+          setFieldMapping(initialMapping);
+          setShowMapping(true);
+        }
+      } catch (error) {
+        console.error('Error al analizar archivo:', error);
+      }
+    }
   };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!parsedData || parsedData.length === 0) return;
 
     setImporting(true);
     setResult(null);
-    setProgress({ stage: 'reading', message: 'Leyendo archivo...' });
+    setShowMapping(false);
+    setProgress({ stage: 'processing', message: `Procesando ${parsedData.length} registros...` });
 
     try {
-      const text = await file.text();
-      const extractedData = parseCSV(text);
-
-      if (extractedData.length === 0) {
-        throw new Error('El archivo no contiene datos');
-      }
-
-      setProgress({ 
-        stage: 'processing', 
-        message: `Procesando ${extractedData.length} registros...`,
-        total: extractedData.length 
-      });
-
       const errors = [];
       let createdCount = 0;
       let updatedCount = 0;
 
-      for (let i = 0; i < extractedData.length; i++) {
-        const row = extractedData[i];
+      for (let i = 0; i < parsedData.length; i++) {
+        const row = parsedData[i];
         
         setProgress({
           stage: 'creating',
@@ -81,79 +180,22 @@ export default function MasterEmployeeImport() {
         try {
           const employeeData = {};
           
-          // Mapear todos los campos del CSV a la entidad
-          const fieldMapping = {
-            'codigo_empleado': row['codigo_empleado'] || '',
-            'nombre': row['nombre'] || '',
-            'estado_empleado': row['estado_empleado'] || 'Alta',
-            'fecha_baja': row['fecha_baja'] || '',
-            'motivo_baja': row['motivo_baja'] || '',
-            'tasa_absentismo': row['tasa_absentismo'] ? parseFloat(row['tasa_absentismo']) : null,
-            'horas_no_trabajadas': row['horas_no_trabajadas'] ? parseFloat(row['horas_no_trabajadas']) : 0,
-            'horas_deberian_trabajarse': row['horas_deberian_trabajarse'] ? parseFloat(row['horas_deberian_trabajarse']) : 0,
-            'ultima_actualizacion_absentismo': row['ultima_actualizacion_absentismo'] || '',
-            'fecha_nacimiento': row['fecha_nacimiento'] || '',
-            'dni': row['dni'] || '',
-            'nuss': row['nuss'] || '',
-            'sexo': row['sexo'] || '',
-            'nacionalidad': row['nacionalidad'] || '',
-            'direccion': row['direccion'] || '',
-            'formacion': row['formacion'] || '',
-            'email': row['email'] || '',
-            'telefono_movil': row['telefono_movil'] || '',
-            'contacto_emergencia_nombre': row['contacto_emergencia_nombre'] || '',
-            'contacto_emergencia_telefono': row['contacto_emergencia_telefono'] || '',
-            'department_id': row['department_id'] || '',
-            'position_id': row['position_id'] || '',
-            'categoria': row['categoria'] || '',
-            'tipo_jornada': row['tipo_jornada'] || 'Jornada Completa',
-            'num_horas_jornada': row['num_horas_jornada'] ? parseFloat(row['num_horas_jornada']) : null,
-            'tipo_turno': row['tipo_turno'] || 'Rotativo',
-            'team_id': row['team_id'] || '',
-            'horario_manana_inicio': row['horario_manana_inicio'] || '',
-            'horario_manana_fin': row['horario_manana_fin'] || '',
-            'horario_tarde_inicio': row['horario_tarde_inicio'] || '',
-            'horario_tarde_fin': row['horario_tarde_fin'] || '',
-            'turno_partido_entrada1': row['turno_partido_entrada1'] || '',
-            'turno_partido_salida1': row['turno_partido_salida1'] || '',
-            'turno_partido_entrada2': row['turno_partido_entrada2'] || '',
-            'turno_partido_salida2': row['turno_partido_salida2'] || '',
-            'taquilla_vestuario': row['taquilla_vestuario'] || '',
-            'taquilla_numero': row['taquilla_numero'] || '',
-            'disponibilidad': row['disponibilidad'] || 'Disponible',
-            'ausencia_inicio': row['ausencia_inicio'] || '',
-            'ausencia_fin': row['ausencia_fin'] || '',
-            'ausencia_motivo': row['ausencia_motivo'] || '',
-            'incluir_en_planning': row['incluir_en_planning'] === 'true' || row['incluir_en_planning'] === '1' || row['incluir_en_planning'] === 'si',
-            'fecha_alta': row['fecha_alta'] || '',
-            'tipo_contrato': row['tipo_contrato'] || '',
-            'codigo_contrato': row['codigo_contrato'] || '',
-            'fecha_fin_contrato': row['fecha_fin_contrato'] || '',
-            'empresa_ett': row['empresa_ett'] || '',
-            'salario_anual': row['salario_anual'] ? parseFloat(row['salario_anual']) : null,
-            'evaluacion_responsable': row['evaluacion_responsable'] || '',
-            'propuesta_cambio_categoria': row['propuesta_cambio_categoria'] || '',
-            'propuesta_cambio_quien': row['propuesta_cambio_quien'] || '',
-            'horas_causa_mayor_consumidas': row['horas_causa_mayor_consumidas'] ? parseFloat(row['horas_causa_mayor_consumidas']) : 0,
-            'horas_causa_mayor_limite': row['horas_causa_mayor_limite'] ? parseFloat(row['horas_causa_mayor_limite']) : null,
-            'ultimo_reset_causa_mayor': row['ultimo_reset_causa_mayor'] || '',
-            'maquina_1': row['maquina_1'] || '',
-            'maquina_2': row['maquina_2'] || '',
-            'maquina_3': row['maquina_3'] || '',
-            'maquina_4': row['maquina_4'] || '',
-            'maquina_5': row['maquina_5'] || '',
-            'maquina_6': row['maquina_6'] || '',
-            'maquina_7': row['maquina_7'] || '',
-            'maquina_8': row['maquina_8'] || '',
-            'maquina_9': row['maquina_9'] || '',
-            'maquina_10': row['maquina_10'] || ''
-          };
-          
-          // Solo agregar campos que no estén vacíos (o que sean números válidos)
-          Object.keys(fieldMapping).forEach(key => {
-            const value = fieldMapping[key];
-            if (value !== '' && value !== null && value !== undefined) {
-              employeeData[key] = value;
+          // Aplicar el mapeo configurado
+          Object.entries(fieldMapping).forEach(([csvHeader, targetField]) => {
+            if (targetField && row[csvHeader]) {
+              const value = row[csvHeader].trim();
+              
+              // Conversiones especiales
+              if (['tasa_absentismo', 'horas_no_trabajadas', 'horas_deberian_trabajarse', 
+                   'num_horas_jornada', 'salario_anual', 'horas_causa_mayor_consumidas', 
+                   'horas_causa_mayor_limite'].includes(targetField)) {
+                const parsed = parseFloat(value);
+                if (!isNaN(parsed)) employeeData[targetField] = parsed;
+              } else if (targetField === 'incluir_en_planning') {
+                employeeData[targetField] = ['true', '1', 'si', 'sí', 'yes'].includes(value.toLowerCase());
+              } else if (value) {
+                employeeData[targetField] = value;
+              }
             }
           });
           
@@ -298,32 +340,117 @@ export default function MasterEmployeeImport() {
               onChange={handleFileChange}
               disabled={importing}
             />
-            {file && (
+            {file && !showMapping && (
               <p className="text-sm text-slate-600">
                 Archivo seleccionado: <span className="font-semibold">{file.name}</span>
               </p>
             )}
           </div>
 
+          {/* Field Mapping */}
+          {showMapping && !importing && (
+            <Card className="border-2 border-blue-300 bg-blue-50/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ArrowLeftRight className="w-5 h-5 text-blue-600" />
+                  Mapeo de Campos
+                </CardTitle>
+                <p className="text-xs text-slate-600 mt-1">
+                  {detectedHeaders.length} columnas detectadas. Asigna cada columna del CSV a un campo de la ficha de empleado.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className="bg-green-600">
+                    {Object.values(fieldMapping).filter(v => v).length} campos mapeados
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const newMapping = {};
+                      detectedHeaders.forEach(h => newMapping[h] = autoMapField(h));
+                      setFieldMapping(newMapping);
+                    }}
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Auto-mapear
+                  </Button>
+                </div>
+
+                <div className="max-h-96 overflow-y-auto space-y-2 p-2 bg-white rounded border">
+                  {detectedHeaders.map((header, idx) => (
+                    <div key={header} className="p-3 bg-slate-50 rounded-lg border">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-slate-600 mb-1 block">Columna del CSV:</Label>
+                          <div className="font-mono text-sm font-semibold text-slate-900 bg-white p-2 rounded border">
+                            {header}
+                          </div>
+                          {previewData[0] && (
+                            <div className="text-xs text-slate-500 mt-1 truncate">
+                              Ejemplo: {previewData[0][header]}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <Label className="text-xs text-slate-600 mb-1 block">
+                            Campo de la ficha:
+                          </Label>
+                          <select
+                            value={fieldMapping[header] || ''}
+                            onChange={(e) => setFieldMapping({
+                              ...fieldMapping,
+                              [header]: e.target.value
+                            })}
+                            className="w-full p-2 border rounded text-sm"
+                          >
+                            {AVAILABLE_FIELDS.map(field => (
+                              <option key={field.value} value={field.value}>
+                                {field.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {previewData.length > 0 && (
+                  <Alert className="border-slate-200 bg-slate-50">
+                    <AlertDescription className="text-xs">
+                      <p className="font-semibold mb-1">Vista previa (primeras 3 filas):</p>
+                      <div className="text-slate-700">
+                        Total de registros a importar: <strong>{parsedData.length}</strong>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Import Button */}
-          <Button
-            onClick={handleImport}
-            disabled={!file || importing}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-            size="lg"
-          >
-            {importing ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Importando...
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5 mr-2" />
-                Importar Base de Datos
-              </>
-            )}
-          </Button>
+          {showMapping && !importing && (
+            <Button
+              onClick={handleImport}
+              disabled={Object.values(fieldMapping).filter(v => v).length === 0}
+              className="w-full bg-green-600 hover:bg-green-700"
+              size="lg"
+            >
+              <Upload className="w-5 h-5 mr-2" />
+              Importar {parsedData.length} Empleados
+            </Button>
+          )}
+
+          {!showMapping && file && !importing && (
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertDescription className="text-amber-900 text-sm">
+                Archivo cargado. Configura el mapeo de campos arriba.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Progress */}
           {progress && (
