@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -286,7 +285,11 @@ export default function DocumentForm({ document, onClose }) {
               <Label>Fecha Caducidad</Label>
               <Input
                 type="date"
-                value={formData.fecha_caducidad ? format(new Date(formData.fecha_caducidad), 'yyyy-MM-dd') : ''}
+                value={(() => {
+                  if (!formData.fecha_caducidad) return '';
+                  const date = new Date(formData.fecha_caducidad);
+                  return isNaN(date.getTime()) ? '' : format(date, 'yyyy-MM-dd');
+                })()}
                 onChange={(e) => setFormData({...formData, fecha_caducidad: e.target.value})}
               />
             </div>

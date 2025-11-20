@@ -15,7 +15,14 @@ const STORAGE_KEYS = {
 };
 
 const offlineStorage = {
-  saveEmployees: (employees) => localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(employees)),
+  saveEmployees: (employees) => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(employees));
+    } catch (error) {
+      console.warn('LocalStorage quota exceeded, clearing old data');
+      localStorage.removeItem(STORAGE_KEYS.EMPLOYEES);
+    }
+  },
   getEmployees: () => {
     const data = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
     return data ? JSON.parse(data) : [];
@@ -63,6 +70,7 @@ export default function MobilePlanningPage() {
         const employees = await base44.entities.Employee.list();
         const emp = employees.find(e => e.email === user?.email);
         if (emp) {
+          // Solo guardar el empleado actual, no todos
           offlineStorage.saveEmployees([emp]);
         }
         return emp;

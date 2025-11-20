@@ -26,7 +26,7 @@ import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
 import LockerAssignmentPanel from "./LockerAssignmentPanel";
 import AbsenteeismCard from "./AbsenteeismCard";
-import { useToast } from "@/components/ui/use-toast"; // New import for toast
+import { toast } from "sonner";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
@@ -98,7 +98,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const [activeTab, setActiveTab] = useState("datos"); // New state for active tab
 
   const queryClient = useQueryClient();
-  const { toast } = useToast(); // Initialize useToast hook
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
