@@ -157,10 +157,28 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
 
                 <div className="space-y-2">
                   <Label>Nacionalidad</Label>
-                  <Input
+                  <Select
                     value={formData.nacionalidad || ""}
-                    onChange={(e) => setFormData({ ...formData, nacionalidad: e.target.value })}
-                  />
+                    onValueChange={(value) => setFormData({ ...formData, nacionalidad: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar nacionalidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ESPAÑOLA">ESPAÑOLA</SelectItem>
+                      <SelectItem value="RUMANA">RUMANA</SelectItem>
+                      <SelectItem value="VENEZOLANA">VENEZOLANA</SelectItem>
+                      <SelectItem value="COLOMBIANA">COLOMBIANA</SelectItem>
+                      <SelectItem value="BULGARA">BÚLGARA</SelectItem>
+                      <SelectItem value="CUBANA">CUBANA</SelectItem>
+                      <SelectItem value="ARGENTINA">ARGENTINA</SelectItem>
+                      <SelectItem value="SALVADOREÑA">SALVADOREÑA</SelectItem>
+                      <SelectItem value="BRASILEÑA">BRASILEÑA</SelectItem>
+                      <SelectItem value="POLACA">POLACA</SelectItem>
+                      <SelectItem value="PORTUGUESA">PORTUGUESA</SelectItem>
+                      <SelectItem value="UCRANIANA">UCRANIANA</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
@@ -211,18 +229,83 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Departamento</Label>
-                  <Input
+                  <Select
                     value={formData.departamento || ""}
-                    onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
-                  />
+                    onValueChange={(value) => setFormData({ ...formData, departamento: value, puesto: "" })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FABRICACION">FABRICACION</SelectItem>
+                      <SelectItem value="MANTENIMIENTO">MANTENIMIENTO</SelectItem>
+                      <SelectItem value="ALMACEN">ALMACEN</SelectItem>
+                      <SelectItem value="CALIDAD">CALIDAD</SelectItem>
+                      <SelectItem value="OFICINA">OFICINA</SelectItem>
+                      <SelectItem value="PLANIFICACION">PLANIFICACION</SelectItem>
+                      <SelectItem value="LIMPIEZA">LIMPIEZA</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Puesto</Label>
-                  <Input
+                  <Select
                     value={formData.puesto || ""}
-                    onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
-                  />
+                    onValueChange={(value) => setFormData({ ...formData, puesto: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar puesto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.departamento === "FABRICACION" && (
+                        <>
+                          <SelectItem value="OPERARIA DE LINEA">OPERARIA DE LINEA</SelectItem>
+                          <SelectItem value="RESPONSABLE DE LINEA">RESPONSABLE DE LINEA</SelectItem>
+                          <SelectItem value="SEGUNDA DE LINEA">SEGUNDA DE LINEA</SelectItem>
+                          <SelectItem value="JEFE DE TURNO">JEFE DE TURNO</SelectItem>
+                          <SelectItem value="OPERARIO FABRICACION">OPERARIO FABRICACION</SelectItem>
+                          <SelectItem value="RESPONSABLE FABRICACION">RESPONSABLE FABRICACION</SelectItem>
+                        </>
+                      )}
+                      {formData.departamento === "MANTENIMIENTO" && (
+                        <>
+                          <SelectItem value="MECANICO">MECANICO</SelectItem>
+                          <SelectItem value="MANT. DE INSTALACIONES">MANT. DE INSTALACIONES</SelectItem>
+                          <SelectItem value="OPERARIO MANTENIMIENTO">OPERARIO MANTENIMIENTO</SelectItem>
+                          <SelectItem value="RESP. TURNO MECANICOS">RESP. TURNO MECANICOS</SelectItem>
+                          <SelectItem value="RESPONSABLE DE MANTENIMIENTO">RESPONSABLE DE MANTENIMIENTO</SelectItem>
+                        </>
+                      )}
+                      {formData.departamento === "ALMACEN" && (
+                        <>
+                          <SelectItem value="CARRETILLERO">CARRETILLERO</SelectItem>
+                          <SelectItem value="RESPONSABLE DE ALMACEN">RESPONSABLE DE ALMACEN</SelectItem>
+                          <SelectItem value="TECNICO DE CALIDAD ALMACEN">TECNICO DE CALIDAD ALMACEN</SelectItem>
+                        </>
+                      )}
+                      {formData.departamento === "CALIDAD" && (
+                        <SelectItem value="TECNICO DE CALIDAD">TECNICO DE CALIDAD</SelectItem>
+                      )}
+                      {(formData.departamento === "OFICINA" || formData.departamento === "PLANIFICACION") && (
+                        <>
+                          <SelectItem value="AUX. ADMINISTRATIVO">AUX. ADMINISTRATIVO</SelectItem>
+                          <SelectItem value="AYUDANTE DE PLANIFICACION">AYUDANTE DE PLANIFICACION</SelectItem>
+                          <SelectItem value="DIR. PROJECT MANAGER/COMPRAS">DIR. PROJECT MANAGER/COMPRAS</SelectItem>
+                          <SelectItem value="DIRECCION PLANIFICACION">DIRECCION PLANIFICACION</SelectItem>
+                          <SelectItem value="OPERACIONES">OPERACIONES</SelectItem>
+                          <SelectItem value="RESPONSABLE COMERCIAL">RESPONSABLE COMERCIAL</SelectItem>
+                          <SelectItem value="RESPONSABLE COMPRAS">RESPONSABLE COMPRAS</SelectItem>
+                          <SelectItem value="RESPONSABLE PACKAGING">RESPONSABLE PACKAGING</SelectItem>
+                          <SelectItem value="RR.HH">RR.HH</SelectItem>
+                          <SelectItem value="TECNICO DE PLANIFICACION">TECNICO DE PLANIFICACION</SelectItem>
+                        </>
+                      )}
+                      {formData.departamento === "LIMPIEZA" && (
+                        <SelectItem value="OPERARIA LIMPIEZA">OPERARIA LIMPIEZA</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -230,15 +313,25 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                   <Input
                     value={formData.categoria || ""}
                     onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                    placeholder="Ej: Categoría 1, S/C"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Equipo</Label>
-                  <Input
+                  <Select
                     value={formData.equipo || ""}
-                    onChange={(e) => setFormData({ ...formData, equipo: e.target.value })}
-                  />
+                    onValueChange={(value) => setFormData({ ...formData, equipo: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={null}>Sin equipo</SelectItem>
+                      <SelectItem value="Turno Isa">Turno Isa</SelectItem>
+                      <SelectItem value="Turno Sara">Turno Sara</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
@@ -261,12 +354,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                     onValueChange={(value) => setFormData({ ...formData, tipo_jornada: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Seleccionar jornada" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Jornada Completa">Jornada Completa</SelectItem>
                       <SelectItem value="Jornada Parcial">Jornada Parcial</SelectItem>
-                      <SelectItem value="Reducción de Jornada">Reducción de Jornada</SelectItem>
+                      <SelectItem value="Reduccion de Jornada">Reducción de Jornada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -295,6 +388,22 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                       <SelectItem value="Fijo Mañana">Fijo Mañana</SelectItem>
                       <SelectItem value="Fijo Tarde">Fijo Tarde</SelectItem>
                       <SelectItem value="Turno Partido">Turno Partido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Incluir en Planning</Label>
+                  <Select
+                    value={formData.incluir_en_planning ? "true" : "false"}
+                    onValueChange={(value) => setFormData({ ...formData, incluir_en_planning: value === "true" })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Sí</SelectItem>
+                      <SelectItem value="false">No</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -380,10 +489,19 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
 
                 <div className="space-y-2">
                   <Label>Tipo Contrato</Label>
-                  <Input
+                  <Select
                     value={formData.tipo_contrato || ""}
-                    onChange={(e) => setFormData({ ...formData, tipo_contrato: e.target.value })}
-                  />
+                    onValueChange={(value) => setFormData({ ...formData, tipo_contrato: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="INDEFINIDO">INDEFINIDO</SelectItem>
+                      <SelectItem value="TEMPORAL">TEMPORAL</SelectItem>
+                      <SelectItem value="ETT">ETT</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -408,6 +526,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                   <Input
                     value={formData.empresa_ett || ""}
                     onChange={(e) => setFormData({ ...formData, empresa_ett: e.target.value })}
+                    disabled={formData.tipo_contrato !== "ETT"}
+                    className={formData.tipo_contrato !== "ETT" ? "bg-slate-50" : ""}
+                    placeholder={formData.tipo_contrato === "ETT" ? "Nombre de la empresa ETT" : ""}
                   />
                 </div>
 
