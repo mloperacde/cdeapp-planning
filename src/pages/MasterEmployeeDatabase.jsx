@@ -370,6 +370,31 @@ export default function MasterEmployeeDatabasePage() {
                   <CardTitle>Registros en Base de Datos Maestra</CardTitle>
                   <div className="flex gap-2 flex-wrap">
                     <Button
+                      onClick={async () => {
+                        if (!confirm('¿Reorganizar y limpiar datos del maestro?\n\nEsto corregirá:\n• Campos en columnas incorrectas\n• Fechas mal formateadas\n• Datos duplicados o mal posicionados\n\n¿Continuar?')) return;
+                        
+                        setSyncing(true);
+                        try {
+                          const response = await base44.functions.invoke('reorganizeMasterEmployeeData', {});
+                          if (response.data.success) {
+                            alert(`✅ ${response.data.message}`);
+                            queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+                          } else {
+                            alert('❌ Error: ' + response.data.error);
+                          }
+                        } catch (error) {
+                          alert('❌ Error: ' + error.message);
+                        } finally {
+                          setSyncing(false);
+                        }
+                      }}
+                      disabled={syncing}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                      Reorganizar Datos
+                    </Button>
+                    <Button
                       onClick={handleSyncAll}
                       disabled={syncing || stats.pendientes === 0}
                       className="bg-green-600 hover:bg-green-700"
