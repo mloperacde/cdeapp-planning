@@ -26,7 +26,13 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
   const queryClient = useQueryClient();
 
   const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.EmployeeMasterDatabase.update(employee.id, data),
+    mutationFn: (data) => {
+      if (employee.id) {
+        return base44.entities.EmployeeMasterDatabase.update(employee.id, data);
+      } else {
+        return base44.entities.EmployeeMasterDatabase.create(data);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       onClose();
@@ -42,7 +48,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Empleado - {employee.nombre}</DialogTitle>
+          <DialogTitle>{employee.id ? `Editar Empleado - ${employee.nombre}` : 'Nueva Alta de Empleado'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -630,7 +636,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
               Cancelar
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+              {saveMutation.isPending ? "Guardando..." : (employee.id ? "Guardar Cambios" : "Crear Empleado")}
             </Button>
           </div>
         </form>

@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, Users, Search, Filter, Edit, Database, Zap, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Users, Search, Filter, Edit, Database, Zap, CheckCircle2, Plus } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -149,17 +149,33 @@ export default function HRDashboard() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <TrendingUp className="w-8 h-8 text-blue-600" />
-              Panel de RRHH - Base de Datos Maestra
+              <Users className="w-8 h-8 text-blue-600" />
+              Gestión de Empleados
             </h1>
             <p className="text-slate-600 mt-1">
-              Vista completa y gestión de empleados
+              Sistema basado en Base de Datos Maestra
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              onClick={() => {
+                setEditingEmployee({
+                  nombre: '',
+                  estado_empleado: 'Alta',
+                  tipo_jornada: 'Jornada Completa',
+                  tipo_turno: 'Rotativo',
+                  incluir_en_planning: true
+                });
+                setShowEditDialog(true);
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Alta
+            </Button>
             <Button
               onClick={() => autoAssignLockersMutation.mutate()}
               disabled={autoAssignLockersMutation.isPending}
