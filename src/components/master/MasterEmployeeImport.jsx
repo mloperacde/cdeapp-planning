@@ -180,24 +180,32 @@ export default function MasterEmployeeImport() {
 
   const downloadTemplate = () => {
     const headers = [
-      'codigo_empleado', 'nombre', 'estado_empleado', 'departamento', 'puesto', 'equipo',
-      'tipo_jornada', 'num_horas_jornada', 'tipo_turno', 'taquilla_vestuario', 'taquilla_numero',
-      'fecha_nacimiento', 'dni', 'nuss', 'sexo', 'nacionalidad', 'direccion', 'email', 'telefono_movil',
-      'fecha_alta', 'tipo_contrato', 'empresa_ett', 'categoria'
-    ];
-    
-    const exampleData = [
-      'EMP001', 'Juan Pérez García', 'Alta', 'Producción', 'Operario', 'Equipo A',
-      'Jornada Completa', '40', 'Rotativo', 'Vestuario Masculino Planta Baja', '101',
-      '1990-01-15', '12345678A', '12-3456789012-34', 'Masculino', 'Española', 'Calle Principal 123',
-      'juan.perez@empresa.com', '600123456', '2024-01-01', 'Indefinido', '', 'Categoría 1'
+      'codigo_empleado', 'nombre', 'fecha_nacimiento', 'dni', 'nuss', 'sexo', 'nacionalidad', 
+      'direccion', 'email', 'telefono_movil', 'formacion',
+      'departamento', 'puesto', 'categoria', 'equipo',
+      'tipo_jornada', 'num_horas_jornada', 'tipo_turno',
+      'horario_manana_inicio', 'horario_manana_fin', 'horario_tarde_inicio', 'horario_tarde_fin',
+      'taquilla_vestuario', 'taquilla_numero',
+      'fecha_alta', 'tipo_contrato', 'codigo_contrato', 'fecha_fin_contrato', 'empresa_ett',
+      'estado_empleado', 'incluir_en_planning'
     ];
 
-    const csvContent = headers.join(',') + '\n' + exampleData.join(',');
+    const exampleData = [
+      'EMP001', 'Juan Pérez García', '1990-01-15', '12345678A', '12-3456789012-34', 
+      'Masculino', 'ESPAÑOLA', 'Calle Principal 123', 'juan.perez@empresa.com', '600123456', 'FP Grado Medio',
+      'FABRICACION', 'OPERARIA DE LINEA', 'Categoría 1', 'Turno Isa',
+      'Jornada Completa', '40', 'Rotativo',
+      '07:00', '15:00', '14:00', '22:00',
+      'Vestuario Masculino Planta Baja', '101',
+      '2024-01-01', 'INDEFINIDO', '502', '', '',
+      'Alta', 'true'
+    ];
+
+    const csvContent = headers.join(';') + '\n' + exampleData.join(';');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'Plantilla_Empleados.csv';
+    link.download = 'Plantilla_Empleados_Completa.csv';
     link.click();
   };
 

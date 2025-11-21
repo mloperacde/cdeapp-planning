@@ -35,19 +35,19 @@ Deno.serve(async (req) => {
           // tipo_contrato tiene "true" -> debería ser incluir_en_planning
           // codigo_contrato tiene fecha -> debería ser fecha_alta
           // fecha_fin_contrato tiene tipo -> debería ser tipo_contrato
-          // empresa_ett tiene código -> debería ser codigo_contrato o salario
+          // empresa_ett tiene código -> debería ser codigo_contrato
           
           if (correctedData.codigo_contrato && /^\d{2}\/\d{2}\/\d{4}$/.test(correctedData.codigo_contrato)) {
-            // Es una fecha en formato DD/MM/YYYY
             correctedData.fecha_alta = correctedData.codigo_contrato;
+            correctedData.codigo_contrato = null;
           }
           
           if (correctedData.fecha_fin_contrato && ['INDEFINIDO', 'TEMPORAL', 'ETT'].includes(correctedData.fecha_fin_contrato)) {
             correctedData.tipo_contrato = correctedData.fecha_fin_contrato;
+            correctedData.fecha_fin_contrato = null;
           }
           
           if (correctedData.empresa_ett && /^\d+$/.test(correctedData.empresa_ett)) {
-            // Es un número - probablemente código de contrato o salario
             const num = parseInt(correctedData.empresa_ett);
             if (num < 1000) {
               correctedData.codigo_contrato = correctedData.empresa_ett;
@@ -58,6 +58,19 @@ Deno.serve(async (req) => {
           }
           
           correctedData.incluir_en_planning = true;
+        }
+        
+        // Patrón 1b: Otro patrón común con datos desplazados (sin "true")
+        if (!correctedData.fecha_alta && correctedData.codigo_contrato && /^\d{2}\/\d{2}\/\d{4}$/.test(correctedData.codigo_contrato)) {
+          needsUpdate = true;
+          correctedData.fecha_alta = correctedData.codigo_contrato;
+          correctedData.codigo_contrato = null;
+        }
+        
+        if (!correctedData.tipo_contrato && correctedData.fecha_fin_contrato && ['INDEFINIDO', 'TEMPORAL', 'ETT'].includes(correctedData.fecha_fin_contrato)) {
+          needsUpdate = true;
+          correctedData.tipo_contrato = correctedData.fecha_fin_contrato;
+          correctedData.fecha_fin_contrato = null;
         }
 
         // Patrón 2: Corregir ausencia_fin con "Disponible"
