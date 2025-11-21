@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -187,17 +186,7 @@ export default function Layout({ children, currentPageName }) {
                               Panel RRHH
                             </Link>
                           </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("Employees")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("Employees")} className="flex items-center gap-2 px-3 py-2">
-                              <Users className="w-4 h-4" />
-                              Gestión de Empleados
-                            </Link>
-                          </SidebarMenuButton>
+
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
