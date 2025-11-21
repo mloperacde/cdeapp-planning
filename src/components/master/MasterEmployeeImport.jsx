@@ -362,16 +362,22 @@ export default function MasterEmployeeImport() {
           )}
 
           {/* Info */}
-          <Alert className="border-slate-200 bg-slate-50">
-            <AlertDescription className="text-sm text-slate-700">
-              <p className="font-semibold mb-1">📋 Instrucciones Simplificadas:</p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>Primera fila del CSV: nombres de los campos (encabezados)</li>
-                <li>Resto de filas: datos de cada empleado</li>
-                <li>Los nombres de las columnas se usan directamente (departamento, puesto, equipo, etc.)</li>
-                <li>Separador: comas (,) o punto y coma (;)</li>
-                <li>Si el empleado ya existe (mismo código), se actualiza. Si no, se crea</li>
-              </ul>
+          <Alert className="border-blue-200 bg-blue-50">
+            <AlertDescription className="text-sm text-blue-900">
+              <p className="font-semibold mb-2">⚠️ ORDEN CORRECTO DE COLUMNAS EN CSV:</p>
+              <div className="text-xs space-y-2 bg-white p-3 rounded border border-blue-200">
+                <p><strong>1. Datos Personales:</strong> codigo_empleado, nombre, fecha_nacimiento, dni, nuss, sexo, nacionalidad, direccion, email, telefono_movil, formacion</p>
+                <p><strong>2. Organización:</strong> departamento, puesto, categoria, equipo</p>
+                <p><strong>3. Jornada:</strong> tipo_jornada, num_horas_jornada, tipo_turno, horario_manana_inicio, horario_manana_fin, horario_tarde_inicio, horario_tarde_fin</p>
+                <p><strong>4. Taquilla:</strong> taquilla_vestuario, taquilla_numero</p>
+                <p><strong>5. Contrato:</strong> fecha_alta, tipo_contrato, codigo_contrato, fecha_fin_contrato, empresa_ett</p>
+                <p><strong>6. Estado:</strong> estado_empleado, incluir_en_planning</p>
+              </div>
+              <p className="mt-2 text-xs">
+                ✅ Fechas en formato DD/MM/YYYY o YYYY-MM-DD<br/>
+                ✅ Separador: punto y coma (;) recomendado<br/>
+                ✅ Después de importar, usa <strong>"Reorganizar Datos"</strong> para corregir campos mal posicionados
+              </p>
             </AlertDescription>
           </Alert>
         </div>
