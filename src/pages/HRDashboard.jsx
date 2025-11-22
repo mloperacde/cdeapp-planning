@@ -22,8 +22,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, Users, Search, Filter, Edit, Database, Zap, CheckCircle2, Plus } from "lucide-react";
+import { Users, Search, Filter, Edit, Plus, UserX, Eye, RefreshCw, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
+import EmployeeAbsenceManager from "../components/hr/EmployeeAbsenceManager";
+import SyncPreviewDialog from "../components/hr/SyncPreviewDialog";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -39,6 +48,9 @@ export default function HRDashboard() {
   });
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedEmployeeForAbsences, setSelectedEmployeeForAbsences] = useState(null);
+  const [showAbsenceDialog, setShowAbsenceDialog] = useState(false);
+  const [showSyncPreview, setShowSyncPreview] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: masterEmployees = [], isLoading } = useQuery({
@@ -47,58 +59,13 @@ export default function HRDashboard() {
     initialData: [],
   });
 
-  const autoAssignLockersMutation = useMutation({
-    mutationFn: async () => {
-      const results = { assigned: 0, skipped: 0, errors: [] };
-      
-      for (const emp of masterEmployees) {
-        if (!emp.taquilla_vestuario || !emp.taquilla_numero) {
-          results.skipped++;
-          continue;
-        }
-
-        try {
-          // Check if already assigned
-          const existing = await base44.entities.LockerAssignment.filter({
-            employee_id: emp.employee_id
-          });
-
-          if (existing.length > 0) {
-            results.skipped++;
-            continue;
-          }
-
-          // Create assignment if employee is synced
-          if (emp.employee_id) {
-            await base44.entities.LockerAssignment.create({
-              employee_id: emp.employee_id,
-              vestuario: emp.taquilla_vestuario,
-              numero_taquilla: emp.taquilla_numero,
-              fecha_asignacion: new Date().toISOString(),
-              estado: 'Asignada'
-            });
-            results.assigned++;
-          } else {
-            results.skipped++;
-          }
-
-          await new Promise(resolve => setTimeout(resolve, 200));
-        } catch (error) {
-          results.errors.push({ nombre: emp.nombre, error: error.message });
-        }
-      }
-
-      return results;
-    },
-    onSuccess: (results) => {
-      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      alert(`✅ Auto-asignación completada:\n\n` +
-        `• Taquillas asignadas: ${results.assigned}\n` +
-        `• Omitidos: ${results.skipped}\n` +
-        `• Errores: ${results.errors.length}`
-      );
-    },
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
   });
+
+
 
   const departments = useMemo(() => {
     const depts = new Set();
@@ -145,6 +112,27 @@ export default function HRDashboard() {
     setEditingEmployee(employee);
     setShowEditDialog(true);
   };
+
+  const handleManageAbsences = (employee) => {
+    setSelectedEmployeeForAbsences(employee);
+    setShowAbsenceDialog(true);
+  };
+
+  const migrateLockersMutation = useMutation({
+    mutationFn: async () => {
+      const response = await base44.functions.invoke('migrateLockerDataFromEmployee', {});
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(`✅ Migración completada:\n${data.migrated} taquillas migradas\n${data.configsCreated} configuraciones creadas`);
+        queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+        queryClient.invalidateQueries({ queryKey: ['lockerRoomConfigs'] });
+      } else {
+        toast.error('❌ Error: ' + data.error);
+      }
+    },
+  });
 
   return (
     <div className="p-6 md:p-8">
@@ -387,9 +375,9 @@ export default function HRDashboard() {
                       <TableHead>Puesto</TableHead>
                       <TableHead>Equipo</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead>Disponibilidad</TableHead>
                       <TableHead>Jornada</TableHead>
                       <TableHead>Turno</TableHead>
-                      <TableHead>Taquilla</TableHead>
                       <TableHead>Sincronización</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -437,6 +425,22 @@ export default function HRDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge className={
+                              (employee.disponibilidad || "Disponible") === "Disponible"
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }>
+                              {employee.disponibilidad || "Disponible"}
+                            </Badge>
+                            {(employee.disponibilidad || "Disponible") === "Ausente" && (
+                              <Badge variant="outline" className="bg-amber-50 text-amber-700 text-xs">
+                                No Planning
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant="outline" className="text-xs">
                             {employee.tipo_jornada || '-'}
                           </Badge>
@@ -445,18 +449,6 @@ export default function HRDashboard() {
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
                             {employee.tipo_turno || '-'}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {employee.taquilla_vestuario && employee.taquilla_numero ? (
-                            <div className="text-xs">
-                              <div className="font-semibold text-slate-700">{employee.taquilla_numero}</div>
-                              <div className="text-slate-500 truncate max-w-[120px]">
-                                {employee.taquilla_vestuario.replace('Vestuario ', '')}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400">-</span>
-                          )}
                         </TableCell>
                         <TableCell>
                           <Badge className={
@@ -468,13 +460,26 @@ export default function HRDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(employee)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(employee)}
+                              title="Editar empleado"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleManageAbsences(employee)}
+                              title="Gestionar ausencias"
+                            >
+                              <UserX className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -494,6 +499,34 @@ export default function HRDashboard() {
             setShowEditDialog(false);
             setEditingEmployee(null);
           }}
+        />
+      )}
+
+      {showAbsenceDialog && selectedEmployeeForAbsences && (
+        <Dialog open={true} onOpenChange={() => {
+          setShowAbsenceDialog(false);
+          setSelectedEmployeeForAbsences(null);
+        }}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserX className="w-5 h-5 text-red-600" />
+                Ausencias - {selectedEmployeeForAbsences.nombre}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto">
+              <EmployeeAbsenceManager employee={selectedEmployeeForAbsences} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showSyncPreview && (
+        <SyncPreviewDialog
+          masterEmployees={masterEmployees}
+          employees={employees}
+          open={showSyncPreview}
+          onClose={() => setShowSyncPreview(false)}
         />
       )}
     </div>

@@ -38,8 +38,8 @@ export default function ConfigurationPage() {
           color: "indigo"
         },
         {
-          title: "Base de Datos de Empleados",
-          description: "Archivo maestro centralizado de empleados",
+          title: "Base de Datos Maestra",
+          description: "Importar, sincronizar y gestionar archivo maestro",
           icon: Users,
           url: createPageUrl("MasterEmployeeDatabase"),
           color: "blue"
