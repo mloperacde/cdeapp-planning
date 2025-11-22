@@ -1345,7 +1345,16 @@ export default function LockerManagementPage() {
                   <div key={index} className="border rounded-lg p-4 bg-slate-50">
                     <div className="flex justify-between items-start mb-2">
                       <Badge variant="outline">
-                        {format(new Date(cambio.fecha), "dd/MM/yyyy HH:mm", { locale: es })}
+                        {(() => {
+                          try {
+                            if (!cambio.fecha) return 'Sin fecha';
+                            const date = new Date(cambio.fecha);
+                            if (isNaN(date.getTime())) return 'Fecha inválida';
+                            return format(date, "dd/MM/yyyy HH:mm", { locale: es });
+                          } catch {
+                            return 'Fecha inválida';
+                          }
+                        })()}
                       </Badge>
                       {cambio.motivo && (
                         <Badge className="bg-blue-100 text-blue-800">
