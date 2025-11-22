@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -17,7 +16,6 @@ import {
 import { 
   Database, 
   ArrowLeft, 
-  Search, 
   RefreshCw, 
   Trash2,
   CheckCircle2,
@@ -33,9 +31,11 @@ import { es } from "date-fns/locale";
 import MasterEmployeeImport from "../components/master/MasterEmployeeImport";
 import SyncComparisonDialog from "../components/master/SyncComparisonDialog";
 import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
+import AdvancedSearch from "../components/common/AdvancedSearch";
+import ThemeToggle from "../components/common/ThemeToggle";
 
 export default function MasterEmployeeDatabasePage() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
   const [syncing, setSyncing] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -257,11 +257,57 @@ export default function MasterEmployeeDatabasePage() {
     }
   };
 
-  const filteredEmployees = masterEmployees.filter(emp =>
-    emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.departamento?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Opciones únicas para filtros
+  const filterOptions = useMemo(() => {
+    const departamentos = [...new Set(masterEmployees.map(e => e.departamento).filter(Boolean))].sort();
+    const puestos = [...new Set(masterEmployees.map(e => e.puesto).filter(Boolean))].sort();
+    const estados = [...new Set(masterEmployees.map(e => e.estado_empleado).filter(Boolean))].sort();
+    const estadosSinc = [...new Set(masterEmployees.map(e => e.estado_sincronizacion).filter(Boolean))].sort();
+
+    return {
+      departamento: {
+        label: 'Departamento',
+        options: departamentos.map(d => ({ value: d, label: d }))
+      },
+      puesto: {
+        label: 'Puesto',
+        options: puestos.map(p => ({ value: p, label: p }))
+      },
+      estado_empleado: {
+        label: 'Estado Empleado',
+        options: estados.map(e => ({ value: e, label: e }))
+      },
+      estado_sincronizacion: {
+        label: 'Estado Sincronización',
+        options: estadosSinc.map(e => ({ value: e, label: e }))
+      }
+    };
+  }, [masterEmployees]);
+
+  const filteredEmployees = useMemo(() => {
+    return masterEmployees.filter(emp => {
+      const searchTerm = filters.searchTerm || "";
+      const matchesSearch = !searchTerm || 
+        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.departamento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.puesto?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesDept = !filters.departamento || filters.departamento === 'all' || 
+        emp.departamento === filters.departamento;
+      
+      const matchesPuesto = !filters.puesto || filters.puesto === 'all' || 
+        emp.puesto === filters.puesto;
+      
+      const matchesEstado = !filters.estado_empleado || filters.estado_empleado === 'all' || 
+        emp.estado_empleado === filters.estado_empleado;
+      
+      const matchesEstadoSinc = !filters.estado_sincronizacion || filters.estado_sincronizacion === 'all' || 
+        emp.estado_sincronizacion === filters.estado_sincronizacion;
+
+      return matchesSearch && matchesDept && matchesPuesto && matchesEstado && matchesEstadoSinc;
+    });
+  }, [masterEmployees, filters]);
 
   const stats = {
     total: masterEmployees.length,
@@ -282,62 +328,65 @@ export default function MasterEmployeeDatabasePage() {
           </Link>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Database className="w-8 h-8 text-blue-600" />
-            Base de Datos Maestra de Empleados
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Archivo maestro centralizado de empleados - Fuente única de verdad
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              Base de Datos Maestra de Empleados
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
+              Archivo maestro centralizado de empleados - Fuente única de verdad
+            </p>
+          </div>
+          <ThemeToggle />
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-blue-700 font-medium">Total Registros</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Total Registros</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
                 </div>
-                <Database className="w-8 h-8 text-blue-600" />
+                <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Sincronizados</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.sincronizados}</p>
+                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">Sincronizados</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.sincronizados}</p>
                 </div>
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
+                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-amber-700 font-medium">Pendientes</p>
-                  <p className="text-2xl font-bold text-amber-900">{stats.pendientes}</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Pendientes</p>
+                  <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.pendientes}</p>
                 </div>
-                <Clock className="w-8 h-8 text-amber-600" />
+                <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-red-700 font-medium">Errores</p>
-                  <p className="text-2xl font-bold text-red-900">{stats.errores}</p>
+                  <p className="text-xs text-red-700 dark:text-red-300 font-medium">Errores</p>
+                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.errores}</p>
                 </div>
-                <AlertCircle className="w-8 h-8 text-red-600" />
+                <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
               </div>
             </CardContent>
           </Card>
@@ -364,10 +413,10 @@ export default function MasterEmployeeDatabasePage() {
           </TabsContent>
 
           <TabsContent value="database">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
-                  <CardTitle>Registros en Base de Datos Maestra</CardTitle>
+                  <CardTitle className="dark:text-slate-100">Registros en Base de Datos Maestra</CardTitle>
                   <div className="flex gap-2 flex-wrap">
                     <Button
                       onClick={async () => {
@@ -427,53 +476,53 @@ export default function MasterEmployeeDatabasePage() {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input
-                      placeholder="Buscar por nombre, código o departamento..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
+                  <AdvancedSearch
+                    data={masterEmployees}
+                    onFilterChange={setFilters}
+                    searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto']}
+                    filterOptions={filterOptions}
+                    placeholder="Buscar por nombre, código, departamento o puesto..."
+                  />
                 </div>
 
                 {isLoading ? (
-                  <div className="text-center py-12 text-slate-500">Cargando...</div>
+                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">Cargando...</div>
                 ) : filteredEmployees.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500">
-                    No hay registros en la base de datos maestra
+                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                    {filters.searchTerm || Object.keys(filters).length > 0 
+                      ? 'No se encontraron resultados con los filtros aplicados' 
+                      : 'No hay registros en la base de datos maestra'}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-slate-50">
-                          <TableHead>Código</TableHead>
-                          <TableHead>Nombre</TableHead>
-                          <TableHead>Departamento</TableHead>
-                          <TableHead>Puesto</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead>Sincronización</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
+                        <TableRow className="bg-slate-50 dark:bg-slate-800">
+                          <TableHead className="dark:text-slate-300">Código</TableHead>
+                          <TableHead className="dark:text-slate-300">Nombre</TableHead>
+                          <TableHead className="dark:text-slate-300">Departamento</TableHead>
+                          <TableHead className="dark:text-slate-300">Puesto</TableHead>
+                          <TableHead className="dark:text-slate-300">Estado</TableHead>
+                          <TableHead className="dark:text-slate-300">Sincronización</TableHead>
+                          <TableHead className="text-right dark:text-slate-300">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredEmployees.map((emp) => (
-                          <TableRow key={emp.id}>
-                            <TableCell className="font-mono text-xs">
+                          <TableRow key={emp.id} className="dark:border-slate-800 dark:hover:bg-slate-800/50">
+                            <TableCell className="font-mono text-xs dark:text-slate-300">
                               {emp.codigo_empleado || '-'}
                             </TableCell>
-                            <TableCell className="font-semibold">
+                            <TableCell className="font-semibold dark:text-slate-200">
                               {emp.nombre}
                             </TableCell>
-                            <TableCell>{emp.departamento || '-'}</TableCell>
-                            <TableCell>{emp.puesto || '-'}</TableCell>
+                            <TableCell className="dark:text-slate-300">{emp.departamento || '-'}</TableCell>
+                            <TableCell className="dark:text-slate-300">{emp.puesto || '-'}</TableCell>
                             <TableCell>
                               <Badge className={
                                 emp.estado_empleado === 'Alta' 
-                                  ? 'bg-green-600' 
-                                  : 'bg-slate-600'
+                                  ? 'bg-green-600 dark:bg-green-700' 
+                                  : 'bg-slate-600 dark:bg-slate-700'
                               }>
                                 {emp.estado_empleado}
                               </Badge>

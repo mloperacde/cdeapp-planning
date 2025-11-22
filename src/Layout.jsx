@@ -44,6 +44,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ThemeProvider } from "../components/common/ThemeProvider";
+import ThemeToggle from "../components/common/ThemeToggle";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -63,20 +65,24 @@ export default function Layout({ children, currentPageName }) {
   const isParentActive = (urls) => urls.some(url => location.pathname === url);
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-        <Sidebar className="border-r border-slate-200 bg-white/80 backdrop-blur-sm">
-          <SidebarHeader className="border-b border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                <CalendarIcon className="w-6 h-6 text-white" />
+    <ThemeProvider>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+          <Sidebar className="border-r border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+            <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
+                    <CalendarIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">CdeApp Planning</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Gestión de Empleados y Planificador</p>
+                  </div>
+                </div>
+                <ThemeToggle />
               </div>
-              <div>
-                <h2 className="font-bold text-lg text-slate-900">CdeApp Planning</h2>
-                <p className="text-xs text-slate-500">Gestión de Empleados y Planificador</p>
-              </div>
-            </div>
-          </SidebarHeader>
+            </SidebarHeader>
 
           <SidebarContent className="p-2">
             <SidebarGroup>
@@ -428,6 +434,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </main>
       </div>
-    </SidebarProvider>
-  );
-}
+      </SidebarProvider>
+      </ThemeProvider>
+      );
+      }
