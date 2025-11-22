@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import MasterEmployeeImport from "../components/master/MasterEmployeeImport";
+import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import SyncComparisonDialog from "../components/master/SyncComparisonDialog";
 import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 import AdvancedSearch from "../components/common/AdvancedSearch";
