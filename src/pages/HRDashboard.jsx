@@ -20,6 +20,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format, differenceInDays, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import PendingTasksPanel from "../components/hr/PendingTasksPanel";
 
 export default function HRDashboard() {
   const { data: masterEmployees = [] } = useQuery({
@@ -317,6 +318,15 @@ export default function HRDashboard() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Módulo de Procesos Pendientes */}
+        <div className="mb-6">
+          <PendingTasksPanel 
+            masterEmployees={masterEmployees}
+            onboardingProcesses={onboardingProcesses}
+            absences={absences}
+          />
         </div>
 
         {/* Alertas Fuerza Mayor */}
