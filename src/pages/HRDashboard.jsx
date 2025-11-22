@@ -20,6 +20,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format, differenceInDays, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import EmployeeListView from "../components/hr/EmployeeListView";
 
 export default function HRDashboard() {
   const { data: masterEmployees = [] } = useQuery({
@@ -242,7 +243,7 @@ export default function HRDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Gestión de Ausencias - Destacado */}
           <Card className="shadow-lg border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-white">
             <CardHeader className="border-b border-blue-200">
@@ -259,6 +260,27 @@ export default function HRDashboard() {
                 <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
                   <FileText className="w-5 h-5 mr-2" />
                   Ir a Gestión de Ausencias
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Calendario Laboral */}
+          <Card className="shadow-lg border-2 border-green-300 bg-gradient-to-br from-green-50 to-white">
+            <CardHeader className="border-b border-green-200">
+              <CardTitle className="flex items-center gap-2 text-green-900">
+                <CalendarIcon className="w-6 h-6 text-green-600" />
+                Calendario Laboral
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-sm text-slate-700 mb-4">
+                Configura festivos y vacaciones del calendario laboral
+              </p>
+              <Link to={createPageUrl("WorkCalendarConfig")}>
+                <Button className="w-full bg-green-600 hover:bg-green-700" size="lg">
+                  <CalendarIcon className="w-5 h-5 mr-2" />
+                  Configurar Calendario
                 </Button>
               </Link>
             </CardContent>
@@ -349,21 +371,7 @@ export default function HRDashboard() {
         )}
 
         {/* Accesos rápidos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link to={createPageUrl("MasterEmployeeDatabase")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Users className="w-8 h-8 text-blue-600" />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Base de Datos Maestra</h3>
-                    <p className="text-xs text-slate-600">Gestión completa de empleados</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <Link to={createPageUrl("AdvancedHRDashboard")}>
             <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-6">
@@ -392,6 +400,19 @@ export default function HRDashboard() {
             </Card>
           </Link>
         </div>
+
+        {/* Listado de Empleados */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-6 h-6 text-blue-600" />
+              Listado de Empleados
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <EmployeeListView />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
