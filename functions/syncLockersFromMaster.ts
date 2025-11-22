@@ -29,17 +29,17 @@ Deno.serve(async (req) => {
       
       const assignmentData = {
         employee_id: emp.employee_id,
+        requiere_taquilla: true,
         vestuario: emp.taquilla_vestuario,
-        numero_taquilla: emp.taquilla_numero,
-        estado: 'Asignada',
-        fecha_asignacion: emp.fecha_alta || new Date().toISOString().split('T')[0],
+        numero_taquilla_actual: emp.taquilla_numero,
+        fecha_asignacion: emp.fecha_alta || new Date().toISOString(),
         notas: 'Sincronizado desde Base de Datos Maestra'
       };
 
       if (existing) {
         // Actualizar solo si hay cambios
         if (existing.vestuario !== emp.taquilla_vestuario || 
-            existing.numero_taquilla !== emp.taquilla_numero) {
+            existing.numero_taquilla_actual !== emp.taquilla_numero) {
           await base44.asServiceRole.entities.LockerAssignment.update(existing.id, assignmentData);
           updated++;
         } else {

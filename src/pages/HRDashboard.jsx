@@ -150,12 +150,16 @@ export default function HRDashboard() {
           <div className="flex gap-2 flex-wrap">
             <Button
               onClick={async () => {
-                const response = await base44.functions.invoke('syncLockersFromMaster', {});
-                if (response.data.success) {
-                  toast.success(`Taquillas sincronizadas: ${response.data.created} creadas, ${response.data.updated} actualizadas`);
-                  queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-                } else {
-                  toast.error('Error: ' + response.data.error);
+                try {
+                  const response = await base44.functions.invoke('syncLockersFromMaster', {});
+                  if (response.data.success) {
+                    toast.success(`Taquillas sincronizadas: ${response.data.created} creadas, ${response.data.updated} actualizadas`);
+                    queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+                  } else {
+                    toast.error('Error: ' + response.data.error);
+                  }
+                } catch (error) {
+                  toast.error('Error al sincronizar: ' + error.message);
                 }
               }}
               variant="outline"
