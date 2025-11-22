@@ -160,7 +160,16 @@ export default function NotificationCenter() {
                         <h3 className="font-semibold text-slate-900 mb-1">{notif.titulo}</h3>
                         <p className="text-sm text-slate-600">{notif.mensaje}</p>
                         <p className="text-xs text-slate-500 mt-2">
-                          {notif.created_date && format(new Date(notif.created_date), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es })}
+                          {(() => {
+                            try {
+                              if (!notif.created_date) return '';
+                              const date = new Date(notif.created_date);
+                              if (isNaN(date.getTime())) return '';
+                              return format(date, "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es });
+                            } catch {
+                              return '';
+                            }
+                          })()}
                         </p>
                       </div>
                       <div className="flex gap-1">
