@@ -12,7 +12,10 @@ import {
   Calendar,
   TrendingUp,
   Activity,
-  List
+  List,
+  KeyRound,
+  Cog,
+  Coffee
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -176,7 +179,7 @@ export default function ShiftManagersPage() {
         </Card>
 
         {/* Módulos de gestión */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
           <Link to={createPageUrl("ShiftManagerEmployees")}>
             <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
               <CardContent className="p-6">
@@ -225,6 +228,42 @@ export default function ShiftManagersPage() {
                       Planning Diario
                     </h3>
                     <p className="text-xs text-slate-600">Vista del día actual</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to={createPageUrl("LockerManagement")}>
+            <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <KeyRound className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      Gestión de Taquillas
+                    </h3>
+                    <p className="text-xs text-slate-600">Asignación de vestuarios</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to={createPageUrl("Breaks")}>
+            <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <Coffee className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 group-hover:text-orange-600 transition-colors">
+                      Gestión de Descansos
+                    </h3>
+                    <p className="text-xs text-slate-600">Turnos de descanso</p>
                   </div>
                 </div>
               </CardContent>
