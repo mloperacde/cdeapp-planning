@@ -60,7 +60,7 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
         employee = employees.find(e => e.nombre === master.nombre);
       }
 
-      if (!employee && syncRule !== "master_empty") {
+      if (!employee) {
         // Crear nuevo empleado
         const fieldsToSync = syncableFields.filter(field => 
           master[field] !== null && master[field] !== undefined && master[field] !== ''
@@ -134,7 +134,7 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
     });
 
     return changes;
-  }, [masterEmployees, employees, syncRule]);
+  }, [masterEmployees, employees, syncRule, employeeFieldSelections]);
 
   const handleSyncAll = async () => {
     setSyncing(true);
