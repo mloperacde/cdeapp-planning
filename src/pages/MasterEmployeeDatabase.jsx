@@ -479,7 +479,7 @@ export default function MasterEmployeeDatabasePage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col gap-1">
                                 {emp.estado_sincronizacion === 'Sincronizado' && (
                                   <Badge className="bg-green-600">
                                     <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -497,6 +497,19 @@ export default function MasterEmployeeDatabasePage() {
                                     <AlertCircle className="w-3 h-3 mr-1" />
                                     Error
                                   </Badge>
+                                )}
+                                {emp.ultimo_sincronizado && (
+                                  <span className="text-[10px] text-slate-500">
+                                    {(() => {
+                                      try {
+                                        const date = new Date(emp.ultimo_sincronizado);
+                                        if (isNaN(date.getTime())) return '';
+                                        return format(date, 'dd/MM/yy HH:mm', { locale: es });
+                                      } catch {
+                                        return '';
+                                      }
+                                    })()}
+                                  </span>
                                 )}
                               </div>
                             </TableCell>

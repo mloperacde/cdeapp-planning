@@ -94,7 +94,10 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
           } else if (syncRule === "most_recent") {
             const masterDate = master.updated_date || master.created_date;
             const employeeDate = employee.updated_date || employee.created_date;
+            const masterDateValid = masterDate && !isNaN(new Date(masterDate).getTime());
+            const employeeDateValid = employeeDate && !isNaN(new Date(employeeDate).getTime());
             shouldUpdate = masterValue !== employeeValue && 
+                          masterDateValid && employeeDateValid &&
                           new Date(masterDate) > new Date(employeeDate);
           } else if (syncRule === "merge_text") {
             if (masterValue !== employeeValue && 
