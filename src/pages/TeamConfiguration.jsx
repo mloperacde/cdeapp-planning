@@ -112,18 +112,23 @@ export default function TeamConfigurationPage() {
             const oldName = existingTeam.team_name;
             const newName = newData.team_name;
 
-            // Actualizar empleados operativos
-            const operationalEmployees = await base44.entities.Employee.filter({ equipo: oldName });
-            for (const emp of operationalEmployees) {
-              await base44.entities.Employee.update(emp.id, { equipo: newName });
-              employeesUpdatedCount++;
-            }
+            // Actualizar empleados operativos y maestros en paralelo
+            const [operationalEmployees, masterEmployees] = await Promise.all([
+              base44.entities.Employee.filter({ equipo: oldName }),
+              base44.entities.EmployeeMasterDatabase.filter({ equipo: oldName })
+            ]);
 
-            // Actualizar base de datos maestra
-            const masterEmployees = await base44.entities.EmployeeMasterDatabase.filter({ equipo: oldName });
-            for (const masterEmp of masterEmployees) {
-              await base44.entities.EmployeeMasterDatabase.update(masterEmp.id, { equipo: newName });
-            }
+            const updatePromises = [
+              ...operationalEmployees.map(emp => 
+                base44.entities.Employee.update(emp.id, { equipo: newName })
+              ),
+              ...masterEmployees.map(masterEmp => 
+                base44.entities.EmployeeMasterDatabase.update(masterEmp.id, { equipo: newName })
+              )
+            ];
+
+            await Promise.all(updatePromises);
+            employeesUpdatedCount = operationalEmployees.length;
           }
         } else {
           updates.push(base44.entities.TeamConfig.create(newData));
@@ -186,6 +191,7 @@ export default function TeamConfigurationPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positionOrders'] });
+      toast.success("Orden de puestos guardado");
     },
   });
 
@@ -229,6 +235,7 @@ export default function TeamConfigurationPage() {
         turno: team2Turno
       });
     });
+    toast.success("Calendario rotativo generado para 8 semanas");
   };
 
   const getTeamEmployees = (teamName) => {
