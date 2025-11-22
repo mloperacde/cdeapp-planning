@@ -18,8 +18,7 @@ import {
   CheckCircle2, 
   AlertCircle, 
   ArrowRight,
-  Eye,
-  Checkbox as CheckboxIcon
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 
