@@ -451,6 +451,24 @@ export default function DashboardPage() {
           <HolidayVacationPanel />
         </div>
 
+        {/* Panel para Jefes de Turno */}
+        {user?.role === 'jefe_turno' && (
+          <div className="mt-8">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle>Módulo de Gestión</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <Link to={createPageUrl("ShiftManagerEmployees")}>
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Users className="w-5 h-5 mr-2" />
+                    Listado de Empleados
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
       </div>
 
