@@ -55,22 +55,22 @@ export default function ApprovalTimesWidget({ size = "medium" }) {
   };
 
   return (
-    <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-purple-100">
-      <CardHeader className="border-b border-purple-200">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Clock className="w-5 h-5 text-purple-600" />
+    <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
+      <CardHeader className="border-b border-purple-200 dark:border-purple-800">
+        <CardTitle className="flex items-center gap-2 text-lg dark:text-slate-100">
+          <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           Tiempos de Aprobación
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
         <div className="space-y-4">
-          <div className="p-4 bg-white rounded-lg border-2 border-purple-200">
+          <div className="p-4 bg-white dark:bg-slate-800 rounded-lg border-2 border-purple-200 dark:border-purple-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600">Tiempo Medio</span>
-              <Badge className="bg-purple-600">Principal</Badge>
+              <span className="text-sm text-slate-600 dark:text-slate-400">Tiempo Medio</span>
+              <Badge className="bg-purple-600 dark:bg-purple-700">Principal</Badge>
             </div>
             <div className="flex items-end gap-2">
-              <span className="text-3xl font-bold text-purple-900">
+              <span className="text-3xl font-bold text-purple-900 dark:text-purple-100">
                 {formatHours(stats.avgHours)}
               </span>
               {stats.avgHours < 48 && (
@@ -83,21 +83,21 @@ export default function ApprovalTimesWidget({ size = "medium" }) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 bg-white rounded-lg border border-purple-200">
-              <span className="text-xs text-slate-600 block mb-1">Más Rápido</span>
-              <span className="text-xl font-bold text-green-700">
+            <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-purple-200 dark:border-purple-700">
+              <span className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Más Rápido</span>
+              <span className="text-xl font-bold text-green-700 dark:text-green-400">
                 {formatHours(stats.minHours)}
               </span>
             </div>
-            <div className="p-3 bg-white rounded-lg border border-purple-200">
-              <span className="text-xs text-slate-600 block mb-1">Más Lento</span>
-              <span className="text-xl font-bold text-red-700">
+            <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-purple-200 dark:border-purple-700">
+              <span className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Más Lento</span>
+              <span className="text-xl font-bold text-red-700 dark:text-red-400">
                 {formatHours(stats.maxHours)}
               </span>
             </div>
           </div>
 
-          <div className="text-xs text-center text-slate-600 bg-white py-2 rounded-lg">
+          <div className="text-xs text-center text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 py-2 rounded-lg">
             Basado en {stats.total} ausencias aprobadas
           </div>
         </div>

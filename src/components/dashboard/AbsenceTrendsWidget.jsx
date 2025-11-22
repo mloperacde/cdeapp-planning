@@ -48,10 +48,10 @@ export default function AbsenceTrendsWidget({ size = "medium" }) {
   const heightClass = size === "large" ? "h-96" : size === "full" ? "h-[500px]" : "h-72";
 
   return (
-    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-      <CardHeader className="border-b border-slate-100">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <TrendingUp className="w-5 h-5 text-blue-600" />
+    <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800">
+        <CardTitle className="flex items-center gap-2 text-lg dark:text-slate-100">
+          <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           Tendencias de Ausencias (6 meses)
         </CardTitle>
       </CardHeader>

@@ -50,8 +50,8 @@ export default function AdvancedHRDashboard() {
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Dashboard Avanzado de RRHH</h1>
-            <p className="text-slate-600 mt-1">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Dashboard Avanzado de RRHH</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
               Análisis de tendencias, métricas y visualizaciones personalizadas
             </p>
           </div>
