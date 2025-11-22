@@ -12,7 +12,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, User, Trash2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Database } from "lucide-react";
+import { Users, User, Trash2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Database, Cake, Calendar, TrendingUp, Columns } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { isSameDay, differenceInYears, addDays } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
@@ -26,6 +34,17 @@ export default function EmployeesPage() {
   const [filters, setFilters] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
+  const [visibleColumns, setVisibleColumns] = useState({
+    codigo_empleado: true,
+    nombre: true,
+    departamento: true,
+    puesto: true,
+    estado_empleado: true,
+    fecha_alta: false,
+    tipo_contrato: false,
+    email: false,
+    telefono_movil: false,
+  });
   const queryClient = useQueryClient();
 
   const { data: masterEmployees = [], isLoading } = useQuery({
@@ -126,12 +145,42 @@ export default function EmployeesPage() {
 
 
 
-  const stats = {
-    total: masterEmployees.length,
-    sincronizados: masterEmployees.filter(e => e.estado_sincronizacion === 'Sincronizado').length,
-    pendientes: masterEmployees.filter(e => e.estado_sincronizacion === 'Pendiente').length,
-    errores: masterEmployees.filter(e => e.estado_sincronizacion === 'Error').length,
-  };
+  // Métricas de RRHH
+  const stats = useMemo(() => {
+    const today = new Date();
+    const next7Days = addDays(today, 7);
+    
+    const activeEmployees = masterEmployees.filter(e => e.estado_empleado === 'Alta');
+    
+    const birthdays = masterEmployees.filter(emp => {
+      if (!emp.fecha_nacimiento) return false;
+      const birthDate = new Date(emp.fecha_nacimiento);
+      const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+      return thisYearBirthday >= today && thisYearBirthday <= next7Days;
+    });
+    
+    const anniversaries = masterEmployees.filter(emp => {
+      if (!emp.fecha_alta) return false;
+      const hireDate = new Date(emp.fecha_alta);
+      const thisYearAnniversary = new Date(today.getFullYear(), hireDate.getMonth(), hireDate.getDate());
+      const years = differenceInYears(today, hireDate);
+      return years > 0 && thisYearAnniversary >= today && thisYearAnniversary <= next7Days;
+    });
+    
+    return {
+      total: masterEmployees.length,
+      active: activeEmployees.length,
+      inactive: masterEmployees.filter(e => e.estado_empleado === 'Baja').length,
+      avgTenure: activeEmployees.length > 0 
+        ? Math.round(activeEmployees.reduce((sum, e) => {
+            if (!e.fecha_alta) return sum;
+            return sum + differenceInYears(today, new Date(e.fecha_alta));
+          }, 0) / activeEmployees.length)
+        : 0,
+      birthdays,
+      anniversaries
+    };
+  }, [masterEmployees]);
 
   return (
     <div className="p-6 md:p-8">
@@ -170,61 +219,120 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
+        {/* Resumen Ejecutivo y Métricas Clave */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Total Registros</p>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
+                  <p className="text-[10px] text-blue-700 dark:text-blue-300 font-medium uppercase">Total Empleados</p>
+                  <p className="text-xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
                 </div>
-                <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">Sincronizados</p>
-                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.sincronizados}</p>
+                  <p className="text-[10px] text-green-700 dark:text-green-300 font-medium uppercase">Empleados Activos</p>
+                  <p className="text-xl font-bold text-green-900 dark:text-green-100">{stats.active}</p>
                 </div>
-                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
+          <Card className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 border-slate-200 dark:border-slate-800">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Pendientes</p>
-                  <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.pendientes}</p>
+                  <p className="text-[10px] text-slate-700 dark:text-slate-300 font-medium uppercase">Empleados Baja</p>
+                  <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{stats.inactive}</p>
                 </div>
-                <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                <AlertCircle className="w-6 h-6 text-slate-600 dark:text-slate-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-red-700 dark:text-red-300 font-medium">Errores</p>
-                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.errores}</p>
+                  <p className="text-[10px] text-purple-700 dark:text-purple-300 font-medium uppercase">Antigüedad Media</p>
+                  <p className="text-xl font-bold text-purple-900 dark:text-purple-100">{stats.avgTenure} años</p>
                 </div>
-                <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm mb-6">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-            <CardTitle className="dark:text-slate-100">Filtros de Búsqueda</CardTitle>
+        {/* Cumpleaños y Aniversarios */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-md">
+            <CardHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
+              <CardTitle className="text-sm flex items-center gap-2 dark:text-slate-100">
+                <Cake className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                Cumpleaños Próximos (7 días)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3">
+              {stats.birthdays.length === 0 ? (
+                <p className="text-xs text-slate-500 dark:text-slate-400">No hay cumpleaños próximos</p>
+              ) : (
+                <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                  {stats.birthdays.slice(0, 3).map((emp) => (
+                    <div key={emp.id} className="text-xs flex items-center justify-between p-1.5 rounded bg-pink-50 dark:bg-pink-950/30">
+                      <span className="font-medium dark:text-slate-200">{emp.nombre}</span>
+                      <span className="text-slate-600 dark:text-slate-400">{format(new Date(emp.fecha_nacimiento), 'd MMM', { locale: es })}</span>
+                    </div>
+                  ))}
+                  {stats.birthdays.length > 3 && (
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">...y {stats.birthdays.length - 3} más</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-md">
+            <CardHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
+              <CardTitle className="text-sm flex items-center gap-2 dark:text-slate-100">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                Aniversarios Laborales (7 días)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3">
+              {stats.anniversaries.length === 0 ? (
+                <p className="text-xs text-slate-500 dark:text-slate-400">No hay aniversarios próximos</p>
+              ) : (
+                <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                  {stats.anniversaries.slice(0, 3).map((emp) => {
+                    const years = differenceInYears(new Date(), new Date(emp.fecha_alta));
+                    return (
+                      <div key={emp.id} className="text-xs flex items-center justify-between p-1.5 rounded bg-blue-50 dark:bg-blue-950/30">
+                        <span className="font-medium dark:text-slate-200">{emp.nombre}</span>
+                        <span className="text-slate-600 dark:text-slate-400">{years} años</span>
+                      </div>
+                    );
+                  })}
+                  {stats.anniversaries.length > 3 && (
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">...y {stats.anniversaries.length - 3} más</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm mb-4">
+          <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+            <CardTitle className="text-base dark:text-slate-100">Búsqueda y Filtros</CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <AdvancedSearch
               data={masterEmployees}
               onFilterChange={setFilters}
@@ -236,9 +344,7 @@ export default function EmployeesPage() {
                 { field: 'departamento', label: 'Departamento' },
                 { field: 'puesto', label: 'Puesto' },
                 { field: 'estado_empleado', label: 'Estado' },
-                { field: 'estado_sincronizacion', label: 'Estado Sincronización' },
                 { field: 'fecha_alta', label: 'Fecha Alta' },
-                { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
               ]}
               placeholder="Buscar por nombre, código, departamento o puesto..."
             />
@@ -247,9 +353,84 @@ export default function EmployeesPage() {
 
         <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-            <CardTitle className="dark:text-slate-100">
-              Empleados ({filteredEmployees.length})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base dark:text-slate-100">
+                Empleados ({filteredEmployees.length})
+              </CardTitle>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="dark:bg-slate-800 dark:border-slate-700">
+                    <Columns className="w-4 h-4 mr-2" />
+                    Columnas
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 dark:bg-slate-800 dark:border-slate-700">
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.codigo_empleado}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, codigo_empleado: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Código
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.nombre}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, nombre: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Nombre
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.departamento}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, departamento: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Departamento
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.puesto}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, puesto: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Puesto
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.estado_empleado}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, estado_empleado: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Estado
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.fecha_alta}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, fecha_alta: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Fecha Alta
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.tipo_contrato}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, tipo_contrato: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Tipo Contrato
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.email}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, email: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Email
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.telefono_movil}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, telefono_movil: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Teléfono
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
@@ -264,71 +445,63 @@ export default function EmployeesPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800">
-                      <TableHead className="dark:text-slate-300">Código</TableHead>
-                      <TableHead className="dark:text-slate-300">Nombre</TableHead>
-                      <TableHead className="dark:text-slate-300">Departamento</TableHead>
-                      <TableHead className="dark:text-slate-300">Puesto</TableHead>
-                      <TableHead className="dark:text-slate-300">Estado</TableHead>
-                      <TableHead className="dark:text-slate-300">Sincronización</TableHead>
-                      <TableHead className="text-right dark:text-slate-300">Acciones</TableHead>
+                    <TableRow className="bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                      {visibleColumns.codigo_empleado && <TableHead className="font-semibold dark:text-slate-200">Código</TableHead>}
+                      {visibleColumns.nombre && <TableHead className="font-semibold dark:text-slate-200">Nombre</TableHead>}
+                      {visibleColumns.departamento && <TableHead className="font-semibold dark:text-slate-200">Departamento</TableHead>}
+                      {visibleColumns.puesto && <TableHead className="font-semibold dark:text-slate-200">Puesto</TableHead>}
+                      {visibleColumns.estado_empleado && <TableHead className="font-semibold dark:text-slate-200">Estado</TableHead>}
+                      {visibleColumns.fecha_alta && <TableHead className="font-semibold dark:text-slate-200">Fecha Alta</TableHead>}
+                      {visibleColumns.tipo_contrato && <TableHead className="font-semibold dark:text-slate-200">Tipo Contrato</TableHead>}
+                      {visibleColumns.email && <TableHead className="font-semibold dark:text-slate-200">Email</TableHead>}
+                      {visibleColumns.telefono_movil && <TableHead className="font-semibold dark:text-slate-200">Teléfono</TableHead>}
+                      <TableHead className="text-right font-semibold dark:text-slate-200">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredEmployees.map((emp) => (
-                      <TableRow key={emp.id} className="dark:border-slate-800 dark:hover:bg-slate-800/50">
-                        <TableCell className="font-mono text-xs dark:text-slate-300">
-                          {emp.codigo_empleado || '-'}
-                        </TableCell>
-                        <TableCell className="font-semibold dark:text-slate-200">
-                          {emp.nombre}
-                        </TableCell>
-                        <TableCell className="dark:text-slate-300">{emp.departamento || '-'}</TableCell>
-                        <TableCell className="dark:text-slate-300">{emp.puesto || '-'}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            emp.estado_empleado === 'Alta' 
-                              ? 'bg-green-600 dark:bg-green-700' 
-                              : 'bg-slate-600 dark:bg-slate-700'
-                          }>
-                            {emp.estado_empleado}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {emp.estado_sincronizacion === 'Sincronizado' && (
-                              <Badge className="bg-green-600">
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Sincronizado
-                              </Badge>
-                            )}
-                            {emp.estado_sincronizacion === 'Pendiente' && (
-                              <Badge className="bg-amber-600">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Pendiente
-                              </Badge>
-                            )}
-                            {emp.estado_sincronizacion === 'Error' && (
-                              <Badge className="bg-red-600">
-                                <AlertCircle className="w-3 h-3 mr-1" />
-                                Error
-                              </Badge>
-                            )}
-                            {emp.ultimo_sincronizado && (
-                              <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                                {(() => {
-                                  try {
-                                    const date = new Date(emp.ultimo_sincronizado);
-                                    if (isNaN(date.getTime())) return '';
-                                    return format(date, 'dd/MM/yy HH:mm', { locale: es });
-                                  } catch {
-                                    return '';
-                                  }
-                                })()}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
+                      <TableRow key={emp.id} className="border-b border-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50">
+                        {visibleColumns.codigo_empleado && (
+                          <TableCell className="font-mono text-xs dark:text-slate-300">
+                            {emp.codigo_empleado || '-'}
+                          </TableCell>
+                        )}
+                        {visibleColumns.nombre && (
+                          <TableCell className="font-semibold dark:text-slate-200">
+                            {emp.nombre}
+                          </TableCell>
+                        )}
+                        {visibleColumns.departamento && (
+                          <TableCell className="dark:text-slate-300">{emp.departamento || '-'}</TableCell>
+                        )}
+                        {visibleColumns.puesto && (
+                          <TableCell className="dark:text-slate-300">{emp.puesto || '-'}</TableCell>
+                        )}
+                        {visibleColumns.estado_empleado && (
+                          <TableCell>
+                            <Badge className={
+                              emp.estado_empleado === 'Alta' 
+                                ? 'bg-green-600 dark:bg-green-700' 
+                                : 'bg-slate-600 dark:bg-slate-700'
+                            }>
+                              {emp.estado_empleado}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        {visibleColumns.fecha_alta && (
+                          <TableCell className="text-xs dark:text-slate-300">
+                            {emp.fecha_alta ? format(new Date(emp.fecha_alta), 'dd/MM/yyyy', { locale: es }) : '-'}
+                          </TableCell>
+                        )}
+                        {visibleColumns.tipo_contrato && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.tipo_contrato || '-'}</TableCell>
+                        )}
+                        {visibleColumns.email && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.email || '-'}</TableCell>
+                        )}
+                        {visibleColumns.telefono_movil && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.telefono_movil || '-'}</TableCell>
+                        )}
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
@@ -352,7 +525,7 @@ export default function EmployeesPage() {
                                 }
                               }}
                             >
-                              <Trash2 className="w-3 h-3 text-red-600" />
+                              <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
                             </Button>
                           </div>
                         </TableCell>
