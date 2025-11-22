@@ -56,46 +56,61 @@ export default function WorkHoursCalculator({ holidays = [], vacations = [] }) {
     // Días efectivos de trabajo
     const effectiveWorkDays = workableDays - workdayHolidays - vacationDays.size;
     
-    // Cálculo de horas por turno
-    const turnoManana = {
-      nombre: "Turno Mañana (7:00 - 15:00)",
-      horasDia: 8,
-      horasSemana: 40,
-      horasAnio: effectiveWorkDays * 8,
-      diasEfectivos: effectiveWorkDays
-    };
+    // Cálculo de horas por tipo de turno
+    const tiposTurno = [
+      {
+        nombre: "Turno Mañana",
+        descripcion: "7:00 - 15:00",
+        horasDia: 8,
+        horasSemana: 40,
+        horasAnio: effectiveWorkDays * 8,
+        diasEfectivos: effectiveWorkDays
+      },
+      {
+        nombre: "Turno Tarde",
+        descripcion: "14:00/15:00 - 22:00",
+        horasDia: 8,
+        horasSemana: 40,
+        horasAnio: effectiveWorkDays * 8,
+        diasEfectivos: effectiveWorkDays
+      },
+      {
+        nombre: "Turno Partido",
+        descripcion: "Mañana + Tarde con descanso",
+        horasDia: 8,
+        horasSemana: 40,
+        horasAnio: effectiveWorkDays * 8,
+        diasEfectivos: effectiveWorkDays
+      }
+    ];
     
-    const turnoTarde = {
-      nombre: "Turno Tarde (14:00 - 22:00 / 15:00 - 22:00)",
-      horasDia: 8,
-      horasSemana: 40,
-      horasAnio: effectiveWorkDays * 8,
-      diasEfectivos: effectiveWorkDays
-    };
-    
-    const turnoPartido = {
-      nombre: "Turno Partido (Mañana + Tarde)",
-      horasDia: 8,
-      horasSemana: 40,
-      horasAnio: effectiveWorkDays * 8,
-      diasEfectivos: effectiveWorkDays
-    };
-    
-    const jornadaCompleta = {
-      nombre: "Jornada Completa (40h/semana)",
-      horasDia: 8,
-      horasSemana: 40,
-      horasAnio: effectiveWorkDays * 8,
-      diasEfectivos: effectiveWorkDays
-    };
-    
-    const jornadaParcial = {
-      nombre: "Jornada Parcial (20h/semana)",
-      horasDia: 4,
-      horasSemana: 20,
-      horasAnio: effectiveWorkDays * 4,
-      diasEfectivos: effectiveWorkDays
-    };
+    // Cálculo de horas por tipo de jornada
+    const tiposJornada = [
+      {
+        nombre: "Jornada Completa",
+        descripcion: "40 horas semanales",
+        horasDia: 8,
+        horasSemana: 40,
+        horasAnio: effectiveWorkDays * 8,
+        diasEfectivos: effectiveWorkDays
+      },
+      {
+        nombre: "Jornada Parcial",
+        descripcion: "20 horas semanales",
+        horasDia: 4,
+        horasSemana: 20,
+        horasAnio: effectiveWorkDays * 4,
+        diasEfectivos: effectiveWorkDays
+      },
+      {
+        nombre: "Reducción de Jornada",
+        descripcion: "30 horas semanales (75%)",
+        horasDia: 6,
+        horasSemana: 30,
+        horasAnio: effectiveWorkDays * 6,
+        diasEfectivos: effectiveWorkDays
+      }
+    ];
     
     return {
       totalDaysYear: allDays.length,
@@ -104,7 +119,8 @@ export default function WorkHoursCalculator({ holidays = [], vacations = [] }) {
       holidayCount: workdayHolidays,
       vacationDaysCount: vacationDays.size,
       effectiveWorkDays,
-      turnos: [turnoManana, turnoTarde, turnoPartido, jornadaCompleta, jornadaParcial]
+      tiposTurno,
+      tiposJornada
     };
   }, [holidays, vacations, currentYear]);
   
@@ -178,15 +194,18 @@ export default function WorkHoursCalculator({ holidays = [], vacations = [] }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-blue-600" />
-            Horas Efectivas Trabajadas por Tipo de Turno - Año {currentYear}
+            Horas Efectivas por Tipo de Turno - Año {currentYear}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {calculations.turnos.map((turno, idx) => (
+            {calculations.tiposTurno.map((turno, idx) => (
               <div key={idx} className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">{turno.nombre}</h3>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{turno.nombre}</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{turno.descripcion}</p>
+                  </div>
                   <Badge className="bg-blue-600">{turno.horasSemana}h/semana</Badge>
                 </div>
                 
@@ -214,12 +233,59 @@ export default function WorkHoursCalculator({ holidays = [], vacations = [] }) {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Horas efectivas por tipo de jornada */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Briefcase className="w-5 h-5 text-purple-600" />
+            Horas Efectivas por Tipo de Jornada - Año {currentYear}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {calculations.tiposJornada.map((jornada, idx) => (
+              <div key={idx} className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{jornada.nombre}</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{jornada.descripcion}</p>
+                  </div>
+                  <Badge className="bg-purple-600">{jornada.horasSemana}h/semana</Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-white dark:bg-slate-900 rounded p-3 border">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Horas/Día</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{jornada.horasDia}h</p>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-900 rounded p-3 border">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Horas/Semana</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{jornada.horasSemana}h</p>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-900 rounded p-3 border">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Días Efectivos</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{jornada.diasEfectivos}</p>
+                  </div>
+                  
+                  <div className="bg-purple-50 dark:bg-purple-950 rounded p-3 border border-purple-200 dark:border-purple-800">
+                    <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Horas/Año</p>
+                    <p className="text-xl font-bold text-purple-900 dark:text-purple-100">{jornada.horasAnio.toLocaleString()}h</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
           
           <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-900 dark:text-blue-100">
               <strong>Nota:</strong> Los cálculos consideran días laborables (lunes a viernes), 
               excluyendo fines de semana, días festivos configurados y períodos de vacaciones generales. 
-              Los resultados muestran las horas efectivas de trabajo disponibles por tipo de turno/jornada.
+              Los resultados muestran las horas efectivas de trabajo disponibles por tipo de turno y jornada.
             </p>
           </div>
         </CardContent>
