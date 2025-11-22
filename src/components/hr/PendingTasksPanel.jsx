@@ -66,10 +66,10 @@ export default function PendingTasksPanel({
       .slice(0, 5);
   }, [masterEmployees]);
 
-  // Cumpleaños próximos (próximos 7 días)
+  // Cumpleaños próximos (próximos 30 días)
   const upcomingBirthdays = useMemo(() => {
     const today = new Date();
-    const next7Days = addDays(today, 7);
+    const next30Days = addDays(today, 30);
     
     return masterEmployees
       .filter(emp => {
@@ -79,18 +79,28 @@ export default function PendingTasksPanel({
           if (isNaN(birthDate.getTime())) return false;
           
           // Crear fecha de cumpleaños de este año
-          const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+          let thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
           
-          return thisYearBirthday >= today && thisYearBirthday <= next7Days;
+          // Si ya pasó este año, usar el del próximo año
+          if (thisYearBirthday < today) {
+            thisYearBirthday = new Date(today.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate());
+          }
+          
+          return thisYearBirthday <= next30Days;
         } catch {
           return false;
         }
       })
       .map(emp => {
         const birthDate = new Date(emp.fecha_nacimiento);
-        const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        let thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        
+        if (thisYearBirthday < today) {
+          thisYearBirthday = new Date(today.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate());
+        }
+        
         const daysUntil = differenceInDays(thisYearBirthday, today);
-        const age = today.getFullYear() - birthDate.getFullYear();
+        const age = thisYearBirthday.getFullYear() - birthDate.getFullYear();
         
         return {
           ...emp,
@@ -100,13 +110,14 @@ export default function PendingTasksPanel({
           isToday: isSameDay(thisYearBirthday, today)
         };
       })
-      .sort((a, b) => a.daysUntil - b.daysUntil);
+      .sort((a, b) => a.daysUntil - b.daysUntil)
+      .slice(0, 5);
   }, [masterEmployees]);
 
-  // Aniversarios laborales próximos (próximos 7 días)
+  // Aniversarios laborales próximos (próximos 30 días)
   const upcomingAnniversaries = useMemo(() => {
     const today = new Date();
-    const next7Days = addDays(today, 7);
+    const next30Days = addDays(today, 30);
     
     return masterEmployees
       .filter(emp => {
@@ -116,22 +127,32 @@ export default function PendingTasksPanel({
           if (isNaN(startDate.getTime())) return false;
           
           // Crear fecha de aniversario de este año
-          const thisYearAnniversary = new Date(today.getFullYear(), startDate.getMonth(), startDate.getDate());
+          let thisYearAnniversary = new Date(today.getFullYear(), startDate.getMonth(), startDate.getDate());
           
-          // Solo mostrar aniversarios de al menos 1 año
-          const yearsWorked = today.getFullYear() - startDate.getFullYear();
+          // Si ya pasó este año, usar el del próximo año
+          if (thisYearAnniversary < today) {
+            thisYearAnniversary = new Date(today.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
+          }
+          
+          // Calcular años trabajados correctamente
+          const yearsWorked = thisYearAnniversary.getFullYear() - startDate.getFullYear();
           if (yearsWorked < 1) return false;
           
-          return thisYearAnniversary >= today && thisYearAnniversary <= next7Days;
+          return thisYearAnniversary <= next30Days;
         } catch {
           return false;
         }
       })
       .map(emp => {
         const startDate = new Date(emp.fecha_alta);
-        const thisYearAnniversary = new Date(today.getFullYear(), startDate.getMonth(), startDate.getDate());
+        let thisYearAnniversary = new Date(today.getFullYear(), startDate.getMonth(), startDate.getDate());
+        
+        if (thisYearAnniversary < today) {
+          thisYearAnniversary = new Date(today.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
+        }
+        
         const daysUntil = differenceInDays(thisYearAnniversary, today);
-        const yearsWorked = today.getFullYear() - startDate.getFullYear();
+        const yearsWorked = thisYearAnniversary.getFullYear() - startDate.getFullYear();
         
         return {
           ...emp,
@@ -141,7 +162,8 @@ export default function PendingTasksPanel({
           isToday: isSameDay(thisYearAnniversary, today)
         };
       })
-      .sort((a, b) => a.daysUntil - b.daysUntil);
+      .sort((a, b) => a.daysUntil - b.daysUntil)
+      .slice(0, 5);
   }, [masterEmployees]);
 
   const totalPendingTasks = pendingOnboarding.length + expiringContracts.length;

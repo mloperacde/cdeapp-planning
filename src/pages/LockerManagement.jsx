@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -509,8 +508,17 @@ export default function LockerManagementPage() {
   };
 
   const stats = useMemo(() => {
+    // Contar solo empleados activos en Employee entity
+    const activeEmployees = employees.filter(emp => 
+      (emp.estado_empleado || "Alta") === "Alta"
+    );
+    
     const employeesConTaquilla = new Set();
     lockerAssignments.forEach(la => {
+      // Verificar que el empleado exista y esté activo
+      const employee = activeEmployees.find(e => e.id === la.employee_id);
+      if (!employee) return;
+      
       const tieneTaquilla = la.numero_taquilla_actual && 
                            la.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
       const requiere = la.requiere_taquilla !== false;
@@ -520,19 +528,22 @@ export default function LockerManagementPage() {
     });
     const conTaquilla = employeesConTaquilla.size;
 
-    const sinTaquilla = employees.filter(emp => {
+    const sinTaquilla = activeEmployees.filter(emp => {
       const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
       if (!assignment) return true;
       if (assignment.requiere_taquilla === false) return false;
       const tieneTaquilla = assignment.numero_taquilla_actual && 
-                           assignment.numero_taquilla_actual.replace(/['']/g, '').trim() !== "";
+                           assignment.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
       return !tieneTaquilla;
     }).length;
 
     const pendientesNotificacion = lockerAssignments.filter(la => {
+      const employee = activeEmployees.find(e => e.id === la.employee_id);
+      if (!employee) return false;
+      
       const tieneTaquilla = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.replace(/['']/g, '').trim() !== "";
-      return !la.notificacion_enviada && tieneTaquilla;
+                           la.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
+      return !la.notificacion_enviada && tieneTaquilla && la.requiere_taquilla !== false;
     }).length;
 
     const cambiosPendientes = Object.values(editingAssignments).filter(ea => {
@@ -557,11 +568,20 @@ export default function LockerManagementPage() {
       const totalInstaladas = config?.numero_taquillas_instaladas || 0;
       const identificadoresValidos = config?.identificadores_taquillas || [];
       
+      // Solo contar empleados activos
+      const activeEmployees = employees.filter(emp => 
+        (emp.estado_empleado || "Alta") === "Alta"
+      );
+      
       const employeesWithValidAssignment = new Set();
       let invalidIdentifierCount = 0;
       
       // Iterate through all assignments to determine status
       lockerAssignments.forEach(la => {
+        // Verificar que el empleado existe y está activo
+        const employee = activeEmployees.find(e => e.id === la.employee_id);
+        if (!employee) return;
+        
         // Only consider assignments for this vestuario that require a locker and have a locker ID
         if (la.vestuario !== vestuario || la.requiere_taquilla === false) return;
         
