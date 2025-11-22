@@ -62,6 +62,8 @@ import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import NotificationCenter from './pages/NotificationCenter';
 import ShiftManagerEmployees from './pages/ShiftManagerEmployees';
 import Employees from './pages/Employees';
+import ShiftManagerEmployeesList from './pages/ShiftManagerEmployeesList';
+import RRHH from './pages/RRHH';
 import __Layout from './Layout.jsx';
 
 
@@ -130,6 +132,8 @@ export const PAGES = {
     "NotificationCenter": NotificationCenter,
     "ShiftManagerEmployees": ShiftManagerEmployees,
     "Employees": Employees,
+    "ShiftManagerEmployeesList": ShiftManagerEmployeesList,
+    "RRHH": RRHH,
 }
 
 export const pagesConfig = {
