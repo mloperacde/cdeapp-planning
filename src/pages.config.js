@@ -60,8 +60,6 @@ import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import NotificationCenter from './pages/NotificationCenter';
-import ShiftManagerEmployees from './pages/ShiftManagerEmployees';
-import Employees from './pages/Employees';
 import __Layout from './Layout.jsx';
 
 
@@ -128,8 +126,6 @@ export const PAGES = {
     "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
     "AdvancedHRDashboard": AdvancedHRDashboard,
     "NotificationCenter": NotificationCenter,
-    "ShiftManagerEmployees": ShiftManagerEmployees,
-    "Employees": Employees,
 }
 
 export const pagesConfig = {
