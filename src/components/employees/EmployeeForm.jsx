@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -27,7 +27,6 @@ import { AlertCircle } from "lucide-react";
 import LockerAssignmentPanel from "./LockerAssignmentPanel";
 import AbsenteeismCard from "./AbsenteeismCard";
 import { toast } from "sonner";
-import { useEffect } from "react";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
