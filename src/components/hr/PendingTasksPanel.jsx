@@ -169,14 +169,14 @@ export default function PendingTasksPanel({
   const totalPendingTasks = pendingOnboarding.length + expiringContracts.length;
 
   return (
-    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-      <CardHeader className="border-b border-slate-100">
+    <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-purple-600" />
+          <CardTitle className="flex items-center gap-2 dark:text-slate-100">
+            <ClipboardList className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             Procesos Pendientes
             {totalPendingTasks > 0 && (
-              <Badge className="bg-purple-600">{totalPendingTasks}</Badge>
+              <Badge className="bg-purple-600 dark:bg-purple-700">{totalPendingTasks}</Badge>
             )}
           </CardTitle>
         </div>
@@ -185,11 +185,11 @@ export default function PendingTasksPanel({
         {/* Tareas de Onboarding Pendientes */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-blue-600" />
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               Onboarding en Proceso
               {pendingOnboarding.length > 0 && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
                   {pendingOnboarding.length}
                 </Badge>
               )}
@@ -202,7 +202,7 @@ export default function PendingTasksPanel({
           </div>
           
           {pendingOnboarding.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
               No hay procesos de onboarding pendientes
             </p>
           ) : (
@@ -237,11 +237,11 @@ export default function PendingTasksPanel({
         {/* Contratos Próximos a Expirar */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-red-600" />
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />
               Contratos por Vencer
               {expiringContracts.length > 0 && (
-                <Badge variant="outline" className="bg-red-50 text-red-700">
+                <Badge variant="outline" className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
                   {expiringContracts.length}
                 </Badge>
               )}
@@ -249,23 +249,24 @@ export default function PendingTasksPanel({
           </div>
           
           {expiringContracts.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
               No hay contratos próximos a vencer en los próximos 30 días
             </p>
           ) : (
             <div className="space-y-2">
               {expiringContracts.map((emp) => (
-                <div key={emp.id} className="p-3 bg-red-50 rounded-lg border border-red-200">
+                <div key={emp.id} className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-slate-900">{emp.nombre}</p>
-                      <p className="text-xs text-slate-600">
+                      <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{emp.nombre}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
                         {emp.tipo_contrato || 'Contrato indefinido'} • {emp.departamento || 'Sin departamento'}
                       </p>
-                      <p className="text-xs text-red-700 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-red-700 dark:text-red-400 mt-1 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         Vence: {(() => {
                           try {
+                            if (!emp.endDate || isNaN(emp.endDate.getTime())) return 'Fecha no válida';
                             return format(emp.endDate, "d 'de' MMMM", { locale: es });
                           } catch {
                             return 'Fecha no válida';
@@ -291,10 +292,10 @@ export default function PendingTasksPanel({
         {upcomingBirthdays.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Cake className="w-4 h-4 text-pink-600" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Cake className="w-4 h-4 text-pink-600 dark:text-pink-400" />
                 Cumpleaños Próximos
-                <Badge variant="outline" className="bg-pink-50 text-pink-700">
+                <Badge variant="outline" className="bg-pink-50 dark:bg-pink-950 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800">
                   {upcomingBirthdays.length}
                 </Badge>
               </h3>
@@ -303,14 +304,16 @@ export default function PendingTasksPanel({
             <div className="space-y-2">
               {upcomingBirthdays.map((emp) => (
                 <div key={emp.id} className={`p-3 rounded-lg border ${
-                  emp.isToday ? 'bg-pink-100 border-pink-300' : 'bg-pink-50 border-pink-200'
+                  emp.isToday 
+                    ? 'bg-pink-100 dark:bg-pink-950/30 border-pink-300 dark:border-pink-800' 
+                    : 'bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Cake className={`w-5 h-5 ${emp.isToday ? 'text-pink-600' : 'text-pink-500'}`} />
+                      <Cake className={`w-5 h-5 ${emp.isToday ? 'text-pink-600 dark:text-pink-400' : 'text-pink-500 dark:text-pink-400'}`} />
                       <div>
-                        <p className="font-semibold text-sm text-slate-900">{emp.nombre}</p>
-                        <p className="text-xs text-slate-600">
+                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{emp.nombre}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
                           {emp.isToday ? '¡Hoy cumple años!' : `En ${emp.daysUntil} ${emp.daysUntil === 1 ? 'día' : 'días'}`} • {emp.age} años
                         </p>
                       </div>
@@ -329,10 +332,10 @@ export default function PendingTasksPanel({
         {upcomingAnniversaries.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 Aniversarios Laborales
-                <Badge variant="outline" className="bg-emerald-50 text-emerald-700">
+                <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
                   {upcomingAnniversaries.length}
                 </Badge>
               </h3>
@@ -341,14 +344,16 @@ export default function PendingTasksPanel({
             <div className="space-y-2">
               {upcomingAnniversaries.map((emp) => (
                 <div key={emp.id} className={`p-3 rounded-lg border ${
-                  emp.isToday ? 'bg-emerald-100 border-emerald-300' : 'bg-emerald-50 border-emerald-200'
+                  emp.isToday 
+                    ? 'bg-emerald-100 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800' 
+                    : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Calendar className={`w-5 h-5 ${emp.isToday ? 'text-emerald-600' : 'text-emerald-500'}`} />
+                      <Calendar className={`w-5 h-5 ${emp.isToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-emerald-500 dark:text-emerald-400'}`} />
                       <div>
-                        <p className="font-semibold text-sm text-slate-900">{emp.nombre}</p>
-                        <p className="text-xs text-slate-600">
+                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{emp.nombre}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
                           {emp.isToday ? '¡Hoy celebra!' : `En ${emp.daysUntil} ${emp.daysUntil === 1 ? 'día' : 'días'}`} • {emp.yearsWorked} {emp.yearsWorked === 1 ? 'año' : 'años'} en la empresa
                         </p>
                       </div>
@@ -366,9 +371,9 @@ export default function PendingTasksPanel({
         {/* Mensaje si no hay nada pendiente */}
         {totalPendingTasks === 0 && upcomingBirthdays.length === 0 && upcomingAnniversaries.length === 0 && (
           <div className="text-center py-8">
-            <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p className="text-slate-500 font-medium">Todo al día</p>
-            <p className="text-sm text-slate-400 mt-1">No hay tareas pendientes ni eventos próximos</p>
+            <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+            <p className="text-slate-500 dark:text-slate-400 font-medium">Todo al día</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">No hay tareas pendientes ni eventos próximos</p>
           </div>
         )}
       </CardContent>

@@ -257,7 +257,7 @@ export default function HRDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <p className="text-sm text-slate-700 mb-4">
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-4">
                 Gestiona y aprueba solicitudes de ausencias, permisos y bajas laborales
               </p>
               <Link to={createPageUrl("AbsenceManagement")}>
@@ -343,13 +343,13 @@ export default function HRDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <p className="text-sm text-slate-700 mb-3">
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
                 Los siguientes empleados han consumido más del 80% de su límite anual
               </p>
               <div className="space-y-2">
                 {fuerzaMayorAlerts.map((emp) => (
-                  <div key={emp.id} className="flex items-center justify-between p-2 bg-orange-50 rounded border border-orange-200">
-                    <span className="text-sm font-medium text-slate-900">{emp.nombre}</span>
+                  <div key={emp.id} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-950/50 rounded border border-orange-200 dark:border-orange-800">
+                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{emp.nombre}</span>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="bg-orange-100 text-orange-800">
                         {emp.horas_causa_mayor_consumidas || 0}h / {emp.horas_causa_mayor_limite || 0}h
