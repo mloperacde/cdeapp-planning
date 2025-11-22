@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -56,11 +55,24 @@ export default function MachineAssignmentsPage() {
     let filtered;
     if (selectedDepartment === "FABRICACION") {
       const validPositions = ['responsable de linea', 'segunda de linea', 'operaria de linea'];
+      const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
       
       filtered = employees.filter(emp => {
         if (emp.departamento !== "FABRICACION") return false;
         if (emp.disponibilidad !== "Disponible") return false;
         if (emp.incluir_en_planning === false) return false;
+        
+        // CRÍTICO: Incluir empleados con turno fijo de mañana o tarde PARA AMBOS EQUIPOS
+        const isTurnoFijo = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
+        
+        // Si es turno fijo, está disponible para ambos equipos
+        if (isTurnoFijo) {
+          const puesto = (emp.puesto || '').toLowerCase();
+          return validPositions.some(vp => puesto.includes(vp));
+        }
+        
+        // Si es rotativo, solo aparece en su equipo asignado
+        if (emp.equipo !== teamName) return false;
         
         const puesto = (emp.puesto || '').toLowerCase();
         return validPositions.some(vp => puesto.includes(vp));
@@ -78,7 +90,7 @@ export default function MachineAssignmentsPage() {
 
     setEmployeeSearchCache(prev => ({ ...prev, [cacheKey]: filtered }));
     return filtered;
-  }, [employees, selectedDepartment, currentTeam, employeeSearchCache]);
+  }, [employees, selectedDepartment, currentTeam, employeeSearchCache, teams]);
 
   const saveAssignmentsMutation = useMutation({
     mutationFn: async (assignmentsData) => {
@@ -338,20 +350,35 @@ export default function MachineAssignmentsPage() {
     const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
     
     if (role === 'responsable_linea') {
-      return filteredEmployees.filter(e => 
-        e.puesto?.toLowerCase().includes('responsable de linea') && 
-        e.equipo === teamName
-      );
+      return filteredEmployees.filter(e => {
+        if (!e.puesto?.toLowerCase().includes('responsable de linea')) return false;
+        
+        // Empleados con turno fijo disponibles para ambos equipos
+        const isTurnoFijo = e.tipo_turno === "Fijo Mañana" || e.tipo_turno === "Fijo Tarde";
+        if (isTurnoFijo) return true;
+        
+        // Rotativos solo en su equipo
+        return e.equipo === teamName;
+      });
     } else if (role === 'segunda_linea') {
-      return filteredEmployees.filter(e => 
-        e.puesto?.toLowerCase().includes('segunda de linea') && 
-        e.equipo === teamName
-      );
+      return filteredEmployees.filter(e => {
+        if (!e.puesto?.toLowerCase().includes('segunda de linea')) return false;
+        
+        // Empleados con turno fijo disponibles para ambos equipos
+        const isTurnoFijo = e.tipo_turno === "Fijo Mañana" || e.tipo_turno === "Fijo Tarde";
+        if (isTurnoFijo) return true;
+        
+        // Rotativos solo en su equipo
+        return e.equipo === teamName;
+      });
     } else {
       // Para operarios, filtrar los que tienen la máquina en su configuración
       return filteredEmployees.filter(emp => {
         if (!emp.puesto?.toLowerCase().includes('operaria de linea')) return false;
-        if (emp.equipo !== teamName) return false;
+        
+        // Empleados con turno fijo disponibles para ambos equipos
+        const isTurnoFijo = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
+        if (!isTurnoFijo && emp.equipo !== teamName) return false;
         
         // Verificar si tiene esta máquina en su configuración
         for (let i = 1; i <= 10; i++) {
@@ -463,6 +490,10 @@ export default function MachineAssignmentsPage() {
                 <p className="text-sm text-blue-800">
                   <strong>ℹ️ Información:</strong> Solo se mostrarán empleados del departamento FABRICACIÓN con los puestos: 
                   Responsable de línea, Segunda de línea y Operaria de línea.
+                </p>
+                <p className="text-sm text-blue-800 mt-2">
+                  <strong>📌 Nota:</strong> Los empleados con <strong>turno fijo (Fijo Mañana o Fijo Tarde)</strong> aparecerán 
+                  disponibles para <strong>ambos equipos</strong>, independientemente del equipo asignado.
                 </p>
               </CardContent>
             </Card>

@@ -27,6 +27,7 @@ import { AlertCircle } from "lucide-react";
 import LockerAssignmentPanel from "./LockerAssignmentPanel";
 import AbsenteeismCard from "./AbsenteeismCard";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
@@ -94,10 +95,19 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     initialNewEmployeeFormData[`prioridad_mantenimiento_${i}`] = null;
   }
 
-  const [formData, setFormData] = useState(employee || initialNewEmployeeFormData);
+  const [formData, setFormData] = useState(initialNewEmployeeFormData);
   const [activeTab, setActiveTab] = useState("datos"); // New state for active tab
 
   const queryClient = useQueryClient();
+
+  // Cargar datos del empleado cuando cambie la prop
+  useEffect(() => {
+    if (employee) {
+      setFormData(employee);
+    } else {
+      setFormData(initialNewEmployeeFormData);
+    }
+  }, [employee]);
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
