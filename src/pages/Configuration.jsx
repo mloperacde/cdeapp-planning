@@ -17,6 +17,13 @@ export default function ConfigurationPage() {
           color: "red"
         },
         {
+          title: "Ausencias Avanzado",
+          description: "Flujos de aprobación, notificaciones y acumulación",
+          icon: FileText,
+          url: createPageUrl("AdvancedAbsenceConfig"),
+          color: "purple"
+        },
+        {
           title: "Configuración de Equipos",
           description: "Gestiona equipos y turnos rotativos",
           icon: Users,

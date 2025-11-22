@@ -18,21 +18,23 @@ import {
   CheckCircle2, 
   AlertCircle, 
   ArrowRight,
-  Eye
+  Eye,
+  Checkbox as CheckboxIcon
 } from "lucide-react";
 import { toast } from "sonner";
 
 const SYNC_RULES = {
-  master_empty: "Copiar solo si maestro está vacío",
   employee_empty: "Copiar solo si empleado está vacío",
   always_master: "Siempre usar valor del maestro",
-  ask_conflicts: "Preguntar en conflictos"
+  most_recent: "Usar valor más reciente (por updated_date)",
+  merge_text: "Fusionar campos de texto (combinar)"
 };
 
 export default function SyncPreviewDialog({ masterEmployees, employees, open, onClose }) {
   const [syncRule, setSyncRule] = useState("employee_empty");
-  const [selectedFields, setSelectedFields] = useState([]);
+  const [employeeFieldSelections, setEmployeeFieldSelections] = useState({});
   const [syncing, setSyncing] = useState(false);
+  const [expandedEmployee, setExpandedEmployee] = useState(null);
   const queryClient = useQueryClient();
 
   const syncableFields = [
@@ -84,20 +86,38 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
           const employeeValue = employee[field];
           
           let shouldUpdate = false;
+          let finalValue = masterValue;
           
           if (syncRule === "employee_empty") {
             shouldUpdate = masterValue && !employeeValue;
           } else if (syncRule === "always_master") {
             shouldUpdate = masterValue !== employeeValue;
-          } else if (syncRule === "ask_conflicts") {
-            shouldUpdate = masterValue && masterValue !== employeeValue;
+          } else if (syncRule === "most_recent") {
+            const masterDate = master.updated_date || master.created_date;
+            const employeeDate = employee.updated_date || employee.created_date;
+            shouldUpdate = masterValue !== employeeValue && 
+                          new Date(masterDate) > new Date(employeeDate);
+          } else if (syncRule === "merge_text") {
+            if (masterValue !== employeeValue && 
+                typeof masterValue === 'string' && 
+                typeof employeeValue === 'string') {
+              finalValue = `${employeeValue} | ${masterValue}`;
+              shouldUpdate = true;
+            }
+          }
+          
+          // Permitir selección individual por empleado
+          const employeeSelections = employeeFieldSelections[`${master.id}_${employee?.id}`] || {};
+          if (employeeSelections[field] === false) {
+            shouldUpdate = false;
           }
           
           if (shouldUpdate) {
             fieldsToUpdate.push({
               field,
               before: employeeValue,
-              after: masterValue
+              after: finalValue,
+              rule: syncRule
             });
           }
         });
@@ -163,7 +183,8 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
             change.fieldsToUpdate.forEach(f => {
               changesDetected[f.field] = {
                 before: f.before,
-                after: f.after
+                after: f.after,
+                rule: f.rule
               };
             });
 
@@ -175,7 +196,8 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
               fields_synced: change.fieldsToUpdate.map(f => f.field),
               changes_detected: changesDetected,
               status: 'Exitoso',
-              synced_by: user?.email || 'Sistema'
+              synced_by: user?.email || 'Sistema',
+              sync_rule_applied: syncRule
             });
 
             successCount++;
@@ -287,71 +309,120 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
                     <p className="text-xs">Todos los datos están sincronizados</p>
                   </div>
                 ) : (
-                  previewChanges.map((change, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-lg border ${
-                        change.type === 'create' 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-blue-50 border-blue-200'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <Badge className={change.type === 'create' ? 'bg-green-600' : 'bg-blue-600'}>
-                            {change.type === 'create' ? 'Nueva Alta' : 'Actualización'}
-                          </Badge>
-                          <p className="font-semibold text-slate-900 mt-1">{change.masterName}</p>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {change.type === 'create' 
-                            ? `${change.fieldsToSync.length} campos` 
-                            : `${change.fieldsToUpdate.length} campos`
-                          }
-                        </Badge>
-                      </div>
+                  previewChanges.map((change, idx) => {
+                    const employeeKey = `${change.masterId}_${change.employeeId}`;
+                    const isExpanded = expandedEmployee === employeeKey;
+                    const selections = employeeFieldSelections[employeeKey] || {};
 
-                      {change.type === 'create' && (
-                        <div className="mt-2 p-2 bg-white rounded border text-xs space-y-1">
-                          <p className="font-semibold text-slate-700">Campos a crear:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {change.fieldsToSync.slice(0, 8).map((field) => (
-                              <Badge key={field} variant="outline" className="text-[10px]">
-                                {field}
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-lg border ${
+                          change.type === 'create' 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-blue-50 border-blue-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge className={change.type === 'create' ? 'bg-green-600' : 'bg-blue-600'}>
+                                {change.type === 'create' ? 'Nueva Alta' : 'Actualización'}
                               </Badge>
-                            ))}
-                            {change.fieldsToSync.length > 8 && (
-                              <Badge variant="outline" className="text-[10px]">
-                                +{change.fieldsToSync.length - 8} más
-                              </Badge>
+                              <p className="font-semibold text-slate-900">{change.masterName}</p>
+                            </div>
+                            {change.type === 'update' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setExpandedEmployee(isExpanded ? null : employeeKey)}
+                                className="h-6 text-xs"
+                              >
+                                <Eye className="w-3 h-3 mr-1" />
+                                {isExpanded ? 'Ocultar' : 'Seleccionar campos'}
+                              </Button>
                             )}
                           </div>
+                          <Badge variant="outline" className="text-xs">
+                            {change.type === 'create' 
+                              ? `${change.fieldsToSync.length} campos` 
+                              : `${change.fieldsToUpdate.filter(f => selections[f.field] !== false).length}/${change.fieldsToUpdate.length} campos`
+                            }
+                          </Badge>
                         </div>
-                      )}
 
-                      {change.type === 'update' && (
-                        <div className="mt-2 space-y-1">
-                          {change.fieldsToUpdate.slice(0, 3).map((f) => (
-                            <div key={f.field} className="text-xs p-2 bg-white rounded border">
-                              <div className="font-semibold text-slate-900 mb-1">{f.field}</div>
-                              <div className="space-y-0.5">
-                                <div className="text-red-700 truncate">- {String(f.before || '(vacío)').substring(0, 40)}</div>
-                                <div className="flex items-center gap-1 text-green-700">
-                                  <ArrowRight className="w-3 h-3 flex-shrink-0" />
-                                  <span className="truncate">{String(f.after || '(vacío)').substring(0, 40)}</span>
+                        {change.type === 'update' && isExpanded && (
+                          <div className="mt-2 p-3 bg-white rounded border space-y-2">
+                            <p className="text-xs font-semibold text-slate-700 mb-2">Seleccionar campos a sincronizar:</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                              {change.fieldsToUpdate.map((f) => (
+                                <div key={f.field} className="flex items-center space-x-2 p-2 bg-slate-50 rounded">
+                                  <Checkbox
+                                    id={`${employeeKey}-${f.field}`}
+                                    checked={selections[f.field] !== false}
+                                    onCheckedChange={(checked) => {
+                                      setEmployeeFieldSelections(prev => ({
+                                        ...prev,
+                                        [employeeKey]: {
+                                          ...(prev[employeeKey] || {}),
+                                          [f.field]: checked
+                                        }
+                                      }));
+                                    }}
+                                  />
+                                  <label htmlFor={`${employeeKey}-${f.field}`} className="text-xs cursor-pointer flex-1">
+                                    {f.field}
+                                  </label>
                                 </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {change.type === 'create' && (
+                          <div className="mt-2 p-2 bg-white rounded border text-xs space-y-1">
+                            <p className="font-semibold text-slate-700">Campos a crear:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {change.fieldsToSync.slice(0, 8).map((field) => (
+                                <Badge key={field} variant="outline" className="text-[10px]">
+                                  {field}
+                                </Badge>
+                              ))}
+                              {change.fieldsToSync.length > 8 && (
+                                <Badge variant="outline" className="text-[10px]">
+                                  +{change.fieldsToSync.length - 8} más
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {change.type === 'update' && !isExpanded && (
+                          <div className="mt-2 space-y-1">
+                            {change.fieldsToUpdate.slice(0, 2).map((f) => (
+                              selections[f.field] !== false && (
+                                <div key={f.field} className="text-xs p-2 bg-white rounded border">
+                                  <div className="font-semibold text-slate-900 mb-1">{f.field}</div>
+                                  <div className="space-y-0.5">
+                                    <div className="text-red-700 truncate">- {String(f.before || '(vacío)').substring(0, 40)}</div>
+                                    <div className="flex items-center gap-1 text-green-700">
+                                      <ArrowRight className="w-3 h-3 flex-shrink-0" />
+                                      <span className="truncate">{String(f.after || '(vacío)').substring(0, 40)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            ))}
+                            {change.fieldsToUpdate.filter(f => selections[f.field] !== false).length > 2 && (
+                              <div className="text-xs text-slate-500 text-center pt-1">
+                                +{change.fieldsToUpdate.filter(f => selections[f.field] !== false).length - 2} campos más
                               </div>
-                            </div>
-                          ))}
-                          {change.fieldsToUpdate.length > 3 && (
-                            <div className="text-xs text-slate-500 text-center pt-1">
-                              +{change.fieldsToUpdate.length - 3} campos más
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </ScrollArea>

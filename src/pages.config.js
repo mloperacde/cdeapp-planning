@@ -57,6 +57,7 @@ import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import SystemReset from './pages/SystemReset';
 import AdvancedConfiguration from './pages/AdvancedConfiguration';
+import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -120,6 +121,7 @@ export const PAGES = {
     "EmployeeDataCompletion": EmployeeDataCompletion,
     "SystemReset": SystemReset,
     "AdvancedConfiguration": AdvancedConfiguration,
+    "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
 }
 
 export const pagesConfig = {
