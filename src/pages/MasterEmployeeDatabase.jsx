@@ -22,7 +22,8 @@ import {
   AlertCircle,
   Clock,
   Upload,
-  FileText
+  FileText,
+  User
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
