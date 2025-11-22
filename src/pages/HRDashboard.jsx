@@ -149,6 +149,28 @@ export default function HRDashboard() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button
+              onClick={async () => {
+                const response = await base44.functions.invoke('syncLockersFromMaster', {});
+                if (response.data.success) {
+                  toast.success(`Taquillas sincronizadas: ${response.data.created} creadas, ${response.data.updated} actualizadas`);
+                  queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+                } else {
+                  toast.error('Error: ' + response.data.error);
+                }
+              }}
+              variant="outline"
+              className="border-purple-300"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Sincronizar Taquillas
+            </Button>
+            <Link to={createPageUrl("AdvancedHRDashboard")}>
+              <Button variant="outline" className="border-blue-300">
+                <Eye className="w-4 h-4 mr-2" />
+                Dashboard Avanzado
+              </Button>
+            </Link>
+            <Button
               onClick={() => {
                 setEditingEmployee({
                   nombre: '',
@@ -164,7 +186,6 @@ export default function HRDashboard() {
               <Plus className="w-4 h-4 mr-2" />
               Nueva Alta
             </Button>
-
           </div>
         </div>
 

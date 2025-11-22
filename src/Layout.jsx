@@ -372,12 +372,12 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuButton
                       asChild
                       className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("Notifications")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                        isActive(createPageUrl("NotificationCenter")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                       }`}
                     >
-                      <Link to={createPageUrl("Notifications")} className="flex items-center gap-3 px-3 py-2.5">
+                      <Link to={createPageUrl("NotificationCenter")} className="flex items-center gap-3 px-3 py-2.5">
                         <Bell className="w-5 h-5" />
-                        <span className="text-sm">Notificaciones</span>
+                        <span className="text-sm">Centro Notificaciones</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -58,6 +58,8 @@ import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import SystemReset from './pages/SystemReset';
 import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
+import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
+import NotificationCenter from './pages/NotificationCenter';
 import __Layout from './Layout.jsx';
 
 
@@ -122,6 +124,8 @@ export const PAGES = {
     "SystemReset": SystemReset,
     "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
+    "AdvancedHRDashboard": AdvancedHRDashboard,
+    "NotificationCenter": NotificationCenter,
 }
 
 export const pagesConfig = {
