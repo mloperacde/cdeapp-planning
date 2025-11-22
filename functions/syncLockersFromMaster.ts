@@ -12,9 +12,13 @@ Deno.serve(async (req) => {
     // Obtener todos los empleados del maestro con datos de taquilla
     const masterEmployees = await base44.asServiceRole.entities.EmployeeMasterDatabase.list();
     
-    const employeesWithLockers = masterEmployees.filter(emp => 
-      emp.taquilla_vestuario && emp.taquilla_numero && emp.employee_id
-    );
+    // Aceptar todos los nombres de vestuario, incluso con variaciones
+    const employeesWithLockers = masterEmployees.filter(emp => {
+      const hasVestuario = emp.taquilla_vestuario && emp.taquilla_vestuario.trim() !== '';
+      const hasNumero = emp.taquilla_numero && emp.taquilla_numero.toString().trim() !== '';
+      const hasEmployeeId = emp.employee_id && emp.employee_id.trim() !== '';
+      return hasVestuario && hasNumero && hasEmployeeId;
+    });
 
     // Obtener asignaciones existentes
     const existingAssignments = await base44.asServiceRole.entities.LockerAssignment.list();
@@ -27,11 +31,14 @@ Deno.serve(async (req) => {
     for (const emp of employeesWithLockers) {
       const existing = existingMap.get(emp.employee_id);
       
+      // Limpiar el número de taquilla de comillas y espacios
+      const cleanTaquillaNumero = emp.taquilla_numero.toString().replace(/['"]/g, '').trim();
+      
       const assignmentData = {
         employee_id: emp.employee_id,
         requiere_taquilla: true,
-        vestuario: emp.taquilla_vestuario,
-        numero_taquilla_actual: emp.taquilla_numero,
+        vestuario: emp.taquilla_vestuario.trim(),
+        numero_taquilla_actual: cleanTaquillaNumero,
         fecha_asignacion: emp.fecha_alta || new Date().toISOString(),
         notas: 'Sincronizado desde Base de Datos Maestra'
       };
