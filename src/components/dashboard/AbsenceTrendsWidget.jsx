@@ -23,8 +23,14 @@ export default function AbsenceTrendsWidget({ size = "medium" }) {
       const monthEnd = endOfMonth(date);
       
       const monthAbsences = absences.filter(absence => {
-        const absenceDate = new Date(absence.fecha_inicio);
-        return absenceDate >= monthStart && absenceDate <= monthEnd;
+        if (!absence.fecha_inicio) return false;
+        try {
+          const absenceDate = new Date(absence.fecha_inicio);
+          if (isNaN(absenceDate.getTime())) return false;
+          return absenceDate >= monthStart && absenceDate <= monthEnd;
+        } catch {
+          return false;
+        }
       });
       
       monthsData.push({

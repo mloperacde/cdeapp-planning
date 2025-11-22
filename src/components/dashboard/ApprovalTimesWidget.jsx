@@ -14,9 +14,16 @@ export default function ApprovalTimesWidget({ size = "medium" }) {
   });
 
   const stats = useMemo(() => {
-    const approvedAbsences = absences.filter(a => 
-      a.estado === 'Aprobada' && a.fecha_aprobacion && a.created_date
-    );
+    const approvedAbsences = absences.filter(a => {
+      if (a.estado !== 'Aprobada' || !a.fecha_aprobacion || !a.created_date) return false;
+      try {
+        const created = new Date(a.created_date);
+        const approved = new Date(a.fecha_aprobacion);
+        return !isNaN(created.getTime()) && !isNaN(approved.getTime());
+      } catch {
+        return false;
+      }
+    });
 
     if (approvedAbsences.length === 0) {
       return { avgHours: 0, minHours: 0, maxHours: 0, total: 0 };
