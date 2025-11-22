@@ -61,6 +61,7 @@ import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import NotificationCenter from './pages/NotificationCenter';
 import EmployeeList from './pages/EmployeeList';
+import Employees from './pages/Employees';
 import __Layout from './Layout.jsx';
 
 
@@ -128,6 +129,7 @@ export const PAGES = {
     "AdvancedHRDashboard": AdvancedHRDashboard,
     "NotificationCenter": NotificationCenter,
     "EmployeeList": EmployeeList,
+    "Employees": Employees,
 }
 
 export const pagesConfig = {

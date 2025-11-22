@@ -196,6 +196,17 @@ export default function Layout({ children, currentPageName }) {
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("Employees")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("Employees")} className="flex items-center gap-2 px-3 py-2">
+                              <Users className="w-4 h-4" />
+                              Empleados
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
                               isActive(createPageUrl("ETTTemporaryEmployees")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
                           >

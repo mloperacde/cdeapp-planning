@@ -175,6 +175,13 @@ export default function ShiftManagersPage() {
       description: "Configura equipos rotativos"
     },
     {
+      title: "Lista de Empleados",
+      icon: Users,
+      url: createPageUrl("EmployeeList"),
+      color: "teal",
+      description: "Consulta información del personal"
+    },
+    {
       title: "Asignaciones Máquinas",
       icon: UserCog,
       url: createPageUrl("MachineAssignments"),
@@ -452,24 +459,6 @@ export default function ShiftManagersPage() {
                         Apoyos 14-15h
                       </h3>
                       <p className="text-xs text-slate-600">Asigna soporte 14-15h</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link to={createPageUrl("EmployeeList")}>
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        Lista de Empleados
-                      </h3>
-                      <p className="text-xs text-slate-600">Consulta información del personal</p>
                     </div>
                   </div>
                 </CardContent>

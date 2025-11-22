@@ -556,20 +556,16 @@ export default function LockerManagementPage() {
       (emp.estado_empleado || "Alta") === "Alta"
     );
     
-    const employeesConTaquilla = new Set();
-    lockerAssignments.forEach(la => {
+    const conTaquilla = lockerAssignments.filter(la => {
       // Verificar que el empleado exista y esté activo
       const employee = activeEmployees.find(e => e.id === la.employee_id);
-      if (!employee) return;
+      if (!employee) return false;
       
       const tieneTaquilla = la.numero_taquilla_actual && 
                            la.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
       const requiere = la.requiere_taquilla !== false;
-      if (tieneTaquilla && requiere) {
-        employeesConTaquilla.add(la.employee_id);
-      }
-    });
-    const conTaquilla = employeesConTaquilla.size;
+      return tieneTaquilla && requiere;
+    }).length;
 
     const sinTaquilla = activeEmployees.filter(emp => {
       const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
