@@ -313,7 +313,7 @@ export default function MasterEmployeeDatabasePage() {
   }, [masterEmployees]);
 
   const filteredEmployees = useMemo(() => {
-    return masterEmployees.filter(emp => {
+    let result = masterEmployees.filter(emp => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
         emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -335,6 +335,36 @@ export default function MasterEmployeeDatabasePage() {
 
       return matchesSearch && matchesDept && matchesPuesto && matchesEstado && matchesEstadoSinc;
     });
+
+    // Aplicar ordenación
+    if (filters.sortField) {
+      result = [...result].sort((a, b) => {
+        const field = filters.sortField;
+        const aVal = a[field];
+        const bVal = b[field];
+        
+        // Manejo de valores nulos
+        if (!aVal && !bVal) return 0;
+        if (!aVal) return 1;
+        if (!bVal) return -1;
+        
+        // Comparación según tipo
+        let comparison = 0;
+        if (typeof aVal === 'string') {
+          comparison = aVal.localeCompare(bVal, 'es', { numeric: true });
+        } else if (typeof aVal === 'number') {
+          comparison = aVal - bVal;
+        } else if (aVal instanceof Date || typeof aVal === 'string' && !isNaN(Date.parse(aVal))) {
+          comparison = new Date(aVal) - new Date(bVal);
+        } else {
+          comparison = String(aVal).localeCompare(String(bVal));
+        }
+        
+        return filters.sortDirection === 'desc' ? -comparison : comparison;
+      });
+    }
+
+    return result;
   }, [masterEmployees, filters]);
 
   const stats = {
@@ -519,6 +549,16 @@ export default function MasterEmployeeDatabasePage() {
                     onFilterChange={setFilters}
                     searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto']}
                     filterOptions={filterOptions}
+                    sortOptions={[
+                      { field: 'nombre', label: 'Nombre' },
+                      { field: 'codigo_empleado', label: 'Código' },
+                      { field: 'departamento', label: 'Departamento' },
+                      { field: 'puesto', label: 'Puesto' },
+                      { field: 'estado_empleado', label: 'Estado' },
+                      { field: 'estado_sincronizacion', label: 'Estado Sincronización' },
+                      { field: 'fecha_alta', label: 'Fecha Alta' },
+                      { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
+                    ]}
                     placeholder="Buscar por nombre, código, departamento o puesto..."
                   />
                 </div>

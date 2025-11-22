@@ -15,18 +15,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Search, X, Filter, ChevronDown } from "lucide-react";
+import { Search, X, Filter, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 export default function AdvancedSearch({ 
   data = [], 
   onFilterChange,
   searchFields = ['nombre'],
   filterOptions = {},
+  sortOptions = [],
   placeholder = "Buscar..."
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({});
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [sortField, setSortField] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   // Autocompletado inteligente
   const suggestions = useMemo(() => {
@@ -59,24 +62,45 @@ export default function AdvancedSearch({
     applyFilters(newFilters);
   };
 
-  const applyFilters = (currentFilters) => {
+  const applyFilters = (currentFilters, currentSort = sortField, currentDirection = sortDirection) => {
     onFilterChange({
       searchTerm: currentFilters.search || "",
+      sortField: currentSort,
+      sortDirection: currentDirection,
       ...currentFilters
     });
+  };
+
+  const handleSortChange = (field) => {
+    let newDirection = "asc";
+    if (sortField === field) {
+      newDirection = sortDirection === "asc" ? "desc" : "";
+      if (newDirection === "") {
+        setSortField("");
+        setSortDirection("asc");
+        applyFilters(filters, "", "asc");
+        return;
+      }
+    }
+    setSortField(field);
+    setSortDirection(newDirection);
+    applyFilters(filters, field, newDirection);
   };
 
   const clearFilters = () => {
     setSearchTerm("");
     setFilters({});
+    setSortField("");
+    setSortDirection("asc");
     onFilterChange({ searchTerm: "" });
   };
 
   const activeFiltersCount = Object.keys(filters).filter(k => k !== 'search' && filters[k] && filters[k] !== 'all').length;
+  const activeSortCount = sortField ? 1 : 0;
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
           <Input
@@ -165,7 +189,62 @@ export default function AdvancedSearch({
           </PopoverContent>
         </Popover>
 
-        {(searchTerm || activeFiltersCount > 0) && (
+        {sortOptions.length > 0 && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                Ordenar
+                {activeSortCount > 0 && (
+                  <Badge className="ml-2 bg-green-600">{activeSortCount}</Badge>
+                )}
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 dark:bg-slate-800 dark:border-slate-700">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm dark:text-slate-100">Ordenar por</h4>
+                  {sortField && (
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setSortField("");
+                      setSortDirection("asc");
+                      applyFilters(filters, "", "asc");
+                    }}>
+                      <X className="w-3 h-3 mr-1" />
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {sortOptions.map((opt) => (
+                    <button
+                      key={opt.field}
+                      onClick={() => handleSortChange(opt.field)}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors ${
+                        sortField === opt.field
+                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 font-medium'
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {sortField === opt.field && (
+                        sortDirection === "asc" ? (
+                          <ArrowUp className="w-4 h-4" />
+                        ) : (
+                          <ArrowDown className="w-4 h-4" />
+                        )
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {(searchTerm || activeFiltersCount > 0 || activeSortCount > 0) && (
           <Button variant="ghost" onClick={clearFilters} className="dark:text-slate-300">
             <X className="w-4 h-4 mr-2" />
             Limpiar todo
@@ -173,7 +252,7 @@ export default function AdvancedSearch({
         )}
       </div>
 
-      {activeFiltersCount > 0 && (
+      {(activeFiltersCount > 0 || activeSortCount > 0) && (
         <div className="flex flex-wrap gap-2">
           {Object.entries(filters).map(([key, value]) => {
             if (key === 'search' || !value || value === 'all') return null;
@@ -191,6 +270,23 @@ export default function AdvancedSearch({
               </Badge>
             );
           })}
+          
+          {sortField && (
+            <Badge variant="outline" className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+              Ordenado: {sortOptions.find(o => o.field === sortField)?.label} 
+              {sortDirection === "asc" ? " ↑" : " ↓"}
+              <button
+                className="ml-2 hover:text-green-900 dark:hover:text-green-100"
+                onClick={() => {
+                  setSortField("");
+                  setSortDirection("asc");
+                  applyFilters(filters, "", "asc");
+                }}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
         </div>
       )}
     </div>
