@@ -180,19 +180,6 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
-                          {/* HRDashboard moved here */}
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("HRDashboard")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("HRDashboard")} className="flex items-center gap-2 px-3 py-2">
-                              <TrendingUp className="w-4 h-4" />
-                              Panel RRHH
-                            </Link>
-                          </SidebarMenuButton>
-
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${

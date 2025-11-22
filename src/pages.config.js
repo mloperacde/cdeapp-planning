@@ -47,7 +47,6 @@ import MobileAbsences from './pages/MobileAbsences';
 import MobileVacations from './pages/MobileVacations';
 import MobilePlanning from './pages/MobilePlanning';
 import MobileChat from './pages/MobileChat';
-import HRDashboard from './pages/HRDashboard';
 import MasterMachineView from './pages/MasterMachineView';
 import MessagingConfig from './pages/MessagingConfig';
 import ArticleManagement from './pages/ArticleManagement';
@@ -115,7 +114,6 @@ export const PAGES = {
     "MobileVacations": MobileVacations,
     "MobilePlanning": MobilePlanning,
     "MobileChat": MobileChat,
-    "HRDashboard": HRDashboard,
     "MasterMachineView": MasterMachineView,
     "MessagingConfig": MessagingConfig,
     "ArticleManagement": ArticleManagement,

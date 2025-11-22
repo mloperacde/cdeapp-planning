@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, User, Trash2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Database, Cake, Calendar, TrendingUp, Columns } from "lucide-react";
+import { Users, User, Trash2, ArrowLeft, CheckCircle2, AlertCircle, Clock, Database, Cake, Calendar, TrendingUp, Columns, UserCheck, UserX, Bell, FileText, UserPlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -20,7 +20,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { isSameDay, differenceInYears, addDays } from "date-fns";
+import { isSameDay, differenceInYears, addDays, isWithinInterval } from "date-fns";
+import PendingTasksPanel from "../components/hr/PendingTasksPanel";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
@@ -39,17 +40,50 @@ export default function EmployeesPage() {
     nombre: true,
     departamento: true,
     puesto: true,
+    categoria: false,
     estado_empleado: true,
     fecha_alta: false,
+    tipo_jornada: false,
+    num_horas_jornada: false,
+    tipo_turno: false,
+    equipo: false,
     tipo_contrato: false,
+    fecha_fin_contrato: false,
+    disponibilidad: false,
     email: false,
     telefono_movil: false,
+    dni: false,
+    nuss: false,
   });
   const queryClient = useQueryClient();
 
   const { data: masterEmployees = [], isLoading } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date'),
+    initialData: [],
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+    initialData: [],
+  });
+
+  const { data: absences = [] } = useQuery({
+    queryKey: ['absences'],
+    queryFn: () => base44.entities.Absence.list('-created_date'),
+    initialData: [],
+  });
+
+  const { data: vacationBalances = [] } = useQuery({
+    queryKey: ['vacationPendingBalances'],
+    queryFn: () => base44.entities.VacationPendingBalance.list(),
+    initialData: [],
+  });
+
+  const { data: onboardingProcesses = [] } = useQuery({
+    queryKey: ['employeeOnboarding'],
+    queryFn: () => base44.entities.EmployeeOnboarding.list(),
     initialData: [],
   });
 
@@ -67,8 +101,13 @@ export default function EmployeesPage() {
   const filterOptions = useMemo(() => {
     const departamentos = [...new Set(masterEmployees.map(e => e.departamento).filter(Boolean))].sort();
     const puestos = [...new Set(masterEmployees.map(e => e.puesto).filter(Boolean))].sort();
+    const categorias = [...new Set(masterEmployees.map(e => e.categoria).filter(Boolean))].sort();
     const estados = [...new Set(masterEmployees.map(e => e.estado_empleado).filter(Boolean))].sort();
-    const estadosSinc = [...new Set(masterEmployees.map(e => e.estado_sincronizacion).filter(Boolean))].sort();
+    const tiposJornada = [...new Set(masterEmployees.map(e => e.tipo_jornada).filter(Boolean))].sort();
+    const tiposTurno = [...new Set(masterEmployees.map(e => e.tipo_turno).filter(Boolean))].sort();
+    const equipos = [...new Set(masterEmployees.map(e => e.equipo).filter(Boolean))].sort();
+    const tiposContrato = [...new Set(masterEmployees.map(e => e.tipo_contrato).filter(Boolean))].sort();
+    const disponibilidades = [...new Set(masterEmployees.map(e => e.disponibilidad).filter(Boolean))].sort();
 
     return {
       departamento: {
@@ -79,13 +118,33 @@ export default function EmployeesPage() {
         label: 'Puesto',
         options: puestos.map(p => ({ value: p, label: p }))
       },
+      categoria: {
+        label: 'Categoría',
+        options: categorias.map(c => ({ value: c, label: c }))
+      },
       estado_empleado: {
-        label: 'Estado Empleado',
+        label: 'Estado',
         options: estados.map(e => ({ value: e, label: e }))
       },
-      estado_sincronizacion: {
-        label: 'Estado Sincronización',
-        options: estadosSinc.map(e => ({ value: e, label: e }))
+      tipo_jornada: {
+        label: 'Tipo Jornada',
+        options: tiposJornada.map(t => ({ value: t, label: t }))
+      },
+      tipo_turno: {
+        label: 'Tipo Turno',
+        options: tiposTurno.map(t => ({ value: t, label: t }))
+      },
+      equipo: {
+        label: 'Equipo',
+        options: equipos.map(e => ({ value: e, label: e }))
+      },
+      tipo_contrato: {
+        label: 'Tipo Contrato',
+        options: tiposContrato.map(t => ({ value: t, label: t }))
+      },
+      disponibilidad: {
+        label: 'Disponibilidad',
+        options: disponibilidades.map(d => ({ value: d, label: d }))
       }
     };
   }, [masterEmployees]);
@@ -105,13 +164,30 @@ export default function EmployeesPage() {
       const matchesPuesto = !filters.puesto || filters.puesto === 'all' || 
         emp.puesto === filters.puesto;
       
+      const matchesCategoria = !filters.categoria || filters.categoria === 'all' || 
+        emp.categoria === filters.categoria;
+      
       const matchesEstado = !filters.estado_empleado || filters.estado_empleado === 'all' || 
         emp.estado_empleado === filters.estado_empleado;
       
-      const matchesEstadoSinc = !filters.estado_sincronizacion || filters.estado_sincronizacion === 'all' || 
-        emp.estado_sincronizacion === filters.estado_sincronizacion;
+      const matchesTipoJornada = !filters.tipo_jornada || filters.tipo_jornada === 'all' || 
+        emp.tipo_jornada === filters.tipo_jornada;
+      
+      const matchesTipoTurno = !filters.tipo_turno || filters.tipo_turno === 'all' || 
+        emp.tipo_turno === filters.tipo_turno;
+      
+      const matchesEquipo = !filters.equipo || filters.equipo === 'all' || 
+        emp.equipo === filters.equipo;
+      
+      const matchesTipoContrato = !filters.tipo_contrato || filters.tipo_contrato === 'all' || 
+        emp.tipo_contrato === filters.tipo_contrato;
+      
+      const matchesDisponibilidad = !filters.disponibilidad || filters.disponibilidad === 'all' || 
+        emp.disponibilidad === filters.disponibilidad;
 
-      return matchesSearch && matchesDept && matchesPuesto && matchesEstado && matchesEstadoSinc;
+      return matchesSearch && matchesDept && matchesPuesto && matchesCategoria && 
+             matchesEstado && matchesTipoJornada && matchesTipoTurno && matchesEquipo && 
+             matchesTipoContrato && matchesDisponibilidad;
     });
 
     // Aplicar ordenación
@@ -145,12 +221,35 @@ export default function EmployeesPage() {
 
 
 
-  // Métricas de RRHH
+  // Métricas completas de RRHH
   const stats = useMemo(() => {
     const today = new Date();
     const next7Days = addDays(today, 7);
     
-    const activeEmployees = masterEmployees.filter(e => e.estado_empleado === 'Alta');
+    const activeEmployees = masterEmployees.filter(e => (e.estado_empleado || "Alta") === "Alta");
+    
+    const disponibles = masterEmployees.filter(e => {
+      if ((e.estado_empleado || "Alta") !== "Alta") return false;
+      return (e.disponibilidad || "Disponible") === "Disponible";
+    }).length;
+
+    const ausenciasActivas = absences.filter(a => {
+      if (!a.fecha_inicio) return false;
+      try {
+        const inicio = new Date(a.fecha_inicio);
+        if (isNaN(inicio.getTime())) return false;
+        const fin = a.fecha_fin ? new Date(a.fecha_fin) : addDays(today, 365);
+        if (isNaN(fin.getTime())) return false;
+        return isWithinInterval(today, { start: inicio, end: fin });
+      } catch {
+        return false;
+      }
+    }).length;
+
+    const pendientesAprobacion = absences.filter(a => a.estado_aprobacion === 'Pendiente').length;
+    const totalDiasPendientes = vacationBalances.reduce((sum, vb) => sum + (vb.dias_pendientes || 0), 0);
+    const empleadosConFuerzaMayor = masterEmployees.filter(e => (e.horas_causa_mayor_consumidas || 0) > 0).length;
+    const onboardingPendientes = onboardingProcesses.filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado').length;
     
     const birthdays = masterEmployees.filter(emp => {
       if (!emp.fecha_nacimiento) return false;
@@ -166,33 +265,42 @@ export default function EmployeesPage() {
       const years = differenceInYears(today, hireDate);
       return years > 0 && thisYearAnniversary >= today && thisYearAnniversary <= next7Days;
     });
+
+    const fuerzaMayorAlerts = masterEmployees.filter(e => {
+      const limite = e.horas_causa_mayor_limite || 0;
+      const consumidas = e.horas_causa_mayor_consumidas || 0;
+      return limite > 0 && consumidas >= limite * 0.8;
+    }).slice(0, 5);
+
+    const recentAbsences = absences
+      .filter(a => a.estado_aprobacion === 'Pendiente' || a.estado_aprobacion === 'Aprobada')
+      .slice(0, 5)
+      .map(a => {
+        const emp = employees.find(e => e.id === a.employee_id) || 
+                    masterEmployees.find(me => me.employee_id === a.employee_id);
+        return { ...a, employeeName: emp?.nombre || 'Desconocido' };
+      });
     
     return {
       total: masterEmployees.length,
       active: activeEmployees.length,
-      inactive: masterEmployees.filter(e => e.estado_empleado === 'Baja').length,
-      avgTenure: activeEmployees.length > 0 
-        ? Math.round(activeEmployees.reduce((sum, e) => {
-            if (!e.fecha_alta) return sum;
-            return sum + differenceInYears(today, new Date(e.fecha_alta));
-          }, 0) / activeEmployees.length)
-        : 0,
+      disponibles,
+      ausenciasActivas,
+      pendientesAprobacion,
+      totalDiasPendientes,
+      empleadosConFuerzaMayor,
+      onboardingPendientes,
       birthdays,
-      anniversaries
+      anniversaries,
+      fuerzaMayorAlerts,
+      recentAbsences
     };
-  }, [masterEmployees]);
+  }, [masterEmployees, employees, absences, vacationBalances, onboardingProcesses]);
 
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to={createPageUrl("HRDashboard")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Panel RRHH
-            </Button>
-          </Link>
-        </div>
+
 
         <div className="mb-8 flex items-start justify-between">
           <div>
@@ -219,109 +327,154 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        {/* Resumen Ejecutivo y Métricas Clave */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        {/* KPIs principales - Compacto */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-3">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-blue-700 dark:text-blue-300 font-medium uppercase">Total Empleados</p>
-                  <p className="text-xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
-                </div>
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
+            <CardContent className="p-2">
+              <p className="text-[9px] text-blue-700 dark:text-blue-300 font-medium">Total</p>
+              <p className="text-lg font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
             </CardContent>
           </Card>
-
           <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-green-700 dark:text-green-300 font-medium uppercase">Empleados Activos</p>
-                  <p className="text-xl font-bold text-green-900 dark:text-green-100">{stats.active}</p>
-                </div>
-                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
+            <CardContent className="p-2">
+              <p className="text-[9px] text-green-700 dark:text-green-300 font-medium">Activos</p>
+              <p className="text-lg font-bold text-green-900 dark:text-green-100">{stats.active}</p>
             </CardContent>
           </Card>
-
-          <Card className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 border-slate-200 dark:border-slate-800">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-slate-700 dark:text-slate-300 font-medium uppercase">Empleados Baja</p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{stats.inactive}</p>
-                </div>
-                <AlertCircle className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-              </div>
+          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 border-emerald-200 dark:border-emerald-800">
+            <CardContent className="p-2">
+              <p className="text-[9px] text-emerald-700 dark:text-emerald-300 font-medium">Disponibles</p>
+              <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100">{stats.disponibles}</p>
             </CardContent>
           </Card>
-
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800">
+            <CardContent className="p-2">
+              <p className="text-[9px] text-amber-700 dark:text-amber-300 font-medium">Ausencias</p>
+              <p className="text-lg font-bold text-amber-900 dark:text-amber-100">{stats.ausenciasActivas}</p>
+            </CardContent>
+          </Card>
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-purple-700 dark:text-purple-300 font-medium uppercase">Antigüedad Media</p>
-                  <p className="text-xl font-bold text-purple-900 dark:text-purple-100">{stats.avgTenure} años</p>
-                </div>
-                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
+            <CardContent className="p-2">
+              <p className="text-[9px] text-purple-700 dark:text-purple-300 font-medium">Pend. Apr.</p>
+              <p className="text-lg font-bold text-purple-900 dark:text-purple-100">{stats.pendientesAprobacion}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950 dark:to-cyan-900 border-cyan-200 dark:border-cyan-800">
+            <CardContent className="p-2">
+              <p className="text-[9px] text-cyan-700 dark:text-cyan-300 font-medium">Días Vac.</p>
+              <p className="text-lg font-bold text-cyan-900 dark:text-cyan-100">{stats.totalDiasPendientes}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
+            <CardContent className="p-2">
+              <p className="text-[9px] text-orange-700 dark:text-orange-300 font-medium">Fza. Mayor</p>
+              <p className="text-lg font-bold text-orange-900 dark:text-orange-100">{stats.empleadosConFuerzaMayor}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950 dark:to-teal-900 border-teal-200 dark:border-teal-800">
+            <CardContent className="p-2">
+              <p className="text-[9px] text-teal-700 dark:text-teal-300 font-medium">Onboard.</p>
+              <p className="text-lg font-bold text-teal-900 dark:text-teal-100">{stats.onboardingPendientes}</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Cumpleaños y Aniversarios */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-md">
-            <CardHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
-              <CardTitle className="text-sm flex items-center gap-2 dark:text-slate-100">
-                <Cake className="w-4 h-4 text-pink-600 dark:text-pink-400" />
-                Cumpleaños Próximos (7 días)
+        {/* Paneles compactos: Cumpleaños, Aniversarios, Solicitudes, Alertas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-sm">
+            <CardHeader className="p-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+              <CardTitle className="text-xs flex items-center gap-1 dark:text-slate-100">
+                <Cake className="w-3 h-3 text-pink-600 dark:text-pink-400" />
+                Cumpleaños (7d)
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               {stats.birthdays.length === 0 ? (
-                <p className="text-xs text-slate-500 dark:text-slate-400">No hay cumpleaños próximos</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Sin cumpleaños</p>
               ) : (
-                <div className="space-y-1.5 max-h-24 overflow-y-auto">
-                  {stats.birthdays.slice(0, 3).map((emp) => (
-                    <div key={emp.id} className="text-xs flex items-center justify-between p-1.5 rounded bg-pink-50 dark:bg-pink-950/30">
-                      <span className="font-medium dark:text-slate-200">{emp.nombre}</span>
-                      <span className="text-slate-600 dark:text-slate-400">{format(new Date(emp.fecha_nacimiento), 'd MMM', { locale: es })}</span>
+                <div className="space-y-1 max-h-16 overflow-y-auto">
+                  {stats.birthdays.slice(0, 2).map((emp) => (
+                    <div key={emp.id} className="text-[10px] flex justify-between p-1 rounded bg-pink-50 dark:bg-pink-950/30">
+                      <span className="font-medium dark:text-slate-200 truncate">{emp.nombre}</span>
+                      <span className="text-slate-600 dark:text-slate-400">{format(new Date(emp.fecha_nacimiento), 'd/M', { locale: es })}</span>
                     </div>
                   ))}
-                  {stats.birthdays.length > 3 && (
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">...y {stats.birthdays.length - 3} más</p>
-                  )}
+                  {stats.birthdays.length > 2 && <p className="text-[9px] text-slate-500 dark:text-slate-400">+{stats.birthdays.length - 2}</p>}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-md">
-            <CardHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
-              <CardTitle className="text-sm flex items-center gap-2 dark:text-slate-100">
-                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                Aniversarios Laborales (7 días)
+          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-sm">
+            <CardHeader className="p-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+              <CardTitle className="text-xs flex items-center gap-1 dark:text-slate-100">
+                <Calendar className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                Aniversarios (7d)
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               {stats.anniversaries.length === 0 ? (
-                <p className="text-xs text-slate-500 dark:text-slate-400">No hay aniversarios próximos</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Sin aniversarios</p>
               ) : (
-                <div className="space-y-1.5 max-h-24 overflow-y-auto">
-                  {stats.anniversaries.slice(0, 3).map((emp) => {
+                <div className="space-y-1 max-h-16 overflow-y-auto">
+                  {stats.anniversaries.slice(0, 2).map((emp) => {
                     const years = differenceInYears(new Date(), new Date(emp.fecha_alta));
                     return (
-                      <div key={emp.id} className="text-xs flex items-center justify-between p-1.5 rounded bg-blue-50 dark:bg-blue-950/30">
-                        <span className="font-medium dark:text-slate-200">{emp.nombre}</span>
-                        <span className="text-slate-600 dark:text-slate-400">{years} años</span>
+                      <div key={emp.id} className="text-[10px] flex justify-between p-1 rounded bg-blue-50 dark:bg-blue-950/30">
+                        <span className="font-medium dark:text-slate-200 truncate">{emp.nombre}</span>
+                        <span className="text-slate-600 dark:text-slate-400">{years}a</span>
                       </div>
                     );
                   })}
-                  {stats.anniversaries.length > 3 && (
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">...y {stats.anniversaries.length - 3} más</p>
-                  )}
+                  {stats.anniversaries.length > 2 && <p className="text-[9px] text-slate-500 dark:text-slate-400">+{stats.anniversaries.length - 2}</p>}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-sm">
+            <CardHeader className="p-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+              <CardTitle className="text-xs flex items-center gap-1 dark:text-slate-100">
+                <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                Últimas Solicitudes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-2">
+              {stats.recentAbsences.length === 0 ? (
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Sin solicitudes</p>
+              ) : (
+                <div className="space-y-1 max-h-16 overflow-y-auto">
+                  {stats.recentAbsences.slice(0, 2).map((absence) => (
+                    <div key={absence.id} className="text-[10px] p-1 rounded bg-slate-50 dark:bg-slate-800">
+                      <span className="font-medium dark:text-slate-200 truncate block">{absence.employeeName}</span>
+                      <Badge className="text-[8px] h-4 px-1 mt-0.5 bg-amber-600">{absence.estado_aprobacion}</Badge>
+                    </div>
+                  ))}
+                  {stats.recentAbsences.length > 2 && <p className="text-[9px] text-slate-500 dark:text-slate-400">+{stats.recentAbsences.length - 2}</p>}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 shadow-sm">
+            <CardHeader className="p-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+              <CardTitle className="text-xs flex items-center gap-1 dark:text-slate-100">
+                <AlertTriangle className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                Fuerza Mayor
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-2">
+              {stats.fuerzaMayorAlerts.length === 0 ? (
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Sin alertas</p>
+              ) : (
+                <div className="space-y-1 max-h-16 overflow-y-auto">
+                  {stats.fuerzaMayorAlerts.slice(0, 2).map((emp) => (
+                    <div key={emp.id} className="text-[10px] flex justify-between p-1 rounded bg-orange-50 dark:bg-orange-950/50">
+                      <span className="font-medium dark:text-slate-200 truncate">{emp.nombre}</span>
+                      <span className="text-slate-600 dark:text-slate-400">{emp.horas_causa_mayor_consumidas}h</span>
+                    </div>
+                  ))}
+                  {stats.fuerzaMayorAlerts.length > 2 && <p className="text-[9px] text-slate-500 dark:text-slate-400">+{stats.fuerzaMayorAlerts.length - 2}</p>}
                 </div>
               )}
             </CardContent>
@@ -428,6 +581,69 @@ export default function EmployeesPage() {
                   >
                     Teléfono
                   </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.categoria}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, categoria: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Categoría
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.tipo_jornada}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, tipo_jornada: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Tipo Jornada
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.num_horas_jornada}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, num_horas_jornada: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Horas Semanales
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.tipo_turno}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, tipo_turno: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Tipo Turno
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.equipo}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, equipo: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Equipo
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.fecha_fin_contrato}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, fecha_fin_contrato: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Fin Contrato
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.disponibilidad}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, disponibilidad: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    Disponibilidad
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.dni}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, dni: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    DNI
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={visibleColumns.nuss}
+                    onCheckedChange={(checked) => setVisibleColumns({...visibleColumns, nuss: checked})}
+                    className="dark:text-slate-200"
+                  >
+                    NUSS
+                  </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -450,11 +666,20 @@ export default function EmployeesPage() {
                       {visibleColumns.nombre && <TableHead className="font-semibold dark:text-slate-200">Nombre</TableHead>}
                       {visibleColumns.departamento && <TableHead className="font-semibold dark:text-slate-200">Departamento</TableHead>}
                       {visibleColumns.puesto && <TableHead className="font-semibold dark:text-slate-200">Puesto</TableHead>}
+                      {visibleColumns.categoria && <TableHead className="font-semibold dark:text-slate-200">Categoría</TableHead>}
                       {visibleColumns.estado_empleado && <TableHead className="font-semibold dark:text-slate-200">Estado</TableHead>}
                       {visibleColumns.fecha_alta && <TableHead className="font-semibold dark:text-slate-200">Fecha Alta</TableHead>}
+                      {visibleColumns.tipo_jornada && <TableHead className="font-semibold dark:text-slate-200">Tipo Jornada</TableHead>}
+                      {visibleColumns.num_horas_jornada && <TableHead className="font-semibold dark:text-slate-200">Hrs/Sem</TableHead>}
+                      {visibleColumns.tipo_turno && <TableHead className="font-semibold dark:text-slate-200">Turno</TableHead>}
+                      {visibleColumns.equipo && <TableHead className="font-semibold dark:text-slate-200">Equipo</TableHead>}
                       {visibleColumns.tipo_contrato && <TableHead className="font-semibold dark:text-slate-200">Tipo Contrato</TableHead>}
+                      {visibleColumns.fecha_fin_contrato && <TableHead className="font-semibold dark:text-slate-200">Fin Contrato</TableHead>}
+                      {visibleColumns.disponibilidad && <TableHead className="font-semibold dark:text-slate-200">Disponibilidad</TableHead>}
                       {visibleColumns.email && <TableHead className="font-semibold dark:text-slate-200">Email</TableHead>}
                       {visibleColumns.telefono_movil && <TableHead className="font-semibold dark:text-slate-200">Teléfono</TableHead>}
+                      {visibleColumns.dni && <TableHead className="font-semibold dark:text-slate-200">DNI</TableHead>}
+                      {visibleColumns.nuss && <TableHead className="font-semibold dark:text-slate-200">NUSS</TableHead>}
                       <TableHead className="text-right font-semibold dark:text-slate-200">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -477,6 +702,9 @@ export default function EmployeesPage() {
                         {visibleColumns.puesto && (
                           <TableCell className="dark:text-slate-300">{emp.puesto || '-'}</TableCell>
                         )}
+                        {visibleColumns.categoria && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.categoria || '-'}</TableCell>
+                        )}
                         {visibleColumns.estado_empleado && (
                           <TableCell>
                             <Badge className={
@@ -490,17 +718,47 @@ export default function EmployeesPage() {
                         )}
                         {visibleColumns.fecha_alta && (
                           <TableCell className="text-xs dark:text-slate-300">
-                            {emp.fecha_alta ? format(new Date(emp.fecha_alta), 'dd/MM/yyyy', { locale: es }) : '-'}
+                            {emp.fecha_alta ? format(new Date(emp.fecha_alta), 'dd/MM/yy', { locale: es }) : '-'}
                           </TableCell>
+                        )}
+                        {visibleColumns.tipo_jornada && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.tipo_jornada || '-'}</TableCell>
+                        )}
+                        {visibleColumns.num_horas_jornada && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.num_horas_jornada || '-'}</TableCell>
+                        )}
+                        {visibleColumns.tipo_turno && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.tipo_turno || '-'}</TableCell>
+                        )}
+                        {visibleColumns.equipo && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.equipo || '-'}</TableCell>
                         )}
                         {visibleColumns.tipo_contrato && (
                           <TableCell className="text-xs dark:text-slate-300">{emp.tipo_contrato || '-'}</TableCell>
+                        )}
+                        {visibleColumns.fecha_fin_contrato && (
+                          <TableCell className="text-xs dark:text-slate-300">
+                            {emp.fecha_fin_contrato ? format(new Date(emp.fecha_fin_contrato), 'dd/MM/yy', { locale: es }) : '-'}
+                          </TableCell>
+                        )}
+                        {visibleColumns.disponibilidad && (
+                          <TableCell>
+                            <Badge className={emp.disponibilidad === 'Disponible' ? 'bg-green-600' : 'bg-red-600'}>
+                              {emp.disponibilidad || 'Disponible'}
+                            </Badge>
+                          </TableCell>
                         )}
                         {visibleColumns.email && (
                           <TableCell className="text-xs dark:text-slate-300">{emp.email || '-'}</TableCell>
                         )}
                         {visibleColumns.telefono_movil && (
                           <TableCell className="text-xs dark:text-slate-300">{emp.telefono_movil || '-'}</TableCell>
+                        )}
+                        {visibleColumns.dni && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.dni || '-'}</TableCell>
+                        )}
+                        {visibleColumns.nuss && (
+                          <TableCell className="text-xs dark:text-slate-300">{emp.nuss || '-'}</TableCell>
                         )}
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
