@@ -40,14 +40,13 @@ import LockerConfigForm from "../components/lockers/LockerConfigForm";
 import LockerDiagnostics from "../components/lockers/LockerDiagnostics";
 import LockerAudit from "../components/lockers/LockerAudit";
 import EmployeesWithoutLocker from "../components/lockers/EmployeesWithoutLocker";
+import AdvancedSearch from "../components/common/AdvancedSearch";
+import ThemeToggle from "../components/common/ThemeToggle";
 
 export default function LockerManagementPage() {
+  const [searchFilters, setSearchFilters] = useState({});
   const [filters, setFilters] = useState({
-    departamento: "all",
-    equipo: "all",
-    sexo: "all",
     vestuario: "all",
-    searchTerm: "",
     numeroTaquilla: ""
   });
   const [sortConfig, setSortConfig] = useState({ field: "nombre", direction: "asc" });
@@ -384,11 +383,24 @@ export default function LockerManagementPage() {
 
   const filteredAndSortedEmployees = useMemo(() => {
     let filtered = employees.filter(emp => {
-      const matchesDept = filters.departamento === "all" || emp.departamento === filters.departamento;
-      const matchesTeam = filters.equipo === "all" || emp.equipo === filters.equipo;
-      const matchesSex = filters.sexo === "all" || emp.sexo === filters.sexo;
-      const matchesSearch = !filters.searchTerm || 
-        emp.nombre?.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      const searchTerm = searchFilters.searchTerm || "";
+      const matchesSearch = !searchTerm || 
+        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.departamento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.puesto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesDept = !searchFilters.departamento || searchFilters.departamento === "all" || 
+        emp.departamento === searchFilters.departamento;
+      
+      const matchesTeam = !searchFilters.equipo || searchFilters.equipo === "all" || 
+        emp.equipo === searchFilters.equipo;
+      
+      const matchesSex = !searchFilters.sexo || searchFilters.sexo === "all" || 
+        emp.sexo === searchFilters.sexo;
+
+      const matchesEstado = !searchFilters.estado_empleado || searchFilters.estado_empleado === "all" || 
+        (emp.estado_empleado || "Alta") === searchFilters.estado_empleado;
       
       const editData = editingAssignments[emp.id];
       const assignment = getAssignment(emp.id);
@@ -399,7 +411,7 @@ export default function LockerManagementPage() {
       const matchesNumeroTaquilla = !filters.numeroTaquilla || 
         numeroTaquilla.includes(filters.numeroTaquilla);
       
-      return matchesDept && matchesTeam && matchesSex && matchesSearch && matchesVestuario && matchesNumeroTaquilla;
+      return matchesSearch && matchesDept && matchesTeam && matchesSex && matchesEstado && matchesVestuario && matchesNumeroTaquilla;
     });
 
     filtered.sort((a, b) => {
@@ -440,7 +452,38 @@ export default function LockerManagementPage() {
     });
 
     return filtered;
-  }, [employees, filters, sortConfig, editingAssignments, lockerAssignments]);
+  }, [employees, filters, searchFilters, sortConfig, editingAssignments, lockerAssignments]);
+
+  const searchFilterOptions = useMemo(() => {
+    const departamentos = [...new Set(employees.map(e => e.departamento).filter(Boolean))].sort();
+    const equipos = teams.map(t => t.team_name);
+    
+    return {
+      departamento: {
+        label: 'Departamento',
+        options: departamentos.map(d => ({ value: d, label: d }))
+      },
+      equipo: {
+        label: 'Equipo',
+        options: equipos.map(e => ({ value: e, label: e }))
+      },
+      sexo: {
+        label: 'Sexo',
+        options: [
+          { value: 'Masculino', label: 'Masculino' },
+          { value: 'Femenino', label: 'Femenino' },
+          { value: 'Otro', label: 'Otro' }
+        ]
+      },
+      estado_empleado: {
+        label: 'Estado',
+        options: [
+          { value: 'Alta', label: 'Alta' },
+          { value: 'Baja', label: 'Baja' }
+        ]
+      }
+    };
+  }, [employees, teams]);
 
   const handleSort = (field) => {
     setSortConfig(prev => ({
@@ -665,16 +708,17 @@ export default function LockerManagementPage() {
           </Link>
         </div>
 
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <KeyRound className="w-8 h-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <KeyRound className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               Gestión de Taquillas
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
               Configura vestuarios y asigna taquillas a empleados
             </p>
           </div>
+          <ThemeToggle />
         </div>
 
         {problemasDetectados.length > 0 && (
@@ -995,93 +1039,44 @@ export default function LockerManagementPage() {
           </TabsContent>
 
           <TabsContent value="asignaciones">
-            <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100">
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="w-5 h-5 text-blue-600" />
-                  Filtros
+            <Card className="mb-6 shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
+                <CardTitle className="flex items-center gap-2 dark:text-slate-100">
+                  <Filter className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  Búsqueda y Filtros
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <AdvancedSearch
+                  data={employees}
+                  onFilterChange={setSearchFilters}
+                  searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto']}
+                  filterOptions={searchFilterOptions}
+                  placeholder="Buscar por nombre, código, departamento o puesto..."
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div className="space-y-2">
-                    <Label>Buscar por Nombre</Label>
+                    <Label className="dark:text-slate-300">ID Taquilla</Label>
                     <Input
-                      placeholder="Nombre..."
-                      value={filters.searchTerm}
-                      onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>ID Taquilla</Label>
-                    <Input
-                      placeholder="Identificador..."
+                      placeholder="Filtrar por identificador..."
                       value={filters.numeroTaquilla}
                       onChange={(e) => setFilters({...filters, numeroTaquilla: e.target.value})}
+                      className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Departamento</Label>
-                    <Select value={filters.departamento} onValueChange={(value) => setFilters({...filters, departamento: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Equipo</Label>
-                    <Select value={filters.equipo} onValueChange={(value) => setFilters({...filters, equipo: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        {teams.map((team) => (
-                          <SelectItem key={team.id} value={team.team_name}>
-                            {team.team_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Sexo</Label>
-                    <Select value={filters.sexo} onValueChange={(value) => setFilters({...filters, sexo: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Masculino">Masculino</SelectItem>
-                        <SelectItem value="Femenino">Femenino</SelectItem>
-                        <SelectItem value="Otro">Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Vestuario</Label>
+                    <Label className="dark:text-slate-300">Vestuario</Label>
                     <Select value={filters.vestuario} onValueChange={(value) => setFilters({...filters, vestuario: value})}>
-                      <SelectTrigger>
+                      <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Vestuario Femenino Planta Baja">Femenino P. Baja</SelectItem>
-                        <SelectItem value="Vestuario Femenino Planta Alta">Femenino P. Alta</SelectItem>
-                        <SelectItem value="Vestuario Masculino Planta Baja">Masculino P. Baja</SelectItem>
+                      <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                        <SelectItem value="all" className="dark:text-slate-200">Todos</SelectItem>
+                        <SelectItem value="Vestuario Femenino Planta Baja" className="dark:text-slate-200">Femenino P. Baja</SelectItem>
+                        <SelectItem value="Vestuario Femenino Planta Alta" className="dark:text-slate-200">Femenino P. Alta</SelectItem>
+                        <SelectItem value="Vestuario Masculino Planta Baja" className="dark:text-slate-200">Masculino P. Baja</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

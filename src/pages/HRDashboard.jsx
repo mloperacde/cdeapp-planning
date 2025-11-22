@@ -21,6 +21,7 @@ import { createPageUrl } from "@/utils";
 import { format, differenceInDays, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import PendingTasksPanel from "../components/hr/PendingTasksPanel";
+import ThemeToggle from "../components/common/ThemeToggle";
 
 export default function HRDashboard() {
   const { data: masterEmployees = [] } = useQuery({
@@ -133,69 +134,72 @@ export default function HRDashboard() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-blue-600" />
-            Panel de Recursos Humanos
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Resumen ejecutivo y métricas clave
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <TrendingUp className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              Panel de Recursos Humanos
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
+              Resumen ejecutivo y métricas clave
+            </p>
+          </div>
+          <ThemeToggle />
         </div>
 
         {/* KPIs principales */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow cursor-pointer">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all cursor-pointer">
             <Link to={createPageUrl("MasterEmployeeDatabase")}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-blue-700 font-medium">Total Empleados</p>
-                    <p className="text-3xl font-bold text-blue-900">{kpis.total}</p>
-                    <p className="text-xs text-blue-600 mt-1">{kpis.activos} activos</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Total Empleados</p>
+                    <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{kpis.total}</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{kpis.activos} activos</p>
                   </div>
-                  <Users className="w-10 h-10 text-blue-600" />
+                  <Users className="w-10 h-10 text-blue-600 dark:text-blue-400" />
                 </div>
               </CardContent>
             </Link>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800 hover:shadow-lg transition-all">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Disponibles</p>
-                  <p className="text-3xl font-bold text-green-900">{kpis.disponibles}</p>
-                  <p className="text-xs text-green-600 mt-1">En plantilla ahora</p>
+                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">Disponibles</p>
+                  <p className="text-3xl font-bold text-green-900 dark:text-green-100">{kpis.disponibles}</p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">En plantilla ahora</p>
                 </div>
-                <UserCheck className="w-10 h-10 text-green-600" />
+                <UserCheck className="w-10 h-10 text-green-600 dark:text-green-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-shadow">
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800 hover:shadow-lg transition-all">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-amber-700 font-medium">Ausencias Activas</p>
-                  <p className="text-3xl font-bold text-amber-900">{kpis.ausenciasActivas}</p>
-                  <p className="text-xs text-amber-600 mt-1">En este momento</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Ausencias Activas</p>
+                  <p className="text-3xl font-bold text-amber-900 dark:text-amber-100">{kpis.ausenciasActivas}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">En este momento</p>
                 </div>
-                <UserX className="w-10 h-10 text-amber-600" />
+                <UserX className="w-10 h-10 text-amber-600 dark:text-amber-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow cursor-pointer">
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all cursor-pointer">
             <Link to={createPageUrl("AbsenceManagement")}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-purple-700 font-medium">Pendientes Aprobación</p>
-                    <p className="text-3xl font-bold text-purple-900">{kpis.pendientesAprobacion}</p>
-                    <p className="text-xs text-purple-600 mt-1">Requieren atención</p>
+                    <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Pendientes Aprobación</p>
+                    <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{kpis.pendientesAprobacion}</p>
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Requieren atención</p>
                   </div>
-                  <Clock className="w-10 h-10 text-purple-600" />
+                  <Clock className="w-10 h-10 text-purple-600 dark:text-purple-400" />
                 </div>
               </CardContent>
             </Link>
@@ -204,39 +208,39 @@ export default function HRDashboard() {
 
         {/* KPIs secundarios */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
+          <Card className="border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-600 font-medium">Días Vacaciones Pendientes</p>
-                  <p className="text-2xl font-bold text-slate-900">{kpis.totalDiasPendientes}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Días Vacaciones Pendientes</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{kpis.totalDiasPendientes}</p>
                 </div>
-                <Calendar className="w-8 h-8 text-blue-500" />
+                <Calendar className="w-8 h-8 text-blue-500 dark:text-blue-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
+          <Card className="border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-600 font-medium">Alertas Fuerza Mayor</p>
-                  <p className="text-2xl font-bold text-slate-900">{kpis.empleadosConFuerzaMayor}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Alertas Fuerza Mayor</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{kpis.empleadosConFuerzaMayor}</p>
                 </div>
-                <AlertTriangle className="w-8 h-8 text-orange-500" />
+                <AlertTriangle className="w-8 h-8 text-orange-500 dark:text-orange-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md cursor-pointer">
+          <Card className="border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-md hover:shadow-lg transition-shadow cursor-pointer">
             <Link to={createPageUrl("EmployeeOnboarding")}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-slate-600 font-medium">Onboarding Pendientes</p>
-                    <p className="text-2xl font-bold text-slate-900">{kpis.onboardingPendientes}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Onboarding Pendientes</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{kpis.onboardingPendientes}</p>
                   </div>
-                  <UserPlus className="w-8 h-8 text-green-500" />
+                  <UserPlus className="w-8 h-8 text-green-500 dark:text-green-400" />
                 </div>
               </CardContent>
             </Link>
@@ -245,10 +249,10 @@ export default function HRDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Gestión de Ausencias - Destacado */}
-          <Card className="shadow-lg border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-white">
-            <CardHeader className="border-b border-blue-200">
-              <CardTitle className="flex items-center gap-2 text-blue-900">
-                <UserX className="w-6 h-6 text-blue-600" />
+          <Card className="shadow-lg border-2 border-blue-300 dark:border-blue-700 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-slate-900">
+            <CardHeader className="border-b border-blue-200 dark:border-blue-800">
+              <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                <UserX className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 Gestión de Ausencias
               </CardTitle>
             </CardHeader>
@@ -266,11 +270,11 @@ export default function HRDashboard() {
           </Card>
 
           {/* Últimas Ausencias Solicitadas */}
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-amber-600" />
+                <CardTitle className="flex items-center gap-2 dark:text-slate-100">
+                  <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                   Últimas Solicitudes
                 </CardTitle>
                 <Link to={createPageUrl("AbsenceManagement")}>
@@ -280,26 +284,26 @@ export default function HRDashboard() {
             </CardHeader>
             <CardContent className="p-4">
               {recentAbsences.length === 0 ? (
-                <p className="text-center text-slate-500 py-8 text-sm">
+                <p className="text-center text-slate-500 dark:text-slate-400 py-8 text-sm">
                   No hay solicitudes recientes
                 </p>
               ) : (
                 <div className="space-y-3">
                   {recentAbsences.map((absence) => (
-                    <div key={absence.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div key={absence.id} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                       <div className="flex items-start justify-between mb-1">
-                        <span className="font-semibold text-sm text-slate-900">
+                        <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
                           {absence.employeeName}
                         </span>
                         <Badge className={
-                          absence.estado === 'Pendiente' ? 'bg-amber-600' :
-                          absence.estado === 'Aprobada' ? 'bg-green-600' :
-                          'bg-slate-600'
+                          absence.estado === 'Pendiente' ? 'bg-amber-600 dark:bg-amber-700' :
+                          absence.estado === 'Aprobada' ? 'bg-green-600 dark:bg-green-700' :
+                          'bg-slate-600 dark:bg-slate-700'
                         }>
                           {absence.estado}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
                         {absence.tipo_ausencia || 'Sin tipo'} • {' '}
                         {(() => {
                           try {
@@ -331,10 +335,10 @@ export default function HRDashboard() {
 
         {/* Alertas Fuerza Mayor */}
         {fuerzaMayorAlerts.length > 0 && (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
-            <CardHeader className="border-b border-slate-100 bg-orange-50">
-              <CardTitle className="flex items-center gap-2 text-orange-900">
-                <AlertTriangle className="w-5 h-5 text-orange-600" />
+          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm mb-6">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-orange-50 dark:bg-orange-950/50">
+              <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-200">
+                <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 Recordatorio: Control de Días por Fuerza Mayor
               </CardTitle>
             </CardHeader>
@@ -361,13 +365,13 @@ export default function HRDashboard() {
         {/* Accesos rápidos */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link to={createPageUrl("MasterEmployeeDatabase")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="hover:shadow-lg transition-all cursor-pointer border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <Users className="w-8 h-8 text-blue-600" />
+                  <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   <div>
-                    <h3 className="font-semibold text-slate-900">Base de Datos Maestra</h3>
-                    <p className="text-xs text-slate-600">Gestión completa de empleados</p>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">Base de Datos Maestra</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Gestión completa de empleados</p>
                   </div>
                 </div>
               </CardContent>
@@ -375,13 +379,13 @@ export default function HRDashboard() {
           </Link>
 
           <Link to={createPageUrl("AdvancedHRDashboard")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="hover:shadow-lg transition-all cursor-pointer border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <TrendingUp className="w-8 h-8 text-purple-600" />
+                  <TrendingUp className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                   <div>
-                    <h3 className="font-semibold text-slate-900">Dashboard Avanzado</h3>
-                    <p className="text-xs text-slate-600">Análisis y tendencias</p>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">Dashboard Avanzado</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Análisis y tendencias</p>
                   </div>
                 </div>
               </CardContent>
@@ -389,13 +393,13 @@ export default function HRDashboard() {
           </Link>
 
           <Link to={createPageUrl("EmployeeOnboarding")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="hover:shadow-lg transition-all cursor-pointer border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <UserPlus className="w-8 h-8 text-green-600" />
+                  <UserPlus className="w-8 h-8 text-green-600 dark:text-green-400" />
                   <div>
-                    <h3 className="font-semibold text-slate-900">Onboarding</h3>
-                    <p className="text-xs text-slate-600">Procesos de incorporación</p>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">Onboarding</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Procesos de incorporación</p>
                   </div>
                 </div>
               </CardContent>
