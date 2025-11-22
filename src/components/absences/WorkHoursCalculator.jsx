@@ -56,61 +56,56 @@ export default function WorkHoursCalculator({ holidays = [], vacations = [] }) {
     // Días efectivos de trabajo
     const effectiveWorkDays = workableDays - workdayHolidays - vacationDays.size;
     
-    // Cálculo de horas por tipo de turno
-    const tiposTurno = [
-      {
-        nombre: "Turno Mañana",
-        descripcion: "7:00 - 15:00",
-        horasDia: 8,
-        horasSemana: 40,
-        horasAnio: effectiveWorkDays * 8,
-        diasEfectivos: effectiveWorkDays
-      },
-      {
-        nombre: "Turno Tarde",
-        descripcion: "14:00/15:00 - 22:00",
-        horasDia: 8,
-        horasSemana: 40,
-        horasAnio: effectiveWorkDays * 8,
-        diasEfectivos: effectiveWorkDays
-      },
-      {
-        nombre: "Turno Partido",
-        descripcion: "Mañana + Tarde con descanso",
-        horasDia: 8,
-        horasSemana: 40,
-        horasAnio: effectiveWorkDays * 8,
-        diasEfectivos: effectiveWorkDays
+    // Tipos de turno desde la configuración de la app
+    const tiposTurnoConfig = ["Rotativo", "Fijo Mañana", "Fijo Tarde", "Turno Partido"];
+    const tiposTurno = tiposTurnoConfig.map(tipo => {
+      let horasDia = 8;
+      let descripcion = "";
+      
+      switch(tipo) {
+        case "Rotativo":
+          descripcion = "Alterna entre mañana y tarde semanalmente";
+          break;
+        case "Fijo Mañana":
+          descripcion = "7:00 - 15:00";
+          break;
+        case "Fijo Tarde":
+          descripcion = "14:00/15:00 - 22:00";
+          break;
+        case "Turno Partido":
+          descripcion = "Mañana + Tarde con descanso";
+          break;
       }
+      
+      return {
+        nombre: tipo,
+        descripcion,
+        horasDia,
+        horasSemana: 40,
+        horasAnio: effectiveWorkDays * horasDia,
+        diasEfectivos: effectiveWorkDays
+      };
+    });
+    
+    // Tipos de jornada desde la configuración de la app
+    const tiposJornadaConfig = [
+      { nombre: "Jornada Completa", horas: 40 },
+      { nombre: "Jornada Parcial", horas: 20 },
+      { nombre: "Reducción de Jornada", horas: 30 }
     ];
     
-    // Cálculo de horas por tipo de jornada
-    const tiposJornada = [
-      {
-        nombre: "Jornada Completa",
-        descripcion: "40 horas semanales",
-        horasDia: 8,
-        horasSemana: 40,
-        horasAnio: effectiveWorkDays * 8,
+    const tiposJornada = tiposJornadaConfig.map(tipo => {
+      const horasDia = tipo.horas / 5; // Distribuido en 5 días laborables
+      
+      return {
+        nombre: tipo.nombre,
+        descripcion: `${tipo.horas} horas semanales`,
+        horasDia,
+        horasSemana: tipo.horas,
+        horasAnio: effectiveWorkDays * horasDia,
         diasEfectivos: effectiveWorkDays
-      },
-      {
-        nombre: "Jornada Parcial",
-        descripcion: "20 horas semanales",
-        horasDia: 4,
-        horasSemana: 20,
-        horasAnio: effectiveWorkDays * 4,
-        diasEfectivos: effectiveWorkDays
-      },
-      {
-        nombre: "Reducción de Jornada",
-        descripcion: "30 horas semanales (75%)",
-        horasDia: 6,
-        horasSemana: 30,
-        horasAnio: effectiveWorkDays * 6,
-        diasEfectivos: effectiveWorkDays
-      }
-    ];
+      };
+    });
     
     return {
       totalDaysYear: allDays.length,

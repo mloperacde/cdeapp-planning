@@ -30,11 +30,13 @@ import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 import { toast } from "sonner";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
+import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 
 export default function EmployeesPage() {
   const [filters, setFilters] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
+  const [activeTab, setActiveTab] = useState("employees");
   const [visibleColumns, setVisibleColumns] = useState({
     codigo_empleado: true,
     nombre: true,
@@ -481,7 +483,34 @@ export default function EmployeesPage() {
           </Card>
         </div>
 
-        <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm mb-4">
+        <div className="mb-4">
+        <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+          <button
+            onClick={() => setActiveTab("employees")}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === "employees"
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            Base de Datos
+          </button>
+          <button
+            onClick={() => setActiveTab("absences")}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === "absences"
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            Gestión de Ausencias
+          </button>
+        </div>
+      </div>
+
+      {activeTab === "employees" && (
+        <>
+          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm mb-4">
           <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
             <CardTitle className="text-base dark:text-slate-100">Búsqueda y Filtros</CardTitle>
           </CardHeader>
@@ -794,10 +823,15 @@ export default function EmployeesPage() {
               </div>
             )}
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+          </>
+          )}
 
-      {editDialogOpen && (
+          {activeTab === "absences" && (
+          <UnifiedAbsenceManager sourceContext="rrhh" />
+          )}
+
+          {editDialogOpen && (
         <MasterEmployeeEditDialog
           employee={employeeToEdit}
           open={editDialogOpen}
