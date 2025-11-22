@@ -227,7 +227,7 @@ export default function ShiftManagersPage() {
     {
       title: "Comunicación Ausencias",
       icon: MessageSquare,
-      url: createPageUrl("ShiftAbsenceReport"),
+      action: "absences",
       color: "red",
       description: "Reporta ausencias del turno"
     }
@@ -397,30 +397,38 @@ export default function ShiftManagersPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {modules.map((module) => {
               const Icon = module.icon;
-              return (
-                <Link key={module.title} to={module.url}>
-                  <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
-                    <CardContent className="p-5">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                              {module.title}
-                            </h3>
-                            {module.badge && (
-                              <Badge className="bg-red-600 text-white">
-                                {module.badge}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-600">{module.description}</p>
-                        </div>
+              const content = (
+                <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
+                        <Icon className="w-6 h-6 text-white" />
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                            {module.title}
+                          </h3>
+                          {module.badge && (
+                            <Badge className="bg-red-600 text-white">
+                              {module.badge}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-600">{module.description}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+              
+              return module.action ? (
+                <button key={module.title} onClick={() => setActiveView(module.action)} className="w-full text-left">
+                  {content}
+                </button>
+              ) : (
+                <Link key={module.title} to={module.url}>
+                  {content}
                 </Link>
               );
             })}
