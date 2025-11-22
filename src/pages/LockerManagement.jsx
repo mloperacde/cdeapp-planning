@@ -628,10 +628,12 @@ export default function LockerManagementPage() {
         if (!cleanedLockerId) return; // No locker ID assigned
 
         let isValidId = false;
+        // PRIORIDAD 1: Si hay identificadores explícitos en la config, usarlos
         if (identificadoresValidos.length > 0) {
-          isValidId = identificadoresValidos.includes(cleanedLockerId);
+          // Asegurar comparación estricta de strings
+          isValidId = identificadoresValidos.some(id => String(id) === cleanedLockerId);
         } else {
-          // If no specific identifiers are configured, assume numeric IDs within range are valid
+          // PRIORIDAD 2: Si no, usar lógica numérica simple
           const numeroInt = parseInt(cleanedLockerId, 10);
           isValidId = !isNaN(numeroInt) && numeroInt >= 1 && numeroInt <= totalInstaladas;
         }
