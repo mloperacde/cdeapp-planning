@@ -62,7 +62,15 @@ export default function SyncHistoryPanel({ masterEmployeeId }) {
                   <div>
                     <p className="font-semibold text-slate-900">{entry.sync_type}</p>
                     <p className="text-xs text-slate-600">
-                      {format(new Date(entry.sync_date), "d MMM yyyy, HH:mm", { locale: es })}
+                      {(() => {
+                        try {
+                          const date = new Date(entry.sync_date);
+                          if (isNaN(date.getTime())) return '-';
+                          return format(date, "d MMM yyyy, HH:mm", { locale: es });
+                        } catch {
+                          return '-';
+                        }
+                      })()}
                     </p>
                   </div>
                 </div>

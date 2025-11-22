@@ -181,7 +181,15 @@ export default function SyncComparisonDialog({ masterEmployee, existingEmployee,
       return;
     }
 
-    const confirmMsg = `¿Revertir sincronización del ${new Date(historyItem.sync_date).toLocaleString()}?\n\nSe restaurarán ${Object.keys(historyItem.changes_detected).length} campos a sus valores anteriores.`;
+    const dateStr = (() => {
+      try {
+        const date = new Date(historyItem.sync_date);
+        return isNaN(date.getTime()) ? 'fecha desconocida' : date.toLocaleString();
+      } catch {
+        return 'fecha desconocida';
+      }
+    })();
+    const confirmMsg = `¿Revertir sincronización del ${dateStr}?\n\nSe restaurarán ${Object.keys(historyItem.changes_detected).length} campos a sus valores anteriores.`;
     
     if (!confirm(confirmMsg)) return;
 
@@ -563,7 +571,15 @@ export default function SyncComparisonDialog({ masterEmployee, existingEmployee,
                             {item.sync_type}
                           </Badge>
                           <p className="text-xs text-slate-600 mt-1">
-                            {new Date(item.sync_date).toLocaleString('es-ES')}
+                           {(() => {
+                             try {
+                               const date = new Date(item.sync_date);
+                               if (isNaN(date.getTime())) return '-';
+                               return date.toLocaleString('es-ES');
+                             } catch {
+                               return '-';
+                             }
+                           })()}
                           </p>
                         </div>
                         {idx === 0 && item.status === 'Exitoso' && item.changes_detected && (
