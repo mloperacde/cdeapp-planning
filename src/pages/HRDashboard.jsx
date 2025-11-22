@@ -67,9 +67,15 @@ export default function HRDashboard() {
     const today = new Date();
     const ausenciasActivas = absences.filter(a => {
       if (!a.fecha_inicio) return false;
-      const inicio = new Date(a.fecha_inicio);
-      const fin = a.fecha_fin ? new Date(a.fecha_fin) : addDays(today, 365);
-      return isWithinInterval(today, { start: inicio, end: fin });
+      try {
+        const inicio = new Date(a.fecha_inicio);
+        if (isNaN(inicio.getTime())) return false;
+        const fin = a.fecha_fin ? new Date(a.fecha_fin) : addDays(today, 365);
+        if (isNaN(fin.getTime())) return false;
+        return isWithinInterval(today, { start: inicio, end: fin });
+      } catch {
+        return false;
+      }
     }).length;
 
     // Pendientes de aprobación
@@ -294,7 +300,16 @@ export default function HRDashboard() {
                       </div>
                       <p className="text-xs text-slate-600">
                         {absence.tipo_ausencia || 'Sin tipo'} • {' '}
-                        {absence.fecha_inicio ? format(new Date(absence.fecha_inicio), "d MMM", { locale: es }) : 'Sin fecha'}
+                        {(() => {
+                          try {
+                            if (!absence.fecha_inicio) return 'Sin fecha';
+                            const date = new Date(absence.fecha_inicio);
+                            if (isNaN(date.getTime())) return 'Sin fecha';
+                            return format(date, "d MMM", { locale: es });
+                          } catch {
+                            return 'Sin fecha';
+                          }
+                        })()}
                       </p>
                     </div>
                   ))}
