@@ -67,9 +67,9 @@ export default function Layout({ children, currentPageName }) {
   return (
     <ThemeProvider>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-          <Sidebar className="border-r border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-            <SidebarHeader className="border-b border-slate-200 dark:border-slate-800 p-4">
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:bg-background">
+          <Sidebar className="border-r border-border bg-card/80 dark:bg-card/95 backdrop-blur-sm">
+            <SidebarHeader className="border-b border-border p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
@@ -86,7 +86,7 @@ export default function Layout({ children, currentPageName }) {
 
           <SidebarContent className="p-2">
             <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">
+              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-3">
                 Menú Principal
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -433,7 +433,7 @@ export default function Layout({ children, currentPageName }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col">
-          <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 px-6 py-4 md:hidden">
+          <header className="bg-card/80 backdrop-blur-sm border-b border-border px-6 py-4 md:hidden">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors duration-200" />
               <h1 className="text-xl font-semibold text-slate-900">CdeApp Planning</h1>
