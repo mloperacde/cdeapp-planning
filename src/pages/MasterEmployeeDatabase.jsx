@@ -41,6 +41,8 @@ export default function MasterEmployeeDatabasePage() {
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [employeeToEdit, setEmployeeToEdit] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: masterEmployees = [], isLoading } = useQuery({
@@ -443,6 +445,16 @@ export default function MasterEmployeeDatabasePage() {
                   <CardTitle className="dark:text-slate-100">Registros en Base de Datos Maestra</CardTitle>
                   <div className="flex gap-2 flex-wrap">
                     <Button
+                      onClick={() => {
+                        setEmployeeToEdit(null);
+                        setEditDialogOpen(true);
+                      }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Nuevo Empleado
+                    </Button>
+                    <Button
                       onClick={async () => {
                         if (!confirm('¿Reorganizar y limpiar datos del maestro?\n\nEsto corregirá:\n• Campos en columnas incorrectas\n• Fechas mal formateadas\n• Datos duplicados o mal posicionados\n\n¿Continuar?')) return;
                         
@@ -590,6 +602,18 @@ export default function MasterEmployeeDatabasePage() {
                               <div className="flex items-center justify-end gap-2">
                                 <Button
                                   size="sm"
+                                  variant="default"
+                                  onClick={() => {
+                                    setEmployeeToEdit(emp);
+                                    setEditDialogOpen(true);
+                                  }}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  <User className="w-3 h-3 mr-1" />
+                                  Editar
+                                </Button>
+                                <Button
+                                  size="sm"
                                   variant="outline"
                                   onClick={() => openSyncDialog(emp)}
                                 >
@@ -663,6 +687,17 @@ export default function MasterEmployeeDatabasePage() {
           onClose={() => {
             setSyncDialogOpen(false);
             setSelectedEmployee(null);
+          }}
+        />
+      )}
+
+      {editDialogOpen && (
+        <MasterEmployeeEditDialog
+          employee={employeeToEdit}
+          open={editDialogOpen}
+          onClose={() => {
+            setEditDialogOpen(false);
+            setEmployeeToEdit(null);
           }}
         />
       )}
