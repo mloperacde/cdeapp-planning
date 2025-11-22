@@ -2,81 +2,58 @@ import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Users, List, Calendar, Clock, AlertTriangle, UserCheck, UserX, Activity } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { format, isWithinInterval, addDays } from "date-fns";
-import { es } from "date-fns/locale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Users, Search, Filter } from "lucide-react";
 
 export default function ShiftManagerEmployees() {
-  const { data: masterEmployees = [] } = useQuery({
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState({
+    departamento: "all",
+    puesto: "all",
+    estado_empleado: "all",
+    tipo_turno: "all",
+  });
+
+  const { data: masterEmployees = [], isLoading } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
   });
 
-  const { data: absences = [] } = useQuery({
-    queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-created_date'),
-    initialData: [],
-  });
+  const departments = useMemo(() => {
+    const depts = new Set();
+    masterEmployees.forEach(emp => {
+      if (emp.departamento) depts.add(emp.departamento);
+    });
+    return Array.from(depts).sort();
+  }, [masterEmployees]);
 
-  const { data: shiftAssignments = [] } = useQuery({
-    queryKey: ['shiftAssignments'],
-    queryFn: () => base44.entities.ShiftAssignment.list(),
-    initialData: [],
-  });
+  const positions = useMemo(() => {
+    const psts = new Set();
+    masterEmployees.forEach(emp => {
+      if (emp.puesto) psts.add(emp.puesto);
+    });
+    return Array.from(psts).sort();
+  }, [masterEmployees]);
 
-  const kpis = useMemo(() => {
-    const total = masterEmployees.length;
-    const activos = masterEmployees.filter(e => (e.estado_empleado || "Alta") === "Alta").length;
-    const disponibles = masterEmployees.filter(e => {
-      if ((e.estado_empleado || "Alta") !== "Alta") return false;
-      return (e.disponibilidad || "Disponible") === "Disponible";
-    }).length;
-
-    const today = new Date();
-    const ausenciasActivas = absences.filter(a => {
-      if (!a.fecha_inicio) return false;
-      try {
-        const inicio = new Date(a.fecha_inicio);
-        if (isNaN(inicio.getTime())) return false;
-        const fin = a.fecha_fin ? new Date(a.fecha_fin) : addDays(today, 365);
-        if (isNaN(fin.getTime())) return false;
-        return isWithinInterval(today, { start: inicio, end: fin });
-      } catch {
-        return false;
-      }
-    }).length;
-
-    return {
-      total,
-      activos,
-      disponibles,
-      ausenciasActivas
-    };
-  }, [masterEmployees, absences]);
-
-  const recentAbsences = useMemo(() => {
-    return absences
-      .filter(a => {
-        if (!a.fecha_inicio) return false;
-        try {
-          const inicio = new Date(a.fecha_inicio);
-          if (isNaN(inicio.getTime())) return false;
-          return true;
-        } catch {
-          return false;
-        }
-      })
-      .slice(0, 5)
-      .map(a => {
-        const emp = masterEmployees.find(me => me.employee_id === a.employee_id);
-        return { ...a, employeeName: emp?.nombre || 'Desconocido' };
-      });
-  }, [absences, masterEmployees]);
+  const filteredEmployees = useMemo(() => {
+    return masterEmployees.filter(emp => {
+      const matchesSearch = 
+        emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesDepartamento = filters.departamento === "all" || emp.departamento === filters.departamento;
+      const matchesPuesto = filters.puesto === "all" || emp.puesto === filters.puesto;
+      const matchesEstado = filters.estado_empleado === "all" || (emp.estado_empleado || "Alta") === filters.estado_empleado;
+      const matchesTipoTurno = filters.tipo_turno === "all" || emp.tipo_turno === filters.tipo_turno;
+      
+      return matchesSearch && matchesDepartamento && matchesPuesto && matchesEstado && matchesTipoTurno;
+    });
+  }, [masterEmployees, searchTerm, filters]);
 
   return (
     <div className="p-6 md:p-8">
@@ -84,180 +61,200 @@ export default function ShiftManagerEmployees() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Users className="w-8 h-8 text-blue-600" />
-            Panel de Control - Jefes de Turno
+            Listado de Empleados
           </h1>
           <p className="text-slate-600 mt-1">
-            Gestión y consulta de información del personal
+            Vista de consulta para jefes de turno
           </p>
         </div>
 
-        {/* KPIs principales */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-blue-700 font-medium">Total Empleados</p>
-                  <p className="text-3xl font-bold text-blue-900">{kpis.total}</p>
-                  <p className="text-xs text-blue-600 mt-1">{kpis.activos} activos</p>
+        {/* Filters */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-blue-600" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <Label>Búsqueda</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar empleados..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-                <Users className="w-10 h-10 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-green-700 font-medium">Disponibles</p>
-                  <p className="text-3xl font-bold text-green-900">{kpis.disponibles}</p>
-                  <p className="text-xs text-green-600 mt-1">En turno</p>
-                </div>
-                <UserCheck className="w-10 h-10 text-green-600" />
+              <div className="space-y-2">
+                <Label>Departamento</Label>
+                <Select value={filters.departamento} onValueChange={(value) => setFilters({...filters, departamento: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-amber-700 font-medium">Ausencias Activas</p>
-                  <p className="text-3xl font-bold text-amber-900">{kpis.ausenciasActivas}</p>
-                  <p className="text-xs text-amber-600 mt-1">En este momento</p>
-                </div>
-                <UserX className="w-10 h-10 text-amber-600" />
+              <div className="space-y-2">
+                <Label>Puesto</Label>
+                <Select value={filters.puesto} onValueChange={(value) => setFilters({...filters, puesto: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {positions.map((puesto) => (
+                      <SelectItem key={puesto} value={puesto}>{puesto}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-purple-700 font-medium">Turnos Planificados</p>
-                  <p className="text-3xl font-bold text-purple-900">{shiftAssignments.length}</p>
-                  <p className="text-xs text-purple-600 mt-1">Asignaciones</p>
-                </div>
-                <Clock className="w-10 h-10 text-purple-600" />
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select value={filters.estado_empleado} onValueChange={(value) => setFilters({...filters, estado_empleado: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                    <SelectItem value="Baja">Baja</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Módulo: Listado de Empleados */}
-          <Card className="shadow-lg border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-white">
-            <CardHeader className="border-b border-blue-200">
-              <CardTitle className="flex items-center gap-2 text-blue-900">
-                <List className="w-6 h-6 text-blue-600" />
-                Listado de Empleados
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-sm text-slate-700 mb-4">
-                Consulta el listado completo de empleados con filtros avanzados
-              </p>
-              <Link to={createPageUrl("ShiftManagerEmployeesList")}>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
-                  <List className="w-5 h-5 mr-2" />
-                  Ver Listado Completo
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+              <div className="space-y-2">
+                <Label>Tipo Turno</Label>
+                <Select value={filters.tipo_turno} onValueChange={(value) => setFilters({...filters, tipo_turno: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Rotativo">Rotativo</SelectItem>
+                    <SelectItem value="Fijo Mañana">Fijo Mañana</SelectItem>
+                    <SelectItem value="Fijo Tarde">Fijo Tarde</SelectItem>
+                    <SelectItem value="Turno Partido">Turno Partido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Ausencias Recientes */}
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-                Ausencias Recientes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              {recentAbsences.length === 0 ? (
-                <p className="text-center text-slate-500 py-8 text-sm">
-                  No hay ausencias recientes
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {recentAbsences.map((absence) => (
-                    <div key={absence.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                      <div className="flex items-start justify-between mb-1">
-                        <span className="font-semibold text-sm text-slate-900">
-                          {absence.employeeName}
-                        </span>
-                        <Badge className="bg-amber-600">
-                          Ausente
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-slate-600">
-                        {absence.motivo || 'Sin motivo'} • {' '}
-                        {(() => {
-                          try {
-                            if (!absence.fecha_inicio) return 'Sin fecha';
-                            const date = new Date(absence.fecha_inicio);
-                            if (isNaN(date.getTime())) return 'Sin fecha';
-                            return format(date, "d MMM", { locale: es });
-                          } catch {
-                            return 'Sin fecha';
-                          }
-                        })()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Módulos de Gestión */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link to={createPageUrl("Timeline")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-8 h-8 text-blue-600" />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Planning</h3>
-                    <p className="text-xs text-slate-600">Línea de tiempo y asignaciones</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("DailyPlanning")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Activity className="w-8 h-8 text-green-600" />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Planning Diario</h3>
-                    <p className="text-xs text-slate-600">Gestión del día a día</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("Machines")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-8 h-8 text-purple-600" />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Máquinas</h3>
-                    <p className="text-xs text-slate-600">Gestión de máquinas</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
+        {/* Employee Table */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle>Empleados ({filteredEmployees.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="p-12 text-center text-slate-500">Cargando empleados...</div>
+            ) : filteredEmployees.length === 0 ? (
+              <div className="p-12 text-center text-slate-500">
+                No se encontraron empleados con estos filtros
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50">
+                      <TableHead>Código</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Departamento</TableHead>
+                      <TableHead>Puesto</TableHead>
+                      <TableHead>Equipo</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Disponibilidad</TableHead>
+                      <TableHead>Jornada</TableHead>
+                      <TableHead>Turno</TableHead>
+                      <TableHead>Taquilla</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEmployees.map((employee) => (
+                      <TableRow key={employee.id} className="hover:bg-slate-50">
+                        <TableCell className="font-mono text-xs">
+                          {employee.codigo_empleado || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-semibold text-slate-900">
+                            {employee.nombre}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{employee.departamento || '-'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{employee.puesto || '-'}</span>
+                        </TableCell>
+                        <TableCell>
+                          {employee.equipo ? (
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                              {employee.equipo}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-slate-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={
+                            (employee.estado_empleado || "Alta") === "Alta" 
+                              ? 'bg-green-600' 
+                              : 'bg-slate-600'
+                          }>
+                            {employee.estado_empleado || "Alta"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={
+                            (employee.disponibilidad || "Disponible") === "Disponible"
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }>
+                            {employee.disponibilidad || "Disponible"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {employee.tipo_jornada || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
+                            {employee.tipo_turno || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {employee.taquilla_vestuario && employee.taquilla_numero ? (
+                            <div className="text-xs">
+                              <div className="font-semibold">{employee.taquilla_numero}</div>
+                              <div className="text-slate-500">{employee.taquilla_vestuario}</div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">Sin asignar</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
