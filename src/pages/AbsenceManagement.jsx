@@ -194,22 +194,34 @@ export default function AbsenceManagementPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      // Establecer estado inicial como Pendiente
+      const dataWithStatus = {
+        ...data,
+        estado_aprobacion: data.estado_aprobacion || 'Pendiente',
+        solicitado_por: currentUser?.id || data.solicitado_por
+      };
+      
       let result;
       if (editingAbsence?.id) {
-        result = await base44.entities.Absence.update(editingAbsence.id, data);
+        result = await base44.entities.Absence.update(editingAbsence.id, dataWithStatus);
       } else {
-        result = await base44.entities.Absence.create(data);
+        result = await base44.entities.Absence.create(dataWithStatus);
         
         // Notificación en tiempo real a supervisores
         const employee = employees.find(e => e.id === data.employee_id);
         const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
         if (employee && absenceType) {
-          await notifyAbsenceRequestRealtime(
-            result.id, 
-            employee.nombre, 
-            absenceType,
-            format(new Date(data.fecha_inicio), "dd/MM/yyyy", { locale: es })
-          );
+          try {
+            await notifyAbsenceRequestRealtime(
+              result.id, 
+              employee.nombre, 
+              absenceType,
+              format(new Date(data.fecha_inicio), "dd/MM/yyyy", { locale: es })
+            );
+            toast.success("Notificaciones enviadas a los supervisores");
+          } catch (error) {
+            console.error("Error enviando notificaciones:", error);
+          }
         }
       }
 
@@ -992,10 +1004,18 @@ export default function AbsenceManagementPage() {
                 )}
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> Esta solicitud quedará pendiente de aprobación según el flujo configurado para este tipo de ausencia.
-                </p>
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Flujo de Aprobación:</strong>
+                  </p>
+                  <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
+                    <li>La solicitud se creará con estado "Pendiente"</li>
+                    <li>Se notificará automáticamente a los responsables configurados</li>
+                    <li>Los supervisores podrán aprobar o rechazar desde la pestaña "Aprobar"</li>
+                    <li>El empleado recibirá notificación del estado de su solicitud</li>
+                  </ul>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3">

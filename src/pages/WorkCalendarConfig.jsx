@@ -9,6 +9,7 @@ import { createPageUrl } from "@/utils";
 import HolidayManager from "../components/timeline/HolidayManager";
 import VacationManager from "../components/timeline/VacationManager";
 import CalendarStyleConfig from "../components/absences/CalendarStyleConfig";
+import WorkHoursCalculator from "../components/absences/WorkHoursCalculator";
 
 export default function WorkCalendarConfig() {
   const [activeTab, setActiveTab] = useState("holidays");
@@ -46,10 +47,11 @@ export default function WorkCalendarConfig() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="holidays">Días Festivos</TabsTrigger>
             <TabsTrigger value="vacations">Períodos de Vacaciones</TabsTrigger>
-            <TabsTrigger value="styles">Estilos del Calendario</TabsTrigger>
+            <TabsTrigger value="calculator">Horas Efectivas</TabsTrigger>
+            <TabsTrigger value="styles">Estilos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="holidays" className="mt-6">
@@ -65,6 +67,13 @@ export default function WorkCalendarConfig() {
               embedded={true} 
               vacations={vacations}
               onUpdate={refetchVacations}
+            />
+          </TabsContent>
+
+          <TabsContent value="calculator" className="mt-6">
+            <WorkHoursCalculator 
+              holidays={holidays}
+              vacations={vacations}
             />
           </TabsContent>
 
