@@ -8,7 +8,7 @@ import {
   Users, 
   UserCheck, 
   UserX, 
-  Calendar, 
+  Calendar as CalendarIcon, 
   AlertTriangle, 
   Clock, 
   TrendingUp,
