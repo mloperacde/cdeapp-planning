@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Search, Filter, Edit, Plus, UserX, Eye, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Users, Search, Filter, Edit, Plus, UserX, Eye, RefreshCw, CheckCircle2, Database } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -164,20 +164,7 @@ export default function HRDashboard() {
               <Plus className="w-4 h-4 mr-2" />
               Nueva Alta
             </Button>
-            <Button
-              onClick={() => autoAssignLockersMutation.mutate()}
-              disabled={autoAssignLockersMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <Zap className="w-4 h-4 mr-2" />
-              Auto-Asignar Taquillas
-            </Button>
-            <Link to={createPageUrl("MasterEmployeeDatabase")}>
-              <Button variant="outline">
-                <Database className="w-4 h-4 mr-2" />
-                BD Maestra
-              </Button>
-            </Link>
+
           </div>
         </div>
 
