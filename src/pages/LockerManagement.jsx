@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +36,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import LockerRoomMap from "../components/lockers/LockerRoomMap";
+import EnhancedLockerRoomMap from "../components/lockers/EnhancedLockerRoomMap";
+import BulkLockerAssignment from "../components/lockers/BulkLockerAssignment";
 import LockerConfigForm from "../components/lockers/LockerConfigForm";
 import LockerDiagnostics from "../components/lockers/LockerDiagnostics";
 import LockerAudit from "../components/lockers/LockerAudit";
@@ -59,6 +60,7 @@ export default function LockerManagementPage() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
@@ -844,7 +846,7 @@ export default function LockerManagementPage() {
           </TabsContent>
 
           <TabsContent value="mapa">
-            <LockerRoomMap 
+            <EnhancedLockerRoomMap 
               lockerAssignments={lockerAssignments}
               employees={employees}
               lockerRoomConfigs={lockerRoomConfigs}
@@ -975,6 +977,17 @@ export default function LockerManagementPage() {
           </TabsContent>
 
           <TabsContent value="asignaciones">
+            {selectedEmployeeIds.length > 0 && (
+              <div className="mb-6">
+                <BulkLockerAssignment
+                  employees={employees}
+                  lockerAssignments={lockerAssignments}
+                  selectedEmployeeIds={selectedEmployeeIds}
+                  onSelectionChange={setSelectedEmployeeIds}
+                />
+              </div>
+            )}
+
             <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2">
@@ -1090,6 +1103,18 @@ export default function LockerManagementPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50">
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedEmployeeIds.length === filteredAndSortedEmployees.length && filteredAndSortedEmployees.length > 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedEmployeeIds(filteredAndSortedEmployees.map(e => e.id));
+                              } else {
+                                setSelectedEmployeeIds([]);
+                              }
+                            }}
+                          />
+                        </TableHead>
                         <TableHead className="w-12">Req.</TableHead>
                         <SortableHeader field="nombre" label="Empleado" />
                         <TableHead>Sexo</TableHead>
@@ -1128,16 +1153,28 @@ export default function LockerManagementPage() {
                                             !identificadoresValidos.includes(editData.numero_taquilla_actual);
                           
                           return (
-                            <TableRow key={employee.id} className={`hover:bg-slate-50 ${
-                              !requiereTaquilla ? 'opacity-50' : 
-                              idNoValido ? 'bg-red-50' : ''
-                            }`}>
-                              <TableCell>
-                                <Checkbox
-                                  checked={requiereTaquilla}
-                                  onCheckedChange={(checked) => handleFieldChange(employee.id, 'requiere_taquilla', checked)}
-                                />
-                              </TableCell>
+                          <TableRow key={employee.id} className={`hover:bg-slate-50 ${
+                            !requiereTaquilla ? 'opacity-50' : 
+                            idNoValido ? 'bg-red-50' : ''
+                          } ${selectedEmployeeIds.includes(employee.id) ? 'bg-purple-50' : ''}`}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedEmployeeIds.includes(employee.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedEmployeeIds([...selectedEmployeeIds, employee.id]);
+                                  } else {
+                                    setSelectedEmployeeIds(selectedEmployeeIds.filter(id => id !== employee.id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Checkbox
+                                checked={requiereTaquilla}
+                                onCheckedChange={(checked) => handleFieldChange(employee.id, 'requiere_taquilla', checked)}
+                              />
+                            </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
                                   <div className="font-semibold text-slate-900">{employee.nombre}</div>

@@ -43,19 +43,25 @@ Deno.serve(async (req) => {
         notas: 'Sincronizado desde Base de Datos Maestra'
       };
 
-      if (existing) {
-        // Actualizar solo si hay cambios
-        if (existing.vestuario !== emp.taquilla_vestuario || 
-            existing.numero_taquilla_actual !== emp.taquilla_numero) {
-          await base44.asServiceRole.entities.LockerAssignment.update(existing.id, assignmentData);
-          updated++;
+      try {
+        if (existing) {
+          // Actualizar solo si hay cambios
+          const existingClean = (existing.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+          if (existing.vestuario !== emp.taquilla_vestuario.trim() || existingClean !== cleanTaquillaNumero) {
+            await base44.asServiceRole.entities.LockerAssignment.update(existing.id, assignmentData);
+            updated++;
+          } else {
+            skipped++;
+          }
         } else {
-          skipped++;
+          // Crear nueva asignación
+          await base44.asServiceRole.entities.LockerAssignment.create(assignmentData);
+          created++;
         }
-      } else {
-        // Crear nueva asignación
-        await base44.asServiceRole.entities.LockerAssignment.create(assignmentData);
-        created++;
+      } catch (error) {
+        console.error(`Error syncing locker for employee ${emp.employee_id}:`, error);
+        // Continue with next employee
+        continue;
       }
 
       // Delay para evitar rate limit
