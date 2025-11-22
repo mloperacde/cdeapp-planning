@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -96,41 +95,55 @@ export default function TeamConfigurationPage() {
   const saveTeamsMutation = useMutation({
     mutationFn: async () => {
       const updates = [];
+      let employeesUpdatedCount = 0;
       
-      for (const [key, data] of Object.entries(teamFormData)) {
-        if (!data.team_name || data.team_name.trim() === '') {
+      for (const [key, newData] of Object.entries(teamFormData)) {
+        if (!newData.team_name || newData.team_name.trim() === '') {
           throw new Error(`El nombre del equipo no puede estar vacío.`);
         }
-        const existing = teams.find(t => t.team_key === key);
-        if (existing) {
-          updates.push(base44.entities.TeamConfig.update(existing.id, data));
+
+        const existingTeam = teams.find(t => t.team_key === key);
+        
+        if (existingTeam) {
+          updates.push(base44.entities.TeamConfig.update(existingTeam.id, newData));
+
+          // Detectar cambio de nombre
+          if (existingTeam.team_name !== newData.team_name) {
+            const oldName = existingTeam.team_name;
+            const newName = newData.team_name;
+
+            // Actualizar empleados operativos
+            const operationalEmployees = await base44.entities.Employee.filter({ equipo: oldName });
+            for (const emp of operationalEmployees) {
+              await base44.entities.Employee.update(emp.id, { equipo: newName });
+              employeesUpdatedCount++;
+            }
+
+            // Actualizar base de datos maestra
+            const masterEmployees = await base44.entities.EmployeeMasterDatabase.filter({ equipo: oldName });
+            for (const masterEmp of masterEmployees) {
+              await base44.entities.EmployeeMasterDatabase.update(masterEmp.id, { equipo: newName });
+            }
+          }
         } else {
-          updates.push(base44.entities.TeamConfig.create(data));
+          updates.push(base44.entities.TeamConfig.create(newData));
         }
       }
       
-      return Promise.all(updates);
+      await Promise.all(updates);
+      return employeesUpdatedCount;
     },
-    onSuccess: async () => {
-      const team1 = teamFormData.team_1;
-      const team2 = teamFormData.team_2;
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftAssignments'] });
       
-      const allEmployees = await base44.entities.Employee.list();
-      const updatePromises = [];
-      
-      allEmployees.forEach(emp => {
-        if (emp.equipo && emp.equipo.includes('Isa') && emp.equipo !== team1.team_name) {
-          updatePromises.push(base44.entities.Employee.update(emp.id, { equipo: team1.team_name }));
-        } else if (emp.equipo && emp.equipo.includes('Sara') && emp.equipo !== team2.team_name) {
-          updatePromises.push(base44.entities.Employee.update(emp.id, { equipo: team2.team_name }));
-        }
-      });
-      
-      if (updatePromises.length > 0) {
-        await Promise.all(updatePromises);
+      if (count > 0) {
+        toast.success(`Configuración guardada y ${count} empleados actualizados al nuevo nombre de equipo.`);
+      } else {
+        toast.success("Configuración de equipos guardada correctamente.");
       }
-      
-      queryClient.invalidateQueries();
     },
     onError: (error) => {
       toast.error(`Error al guardar equipos: ${error.message}`);
@@ -444,8 +457,14 @@ export default function TeamConfigurationPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-6">
+                  <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Nota:</strong> Si cambias el nombre de un equipo, el sistema actualizará automáticamente a todos los empleados (operativos y maestros) que pertenezcan a ese equipo para reflejar el nuevo nombre.
+                    </p>
+                  </div>
+
                   {/* Equipo 1 */}
-                  <div className="p-6 border-2 border-purple-200 rounded-lg bg-purple-50/50">
+                  <div className="p-6 border-2 border-purple-200 dark:border-purple-800 rounded-lg bg-purple-50/50 dark:bg-purple-950/30">
                     <h3 className="text-lg font-semibold text-purple-900 mb-4">Equipo 1</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">

@@ -148,63 +148,85 @@ export default function MasterEmployeeDatabasePage() {
 
   const handleSyncAll = async () => {
     const pending = masterEmployees.filter(e => e.estado_sincronizacion !== 'Sincronizado');
-    
-    if (!confirm(`¿Sincronizar automáticamente ${pending.length} empleados? Se sincronizarán todos los campos disponibles.`)) {
+
+    if (pending.length === 0) {
+      toast.info("No hay registros pendientes de sincronización");
       return;
     }
-    
+
+    if (!confirm(`¿Sincronizar automáticamente ${pending.length} empleados?`)) {
+      return;
+    }
+
     setSyncing(true);
     const user = await base44.auth.me().catch(() => null);
     let successCount = 0;
     let errorCount = 0;
-    
+
     try {
+      // Obtener todos los empleados existentes de una vez
+      const existingEmployees = await base44.entities.Employee.list();
+
+      // Crear mapas para búsqueda rápida O(1)
+      const existingByCode = new Map(existingEmployees.filter(e => e.codigo_empleado).map(e => [e.codigo_empleado, e]));
+      const existingByName = new Map(existingEmployees.filter(e => e.nombre).map(e => [e.nombre.toLowerCase().trim(), e]));
+      const existingById = new Map(existingEmployees.map(e => [e.id, e]));
+
       for (const masterEmployee of pending) {
         try {
-          // Buscar empleado existente
-          let existingEmployee = null;
-          if (masterEmployee.employee_id) {
-            const result = await base44.entities.Employee.filter({ id: masterEmployee.employee_id });
-            existingEmployee = result[0] || null;
-          } else if (masterEmployee.codigo_empleado) {
-            const result = await base44.entities.Employee.filter({ 
-              codigo_empleado: masterEmployee.codigo_empleado 
-            });
-            existingEmployee = result[0] || null;
+          // Estrategia de búsqueda robusta
+          let targetEmployee = null;
+
+          if (masterEmployee.employee_id && existingById.has(masterEmployee.employee_id)) {
+            targetEmployee = existingById.get(masterEmployee.employee_id);
+          } else if (masterEmployee.codigo_empleado && existingByCode.has(masterEmployee.codigo_empleado)) {
+            targetEmployee = existingByCode.get(masterEmployee.codigo_empleado);
+          } else if (masterEmployee.nombre && existingByName.has(masterEmployee.nombre.toLowerCase().trim())) {
+            targetEmployee = existingByName.get(masterEmployee.nombre.toLowerCase().trim());
           }
 
-          // Preparar datos para sincronizar
+          // Preparar payload de datos
           const dataToSync = {};
+          const excludeFields = ['id', 'created_date', 'updated_date', 'created_by', 'employee_id', 'ultimo_sincronizado', 'estado_sincronizacion'];
+
           Object.keys(masterEmployee).forEach(key => {
-            if (!['id', 'created_date', 'updated_date', 'created_by', 'employee_id', 'ultimo_sincronizado', 'estado_sincronizacion'].includes(key)) {
-              if (masterEmployee[key] !== null && masterEmployee[key] !== undefined && masterEmployee[key] !== '') {
-                dataToSync[key] = masterEmployee[key];
-              }
+            if (!excludeFields.includes(key) && masterEmployee[key] !== null && masterEmployee[key] !== undefined) {
+              dataToSync[key] = masterEmployee[key];
             }
           });
+
+          // Asegurar campos críticos
+          if (!targetEmployee) {
+            dataToSync.estado_empleado = dataToSync.estado_empleado || 'Alta';
+            dataToSync.disponibilidad = dataToSync.disponibilidad || 'Disponible';
+            dataToSync.incluir_en_planning = dataToSync.incluir_en_planning ?? true;
+          }
 
           let employeeId;
           let syncType;
 
-          // Crear o actualizar en Employee
-          if (existingEmployee) {
-            await base44.entities.Employee.update(existingEmployee.id, dataToSync);
-            employeeId = existingEmployee.id;
+          // Ejecutar operación
+          if (targetEmployee) {
+            await base44.entities.Employee.update(targetEmployee.id, dataToSync);
+            employeeId = targetEmployee.id;
             syncType = 'Sincronización Total';
           } else {
-            const newEmployee = await base44.entities.Employee.create(dataToSync);
-            employeeId = newEmployee.id;
+            const newEmp = await base44.entities.Employee.create(dataToSync);
+            employeeId = newEmp.id;
             syncType = 'Creación';
+
+            // Actualizar cachés locales
+            existingById.set(newEmp.id, newEmp);
+            if(newEmp.codigo_empleado) existingByCode.set(newEmp.codigo_empleado, newEmp);
           }
 
-          // Actualizar estado en MasterDatabase
+          // Actualizar maestro y historial
           await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
             employee_id: employeeId,
             ultimo_sincronizado: new Date().toISOString(),
             estado_sincronizacion: 'Sincronizado'
           });
 
-          // Crear historial
           await base44.entities.EmployeeSyncHistory.create({
             master_employee_id: masterEmployee.id,
             employee_id: employeeId,
@@ -217,12 +239,9 @@ export default function MasterEmployeeDatabasePage() {
 
           successCount++;
 
-          // Delay para evitar rate limit
-          await new Promise(resolve => setTimeout(resolve, 300));
-
         } catch (error) {
           console.error('Error syncing employee:', masterEmployee.nombre, error);
-          
+
           await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
             estado_sincronizacion: 'Error'
           });
@@ -237,21 +256,25 @@ export default function MasterEmployeeDatabasePage() {
           });
 
           errorCount++;
-          
-          // Delay incluso en error
-          await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
 
+      // Invalidación masiva de queries
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['syncHistory'] });
 
-      alert(`Sincronización completada:\n✅ ${successCount} exitosos\n❌ ${errorCount} errores`);
+      if (errorCount > 0) {
+        toast.warning(`Sincronización: ${successCount} éxitos, ${errorCount} errores.`);
+      } else {
+        toast.success(`Sincronización completada: ${successCount} registros actualizados.`);
+      }
 
     } catch (error) {
-      console.error('Error general en sincronización:', error);
-      alert('Error durante la sincronización masiva: ' + error.message);
+      toast.error('Error crítico en sincronización: ' + error.message);
     } finally {
       setSyncing(false);
     }

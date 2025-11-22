@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { format, isWithinInterval, isSameDay, startOfWeek } from "date-fns";
@@ -97,18 +96,31 @@ export default function TimelineView({
       return Array.isArray(teamSchedules) ? teamSchedules.find((s) => s?.team_key === teamKey && s?.fecha_inicio_semana === weekStartStr) : null;
     };
 
-    const getEmployeeShift = (employee, date) => {
+    // Pre-calcular disponibilidad de empleados
+    const employeeAvailabilityMap = new Map();
+    
+    filteredEmployees.forEach(emp => {
+      const teamKey = getEmployeeTeamKey(emp);
+      const absStart = emp.ausencia_inicio ? new Date(emp.ausencia_inicio) : null;
+      const absEnd = emp.ausencia_fin ? new Date(emp.ausencia_fin) : null;
+      
+      employeeAvailabilityMap.set(emp.id, {
+        employee: emp,
+        teamKey,
+        isAbsent: emp.disponibilidad === "Ausente",
+        absStart,
+        absEnd
+      });
+    });
+
+    const getEmployeeShift = (employee, date, teamKey) => {
       if (!employee) return "Mañana";
       if (employee.tipo_turno === "Fijo Mañana") return "Mañana";
       if (employee.tipo_turno === "Fijo Tarde") return "Tarde";
 
-      // Para rotativos, usar el horario del equipo
-      if (employee.tipo_turno === "Rotativo") {
-        const teamKey = getEmployeeTeamKey(employee);
-        if (teamKey) {
-          const schedule = getTeamScheduleForWeek(teamKey, date);
-          return schedule?.turno || "Mañana";
-        }
+      if (employee.tipo_turno === "Rotativo" && teamKey) {
+        const schedule = getTeamScheduleForWeek(teamKey, date);
+        return schedule?.turno || "Mañana";
       }
 
       return "Mañana";
@@ -134,41 +146,6 @@ export default function TimelineView({
       }
     };
 
-    const isEmployeeAvailable = (employee, date) => {
-      if (!employee || !date) return false;
-
-      const dateStr = format(date, "yyyy-MM-dd");
-      const dayOfWeek = date.getDay();
-
-      if (dayOfWeek === 0 || dayOfWeek === 6) return false;
-      if (holidayDates.has(dateStr)) return false;
-
-      if (employee.disponibilidad === "Ausente") {
-        if (employee.ausencia_inicio && employee.ausencia_fin) {
-          const ausenciaStart = new Date(employee.ausencia_inicio);
-          const ausenciaEnd = new Date(employee.ausencia_fin);
-          // Check if date is within the absence range (inclusive)
-          if (date >= ausenciaStart && date <= ausenciaEnd) {
-            return false;
-          }
-        }
-      }
-
-      for (const vacRange of vacationRanges) {
-        if (vacRange?.employeeIds === null || vacRange?.employeeIds?.includes(employee.id)) {
-          if (isWithinInterval(date, { start: vacRange.start, end: vacRange.end })) {
-            return false;
-          }
-        }
-      }
-
-      const shift = getEmployeeShift(employee, date);
-      const schedule = getEmployeeSchedule(employee, shift);
-      const timeInMinutes = date.getHours() * 60 + date.getMinutes();
-
-      return timeInMinutes >= schedule.start && timeInMinutes < schedule.end;
-    };
-
     const isInWorkingHours = (date) => {
       const timeInMinutes = date.getHours() * 60 + date.getMinutes();
       return timeInMinutes >= WORKING_DAY_START && timeInMinutes < WORKING_DAY_END;
@@ -184,9 +161,42 @@ export default function TimelineView({
       const inWorkingHours = isInWorkingHours(currentDate);
 
       if (inWorkingHours && !isWeekend && !isHoliday) {
-        const availableCount = filteredEmployees.filter((emp) =>
-        isEmployeeAvailable(emp, currentDate)
-        ).length;
+        const currentMinutes = currentDate.getHours() * 60 + currentDate.getMinutes();
+        let availableCount = 0;
+
+        // Iterar sobre el mapa pre-calculado
+        for (const [empId, data] of employeeAvailabilityMap) {
+          const { employee, teamKey, isAbsent, absStart, absEnd } = data;
+          
+          // Check de ausencia específica
+          let isNowAbsent = isAbsent;
+          if (absStart && absEnd) {
+            isNowAbsent = currentDate >= absStart && currentDate <= absEnd;
+          }
+          
+          if (isNowAbsent) continue;
+          
+          // Check de vacaciones
+          let isOnVacation = false;
+          for (const vacRange of vacationRanges) {
+            if (vacRange?.employeeIds === null || vacRange?.employeeIds?.includes(empId)) {
+              if (isWithinInterval(currentDate, { start: vacRange.start, end: vacRange.end })) {
+                isOnVacation = true;
+                break;
+              }
+            }
+          }
+          
+          if (isOnVacation) continue;
+          
+          // Check de horario
+          const shift = getEmployeeShift(employee, currentDate, teamKey);
+          const schedule = getEmployeeSchedule(employee, shift);
+          
+          if (currentMinutes >= schedule.start && currentMinutes < schedule.end) {
+            availableCount++;
+          }
+        }
 
         allIntervals.push({
           date: currentDate,
