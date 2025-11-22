@@ -827,11 +827,11 @@ export default function EmployeesPage() {
           </>
           )}
 
-          {activeTab === "absences" && (
-          <UnifiedAbsenceManager sourceContext="rrhh" />
-          )}
+      {activeTab === "absences" && (
+        <UnifiedAbsenceManager sourceContext="rrhh" />
+      )}
 
-          {editDialogOpen && (
+      {editDialogOpen && (
         <MasterEmployeeEditDialog
           employee={employeeToEdit}
           open={editDialogOpen}
@@ -841,6 +841,7 @@ export default function EmployeesPage() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }
