@@ -1,121 +1,260 @@
+
 import React, { useMemo } from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Users, 
-  UserCheck, 
-  UserX, 
+  UserCog, 
+  UsersRound, 
+  RefreshCw,
+  Users,
   Clock,
-  Calendar,
-  TrendingUp,
-  Activity,
-  List,
   KeyRound,
-  Cog,
+  LayoutDashboard,
+  UserX,
+  Sunrise,
+  Sunset,
+  CheckCircle2,
+  Cake,
+  Calendar,
+  AlertTriangle,
+  MessageSquare,
+  ArrowLeftRight,
   Coffee
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { isWithinInterval, addDays } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { format, startOfWeek, isSameDay } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function ShiftManagersPage() {
-  const { data: masterEmployees = [] } = useQuery({
-    queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list('nombre'),
     initialData: [],
   });
 
-  const { data: absences = [] } = useQuery({
+  const { data: teams } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
+  });
+
+  const { data: teamSchedules } = useQuery({
+    queryKey: ['teamWeekSchedules'],
+    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    initialData: [],
+  });
+
+  const { data: swapRequests } = useQuery({
+    queryKey: ['shiftSwapRequests'],
+    queryFn: () => base44.entities.ShiftSwapRequest.list('-fecha_solicitud'),
+    initialData: [],
+  });
+
+  const { data: lockerAssignments } = useQuery({
+    queryKey: ['lockerAssignments'],
+    queryFn: () => base44.entities.LockerAssignment.list(),
+    initialData: [],
+  });
+
+  const { data: absences } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-created_date'),
+    queryFn: () => base44.entities.Absence.list(),
     initialData: [],
   });
 
-  const stats = useMemo(() => {
-    const total = masterEmployees.length;
-    const activos = masterEmployees.filter(e => (e.estado_empleado || "Alta") === "Alta").length;
+  // Active absences today - SOLO de empleados en equipos
+  const activeAbsencesToday = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
     
-    const disponibles = masterEmployees.filter(e => {
-      if ((e.estado_empleado || "Alta") !== "Alta") return false;
-      return (e.disponibilidad || "Disponible") === "Disponible";
-    }).length;
+    const employeesInTeams = employees.filter(e => e.equipo);
+    
+    return absences.filter(abs => {
+      const employee = employeesInTeams.find(e => e.id === abs.employee_id);
+      if (!employee) return false;
+      
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      
+      return now >= start && now <= end;
+    });
+  }, [absences, employees]);
 
-    const today = new Date();
-    const ausenciasActivas = absences.filter(a => {
-      if (!a.fecha_inicio) return false;
-      try {
-        const inicio = new Date(a.fecha_inicio);
-        if (isNaN(inicio.getTime())) return false;
-        const fin = a.fecha_fin ? new Date(a.fecha_fin) : addDays(today, 365);
-        if (isNaN(fin.getTime())) return false;
-        return isWithinInterval(today, { start: inicio, end: fin });
-      } catch {
-        return false;
-      }
-    }).length;
+  // Ausencias por equipo
+  const absencesByTeam = useMemo(() => {
+    const byTeam = {};
+    
+    teams.forEach(team => {
+      byTeam[team.team_name] = [];
+    });
 
-    return { total, activos, disponibles, ausenciasActivas };
-  }, [masterEmployees, absences]);
-
-  const departmentStats = useMemo(() => {
-    const deptMap = new Map();
-    masterEmployees.forEach(emp => {
-      const dept = emp.departamento || 'Sin departamento';
-      if (!deptMap.has(dept)) {
-        deptMap.set(dept, { total: 0, disponibles: 0 });
-      }
-      const stat = deptMap.get(dept);
-      stat.total++;
-      if ((emp.estado_empleado || "Alta") === "Alta" && (emp.disponibilidad || "Disponible") === "Disponible") {
-        stat.disponibles++;
+    activeAbsencesToday.forEach(abs => {
+      const employee = employees.find(e => e.id === abs.employee_id);
+      if (employee && employee.equipo && byTeam[employee.equipo]) {
+        byTeam[employee.equipo].push({ ...abs, employee });
       }
     });
-    return Array.from(deptMap.entries()).map(([dept, stats]) => ({
-      departamento: dept,
-      ...stats
-    })).sort((a, b) => b.total - a.total).slice(0, 5);
-  }, [masterEmployees]);
+
+    return byTeam;
+  }, [activeAbsencesToday, employees, teams]);
+
+  // Pending swap requests
+  const pendingSwaps = useMemo(() => {
+    return swapRequests.filter(req => 
+      req.estado === "Pendiente" || req.estado === "Aceptada por Receptor"
+    );
+  }, [swapRequests]);
+
+  // Lockers without assignment
+  const lockersWithoutNumber = useMemo(() => {
+    return lockerAssignments.filter(la => 
+      la.requiere_taquilla !== false && !la.numero_taquilla_actual
+    ).length;
+  }, [lockerAssignments]);
+
+  // Get shift for today
+  const getTodayShift = (teamKey) => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    
+    const schedule = teamSchedules.find(
+      s => s.team_key === teamKey && s.fecha_inicio_semana === weekStartStr
+    );
+    
+    return schedule?.turno;
+  };
+
+  // Upcoming birthdays
+  const upcomingBirthdays = useMemo(() => {
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+
+    return employees.filter(emp => {
+      if (!emp.fecha_nacimiento) return false;
+      const birthDate = new Date(emp.fecha_nacimiento);
+      const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+      
+      if (isSameDay(thisYearBirthday, today)) return true;
+      return thisYearBirthday >= today && thisYearBirthday <= nextWeek;
+    }).slice(0, 5);
+  }, [employees]);
+
+  // Team stats with absences by team
+  const teamStats = useMemo(() => {
+    return teams.map(team => {
+      const teamEmployees = employees.filter(emp => emp.equipo === team.team_name);
+      const available = teamEmployees.filter(emp => emp.disponibilidad === "Disponible").length;
+      const absent = teamEmployees.filter(emp => emp.disponibilidad === "Ausente").length;
+      const shift = getTodayShift(team.team_key);
+      const absencesCount = absencesByTeam[team.team_name]?.length || 0;
+      
+      return {
+        ...team,
+        total: teamEmployees.length,
+        available,
+        absent,
+        shift,
+        absencesCount
+      };
+    });
+  }, [teams, employees, teamSchedules, absencesByTeam]);
+
+  const modules = [
+    {
+      title: "Equipos de Turno",
+      icon: UsersRound,
+      url: createPageUrl("TeamConfiguration"),
+      color: "purple",
+      description: "Configura equipos rotativos"
+    },
+    {
+      title: "Asignaciones Máquinas",
+      icon: UserCog,
+      url: createPageUrl("MachineAssignments"),
+      color: "blue",
+      description: "Distribuye operarios"
+    },
+    {
+      title: "Intercambio Turnos",
+      icon: RefreshCw,
+      url: createPageUrl("ShiftManagement"),
+      color: "green",
+      description: "Gestiona intercambios",
+      badge: pendingSwaps.length > 0 ? pendingSwaps.length : null
+    },
+    {
+      title: "Gestión Taquillas",
+      icon: KeyRound,
+      url: createPageUrl("LockerManagement"),
+      color: "orange",
+      description: "Asigna vestuarios",
+      badge: lockersWithoutNumber > 0 ? lockersWithoutNumber : null
+    },
+    {
+      title: "Comunicación Ausencias",
+      icon: MessageSquare,
+      url: createPageUrl("ShiftAbsenceReport"),
+      color: "red",
+      description: "Reporta ausencias del turno"
+    }
+  ];
+
+  const colorClasses = {
+    purple: "from-purple-500 to-purple-600",
+    blue: "from-blue-500 to-blue-600",
+    green: "from-green-500 to-green-600",
+    orange: "from-orange-500 to-orange-600",
+    red: "from-red-500 to-red-600",
+    cyan: "from-cyan-500 to-cyan-600",
+    teal: "from-teal-500 to-teal-600",
+    violet: "from-violet-500 to-violet-600"
+  };
 
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Activity className="w-8 h-8 text-blue-600" />
+            <LayoutDashboard className="w-8 h-8 text-blue-600" />
             Panel de Control - Jefes de Turno
           </h1>
           <p className="text-slate-600 mt-1">
-            Vista general del estado de la plantilla
+            Vista general y acceso rápido a gestión de turnos
           </p>
         </div>
 
-        {/* KPIs principales */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-blue-700 font-medium">Total Empleados</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.total}</p>
-                  <p className="text-xs text-blue-600 mt-1">{stats.activos} activos</p>
-                </div>
-                <Users className="w-10 h-10 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
+        {/* KPIs Principales */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Disponibles</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.disponibles}</p>
-                  <p className="text-xs text-green-600 mt-1">En plantilla ahora</p>
+                  <p className="text-xs text-green-700 font-medium">Empleados Disponibles (en Equipos)</p>
+                  <p className="text-2xl font-bold text-green-900">
+                    {employees.filter(e => e.disponibilidad === "Disponible" && e.equipo).length}
+                  </p>
                 </div>
-                <UserCheck className="w-10 h-10 text-green-600" />
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-red-700 font-medium">Ausentes Hoy (en Equipos)</p>
+                  <p className="text-2xl font-bold text-red-900">{activeAbsencesToday.length}</p>
+                </div>
+                <UserX className="w-8 h-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
@@ -124,152 +263,407 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-amber-700 font-medium">Ausencias Activas</p>
-                  <p className="text-3xl font-bold text-amber-900">{stats.ausenciasActivas}</p>
-                  <p className="text-xs text-amber-600 mt-1">En este momento</p>
+                  <p className="text-xs text-amber-700 font-medium">Intercambios Pendientes</p>
+                  <p className="text-2xl font-bold text-amber-900">{pendingSwaps.length}</p>
                 </div>
-                <UserX className="w-10 h-10 text-amber-600" />
+                <RefreshCw className="w-8 h-8 text-amber-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-purple-700 font-medium">Tasa Disponibilidad</p>
-                  <p className="text-3xl font-bold text-purple-900">
-                    {stats.activos > 0 ? Math.round((stats.disponibles / stats.activos) * 100) : 0}%
-                  </p>
-                  <p className="text-xs text-purple-600 mt-1">Del total activo</p>
+                  <p className="text-xs text-orange-700 font-medium">Taquillas sin Asignar</p>
+                  <p className="text-2xl font-bold text-orange-900">{lockersWithoutNumber}</p>
                 </div>
-                <TrendingUp className="w-10 h-10 text-purple-600" />
+                <KeyRound className="w-8 h-8 text-orange-600" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Disponibilidad por departamento */}
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-8">
+        {/* Turnos de Hoy por Equipo */}
+        <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
-            <CardTitle>Disponibilidad por Departamento</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-600" />
+              Turnos de Hoy - {format(new Date(), "EEEE, d 'de' MMMM", { locale: es })}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="space-y-4">
-              {departmentStats.map((dept) => (
-                <div key={dept.departamento} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900">{dept.departamento}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="flex-1 bg-slate-200 rounded-full h-2">
-                        <div
-                          className="bg-green-500 h-2 rounded-full transition-all"
-                          style={{ width: `${dept.total > 0 ? (dept.disponibles / dept.total) * 100 : 0}%` }}
-                        />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {teamStats.map((team) => (
+                <div 
+                  key={team.team_key} 
+                  className="border-2 rounded-lg p-4"
+                  style={{ borderColor: team.color }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-900">{team.team_name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        {team.shift === "Mañana" && (
+                          <Badge className="bg-amber-100 text-amber-800">
+                            <Sunrise className="w-3 h-3 mr-1" />
+                            Mañana (7:00-15:00)
+                          </Badge>
+                        )}
+                        {team.shift === "Tarde" && (
+                          <Badge className="bg-indigo-100 text-indigo-800">
+                            <Sunset className="w-3 h-3 mr-1" />
+                            Tarde (14:00/15:00-22:00)
+                          </Badge>
+                        )}
+                        {!team.shift && (
+                          <Badge variant="outline" className="bg-slate-100">
+                            Sin asignar
+                          </Badge>
+                        )}
                       </div>
-                      <span className="text-sm font-medium text-slate-700 min-w-[80px] text-right">
-                        {dept.disponibles} / {dept.total}
-                      </span>
+                    </div>
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: `${team.color}20`, borderColor: team.color, borderWidth: 2 }}
+                    >
+                      <Users className="w-6 h-6" style={{ color: team.color }} />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-3 bg-slate-50 rounded-lg">
+                      <div className="text-2xl font-bold text-slate-900">{team.total}</div>
+                      <div className="text-xs text-slate-600">Total</div>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-900">{team.available}</div>
+                      <div className="text-xs text-green-700">Disponibles</div>
+                    </div>
+                    <div className="text-center p-3 bg-red-50 rounded-lg">
+                      <div className="text-2xl font-bold text-red-900">{team.absencesCount}</div>
+                      <div className="text-xs text-red-700">Ausentes</div>
+                    </div>
+                  </div>
+
+                  {team.absencesCount > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <p className="text-xs font-semibold text-slate-700 mb-2">Ausentes de este equipo:</p>
+                      {absencesByTeam[team.team_name]?.slice(0, 3).map(abs => (
+                        <div key={abs.id} className="text-xs text-slate-600 mb-1">
+                          • {abs.employee?.nombre} - {abs.tipo || abs.motivo}
+                        </div>
+                      ))}
+                      {team.absencesCount > 3 && (
+                        <p className="text-xs text-slate-500 mt-1">...y {team.absencesCount - 3} más</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Módulos de gestión */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          <Link to={createPageUrl("ShiftManagerEmployees")}>
-            <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <List className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                      Listado de Empleados
-                    </h3>
-                    <p className="text-xs text-slate-600">Vista detallada del personal</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("Timeline")}>
-            <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Clock className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-purple-600 transition-colors">
-                      Planning y Turnos
-                    </h3>
-                    <p className="text-xs text-slate-600">Gestión de asignaciones</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("DailyPlanning")}>
-            <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Calendar className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-green-600 transition-colors">
-                      Planning Diario
-                    </h3>
-                    <p className="text-xs text-slate-600">Vista del día actual</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("LockerManagement")}>
-            <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <KeyRound className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                      Gestión de Taquillas
-                    </h3>
-                    <p className="text-xs text-slate-600">Asignación de vestuarios</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("Breaks")}>
-            <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/80 backdrop-blur-sm group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Coffee className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-orange-600 transition-colors">
-                      Gestión de Descansos
-                    </h3>
-                    <p className="text-xs text-slate-600">Turnos de descanso</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+        {/* Acceso a Módulos */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Módulos de Gestión</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {modules.map((module) => {
+              const Icon = module.icon;
+              return (
+                <Link key={module.title} to={module.url}>
+                  <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
+                          <Icon className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                              {module.title}
+                            </h3>
+                            {module.badge && (
+                              <Badge className="bg-red-600 text-white">
+                                {module.badge}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-600">{module.description}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Módulos Adicionales */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Comunicación y Coordinación</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link to={createPageUrl("ShiftHandover")}>
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                      <ArrowLeftRight className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        Info. Traspaso Turno
+                      </h3>
+                      <p className="text-xs text-slate-600">Comunica info entre turnos</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to={createPageUrl("Breaks")}>
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                      <Coffee className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        Descansos
+                      </h3>
+                      <p className="text-xs text-slate-600">Gestiona turnos de descanso</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to={createPageUrl("SupportManagement1415")}>
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                      <Clock className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        Apoyos 14-15h
+                      </h3>
+                      <p className="text-xs text-slate-600">Asigna soporte 14-15h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Solicitudes de Intercambio Pendientes */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-amber-600" />
+                Solicitudes de Intercambio
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {pendingSwaps.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm text-slate-600">No hay solicitudes pendientes</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingSwaps.slice(0, 3).map(swap => {
+                    const solicitante = employees.find(e => e.id === swap.solicitante_id);
+                    const receptor = employees.find(e => e.id === swap.receptor_id);
+                    
+                    return (
+                      <div key={swap.id} className="p-3 border rounded-lg bg-amber-50 border-amber-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge className={
+                            swap.estado === "Aceptada por Receptor" 
+                              ? "bg-blue-100 text-blue-800" 
+                              : "bg-yellow-100 text-yellow-800"
+                          }>
+                            {swap.estado}
+                          </Badge>
+                          <span className="text-xs text-slate-500">
+                            {format(new Date(swap.fecha_solicitud), "dd/MM HH:mm")}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {solicitante?.nombre} ↔️ {receptor?.nombre}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1">{swap.motivo}</p>
+                      </div>
+                    );
+                  })}
+                  <Link to={createPageUrl("ShiftManagement")}>
+                    <Button variant="outline" className="w-full mt-2">
+                      Ver Todas ({pendingSwaps.length})
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Próximos Cumpleaños */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <Cake className="w-5 h-5 text-purple-600" />
+                Próximos Cumpleaños
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {upcomingBirthdays.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-600">No hay cumpleaños próximos</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {upcomingBirthdays.map(emp => {
+                    const birthDate = new Date(emp.fecha_nacimiento);
+                    const thisYearBirthday = new Date(new Date().getFullYear(), birthDate.getMonth(), birthDate.getDate());
+                    const isToday = isSameDay(thisYearBirthday, new Date());
+                    
+                    return (
+                      <div 
+                        key={emp.id} 
+                        className={`p-3 rounded-lg ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-slate-50'}`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold text-sm text-slate-900">{emp.nombre}</div>
+                            <div className="text-xs text-slate-600">
+                              {format(thisYearBirthday, "d 'de' MMMM", { locale: es })}
+                            </div>
+                          </div>
+                          {isToday && (
+                            <Badge className="bg-purple-600 text-white">
+                              ¡HOY! 🎉
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Alertas y Acciones Requeridas */}
+        {(lockersWithoutNumber > 0 || pendingSwaps.length > 0 || activeAbsencesToday.length > 5) && (
+          <Card className="mb-6 shadow-lg border-2 border-amber-300 bg-amber-50">
+            <CardHeader className="border-b border-amber-200">
+              <CardTitle className="flex items-center gap-2 text-amber-900">
+                <AlertTriangle className="w-5 h-5" />
+                Acciones Requeridas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {lockersWithoutNumber > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200">
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="w-4 h-4 text-orange-600" />
+                      <span className="text-sm text-slate-900">
+                        <strong>{lockersWithoutNumber}</strong> empleado(s) sin taquilla asignada
+                      </span>
+                    </div>
+                    <Link to={createPageUrl("LockerManagement")}>
+                      <Button size="sm" variant="outline">
+                        Resolver
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+                
+                {pendingSwaps.length > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200">
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm text-slate-900">
+                        <strong>{pendingSwaps.length}</strong> solicitud(es) de intercambio pendiente(s)
+                      </span>
+                    </div>
+                    <Link to={createPageUrl("ShiftManagement")}>
+                      <Button size="sm" variant="outline">
+                        Revisar
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+
+                {activeAbsencesToday.length > 5 && (
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200">
+                    <div className="flex items-center gap-2">
+                      <UserX className="w-4 h-4 text-red-600" />
+                      <span className="text-sm text-slate-900">
+                        <strong>{activeAbsencesToday.length}</strong> ausencias activas hoy - revisar cobertura
+                      </span>
+                    </div>
+                    <Link to={createPageUrl("ShiftAbsenceReport")}>
+                      <Button size="sm" variant="outline">
+                        Comunicar
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Resumen de Ausencias Hoy - Agrupado por Equipo */}
+        {activeAbsencesToday.length > 0 && (
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2">
+                <UserX className="w-5 h-5 text-red-600" />
+                Empleados Ausentes Hoy (en Equipos) ({activeAbsencesToday.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {Object.entries(absencesByTeam).map(([teamName, absences]) => {
+                  if (absences.length === 0) return null;
+                  
+                  return (
+                    <div key={teamName}>
+                      <h4 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                        <Badge className="bg-purple-600">{teamName}</Badge>
+                        <span className="text-sm">({absences.length})</span>
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {absences.map(absence => (
+                          <div key={absence.id} className="p-3 border rounded-lg bg-red-50 border-red-200">
+                            <div className="font-semibold text-sm text-slate-900">{absence.employee?.nombre}</div>
+                            <div className="text-xs text-slate-600 mt-1">
+                              {absence.employee?.departamento} - {absence.employee?.puesto}
+                            </div>
+                            <Badge variant="outline" className="mt-2 text-xs">
+                              {absence.tipo}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

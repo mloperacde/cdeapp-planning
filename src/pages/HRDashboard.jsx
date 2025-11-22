@@ -243,7 +243,7 @@ export default function HRDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Gestión de Ausencias - Principal */}
+          {/* Gestión de Ausencias - Destacado */}
           <Card className="shadow-lg border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-white">
             <CardHeader className="border-b border-blue-200">
               <CardTitle className="flex items-center gap-2 text-blue-900">
@@ -251,51 +251,16 @@ export default function HRDashboard() {
                 Gestión de Ausencias
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-3">
-              <p className="text-sm text-slate-700">
-                Sistema completo de gestión de ausencias, permisos y bajas laborales
+            <CardContent className="p-6">
+              <p className="text-sm text-slate-700 mb-4">
+                Gestiona y aprueba solicitudes de ausencias, permisos y bajas laborales
               </p>
-              <div className="flex gap-2">
-                <Link to={createPageUrl("AbsenceManagement")} className="flex-1">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Gestionar Ausencias
-                  </Button>
-                </Link>
-                <Link to={createPageUrl("AbsenceTypeConfig")} className="flex-1">
-                  <Button variant="outline" className="w-full border-blue-300">
-                    Tipos de Ausencias
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Gestión de Empleados */}
-          <Card className="shadow-lg border-2 border-green-300 bg-gradient-to-br from-green-50 to-white">
-            <CardHeader className="border-b border-green-200">
-              <CardTitle className="flex items-center gap-2 text-green-900">
-                <Users className="w-6 h-6 text-green-600" />
-                Gestión de Empleados
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-3">
-              <p className="text-sm text-slate-700">
-                Administración completa del personal y base de datos
-              </p>
-              <div className="flex gap-2">
-                <Link to={createPageUrl("Employees")} className="flex-1">
-                  <Button className="w-full bg-green-600 hover:bg-green-700">
-                    <Users className="w-4 h-4 mr-2" />
-                    Ver Empleados
-                  </Button>
-                </Link>
-                <Link to={createPageUrl("ETTTemporaryEmployees")} className="flex-1">
-                  <Button variant="outline" className="w-full border-green-300">
-                    ETT y Temporales
-                  </Button>
-                </Link>
-              </div>
+              <Link to={createPageUrl("AbsenceManagement")}>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Ir a Gestión de Ausencias
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -383,8 +348,22 @@ export default function HRDashboard() {
           </Card>
         )}
 
-        {/* Módulos adicionales */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Accesos rápidos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link to={createPageUrl("MasterEmployeeDatabase")}>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3">
+                  <Users className="w-8 h-8 text-blue-600" />
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Base de Datos Maestra</h3>
+                    <p className="text-xs text-slate-600">Gestión completa de empleados</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Link to={createPageUrl("AdvancedHRDashboard")}>
             <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-6">
@@ -406,35 +385,7 @@ export default function HRDashboard() {
                   <UserPlus className="w-8 h-8 text-green-600" />
                   <div>
                     <h3 className="font-semibold text-slate-900">Onboarding</h3>
-                    <p className="text-xs text-slate-600">Incorporación de empleados</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("AttendanceManagement")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-8 h-8 text-blue-600" />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Gestión de Presencia</h3>
-                    <p className="text-xs text-slate-600">Control de asistencia</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl("LockerManagement")}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-8 h-8 text-indigo-600" />
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Taquillas</h3>
-                    <p className="text-xs text-slate-600">Gestión de vestuarios</p>
+                    <p className="text-xs text-slate-600">Procesos de incorporación</p>
                   </div>
                 </div>
               </CardContent>
