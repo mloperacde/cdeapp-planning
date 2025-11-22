@@ -101,7 +101,7 @@ export default function RRHHPage() {
       }
     }).length;
 
-    const pendientesAprobacion = absences.filter(a => a.estado === 'Pendiente').length;
+    const pendientesAprobacion = absences.filter(a => a.estado_aprobacion === 'Pendiente').length;
     const totalDiasPendientes = vacationBalances.reduce((sum, vb) => sum + (vb.dias_pendientes || 0), 0);
     const empleadosConFuerzaMayor = masterEmployees.filter(e => (e.horas_causa_mayor_consumidas || 0) > 0).length;
     const onboardingPendientes = onboardingProcesses.filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado').length;
@@ -120,7 +120,10 @@ export default function RRHHPage() {
 
   const recentAbsences = useMemo(() => {
     return absences
-      .filter(a => a.estado === 'Pendiente' || a.estado === 'Aprobada')
+      .filter(a => {
+        if (!a.estado) return false;
+        return a.estado === 'Pendiente' || a.estado === 'Aprobada';
+      })
       .slice(0, 5)
       .map(a => {
         const emp = employees.find(e => e.id === a.employee_id) || 
