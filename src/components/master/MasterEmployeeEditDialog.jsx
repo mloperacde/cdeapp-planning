@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 
 export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
-  const [formData, setFormData] = useState(employee || {
+  const [formData, setFormData] = useState({
     nombre: "",
     codigo_empleado: "",
     estado_empleado: "Alta",
@@ -32,6 +32,21 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
     incluir_en_planning: true,
   });
   const queryClient = useQueryClient();
+
+  // Cargar datos del empleado cuando cambie la prop
+  useEffect(() => {
+    if (employee) {
+      setFormData(employee);
+    } else {
+      setFormData({
+        nombre: "",
+        codigo_empleado: "",
+        estado_empleado: "Alta",
+        disponibilidad: "Disponible",
+        incluir_en_planning: true,
+      });
+    }
+  }, [employee, open]);
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
