@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -6,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, ExternalLink, Users, Database, Trash2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -74,9 +74,16 @@ export default function LockerAudit({ employees, lockerAssignments }) {
       const promises = [];
       
       duplicates.forEach(dup => {
-        const sortedByDate = [...dup.assignments].sort((a, b) => 
-          new Date(b.fecha_asignacion || b.created_date) - new Date(a.fecha_asignacion || a.created_date)
-        );
+        const sortedByDate = [...dup.assignments].sort((a, b) => {
+          try {
+            const dateA = new Date(a.fecha_asignacion || a.created_date);
+            const dateB = new Date(b.fecha_asignacion || b.created_date);
+            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+            return dateB - dateA;
+          } catch {
+            return 0;
+          }
+        });
         
         // Keep the most recent assignment, delete the rest
         const toDelete = sortedByDate.slice(1);

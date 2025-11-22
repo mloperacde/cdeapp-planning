@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -71,9 +70,16 @@ export default function EmployeeOnboardingPage() {
   };
 
   const getDaysInProcess = (onboarding) => {
-    const start = new Date(onboarding.fecha_inicio);
-    const end = onboarding.fecha_completado ? new Date(onboarding.fecha_completado) : new Date();
-    return differenceInDays(end, start);
+    try {
+      if (!onboarding.fecha_inicio) return 0;
+      const start = new Date(onboarding.fecha_inicio);
+      if (isNaN(start.getTime())) return 0;
+      const end = onboarding.fecha_completado ? new Date(onboarding.fecha_completado) : new Date();
+      if (isNaN(end.getTime())) return 0;
+      return differenceInDays(end, start);
+    } catch {
+      return 0;
+    }
   };
 
   const filteredOnboardings = useMemo(() => {
@@ -104,9 +110,21 @@ export default function EmployeeOnboardingPage() {
     
     return onboardings.filter(ob => {
       if (ob.estado === "Completado") return false;
-      const startDate = new Date(ob.fecha_inicio);
-      return startDate >= today && startDate <= nextWeek;
-    }).sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+      try {
+        if (!ob.fecha_inicio) return false;
+        const startDate = new Date(ob.fecha_inicio);
+        if (isNaN(startDate.getTime())) return false;
+        return startDate >= today && startDate <= nextWeek;
+      } catch {
+        return false;
+      }
+    }).sort((a, b) => {
+      try {
+        return new Date(a.fecha_inicio) - new Date(b.fecha_inicio);
+      } catch {
+        return 0;
+      }
+    });
   }, [onboardings]);
 
   const handleEdit = (onboarding) => {
@@ -274,7 +292,16 @@ export default function EmployeeOnboardingPage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-medium text-blue-700">
-                            {format(new Date(ob.fecha_inicio), "EEEE, d 'de' MMMM", { locale: es })}
+                            {(() => {
+                              try {
+                                if (!ob.fecha_inicio) return 'Sin fecha';
+                                const date = new Date(ob.fecha_inicio);
+                                if (isNaN(date.getTime())) return 'Fecha inválida';
+                                return format(date, "EEEE, d 'de' MMMM", { locale: es });
+                              } catch {
+                                return 'Fecha inválida';
+                              }
+                            })()}
                           </span>
                           <Button
                             size="sm"
@@ -376,7 +403,16 @@ export default function EmployeeOnboardingPage() {
                                 <div>
                                   <p className="text-xs text-slate-500">Fecha Inicio</p>
                                   <p className="text-sm font-medium text-slate-900">
-                                    {format(new Date(onboarding.fecha_inicio), "dd/MM/yyyy", { locale: es })}
+                                    {(() => {
+                                      try {
+                                        if (!onboarding.fecha_inicio) return 'Sin fecha';
+                                        const date = new Date(onboarding.fecha_inicio);
+                                        if (isNaN(date.getTime())) return 'Fecha inválida';
+                                        return format(date, "dd/MM/yyyy", { locale: es });
+                                      } catch {
+                                        return 'Fecha inválida';
+                                      }
+                                    })()}
                                   </p>
                                 </div>
                                 <div>
