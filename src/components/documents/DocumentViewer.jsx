@@ -90,40 +90,9 @@ export default function DocumentViewer({ document, onClose, onEdit, roles = [], 
             </div>
           )}
 
-          {document.historial_versiones?.length > 0 && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <History className="w-4 h-4 text-blue-600" />
-                  <h3 className="font-semibold text-slate-900">Historial de Versiones</h3>
-                </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {document.historial_versiones.reverse().map((version, idx) => (
-                    <div key={idx} className="border rounded p-3 bg-slate-50">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-semibold text-sm">v{version.version}</div>
-                          <div className="text-xs text-slate-600">
-                            {format(new Date(version.fecha), "dd/MM/yyyy HH:mm", { locale: es })}
-                          </div>
-                          {version.cambios && (
-                            <div className="text-xs text-slate-700 mt-1">{version.cambios}</div>
-                          )}
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(version.archivo_url, '_blank')}
-                        >
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <DocumentVersionHistory document={document} />
+
+          <DocumentPermissions document={document} roles={roles} departments={departments} />
         </div>
       </DialogContent>
     </Dialog>

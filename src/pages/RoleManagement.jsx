@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Plus, Edit, Users, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Shield, Plus, Edit, Users, ArrowLeft, CheckCircle2, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import RoleForm from "../components/roles/RoleForm";
