@@ -514,7 +514,7 @@ export default function EmployeesPage() {
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
-            Cambios de Perfil
+            Aprobación de Cambios
           </button>
         </div>
       </div>
