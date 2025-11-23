@@ -224,3 +224,32 @@ export async function notifyMachinePlanningChange(machineId, teamKey, activated,
     console.error("Error notificando cambio de planificación:", error);
   }
 }
+
+/**
+ * Notifica a supervisores sobre nueva solicitud de ausencia
+ */
+export async function notifySupervisorsAbsenceRequest(absenceId, employeeName) {
+  try {
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
+    const supervisors = employees.filter(e => 
+      e.departamento === 'RRHH' || 
+      e.puesto?.toLowerCase().includes('supervisor') ||
+      e.puesto?.toLowerCase().includes('jefe')
+    );
+
+    for (const supervisor of supervisors) {
+      await sendPushNotification({
+        destinatarioId: supervisor.id,
+        tipo: 'ausencia',
+        titulo: '📋 Nueva Solicitud de Ausencia',
+        mensaje: `${employeeName} ha solicitado una ausencia pendiente de aprobación`,
+        prioridad: 'alta',
+        referenciaTipo: 'Absence',
+        referenciaId: absenceId,
+        accionUrl: '/employees?tab=absences'
+      });
+    }
+  } catch (error) {
+    console.error("Error notificando a supervisores:", error);
+  }
+}
