@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import EmployeeSelect from "../common/EmployeeSelect";
 import {
   Table,
   TableBody,
@@ -345,24 +346,12 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Empleado *</Label>
-                <Select
+                <EmployeeSelect
+                  employees={[...employees, ...masterEmployees].filter((emp, idx, self) => self.findIndex(e => e.id === emp.id) === idx)}
                   value={formData.employee_id}
                   onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar empleado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[...employees, ...masterEmployees]
-                      .filter((emp, idx, self) => self.findIndex(e => e.id === emp.id) === idx)
-                      .map(emp => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.nombre} - {emp.departamento || "Sin departamento"}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Seleccionar empleado"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
