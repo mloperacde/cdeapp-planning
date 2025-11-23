@@ -31,6 +31,7 @@ import ThemeToggle from "../components/common/ThemeToggle";
 import { toast } from "sonner";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
+import ProfileApprovalPanel from "../components/profile/ProfileApprovalPanel";
 
 export default function EmployeesPage() {
   const [filters, setFilters] = useState({});
@@ -505,6 +506,16 @@ export default function EmployeesPage() {
           >
             Gestión de Ausencias
           </button>
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === "profile"
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            Cambios de Perfil
+          </button>
         </div>
       </div>
 
@@ -829,6 +840,10 @@ export default function EmployeesPage() {
 
       {activeTab === "absences" && (
         <UnifiedAbsenceManager sourceContext="rrhh" />
+      )}
+
+      {activeTab === "profile" && (
+        <ProfileApprovalPanel />
       )}
 
       {editDialogOpen && (
