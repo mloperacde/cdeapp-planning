@@ -19,15 +19,32 @@ export default function HRChatbot({ isOpen, onClose, employeeId }) {
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: () => base44.auth.me(),
+    enabled: isOpen
   });
+
+  const createConversation = async () => {
+    try {
+      const conversation = await base44.agents.createConversation({
+        agent_name: "hr_chatbot",
+        metadata: {
+          name: "Consulta RRHH",
+          employee_id: employeeId,
+          created_at: new Date().toISOString()
+        }
+      });
+      setConversationId(conversation.id);
+    } catch (error) {
+      console.error("Error creando conversación:", error);
+    }
+  };
 
   // Crear conversación al abrir
   useEffect(() => {
     if (isOpen && !conversationId) {
       createConversation();
     }
-  }, [isOpen]);
+  }, [isOpen, conversationId]);
 
   // Scroll automático
   useEffect(() => {
@@ -46,22 +63,6 @@ export default function HRChatbot({ isOpen, onClose, employeeId }) {
       if (unsubscribe) unsubscribe();
     };
   }, [conversationId]);
-
-  const createConversation = async () => {
-    try {
-      const conversation = await base44.agents.createConversation({
-        agent_name: "hr_chatbot",
-        metadata: {
-          name: "Consulta RRHH",
-          employee_id: employeeId,
-          created_at: new Date().toISOString()
-        }
-      });
-      setConversationId(conversation.id);
-    } catch (error) {
-      console.error("Error creando conversación:", error);
-    }
-  };
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content) => {
