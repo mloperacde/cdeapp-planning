@@ -32,23 +32,6 @@ import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager"
 export default function ShiftManagersPage() {
   const [activeView, setActiveView] = React.useState("dashboard");
   
-  if (activeView === "absences") {
-    return (
-      <div className="p-6 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <Button variant="ghost" onClick={() => setActiveView("dashboard")}>
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Volver al Dashboard
-            </Button>
-          </div>
-          <UnifiedAbsenceManager sourceContext="shift_manager" />
-        </div>
-      </div>
-    );
-  }
-  
-
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
@@ -243,6 +226,22 @@ export default function ShiftManagersPage() {
     teal: "from-teal-500 to-teal-600",
     violet: "from-violet-500 to-violet-600"
   };
+
+  if (activeView === "absences") {
+    return (
+      <div className="p-6 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <Button variant="ghost" onClick={() => setActiveView("dashboard")}>
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Volver al Dashboard
+            </Button>
+          </div>
+          <UnifiedAbsenceManager sourceContext="shift_manager" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 md:p-8">
