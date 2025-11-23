@@ -63,6 +63,7 @@ import EmployeeList from './pages/EmployeeList';
 import Employees from './pages/Employees';
 import MyProfile from './pages/MyProfile';
 import MobileProfile from './pages/MobileProfile';
+import MobileNotifications from './pages/MobileNotifications';
 import __Layout from './Layout.jsx';
 
 
@@ -132,6 +133,7 @@ export const PAGES = {
     "Employees": Employees,
     "MyProfile": MyProfile,
     "MobileProfile": MobileProfile,
+    "MobileNotifications": MobileNotifications,
 }
 
 export const pagesConfig = {

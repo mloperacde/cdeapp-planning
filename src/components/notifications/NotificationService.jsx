@@ -191,3 +191,36 @@ export async function getUnreadNotifications(employeeId) {
     return [];
   }
 }
+
+/**
+ * Notifica cambio en planificación de máquinas
+ */
+export async function notifyMachinePlanningChange(machineId, teamKey, activated, employeeIds) {
+  try {
+    const machines = await base44.entities.Machine.list();
+    const machine = machines.find(m => m.id === machineId);
+    
+    const titulo = activated 
+      ? `🟢 Máquina Activada: ${machine?.nombre || 'Máquina'}`
+      : `🔴 Máquina Desactivada: ${machine?.nombre || 'Máquina'}`;
+    
+    const mensaje = activated
+      ? `La máquina ${machine?.nombre} ha sido activada en el planning.`
+      : `La máquina ${machine?.nombre} ha sido desactivada del planning.`;
+
+    for (const empId of employeeIds) {
+      await sendPushNotification({
+        destinatarioId: empId,
+        tipo: 'planificacion',
+        titulo,
+        mensaje,
+        prioridad: 'media',
+        referenciaTipo: 'MachinePlanning',
+        referenciaId: machineId,
+        accionUrl: '/machine-planning'
+      });
+    }
+  } catch (error) {
+    console.error("Error notificando cambio de planificación:", error);
+  }
+}
