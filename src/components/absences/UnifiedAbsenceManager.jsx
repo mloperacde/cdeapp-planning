@@ -342,7 +342,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
       {/* Dialog de formulario */}
       {showForm && (
         <Dialog open={true} onOpenChange={handleClose}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingAbsence ? 'Editar Ausencia' : 'Comunicar Nueva Ausencia'}
@@ -352,12 +352,25 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Empleado *</Label>
-                <EmployeeSelect
-                  employees={[...employees, ...masterEmployees].filter((emp, idx, self) => self.findIndex(e => e.id === emp.id) === idx)}
+                <Select
                   value={formData.employee_id}
                   onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  placeholder="Seleccionar empleado"
-                />
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar empleado" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {[...employees, ...masterEmployees]
+                      .filter((emp, idx, self) => self.findIndex(e => e.id === emp.id) === idx)
+                      .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
+                      .map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.nombre} {emp.departamento ? `- ${emp.departamento}` : ''}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
