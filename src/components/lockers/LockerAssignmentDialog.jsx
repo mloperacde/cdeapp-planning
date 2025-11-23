@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { User, UserPlus, XCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import EmployeeSelect from "../common/EmployeeSelect";
 
 export default function LockerAssignmentDialog({ 
   locker, 
@@ -44,7 +44,7 @@ export default function LockerAssignmentDialog({
 
         // If an assignment exists, check if it's an "empty" one or if they don't require a locker
         const hasLocker = hasAssignment.numero_taquilla_actual && 
-                         hasAssignment.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
+                         hasAssignment.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
         const requiresLocker = hasAssignment.requiere_taquilla !== false; // requires_taquilla defaults to true if not specified as false
         
         return !hasLocker && requiresLocker; // Available if no current locker AND requires one
@@ -64,7 +64,7 @@ export default function LockerAssignmentDialog({
 
       const duplicado = lockerAssignments.find(la => 
         la.vestuario === vestuario &&
-        la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === locker.numero.toString() &&
+        la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === locker.numero.toString() &&
         la.employee_id !== selectedEmployeeId &&
         la.requiere_taquilla !== false
       );
@@ -76,12 +76,13 @@ export default function LockerAssignmentDialog({
 
       const existing = lockerAssignments.find(la => la.employee_id === selectedEmployeeId);
       const now = new Date().toISOString();
+      const numeroLimpio = locker.numero.toString().replace(/['"''‚„]/g, '').trim();
 
       const dataToSave = {
         employee_id: selectedEmployeeId,
         requiere_taquilla: true,
         vestuario: vestuario,
-        numero_taquilla_actual: locker.numero.toString(),
+        numero_taquilla_actual: numeroLimpio,
         numero_taquilla_nuevo: "",
         fecha_asignacion: now,
         notificacion_enviada: false
@@ -94,7 +95,7 @@ export default function LockerAssignmentDialog({
           vestuario_anterior: existing.vestuario,
           taquilla_anterior: existing.numero_taquilla_actual,
           vestuario_nuevo: vestuario,
-          taquilla_nueva: locker.numero.toString(),
+          taquilla_nueva: numeroLimpio,
           motivo: "Asignación desde mapa interactivo"
         });
         dataToSave.historial_cambios = historial;
@@ -104,11 +105,21 @@ export default function LockerAssignmentDialog({
         await base44.entities.LockerAssignment.create(dataToSave);
       }
 
-      // Actualizar Employee
+      // CRÍTICO: Sincronizar con Employee
       await base44.entities.Employee.update(selectedEmployeeId, {
         taquilla_vestuario: vestuario,
-        taquilla_numero: locker.numero.toString()
+        taquilla_numero: numeroLimpio
       });
+
+      // CRÍTICO: Sincronizar con EmployeeMasterDatabase
+      const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
+      const masterEmployee = masterEmployees.find(me => me.employee_id === selectedEmployeeId);
+      if (masterEmployee) {
+        await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
+          taquilla_vestuario: vestuario,
+          taquilla_numero: numeroLimpio
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
@@ -132,18 +143,31 @@ export default function LockerAssignmentDialog({
         notificacion_enviada: false
       });
 
-      // Actualizar Employee
+      // CRÍTICO: Sincronizar con Employee
       if (locker.employee?.id) {
         await base44.entities.Employee.update(locker.employee.id, {
           taquilla_vestuario: "",
           taquilla_numero: ""
         });
       }
+
+      // CRÍTICO: Sincronizar con EmployeeMasterDatabase
+      if (locker.employee?.id) {
+        const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
+        const masterEmployee = masterEmployees.find(me => me.employee_id === locker.employee.id);
+        if (masterEmployee) {
+          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
+            taquilla_vestuario: "",
+            taquilla_numero: ""
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast.success("Taquilla liberada");
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      toast.success("Taquilla liberada y sincronizada");
       onClose();
     },
   });
@@ -219,39 +243,13 @@ export default function LockerAssignmentDialog({
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Buscar Empleado</Label>
-                  <Input
-                    placeholder="Buscar por nombre o código..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label>Seleccionar Empleado *</Label>
-                  <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un empleado sin taquilla" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableEmployees.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-slate-500">
-                          No hay empleados disponibles
-                        </div>
-                      ) : (
-                        availableEmployees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{emp.nombre}</span>
-                              <span className="text-xs text-slate-500">
-                                {emp.departamento}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <EmployeeSelect
+                    employees={availableEmployees}
+                    value={selectedEmployeeId}
+                    onValueChange={setSelectedEmployeeId}
+                    placeholder="Buscar y seleccionar empleado sin taquilla..."
+                  />
                   
                   {availableEmployees.length === 0 && (
                     <p className="text-xs text-amber-600 flex items-center gap-1">

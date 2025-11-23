@@ -91,9 +91,9 @@ export default function LockerManagementPage() {
   React.useEffect(() => {
     const assignments = {};
     lockerAssignments.forEach(la => {
-      // Limpiar comillas del número de taquilla
-      const cleanActual = la.numero_taquilla_actual ? la.numero_taquilla_actual.replace(/['"]/g, '').trim() : '';
-      const cleanNuevo = la.numero_taquilla_nuevo ? la.numero_taquilla_nuevo.replace(/['']/g, '').trim() : '';
+      // Limpiar comillas y caracteres especiales del número de taquilla
+      const cleanActual = la.numero_taquilla_actual ? la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() : '';
+      const cleanNuevo = la.numero_taquilla_nuevo ? la.numero_taquilla_nuevo.replace(/['"''‚„]/g, '').trim() : '';
       
       assignments[la.employee_id] = {
         requiere_taquilla: la.requiere_taquilla !== false,
@@ -159,7 +159,7 @@ export default function LockerManagementPage() {
         const codigo = parts[0]?.trim();
         const nombre = parts[1]?.trim();
         const vestuario = parts[2]?.trim();
-        const numeroTaquilla = parts[3]?.trim().replace(/['"]/g, ''); // Limpiar comillas
+        const numeroTaquilla = parts[3]?.trim().replace(/['"''‚„]/g, ''); // Limpiar comillas y variantes
 
         let employee = null;
         
@@ -203,7 +203,7 @@ export default function LockerManagementPage() {
         
         const duplicado = lockerAssignments.find(la => 
           la.vestuario === vestuario &&
-          la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === numeroTaquilla && // Clean quotes for comparison
+          la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroTaquilla &&
           la.employee_id !== employee.id &&
           la.requiere_taquilla !== false
         );
@@ -214,7 +214,7 @@ export default function LockerManagementPage() {
         }
         
         const now = new Date().toISOString();
-        const hasChange = existing && existing.numero_taquilla_actual?.replace(/['"]/g, '').trim() !== numeroTaquilla;
+        const hasChange = existing && existing.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() !== numeroTaquilla;
 
         const dataToSave = {
           employee_id: employee.id,
@@ -239,16 +239,36 @@ export default function LockerManagementPage() {
           dataToSave.historial_cambios = historial;
         }
 
+        // Actualizar LockerAssignment
         if (existing) {
-          return base44.entities.LockerAssignment.update(existing.id, dataToSave);
+          await base44.entities.LockerAssignment.update(existing.id, dataToSave);
+        } else {
+          await base44.entities.LockerAssignment.create(dataToSave);
         }
-        return base44.entities.LockerAssignment.create(dataToSave);
+
+        // CRÍTICO: Sincronizar con Employee
+        await base44.entities.Employee.update(employee.id, {
+          taquilla_vestuario: vestuario,
+          taquilla_numero: numeroTaquilla
+        });
+
+        // CRÍTICO: Sincronizar con EmployeeMasterDatabase
+        const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
+        const masterEmployee = masterEmployees.find(me => me.employee_id === employee.id);
+        if (masterEmployee) {
+          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
+            taquilla_vestuario: vestuario,
+            taquilla_numero: numeroTaquilla
+          });
+        }
       });
 
       await Promise.all(promises);
       
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      toast.success(`${importPreview.matched.length} asignaciones importadas`);
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      toast.success(`${importPreview.matched.length} asignaciones importadas y sincronizadas`);
       setImportPreview(null);
       setImportFile(null);
     } catch (error) {
@@ -264,7 +284,7 @@ export default function LockerManagementPage() {
       for (const [employeeId, data] of Object.entries(editingAssignments)) {
         if (!data.requiere_taquilla) continue;
         
-        const numeroAUsar = (data.numero_taquilla_nuevo || data.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+        const numeroAUsar = (data.numero_taquilla_nuevo || data.numero_taquilla_actual || '').replace(/['"'']/g, '').trim();
         if (!numeroAUsar) continue;
         
         const vestuario = data.vestuario;
@@ -281,7 +301,7 @@ export default function LockerManagementPage() {
         
         const duplicado = lockerAssignments.find(la => 
           la.vestuario === vestuario &&
-          la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === numeroAUsar &&
+          la.numero_taquilla_actual?.replace(/['"'']/g, '').trim() === numeroAUsar &&
           la.employee_id !== employeeId &&
           la.requiere_taquilla !== false
         );
@@ -299,20 +319,23 @@ export default function LockerManagementPage() {
         throw new Error("Validación fallida");
       }
       
-      const promises = Object.entries(editingAssignments).map(([employeeId, data]) => {
+      const promises = Object.entries(editingAssignments).map(async ([employeeId, data]) => {
         const existing = lockerAssignments.find(la => la.employee_id === employeeId);
         
-        const numeroActualClean = (data.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
-        const numeroNuevoClean = (data.numero_taquilla_nuevo || '').replace(/['']/g, '').trim();
+        const numeroActualClean = (data.numero_taquilla_actual || '').replace(/['"'']/g, '').trim();
+        const numeroNuevoClean = (data.numero_taquilla_nuevo || '').replace(/['"'']/g, '').trim();
         
         const hasLockerChange = numeroNuevoClean && numeroNuevoClean !== numeroActualClean;
         
         const now = new Date().toISOString();
+        const finalNumero = hasLockerChange ? numeroNuevoClean : numeroActualClean;
+        const finalVestuario = data.vestuario || "";
+        
         const updatedData = {
           employee_id: employeeId,
           requiere_taquilla: data.requiere_taquilla,
-          vestuario: data.vestuario,
-          numero_taquilla_actual: hasLockerChange ? numeroNuevoClean : numeroActualClean,
+          vestuario: finalVestuario,
+          numero_taquilla_actual: finalNumero,
           numero_taquilla_nuevo: "",
           fecha_asignacion: now,
           notificacion_enviada: hasLockerChange ? false : (existing?.notificacion_enviada || false)
@@ -324,25 +347,48 @@ export default function LockerManagementPage() {
             fecha: now,
             vestuario_anterior: existing.vestuario,
             taquilla_anterior: existing.numero_taquilla_actual,
-            vestuario_nuevo: data.vestuario,
-            taquilla_nueva: numeroNuevoClean,
+            vestuario_nuevo: finalVestuario,
+            taquilla_nueva: finalNumero,
             motivo: "Reasignación manual"
           });
           updatedData.historial_cambios = historial;
         }
 
+        // Actualizar LockerAssignment
         if (existing) {
-          return base44.entities.LockerAssignment.update(existing.id, updatedData);
+          await base44.entities.LockerAssignment.update(existing.id, updatedData);
+        } else {
+          await base44.entities.LockerAssignment.create(updatedData);
         }
-        return base44.entities.LockerAssignment.create(updatedData);
+
+        // CRÍTICO: Sincronizar con Employee
+        const employee = employees.find(e => e.id === employeeId);
+        if (employee) {
+          await base44.entities.Employee.update(employeeId, {
+            taquilla_vestuario: data.requiere_taquilla ? finalVestuario : "",
+            taquilla_numero: data.requiere_taquilla ? finalNumero : ""
+          });
+        }
+
+        // CRÍTICO: Sincronizar con EmployeeMasterDatabase  
+        const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
+        const masterEmployee = masterEmployees.find(me => me.employee_id === employeeId);
+        if (masterEmployee) {
+          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
+            taquilla_vestuario: data.requiere_taquilla ? finalVestuario : "",
+            taquilla_numero: data.requiere_taquilla ? finalNumero : ""
+          });
+        }
       });
 
       return Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       setHasChanges(false);
-      toast.success("✅ Cambios guardados correctamente");
+      toast.success("✅ Cambios guardados y sincronizados correctamente");
     },
     onError: (error) => {
       // Error ya mostrado en validación
@@ -407,7 +453,7 @@ export default function LockerManagementPage() {
       const vestuario = editData?.vestuario || assignment?.vestuario || "";
       const matchesVestuario = filters.vestuario === "all" || vestuario === filters.vestuario;
 
-      const numeroTaquilla = (editData?.numero_taquilla_actual || assignment?.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+      const numeroTaquilla = (editData?.numero_taquilla_actual || assignment?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
       const matchesNumeroTaquilla = !filters.numeroTaquilla || 
         numeroTaquilla.includes(filters.numeroTaquilla);
       
@@ -429,8 +475,8 @@ export default function LockerManagementPage() {
       } else if (sortConfig.field === "taquilla") {
         const aAssign = editingAssignments[a.id] || getAssignment(a.id);
         const bAssign = editingAssignments[b.id] || getAssignment(b.id);
-        aVal = (aAssign?.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
-        bVal = (bAssign?.numero_taquilla_actual || '').replace(/['']/g, '').trim();
+        aVal = (aAssign?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
+        bVal = (bAssign?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
       } else if (sortConfig.field === "departamento") {
         aVal = a.departamento || "";
         bVal = b.departamento || "";
@@ -493,8 +539,8 @@ export default function LockerManagementPage() {
   };
 
   const handleFieldChange = (employeeId, field, value) => {
-    // Limpiar comillas al editar
-    const cleanValue = typeof value === 'string' ? value.replace(/['"]/g, '').trim() : value;
+    // Limpiar comillas y caracteres especiales al editar
+    const cleanValue = typeof value === 'string' ? value.replace(/['"''‚„]/g, '').trim() : value;
     
     setEditingAssignments(prev => ({
       ...prev,
@@ -562,7 +608,7 @@ export default function LockerManagementPage() {
       if (!employee) return false;
       
       const tieneTaquilla = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
+                           la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
       const requiere = la.requiere_taquilla !== false;
       return tieneTaquilla && requiere;
     }).length;
@@ -572,7 +618,7 @@ export default function LockerManagementPage() {
       if (!assignment) return true;
       if (assignment.requiere_taquilla === false) return false;
       const tieneTaquilla = assignment.numero_taquilla_actual && 
-                           assignment.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
+                           assignment.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
       return !tieneTaquilla;
     }).length;
 
@@ -581,7 +627,7 @@ export default function LockerManagementPage() {
       if (!employee) return false;
       
       const tieneTaquilla = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
+                           la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
       return !la.notificacion_enviada && tieneTaquilla && la.requiere_taquilla !== false;
     }).length;
 
@@ -624,7 +670,7 @@ export default function LockerManagementPage() {
         // Only consider assignments for this vestuario that require a locker and have a locker ID
         if (la.vestuario !== vestuario || la.requiere_taquilla === false) return;
         
-        const cleanedLockerId = (la.numero_taquilla_actual || '').replace(/['"]/g, '').trim();
+        const cleanedLockerId = (la.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
         if (!cleanedLockerId) return; // No locker ID assigned
 
         let isValidId = false;
@@ -1126,7 +1172,7 @@ export default function LockerManagementPage() {
                           const editData = editingAssignments[employee.id] || {
                             requiere_taquilla: assignment?.requiere_taquilla !== false,
                             vestuario: assignment?.vestuario || "",
-                            numero_taquilla_actual: (assignment?.numero_taquilla_actual || '').replace(/['"]/g, '').trim(),
+                            numero_taquilla_actual: (assignment?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim(),
                             numero_taquilla_nuevo: ""
                           };
                           
