@@ -20,6 +20,7 @@ import { UserCheck, CheckCircle2, XCircle, Clock, Search, FileText } from "lucid
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { notifyProfileChangeResponse } from "../notifications/NotificationService";
 
 export default function ProfileApprovalPanel() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,6 +62,9 @@ export default function ProfileApprovalPanel() {
           [request.campo_modificado]: request.valor_solicitado
         });
       }
+
+      // Enviar notificación
+      await notifyProfileChangeResponse(request.employee_id, request.campo_modificado, 'Aprobado');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profileChangeRequests'] });
@@ -75,12 +79,19 @@ export default function ProfileApprovalPanel() {
 
   const rejectMutation = useMutation({
     mutationFn: async ({ requestId, reason }) => {
+      const request = changeRequests.find(r => r.id === requestId);
+      
       await base44.entities.ProfileChangeRequest.update(requestId, {
         estado: 'Rechazado',
         fecha_respuesta: new Date().toISOString(),
         aprobado_por: currentUser?.id,
         motivo_rechazo: reason
       });
+
+      // Enviar notificación
+      if (request) {
+        await notifyProfileChangeResponse(request.employee_id, request.campo_modificado, 'Rechazado', reason);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profileChangeRequests'] });
