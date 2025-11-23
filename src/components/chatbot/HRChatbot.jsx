@@ -97,9 +97,7 @@ export default function HRChatbot({ isOpen, onClose, employeeId }) {
     }
   };
 
-  if (!isOpen) return null;
-
-  return (
+  return !isOpen ? null : (
     <div className="fixed bottom-4 right-4 z-50 w-96 max-h-[600px] shadow-2xl rounded-2xl overflow-hidden bg-white border-2 border-blue-200">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
