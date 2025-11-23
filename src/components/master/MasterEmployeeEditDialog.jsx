@@ -292,6 +292,46 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                     onChange={(e) => setFormData({ ...formData, contacto_emergencia_telefono: e.target.value })}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Relación</Label>
+                  <Input
+                    placeholder="Ej: Padre, Madre, Cónyuge"
+                    value={formData.contacto_emergencia_relacion || ""}
+                    onChange={(e) => setFormData({ ...formData, contacto_emergencia_relacion: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-sm font-semibold text-blue-900">Datos Bancarios (Nóminas)</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>IBAN</Label>
+                  <Input
+                    placeholder="ES00 0000 0000 0000 0000 0000"
+                    value={formData.iban || ""}
+                    onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>SWIFT/BIC</Label>
+                  <Input
+                    placeholder="BBVAESMM"
+                    value={formData.swift_bic || ""}
+                    onChange={(e) => setFormData({ ...formData, swift_bic: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nombre del Banco</Label>
+                  <Input
+                    placeholder="Ej: Banco Santander"
+                    value={formData.banco_nombre || ""}
+                    onChange={(e) => setFormData({ ...formData, banco_nombre: e.target.value })}
+                  />
+                </div>
               </div>
             </TabsContent>
 
