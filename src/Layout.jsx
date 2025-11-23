@@ -26,6 +26,8 @@ import {
   TrendingUp,
   Calendar as CalendarIcon,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import {
   Sidebar,
   SidebarContent,
@@ -46,6 +48,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ThemeProvider } from "../components/common/ThemeProvider";
 import ThemeToggle from "../components/common/ThemeToggle";
+import ChatbotButton from "../components/chatbot/ChatbotButton";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -54,6 +57,20 @@ export default function Layout({ children, currentPageName }) {
     informes: false,
     maquinas: false,
     planning: false,
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: employee } = useQuery({
+    queryKey: ['currentEmployee', currentUser?.email],
+    queryFn: async () => {
+      const emps = await base44.entities.EmployeeMasterDatabase.list();
+      return emps.find(e => e.email === currentUser?.email);
+    },
+    enabled: !!currentUser?.email
   });
 
   const toggleSection = (section) => {
@@ -431,8 +448,10 @@ export default function Layout({ children, currentPageName }) {
             {children}
           </div>
         </main>
-      </div>
-      </SidebarProvider>
-      </ThemeProvider>
-      );
-      }
+
+        <ChatbotButton employeeId={employee?.id} />
+        </div>
+        </SidebarProvider>
+        </ThemeProvider>
+        );
+        }

@@ -11,6 +11,7 @@ import { UserCog, GripVertical, User, UserCheck, Users, ArrowLeft, RefreshCw, Sa
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import EmployeeSelect from "../components/common/EmployeeSelect";
 
 export default function MachineAssignmentsPage() {
   const [currentTeam, setCurrentTeam] = useState("team_1");
@@ -563,20 +564,12 @@ export default function MachineAssignmentsPage() {
                                 </div>
 
                                 {/* Selector Manual */}
-                                <Select 
-                                  onValueChange={(value) => handleAddToRole(machine.id, 'responsable_linea', value)}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="+ Añadir responsable" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {responsables.map((emp) => (
-                                      <SelectItem key={emp.id} value={emp.id}>
-                                        {emp.nombre}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <EmployeeSelect
+                                  employees={responsables}
+                                  value=""
+                                  onValueChange={(value) => value && handleAddToRole(machine.id, 'responsable_linea', value)}
+                                  placeholder="+ Añadir responsable"
+                                />
 
                                 <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'responsable_linea')}>
                                   <Droppable droppableId={`responsables-${machine.id}`}>
@@ -665,20 +658,12 @@ export default function MachineAssignmentsPage() {
                                 </div>
 
                                 {/* Selector Manual */}
-                                <Select 
-                                  onValueChange={(value) => handleAddToRole(machine.id, 'segunda_linea', value)}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="+ Añadir segunda" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {segundas.map((emp) => (
-                                      <SelectItem key={emp.id} value={emp.id}>
-                                        {emp.nombre}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <EmployeeSelect
+                                  employees={segundas}
+                                  value=""
+                                  onValueChange={(value) => value && handleAddToRole(machine.id, 'segunda_linea', value)}
+                                  placeholder="+ Añadir segunda"
+                                />
 
                                 <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id, 'segunda_linea')}>
                                   <Droppable droppableId={`segundas-${machine.id}`}>
@@ -771,22 +756,13 @@ export default function MachineAssignmentsPage() {
                                     
                                     return (
                                       <div key={num} className="space-y-1">
-                                        <Select
+                                        <EmployeeSelect
+                                          employees={[{ id: "empty", nombre: "Sin asignar", departamento: "" }, ...operarios]}
                                           value={empId || "empty"}
                                           onValueChange={(value) => handleSetOperator(machine.id, num, value === "empty" ? null : value)}
-                                        >
-                                          <SelectTrigger className="w-full">
-                                            <SelectValue placeholder={`Operario ${num}`} />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="empty">Sin asignar</SelectItem>
-                                            {operarios.map((emp) => (
-                                              <SelectItem key={emp.id} value={emp.id}>
-                                                {emp.nombre}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                          placeholder={`Operario ${num}`}
+                                          showDepartment={false}
+                                        />
                                         
                                         {empId && (
                                           <div className={`

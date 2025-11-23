@@ -7,7 +7,7 @@ import { Download, Edit, History, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function DocumentViewer({ document, onClose, onEdit }) {
+export default function DocumentViewer({ document, onClose, onEdit, roles = [], departments = [] }) {
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

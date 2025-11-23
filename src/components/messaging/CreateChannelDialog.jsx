@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import EmployeeSelect from "../common/EmployeeSelect";
 
 export default function CreateChannelDialog({ onClose, employees, currentEmployee }) {
   const [tipo, setTipo] = useState("Equipo");
@@ -176,23 +177,51 @@ export default function CreateChannelDialog({ onClose, employees, currentEmploye
 
           <div className="space-y-2">
             <Label>Participantes</Label>
-            <div className="border rounded-lg p-3 max-h-60 overflow-y-auto space-y-2">
-              {employees.filter(e => e.id !== currentEmployee?.id).map(emp => (
-                <div key={emp.id} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={selectedParticipants.includes(emp.id)}
-                    onCheckedChange={() => toggleParticipant(emp.id)}
-                  />
-                  <span className="text-sm">{emp.nombre}</span>
-                  {emp.departamento && (
-                    <span className="text-xs text-slate-500">({emp.departamento})</span>
-                  )}
-                </div>
-              ))}
+            <div className="space-y-3">
+              <EmployeeSelect
+                employees={employees.filter(e => e.id !== currentEmployee?.id)}
+                value=""
+                onValueChange={(empId) => {
+                  if (empId && !selectedParticipants.includes(empId)) {
+                    setSelectedParticipants([...selectedParticipants, empId]);
+                  }
+                }}
+                placeholder="Buscar y añadir empleado..."
+              />
+              
+              <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                {selectedParticipants.filter(id => id !== currentEmployee?.id).length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-2">
+                    No hay participantes seleccionados
+                  </p>
+                ) : (
+                  selectedParticipants.filter(id => id !== currentEmployee?.id).map(empId => {
+                    const emp = employees.find(e => e.id === empId);
+                    return emp ? (
+                      <div key={empId} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                        <div>
+                          <span className="text-sm font-medium">{emp.nombre}</span>
+                          {emp.departamento && (
+                            <span className="text-xs text-slate-500 ml-2">({emp.departamento})</span>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleParticipant(empId)}
+                        >
+                          <X className="w-3 h-3 text-red-600" />
+                        </Button>
+                      </div>
+                    ) : null;
+                  })
+                )}
+              </div>
+              
+              <p className="text-xs text-slate-500">
+                {selectedParticipants.filter(id => id !== currentEmployee?.id).length} participante(s) seleccionado(s)
+              </p>
             </div>
-            <p className="text-xs text-slate-500">
-              {selectedParticipants.length} participante(s) seleccionado(s)
-            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

@@ -34,6 +34,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import EmployeeSelect from "../components/common/EmployeeSelect";
 
 export default function ShiftAbsenceReportPage() {
   const [showForm, setShowForm] = useState(false);
@@ -362,30 +363,13 @@ export default function ShiftAbsenceReportPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="employee_id">Empleado *</Label>
-                <Select
+                <EmployeeSelect
+                  employees={employees}
                   value={formData.employee_id}
                   onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Buscar y seleccionar empleado disponible" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="p-2">
-                      <Input
-                        placeholder="Buscar empleado..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="mb-2"
-                      />
-                    </div>
-                    {employeesForSelect.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.nombre} - {emp.departamento} ({emp.puesto})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Buscar y seleccionar empleado disponible"
+                  filterFn={(emp) => emp.disponibilidad === "Disponible"}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -399,14 +383,11 @@ export default function ShiftAbsenceReportPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {absenceTypes.filter(t => t.activo).map(type => (
+                      {absenceTypes.filter(t => t.activo && t.visible_empleados).map(type => (
                         <SelectItem key={type.id} value={type.nombre}>
                           {type.nombre}
                         </SelectItem>
                       ))}
-                      <SelectItem value="Ausencia justificada">Ausencia justificada</SelectItem>
-                      <SelectItem value="Ausencia injustificada">Ausencia injustificada</SelectItem>
-                      <SelectItem value="Baja médica">Baja médica</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

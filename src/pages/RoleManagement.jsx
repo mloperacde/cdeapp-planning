@@ -10,6 +10,9 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import RoleForm from "../components/roles/RoleForm";
 import RoleAssignmentManager from "../components/roles/RoleAssignmentManager";
+import EnhancedRoleForm from "../components/roles/EnhancedRoleForm";
+import EnhancedRoleAssignment from "../components/roles/EnhancedRoleAssignment";
+import RoleAuditLogViewer from "../components/roles/RoleAuditLogViewer";
 import { toast } from "sonner";
 
 export default function RoleManagementPage() {
@@ -148,7 +151,7 @@ export default function RoleManagementPage() {
         </div>
 
         <Tabs defaultValue="roles">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="roles">
               <Shield className="w-4 h-4 mr-2" />
               Roles del Sistema
@@ -156,6 +159,10 @@ export default function RoleManagementPage() {
             <TabsTrigger value="assignments">
               <Users className="w-4 h-4 mr-2" />
               Asignación de Roles
+            </TabsTrigger>
+            <TabsTrigger value="audit">
+              <FileText className="w-4 h-4 mr-2" />
+              Log de Auditoría
             </TabsTrigger>
           </TabsList>
 
@@ -209,13 +216,17 @@ export default function RoleManagementPage() {
           </TabsContent>
 
           <TabsContent value="assignments" className="mt-6">
-            <RoleAssignmentManager roles={roles} />
+            <EnhancedRoleAssignment roles={roles} />
+          </TabsContent>
+
+          <TabsContent value="audit" className="mt-6">
+            <RoleAuditLogViewer />
           </TabsContent>
         </Tabs>
       </div>
 
       {showRoleForm && (
-        <RoleForm
+        <EnhancedRoleForm
           role={editingRole}
           onClose={() => {
             setShowRoleForm(false);

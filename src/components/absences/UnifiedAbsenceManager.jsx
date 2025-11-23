@@ -54,6 +54,12 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
+  const { data: absenceTypes = [] } = useQuery({
+    queryKey: ['absenceTypes'],
+    queryFn: () => base44.entities.AbsenceType.list('orden'),
+    initialData: [],
+  });
+
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -366,12 +372,11 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
                       <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Baja médica">Baja médica</SelectItem>
-                      <SelectItem value="Vacaciones">Vacaciones</SelectItem>
-                      <SelectItem value="Permiso">Permiso</SelectItem>
-                      <SelectItem value="Fuerza mayor">Fuerza mayor</SelectItem>
-                      <SelectItem value="Accidente laboral">Accidente laboral</SelectItem>
-                      <SelectItem value="Otro">Otro</SelectItem>
+                      {absenceTypes.filter(t => t.activo && t.visible_empleados).map(type => (
+                        <SelectItem key={type.id} value={type.nombre}>
+                          {type.nombre}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

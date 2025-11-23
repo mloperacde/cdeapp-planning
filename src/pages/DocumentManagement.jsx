@@ -14,18 +14,16 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import DocumentForm from "../components/documents/DocumentForm";
 import DocumentViewer from "../components/documents/DocumentViewer";
+import EnhancedDocumentForm from "../components/documents/EnhancedDocumentForm";
+import AdvancedDocumentSearch from "../components/documents/AdvancedDocumentSearch";
 import { toast } from "sonner";
 
 export default function DocumentManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
-  const [filters, setFilters] = useState({
-    categoria: "all",
-    estado: "all",
-    tipo_entidad: "all",
-    searchTerm: ""
-  });
+  const [filters, setFilters] = useState({});
+  const [advancedFilters, setAdvancedFilters] = useState({});
   const queryClient = useQueryClient();
 
   const { data: documents } = useQuery({
@@ -52,6 +50,20 @@ export default function DocumentManagementPage() {
     initialData: [],
   });
 
+  const { data: masterEmployees = [] } = useQuery({
+    queryKey: ['employeeMasterDatabase'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+    initialData: []
+  });
+
+  const categories = useMemo(() => {
+    return [...new Set(documents.map(d => d.categoria).filter(Boolean))].sort();
+  }, [documents]);
+
+  const departments = useMemo(() => {
+    return [...new Set(masterEmployees.map(e => e.departamento).filter(Boolean))].sort();
+  }, [masterEmployees]);
+
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Document.delete(id),
     onSuccess: () => {
@@ -77,17 +89,28 @@ export default function DocumentManagementPage() {
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => {
-      const matchesCategoria = filters.categoria === "all" || doc.categoria === filters.categoria;
-      const matchesEstado = filters.estado === "all" || doc.estado === filters.estado;
-      const matchesTipoEntidad = filters.tipo_entidad === "all" || doc.tipo_entidad_asociada === filters.tipo_entidad;
-      const matchesSearch = !filters.searchTerm || 
-        doc.titulo?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        doc.descripcion?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        doc.etiquetas?.some(tag => tag.toLowerCase().includes(filters.searchTerm.toLowerCase()));
+      const matchesSearch = !advancedFilters.searchTerm || 
+        doc.titulo?.toLowerCase().includes(advancedFilters.searchTerm.toLowerCase()) ||
+        doc.descripcion?.toLowerCase().includes(advancedFilters.searchTerm.toLowerCase());
       
-      return matchesCategoria && matchesEstado && matchesTipoEntidad && matchesSearch;
+      const matchesFullText = !advancedFilters.fullTextSearch ||
+        doc.contenido_indexado?.toLowerCase().includes(advancedFilters.fullTextSearch.toLowerCase());
+      
+      const matchesCategory = !advancedFilters.category || doc.categoria === advancedFilters.category;
+      
+      const matchesDepartment = !advancedFilters.department || 
+        doc.departamentos_acceso?.includes(advancedFilters.department) ||
+        (doc.departamentos_acceso?.length === 0);
+      
+      const matchesRole = !advancedFilters.role || 
+        doc.roles_acceso?.includes(advancedFilters.role);
+      
+      const matchesTags = !advancedFilters.tags || advancedFilters.tags.length === 0 ||
+        advancedFilters.tags.some(tag => doc.etiquetas?.includes(tag));
+      
+      return matchesSearch && matchesFullText && matchesCategory && matchesDepartment && matchesRole && matchesTags;
     });
-  }, [documents, filters]);
+  }, [documents, advancedFilters]);
 
   const documentsByCategory = useMemo(() => {
     const grouped = {};
@@ -225,64 +248,17 @@ export default function DocumentManagementPage() {
         <Card className="mb-6">
           <CardHeader className="border-b">
             <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-blue-600" />
-              Filtros
+              <Search className="w-5 h-5 text-blue-600" />
+              Búsqueda Avanzada
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar documentos..."
-                  value={filters.searchTerm}
-                  onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
-                  className="pl-10"
-                />
-              </div>
-
-              <Select value={filters.categoria} onValueChange={(value) => setFilters({...filters, categoria: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las categorías</SelectItem>
-                  <SelectItem value="Manual de Máquina">Manual de Máquina</SelectItem>
-                  <SelectItem value="Política PRL">Política PRL</SelectItem>
-                  <SelectItem value="Procedimiento de Ausencia">Procedimiento de Ausencia</SelectItem>
-                  <SelectItem value="Política RRHH">Política RRHH</SelectItem>
-                  <SelectItem value="Certificado">Certificado</SelectItem>
-                  <SelectItem value="Contrato">Contrato</SelectItem>
-                  <SelectItem value="Formación">Formación</SelectItem>
-                  <SelectItem value="Calidad">Calidad</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filters.estado} onValueChange={(value) => setFilters({...filters, estado: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="Borrador">Borrador</SelectItem>
-                  <SelectItem value="Vigente">Vigente</SelectItem>
-                  <SelectItem value="Obsoleto">Obsoleto</SelectItem>
-                  <SelectItem value="Archivado">Archivado</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filters.tipo_entidad} onValueChange={(value) => setFilters({...filters, tipo_entidad: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo Entidad" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="Machine">Máquinas</SelectItem>
-                  <SelectItem value="Employee">Empleados</SelectItem>
-                  <SelectItem value="General">General</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <AdvancedDocumentSearch
+              onSearchChange={setAdvancedFilters}
+              categories={categories}
+              departments={departments}
+              roles={roles}
+            />
           </CardContent>
         </Card>
 
@@ -402,7 +378,7 @@ export default function DocumentManagementPage() {
       </div>
 
       {showForm && (
-        <DocumentForm
+        <EnhancedDocumentForm
           document={editingDocument}
           onClose={() => {
             setShowForm(false);
