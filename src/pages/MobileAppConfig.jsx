@@ -172,7 +172,6 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
       description: "Alertas en tiempo real sobre mensajes, calendario y documentos",
       icon: Bell,
       enabled: true,
-      highlighted: true,
       color: "red"
     },
     {
@@ -225,12 +224,22 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
       ]
     },
     {
+      tipo: "Cambios de Perfil",
+      icon: User,
+      color: "indigo",
+      triggers: [
+        "Cambio de perfil aprobado",
+        "Cambio de perfil rechazado",
+        "Datos bancarios actualizados"
+      ]
+    },
+    {
       tipo: "Calendario Laboral",
       icon: Calendar,
       color: "purple",
       triggers: [
-        "Festivo próximo (7 días antes)",
-        "Inicio de período de vacaciones",
+        "Próximo cumpleaños de compañero (7 días)",
+        "Próximo aniversario laboral (7 días)",
         "Ausencia aprobada/rechazada"
       ]
     },
@@ -249,9 +258,9 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
       icon: FileText,
       color: "orange",
       triggers: [
-        "Documento próximo a caducar (30 días)",
         "Nuevo documento disponible",
-        "Versión actualizada de documento"
+        "Documento actualizado",
+        "Documento próximo a caducar (30 días)"
       ]
     },
     {
@@ -307,7 +316,8 @@ Ya puedes acceder a la aplicación móvil de CdeApp Planning desde tu teléfono.
     orange: "bg-orange-100 text-orange-800 border-orange-300",
     blue: "bg-blue-100 text-blue-800 border-blue-300",
     green: "bg-green-100 text-green-800 border-green-300",
-    purple: "bg-purple-100 text-purple-800 border-purple-300"
+    purple: "bg-purple-100 text-purple-800 border-purple-300",
+    indigo: "bg-indigo-100 text-indigo-800 border-indigo-300"
   };
 
   return (
