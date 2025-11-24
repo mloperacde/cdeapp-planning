@@ -59,18 +59,22 @@ export default function Layout({ children, currentPageName }) {
     planning: false,
   });
 
-  const { data: currentUser } = useQuery({
+  const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
   });
 
-  const { data: employee } = useQuery({
+  const { data: employee, isLoading: employeeLoading } = useQuery({
     queryKey: ['currentEmployee', currentUser?.email],
     queryFn: async () => {
       const emps = await base44.entities.EmployeeMasterDatabase.list();
-      return emps.find(e => e.email === currentUser?.email);
+      return emps.find(e => e.email === currentUser?.email) || null;
     },
-    enabled: !!currentUser?.email
+    enabled: !!currentUser?.email,
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
   });
 
   const toggleSection = (section) => {
