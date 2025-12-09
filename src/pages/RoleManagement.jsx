@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Plus, Edit, Users, ArrowLeft, CheckCircle2, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import RoleForm from "../components/roles/RoleForm";
 import RoleAssignmentManager from "../components/roles/RoleAssignmentManager";
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 export default function RoleManagementPage() {
   const [showRoleForm, setShowRoleForm] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: roles } = useQuery({
