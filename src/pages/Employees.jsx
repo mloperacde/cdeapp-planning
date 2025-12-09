@@ -62,15 +62,17 @@ export default function EmployeesPage() {
   });
   const queryClient = useQueryClient();
 
-  const { data: masterEmployees = EMPTY_ARRAY } = useQuery({
+  const { data: masterEmployees = EMPTY_ARRAY, isLoading: loadingMasterEmployees } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date'),
   });
 
-  const { data: employees = EMPTY_ARRAY } = useQuery({
+  const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
   });
+
+  const isLoading = loadingMasterEmployees || loadingEmployees;
 
   const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
