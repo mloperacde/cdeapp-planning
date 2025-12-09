@@ -43,6 +43,8 @@ import EmployeesWithoutLocker from "../components/lockers/EmployeesWithoutLocker
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 
+const EMPTY_ARRAY = [];
+
 export default function LockerManagementPage() {
   const [searchFilters, setSearchFilters] = useState({});
   const [filters, setFilters] = useState({
@@ -59,28 +61,25 @@ export default function LockerManagementPage() {
   const [importPreview, setImportPreview] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: employees } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
-    initialData: [],
   });
 
-  const { data: lockerAssignments, refetch: refetchAssignments } = useQuery({
+  const { data: lockerAssignments = EMPTY_ARRAY, refetch: refetchAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
     refetchInterval: 5000,
   });
 
-  const { data: teams } = useQuery({
+  const { data: teams = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
   });
 
-  const { data: lockerRoomConfigs } = useQuery({
+  const { data: lockerRoomConfigs = EMPTY_ARRAY } = useQuery({
     queryKey: ['lockerRoomConfigs'],
     queryFn: () => base44.entities.LockerRoomConfig.list(),
-    initialData: [],
   });
 
   const getAssignment = (employeeId) => {

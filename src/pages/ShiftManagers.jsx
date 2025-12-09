@@ -29,35 +29,37 @@ import { format, startOfWeek, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 
+const EMPTY_ARRAY = [];
+
 export default function ShiftManagersPage() {
   const [activeView, setActiveView] = React.useState("dashboard");
   
-  const { data: employees } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
   });
 
-  const { data: teams } = useQuery({
+  const { data: teams = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
   });
 
-  const { data: teamSchedules } = useQuery({
+  const { data: teamSchedules = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
   });
 
-  const { data: swapRequests } = useQuery({
+  const { data: swapRequests = EMPTY_ARRAY } = useQuery({
     queryKey: ['shiftSwapRequests'],
     queryFn: () => base44.entities.ShiftSwapRequest.list('-fecha_solicitud'),
   });
 
-  const { data: lockerAssignments } = useQuery({
+  const { data: lockerAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
   });
 
-  const { data: absences } = useQuery({
+  const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
   });

@@ -33,6 +33,8 @@ import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDia
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 import ProfileApprovalPanel from "../components/profile/ProfileApprovalPanel";
 
+const EMPTY_ARRAY = [];
+
 export default function EmployeesPage() {
   const [filters, setFilters] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -60,27 +62,27 @@ export default function EmployeesPage() {
   });
   const queryClient = useQueryClient();
 
-  const { data: masterEmployees } = useQuery({
+  const { data: masterEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date'),
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
   });
 
-  const { data: absences } = useQuery({
+  const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-created_date'),
   });
 
-  const { data: vacationBalances } = useQuery({
+  const { data: vacationBalances = EMPTY_ARRAY } = useQuery({
     queryKey: ['vacationPendingBalances'],
     queryFn: () => base44.entities.VacationPendingBalance.list(),
   });
 
-  const { data: onboardingProcesses } = useQuery({
+  const { data: onboardingProcesses = EMPTY_ARRAY } = useQuery({
     queryKey: ['employeeOnboarding'],
     queryFn: () => base44.entities.EmployeeOnboarding.list(),
   });
