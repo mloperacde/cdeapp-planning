@@ -68,7 +68,6 @@ export default function LockerManagementPage() {
   const { data: lockerAssignments, refetch: refetchAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
-    initialData: [],
     refetchInterval: 5000,
   });
 

@@ -35,37 +35,31 @@ export default function ShiftManagersPage() {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
-    initialData: [],
   });
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
   });
 
   const { data: teamSchedules } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
-    initialData: [],
   });
 
   const { data: swapRequests } = useQuery({
     queryKey: ['shiftSwapRequests'],
     queryFn: () => base44.entities.ShiftSwapRequest.list('-fecha_solicitud'),
-    initialData: [],
   });
 
   const { data: lockerAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
-    initialData: [],
   });
 
   const { data: absences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
-    initialData: [],
   });
 
   // Active absences today - SOLO de empleados en equipos

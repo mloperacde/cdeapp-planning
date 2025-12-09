@@ -60,34 +60,29 @@ export default function EmployeesPage() {
   });
   const queryClient = useQueryClient();
 
-  const { data: masterEmployees = [], isLoading } = useQuery({
+  const { data: masterEmployees } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date'),
-    initialData: [],
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
-    initialData: [],
   });
 
-  const { data: absences = [] } = useQuery({
+  const { data: absences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-created_date'),
-    initialData: [],
   });
 
-  const { data: vacationBalances = [] } = useQuery({
+  const { data: vacationBalances } = useQuery({
     queryKey: ['vacationPendingBalances'],
     queryFn: () => base44.entities.VacationPendingBalance.list(),
-    initialData: [],
   });
 
-  const { data: onboardingProcesses = [] } = useQuery({
+  const { data: onboardingProcesses } = useQuery({
     queryKey: ['employeeOnboarding'],
     queryFn: () => base44.entities.EmployeeOnboarding.list(),
-    initialData: [],
   });
 
   const deleteMutation = useMutation({
