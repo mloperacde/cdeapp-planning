@@ -148,17 +148,18 @@ export default function ShiftManagersPage() {
   // Team stats with absences by team
   const teamStats = useMemo(() => {
     return teams.map(team => {
-      const teamEmployees = employees.filter(emp => emp.equipo === team.team_name);
-      const available = teamEmployees.filter(emp => emp.disponibilidad === "Disponible").length;
-      const absent = teamEmployees.filter(emp => emp.disponibilidad === "Ausente").length;
-      const shift = getTodayShift(team.team_key);
+      const teamEmployees = employees.filter(emp => emp.equipo === team.team_name && (emp.estado_empleado || "Alta") === "Alta");
       const absencesCount = absencesByTeam[team.team_name]?.length || 0;
+      
+      // Disponibles = Total Activos - Ausencias Reales
+      const available = Math.max(0, teamEmployees.length - absencesCount);
+      const shift = getTodayShift(team.team_key);
       
       return {
         ...team,
         total: teamEmployees.length,
         available,
-        absent,
+        absent: absencesCount,
         shift,
         absencesCount
       };

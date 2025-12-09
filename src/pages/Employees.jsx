@@ -230,23 +230,31 @@ export default function EmployeesPage() {
     
     const activeEmployees = masterEmployees.filter(e => (e.estado_empleado || "Alta") === "Alta");
     
-    const disponibles = masterEmployees.filter(e => {
-      if ((e.estado_empleado || "Alta") !== "Alta") return false;
-      return (e.disponibilidad || "Disponible") === "Disponible";
-    }).length;
-
     const ausenciasActivas = absences.filter(a => {
       if (!a.fecha_inicio) return false;
       try {
         const inicio = new Date(a.fecha_inicio);
         if (isNaN(inicio.getTime())) return false;
+        
+        // Normalizar fechas para comparación precisa
+        const start = new Date(inicio);
+        start.setHours(0,0,0,0);
+        
         const fin = a.fecha_fin ? new Date(a.fecha_fin) : addDays(today, 365);
-        if (isNaN(fin.getTime())) return false;
-        return isWithinInterval(today, { start: inicio, end: fin });
+        const end = new Date(fin);
+        end.setHours(23,59,59,999);
+        
+        const checkDate = new Date(today);
+        checkDate.setHours(12,0,0,0);
+
+        return checkDate >= start && checkDate <= end;
       } catch {
         return false;
       }
     }).length;
+
+    // Calcular disponibles dinámicamente: Activos - Ausentes Reales
+    const disponibles = Math.max(0, activeEmployees.length - ausenciasActivas);
 
     const pendientesAprobacion = absences.filter(a => a.estado_aprobacion === 'Pendiente').length;
     const totalDiasPendientes = vacationBalances.reduce((sum, vb) => sum + (vb.dias_pendientes || 0), 0);

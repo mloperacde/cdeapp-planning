@@ -106,6 +106,12 @@ export default function MachinePlanningPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: absences = [] } = useQuery({
+    queryKey: ['absences_planning'],
+    queryFn: () => base44.entities.Absence.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const savePlanningMutation = useMutation({
     mutationFn: async (data) => {
       const existing = plannings.find(
@@ -367,15 +373,33 @@ INSTRUCCIONES:
 
   // Calcular operarios disponibles
   const availableOperators = useMemo(() => {
-    // Filtrar empleados del equipo seleccionado que estén disponibles
     const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
     if (!teamName) return 0;
 
+    // Calcular ausencias activas para la fecha seleccionada
+    const checkDate = new Date(selectedDate);
+    checkDate.setHours(12, 0, 0, 0);
+
+    const absentEmployeeIds = new Set();
+    
+    absences.forEach(abs => {
+      const start = new Date(abs.fecha_inicio);
+      start.setHours(0,0,0,0);
+      const end = abs.fecha_fin ? new Date(abs.fecha_fin) : new Date('2099-12-31');
+      end.setHours(23,59,59,999);
+      
+      if (checkDate >= start && checkDate <= end) {
+        absentEmployeeIds.add(abs.employee_id);
+      }
+    });
+
+    // Disponibles = En equipo Y Activos Y NO ausentes
     return employees.filter(emp =>
       emp.equipo === teamName &&
-      emp.disponibilidad === "Disponible"
+      (emp.estado_empleado || "Alta") === "Alta" &&
+      !absentEmployeeIds.has(emp.id)
     ).length;
-  }, [employees, selectedTeam, teams]);
+  }, [employees, selectedTeam, teams, absences, selectedDate]);
 
   const operatorsDeficit = totalOperators - availableOperators;
 

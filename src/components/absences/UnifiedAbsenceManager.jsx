@@ -82,16 +82,16 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   // Consolidado de empleados disponibles vs ausentes
   const availabilityStats = useMemo(() => {
-    const allEmployees = [...employees, ...masterEmployees];
-    const uniqueEmployees = Array.from(new Map(allEmployees.map(e => [e.id, e])).values());
+    // Usar solo empleados operativos si existen, de lo contrario maestros
+    // Evitar duplicar sumando ambas listas
+    const targetList = employees.length > 0 ? employees : masterEmployees;
     
-    const disponibles = uniqueEmployees.filter(e => 
-      (e.disponibilidad || "Disponible") === "Disponible" && 
-      (e.estado_empleado || "Alta") === "Alta"
-    ).length;
-    
+    const total = targetList.filter(e => (e.estado_empleado || "Alta") === "Alta").length;
     const ausentes = activeAbsencesConsolidated.length;
-    const total = uniqueEmployees.filter(e => (e.estado_empleado || "Alta") === "Alta").length;
+    
+    // Calcular disponibles restando ausencias reales (no confiando en el flag estático)
+    // Aseguramos que no sea negativo si hay inconsistencias
+    const disponibles = Math.max(0, total - ausentes);
     
     return { disponibles, ausentes, total };
   }, [employees, masterEmployees, activeAbsencesConsolidated]);
