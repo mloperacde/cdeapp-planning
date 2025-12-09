@@ -55,7 +55,7 @@ export default function MachineAssignmentsPage() {
 
     let filtered;
     if (selectedDepartment === "FABRICACION") {
-      const validPositions = ['responsable de linea', 'segunda de linea', 'operaria de linea'];
+      const validPositions = ['responsable', 'segunda', 'operari'];
       const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
       
       filtered = employees.filter(emp => {
@@ -352,7 +352,7 @@ export default function MachineAssignmentsPage() {
     
     if (role === 'responsable_linea') {
       return filteredEmployees.filter(e => {
-        if (!e.puesto?.toLowerCase().includes('responsable de linea')) return false;
+        if (!e.puesto?.toLowerCase().includes('responsable')) return false;
         
         // Empleados con turno fijo disponibles para ambos equipos
         const isTurnoFijo = e.tipo_turno === "Fijo Mañana" || e.tipo_turno === "Fijo Tarde";
@@ -363,7 +363,7 @@ export default function MachineAssignmentsPage() {
       });
     } else if (role === 'segunda_linea') {
       return filteredEmployees.filter(e => {
-        if (!e.puesto?.toLowerCase().includes('segunda de linea')) return false;
+        if (!e.puesto?.toLowerCase().includes('segunda')) return false;
         
         // Empleados con turno fijo disponibles para ambos equipos
         const isTurnoFijo = e.tipo_turno === "Fijo Mañana" || e.tipo_turno === "Fijo Tarde";
@@ -373,21 +373,15 @@ export default function MachineAssignmentsPage() {
         return e.equipo === teamName;
       });
     } else {
-      // Para operarios, filtrar los que tienen la máquina en su configuración
+      // Para operarios
       return filteredEmployees.filter(emp => {
-        if (!emp.puesto?.toLowerCase().includes('operaria de linea')) return false;
+        if (!emp.puesto?.toLowerCase().includes('operari')) return false;
         
         // Empleados con turno fijo disponibles para ambos equipos
         const isTurnoFijo = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
         if (!isTurnoFijo && emp.equipo !== teamName) return false;
         
-        // Verificar si tiene esta máquina en su configuración
-        for (let i = 1; i <= 10; i++) {
-          if (emp[`maquina_${i}`] === machineId) {
-            return true;
-          }
-        }
-        return false;
+        return true;
       });
     }
   };
