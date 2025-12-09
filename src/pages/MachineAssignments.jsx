@@ -11,6 +11,7 @@ import { UserCog, GripVertical, User, UserCheck, Users, ArrowLeft, RefreshCw, Sa
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { toast } from "sonner";
 import EmployeeSelect from "../components/common/EmployeeSelect";
 
 export default function MachineAssignmentsPage() {
@@ -122,45 +123,43 @@ export default function MachineAssignmentsPage() {
     },
   });
 
-  // Auto-asignar operarios basado en sus fichas de empleado - SOLO FABRICACIÓN
-  const autoAssignOperators = () => {
+  // Auto-asignar operarios usando el Agente AI
+  const autoAssignOperators = async () => {
     if (selectedDepartment !== "FABRICACION") return;
     
-    const newAssignments = {};
-    const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
-
-    machines.forEach(machine => {
-      const eligibleEmployees = filteredEmployees.filter(emp => {
-        if (emp.equipo !== teamName) return false;
-
-        for (let i = 1; i <= 10; i++) {
-          if (emp[`maquina_${i}`] === machine.id) {
-            return true;
-          }
-        }
-        return false;
+    try {
+      const promise = base44.functions.invoke('generate_assignments', { 
+        team_key: currentTeam,
+        department: selectedDepartment 
       });
 
-      const responsables = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('responsable de linea'));
-      const segundas = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('segunda de linea'));
-      const operarios = eligibleEmployees.filter(e => e.puesto?.toLowerCase().includes('operaria de linea'));
+      toast.promise(promise, {
+        loading: 'El agente está calculando las asignaciones óptimas...',
+        success: (response) => {
+          const data = response.data;
+          if (data && data.asignaciones) {
+            // Fusionar con asignaciones existentes para no perder datos de otras máquinas si el agente no devuelve todas
+            setAssignments(prev => {
+              const next = { ...prev };
+              Object.entries(data.asignaciones).forEach(([machineId, assignment]) => {
+                next[machineId] = {
+                  ...next[machineId], // Mantener estructura base
+                  ...assignment
+                };
+              });
+              return next;
+            });
+            setHasChanges(true);
+            return 'Asignaciones generadas por IA correctamente';
+          }
+          return 'Proceso completado sin cambios';
+        },
+        error: (err) => `Error: ${err.message}`
+      });
 
-      newAssignments[machine.id] = {
-        responsable_linea: responsables.map(e => e.id),
-        segunda_linea: segundas.map(e => e.id),
-        operador_1: operarios[0]?.id || null,
-        operador_2: operarios[1]?.id || null,
-        operador_3: operarios[2]?.id || null,
-        operador_4: operarios[3]?.id || null,
-        operador_5: operarios[4]?.id || null,
-        operador_6: operarios[5]?.id || null,
-        operador_7: operarios[6]?.id || null,
-        operador_8: operarios[7]?.id || null,
-      };
-    });
-
-    setAssignments(newAssignments);
-    setHasChanges(true);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   // Cargar asignaciones existentes
