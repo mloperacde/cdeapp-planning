@@ -9,6 +9,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Search, Shield, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import EmployeeSelect from "../common/EmployeeSelect";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function EnhancedRoleAssignment({ roles }) {
   const [selectedEmployee, setSelectedEmployee] = useState("");
