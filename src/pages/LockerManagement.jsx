@@ -89,7 +89,6 @@ export default function LockerManagementPage() {
   React.useEffect(() => {
     const assignments = {};
     lockerAssignments.forEach(la => {
-      // Limpiar comillas y caracteres especiales del número de taquilla
       const cleanActual = la.numero_taquilla_actual ? la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() : '';
       const cleanNuevo = la.numero_taquilla_nuevo ? la.numero_taquilla_nuevo.replace(/['"''‚„]/g, '').trim() : '';
       
@@ -100,7 +99,11 @@ export default function LockerManagementPage() {
         numero_taquilla_nuevo: cleanNuevo
       };
     });
-    setEditingAssignments(assignments);
+    
+    setEditingAssignments(prev => {
+      if (JSON.stringify(prev) === JSON.stringify(assignments)) return prev;
+      return assignments;
+    });
   }, [lockerAssignments]);
 
   const normalizeString = (str) => {
