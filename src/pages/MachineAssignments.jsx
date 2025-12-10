@@ -29,7 +29,6 @@ export default function MachineAssignmentsPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("FABRICACION");
   const [assignments, setAssignments] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
-  const [employeeSearchCache, setEmployeeSearchCache] = useState({});
   const queryClient = useQueryClient();
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
@@ -56,14 +55,8 @@ export default function MachineAssignmentsPage() {
     initialData: EMPTY_ARRAY,
   });
 
-  // Optimized filtered employees with caching
+  // Optimized filtered employees
   const filteredEmployees = useMemo(() => {
-    const cacheKey = `${selectedDepartment}-${currentTeam}`;
-    
-    if (employeeSearchCache[cacheKey]) {
-      return employeeSearchCache[cacheKey];
-    }
-
     let filtered;
     if (selectedDepartment === "FABRICACION") {
       const validPositions = ['responsable', 'segunda', 'operari'];
@@ -100,9 +93,8 @@ export default function MachineAssignmentsPage() {
       filtered = [];
     }
 
-    setEmployeeSearchCache(prev => ({ ...prev, [cacheKey]: filtered }));
     return filtered;
-  }, [employees, selectedDepartment, currentTeam, employeeSearchCache, teams]);
+  }, [employees, selectedDepartment, currentTeam, teams]);
 
   const saveAssignmentsMutation = useMutation({
     mutationFn: async (assignmentsData) => {
