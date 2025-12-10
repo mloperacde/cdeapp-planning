@@ -36,6 +36,32 @@ export default function ProcessConfigurationPage() {
   const [filters, setFilters] = useState({});
   const queryClient = useQueryClient();
 
+  const [formData, setFormData] = useState({
+    nombre: "",
+    codigo: "",
+    descripcion: "",
+    operadores_requeridos: 1,
+    activo: true,
+  });
+
+  const { data: processes = EMPTY_ARRAY, isLoading } = useQuery({
+    queryKey: ['processes'],
+    queryFn: () => base44.entities.Process.list('nombre'),
+    initialData: EMPTY_ARRAY,
+  });
+
+  const { data: machines = EMPTY_ARRAY } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list('nombre'),
+    initialData: EMPTY_ARRAY,
+  });
+
+  const { data: machineProcesses = EMPTY_ARRAY } = useQuery({
+    queryKey: ['machineProcesses'],
+    queryFn: () => base44.entities.MachineProcess.list(),
+    initialData: EMPTY_ARRAY,
+  });
+
   // Filtered processes
   const filteredProcesses = React.useMemo(() => {
     let result = processes.filter(p => {
@@ -65,32 +91,6 @@ export default function ProcessConfigurationPage() {
     
     return result;
   }, [processes, filters]);
-
-  const [formData, setFormData] = useState({
-    nombre: "",
-    codigo: "",
-    descripcion: "",
-    operadores_requeridos: 1,
-    activo: true,
-  });
-
-  const { data: processes = EMPTY_ARRAY, isLoading } = useQuery({
-    queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.list('nombre'),
-    initialData: EMPTY_ARRAY,
-  });
-
-  const { data: machines = EMPTY_ARRAY } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('nombre'),
-    initialData: EMPTY_ARRAY,
-  });
-
-  const { data: machineProcesses = EMPTY_ARRAY } = useQuery({
-    queryKey: ['machineProcesses'],
-    queryFn: () => base44.entities.MachineProcess.list(),
-    initialData: EMPTY_ARRAY,
-  });
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
@@ -225,13 +225,54 @@ export default function ProcessConfigurationPage() {
     });
   };
 
-  const { data: processes = EMPTY_ARRAY, isLoading } = useQuery({
-    queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.list('nombre'),
-    initialData: EMPTY_ARRAY,
-  });
+  const getAssignedMachines = (processId) => {
+    return machineProcesses.filter(mp => mp.process_id === processId).length;
+  };
 
-  const { data: machines = EMPTY_ARRAY } = useQuery({
+  return (
+    <div className="space-y-6">
+      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="border-b border-slate-100">
+          <div className="flex justify-between items-center">
+            <CardTitle>Configuración de Procesos</CardTitle>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Proceso
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="mb-6">
+            <AdvancedSearch
+              data={processes}
+              onFilterChange={setFilters}
+              searchFields={['nombre', 'codigo']}
+              filterOptions={{
+                activo: {
+                  label: 'Estado',
+                  options: [
+                    { value: 'activo', label: 'Activo' },
+                    { value: 'inactivo', label: 'Inactivo' }
+                  ]
+                }
+              }}
+              placeholder="Buscar por nombre o código..."
+              pageId="process_configuration"
+            />
+          </div>
+
+          {isLoading ? (
+            <div className="p-12 text-center text-slate-500">Cargando procesos...</div>
+          ) : filteredProcesses.length === 0 ? (
+            <div className="p-12 text-center text-slate-500">
+              No se encontraron procesos con los filtros seleccionados
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead>Código</TableHead>
