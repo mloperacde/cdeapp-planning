@@ -1,13 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 
-export default async function handler(req) {
-  const base44 = createClientFromRequest(req);
-  
+// Helper to process array in chunks to avoid timeouts and rate limits
+async function processInChunks(items, chunkSize, processFn) {
+  const results = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const chunkResults = await Promise.all(chunk.map(processFn));
+    results.push(...chunkResults);
+  }
+  return results;
+}
+
+Deno.serve(async (req) => {
   try {
-    const employees = await base44.entities.Employee.list();
-    const masters = await base44.entities.EmployeeMasterDatabase.list();
+    const base44 = createClientFromRequest(req);
     
-    // Map existing masters for quick lookup
+    // 1. Fetch data
+    const [employees, masters] = await Promise.all([
+      base44.entities.Employee.list(),
+      base44.entities.EmployeeMasterDatabase.list()
+    ]);
+    
+    // 2. Map existing masters for quick lookup
     const masterByCode = new Map();
     const masterByEmail = new Map();
     const masterByName = new Map();
@@ -24,8 +38,8 @@ export default async function handler(req) {
     const createdMasters = [];
     const updatedMasters = [];
 
-    // Consolidate Employee into Master
-    for (const emp of employees) {
+    // 3. Consolidate Employee into Master (Processing in chunks)
+    await processInChunks(employees, 20, async (emp) => {
       let master = masterByOldId.get(emp.id) || 
                    (emp.codigo_empleado ? masterByCode.get(emp.codigo_empleado) : null) ||
                    (emp.email ? masterByEmail.get(emp.email.toLowerCase()) : null) ||
@@ -36,7 +50,6 @@ export default async function handler(req) {
         const updates = {};
         let hasUpdates = false;
         
-        // List of fields to copy if missing in master
         const fields = [
           'codigo_empleado', 'nombre', 'email', 'telefono_movil', 'departamento', 'puesto', 
           'categoria', 'fecha_alta', 'fecha_nacimiento', 'dni', 'nuss', 'sexo', 'nacionalidad',
@@ -66,8 +79,6 @@ export default async function handler(req) {
         delete newMasterData.updated_date;
         delete newMasterData.created_by;
         
-        // Ensure required fields mapping if names differ, but they seem identical.
-        // Add specific master fields
         newMasterData.employee_id = emp.id;
         newMasterData.estado_sincronizacion = "Sincronizado";
         newMasterData.ultimo_sincronizado = new Date().toISOString();
@@ -76,32 +87,33 @@ export default async function handler(req) {
         createdMasters.push(newMaster.id);
         empToMasterMap[emp.id] = newMaster.id;
       }
-    }
+    });
 
-    // Now update references in other entities
+    // 4. Update references in other entities
     const entitiesToUpdate = [
       { name: 'Absence', field: 'employee_id' },
       { name: 'LockerAssignment', field: 'employee_id' },
       { name: 'ShiftAssignment', field: 'employee_id' },
       { name: 'PerformanceReview', field: 'employee_id' },
       { name: 'EmployeeIncentiveResult', field: 'employee_id' },
-      { name: 'UserRoleAssignment', field: 'user_id' }, // Assuming user_id holds employee id in this context
+      { name: 'UserRoleAssignment', field: 'user_id' },
       { name: 'MaintenanceSchedule', fields: ['tecnico_asignado', 'revisado_por', 'verificado_por', 'creado_por'] },
       { name: 'MachineAssignment', fields: ['operador_1', 'operador_2', 'operador_3', 'operador_4', 'operador_5', 'operador_6', 'operador_7', 'operador_8'], arrayFields: ['responsable_linea', 'segunda_linea'] }
     ];
 
     const stats = { created: createdMasters.length, updated: updatedMasters.length, referencesUpdated: {} };
 
+    // Process entities sequentially to avoid overwhelming DB, but records within entity in chunks
     for (const entityConfig of entitiesToUpdate) {
       let updatedCount = 0;
       try {
         const records = await base44.entities[entityConfig.name].list();
         
-        for (const record of records) {
+        await processInChunks(records, 20, async (record) => {
           const updates = {};
           let needsUpdate = false;
 
-          // Handle single fields
+          // Single field
           if (entityConfig.field) {
             if (empToMasterMap[record[entityConfig.field]]) {
               updates[entityConfig.field] = empToMasterMap[record[entityConfig.field]];
@@ -109,7 +121,7 @@ export default async function handler(req) {
             }
           }
 
-          // Handle multiple fields
+          // Multiple fields
           if (entityConfig.fields) {
             entityConfig.fields.forEach(field => {
               if (record[field] && empToMasterMap[record[field]]) {
@@ -119,7 +131,7 @@ export default async function handler(req) {
             });
           }
 
-          // Handle array fields
+          // Array fields
           if (entityConfig.arrayFields) {
             entityConfig.arrayFields.forEach(field => {
               if (record[field] && Array.isArray(record[field])) {
@@ -136,7 +148,8 @@ export default async function handler(req) {
             await base44.entities[entityConfig.name].update(record.id, updates);
             updatedCount++;
           }
-        }
+        });
+        
         stats.referencesUpdated[entityConfig.name] = updatedCount;
       } catch (e) {
         console.log(`Skipping entity ${entityConfig.name}: ${e.message}`);
@@ -153,4 +166,4 @@ export default async function handler(req) {
       headers: { "Content-Type": "application/json" },
     });
   }
-}
+});
