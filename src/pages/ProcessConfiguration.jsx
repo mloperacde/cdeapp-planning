@@ -25,6 +25,8 @@ import {
 import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
+const EMPTY_ARRAY = [];
+
 export default function ProcessConfigurationPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
@@ -40,22 +42,22 @@ export default function ProcessConfigurationPage() {
     activo: true,
   });
 
-  const { data: processes, isLoading } = useQuery({
+  const { data: processes = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ['processes'],
     queryFn: () => base44.entities.Process.list('nombre'),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: machines } = useQuery({
+  const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list('nombre'),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: machineProcesses } = useQuery({
+  const { data: machineProcesses = EMPTY_ARRAY } = useQuery({
     queryKey: ['machineProcesses'],
     queryFn: () => base44.entities.MachineProcess.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
   const saveMutation = useMutation({
