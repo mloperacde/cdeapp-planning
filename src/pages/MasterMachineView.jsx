@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Cog, Search, Filter, Download, X, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, Cog, Search, Filter, Download, X, ChevronDown, ChevronUp, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
@@ -65,13 +65,16 @@ export default function MasterMachineView() {
     parametros_sobres: {},
     parametros_frascos: {},
   });
+  
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
 
   const queryClient = useQueryClient();
 
-  const { data: machines, isLoading } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-    initialData: [],
+  const { data: machines = [], isLoading } = useQuery({
+    queryKey: ['machines', page, pageSize],
+    queryFn: () => base44.entities.Machine.list('orden', pageSize, page * pageSize),
+    keepPreviousData: true,
   });
 
   const { data: processes = [] } = useQuery({
@@ -375,6 +378,31 @@ export default function MasterMachineView() {
             <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
+            <div className="p-4 flex items-center justify-between border-b">
+              <span className="text-sm text-slate-500">
+                Página {page + 1}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={machines.length < pageSize}
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
             {isLoading ? (
               <div className="p-12 text-center text-slate-500">Cargando máquinas...</div>
             ) : filteredMachines.length === 0 ? (

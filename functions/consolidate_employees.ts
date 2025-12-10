@@ -15,11 +15,27 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // 1. Fetch data
-    const [employees, masters] = await Promise.all([
-      base44.entities.Employee.list(),
-      base44.entities.EmployeeMasterDatabase.list()
-    ]);
+    // 1. Fetch data with pagination to handle large datasets
+    let employees = [];
+    let skip = 0;
+    const limit = 500;
+    while (true) {
+      const chunk = await base44.entities.Employee.list(null, limit, skip);
+      if (!chunk || chunk.length === 0) break;
+      employees = employees.concat(chunk);
+      skip += limit;
+      if (chunk.length < limit) break;
+    }
+
+    let masters = [];
+    skip = 0;
+    while (true) {
+      const chunk = await base44.entities.EmployeeMasterDatabase.list(null, limit, skip);
+      if (!chunk || chunk.length === 0) break;
+      masters = masters.concat(chunk);
+      skip += limit;
+      if (chunk.length < limit) break;
+    }
     
     // 2. Map existing masters for quick lookup
     const masterByCode = new Map();

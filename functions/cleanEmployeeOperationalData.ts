@@ -20,12 +20,15 @@ Deno.serve(async (req) => {
       errors: []
     };
 
-    // Eliminar todos los empleados del sistema operativo
+    // Eliminar todos los empleados del sistema operativo (paginado)
     try {
-      const employees = await base44.asServiceRole.entities.Employee.list();
-      for (const emp of employees) {
-        await base44.asServiceRole.entities.Employee.delete(emp.id);
-        results.employees++;
+      while (true) {
+        const employees = await base44.asServiceRole.entities.Employee.list(null, 100);
+        if (!employees || employees.length === 0) break;
+        for (const emp of employees) {
+          await base44.asServiceRole.entities.Employee.delete(emp.id);
+          results.employees++;
+        }
       }
     } catch (error) {
       results.errors.push({ entity: 'Employee', error: error.message });

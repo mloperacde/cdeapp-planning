@@ -25,7 +25,9 @@ import {
   FileText,
   User,
   Columns,
-  Settings
+  Settings,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,6 +55,8 @@ export default function MasterEmployeeDatabasePage() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
   
   // Definición completa de columnas disponibles
   const allColumns = {
@@ -137,9 +141,40 @@ export default function MasterEmployeeDatabasePage() {
   }, [currentUser, userRoleAssignments, userRoles]);
 
   const { data: masterEmployees = [], isLoading } = useQuery({
-    queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date'),
-    initialData: [],
+    queryKey: ['employeeMasterDatabase', page, pageSize],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', pageSize, page * pageSize),
+    keepPreviousData: true,
+  });
+
+  const { data: userPermissions } = useQuery({
+    queryKey: ['userPermissions', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser) return null;
+      if (currentUser.role === 'admin') return { isAdmin: true };
+      
+      const roles = await base44.entities.UserRole.list();
+      const assignments = await base44.entities.UserRoleAssignment.filter({ user_email: currentUser.email });
+      const userRoleIds = assignments.map(a => a.role_id);
+      const activeRoles = roles.filter(r => userRoleIds.includes(r.id));
+      
+      const perms = {
+        ver_salario: false,
+        ver_dni: false,
+        ver_contacto: false,
+        ver_direccion: false,
+        ver_bancarios: false
+      };
+
+      activeRoles.forEach(role => {
+        if (role.permissions?.campos_empleado?.ver_salario) perms.ver_salario = true;
+        if (role.permissions?.campos_empleado?.ver_dni) perms.ver_dni = true;
+        if (role.permissions?.campos_empleado?.ver_contacto) perms.ver_contacto = true;
+        if (role.permissions?.campos_empleado?.ver_direccion) perms.ver_direccion = true;
+        if (role.permissions?.campos_empleado?.ver_bancarios) perms.ver_bancarios = true;
+      });
+      return perms;
+    },
+    enabled: !!currentUser
   });
 
   // const { data: employees = [] } = useQuery({
@@ -681,6 +716,31 @@ export default function MasterEmployeeDatabasePage() {
                         placeholder="Buscar por nombre, código, DNI, email..."
                       />
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      Página {page + 1}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                        disabled={page === 0}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage(p => p + 1)}
+                        disabled={masterEmployees.length < pageSize}
+                      >
+                        Siguiente
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 min-w-[140px]">
@@ -771,7 +831,9 @@ export default function MasterEmployeeDatabasePage() {
                               <TableCell className="text-xs dark:text-slate-300">{emp.motivo_baja || '-'}</TableCell>
                             )}
                             {visibleColumns.dni && (
-                              <TableCell className="text-xs dark:text-slate-300">{emp.dni || '-'}</TableCell>
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {userPermissions?.isAdmin || userPermissions?.ver_dni ? emp.dni || '-' : '******'}
+                              </TableCell>
                             )}
                             {visibleColumns.nuss && (
                               <TableCell className="text-xs dark:text-slate-300">{emp.nuss || '-'}</TableCell>
@@ -783,13 +845,19 @@ export default function MasterEmployeeDatabasePage() {
                               <TableCell className="text-xs dark:text-slate-300">{emp.nacionalidad || '-'}</TableCell>
                             )}
                             {visibleColumns.direccion && (
-                              <TableCell className="text-xs dark:text-slate-300 truncate max-w-[150px]" title={emp.direccion}>{emp.direccion || '-'}</TableCell>
+                              <TableCell className="text-xs dark:text-slate-300 truncate max-w-[150px]" title={emp.direccion}>
+                                {userPermissions?.isAdmin || userPermissions?.ver_direccion ? emp.direccion || '-' : '******'}
+                              </TableCell>
                             )}
                             {visibleColumns.email && (
-                              <TableCell className="text-xs dark:text-slate-300">{emp.email || '-'}</TableCell>
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {userPermissions?.isAdmin || userPermissions?.ver_contacto ? emp.email || '-' : '******'}
+                              </TableCell>
                             )}
                             {visibleColumns.telefono_movil && (
-                              <TableCell className="text-xs dark:text-slate-300">{emp.telefono_movil || '-'}</TableCell>
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {userPermissions?.isAdmin || userPermissions?.ver_contacto ? emp.telefono_movil || '-' : '******'}
+                              </TableCell>
                             )}
                             {visibleColumns.tipo_jornada && (
                               <TableCell className="text-xs dark:text-slate-300">{emp.tipo_jornada || '-'}</TableCell>
@@ -818,10 +886,14 @@ export default function MasterEmployeeDatabasePage() {
                               <TableCell className="text-xs dark:text-slate-300">{emp.empresa_ett || '-'}</TableCell>
                             )}
                             {visibleColumns.salario_anual && (
-                              <TableCell className="text-xs dark:text-slate-300">{emp.salario_anual || '-'}</TableCell>
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {userPermissions?.isAdmin || userPermissions?.ver_salario ? emp.salario_anual || '-' : '******'}
+                              </TableCell>
                             )}
                             {visibleColumns.iban && (
-                              <TableCell className="text-xs dark:text-slate-300">{emp.iban || '-'}</TableCell>
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {userPermissions?.isAdmin || userPermissions?.ver_bancarios ? emp.iban || '-' : '******'}
+                              </TableCell>
                             )}
                             {visibleColumns.taquilla_vestuario && (
                               <TableCell className="text-xs dark:text-slate-300">{emp.taquilla_vestuario || '-'}</TableCell>
