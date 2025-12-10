@@ -36,6 +36,36 @@ export default function ProcessConfigurationPage() {
   const [filters, setFilters] = useState({});
   const queryClient = useQueryClient();
 
+  // Filtered processes
+  const filteredProcesses = React.useMemo(() => {
+    let result = processes.filter(p => {
+      const searchTerm = filters.searchTerm || "";
+      const matchesSearch = !searchTerm || 
+        p.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = !filters.activo || filters.activo === 'all' || 
+        (filters.activo === 'activo' ? p.activo : !p.activo);
+
+      return matchesSearch && matchesStatus;
+    });
+
+    if (filters.sortField) {
+      result = [...result].sort((a, b) => {
+        let aVal = a[filters.sortField];
+        let bVal = b[filters.sortField];
+        
+        if (!aVal) return 1;
+        if (!bVal) return -1;
+        
+        const comparison = String(aVal).localeCompare(String(bVal));
+        return filters.sortDirection === 'desc' ? -comparison : comparison;
+      });
+    }
+    
+    return result;
+  }, [processes, filters]);
+
   const [formData, setFormData] = useState({
     nombre: "",
     codigo: "",

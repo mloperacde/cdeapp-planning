@@ -29,6 +29,7 @@ export default function MaintenanceTrackingPage() {
   const [currentTab, setCurrentTab] = useState('kanban');
   const [showForm, setShowForm] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState(null);
+  const [filters, setFilters] = useState({});
   const [showTypeManager, setShowTypeManager] = useState(false);
   const [showWorkOrder, setShowWorkOrder] = useState(null);
   const queryClient = useQueryClient();
