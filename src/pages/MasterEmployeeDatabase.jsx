@@ -53,11 +53,11 @@ export default function MasterEmployeeDatabasePage() {
     initialData: [],
   });
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
-    initialData: [],
-  });
+  // const { data: employees = [] } = useQuery({
+  //   queryKey: ['employees'],
+  //   queryFn: () => base44.entities.Employee.list(),
+  //   initialData: [],
+  // });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.EmployeeMasterDatabase.delete(id),

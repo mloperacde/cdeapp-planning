@@ -20,7 +20,7 @@ export default function EmployeeReadOnlyList() {
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
   });
 

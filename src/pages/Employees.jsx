@@ -67,12 +67,12 @@ export default function EmployeesPage() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date'),
   });
 
-  const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
-  });
+  // const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({
+  //   queryKey: ['employees'],
+  //   queryFn: () => base44.entities.Employee.list(),
+  // });
 
-  const isLoading = loadingMasterEmployees || loadingEmployees;
+  const isLoading = loadingMasterEmployees;
 
   const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
@@ -152,6 +152,7 @@ export default function EmployeesPage() {
   }, [masterEmployees]);
 
   const filteredEmployees = useMemo(() => {
+    // Use masterEmployees as the single source of truth
     let result = masterEmployees.filter(emp => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 

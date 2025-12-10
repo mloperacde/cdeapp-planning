@@ -69,7 +69,7 @@ export default function MasterEmployeeView() {
 
   const { data: employees, isLoading } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('-created_date'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date'),
     initialData: [],
   });
 
@@ -86,7 +86,7 @@ export default function MasterEmployeeView() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Employee.delete(id),
+    mutationFn: (id) => base44.entities.EmployeeMasterDatabase.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
