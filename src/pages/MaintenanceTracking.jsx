@@ -21,6 +21,7 @@ import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeMan
 import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder";
 import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenance";
 import KanbanView from "../components/maintenance/KanbanView";
+import AdvancedSearch from "../components/common/AdvancedSearch";
 
 const EMPTY_ARRAY = [];
 
@@ -55,6 +56,40 @@ export default function MaintenanceTrackingPage() {
     queryFn: () => base44.entities.MaintenanceType.list(),
     initialData: EMPTY_ARRAY,
   });
+
+  // Filtered maintenances
+  const filteredMaintenances = React.useMemo(() => {
+    let result = maintenances.filter(m => {
+      const searchTerm = filters.searchTerm || "";
+      const matchesSearch = !searchTerm || 
+        m.tipo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getMachineName(m.machine_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getEmployeeName(m.tecnico_asignado).toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesType = !filters.tipo || filters.tipo === 'all' || m.tipo === filters.tipo;
+      const matchesPriority = !filters.prioridad || filters.prioridad === 'all' || m.prioridad === filters.prioridad;
+      const matchesStatus = !filters.estado || filters.estado === 'all' || m.estado === filters.estado;
+
+      return matchesSearch && matchesType && matchesPriority && matchesStatus;
+    });
+
+    if (filters.sortField) {
+      result = [...result].sort((a, b) => {
+        let aVal = a[filters.sortField];
+        let bVal = b[filters.sortField];
+        
+        // Handle derived fields if needed
+        
+        if (!aVal) return 1;
+        if (!bVal) return -1;
+        
+        const comparison = String(aVal).localeCompare(String(bVal));
+        return filters.sortDirection === 'desc' ? -comparison : comparison;
+      });
+    }
+    
+    return result;
+  }, [maintenances, filters, machines, employees]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MaintenanceSchedule.delete(id),
@@ -327,12 +362,35 @@ export default function MaintenanceTrackingPage() {
           <TabsContent value="all">
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-6">
-                {maintenances.length === 0 ? (
+                <div className="mb-6">
+                  <AdvancedSearch
+                    data={maintenances}
+                    onFilterChange={setFilters}
+                    searchFields={['tipo']}
+                    filterOptions={{
+                      tipo: {
+                        label: 'Tipo',
+                        options: maintenanceTypes.map(t => ({ value: t.nombre, label: t.nombre }))
+                      },
+                      prioridad: {
+                        label: 'Prioridad',
+                        options: ['Baja', 'Media', 'Alta', 'Urgente'].map(p => ({ value: p, label: p }))
+                      },
+                      estado: {
+                        label: 'Estado',
+                        options: ['Pendiente', 'Programado', 'En Proceso', 'Completado'].map(e => ({ value: e, label: e }))
+                      }
+                    }}
+                    placeholder="Buscar por máquina, técnico o tipo..."
+                    pageId="maintenance_tracking"
+                  />
+                </div>
+                {filteredMaintenances.length === 0 ? (
                   <div className="p-12 text-center text-slate-500">
-                    No hay mantenimientos registrados
+                    No se encontraron mantenimientos con los filtros seleccionados
                   </div>
                 ) : (
-                  renderMaintenanceTable(maintenances)
+                  renderMaintenanceTable(filteredMaintenances)
                 )}
               </CardContent>
             </Card>

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import AdvancedSearch from "../components/common/AdvancedSearch";
 
 const EMPTY_ARRAY = [];
 
@@ -32,6 +33,7 @@ export default function ProcessConfigurationPage() {
   const [editingProcess, setEditingProcess] = useState(null);
   const [showMachineAssignment, setShowMachineAssignment] = useState(null);
   const [machineAssignments, setMachineAssignments] = useState({});
+  const [filters, setFilters] = useState({});
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -193,35 +195,13 @@ export default function ProcessConfigurationPage() {
     });
   };
 
-  const getAssignedMachines = (processId) => {
-    return machineProcesses.filter(mp => mp.process_id === processId).length;
-  };
+  const { data: processes = EMPTY_ARRAY, isLoading } = useQuery({
+    queryKey: ['processes'],
+    queryFn: () => base44.entities.Process.list('nombre'),
+    initialData: EMPTY_ARRAY,
+  });
 
-  return (
-    <div className="space-y-6">
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100">
-          <div className="flex justify-between items-center">
-            <CardTitle>Configuración de Procesos</CardTitle>
-            <Button
-              onClick={() => setShowForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo Proceso
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? (
-            <div className="p-12 text-center text-slate-500">Cargando procesos...</div>
-          ) : processes.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
-              No hay procesos configurados
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
+  const { data: machines = EMPTY_ARRAY } = useQuery({
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead>Código</TableHead>
@@ -233,7 +213,7 @@ export default function ProcessConfigurationPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {processes.map((process) => (
+                  {filteredProcesses.map((process) => (
                     <TableRow key={process.id} className="hover:bg-slate-50">
                       <TableCell>
                         <Badge variant="outline">{process.codigo}</Badge>
