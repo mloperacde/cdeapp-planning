@@ -60,6 +60,41 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
     initialData: [],
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: userRoleAssignments = [] } = useQuery({
+    queryKey: ['userRoleAssignments', currentUser?.email],
+    queryFn: () => base44.entities.UserRoleAssignment.filter({ user_email: currentUser?.email }),
+    enabled: !!currentUser?.email,
+  });
+
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ['userRoles'],
+    queryFn: () => base44.entities.UserRole.list(),
+  });
+
+  const permissions = React.useMemo(() => {
+    if (!currentUser) return {};
+    if (currentUser.role === 'admin') return {
+      contrato: { ver: true, editar: true }
+    };
+
+    let perms = {
+      contrato: { ver: false, editar: false }
+    };
+
+    userRoleAssignments.forEach(assignment => {
+      const role = userRoles.find(r => r.id === assignment.role_id);
+      if (role?.permissions?.contrato?.ver) perms.contrato.ver = true;
+      if (role?.permissions?.contrato?.editar) perms.contrato.editar = true;
+    });
+
+    return perms;
+  }, [currentUser, userRoleAssignments, userRoles]);
+
   const saveMutation = useMutation({
     mutationFn: (data) => {
       if (employee?.id) {
@@ -109,10 +144,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                 <Home className="w-4 h-4 mr-1" />
                 Taquilla
               </TabsTrigger>
-              <TabsTrigger value="contrato">
-                <FileText className="w-4 h-4 mr-1" />
-                Contrato
-              </TabsTrigger>
+              {permissions.contrato?.ver && (
+                <TabsTrigger value="contrato">
+                  <FileText className="w-4 h-4 mr-1" />
+                  Contrato
+                </TabsTrigger>
+              )}
               <TabsTrigger value="absentismo">
                 <TrendingDown className="w-4 h-4 mr-1" />
                 Absentismo
@@ -630,108 +667,124 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
               </div>
             </TabsContent>
 
-            <TabsContent value="contrato" className="space-y-4 mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Fecha Alta</Label>
-                  <Input
-                    type="date"
-                    value={formData.fecha_alta || ""}
-                    onChange={(e) => setFormData({ ...formData, fecha_alta: e.target.value })}
-                  />
-                </div>
+            {permissions.contrato?.ver && (
+              <TabsContent value="contrato" className="space-y-4 mt-4">
+                {!permissions.contrato?.editar && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded mb-4 text-sm">
+                    <AlertCircle className="w-4 h-4 inline mr-2" />
+                    Solo lectura - No tienes permisos para editar contratos
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Fecha Alta</Label>
+                    <Input
+                      type="date"
+                      value={formData.fecha_alta || ""}
+                      onChange={(e) => setFormData({ ...formData, fecha_alta: e.target.value })}
+                      disabled={!permissions.contrato?.editar}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Tipo Contrato</Label>
-                  <Select
-                    value={formData.tipo_contrato || ""}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_contrato: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="INDEFINIDO">INDEFINIDO</SelectItem>
-                      <SelectItem value="TEMPORAL">TEMPORAL</SelectItem>
-                      <SelectItem value="ETT">ETT</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-2">
+                    <Label>Tipo Contrato</Label>
+                    <Select
+                      value={formData.tipo_contrato || ""}
+                      onValueChange={(value) => setFormData({ ...formData, tipo_contrato: value })}
+                      disabled={!permissions.contrato?.editar}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INDEFINIDO">INDEFINIDO</SelectItem>
+                        <SelectItem value="TEMPORAL">TEMPORAL</SelectItem>
+                        <SelectItem value="ETT">ETT</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Código Contrato</Label>
-                  <Input
-                    value={formData.codigo_contrato || ""}
-                    onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label>Código Contrato</Label>
+                    <Input
+                      value={formData.codigo_contrato || ""}
+                      onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
+                      disabled={!permissions.contrato?.editar}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Fecha Fin Contrato</Label>
-                  <Input
-                    type="date"
-                    value={formData.fecha_fin_contrato || ""}
-                    onChange={(e) => setFormData({ ...formData, fecha_fin_contrato: e.target.value })}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label>Fecha Fin Contrato</Label>
+                    <Input
+                      type="date"
+                      value={formData.fecha_fin_contrato || ""}
+                      onChange={(e) => setFormData({ ...formData, fecha_fin_contrato: e.target.value })}
+                      disabled={!permissions.contrato?.editar}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Empresa ETT</Label>
-                  <Input
-                    value={formData.empresa_ett || ""}
-                    onChange={(e) => setFormData({ ...formData, empresa_ett: e.target.value })}
-                    disabled={formData.tipo_contrato !== "ETT"}
-                    className={formData.tipo_contrato !== "ETT" ? "bg-slate-50" : ""}
-                    placeholder={formData.tipo_contrato === "ETT" ? "Nombre de la empresa ETT" : ""}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label>Empresa ETT</Label>
+                    <Input
+                      value={formData.empresa_ett || ""}
+                      onChange={(e) => setFormData({ ...formData, empresa_ett: e.target.value })}
+                      disabled={!permissions.contrato?.editar || formData.tipo_contrato !== "ETT"}
+                      className={formData.tipo_contrato !== "ETT" ? "bg-slate-50" : ""}
+                      placeholder={formData.tipo_contrato === "ETT" ? "Nombre de la empresa ETT" : ""}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Salario Anual (€)</Label>
-                  <Input
-                    type="number"
-                    value={formData.salario_anual || ""}
-                    onChange={(e) => setFormData({ ...formData, salario_anual: parseFloat(e.target.value) })}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label>Salario Anual (€)</Label>
+                    <Input
+                      type="number"
+                      value={formData.salario_anual || ""}
+                      onChange={(e) => setFormData({ ...formData, salario_anual: parseFloat(e.target.value) })}
+                      disabled={!permissions.contrato?.editar}
+                    />
+                  </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Evaluación de Responsable</Label>
-                  <Input
-                    value={formData.evaluacion_responsable || ""}
-                    onChange={(e) => setFormData({ ...formData, evaluacion_responsable: e.target.value })}
-                    placeholder="Evaluación del desempeño..."
-                  />
-                </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Evaluación de Responsable</Label>
+                    <Input
+                      value={formData.evaluacion_responsable || ""}
+                      onChange={(e) => setFormData({ ...formData, evaluacion_responsable: e.target.value })}
+                      placeholder="Evaluación del desempeño..."
+                      disabled={!permissions.contrato?.editar}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Propuesta Cambio Categoría</Label>
-                  <Select
-                    value={formData.propuesta_cambio_categoria || ""}
-                    onValueChange={(value) => setFormData({ ...formData, propuesta_cambio_categoria: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={null}>Sin propuesta</SelectItem>
-                      <SelectItem value="1">Categoría 1</SelectItem>
-                      <SelectItem value="2">Categoría 2</SelectItem>
-                      <SelectItem value="3">Categoría 3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-2">
+                    <Label>Propuesta Cambio Categoría</Label>
+                    <Select
+                      value={formData.propuesta_cambio_categoria || ""}
+                      onValueChange={(value) => setFormData({ ...formData, propuesta_cambio_categoria: value })}
+                      disabled={!permissions.contrato?.editar}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={null}>Sin propuesta</SelectItem>
+                        <SelectItem value="1">Categoría 1</SelectItem>
+                        <SelectItem value="2">Categoría 2</SelectItem>
+                        <SelectItem value="3">Categoría 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Propuesto Por</Label>
-                  <Input
-                    value={formData.propuesta_cambio_quien || ""}
-                    onChange={(e) => setFormData({ ...formData, propuesta_cambio_quien: e.target.value })}
-                    placeholder="Nombre de quien propone el cambio"
-                  />
+                  <div className="space-y-2">
+                    <Label>Propuesto Por</Label>
+                    <Input
+                      value={formData.propuesta_cambio_quien || ""}
+                      onChange={(e) => setFormData({ ...formData, propuesta_cambio_quien: e.target.value })}
+                      placeholder="Nombre de quien propone el cambio"
+                      disabled={!permissions.contrato?.editar}
+                    />
+                  </div>
                 </div>
-              </div>
-            </TabsContent>
+              </TabsContent>
+            )}
 
             <TabsContent value="absentismo" className="space-y-4 mt-4">
               <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
