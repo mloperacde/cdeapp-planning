@@ -182,7 +182,7 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("HRDashboard"), // Added HRDashboard here
-                              createPageUrl("Employees"),
+                              createPageUrl("MasterEmployeeDatabase"),
                               createPageUrl("ETTTemporaryEmployees"),
                               createPageUrl("EmployeeOnboarding"),
                               createPageUrl("AttendanceManagement"),
@@ -204,12 +204,12 @@ export default function Layout({ children, currentPageName }) {
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("Employees")) ? 'bg-blue-50 text-blue-700' : ''
+                              isActive(createPageUrl("MasterEmployeeDatabase")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
                           >
-                            <Link to={createPageUrl("Employees")} className="flex items-center gap-2 px-3 py-2">
+                            <Link to={createPageUrl("MasterEmployeeDatabase")} className="flex items-center gap-2 px-3 py-2">
                               <Users className="w-4 h-4" />
-                              Empleados
+                              Base de Datos Maestra
                             </Link>
                           </SidebarMenuButton>
                           <SidebarMenuButton
@@ -417,6 +417,20 @@ export default function Layout({ children, currentPageName }) {
                       <Link to={createPageUrl("MobileAppConfig")} className="flex items-center gap-3 px-3 py-2.5">
                         <Smartphone className="w-5 h-5" />
                         <span className="text-sm">App Móvil</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("RoleManagement")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      }`}
+                    >
+                      <Link to={createPageUrl("RoleManagement")} className="flex items-center gap-3 px-3 py-2.5">
+                        <Shield className="w-5 h-5" />
+                        <span className="text-sm">Roles y Permisos</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
