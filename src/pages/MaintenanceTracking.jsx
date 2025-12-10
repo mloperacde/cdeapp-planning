@@ -22,6 +22,8 @@ import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder
 import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenance";
 import KanbanView from "../components/maintenance/KanbanView";
 
+const EMPTY_ARRAY = [];
+
 export default function MaintenanceTrackingPage() {
   const [currentTab, setCurrentTab] = useState('kanban');
   const [showForm, setShowForm] = useState(false);
@@ -30,28 +32,28 @@ export default function MaintenanceTrackingPage() {
   const [showWorkOrder, setShowWorkOrder] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: maintenances } = useQuery({
+  const { data: maintenances = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenances'],
     queryFn: () => base44.entities.MaintenanceSchedule.list('-fecha_programada'),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: machines } = useQuery({
+  const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: maintenanceTypes } = useQuery({
+  const { data: maintenanceTypes = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenanceTypes'],
     queryFn: () => base44.entities.MaintenanceType.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
   const deleteMutation = useMutation({

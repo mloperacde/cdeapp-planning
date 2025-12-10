@@ -18,27 +18,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+const EMPTY_ARRAY = [];
+
 export default function MachineManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingStatus, setEditingStatus] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: machines = [], isLoading: loadingMachines } = useQuery({
+  const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list('orden'),
     staleTime: 10 * 60 * 1000,
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: machineStatuses = [] } = useQuery({
+  const { data: machineStatuses = EMPTY_ARRAY } = useQuery({
     queryKey: ['machineStatuses'],
     queryFn: () => base44.entities.MachineStatus.list(),
     staleTime: 1 * 60 * 1000,
     refetchInterval: 30000,
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: articles = [] } = useQuery({
+  const { data: articles = EMPTY_ARRAY } = useQuery({
     queryKey: ['articles'],
     queryFn: () => base44.entities.Article.list(),
+    initialData: EMPTY_ARRAY,
   });
 
   const updateStatusMutation = useMutation({

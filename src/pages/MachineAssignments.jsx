@@ -22,6 +22,8 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import EmployeeSelect from "../components/common/EmployeeSelect";
 
+const EMPTY_ARRAY = [];
+
 export default function MachineAssignmentsPage() {
   const [currentTeam, setCurrentTeam] = useState("team_1");
   const [selectedDepartment, setSelectedDepartment] = useState("FABRICACION");
@@ -30,28 +32,28 @@ export default function MachineAssignmentsPage() {
   const [employeeSearchCache, setEmployeeSearchCache] = useState({});
   const queryClient = useQueryClient();
 
-  const { data: machines, isLoading: loadingMachines } = useQuery({
+  const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list('orden'),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: employees, isLoading: loadingEmployees } = useQuery({
+  const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: machineAssignments } = useQuery({
+  const { data: machineAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['machineAssignments'],
     queryFn: () => base44.entities.MachineAssignment.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: teams } = useQuery({
+  const { data: teams = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
   // Optimized filtered employees with caching
