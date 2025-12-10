@@ -36,6 +36,8 @@ import MachineDetailCard from "../components/machines/MachineDetailCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+const EMPTY_ARRAY = [];
+
 export default function MasterMachineView() {
   const [showForm, setShowForm] = useState(false);
   const [editingMachine, setEditingMachine] = useState(null);
@@ -70,17 +72,17 @@ export default function MasterMachineView() {
 
   const queryClient = useQueryClient();
 
-  const { data: machines = [], isLoading } = useQuery({
+  const { data: machines = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ['machines', page, pageSize],
     queryFn: () => base44.entities.Machine.list('orden', pageSize, page * pageSize),
   });
 
-  const { data: processes = [] } = useQuery({
+  const { data: processes = EMPTY_ARRAY } = useQuery({
     queryKey: ['processes'],
     queryFn: () => base44.entities.Process.list('nombre'),
   });
 
-  const { data: articles = [] } = useQuery({
+  const { data: articles = EMPTY_ARRAY } = useQuery({
     queryKey: ['articles'],
     queryFn: () => base44.entities.Article.list(),
   });

@@ -84,6 +84,7 @@ const ALL_COLUMNS = {
 };
 
 // Constant arrays for stable references
+const EMPTY_ARRAY = [];
 const SEARCH_FIELDS = ['nombre', 'codigo_empleado', 'departamento', 'puesto', 'dni', 'email'];
 const SORT_OPTIONS = [
   { field: 'nombre', label: 'Nombre' },
@@ -132,13 +133,13 @@ export default function MasterEmployeeDatabasePage() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: userRoleAssignments = [] } = useQuery({
+  const { data: userRoleAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['userRoleAssignments', currentUser?.email],
     queryFn: () => base44.entities.UserRoleAssignment.filter({ user_email: currentUser?.email }),
     enabled: !!currentUser?.email,
   });
 
-  const { data: userRoles = [] } = useQuery({
+  const { data: userRoles = EMPTY_ARRAY } = useQuery({
     queryKey: ['userRoles'],
     queryFn: () => base44.entities.UserRole.list(),
   });
@@ -153,7 +154,7 @@ export default function MasterEmployeeDatabasePage() {
     });
   }, [currentUser, userRoleAssignments, userRoles]);
 
-  const { data: masterEmployees = [], isLoading } = useQuery({
+  const { data: masterEmployees = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ['employeeMasterDatabase', page, pageSize],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', pageSize, page * pageSize),
   });
