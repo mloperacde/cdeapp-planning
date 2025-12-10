@@ -28,8 +28,7 @@ const EMPTY_ARRAY = [];
 export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  // Removed local filters state in favor of AdvancedSearch filters
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -248,29 +247,15 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="space-y-4 mb-6">
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar empleado o motivo..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="mb-6">
+            <AdvancedSearch
+              data={activeAbsencesConsolidated}
+              onFilterChange={setFilters}
+              searchFields={['motivo']} // Nombre is derived, need to handle search in filteredAbsences
+              filterOptions={filterOptions}
+              placeholder="Buscar por empleado o motivo..."
+              pageId={`absence_manager_${sourceContext}`}
+            />
           </div>
 
           {filteredAbsences.length === 0 ? (

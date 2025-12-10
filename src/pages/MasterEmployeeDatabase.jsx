@@ -718,6 +718,7 @@ export default function MasterEmployeeDatabasePage() {
                         filterOptions={filterOptions}
                         sortOptions={SORT_OPTIONS}
                         placeholder="Buscar por nombre, código, DNI, email..."
+                        pageId="master_employee_database"
                       />
                     </div>
                   </div>

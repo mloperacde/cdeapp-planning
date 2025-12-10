@@ -15,7 +15,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Search, X, Filter, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, X, Filter, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown, Save, Loader2 } from "lucide-react";
+import { useDebounce } from "@/components/utils/useDebounce";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export default function AdvancedSearch({ 
   data = [], 
@@ -23,17 +27,102 @@ export default function AdvancedSearch({
   searchFields = ['nombre'],
   filterOptions = {},
   sortOptions = [],
-  placeholder = "Buscar..."
+  placeholder = "Buscar...",
+  pageId = null // Identificador para guardar filtros
 }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 400); // 400ms delay
   const [filters, setFilters] = useState({});
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [sortField, setSortField] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
+  const queryClient = useQueryClient();
 
-  // Autocompletado inteligente
+  // Load user info for saving prefs
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me().catch(() => null),
+    enabled: !!pageId
+  });
+
+  // Load saved preference
+  const { data: savedPref, isLoading: loadingPref } = useQuery({
+    queryKey: ['userFilterPreference', pageId, user?.email],
+    queryFn: async () => {
+      if (!user?.email || !pageId) return null;
+      const prefs = await base44.entities.UserFilterPreference.filter({
+        user_email: user.email,
+        page_id: pageId,
+        is_default: true
+      });
+      return prefs[0] || null;
+    },
+    enabled: !!user?.email && !!pageId,
+    onSuccess: (pref) => {
+      if (pref && pref.filters) {
+        // Restaurar estado
+        const loadedFilters = pref.filters;
+        if (loadedFilters.search) setSearchTerm(loadedFilters.search);
+        if (loadedFilters.sortField) setSortField(loadedFilters.sortField);
+        if (loadedFilters.sortDirection) setSortDirection(loadedFilters.sortDirection);
+        
+        // Separar filtros específicos de búsqueda/orden
+        const { search, sortField, sortDirection, ...restFilters } = loadedFilters;
+        setFilters(restFilters);
+        
+        // Aplicar inmediatamente
+        onFilterChange({
+          searchTerm: loadedFilters.search || "",
+          sortField: loadedFilters.sortField || "",
+          sortDirection: loadedFilters.sortDirection || "asc",
+          ...restFilters
+        });
+      }
+    }
+  });
+
+  // Save preference mutation
+  const savePrefMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.email || !pageId) return;
+      
+      const currentState = {
+        search: searchTerm,
+        sortField,
+        sortDirection,
+        ...filters
+      };
+
+      if (savedPref) {
+        await base44.entities.UserFilterPreference.update(savedPref.id, {
+          filters: currentState
+        });
+      } else {
+        await base44.entities.UserFilterPreference.create({
+          user_email: user.email,
+          page_id: pageId,
+          filters: currentState,
+          is_default: true,
+          name: "Vista Predeterminada"
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userFilterPreference', pageId] });
+      toast.success("Filtros guardados como predeterminados");
+    },
+    onError: () => toast.error("Error al guardar filtros")
+  });
+
+  // Effect to trigger search update when debounce changes
+  React.useEffect(() => {
+    applyFilters({ ...filters, search: debouncedSearchTerm });
+  }, [debouncedSearchTerm]);
+
+  // Autocompletado inteligente usando el término NO debounced para feedback rápido, 
+  // o debounced si se prefiere no saturar. Usaremos debounced para consistencia.
   const suggestions = useMemo(() => {
-    if (!searchTerm || searchTerm.length < 2) return [];
+    if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
     
     const lowerSearch = searchTerm.toLowerCase();
     const matches = new Set();
@@ -48,18 +137,18 @@ export default function AdvancedSearch({
     });
     
     return Array.from(matches).slice(0, 8);
-  }, [searchTerm, data, searchFields]);
+  }, [debouncedSearchTerm, data, searchFields]);
 
   const handleSearchChange = (value) => {
     setSearchTerm(value);
     setShowSuggestions(value.length >= 2);
-    applyFilters({ ...filters, search: value });
+    // Removemos la llamada directa a applyFilters para usar el debounce effect
   };
 
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    applyFilters(newFilters);
+    applyFilters({ ...newFilters, search: debouncedSearchTerm }); // Mantener search actual
   };
 
   const applyFilters = (currentFilters, currentSort = sortField, currentDirection = sortDirection) => {
@@ -100,6 +189,22 @@ export default function AdvancedSearch({
 
   return (
     <div className="space-y-3">
+      {/* Header con botón de guardar si hay pageId */}
+      {pageId && (
+        <div className="flex justify-end">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => savePrefMutation.mutate()}
+            disabled={savePrefMutation.isPending || loadingPref}
+            className="text-xs text-slate-500 hover:text-blue-600"
+          >
+            {savePrefMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+            {savedPref ? "Actualizar vista predeterminada" : "Guardar como vista predeterminada"}
+          </Button>
+        </div>
+      )}
+
       {/* Search Bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />

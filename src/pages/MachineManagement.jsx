@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useDebounce } from "../components/utils/useDebounce";
 import { usePagination } from "../components/utils/usePagination";
+import AdvancedSearch from "../components/common/AdvancedSearch";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ import {
 const EMPTY_ARRAY = [];
 
 export default function MachineManagement() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState({});
   const [editingStatus, setEditingStatus] = useState(null);
   const queryClient = useQueryClient();
 
@@ -71,14 +72,43 @@ export default function MachineManagement() {
     };
   };
 
-  const debouncedSearch = useDebounce(searchTerm, 300);
-
   const filteredMachines = useMemo(() => {
-    return machines.filter(m => 
-      m.nombre?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      m.codigo?.toLowerCase().includes(debouncedSearch.toLowerCase())
-    );
-  }, [machines, debouncedSearch]);
+    let result = machines.filter(m => {
+      const searchTerm = filters.searchTerm || "";
+      const matchesSearch = !searchTerm || 
+        m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const status = getStatus(m.id);
+      const matchesDisp = !filters.disponibilidad || filters.disponibilidad === 'all' || 
+        status.estado_disponibilidad === filters.disponibilidad;
+        
+      const matchesProd = !filters.produccion || filters.produccion === 'all' || 
+        status.estado_produccion === filters.produccion;
+
+      return matchesSearch && matchesDisp && matchesProd;
+    });
+
+    if (filters.sortField) {
+      result = [...result].sort((a, b) => {
+        let aVal = a[filters.sortField];
+        let bVal = b[filters.sortField];
+        
+        if (filters.sortField === 'estado_disponibilidad' || filters.sortField === 'estado_produccion') {
+          aVal = getStatus(a.id)[filters.sortField];
+          bVal = getStatus(b.id)[filters.sortField];
+        }
+
+        if (!aVal) return 1;
+        if (!bVal) return -1;
+        
+        const comparison = String(aVal).localeCompare(String(bVal));
+        return filters.sortDirection === 'desc' ? -comparison : comparison;
+      });
+    }
+
+    return result;
+  }, [machines, filters, machineStatuses]);
 
   const { currentPage, totalPages, paginatedItems, goToPage, nextPage, prevPage } = usePagination(filteredMachines, 24);
 
@@ -218,15 +248,37 @@ export default function MachineManagement() {
                   </div>
                 )}
               </div>
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar máquina..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            </div>
+            <div className="mt-4">
+              <AdvancedSearch
+                data={machines}
+                onFilterChange={setFilters}
+                searchFields={['nombre', 'codigo']}
+                filterOptions={{
+                  disponibilidad: {
+                    label: 'Disponibilidad',
+                    options: [
+                      { value: 'Disponible', label: 'Disponible' },
+                      { value: 'No disponible', label: 'No disponible' }
+                    ]
+                  },
+                  produccion: {
+                    label: 'Estado Producción',
+                    options: [
+                      { value: 'Sin orden', label: 'Sin orden' },
+                      { value: 'Orden nueva', label: 'Orden nueva' },
+                      { value: 'Orden en curso', label: 'Orden en curso' }
+                    ]
+                  }
+                }}
+                sortOptions={[
+                  { field: 'nombre', label: 'Nombre' },
+                  { field: 'codigo', label: 'Código' },
+                  { field: 'estado_disponibilidad', label: 'Disponibilidad' }
+                ]}
+                placeholder="Buscar por nombre o código..."
+                pageId="machine_management"
+              />
             </div>
           </CardHeader>
           <CardContent className="p-0">
