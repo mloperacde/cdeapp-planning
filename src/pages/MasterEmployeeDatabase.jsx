@@ -24,7 +24,8 @@ import {
   Upload,
   FileText,
   User,
-  Columns
+  Columns,
+  Settings
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -52,17 +53,60 @@ export default function MasterEmployeeDatabasePage() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
-  const [visibleColumns, setVisibleColumns] = useState({
-    codigo_empleado: true,
-    nombre: true,
-    departamento: true,
-    puesto: true,
-    estado_empleado: true,
-    estado_sincronizacion: true,
-    fecha_alta: false,
-    ultimo_sincronizado: true,
-    acciones: true
+  
+  // Definición completa de columnas disponibles
+  const allColumns = {
+    codigo_empleado: { label: "Código", default: true },
+    nombre: { label: "Nombre", default: true },
+    departamento: { label: "Departamento", default: true },
+    puesto: { label: "Puesto", default: true },
+    categoria: { label: "Categoría", default: false },
+    estado_empleado: { label: "Estado", default: true },
+    fecha_alta: { label: "Fecha Alta", default: false },
+    fecha_baja: { label: "Fecha Baja", default: false },
+    motivo_baja: { label: "Motivo Baja", default: false },
+    dni: { label: "DNI", default: false },
+    nuss: { label: "NUSS", default: false },
+    sexo: { label: "Sexo", default: false },
+    nacionalidad: { label: "Nacionalidad", default: false },
+    direccion: { label: "Dirección", default: false },
+    email: { label: "Email", default: false },
+    telefono_movil: { label: "Móvil", default: false },
+    tipo_jornada: { label: "Jornada", default: false },
+    num_horas_jornada: { label: "Horas/Sem", default: false },
+    tipo_turno: { label: "Turno", default: false },
+    equipo: { label: "Equipo", default: false },
+    tipo_contrato: { label: "Contrato", default: false },
+    codigo_contrato: { label: "Cód. Contrato", default: false },
+    fecha_fin_contrato: { label: "Fin Contrato", default: false },
+    empresa_ett: { label: "ETT", default: false },
+    salario_anual: { label: "Salario", default: false },
+    iban: { label: "IBAN", default: false },
+    taquilla_vestuario: { label: "Vestuario", default: false },
+    taquilla_numero: { label: "Taquilla", default: false },
+    disponibilidad: { label: "Disponibilidad", default: false },
+    estado_sincronizacion: { label: "Sync Status", default: true },
+    ultimo_sincronizado: { label: "Últ. Sync", default: true },
+    acciones: { label: "Acciones", default: true }
+  };
+
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const saved = localStorage.getItem("masterEmployeeColumns");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    const defaults = {};
+    Object.keys(allColumns).forEach(key => {
+      defaults[key] = allColumns[key].default;
+    });
+    return defaults;
   });
+
+  // Persistir selección de columnas
+  React.useEffect(() => {
+    localStorage.setItem("masterEmployeeColumns", JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
+
   const queryClient = useQueryClient();
 
   // Fetch current user and permissions
@@ -517,143 +561,150 @@ export default function MasterEmployeeDatabasePage() {
 
           <TabsContent value="database">
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="dark:text-slate-100">Registros en Base de Datos Maestra</CardTitle>
-                  <div className="flex gap-2 flex-wrap">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="dark:text-slate-100">Registros en Base de Datos Maestra</CardTitle>
+                    
+                    <div className="flex gap-2">
+                      {canCreateEmployee && (
+                        <Button
+                          onClick={() => {
+                            setEmployeeToEdit(null);
+                            setEditDialogOpen(true);
+                          }}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <User className="w-4 h-4 mr-2" />
+                          Nuevo Empleado
+                        </Button>
+                      )}
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="bg-white dark:bg-slate-800 dark:border-slate-700">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Acciones Masivas
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-64">
+                          <DropdownMenuCheckboxItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              if (confirm('¿Consolidar y migrar datos de Employee a MasterEmployee?\n\nEsto unificará los datos y actualizará referencias.')) {
+                                setSyncing(true);
+                                base44.functions.invoke('consolidate_employees', {})
+                                  .then(response => {
+                                    if (response.data.success) {
+                                      alert(`✅ Consolidación completada.\nCreados: ${response.data.stats.created}\nActualizados: ${response.data.stats.updated}`);
+                                      queryClient.invalidateQueries();
+                                    } else {
+                                      alert('❌ Error: ' + response.data.error);
+                                    }
+                                  })
+                                  .catch(err => alert('❌ Error: ' + err.message))
+                                  .finally(() => setSyncing(false));
+                              }
+                            }}
+                          >
+                            <Database className="w-4 h-4 mr-2 text-blue-600" />
+                            Consolidar Todo
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              if (confirm('¿Reorganizar y limpiar datos del maestro?')) {
+                                setSyncing(true);
+                                base44.functions.invoke('reorganizeMasterEmployeeData', {})
+                                  .then(res => {
+                                    if (res.data.success) {
+                                      alert(`✅ ${res.data.message}`);
+                                      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+                                    }
+                                  })
+                                  .finally(() => setSyncing(false));
+                              }
+                            }}
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2 text-purple-600" />
+                            Reorganizar Datos
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            onSelect={handleCleanOperationalData}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2 text-orange-600" />
+                            Limpiar Sistema Operativo
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            onSelect={() => {
+                              if (confirm(`¿ELIMINAR TODOS LOS REGISTROS de la Base de Datos Maestra?\n\nSe eliminarán ${stats.total} registros.\n\nEsta acción NO se puede deshacer.`)) {
+                                handleDeleteAll();
+                              }
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Borrar BD Maestra
+                          </DropdownMenuCheckboxItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Button
+                        onClick={handleSyncAll}
+                        disabled={syncing || stats.pendientes === 0}
+                        variant="secondary"
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-200"
+                      >
+                        <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                        Sincronizar ({stats.pendientes})
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-4 items-end">
+                    <div className="flex-1 w-full">
+                      <AdvancedSearch
+                        data={masterEmployees}
+                        onFilterChange={setFilters}
+                        searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto', 'dni', 'email']}
+                        filterOptions={filterOptions}
+                        sortOptions={[
+                          { field: 'nombre', label: 'Nombre' },
+                          { field: 'codigo_empleado', label: 'Código' },
+                          { field: 'departamento', label: 'Departamento' },
+                          { field: 'puesto', label: 'Puesto' },
+                          { field: 'estado_empleado', label: 'Estado' },
+                          { field: 'estado_sincronizacion', label: 'Estado Sincronización' },
+                          { field: 'fecha_alta', label: 'Fecha Alta' },
+                          { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
+                        ]}
+                        placeholder="Buscar por nombre, código, DNI, email..."
+                      />
+                    </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+                        <Button variant="outline" className="bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 min-w-[140px]">
                           <Columns className="w-4 h-4 mr-2" />
-                          Columnas
+                          Configurar Vista
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 dark:bg-slate-800 dark:border-slate-700">
-                        {Object.keys(visibleColumns).map((column) => (
+                      <DropdownMenuContent align="end" className="w-64 max-h-[400px] overflow-y-auto dark:bg-slate-800 dark:border-slate-700">
+                        {Object.keys(allColumns).map((column) => (
                           <DropdownMenuCheckboxItem
                             key={column}
                             checked={visibleColumns[column]}
                             onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, [column]: checked }))}
-                            className="capitalize dark:text-slate-200"
+                            className="dark:text-slate-200"
                           >
-                            {column.replace(/_/g, " ")}
+                            {allColumns[column].label}
                           </DropdownMenuCheckboxItem>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-
-                    {canCreateEmployee && (
-                      <Button
-                        onClick={() => {
-                          setEmployeeToEdit(null);
-                          setEditDialogOpen(true);
-                        }}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <User className="w-4 h-4 mr-2" />
-                        Nuevo Empleado
-                      </Button>
-                    )}
-                    <Button
-                      onClick={async () => {
-                        if (!confirm('¿Reorganizar y limpiar datos del maestro?\n\nEsto corregirá:\n• Campos en columnas incorrectas\n• Fechas mal formateadas\n• Datos duplicados o mal posicionados\n\n¿Continuar?')) return;
-                        
-                        setSyncing(true);
-                        try {
-                          const response = await base44.functions.invoke('reorganizeMasterEmployeeData', {});
-                          if (response.data.success) {
-                            alert(`✅ ${response.data.message}`);
-                            queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-                          } else {
-                            alert('❌ Error: ' + response.data.error);
-                          }
-                        } catch (error) {
-                          alert('❌ Error: ' + error.message);
-                        } finally {
-                          setSyncing(false);
-                        }
-                      }}
-                      disabled={syncing}
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                      Reorganizar Datos
-                    </Button>
-                    <Button
-                      onClick={async () => {
-                        if (!confirm('¿Consolidar y migrar datos de Employee a MasterEmployee?\n\nEsto unificará los datos y actualizará referencias.')) return;
-                        setSyncing(true);
-                        try {
-                          const response = await base44.functions.invoke('consolidate_employees', {});
-                          if (response.data.success) {
-                            alert(`✅ Consolidación completada.\nCreados: ${response.data.stats.created}\nActualizados: ${response.data.stats.updated}`);
-                            queryClient.invalidateQueries();
-                          } else {
-                            alert('❌ Error: ' + response.data.error);
-                          }
-                        } catch (error) {
-                          alert('❌ Error: ' + error.message);
-                        } finally {
-                          setSyncing(false);
-                        }
-                      }}
-                      disabled={syncing}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Database className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                      Consolidar Todo
-                    </Button>
-                    <Button
-                      onClick={handleSyncAll}
-                      disabled={syncing || stats.pendientes === 0}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                      Sincronizar Pendientes ({stats.pendientes})
-                    </Button>
-                    <Button
-                      onClick={handleCleanOperationalData}
-                      disabled={syncing}
-                      className="bg-orange-600 hover:bg-orange-700"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Limpiar Sistema Operativo
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (confirm(`¿ELIMINAR TODOS LOS REGISTROS de la Base de Datos Maestra?\n\nSe eliminarán ${stats.total} registros.\n\nEsta acción NO se puede deshacer.`)) {
-                          handleDeleteAll();
-                        }
-                      }}
-                      disabled={syncing || stats.total === 0}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Borrar BD Maestra ({stats.total})
-                    </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="mb-4">
-                  <AdvancedSearch
-                    data={masterEmployees}
-                    onFilterChange={setFilters}
-                    searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto']}
-                    filterOptions={filterOptions}
-                    sortOptions={[
-                      { field: 'nombre', label: 'Nombre' },
-                      { field: 'codigo_empleado', label: 'Código' },
-                      { field: 'departamento', label: 'Departamento' },
-                      { field: 'puesto', label: 'Puesto' },
-                      { field: 'estado_empleado', label: 'Estado' },
-                      { field: 'estado_sincronizacion', label: 'Estado Sincronización' },
-                      { field: 'fecha_alta', label: 'Fecha Alta' },
-                      { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
-                    ]}
-                    placeholder="Buscar por nombre, código, departamento o puesto..."
-                  />
-                </div>
+              <CardContent className="p-0">
 
                 {isLoading ? (
                   <div className="text-center py-12 text-slate-500 dark:text-slate-400">Cargando...</div>
@@ -668,15 +719,9 @@ export default function MasterEmployeeDatabasePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-slate-50 dark:bg-slate-800">
-                          {visibleColumns.codigo_empleado && <TableHead className="dark:text-slate-300">Código</TableHead>}
-                          {visibleColumns.nombre && <TableHead className="dark:text-slate-300">Nombre</TableHead>}
-                          {visibleColumns.departamento && <TableHead className="dark:text-slate-300">Departamento</TableHead>}
-                          {visibleColumns.puesto && <TableHead className="dark:text-slate-300">Puesto</TableHead>}
-                          {visibleColumns.estado_empleado && <TableHead className="dark:text-slate-300">Estado</TableHead>}
-                          {visibleColumns.fecha_alta && <TableHead className="dark:text-slate-300">Fecha Alta</TableHead>}
-                          {visibleColumns.estado_sincronizacion && <TableHead className="dark:text-slate-300">Sincronización</TableHead>}
-                          {visibleColumns.ultimo_sincronizado && <TableHead className="dark:text-slate-300">Últ. Sincro</TableHead>}
-                          {visibleColumns.acciones && <TableHead className="text-right dark:text-slate-300">Acciones</TableHead>}
+                          {Object.keys(allColumns).map(key => 
+                            visibleColumns[key] && <TableHead key={key} className="dark:text-slate-300 whitespace-nowrap">{allColumns[key].label}</TableHead>
+                          )}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -698,6 +743,9 @@ export default function MasterEmployeeDatabasePage() {
                             {visibleColumns.puesto && (
                               <TableCell className="dark:text-slate-300">{emp.puesto || '-'}</TableCell>
                             )}
+                            {visibleColumns.categoria && (
+                              <TableCell className="dark:text-slate-300 text-xs">{emp.categoria || '-'}</TableCell>
+                            )}
                             {visibleColumns.estado_empleado && (
                               <TableCell>
                                 <Badge className={
@@ -714,25 +762,95 @@ export default function MasterEmployeeDatabasePage() {
                                 {emp.fecha_alta ? format(new Date(emp.fecha_alta), 'dd/MM/yyyy') : '-'}
                               </TableCell>
                             )}
+                            {visibleColumns.fecha_baja && (
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {emp.fecha_baja ? format(new Date(emp.fecha_baja), 'dd/MM/yyyy') : '-'}
+                              </TableCell>
+                            )}
+                            {visibleColumns.motivo_baja && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.motivo_baja || '-'}</TableCell>
+                            )}
+                            {visibleColumns.dni && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.dni || '-'}</TableCell>
+                            )}
+                            {visibleColumns.nuss && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.nuss || '-'}</TableCell>
+                            )}
+                            {visibleColumns.sexo && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.sexo || '-'}</TableCell>
+                            )}
+                            {visibleColumns.nacionalidad && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.nacionalidad || '-'}</TableCell>
+                            )}
+                            {visibleColumns.direccion && (
+                              <TableCell className="text-xs dark:text-slate-300 truncate max-w-[150px]" title={emp.direccion}>{emp.direccion || '-'}</TableCell>
+                            )}
+                            {visibleColumns.email && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.email || '-'}</TableCell>
+                            )}
+                            {visibleColumns.telefono_movil && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.telefono_movil || '-'}</TableCell>
+                            )}
+                            {visibleColumns.tipo_jornada && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.tipo_jornada || '-'}</TableCell>
+                            )}
+                            {visibleColumns.num_horas_jornada && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.num_horas_jornada || '-'}</TableCell>
+                            )}
+                            {visibleColumns.tipo_turno && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.tipo_turno || '-'}</TableCell>
+                            )}
+                            {visibleColumns.equipo && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.equipo || '-'}</TableCell>
+                            )}
+                            {visibleColumns.tipo_contrato && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.tipo_contrato || '-'}</TableCell>
+                            )}
+                            {visibleColumns.codigo_contrato && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.codigo_contrato || '-'}</TableCell>
+                            )}
+                            {visibleColumns.fecha_fin_contrato && (
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {emp.fecha_fin_contrato ? format(new Date(emp.fecha_fin_contrato), 'dd/MM/yyyy') : '-'}
+                              </TableCell>
+                            )}
+                            {visibleColumns.empresa_ett && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.empresa_ett || '-'}</TableCell>
+                            )}
+                            {visibleColumns.salario_anual && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.salario_anual || '-'}</TableCell>
+                            )}
+                            {visibleColumns.iban && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.iban || '-'}</TableCell>
+                            )}
+                            {visibleColumns.taquilla_vestuario && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.taquilla_vestuario || '-'}</TableCell>
+                            )}
+                            {visibleColumns.taquilla_numero && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.taquilla_numero || '-'}</TableCell>
+                            )}
+                            {visibleColumns.disponibilidad && (
+                              <TableCell className="text-xs dark:text-slate-300">{emp.disponibilidad || '-'}</TableCell>
+                            )}
                             {visibleColumns.estado_sincronizacion && (
                               <TableCell>
                                 <div className="flex flex-col gap-1">
                                   {emp.estado_sincronizacion === 'Sincronizado' && (
                                     <Badge className="bg-green-600 w-fit">
                                       <CheckCircle2 className="w-3 h-3 mr-1" />
-                                      Sincronizado
+                                      Sync
                                     </Badge>
                                   )}
                                   {emp.estado_sincronizacion === 'Pendiente' && (
                                     <Badge className="bg-amber-600 w-fit">
                                       <Clock className="w-3 h-3 mr-1" />
-                                      Pendiente
+                                      Pend
                                     </Badge>
                                   )}
                                   {emp.estado_sincronizacion === 'Error' && (
                                     <Badge className="bg-red-600 w-fit">
                                       <AlertCircle className="w-3 h-3 mr-1" />
-                                      Error
+                                      Err
                                     </Badge>
                                   )}
                                 </div>
@@ -746,7 +864,7 @@ export default function MasterEmployeeDatabasePage() {
                                       try {
                                         const date = new Date(emp.ultimo_sincronizado);
                                         if (isNaN(date.getTime())) return '';
-                                        return format(date, 'dd/MM/yy HH:mm', { locale: es });
+                                        return format(date, 'dd/MM HH:mm', { locale: es });
                                       } catch {
                                         return '';
                                       }
@@ -765,25 +883,28 @@ export default function MasterEmployeeDatabasePage() {
                                       setEmployeeToEdit(emp);
                                       setEditDialogOpen(true);
                                     }}
-                                    className="bg-blue-600 hover:bg-blue-700"
+                                    className="bg-blue-600 hover:bg-blue-700 h-8 w-8 p-0 rounded-full"
+                                    title="Editar"
                                   >
-                                    <User className="w-3 h-3 mr-1" />
-                                    Editar
+                                    <User className="w-4 h-4" />
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     onClick={() => openSyncDialog(emp)}
+                                    className="h-8 w-8 p-0 rounded-full"
+                                    title="Sincronizar"
                                   >
-                                    <RefreshCw className="w-3 h-3 mr-1" />
-                                    Sincronizar
+                                    <RefreshCw className="w-4 h-4" />
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => setHistoryEmployeeId(emp.id)}
+                                    className="h-8 w-8 p-0 rounded-full"
+                                    title="Historial"
                                   >
-                                    <FileText className="w-3 h-3" />
+                                    <FileText className="w-4 h-4" />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -793,8 +914,10 @@ export default function MasterEmployeeDatabasePage() {
                                         deleteMutation.mutate(emp.id);
                                       }
                                     }}
+                                    className="h-8 w-8 p-0 rounded-full hover:bg-red-100"
+                                    title="Eliminar"
                                   >
-                                    <Trash2 className="w-3 h-3 text-red-600" />
+                                    <Trash2 className="w-4 h-4 text-red-600" />
                                   </Button>
                                 </div>
                               </TableCell>

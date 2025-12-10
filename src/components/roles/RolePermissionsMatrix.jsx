@@ -38,6 +38,14 @@ export default function RolePermissionsMatrix({ role, onPermissionChange, editab
       ]
     },
     {
+      key: "contrato",
+      label: "Contrato",
+      permissions: [
+        { key: "ver", label: "Ver" },
+        { key: "editar", label: "Editar" }
+      ]
+    },
+    {
       key: "documentos",
       label: "Documentos",
       permissions: [
