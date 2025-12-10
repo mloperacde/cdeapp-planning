@@ -25,6 +25,14 @@ export default function RoleForm({ role, onClose }) {
       acciones_maquinas: { ver: false, actualizar_estado: false, planificar: false },
       acciones_mantenimiento: { ver: false, crear: false, actualizar: false, completar: false },
       acciones_comites: { ver: false, gestionar_miembros: false, gestionar_documentos: false },
+      campos_empleado: { 
+        ver_salario: false, 
+        ver_bancarios: false, 
+        ver_contacto: true, 
+        ver_direccion: true, 
+        ver_dni: false,
+        editar_sensible: false
+      },
       acciones_prl: {
         ver_equipo_emergencias: false,
         gestionar_equipo_emergencias: false,
@@ -205,7 +213,7 @@ export default function RoleForm({ role, onClose }) {
             <TabsContent value="acciones" className="space-y-4 mt-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Empleados</CardTitle>
+                  <CardTitle className="text-base">Empleados - Acciones</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {Object.keys(formData.permissions?.acciones_empleados || {}).map(key => (
@@ -216,6 +224,25 @@ export default function RoleForm({ role, onClose }) {
                       />
                       <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('acciones_empleados', key, !(formData.permissions?.acciones_empleados?.[key]))}>
                         {key.replace('_', ' ')}
+                      </label>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Empleados - Datos Sensibles</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {Object.keys(formData.permissions?.campos_empleado || {}).map(key => (
+                    <div key={key} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={formData.permissions?.campos_empleado?.[key] || false}
+                        onCheckedChange={(checked) => updatePermission('campos_empleado', key, checked)}
+                      />
+                      <label className="text-sm cursor-pointer capitalize" onClick={() => updatePermission('campos_empleado', key, !(formData.permissions?.campos_empleado?.[key]))}>
+                        {key.replace(/_/g, ' ')}
                       </label>
                     </div>
                   ))}
