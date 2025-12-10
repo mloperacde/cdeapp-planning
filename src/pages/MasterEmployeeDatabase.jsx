@@ -47,8 +47,6 @@ import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 
-import { keepPreviousData } from "@tanstack/react-query";
-
 // Definición completa de columnas disponibles (Moved outside component to avoid recreation)
 const ALL_COLUMNS = {
   codigo_empleado: { label: "Código", default: true },
@@ -158,7 +156,6 @@ export default function MasterEmployeeDatabasePage() {
   const { data: masterEmployees = [], isLoading } = useQuery({
     queryKey: ['employeeMasterDatabase', page, pageSize],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', pageSize, page * pageSize),
-    placeholderData: keepPreviousData,
   });
 
   const { data: userPermissions } = useQuery({
