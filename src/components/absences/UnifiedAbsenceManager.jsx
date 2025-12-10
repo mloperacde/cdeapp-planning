@@ -23,6 +23,8 @@ import { format, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
+const EMPTY_ARRAY = [];
+
 export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
@@ -39,25 +41,25 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
     notas: "",
   });
 
-  const { data: absences = [] } = useQuery({
+  const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio'),
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
-  const { data: masterEmployees = [] } = useQuery({
+  const { data: masterEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
-  const { data: absenceTypes = [] } = useQuery({
+  const { data: absenceTypes = EMPTY_ARRAY } = useQuery({
     queryKey: ['absenceTypes'],
     queryFn: () => base44.entities.AbsenceType.list('orden'),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
   const { data: currentUser } = useQuery({

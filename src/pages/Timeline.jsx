@@ -10,6 +10,8 @@ import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, en
 import { Sparkles } from "lucide-react";
 import WorkCalendar from "../components/absences/WorkCalendar";
 
+const EMPTY_ARRAY = [];
+
 export default function Timeline() {
   const now = new Date();
   const [viewMode, setViewMode] = useState('day');
@@ -18,7 +20,7 @@ export default function Timeline() {
   const [selectedDepartment, setSelectedDepartment] = useState('all'); // New state for selected department
   const [isCalling, setIsCalling] = useState(false);
 
-  const getDateRange = () => {
+  const { start: startDate, end: endDate } = useMemo(() => {
     const dateCopy = new Date(selectedDate); // Create a copy to avoid mutating the state date
     switch (viewMode) {
       case 'day':
@@ -44,42 +46,40 @@ export default function Timeline() {
           end: new Date(dateCopy.setHours(22, 0, 0, 0))
         };
     }
-  };
+  }, [viewMode, selectedDate]);
 
-  const { start: startDate, end: endDate } = getDateRange();
-
-  const { data: holidays = [] } = useQuery({
+  const { data: holidays = EMPTY_ARRAY } = useQuery({
     queryKey: ['holidays'],
     queryFn: () => base44.entities.Holiday.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: vacations = [] } = useQuery({
+  const { data: vacations = EMPTY_ARRAY } = useQuery({
     queryKey: ['vacations'],
     queryFn: () => base44.entities.Vacation.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
     staleTime: 2 * 60 * 1000,
   });
 
-  const { data: teams = [] } = useQuery({
+  const { data: teams = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: teamSchedules = [] } = useQuery({
+  const { data: teamSchedules = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -138,12 +138,12 @@ export default function Timeline() {
             <TimelineView 
               startDate={startDate} 
               endDate={endDate}
-              holidays={holidays || []}
-              vacations={vacations || []}
+              holidays={holidays}
+              vacations={vacations}
               selectedTeam={selectedTeam}
-              employees={employees || []}
-              teams={teams || []}
-              teamSchedules={teamSchedules || []}
+              employees={employees}
+              teams={teams}
+              teamSchedules={teamSchedules}
               viewMode={viewMode}
               selectedDepartment={selectedDepartment}
             />

@@ -28,6 +28,8 @@ import HolidayVacationPanel from "../components/absences/HolidayVacationPanel";
 import ProductionMonitor from "../components/machines/ProductionMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+const EMPTY_ARRAY = [];
+
 const AVAILABLE_WIDGETS = [
   { id: 'absence_kpis', name: 'KPIs de Ausencias', icon: UserX, color: 'red' },
   { id: 'daily_planning_summary', name: 'Resumen Planning Diario', icon: Calendar, color: 'blue' },
@@ -45,43 +47,43 @@ export default function DashboardPage() {
     base44.auth.me().then(setUser).catch(() => setUser(null));
   }, []);
 
-  const { data: absences = [] } = useQuery({
+  const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: machines = [] } = useQuery({
+  const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: maintenances = [] } = useQuery({
+  const { data: maintenances = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenances'],
     queryFn: () => base44.entities.MaintenanceSchedule.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: productionPlannings = [] } = useQuery({
+  const { data: productionPlannings = EMPTY_ARRAY } = useQuery({
     queryKey: ['dailyProductionPlannings'],
     queryFn: () => base44.entities.DailyProductionPlanning.list(),
-    initialData: [],
+    initialData: EMPTY_ARRAY,
   });
 
-  const { data: widgetPreferences = [] } = useQuery({
+  const { data: widgetPreferences = EMPTY_ARRAY } = useQuery({
     queryKey: ['dashboardWidgets', user?.role],
     queryFn: async () => {
-      if (!user?.role) return [];
+      if (!user?.role) return EMPTY_ARRAY;
       return base44.entities.DashboardWidget.filter({ role: user.role }, 'order');
     },
-    initialData: [],
+    initialData: EMPTY_ARRAY,
     enabled: !!user,
   });
 
