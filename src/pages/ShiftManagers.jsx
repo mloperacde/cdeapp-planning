@@ -36,7 +36,7 @@ export default function ShiftManagersPage() {
   
   const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
   const { data: teams = EMPTY_ARRAY } = useQuery({

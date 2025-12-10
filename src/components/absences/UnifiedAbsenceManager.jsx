@@ -46,7 +46,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
   const { data: masterEmployees = [] } = useQuery({

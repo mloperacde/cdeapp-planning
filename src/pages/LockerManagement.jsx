@@ -63,7 +63,7 @@ export default function LockerManagementPage() {
 
   const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
   const { data: lockerAssignments = EMPTY_ARRAY, refetch: refetchAssignments } = useQuery({

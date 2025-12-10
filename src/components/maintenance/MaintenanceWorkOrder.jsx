@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -456,7 +455,7 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
 

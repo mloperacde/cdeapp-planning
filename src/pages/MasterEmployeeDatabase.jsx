@@ -512,6 +512,30 @@ export default function MasterEmployeeDatabasePage() {
                       Reorganizar Datos
                     </Button>
                     <Button
+                      onClick={async () => {
+                        if (!confirm('¿Consolidar y migrar datos de Employee a MasterEmployee?\n\nEsto unificará los datos y actualizará referencias.')) return;
+                        setSyncing(true);
+                        try {
+                          const response = await base44.functions.invoke('consolidate_employees', {});
+                          if (response.data.success) {
+                            alert(`✅ Consolidación completada.\nCreados: ${response.data.stats.created}\nActualizados: ${response.data.stats.updated}`);
+                            queryClient.invalidateQueries();
+                          } else {
+                            alert('❌ Error: ' + response.data.error);
+                          }
+                        } catch (error) {
+                          alert('❌ Error: ' + error.message);
+                        } finally {
+                          setSyncing(false);
+                        }
+                      }}
+                      disabled={syncing}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Database className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                      Consolidar Todo
+                    </Button>
+                    <Button
                       onClick={handleSyncAll}
                       disabled={syncing || stats.pendientes === 0}
                       className="bg-green-600 hover:bg-green-700"
