@@ -36,7 +36,6 @@ import CommitteeManagement from './pages/CommitteeManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
 import LockerDataCleanup from './pages/LockerDataCleanup';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
-import MasterEmployeeView from './pages/MasterEmployeeView';
 import AppUserManagement from './pages/AppUserManagement';
 import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
 import RoleManagement from './pages/RoleManagement';
@@ -59,8 +58,6 @@ import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import NotificationCenter from './pages/NotificationCenter';
-import EmployeeList from './pages/EmployeeList';
-import Employees from './pages/Employees';
 import MyProfile from './pages/MyProfile';
 import MobileProfile from './pages/MobileProfile';
 import MobileNotifications from './pages/MobileNotifications';
@@ -106,7 +103,6 @@ export const PAGES = {
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
     "LockerDataCleanup": LockerDataCleanup,
     "EmployeeDataCorrection": EmployeeDataCorrection,
-    "MasterEmployeeView": MasterEmployeeView,
     "AppUserManagement": AppUserManagement,
     "LockerDuplicateCleanup": LockerDuplicateCleanup,
     "RoleManagement": RoleManagement,
@@ -129,8 +125,6 @@ export const PAGES = {
     "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
     "AdvancedHRDashboard": AdvancedHRDashboard,
     "NotificationCenter": NotificationCenter,
-    "EmployeeList": EmployeeList,
-    "Employees": Employees,
     "MyProfile": MyProfile,
     "MobileProfile": MobileProfile,
     "MobileNotifications": MobileNotifications,

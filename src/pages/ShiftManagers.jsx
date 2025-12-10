@@ -175,11 +175,11 @@ export default function ShiftManagersPage() {
       description: "Configura equipos rotativos"
     },
     {
-      title: "Lista de Empleados",
+      title: "Base de Datos de Empleados",
       icon: Users,
-      url: createPageUrl("EmployeeList"),
+      url: createPageUrl("MasterEmployeeDatabase"),
       color: "teal",
-      description: "Consulta información del personal"
+      description: "Consulta y gestión de empleados"
     },
     {
       title: "Asignaciones Máquinas",

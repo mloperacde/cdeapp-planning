@@ -94,6 +94,17 @@ export default function RolePermissionsMatrix({ role, onPermissionChange, editab
         { key: "gestionar_miembros", label: "Gestionar miembros" },
         { key: "gestionar_documentos", label: "Gestionar documentos" }
       ]
+    },
+    {
+      key: "campos_empleado",
+      label: "Campos de Empleado (Vista)",
+      permissions: [
+        { key: "ver_salario", label: "Ver Salario" },
+        { key: "ver_dni", label: "Ver DNI" },
+        { key: "ver_contacto", label: "Ver Contacto (Tlf/Email)" },
+        { key: "ver_direccion", label: "Ver Dirección" },
+        { key: "ver_bancarios", label: "Ver Datos Bancarios" }
+      ]
     }
   ];
 
