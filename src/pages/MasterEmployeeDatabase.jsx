@@ -539,15 +539,15 @@ export default function MasterEmployeeDatabasePage() {
           </Card>
         </div>
 
-        <Tabs defaultValue="import" className="space-y-6">
+        <Tabs defaultValue="database" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="import">
-              <Upload className="w-4 h-4 mr-2" />
-              Importar Datos
-            </TabsTrigger>
             <TabsTrigger value="database">
               <Database className="w-4 h-4 mr-2" />
               Base de Datos ({stats.total})
+            </TabsTrigger>
+            <TabsTrigger value="import">
+              <Upload className="w-4 h-4 mr-2" />
+              Importar Datos
             </TabsTrigger>
             <TabsTrigger value="history">
               <FileText className="w-4 h-4 mr-2" />
