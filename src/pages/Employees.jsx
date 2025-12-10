@@ -287,8 +287,7 @@ export default function EmployeesPage() {
       .filter(a => a.estado_aprobacion === 'Pendiente' || a.estado_aprobacion === 'Aprobada')
       .slice(0, 5)
       .map(a => {
-        const emp = employees.find(e => e.id === a.employee_id) || 
-                    masterEmployees.find(me => me.employee_id === a.employee_id);
+        const emp = masterEmployees.find(me => me.id === a.employee_id);
         return { ...a, employeeName: emp?.nombre || 'Desconocido' };
       });
     
@@ -306,7 +305,7 @@ export default function EmployeesPage() {
       fuerzaMayorAlerts,
       recentAbsences
     };
-  }, [masterEmployees, employees, absences, vacationBalances, onboardingProcesses]);
+  }, [masterEmployees, absences, vacationBalances, onboardingProcesses]);
 
   return (
     <div className="p-6 md:p-8">
