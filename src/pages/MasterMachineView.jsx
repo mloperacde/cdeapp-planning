@@ -36,6 +36,7 @@ import MachineDetailCard from "../components/machines/MachineDetailCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export default function MasterMachineView() {
   const [showForm, setShowForm] = useState(false);
@@ -74,7 +75,7 @@ export default function MasterMachineView() {
   const { data: machines = [], isLoading } = useQuery({
     queryKey: ['machines', page, pageSize],
     queryFn: () => base44.entities.Machine.list('orden', pageSize, page * pageSize),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const { data: processes = [] } = useQuery({

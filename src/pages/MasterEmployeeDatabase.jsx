@@ -47,6 +47,57 @@ import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 
+import { keepPreviousData } from "@tanstack/react-query";
+
+// Definición completa de columnas disponibles (Moved outside component to avoid recreation)
+const ALL_COLUMNS = {
+  codigo_empleado: { label: "Código", default: true },
+  nombre: { label: "Nombre", default: true },
+  departamento: { label: "Departamento", default: true },
+  puesto: { label: "Puesto", default: true },
+  categoria: { label: "Categoría", default: false },
+  estado_empleado: { label: "Estado", default: true },
+  fecha_alta: { label: "Fecha Alta", default: false },
+  fecha_baja: { label: "Fecha Baja", default: false },
+  motivo_baja: { label: "Motivo Baja", default: false },
+  dni: { label: "DNI", default: false },
+  nuss: { label: "NUSS", default: false },
+  sexo: { label: "Sexo", default: false },
+  nacionalidad: { label: "Nacionalidad", default: false },
+  direccion: { label: "Dirección", default: false },
+  email: { label: "Email", default: false },
+  telefono_movil: { label: "Móvil", default: false },
+  tipo_jornada: { label: "Jornada", default: false },
+  num_horas_jornada: { label: "Horas/Sem", default: false },
+  tipo_turno: { label: "Turno", default: false },
+  equipo: { label: "Equipo", default: false },
+  tipo_contrato: { label: "Contrato", default: false },
+  codigo_contrato: { label: "Cód. Contrato", default: false },
+  fecha_fin_contrato: { label: "Fin Contrato", default: false },
+  empresa_ett: { label: "ETT", default: false },
+  salario_anual: { label: "Salario", default: false },
+  iban: { label: "IBAN", default: false },
+  taquilla_vestuario: { label: "Vestuario", default: false },
+  taquilla_numero: { label: "Taquilla", default: false },
+  disponibilidad: { label: "Disponibilidad", default: false },
+  estado_sincronizacion: { label: "Sync Status", default: true },
+  ultimo_sincronizado: { label: "Últ. Sync", default: true },
+  acciones: { label: "Acciones", default: true }
+};
+
+// Constant arrays for stable references
+const SEARCH_FIELDS = ['nombre', 'codigo_empleado', 'departamento', 'puesto', 'dni', 'email'];
+const SORT_OPTIONS = [
+  { field: 'nombre', label: 'Nombre' },
+  { field: 'codigo_empleado', label: 'Código' },
+  { field: 'departamento', label: 'Departamento' },
+  { field: 'puesto', label: 'Puesto' },
+  { field: 'estado_empleado', label: 'Estado' },
+  { field: 'estado_sincronizacion', label: 'Estado Sincronización' },
+  { field: 'fecha_alta', label: 'Fecha Alta' },
+  { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
+];
+
 export default function MasterEmployeeDatabasePage() {
   const [filters, setFilters] = useState({});
   const [syncing, setSyncing] = useState(false);
@@ -58,50 +109,14 @@ export default function MasterEmployeeDatabasePage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   
-  // Definición completa de columnas disponibles
-  const allColumns = {
-    codigo_empleado: { label: "Código", default: true },
-    nombre: { label: "Nombre", default: true },
-    departamento: { label: "Departamento", default: true },
-    puesto: { label: "Puesto", default: true },
-    categoria: { label: "Categoría", default: false },
-    estado_empleado: { label: "Estado", default: true },
-    fecha_alta: { label: "Fecha Alta", default: false },
-    fecha_baja: { label: "Fecha Baja", default: false },
-    motivo_baja: { label: "Motivo Baja", default: false },
-    dni: { label: "DNI", default: false },
-    nuss: { label: "NUSS", default: false },
-    sexo: { label: "Sexo", default: false },
-    nacionalidad: { label: "Nacionalidad", default: false },
-    direccion: { label: "Dirección", default: false },
-    email: { label: "Email", default: false },
-    telefono_movil: { label: "Móvil", default: false },
-    tipo_jornada: { label: "Jornada", default: false },
-    num_horas_jornada: { label: "Horas/Sem", default: false },
-    tipo_turno: { label: "Turno", default: false },
-    equipo: { label: "Equipo", default: false },
-    tipo_contrato: { label: "Contrato", default: false },
-    codigo_contrato: { label: "Cód. Contrato", default: false },
-    fecha_fin_contrato: { label: "Fin Contrato", default: false },
-    empresa_ett: { label: "ETT", default: false },
-    salario_anual: { label: "Salario", default: false },
-    iban: { label: "IBAN", default: false },
-    taquilla_vestuario: { label: "Vestuario", default: false },
-    taquilla_numero: { label: "Taquilla", default: false },
-    disponibilidad: { label: "Disponibilidad", default: false },
-    estado_sincronizacion: { label: "Sync Status", default: true },
-    ultimo_sincronizado: { label: "Últ. Sync", default: true },
-    acciones: { label: "Acciones", default: true }
-  };
-
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem("masterEmployeeColumns");
     if (saved) {
       return JSON.parse(saved);
     }
     const defaults = {};
-    Object.keys(allColumns).forEach(key => {
-      defaults[key] = allColumns[key].default;
+    Object.keys(ALL_COLUMNS).forEach(key => {
+      defaults[key] = ALL_COLUMNS[key].default;
     });
     return defaults;
   });
@@ -143,7 +158,7 @@ export default function MasterEmployeeDatabasePage() {
   const { data: masterEmployees = [], isLoading } = useQuery({
     queryKey: ['employeeMasterDatabase', page, pageSize],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', pageSize, page * pageSize),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const { data: userPermissions } = useQuery({
@@ -701,18 +716,9 @@ export default function MasterEmployeeDatabasePage() {
                       <AdvancedSearch
                         data={masterEmployees}
                         onFilterChange={setFilters}
-                        searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto', 'dni', 'email']}
+                        searchFields={SEARCH_FIELDS}
                         filterOptions={filterOptions}
-                        sortOptions={[
-                          { field: 'nombre', label: 'Nombre' },
-                          { field: 'codigo_empleado', label: 'Código' },
-                          { field: 'departamento', label: 'Departamento' },
-                          { field: 'puesto', label: 'Puesto' },
-                          { field: 'estado_empleado', label: 'Estado' },
-                          { field: 'estado_sincronizacion', label: 'Estado Sincronización' },
-                          { field: 'fecha_alta', label: 'Fecha Alta' },
-                          { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
-                        ]}
+                        sortOptions={SORT_OPTIONS}
                         placeholder="Buscar por nombre, código, DNI, email..."
                       />
                     </div>
@@ -749,14 +755,14 @@ export default function MasterEmployeeDatabasePage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-64 max-h-[400px] overflow-y-auto dark:bg-slate-800 dark:border-slate-700">
-                        {Object.keys(allColumns).map((column) => (
+                        {Object.keys(ALL_COLUMNS).map((column) => (
                           <DropdownMenuCheckboxItem
                             key={column}
                             checked={visibleColumns[column]}
                             onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, [column]: checked }))}
                             className="dark:text-slate-200"
                           >
-                            {allColumns[column].label}
+                            {ALL_COLUMNS[column].label}
                           </DropdownMenuCheckboxItem>
                         ))}
                       </DropdownMenuContent>
@@ -779,8 +785,8 @@ export default function MasterEmployeeDatabasePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-slate-50 dark:bg-slate-800">
-                          {Object.keys(allColumns).map(key => 
-                            visibleColumns[key] && <TableHead key={key} className="dark:text-slate-300 whitespace-nowrap">{allColumns[key].label}</TableHead>
+                          {Object.keys(ALL_COLUMNS).map(key => 
+                            visibleColumns[key] && <TableHead key={key} className="dark:text-slate-300 whitespace-nowrap">{ALL_COLUMNS[key].label}</TableHead>
                           )}
                         </TableRow>
                       </TableHeader>
