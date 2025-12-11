@@ -61,9 +61,15 @@ export default function AdvancedSearch({
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Use a ref to track if we've already applied these specific preferences
+  const appliedPrefRef = React.useRef(null);
+
   // Handle preference loading with useEffect
   React.useEffect(() => {
     if (savedPref && savedPref.filters) {
+      // Avoid re-applying the exact same preference object if it hasn't changed
+      if (appliedPrefRef.current === savedPref) return;
+      
       const loadedFilters = savedPref.filters;
       
       // Check if current state is different to avoid unnecessary updates/loops
@@ -74,10 +80,6 @@ export default function AdvancedSearch({
         ...filters
       };
       
-      // Normalize comparison (handle undefined/null vs empty string)
-      // JSON stringify isn't perfect for unordered keys but works for simple cases
-      // We also check specifically if key values are different
-      
       let needsUpdate = false;
       if ((loadedFilters.search || "") !== (currentState.search || "")) needsUpdate = true;
       if ((loadedFilters.sortField || "") !== (currentState.sortField || "")) needsUpdate = true;
@@ -87,10 +89,14 @@ export default function AdvancedSearch({
       if (!needsUpdate) {
          const { search, sortField, sortDirection, ...restLoaded } = loadedFilters;
          const { search: s, sortField: sf, sortDirection: sd, ...restCurrent } = currentState;
+         // Use strict comparison for optimization
          if (JSON.stringify(restLoaded) !== JSON.stringify(restCurrent)) needsUpdate = true;
       }
       
       if (needsUpdate) {
+        // Mark as applied
+        appliedPrefRef.current = savedPref;
+
         // Update local state
         if (loadedFilters.search !== undefined) setSearchTerm(loadedFilters.search);
         if (loadedFilters.sortField !== undefined) setSortField(loadedFilters.sortField);
@@ -106,6 +112,9 @@ export default function AdvancedSearch({
           sortDirection: loadedFilters.sortDirection || "asc",
           ...restFilters
         });
+      } else {
+        // Even if no update needed, mark as applied to avoid re-check
+        appliedPrefRef.current = savedPref;
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

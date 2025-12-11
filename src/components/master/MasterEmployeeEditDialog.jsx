@@ -22,6 +22,8 @@ import {
 import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 
+const EMPTY_ARRAY = [];
+
 export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions }) {
   const [activeTab, setActiveTab] = useState("personal");
   const [formData, setFormData] = useState({
@@ -65,13 +67,13 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: userRoleAssignments = [] } = useQuery({
+  const { data: userRoleAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['userRoleAssignments', currentUser?.email],
     queryFn: () => base44.entities.UserRoleAssignment.filter({ user_email: currentUser?.email }),
     enabled: !!currentUser?.email && !propPermissions,
   });
 
-  const { data: userRoles = [] } = useQuery({
+  const { data: userRoles = EMPTY_ARRAY } = useQuery({
     queryKey: ['userRoles'],
     queryFn: () => base44.entities.UserRole.list(),
     enabled: !propPermissions,
