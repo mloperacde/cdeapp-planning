@@ -106,7 +106,7 @@ export default function EnhancedRoleForm({ role, onClose }) {
   });
 
   const availableDepartments = departmentsList.length > 0 
-    ? departmentsList.map(d => d.name.toUpperCase()) 
+    ? departmentsList.map(d => (d.name || "").toUpperCase()).filter(Boolean)
     : [
       "FABRICACION", "MANTENIMIENTO", "ALMACEN", "CALIDAD", 
       "OFICINA", "PLANIFICACION", "LIMPIEZA"

@@ -70,7 +70,7 @@ export default function DepartmentManagementPage() {
         level,
         children: buildTree(depts, d.id, level + 1)
       }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   };
 
   const getFlatTree = (tree, acc = []) => {
