@@ -28,7 +28,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table.jsx";
 import { MessageSquare, Plus, UserX, ArrowLeft, Clock, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";

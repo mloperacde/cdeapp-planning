@@ -16,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table.jsx";
 import { UserX, Plus, Edit, Trash2, Search, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
