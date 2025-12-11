@@ -286,11 +286,11 @@ export default function RoleEditor({ roleId, onClose, onSuccess }) {
                       <div 
                         key={dept.id}
                         className={`cursor-pointer px-3 py-1 rounded-full border transition-colors ${
-                          formData.permissions.empleados.departamentos_visibles.includes(dept.name.toUpperCase()) 
+                          formData.permissions.empleados.departamentos_visibles.includes(String(dept.name || "").toUpperCase()) 
                           ? 'bg-blue-100 text-blue-800 border-blue-300' 
                           : 'bg-white hover:bg-slate-100'
                         }`}
-                        onClick={() => handleDeptToggle(dept.name.toUpperCase())}
+                        onClick={() => handleDeptToggle(String(dept.name || "").toUpperCase())}
                       >
                         {dept.name}
                       </div>
