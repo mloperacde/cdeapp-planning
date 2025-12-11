@@ -34,9 +34,9 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import EmployeeSelect from "../components/common/EmployeeSelect";
 import { createAbsence } from "../components/absences/AbsenceOperations";
 import { toast } from "sonner";
+import AbsenceForm from "../components/absences/AbsenceForm";
 
 export default function ShiftAbsenceReportPage() {
   const [showForm, setShowForm] = useState(false);
@@ -125,37 +125,10 @@ export default function ShiftAbsenceReportPage() {
 
   const handleClose = () => {
     setShowForm(false);
-    setFullDay(false);
-    setFormData({
-      employee_id: "",
-      fecha_inicio: "",
-      fecha_fin: "",
-      motivo: "",
-      tipo: "",
-      absence_type_id: "",
-      remunerada: true,
-      notas: "",
-    });
-    setSearchTerm("");
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    let finalData = { ...formData };
-
-    if (fullDay && formData.fecha_inicio && formData.fecha_fin) {
-      const startDate = new Date(formData.fecha_inicio);
-      const endDate = new Date(formData.fecha_fin);
-      
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-      
-      finalData.fecha_inicio = startDate.toISOString();
-      finalData.fecha_fin = endDate.toISOString();
-    }
-
-    saveMutation.mutate(finalData);
+  const handleSubmit = (data) => {
+    saveMutation.mutate(data);
   };
 
   const activeAbsencesToday = useMemo(() => {
@@ -366,144 +339,26 @@ export default function ShiftAbsenceReportPage() {
       {/* Formulario de Comunicación */}
       {showForm && (
         <Dialog open={true} onOpenChange={handleClose}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Comunicar Ausencia</DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-amber-800">
-                  <strong>⚠️ Importante:</strong> Utiliza este formulario para comunicar ausencias que ocurran 
-                  durante tu turno (enfermedad repentina, emergencia familiar, etc.). El empleado será marcado 
-                  automáticamente como ausente.
-                </p>
-              </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-amber-800">
+                <strong>⚠️ Importante:</strong> Utiliza este formulario para comunicar ausencias que ocurran 
+                durante tu turno (enfermedad repentina, emergencia familiar, etc.). El empleado será marcado 
+                automáticamente como ausente.
+              </p>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="employee_id">Empleado *</Label>
-                <EmployeeSelect
-                  employees={employees}
-                  value={formData.employee_id}
-                  onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  placeholder="Buscar y seleccionar empleado disponible"
-                  filterFn={(emp) => emp.disponibilidad === "Disponible"}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo de Ausencia *</Label>
-                  <Select
-                    value={formData.absence_type_id}
-                    onValueChange={(value) => {
-                        const type = absenceTypes.find(t => t.id === value);
-                        setFormData({ 
-                            ...formData, 
-                            absence_type_id: value,
-                            tipo: type ? type.nombre : "",
-                            remunerada: type ? type.remunerada : formData.remunerada
-                        });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {absenceTypes.filter(t => t.activo && t.visible_empleados).map(type => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="motivo">Motivo *</Label>
-                  <Input
-                    id="motivo"
-                    value={formData.motivo}
-                    onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
-                    required
-                    placeholder="Ej: Enfermedad repentina"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <Checkbox
-                  id="remunerada"
-                  checked={formData.remunerada}
-                  onCheckedChange={(checked) => setFormData({ ...formData, remunerada: checked })}
-                />
-                <label htmlFor="remunerada" className="text-sm font-medium text-slate-900 cursor-pointer">
-                  Ausencia Remunerada (con pago de salario)
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <Checkbox
-                  id="fullDay"
-                  checked={fullDay}
-                  onCheckedChange={setFullDay}
-                />
-                <label htmlFor="fullDay" className="text-sm font-medium text-slate-900 cursor-pointer">
-                  Ausencia de horario completo (00:00 - 23:59)
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fecha_inicio">Fecha {!fullDay && "y Hora"} Inicio *</Label>
-                  <Input
-                    id="fecha_inicio"
-                    type={fullDay ? "date" : "datetime-local"}
-                    value={formData.fecha_inicio}
-                    onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fecha_fin">Fecha {!fullDay && "y Hora"} Fin *</Label>
-                  <Input
-                    id="fecha_fin"
-                    type={fullDay ? "date" : "datetime-local"}
-                    value={formData.fecha_fin}
-                    onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notas">Notas Adicionales</Label>
-                <Textarea
-                  id="notas"
-                  value={formData.notas}
-                  onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-                  rows={3}
-                  placeholder="Detalles adicionales sobre la ausencia..."
-                />
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> Al guardar esta comunicación, el empleado será marcado automáticamente 
-                  como "Ausente" en el sistema y Recursos Humanos será notificado.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-red-600 hover:bg-red-700" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Comunicando..." : "Comunicar Ausencia"}
-                </Button>
-              </div>
-            </form>
+            <AbsenceForm
+              employees={employees}
+              absenceTypes={absenceTypes}
+              onSubmit={handleSubmit}
+              onCancel={handleClose}
+              isSubmitting={saveMutation.isPending}
+            />
           </DialogContent>
         </Dialog>
       )}
