@@ -5,11 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Plus, Edit, Users, ArrowLeft, CheckCircle2, FileText } from "lucide-react";
+import { Shield, Plus, Edit, Users, ArrowLeft, CheckCircle2, FileText, AlertTriangle, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import RoleForm from "../components/roles/RoleForm";
-import RoleAssignmentManager from "../components/roles/RoleAssignmentManager";
 import EnhancedRoleForm from "../components/roles/EnhancedRoleForm";
 import EnhancedRoleAssignment from "../components/roles/EnhancedRoleAssignment";
 import RoleAuditLogViewer from "../components/roles/RoleAuditLogViewer";
@@ -21,15 +18,9 @@ export default function RoleManagementPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: roles } = useQuery({
+  const { data: roles, isLoading: loadingRoles, error: rolesError } = useQuery({
     queryKey: ['userRoles'],
     queryFn: () => base44.entities.UserRole.list('-nivel_prioridad'),
-    initialData: [],
-  });
-
-  const { data: roleAssignments } = useQuery({
-    queryKey: ['userRoleAssignments'],
-    queryFn: () => base44.entities.UserRoleAssignment.list(),
     initialData: [],
   });
 
@@ -41,85 +32,131 @@ export default function RoleManagementPage() {
           description: "Acceso completo a todos los módulos del sistema",
           is_admin: true,
           nivel_prioridad: 10,
+          es_rol_sistema: true,
           permissions: {
             modulos_acceso: ["Dashboard", "Empleados", "Planning", "Maquinas", "Mantenimiento", "Ausencias", "Comites", "PRL", "Taquillas", "Habilidades", "Informes", "Configuracion", "Usuarios"],
-            acciones_empleados: { ver: true, crear: true, editar: true, eliminar: true },
-            acciones_ausencias: { ver_propias: true, crear_propias: true, ver_todas: true, aprobar: true },
-            acciones_maquinas: { ver: true, actualizar_estado: true, planificar: true },
-            acciones_mantenimiento: { ver: true, crear: true, actualizar: true, completar: true },
-            acciones_comites: { ver: true, gestionar_miembros: true, gestionar_documentos: true }
+            empleados: { ver: true, crear: true, editar: true, eliminar: true, departamentos_visibles: ["*"] },
+            empleados_detalle: {
+              pestanas: {
+                personal: true, organizacion: true, horarios: true, taquilla: true, contrato: true, absentismo: true, maquinas: true, disponibilidad: true
+              }
+            },
+            campos_empleado: {
+              ver_salario: true, ver_bancarios: true, ver_contacto: true, ver_direccion: true, ver_dni: true, editar_sensible: true, editar_contacto: true
+            },
+            ausencias: { ver_propias: true, crear_propias: true, ver_todas: true, aprobar: true, rechazar: true, eliminar: true },
+            maquinas: { ver: true, actualizar_estado: true, planificar: true },
+            mantenimiento: { ver: true, crear: true, actualizar: true, completar: true },
+            comites: { ver: true, gestionar_miembros: true, gestionar_documentos: true }
           }
         },
         {
           role_name: "Supervisor",
           description: "Gestión de empleados y planificación general",
           nivel_prioridad: 8,
+          es_rol_sistema: true,
           permissions: {
             modulos_acceso: ["Dashboard", "Empleados", "Planning", "Maquinas", "Ausencias", "Informes"],
-            acciones_empleados: { ver: true, crear: true, editar: true, eliminar: false },
-            acciones_ausencias: { ver_propias: true, crear_propias: true, ver_todas: true, aprobar: true },
-            acciones_maquinas: { ver: true, actualizar_estado: true, planificar: true },
-            acciones_mantenimiento: { ver: true, crear: false, actualizar: false, completar: false }
+            empleados: { ver: true, crear: true, editar: true, eliminar: false, departamentos_visibles: ["*"] },
+            empleados_detalle: {
+              pestanas: {
+                personal: true, organizacion: true, horarios: true, taquilla: true, contrato: true, absentismo: true, maquinas: true, disponibilidad: true
+              }
+            },
+            campos_empleado: {
+              ver_salario: true, ver_bancarios: true, ver_contacto: true, ver_direccion: true, ver_dni: true, editar_sensible: false, editar_contacto: true
+            },
+            ausencias: { ver_propias: true, crear_propias: true, ver_todas: true, aprobar: true },
+            maquinas: { ver: true, actualizar_estado: true, planificar: true },
+            mantenimiento: { ver: true, crear: false, actualizar: false, completar: false }
           }
         },
         {
           role_name: "Jefe de Turno",
           description: "Gestión de su equipo y planificación de turno",
           nivel_prioridad: 6,
+          es_rol_sistema: true,
           permissions: {
-            modulos_acceso: ["Dashboard", "Planning", "Ausencias", "Maquinas"],
-            acciones_empleados: { ver: true, crear: false, editar: false, eliminar: false },
-            acciones_ausencias: { ver_propias: true, crear_propias: true, ver_todas: true, aprobar: true },
-            acciones_maquinas: { ver: true, actualizar_estado: false, planificar: true }
+            modulos_acceso: ["Dashboard", "Planning", "Ausencias", "Maquinas", "Empleados"],
+            empleados: { ver: true, crear: false, editar: false, eliminar: false, departamentos_visibles: ["FABRICACION"] },
+            empleados_detalle: {
+              pestanas: {
+                personal: true, organizacion: true, horarios: true, taquilla: true, contrato: false, absentismo: true, maquinas: true, disponibilidad: true
+              }
+            },
+            campos_empleado: {
+              ver_salario: false, ver_bancarios: false, ver_contacto: true, ver_direccion: false, ver_dni: false, editar_sensible: false, editar_contacto: false
+            },
+            ausencias: { ver_propias: true, crear_propias: true, ver_todas: true, aprobar: true },
+            maquinas: { ver: true, actualizar_estado: false, planificar: true }
           }
         },
         {
           role_name: "Técnico Mantenimiento",
           description: "Gestión de mantenimiento y máquinas",
           nivel_prioridad: 5,
+          es_rol_sistema: true,
           permissions: {
             modulos_acceso: ["Dashboard", "Maquinas", "Mantenimiento", "Ausencias"],
-            acciones_maquinas: { ver: true, actualizar_estado: true, planificar: false },
-            acciones_mantenimiento: { ver: true, crear: true, actualizar: true, completar: true },
-            acciones_ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false }
+            maquinas: { ver: true, actualizar_estado: true, planificar: false },
+            mantenimiento: { ver: true, crear: true, actualizar: true, completar: true },
+            ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false }
           }
         },
         {
           role_name: "Miembro Comité",
           description: "Acceso a documentación PRL y gestión de comités",
           nivel_prioridad: 4,
+          es_rol_sistema: true,
           permissions: {
             modulos_acceso: ["Dashboard", "Comites", "PRL", "Ausencias"],
-            acciones_comites: { ver: true, gestionar_miembros: false, gestionar_documentos: true },
-            acciones_ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false }
+            comites: { ver: true, gestionar_miembros: false, gestionar_documentos: true },
+            ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false }
           }
         },
         {
           role_name: "Operario",
           description: "Acceso limitado a información personal y asignaciones",
           nivel_prioridad: 2,
+          es_rol_sistema: true,
           permissions: {
             modulos_acceso: ["Dashboard", "Ausencias"],
-            acciones_ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false },
-            acciones_maquinas: { ver: true, actualizar_estado: false, planificar: false }
+            ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false },
+            maquinas: { ver: true, actualizar_estado: false, planificar: false }
           }
         },
         {
           role_name: "Empleado",
           description: "Acceso básico solo a información personal",
           nivel_prioridad: 1,
+          es_rol_sistema: true,
           permissions: {
             modulos_acceso: ["Dashboard"],
-            acciones_ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false }
+            ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false }
           }
         }
       ];
 
-      return Promise.all(defaultRoles.map(role => base44.entities.UserRole.create(role)));
+      // Eliminar roles existentes si es necesario o simplemente crear si no existen
+      // Para evitar duplicados, primero verificamos por nombre
+      for (const defRole of defaultRoles) {
+        const existing = roles.find(r => r.role_name === defRole.role_name);
+        if (!existing) {
+          await base44.entities.UserRole.create(defRole);
+        } else {
+          // Opcional: Actualizar permisos de roles del sistema existentes para asegurar consistencia
+          if (existing.es_rol_sistema) {
+             await base44.entities.UserRole.update(existing.id, { permissions: defRole.permissions, es_rol_sistema: true });
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userRoles'] });
-      toast.success("Roles inicializados correctamente");
+      toast.success("Roles inicializados y actualizados correctamente");
+    },
+    onError: (err) => {
+      toast.error(`Error al inicializar roles: ${err.message}`);
     }
   });
 
@@ -143,13 +180,20 @@ export default function RoleManagementPage() {
               Configura roles y asigna permisos a usuarios
             </p>
           </div>
-          {roles.length === 0 && (
-            <Button onClick={() => initializeRolesMutation.mutate()} className="bg-green-600 hover:bg-green-700">
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Inicializar Roles Predefinidos
+          <div className="flex gap-2">
+            <Button onClick={() => initializeRolesMutation.mutate()} variant="outline" className="text-slate-600 border-slate-300">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Restaurar Roles Sistema
             </Button>
-          )}
+          </div>
         </div>
+
+        {rolesError && (
+           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-800">
+             <AlertTriangle className="w-5 h-5" />
+             <p>Error cargando roles: {rolesError.message}</p>
+           </div>
+        )}
 
         <Tabs defaultValue="roles">
           <TabsList className="grid w-full grid-cols-3">
@@ -175,45 +219,59 @@ export default function RoleManagementPage() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {roles.map(role => (
-                <Card key={role.id} className={role.is_admin ? "border-2 border-blue-400" : ""}>
-                  <CardHeader className="border-b border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{role.role_name}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-600">Nivel {role.nivel_prioridad}</Badge>
-                        {role.is_admin && <Badge className="bg-red-600">ADMIN</Badge>}
+            {loadingRoles ? (
+              <div className="text-center p-8">Cargando roles...</div>
+            ) : roles.length === 0 ? (
+              <div className="text-center p-12 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                <Shield className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-slate-900">No hay roles definidos</h3>
+                <p className="text-slate-500 mb-4">Inicializa los roles del sistema para comenzar.</p>
+                <Button onClick={() => initializeRolesMutation.mutate()} className="bg-blue-600">
+                  Inicializar Roles
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {roles.map(role => (
+                  <Card key={role.id} className={role.is_admin ? "border-2 border-blue-400" : ""}>
+                    <CardHeader className="border-b border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{role.role_name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-blue-600">Nivel {role.nivel_prioridad}</Badge>
+                          {role.is_admin && <Badge className="bg-red-600">ADMIN</Badge>}
+                          {role.es_rol_sistema && <Badge variant="outline">Sistema</Badge>}
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <p className="text-sm text-slate-600 mb-3">{role.description}</p>
-                    
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-semibold text-slate-700">Módulos de Acceso:</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {(role.permissions?.modulos_acceso || []).map((mod, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {mod}
-                          </Badge>
-                        ))}
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-slate-600 mb-3">{role.description}</p>
+                      
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-semibold text-slate-700">Módulos de Acceso:</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {(role.permissions?.modulos_acceso || []).map((mod, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {mod}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="mt-3 pt-3 border-t">
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        setEditingRole(role);
-                        setShowRoleForm(true);
-                      }}>
-                        <Edit className="w-3 h-3 mr-2" />
-                        Editar
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <div className="mt-3 pt-3 border-t">
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          setEditingRole(role);
+                          setShowRoleForm(true);
+                        }}>
+                          <Edit className="w-3 h-3 mr-2" />
+                          Editar Permisos
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="assignments" className="mt-6">

@@ -79,25 +79,64 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const permissions = React.useMemo(() => {
     if (propPermissions) return propPermissions;
     if (!currentUser) return {};
+    // Default permissions structure
+    const defaultPerms = {
+      contrato: { ver: false, editar: false },
+      campos: { editar_sensible: false, editar_contacto: false, ver_salario: false, ver_dni: false },
+      tabs: {
+        personal: true,
+        organizacion: true,
+        horarios: true,
+        taquilla: true,
+        contrato: false,
+        absentismo: false,
+        maquinas: true,
+        disponibilidad: true
+      }
+    };
+
+    if (!currentUser) return defaultPerms;
+
     if (currentUser.role === 'admin') return {
       contrato: { ver: true, editar: true },
-      campos: { editar_sensible: true, editar_contacto: true, ver_salario: true, ver_dni: true }
+      campos: { editar_sensible: true, editar_contacto: true, ver_salario: true, ver_dni: true },
+      tabs: {
+        personal: true, organizacion: true, horarios: true, taquilla: true, 
+        contrato: true, absentismo: true, maquinas: true, disponibilidad: true
+      }
     };
 
-    let perms = {
-      contrato: { ver: false, editar: false },
-      campos: { editar_sensible: false, editar_contacto: false, ver_salario: false, ver_dni: false }
-    };
+    let perms = { ...defaultPerms };
 
-    userRoleAssignments.forEach(assignment => {
-      const role = userRoles.find(r => r.id === assignment.role_id);
-      if (role?.permissions?.contrato?.ver) perms.contrato.ver = true;
-      if (role?.permissions?.contrato?.editar) perms.contrato.editar = true;
-      if (role?.permissions?.campos_empleado?.editar_sensible) perms.campos.editar_sensible = true;
-      if (role?.permissions?.campos_empleado?.editar_contacto) perms.campos.editar_contacto = true;
-      if (role?.permissions?.campos_empleado?.ver_salario) perms.campos.ver_salario = true;
-      if (role?.permissions?.campos_empleado?.ver_dni) perms.campos.ver_dni = true;
+    // Apply role-based permissions
+    const relevantRoles = userRoleAssignments
+      .map(assignment => userRoles.find(r => r.id === assignment.role_id))
+      .filter(Boolean);
+
+    relevantRoles.forEach(role => {
+      // Merge Tabs Permissions (OR logic: if one role allows, it's allowed)
+      if (role.permissions?.empleados_detalle?.pestanas) {
+        Object.keys(perms.tabs).forEach(tab => {
+          if (role.permissions.empleados_detalle.pestanas[tab]) {
+            perms.tabs[tab] = true;
+          }
+        });
+      }
+
+      // Merge Contract Permissions
+      if (role.permissions?.contrato?.ver) perms.contrato.ver = true;
+      if (role.permissions?.contrato?.editar) perms.contrato.editar = true;
+
+      // Merge Field Permissions
+      if (role.permissions?.campos_empleado) {
+        if (role.permissions.campos_empleado.editar_sensible) perms.campos.editar_sensible = true;
+        if (role.permissions.campos_empleado.editar_contacto) perms.campos.editar_contacto = true;
+        if (role.permissions.campos_empleado.ver_salario) perms.campos.ver_salario = true;
+        if (role.permissions.campos_empleado.ver_dni) perms.campos.ver_dni = true;
+      }
     });
+
+    return perms;
 
     return perms;
   }, [propPermissions, currentUser, userRoleAssignments, userRoles]);
@@ -147,43 +186,58 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-8">
-              <TabsTrigger value="personal">
-                <User className="w-4 h-4 mr-1" />
-                Personal
-              </TabsTrigger>
-              <TabsTrigger value="organizacion">
-                <Briefcase className="w-4 h-4 mr-1" />
-                Organización
-              </TabsTrigger>
-              <TabsTrigger value="horarios">
-                <Clock className="w-4 h-4 mr-1" />
-                Horarios
-              </TabsTrigger>
-              <TabsTrigger value="taquilla">
-                <Home className="w-4 h-4 mr-1" />
-                Taquilla
-              </TabsTrigger>
-              {permissions.contrato?.ver && (
-                <TabsTrigger value="contrato">
+            <TabsList className="flex flex-wrap w-full">
+              {permissions.tabs.personal && (
+                <TabsTrigger value="personal" className="flex-1">
+                  <User className="w-4 h-4 mr-1" />
+                  Personal
+                </TabsTrigger>
+              )}
+              {permissions.tabs.organizacion && (
+                <TabsTrigger value="organizacion" className="flex-1">
+                  <Briefcase className="w-4 h-4 mr-1" />
+                  Org.
+                </TabsTrigger>
+              )}
+              {permissions.tabs.horarios && (
+                <TabsTrigger value="horarios" className="flex-1">
+                  <Clock className="w-4 h-4 mr-1" />
+                  Horarios
+                </TabsTrigger>
+              )}
+              {permissions.tabs.taquilla && (
+                <TabsTrigger value="taquilla" className="flex-1">
+                  <Home className="w-4 h-4 mr-1" />
+                  Taquilla
+                </TabsTrigger>
+              )}
+              {(permissions.tabs.contrato || permissions.contrato?.ver) && (
+                <TabsTrigger value="contrato" className="flex-1">
                   <FileText className="w-4 h-4 mr-1" />
                   Contrato
                 </TabsTrigger>
               )}
-              <TabsTrigger value="absentismo">
-                <TrendingDown className="w-4 h-4 mr-1" />
-                Absentismo
-              </TabsTrigger>
-              <TabsTrigger value="maquinas">
-                <Wrench className="w-4 h-4 mr-1" />
-                Máquinas
-              </TabsTrigger>
-              <TabsTrigger value="disponibilidad">
-                <Calendar className="w-4 h-4 mr-1" />
-                Disponibilidad
-              </TabsTrigger>
+              {permissions.tabs.absentismo && (
+                <TabsTrigger value="absentismo" className="flex-1">
+                  <TrendingDown className="w-4 h-4 mr-1" />
+                  Absencias
+                </TabsTrigger>
+              )}
+              {permissions.tabs.maquinas && (
+                <TabsTrigger value="maquinas" className="flex-1">
+                  <Wrench className="w-4 h-4 mr-1" />
+                  Máquinas
+                </TabsTrigger>
+              )}
+              {permissions.tabs.disponibilidad && (
+                <TabsTrigger value="disponibilidad" className="flex-1">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  Disp.
+                </TabsTrigger>
+              )}
             </TabsList>
 
+            {permissions.tabs.personal && (
             <TabsContent value="personal" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -400,7 +454,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
               </div>
             </TabsContent>
+            )}
 
+            {permissions.tabs.organizacion && (
             <TabsContent value="organizacion" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -524,7 +580,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
               </div>
             </TabsContent>
+            )}
 
+            {permissions.tabs.horarios && (
             <TabsContent value="horarios" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -665,7 +723,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 )}
               </div>
             </TabsContent>
+            )}
 
+            {permissions.tabs.taquilla && (
             <TabsContent value="taquilla" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -695,8 +755,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
               </div>
             </TabsContent>
+            )}
 
-            {permissions.contrato?.ver && (
+            {(permissions.tabs.contrato || permissions.contrato?.ver) && (
               <TabsContent value="contrato" className="space-y-4 mt-4">
                 {!permissions.contrato?.editar && (
                   <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded mb-4 text-sm">
@@ -817,6 +878,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
               </TabsContent>
             )}
 
+            {permissions.tabs.absentismo && (
             <TabsContent value="absentismo" className="space-y-4 mt-4">
               <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
                 <AlertCircle className="w-5 h-5 text-blue-600 mb-2" />
@@ -902,7 +964,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
               </div>
             </TabsContent>
+            )}
 
+            {permissions.tabs.maquinas && (
             <TabsContent value="maquinas" className="space-y-4 mt-4">
               <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">
@@ -937,7 +1001,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 ))}
               </div>
             </TabsContent>
+            )}
 
+            {permissions.tabs.disponibilidad && (
             <TabsContent value="disponibilidad" className="space-y-4 mt-4">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -996,6 +1062,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
               </div>
             </TabsContent>
+            )}
           </Tabs>
 
           <div className="flex justify-end gap-3 mt-6 pt-6 border-t">

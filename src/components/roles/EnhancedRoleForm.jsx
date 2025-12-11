@@ -27,6 +27,18 @@ export default function EnhancedRoleForm({ role, onClose }) {
       perfil: { ver_propio: true, editar_propio: true, ver_otros: false, editar_otros: false },
       documentos: { ver: true, descargar: true, subir: false, editar: false, eliminar: false, gestionar_permisos: false },
       empleados: { ver: true, crear: false, editar: false, eliminar: false, departamentos_visibles: [] },
+      empleados_detalle: {
+        pestanas: {
+          personal: true,
+          organizacion: true,
+          horarios: true,
+          taquilla: true,
+          contrato: false,
+          absentismo: false,
+          maquinas: true,
+          disponibilidad: true
+        }
+      },
       maquinas: { ver: true, actualizar_estado: false, planificar: false },
       mantenimiento: { ver: false, crear: false, actualizar: false, completar: false },
       comites: { ver: false, gestionar_miembros: false, gestionar_documentos: false }

@@ -96,32 +96,67 @@ export default function RolePermissionsMatrix({ role, onPermissionChange, editab
       ]
     },
     {
+      key: "empleados_detalle",
+      subKey: "pestanas",
+      label: "Ficha de Empleado (Pestañas Visibles)",
+      permissions: [
+        { key: "personal", label: "Personal" },
+        { key: "organizacion", label: "Organización" },
+        { key: "horarios", label: "Horarios" },
+        { key: "taquilla", label: "Taquilla" },
+        { key: "contrato", label: "Contrato" },
+        { key: "absentismo", label: "Absentismo" },
+        { key: "maquinas", label: "Máquinas" },
+        { key: "disponibilidad", label: "Disponibilidad" }
+      ]
+    },
+    {
       key: "campos_empleado",
-      label: "Campos de Empleado (Vista)",
+      label: "Campos de Empleado (Vista/Edición)",
       permissions: [
         { key: "ver_salario", label: "Ver Salario" },
         { key: "ver_dni", label: "Ver DNI" },
         { key: "ver_contacto", label: "Ver Contacto (Tlf/Email)" },
         { key: "ver_direccion", label: "Ver Dirección" },
-        { key: "ver_bancarios", label: "Ver Datos Bancarios" }
+        { key: "ver_bancarios", label: "Ver Datos Bancarios" },
+        { key: "editar_contacto", label: "Editar Contacto" },
+        { key: "editar_sensible", label: "Editar Datos Sensibles" }
       ]
     }
   ];
 
-  const getPermissionValue = (section, permission) => {
+  const getPermissionValue = (section, permission, subKey) => {
+    if (subKey) {
+      return role?.permissions?.[section]?.[subKey]?.[permission] || false;
+    }
     return role?.permissions?.[section]?.[permission] || false;
   };
 
-  const handlePermissionToggle = (section, permission) => {
+  const handlePermissionToggle = (section, permission, subKey) => {
     if (!editable || !onPermissionChange) return;
     
-    const newPermissions = {
-      ...role.permissions,
-      [section]: {
-        ...role.permissions?.[section],
-        [permission]: !getPermissionValue(section, permission)
-      }
-    };
+    let newPermissions = { ...role.permissions };
+
+    if (subKey) {
+      newPermissions = {
+        ...newPermissions,
+        [section]: {
+          ...newPermissions[section],
+          [subKey]: {
+            ...newPermissions[section]?.[subKey],
+            [permission]: !getPermissionValue(section, permission, subKey)
+          }
+        }
+      };
+    } else {
+      newPermissions = {
+        ...newPermissions,
+        [section]: {
+          ...newPermissions[section],
+          [permission]: !getPermissionValue(section, permission)
+        }
+      };
+    }
     
     onPermissionChange(newPermissions);
   };
@@ -143,19 +178,19 @@ export default function RolePermissionsMatrix({ role, onPermissionChange, editab
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {section.permissions.map(perm => {
-                  const hasPermission = getPermissionValue(section.key, perm.key);
+                  const hasPermission = getPermissionValue(section.key, perm.key, section.subKey);
                   return (
                     <div
                       key={perm.key}
                       className={`flex items-center space-x-2 p-2 rounded ${
                         editable ? 'hover:bg-slate-50 cursor-pointer' : ''
                       }`}
-                      onClick={() => editable && handlePermissionToggle(section.key, perm.key)}
+                      onClick={() => editable && handlePermissionToggle(section.key, perm.key, section.subKey)}
                     >
                       {editable ? (
                         <Checkbox
                           checked={hasPermission}
-                          onCheckedChange={() => handlePermissionToggle(section.key, perm.key)}
+                          onCheckedChange={() => handlePermissionToggle(section.key, perm.key, section.subKey)}
                         />
                       ) : (
                         <div className={`w-5 h-5 rounded flex items-center justify-center ${
