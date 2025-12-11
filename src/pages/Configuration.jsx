@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Building } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -123,6 +123,13 @@ export default function ConfigurationPage() {
           icon: Shield,
           url: createPageUrl("RoleManagement"),
           color: "blue"
+        },
+        {
+          title: "Gestión de Departamentos",
+          description: "Configura estructura organizativa y jerarquías",
+          icon: Building,
+          url: createPageUrl("DepartmentManagement"),
+          color: "emerald"
         },
         {
           title: "Notificaciones",

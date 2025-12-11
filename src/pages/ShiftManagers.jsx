@@ -36,7 +36,11 @@ export default function ShiftManagersPage() {
   
   const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+    queryFn: async () => {
+      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
+      // Filtro estricto para Jefes de Turno: solo FABRICACION
+      return all.filter(e => e.departamento === 'FABRICACION');
+    },
   });
 
   const { data: teams = EMPTY_ARRAY } = useQuery({

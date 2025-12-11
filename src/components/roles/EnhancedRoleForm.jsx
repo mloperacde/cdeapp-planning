@@ -100,10 +100,17 @@ export default function EnhancedRoleForm({ role, onClose }) {
     "Informes", "Configuracion", "Usuarios"
   ];
 
-  const availableDepartments = [
-    "FABRICACION", "MANTENIMIENTO", "ALMACEN", "CALIDAD", 
-    "OFICINA", "PLANIFICACION", "LIMPIEZA"
-  ];
+  const { data: departmentsList = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => base44.entities.Department.list(),
+  });
+
+  const availableDepartments = departmentsList.length > 0 
+    ? departmentsList.map(d => d.name.toUpperCase()) 
+    : [
+      "FABRICACION", "MANTENIMIENTO", "ALMACEN", "CALIDAD", 
+      "OFICINA", "PLANIFICACION", "LIMPIEZA"
+    ];
 
   const toggleDepartment = (dept) => {
     const current = formData.permissions.empleados?.departamentos_visibles || [];
