@@ -14,7 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table.jsx";
 import { UserCog, GripVertical, User, UserCheck, Users, ArrowLeft, RefreshCw, Save, ArrowUp, ArrowDown, Factory, Wrench, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
