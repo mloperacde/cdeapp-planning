@@ -190,7 +190,7 @@ export default function MaintenanceTrackingPage() {
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50">
+          <TableRow className="bg-slate-50 dark:bg-slate-800/50">
             <TableHead>Máquina</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Fecha Programada</TableHead>
@@ -202,7 +202,7 @@ export default function MaintenanceTrackingPage() {
         </TableHeader>
         <TableBody>
           {maintenanceList.map((maintenance) => (
-            <TableRow key={maintenance.id} className="hover:bg-slate-50">
+            <TableRow key={maintenance.id} className="hover:bg-slate-50 dark:bg-slate-800/50">
               <TableCell className="font-medium">{getMachineName(maintenance.machine_id)}</TableCell>
               <TableCell>{maintenance.tipo}</TableCell>
               <TableCell>
@@ -242,7 +242,7 @@ export default function MaintenanceTrackingPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDelete(maintenance.id)}
-                    className="hover:bg-red-50 hover:text-red-600"
+                    className="hover:bg-red-50 dark:bg-red-900/20 hover:text-red-600"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -269,11 +269,11 @@ export default function MaintenanceTrackingPage() {
 
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
               <Wrench className="w-8 h-8 text-blue-600" />
               Seguimiento de Mantenimiento
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
               Gestiona mantenimientos programados y no programados
             </p>
           </div>
@@ -301,8 +301,8 @@ export default function MaintenanceTrackingPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-orange-700 font-medium">Pendientes</p>
-                  <p className="text-2xl font-bold text-orange-900">{upcomingMaintenances.length}</p>
+                  <p className="text-xs text-orange-700 dark:text-orange-200 font-medium">Pendientes</p>
+                  <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{upcomingMaintenances.length}</p>
                 </div>
                 <Clock className="w-8 h-8 text-orange-600" />
               </div>
@@ -313,8 +313,8 @@ export default function MaintenanceTrackingPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-red-700 font-medium">Alertas Activas</p>
-                  <p className="text-2xl font-bold text-red-900">{alertMaintenances.length}</p>
+                  <p className="text-xs text-red-700 dark:text-red-200 font-medium">Alertas Activas</p>
+                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{alertMaintenances.length}</p>
                 </div>
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
@@ -325,8 +325,8 @@ export default function MaintenanceTrackingPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-blue-700 font-medium">En Proceso</p>
-                  <p className="text-2xl font-bold text-blue-900">{activeMaintenances.length}</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-200 font-medium">En Proceso</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{activeMaintenances.length}</p>
                 </div>
                 <Wrench className="w-8 h-8 text-blue-600" />
               </div>
@@ -337,8 +337,8 @@ export default function MaintenanceTrackingPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Completados</p>
-                  <p className="text-2xl font-bold text-green-900">{completedMaintenances.length}</p>
+                  <p className="text-xs text-green-700 dark:text-green-200 font-medium">Completados</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{completedMaintenances.length}</p>
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
@@ -372,7 +372,7 @@ export default function MaintenanceTrackingPage() {
           </TabsContent>
 
           <TabsContent value="all">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="mb-6">
                   <AdvancedSearch
@@ -398,7 +398,7 @@ export default function MaintenanceTrackingPage() {
                   />
                 </div>
                 {filteredMaintenances.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
+                  <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                     No se encontraron mantenimientos con los filtros seleccionados
                   </div>
                 ) : (
@@ -409,10 +409,10 @@ export default function MaintenanceTrackingPage() {
           </TabsContent>
 
           <TabsContent value="upcoming">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 {upcomingMaintenances.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
+                  <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                     No hay mantenimientos próximos
                   </div>
                 ) : (
@@ -423,10 +423,10 @@ export default function MaintenanceTrackingPage() {
           </TabsContent>
 
           <TabsContent value="alerts">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 {alertMaintenances.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
+                  <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                     <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-400" />
                     No hay alertas activas
                   </div>
@@ -438,10 +438,10 @@ export default function MaintenanceTrackingPage() {
           </TabsContent>
 
           <TabsContent value="history">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 {completedMaintenances.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
+                  <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                     No hay historial de mantenimientos
                   </div>
                 ) : (

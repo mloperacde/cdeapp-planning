@@ -208,11 +208,11 @@ export default function ReportsPage() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <FileText className="w-8 h-8 text-blue-600" />
             Informes y Reportes
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Genera reportes personalizados con filtros avanzados o usa IA
           </p>
         </div>
@@ -220,8 +220,8 @@ export default function ReportsPage() {
         <AIReportGenerator />
 
         {/* Configuración del Reporte */}
-        <Card className="mb-6 mt-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
+        <Card className="mb-6 mt-6 shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800">
             <CardTitle className="flex items-center gap-2">
               <Filter className="w-5 h-5 text-blue-600" />
               Configuración del Reporte
@@ -340,22 +340,22 @@ export default function ReportsPage() {
         </Card>
 
         {/* Resultados */}
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
+        <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800">
             <CardTitle>
               Resultados ({filteredData.length} registros)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             {filteredData.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
+              <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                 No se encontraron datos con los filtros seleccionados
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50">
+                    <TableRow className="bg-slate-50 dark:bg-slate-800/50">
                       {reportType === "employees" && (
                         <>
                           <TableHead>Código</TableHead>

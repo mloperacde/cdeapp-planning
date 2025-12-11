@@ -197,11 +197,11 @@ export default function MachineManagement() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <Cog className="w-8 h-8 text-blue-600" />
             Gestión de Estados de Máquinas
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Control de disponibilidad y órdenes de producción
           </p>
         </div>
@@ -211,8 +211,8 @@ export default function MachineManagement() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-blue-700 font-medium">Total Máquinas</p>
-                  <p className="text-2xl font-bold text-blue-900">{filteredMachines.length}</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-200 font-medium">Total Máquinas</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{filteredMachines.length}</p>
                 </div>
                 <Cog className="w-8 h-8 text-blue-600" />
               </div>
@@ -223,8 +223,8 @@ export default function MachineManagement() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Disponibles</p>
-                  <p className="text-2xl font-bold text-green-900">{availableCount}</p>
+                  <p className="text-xs text-green-700 dark:text-green-200 font-medium">Disponibles</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{availableCount}</p>
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
@@ -235,8 +235,8 @@ export default function MachineManagement() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-orange-700 font-medium">Con Órdenes</p>
-                  <p className="text-2xl font-bold text-orange-900">{ordenesCount}</p>
+                  <p className="text-xs text-orange-700 dark:text-orange-200 font-medium">Con Órdenes</p>
+                  <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{ordenesCount}</p>
                 </div>
                 <Package className="w-8 h-8 text-orange-600" />
               </div>
@@ -251,7 +251,7 @@ export default function MachineManagement() {
                 <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">Página {currentPage} de {totalPages}</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Página {currentPage} de {totalPages}</span>
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={prevPage} disabled={currentPage === 1}>Anterior</Button>
                       <Button size="sm" variant="outline" onClick={nextPage} disabled={currentPage === totalPages}>Siguiente</Button>
@@ -294,7 +294,7 @@ export default function MachineManagement() {
           </CardHeader>
           <CardContent className="p-0">
             {loadingMachines ? (
-              <div className="p-12 text-center text-slate-500">Cargando...</div>
+              <div className="p-12 text-center text-slate-500 dark:text-slate-400">Cargando...</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
                 {paginatedItems.map(machine => {
@@ -306,15 +306,15 @@ export default function MachineManagement() {
                     <Card 
                       key={machine.id} 
                       className={`border-2 transition-all cursor-pointer ${
-                        isAvailable ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+                        isAvailable ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : 'border-red-300 bg-red-50 dark:bg-red-900/20'
                       }`}
                       onClick={() => handleEditStatus(machine)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
-                            <h3 className="font-bold text-slate-900">{machine.nombre}</h3>
-                            <p className="text-xs text-slate-600">{machine.codigo}</p>
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100">{machine.nombre}</h3>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">{machine.codigo}</p>
                           </div>
                           <Button
                             variant="ghost"
@@ -335,18 +335,18 @@ export default function MachineManagement() {
                         
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-600">Disponibilidad</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-400">Disponibilidad</span>
                             <Badge className={isAvailable ? "bg-green-600" : "bg-red-600"}>
                               {status.estado_disponibilidad}
                             </Badge>
                           </div>
                           
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-600">Producción</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-400">Producción</span>
                             <Badge variant="outline" className={
                               prodStatus === "Orden en curso" ? "bg-blue-100 text-blue-800" :
                               prodStatus === "Orden nueva" ? "bg-purple-100 text-purple-800" :
-                              "bg-slate-100 text-slate-600"
+                              "bg-slate-100 text-slate-600 dark:text-slate-400"
                             }>
                               {prodStatus}
                             </Badge>
@@ -503,8 +503,8 @@ export default function MachineManagement() {
                   {editingStatus.tiempo_ciclo_actual && editingStatus.tiempo_ciclo_estandar && (
                     <div className={`p-3 rounded-lg ${
                       ((editingStatus.tiempo_ciclo_actual - editingStatus.tiempo_ciclo_estandar) / editingStatus.tiempo_ciclo_estandar * 100) > 20
-                        ? 'bg-red-50 border-2 border-red-300'
-                        : 'bg-green-50 border-2 border-green-300'
+                        ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-300'
+                        : 'bg-green-50 dark:bg-green-900/20 border-2 border-green-300'
                     }`}>
                       <p className="text-sm font-semibold flex items-center gap-2">
                         <TrendingUp className="w-4 h-4" />

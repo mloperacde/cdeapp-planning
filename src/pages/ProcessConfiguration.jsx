@@ -242,8 +242,8 @@ export default function ProcessConfigurationPage() {
         </Link>
       </div>
 
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100">
+      <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800">
           <div className="flex justify-between items-center">
             <CardTitle>Configuración de Procesos</CardTitle>
             <Button
@@ -276,16 +276,16 @@ export default function ProcessConfigurationPage() {
           </div>
 
           {isLoading ? (
-            <div className="p-12 text-center text-slate-500">Cargando procesos...</div>
+            <div className="p-12 text-center text-slate-500 dark:text-slate-400">Cargando procesos...</div>
           ) : filteredProcesses.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
+            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
               No se encontraron procesos con los filtros seleccionados
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50">
+                  <TableRow className="bg-slate-50 dark:bg-slate-800/50">
                     <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Operadores Requeridos</TableHead>
@@ -296,7 +296,7 @@ export default function ProcessConfigurationPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredProcesses.map((process) => (
-                    <TableRow key={process.id} className="hover:bg-slate-50">
+                    <TableRow key={process.id} className="hover:bg-slate-50 dark:bg-slate-800/50">
                       <TableCell>
                         <Badge variant="outline">{process.codigo}</Badge>
                       </TableCell>
@@ -304,25 +304,25 @@ export default function ProcessConfigurationPage() {
                         <div>
                           <div className="font-semibold">{process.nombre}</div>
                           {process.descripcion && (
-                            <div className="text-xs text-slate-500">{process.descripcion}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">{process.descripcion}</div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-purple-100 text-purple-800">
+                        <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
                           {process.operadores_requeridos || 1} operadores
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-blue-100 text-blue-800">
+                        <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
                           {getAssignedMachines(process.id)} máquinas
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={
                           process.activo
-                            ? "bg-green-100 text-green-800"
-                            : "bg-slate-100 text-slate-600"
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                         }>
                           {process.activo ? "Activo" : "Inactivo"}
                         </Badge>
@@ -419,7 +419,7 @@ export default function ProcessConfigurationPage() {
                   })}
                   required
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Número de operadores necesarios por defecto para este proceso
                 </p>
               </div>
@@ -463,15 +463,15 @@ export default function ProcessConfigurationPage() {
             </DialogHeader>
 
             <div className="space-y-4">
-              <Card className="bg-blue-50 border-blue-200">
+              <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-slate-700">Código:</span>
+                      <span className="text-slate-700 dark:text-slate-300">Código:</span>
                       <span className="font-semibold ml-2">{showMachineAssignment.codigo}</span>
                     </div>
                     <div>
-                      <span className="text-slate-700">Operadores por defecto:</span>
+                      <span className="text-slate-700 dark:text-slate-300">Operadores por defecto:</span>
                       <Badge className="ml-2 bg-purple-600">
                         {showMachineAssignment.operadores_requeridos}
                       </Badge>
@@ -486,7 +486,7 @@ export default function ProcessConfigurationPage() {
                   <Card key={machine.id} className={`
                     border-2 transition-all
                     ${machineAssignments[machine.id]?.checked 
-                      ? 'border-blue-400 bg-blue-50' 
+                      ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
                       : 'border-slate-200 hover:border-slate-300'}
                   `}>
                     <CardContent className="p-4">
@@ -500,7 +500,7 @@ export default function ProcessConfigurationPage() {
                           <label htmlFor={`machine-${machine.id}`} className="flex-1 cursor-pointer">
                             <div>
                               <div className="font-semibold text-slate-900">{machine.nombre}</div>
-                              <div className="text-xs text-slate-500">{machine.codigo}</div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">{machine.codigo}</div>
                             </div>
                           </label>
                         </div>

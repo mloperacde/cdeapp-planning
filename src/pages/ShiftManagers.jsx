@@ -258,11 +258,11 @@ export default function ShiftManagersPage() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <LayoutDashboard className="w-8 h-8 text-blue-600" />
             Panel de Control - Jefes de Turno
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Vista general y acceso rápido a gestión de turnos
           </p>
         </div>
@@ -273,8 +273,8 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Empleados Disponibles (en Equipos)</p>
-                  <p className="text-2xl font-bold text-green-900">
+                  <p className="text-xs text-green-700 dark:text-green-200 font-medium">Empleados Disponibles (en Equipos)</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">
                     {employees.filter(e => e.disponibilidad === "Disponible" && e.equipo).length}
                   </p>
                 </div>
@@ -287,8 +287,8 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-red-700 font-medium">Ausentes Hoy (en Equipos)</p>
-                  <p className="text-2xl font-bold text-red-900">{activeAbsencesToday.length}</p>
+                  <p className="text-xs text-red-700 dark:text-red-200 font-medium">Ausentes Hoy (en Equipos)</p>
+                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{activeAbsencesToday.length}</p>
                 </div>
                 <UserX className="w-8 h-8 text-red-600" />
               </div>
@@ -299,8 +299,8 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-amber-700 font-medium">Intercambios Pendientes</p>
-                  <p className="text-2xl font-bold text-amber-900">{pendingSwaps.length}</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-200 font-medium">Intercambios Pendientes</p>
+                  <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{pendingSwaps.length}</p>
                 </div>
                 <RefreshCw className="w-8 h-8 text-amber-600" />
               </div>
@@ -311,8 +311,8 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-orange-700 font-medium">Taquillas sin Asignar</p>
-                  <p className="text-2xl font-bold text-orange-900">{lockersWithoutNumber}</p>
+                  <p className="text-xs text-orange-700 dark:text-orange-200 font-medium">Taquillas sin Asignar</p>
+                  <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{lockersWithoutNumber}</p>
                 </div>
                 <KeyRound className="w-8 h-8 text-orange-600" />
               </div>
@@ -321,8 +321,8 @@ export default function ShiftManagersPage() {
         </div>
 
         {/* Turnos de Hoy por Equipo */}
-        <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
+        <Card className="mb-6 shadow-lg border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800">
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-blue-600" />
               Turnos de Hoy - {format(new Date(), "EEEE, d 'de' MMMM", { locale: es })}
@@ -338,7 +338,7 @@ export default function ShiftManagersPage() {
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="font-bold text-lg text-slate-900">{team.team_name}</h3>
+                      <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{team.team_name}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         {team.shift === "Mañana" && (
                           <Badge className="bg-amber-100 text-amber-800">
@@ -368,17 +368,17 @@ export default function ShiftManagersPage() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center p-3 bg-slate-50 rounded-lg">
-                      <div className="text-2xl font-bold text-slate-900">{team.total}</div>
-                      <div className="text-xs text-slate-600">Total</div>
+                    <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{team.total}</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400">Total</div>
                     </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-900">{team.available}</div>
-                      <div className="text-xs text-green-700">Disponibles</div>
+                    <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-green-900 dark:text-green-100">{team.available}</div>
+                      <div className="text-xs text-green-700 dark:text-green-200">Disponibles</div>
                     </div>
-                    <div className="text-center p-3 bg-red-50 rounded-lg">
-                      <div className="text-2xl font-bold text-red-900">{team.absencesCount}</div>
-                      <div className="text-xs text-red-700">Ausentes</div>
+                    <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-red-900 dark:text-red-100">{team.absencesCount}</div>
+                      <div className="text-xs text-red-700 dark:text-red-200">Ausentes</div>
                     </div>
                   </div>
 
@@ -386,7 +386,7 @@ export default function ShiftManagersPage() {
                     <div className="mt-3 pt-3 border-t border-slate-200">
                       <p className="text-xs font-semibold text-slate-700 mb-2">Ausentes de este equipo:</p>
                       {absencesByTeam[team.team_name]?.slice(0, 3).map(abs => (
-                        <div key={abs.id} className="text-xs text-slate-600 mb-1">
+                        <div key={abs.id} className="text-xs text-slate-600 dark:text-slate-400 mb-1">
                           • {abs.employee?.nombre} - {abs.tipo || abs.motivo}
                         </div>
                       ))}
@@ -403,12 +403,12 @@ export default function ShiftManagersPage() {
 
         {/* Acceso a Módulos */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Módulos de Gestión</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Módulos de Gestión</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {modules.map((module) => {
               const Icon = module.icon;
               const content = (
-                <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+                <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
                   <CardContent className="p-5">
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
@@ -416,7 +416,7 @@ export default function ShiftManagersPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
                             {module.title}
                           </h3>
                           {module.badge && (
@@ -425,7 +425,7 @@ export default function ShiftManagersPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-slate-600">{module.description}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">{module.description}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -447,20 +447,20 @@ export default function ShiftManagersPage() {
 
         {/* Módulos Adicionales */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Comunicación y Coordinación</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Comunicación y Coordinación</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link to={createPageUrl("ShiftHandover")}>
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
                       <ArrowLeftRight className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
                         Info. Traspaso Turno
                       </h3>
-                      <p className="text-xs text-slate-600">Comunica info entre turnos</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Comunica info entre turnos</p>
                     </div>
                   </div>
                 </CardContent>
@@ -468,17 +468,17 @@ export default function ShiftManagersPage() {
             </Link>
 
             <Link to={createPageUrl("Breaks")}>
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
                       <Coffee className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
                         Descansos
                       </h3>
-                      <p className="text-xs text-slate-600">Gestiona turnos de descanso</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Gestiona turnos de descanso</p>
                     </div>
                   </div>
                 </CardContent>
@@ -486,17 +486,17 @@ export default function ShiftManagersPage() {
             </Link>
 
             <Link to={createPageUrl("SupportManagement1415")}>
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white/80 backdrop-blur-sm">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
                       <Clock className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
                         Apoyos 14-15h
                       </h3>
-                      <p className="text-xs text-slate-600">Asigna soporte 14-15h</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Asigna soporte 14-15h</p>
                     </div>
                   </div>
                 </CardContent>
@@ -507,8 +507,8 @@ export default function ShiftManagersPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Solicitudes de Intercambio Pendientes */}
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+          <Card className="shadow-lg border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <RefreshCw className="w-5 h-5 text-amber-600" />
                 Solicitudes de Intercambio
@@ -518,7 +518,7 @@ export default function ShiftManagersPage() {
               {pendingSwaps.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm text-slate-600">No hay solicitudes pendientes</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">No hay solicitudes pendientes</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -527,7 +527,7 @@ export default function ShiftManagersPage() {
                     const receptor = employees.find(e => e.id === swap.receptor_id);
                     
                     return (
-                      <div key={swap.id} className="p-3 border rounded-lg bg-amber-50 border-amber-200">
+                      <div key={swap.id} className="p-3 border rounded-lg bg-amber-50 dark:bg-amber-900/20 border-amber-200">
                         <div className="flex items-center justify-between mb-2">
                           <Badge className={
                             swap.estado === "Aceptada por Receptor" 
@@ -540,10 +540,10 @@ export default function ShiftManagersPage() {
                             {format(new Date(swap.fecha_solicitud), "dd/MM HH:mm")}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                           {solicitante?.nombre} ↔️ {receptor?.nombre}
                         </p>
-                        <p className="text-xs text-slate-600 mt-1">{swap.motivo}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{swap.motivo}</p>
                       </div>
                     );
                   })}
@@ -558,8 +558,8 @@ export default function ShiftManagersPage() {
           </Card>
 
           {/* Próximos Cumpleaños */}
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+          <Card className="shadow-lg border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Cake className="w-5 h-5 text-purple-600" />
                 Próximos Cumpleaños
@@ -569,7 +569,7 @@ export default function ShiftManagersPage() {
               {upcomingBirthdays.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                  <p className="text-sm text-slate-600">No hay cumpleaños próximos</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">No hay cumpleaños próximos</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -581,12 +581,12 @@ export default function ShiftManagersPage() {
                     return (
                       <div 
                         key={emp.id} 
-                        className={`p-3 rounded-lg ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-slate-50'}`}
+                        className={`p-3 rounded-lg ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-slate-50 dark:bg-slate-800/50'}`}
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <div className="font-semibold text-sm text-slate-900">{emp.nombre}</div>
-                            <div className="text-xs text-slate-600">
+                            <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{emp.nombre}</div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">
                               {format(thisYearBirthday, "d 'de' MMMM", { locale: es })}
                             </div>
                           </div>
@@ -607,9 +607,9 @@ export default function ShiftManagersPage() {
 
         {/* Alertas y Acciones Requeridas */}
         {(lockersWithoutNumber > 0 || pendingSwaps.length > 0 || activeAbsencesToday.length > 5) && (
-          <Card className="mb-6 shadow-lg border-2 border-amber-300 bg-amber-50">
+          <Card className="mb-6 shadow-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
             <CardHeader className="border-b border-amber-200">
-              <CardTitle className="flex items-center gap-2 text-amber-900">
+              <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
                 <AlertTriangle className="w-5 h-5" />
                 Acciones Requeridas
               </CardTitle>
@@ -617,10 +617,10 @@ export default function ShiftManagersPage() {
             <CardContent className="p-6">
               <div className="space-y-3">
                 {lockersWithoutNumber > 0 && (
-                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-card rounded-lg border border-amber-200">
                     <div className="flex items-center gap-2">
                       <KeyRound className="w-4 h-4 text-orange-600" />
-                      <span className="text-sm text-slate-900">
+                      <span className="text-sm text-slate-900 dark:text-slate-100">
                         <strong>{lockersWithoutNumber}</strong> empleado(s) sin taquilla asignada
                       </span>
                     </div>
@@ -633,10 +633,10 @@ export default function ShiftManagersPage() {
                 )}
                 
                 {pendingSwaps.length > 0 && (
-                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-card rounded-lg border border-amber-200">
                     <div className="flex items-center gap-2">
                       <RefreshCw className="w-4 h-4 text-amber-600" />
-                      <span className="text-sm text-slate-900">
+                      <span className="text-sm text-slate-900 dark:text-slate-100">
                         <strong>{pendingSwaps.length}</strong> solicitud(es) de intercambio pendiente(s)
                       </span>
                     </div>
@@ -649,10 +649,10 @@ export default function ShiftManagersPage() {
                 )}
 
                 {activeAbsencesToday.length > 5 && (
-                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-card rounded-lg border border-amber-200">
                     <div className="flex items-center gap-2">
                       <UserX className="w-4 h-4 text-red-600" />
-                      <span className="text-sm text-slate-900">
+                      <span className="text-sm text-slate-900 dark:text-slate-100">
                         <strong>{activeAbsencesToday.length}</strong> ausencias activas hoy - revisar cobertura
                       </span>
                     </div>
@@ -670,8 +670,8 @@ export default function ShiftManagersPage() {
 
         {/* Resumen de Ausencias Hoy - Agrupado por Equipo */}
         {activeAbsencesToday.length > 0 && (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+          <Card className="shadow-lg border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <UserX className="w-5 h-5 text-red-600" />
                 Empleados Ausentes Hoy (en Equipos) ({activeAbsencesToday.length})
@@ -684,15 +684,15 @@ export default function ShiftManagersPage() {
                   
                   return (
                     <div key={teamName}>
-                      <h4 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                      <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
                         <Badge className="bg-purple-600">{teamName}</Badge>
                         <span className="text-sm">({absences.length})</span>
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {absences.map(absence => (
-                          <div key={absence.id} className="p-3 border rounded-lg bg-red-50 border-red-200">
-                            <div className="font-semibold text-sm text-slate-900">{absence.employee?.nombre}</div>
-                            <div className="text-xs text-slate-600 mt-1">
+                          <div key={absence.id} className="p-3 border rounded-lg bg-red-50 dark:bg-red-900/20 border-red-200">
+                            <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{absence.employee?.nombre}</div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                               {absence.employee?.departamento} - {absence.employee?.puesto}
                             </div>
                             <Badge variant="outline" className="mt-2 text-xs">

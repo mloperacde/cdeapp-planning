@@ -88,11 +88,11 @@ export default function DailyPlanningPage() {
 
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
               <Calendar className="w-8 h-8 text-blue-600" />
               Planning Diario
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
               Planificación diaria de producción, mantenimiento, almacén y calidad
             </p>
           </div>
@@ -107,7 +107,7 @@ export default function DailyPlanningPage() {
         </div>
 
         {/* Filtros Globales */}
-        <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <Card className="mb-6 shadow-lg border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -127,7 +127,7 @@ export default function DailyPlanningPage() {
                   id="team"
                   value={selectedTeam}
                   onChange={(e) => setSelectedTeam(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white"
+                  className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white dark:bg-card"
                 >
                   {teams.map((team) => (
                     <option key={team.team_key} value={team.team_key}>
@@ -163,11 +163,11 @@ export default function DailyPlanningPage() {
         </Card>
 
         {/* Información del planning */}
-        <Card className="mb-6 bg-blue-50 border-2 border-blue-300">
+        <Card className="mb-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="text-sm text-blue-800 space-y-1 flex-1">
+              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1 flex-1">
                 <p><strong>📅 Fecha:</strong> {format(new Date(selectedDate), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</p>
                 <p><strong>👥 Equipo:</strong> {getTeamName(selectedTeam)}</p>
                 <p><strong>⏰ Turno:</strong> {selectedShift || 'Pendiente de asignar'}</p>

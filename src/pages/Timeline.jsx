@@ -99,7 +99,7 @@ export default function Timeline() {
   // Removed handleCallSchedulingAssistant as per instructions
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:via-background dark:to-background">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="mb-6">
           <Link to={createPageUrl("Dashboard")}>
@@ -119,7 +119,7 @@ export default function Timeline() {
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
             Planning / Línea de Tiempo
           </h1>
-          <p className="text-slate-600 text-lg mt-2">
+          <p className="text-slate-600 dark:text-slate-400 text-lg mt-2">
             Visualiza la disponibilidad de empleados
           </p>
         </motion.div>
@@ -130,7 +130,7 @@ export default function Timeline() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="space-y-6"
         >
-          <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
+          <Card className="bg-white/80 dark:bg-card/80 backdrop-blur-sm shadow-xl border-0">
             <TimelineControls
               viewMode={viewMode}
               onViewModeChange={setViewMode}
@@ -145,7 +145,7 @@ export default function Timeline() {
             />
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 overflow-hidden">
+          <Card className="bg-white/80 dark:bg-card/80 backdrop-blur-sm shadow-xl border-0 overflow-hidden">
             <TimelineView 
               startDate={startDate} 
               endDate={endDate}

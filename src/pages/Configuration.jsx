@@ -176,11 +176,11 @@ export default function ConfigurationPage() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <Settings className="w-8 h-8 text-blue-600" />
             Configuración del Sistema
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Accede a los diferentes módulos de configuración
           </p>
         </div>
@@ -188,21 +188,21 @@ export default function ConfigurationPage() {
         <div className="space-y-8">
           {Object.entries(configModules).map(([key, category]) => (
             <div key={key}>
-              <h2 className="text-xl font-semibold text-slate-900 mb-4">{category.title}</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4">{category.title}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {category.modules.map((module) => {
                   const Icon = module.icon;
                   return (
                     <Link key={module.title} to={module.url}>
-                      <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
+                      <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm cursor-pointer group">
                         <CardContent className="p-4">
                           <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                             <Icon className="w-6 h-6 text-white" />
                           </div>
-                          <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 group-hover:text-blue-600 transition-colors">
                             {module.title}
                           </h3>
-                          <p className="text-xs text-slate-600">{module.description}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">{module.description}</p>
                         </CardContent>
                       </Card>
                     </Link>

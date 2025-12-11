@@ -495,11 +495,11 @@ export default function AbsenceManagementPage() {
 
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
               <UserX className="w-8 h-8 text-blue-600" />
               Gestión de Ausencias
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
               Registra y gestiona las ausencias de empleados
             </p>
           </div>
@@ -536,23 +536,23 @@ export default function AbsenceManagementPage() {
             </div>
 
             {expiredAbsences.length > 0 && (
-              <Card className="mb-6 bg-amber-50 border-amber-200">
+              <Card className="mb-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-amber-900">
+                  <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
                     <AlertCircle className="w-5 h-5" />
                     Ausencias Finalizadas ({expiredAbsences.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-amber-800 mb-3">
+                  <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
                     Las siguientes ausencias han finalizado. Los empleados deberían estar disponibles automáticamente.
                   </p>
                   <div className="space-y-2">
                     {expiredAbsences.slice(0, 5).map((absence) => (
-                      <div key={absence.id} className="flex justify-between items-center bg-white p-3 rounded border border-amber-200">
+                      <div key={absence.id} className="flex justify-between items-center bg-white dark:bg-card p-3 rounded border border-amber-200">
                         <div>
-                          <span className="font-semibold text-slate-900">{getEmployeeName(absence.employee_id)}</span>
-                          <span className="text-sm text-slate-600 ml-2">
+                          <span className="font-semibold text-slate-900 dark:text-slate-100">{getEmployeeName(absence.employee_id)}</span>
+                          <span className="text-sm text-slate-600 dark:text-slate-400 ml-2">
                             - Finalizó el {format(new Date(absence.fecha_fin), "dd/MM/yyyy HH:mm", { locale: es })}
                           </span>
                         </div>
@@ -560,7 +560,7 @@ export default function AbsenceManagementPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDelete(absence)}
-                          className="text-amber-700 hover:bg-amber-100"
+                          className="text-amber-700 dark:text-amber-200 hover:bg-amber-100"
                         >
                           Marcar como Disponible
                         </Button>
@@ -576,8 +576,8 @@ export default function AbsenceManagementPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-red-700 font-medium">Ausencias Activas</p>
-                      <p className="text-2xl font-bold text-red-900">{activeAbsences.length}</p>
+                      <p className="text-xs text-red-700 dark:text-red-200 font-medium">Ausencias Activas</p>
+                      <p className="text-2xl font-bold text-red-900 dark:text-red-100">{activeAbsences.length}</p>
                     </div>
                     <UserX className="w-8 h-8 text-red-600" />
                   </div>
@@ -588,8 +588,8 @@ export default function AbsenceManagementPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-blue-700 font-medium">Total Ausencias</p>
-                      <p className="text-2xl font-bold text-blue-900">{absences.length}</p>
+                      <p className="text-xs text-blue-700 dark:text-blue-200 font-medium">Total Ausencias</p>
+                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{absences.length}</p>
                     </div>
                     <UserX className="w-8 h-8 text-blue-600" />
                   </div>
@@ -600,8 +600,8 @@ export default function AbsenceManagementPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-amber-700 font-medium">Finalizadas</p>
-                      <p className="text-2xl font-bold text-amber-900">{expiredAbsences.length}</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-200 font-medium">Finalizadas</p>
+                      <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{expiredAbsences.length}</p>
                     </div>
                     <AlertCircle className="w-8 h-8 text-amber-600" />
                   </div>
@@ -609,8 +609,8 @@ export default function AbsenceManagementPage() {
               </Card>
             </div>
 
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100">
+            <Card className="shadow-lg border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <CardTitle>Registro de Ausencias</CardTitle>
@@ -660,16 +660,16 @@ export default function AbsenceManagementPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {isLoading ? (
-                  <div className="p-12 text-center text-slate-500">Cargando ausencias...</div>
+                  <div className="p-12 text-center text-slate-500 dark:text-slate-400">Cargando ausencias...</div>
                 ) : filteredAbsences.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
+                  <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                     No hay ausencias registradas
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-slate-50">
+                        <TableRow className="bg-slate-50 dark:bg-slate-800/50">
                           <TableHead>Empleado</TableHead>
                           <TableHead>Tipo</TableHead>
                           <TableHead>Fecha Inicio</TableHead>
@@ -687,10 +687,10 @@ export default function AbsenceManagementPage() {
                           return (
                             <TableRow 
                               key={absence.id} 
-                              className={`hover:bg-slate-50 ${isActive ? 'bg-red-50' : isExpired ? 'bg-slate-50' : ''}`}
+                              className={`hover:bg-slate-50 dark:hover:bg-slate-800 dark:bg-slate-800/50 ${isActive ? 'bg-red-50 dark:bg-red-900/20' : isExpired ? 'bg-slate-50 dark:bg-slate-800/50' : ''}`}
                             >
                               <TableCell>
-                                <span className={`font-semibold ${isActive ? 'text-red-700' : 'text-slate-900'}`}>
+                                <span className={`font-semibold ${isActive ? 'text-red-700 dark:text-red-200' : 'text-slate-900 dark:text-slate-100'}`}>
                                   {getEmployeeName(absence.employee_id)}
                                 </span>
                               </TableCell>
@@ -714,7 +714,7 @@ export default function AbsenceManagementPage() {
                               <TableCell>
                                 <Badge className={
                                   isActive ? "bg-red-100 text-red-800" :
-                                  isExpired ? "bg-slate-100 text-slate-600" :
+                                  isExpired ? "bg-slate-100 text-slate-600 dark:text-slate-400" :
                                   "bg-blue-100 text-blue-800"
                                 }>
                                   {isActive ? "Activa" : isExpired ? "Finalizada" : "Futura"}
@@ -733,7 +733,7 @@ export default function AbsenceManagementPage() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleDelete(absence)}
-                                    className="hover:bg-red-50 hover:text-red-600"
+                                    className="hover:bg-red-50 dark:bg-red-900/20 hover:text-red-600"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -884,25 +884,25 @@ export default function AbsenceManagementPage() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 rounded-lg p-3">
                 <Checkbox
                   id="remunerada"
                   checked={formData.remunerada}
                   onCheckedChange={(checked) => setFormData({ ...formData, remunerada: checked })}
                 />
-                <label htmlFor="remunerada" className="text-sm font-medium text-slate-900 cursor-pointer">
+                <label htmlFor="remunerada" className="text-sm font-medium text-slate-900 dark:text-slate-100 cursor-pointer">
                   Ausencia Remunerada (con pago de salario)
                 </label>
               </div>
 
-              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 rounded-lg p-3">
                 <Checkbox
                   id="fullDay"
                   checked={fullDay}
                   onCheckedChange={setFullDay}
                   disabled={unknownEndDate}
                 />
-                <label htmlFor="fullDay" className="text-sm font-medium text-slate-900 cursor-pointer">
+                <label htmlFor="fullDay" className="text-sm font-medium text-slate-900 dark:text-slate-100 cursor-pointer">
                   Ausencia de horario completo (00:00 - 23:59)
                 </label>
               </div>
@@ -986,7 +986,7 @@ export default function AbsenceManagementPage() {
                 {formData.documentos_adjuntos?.length > 0 && (
                   <div className="mt-2 space-y-2">
                     {formData.documentos_adjuntos.map((doc, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-slate-50 p-2 rounded border">
+                      <div key={idx} className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-2 rounded border">
                         <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm truncate flex-1 text-blue-600 hover:underline">
                           {doc.nombre}
                         </a>
@@ -1004,12 +1004,12 @@ export default function AbsenceManagementPage() {
                 )}
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <div className="space-y-2">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     <strong>Flujo de Aprobación:</strong>
                   </p>
-                  <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
+                  <ul className="text-sm text-blue-700 dark:text-blue-200 dark:text-blue-300 list-disc list-inside space-y-1">
                     <li>La solicitud se creará con estado "Pendiente"</li>
                     <li>Se notificará automáticamente a los responsables configurados</li>
                     <li>Los supervisores podrán aprobar o rechazar desde la pestaña "Aprobar"</li>
