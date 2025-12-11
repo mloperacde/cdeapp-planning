@@ -41,6 +41,7 @@ const AVAILABLE_WIDGETS = [
 
 export default function DashboardPage() {
   const [showWidgetConfig, setShowWidgetConfig] = useState(false);
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [user, setUser] = useState(null);
 
   React.useEffect(() => {
@@ -446,11 +447,11 @@ export default function DashboardPage() {
         <ProductionMonitor />
 
         <div className="mt-8">
-          <WorkCalendar />
+          <WorkCalendar year={calendarYear} onYearChange={setCalendarYear} />
         </div>
 
         <div className="mt-6">
-          <HolidayVacationPanel />
+          <HolidayVacationPanel year={calendarYear} />
         </div>
 
 

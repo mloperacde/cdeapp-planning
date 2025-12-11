@@ -7,8 +7,8 @@ import { Calendar, Palmtree } from "lucide-react";
 import { format, eachDayOfInterval, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function HolidayVacationPanel() {
-  const currentYear = new Date().getFullYear();
+export default function HolidayVacationPanel({ year }) {
+  const currentYear = year || new Date().getFullYear();
 
   const { data: holidays = [] } = useQuery({
     queryKey: ['holidays'],

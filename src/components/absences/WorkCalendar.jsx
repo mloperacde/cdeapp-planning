@@ -10,8 +10,19 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function WorkCalendar() {
-  const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear());
+export default function WorkCalendar({ year, onYearChange }) {
+  const [internalYear, setInternalYear] = React.useState(new Date().getFullYear());
+  
+  // Use controlled or uncontrolled state
+  const selectedYear = year !== undefined ? year : internalYear;
+  
+  const handleYearChange = (newYear) => {
+    if (onYearChange) {
+      onYearChange(newYear);
+    }
+    setInternalYear(newYear);
+  };
+
   const currentDate = new Date(selectedYear, 0, 1);
 
   const { data: holidays = [] } = useQuery({
@@ -67,7 +78,7 @@ export default function WorkCalendar() {
                 key={year}
                 variant={selectedYear === year ? "default" : "outline"}
                 className={`cursor-pointer ${selectedYear === year ? "bg-blue-600" : "hover:bg-slate-100"}`}
-                onClick={() => setSelectedYear(year)}
+                onClick={() => handleYearChange(year)}
               >
                 {year}
               </Badge>
