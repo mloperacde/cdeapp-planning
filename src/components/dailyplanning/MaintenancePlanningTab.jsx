@@ -22,7 +22,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table.jsx";
 
 export default function MaintenancePlanningTab({ selectedDate, selectedTeam, selectedShift }) {
   const [showForm, setShowForm] = useState(false);
