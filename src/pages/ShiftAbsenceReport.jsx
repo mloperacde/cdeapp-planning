@@ -35,6 +35,8 @@ import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import EmployeeSelect from "../components/common/EmployeeSelect";
+import { createAbsence } from "../components/absences/AbsenceOperations";
+import { toast } from "sonner";
 
 export default function ShiftAbsenceReportPage() {
   const [showForm, setShowForm] = useState(false);
@@ -70,32 +72,59 @@ export default function ShiftAbsenceReportPage() {
     initialData: [],
   });
 
-  const updateEmployeeAvailability = async (employeeId, disponibilidad, ausenciaData = {}) => {
-    await base44.entities.Employee.update(employeeId, {
-      disponibilidad,
-      ausencia_inicio: ausenciaData.ausencia_inicio || null,
-      ausencia_fin: ausenciaData.ausencia_fin || null,
-      ausencia_motivo: ausenciaData.ausencia_motivo || null,
-    });
-  };
+  const { data: vacations = [] } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list(),
+    initialData: [],
+  });
+
+  const { data: holidays = [] } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+    initialData: [],
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const result = await base44.entities.Absence.create(data);
-      
-      await updateEmployeeAvailability(data.employee_id, "Ausente", {
-        ausencia_inicio: data.fecha_inicio,
-        ausencia_fin: data.fecha_fin,
-        ausencia_motivo: data.motivo,
-      });
+      // Find absence type ID if we only have the name in formData
+      // Or ensure formData has absence_type_id
+      let absenceTypeId = data.absence_type_id;
+      if (!absenceTypeId && data.tipo) {
+          const type = absenceTypes.find(t => t.nombre === data.tipo);
+          if (type) absenceTypeId = type.id;
+      }
 
-      return result;
+      const cleanData = {
+          ...data,
+          absence_type_id: absenceTypeId
+      };
+
+      return await createAbsence(
+        cleanData,
+        currentUser,
+        employees,
+        absenceTypes,
+        vacations,
+        holidays
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
+      queryClient.invalidateQueries({ queryKey: ['globalAbsenteeism'] });
+      toast.success("Ausencia comunicada correctamente");
       handleClose();
     },
+    onError: (error) => {
+      toast.error("Error al comunicar ausencia");
+      console.error(error);
+    }
   });
 
   const handleClose = () => {
@@ -106,7 +135,8 @@ export default function ShiftAbsenceReportPage() {
       fecha_inicio: "",
       fecha_fin: "",
       motivo: "",
-      tipo: "Ausencia justificada",
+      tipo: "",
+      absence_type_id: "",
       remunerada: true,
       notas: "",
     });
@@ -376,15 +406,23 @@ export default function ShiftAbsenceReportPage() {
                 <div className="space-y-2">
                   <Label htmlFor="tipo">Tipo de Ausencia *</Label>
                   <Select
-                    value={formData.tipo}
-                    onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+                    value={formData.absence_type_id}
+                    onValueChange={(value) => {
+                        const type = absenceTypes.find(t => t.id === value);
+                        setFormData({ 
+                            ...formData, 
+                            absence_type_id: value,
+                            tipo: type ? type.nombre : "",
+                            remunerada: type ? type.remunerada : formData.remunerada
+                        });
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>
                       {absenceTypes.filter(t => t.activo && t.visible_empleados).map(type => (
-                        <SelectItem key={type.id} value={type.nombre}>
+                        <SelectItem key={type.id} value={type.id}>
                           {type.nombre}
                         </SelectItem>
                       ))}

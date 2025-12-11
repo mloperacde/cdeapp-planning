@@ -7,13 +7,17 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
     return null;
   }
 
-  // Si la ausencia no tiene fecha de fin definida, no calcular
-  if (absence.fecha_fin_desconocida || !absence.fecha_fin) {
-    return null;
-  }
-
+  // Si la ausencia no tiene fecha de fin definida, usar hoy
   const absenceStart = new Date(absence.fecha_inicio);
-  const absenceEnd = new Date(absence.fecha_fin);
+  let absenceEnd;
+  
+  if (absence.fecha_fin_desconocida) {
+    absenceEnd = new Date(); // Calcular hasta hoy
+  } else if (absence.fecha_fin) {
+    absenceEnd = new Date(absence.fecha_fin);
+  } else {
+    return null; // Should not happen if data is correct
+  }
   const year = absenceStart.getFullYear();
 
   // Obtener todos los días del rango de ausencia

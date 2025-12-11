@@ -107,22 +107,33 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const dataWithStatus = {
-        ...data,
-        estado_aprobacion: 'Pendiente',
-        solicitado_por: currentUser?.id
-      };
-      
       if (editingAbsence?.id) {
-        return await base44.entities.Absence.update(editingAbsence.id, dataWithStatus);
+        return await updateAbsence(
+          editingAbsence.id, 
+          data, 
+          currentUser, 
+          absenceTypes, 
+          vacations, 
+          holidays
+        );
       } else {
-        return await base44.entities.Absence.create(dataWithStatus);
+        const allEmployees = [...employees, ...masterEmployees];
+        return await createAbsence(
+          data, 
+          currentUser, 
+          allEmployees, 
+          absenceTypes, 
+          vacations, 
+          holidays
+        );
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
+      queryClient.invalidateQueries({ queryKey: ['globalAbsenteeism'] });
       toast.success("Ausencia registrada correctamente");
       handleClose();
     },
@@ -132,9 +143,19 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Absence.delete(id),
+    mutationFn: async (id) => {
+      // Need full absence object for delete logic
+      const absence = absences.find(a => a.id === id);
+      if (absence) {
+        const allEmployees = [...employees, ...masterEmployees];
+        await deleteAbsence(absence, allEmployees);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
       toast.success("Ausencia eliminada");
     }
   });
