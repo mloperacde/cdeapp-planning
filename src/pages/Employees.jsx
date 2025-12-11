@@ -129,6 +129,11 @@ export default function EmployeesPage() {
     queryFn: () => base44.entities.UserRole.list(),
   });
 
+  // Stable keys for useMemo to prevent infinite loops from object references
+  const userRoleAssignmentsStr = JSON.stringify(userRoleAssignments);
+  const userRolesStr = JSON.stringify(userRoles);
+  const currentUserRole = currentUser?.role;
+
   const { isShiftManager, permissions } = useMemo(() => {
     let isShiftManager = false;
     let isAdmin = false;
@@ -150,7 +155,7 @@ export default function EmployeesPage() {
       }
     };
 
-    if (currentUser?.role === 'admin') {
+    if (currentUserRole === 'admin') {
       isAdmin = true;
       perms.ver_lista = true;
       perms.crear = true;
@@ -167,8 +172,11 @@ export default function EmployeesPage() {
         editar_contacto: true
       };
     } else {
-      userRoleAssignments.forEach(assignment => {
-        const role = userRoles.find(r => r.id === assignment.role_id);
+      const assignments = JSON.parse(userRoleAssignmentsStr || '[]');
+      const roles = JSON.parse(userRolesStr || '[]');
+
+      assignments.forEach(assignment => {
+        const role = roles.find(r => r.id === assignment.role_id);
         if (role) {
           if (role.role_name === 'Jefe de Turno') isShiftManager = true;
           if (role.is_admin) isAdmin = true;
@@ -210,7 +218,7 @@ export default function EmployeesPage() {
     if (isAdmin) isShiftManager = false;
 
     return { isShiftManager, permissions: perms };
-  }, [currentUser, userRoleAssignments, userRoles]);
+  }, [currentUserRole, userRoleAssignmentsStr, userRolesStr]);
 
   // Fetch ALL employees for stats
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
@@ -565,6 +573,74 @@ export default function EmployeesPage() {
                   <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.upcomingContractExpirations}</span>
                   <span className="text-xs text-slate-500">contratos</span>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* HR - Extended Info (Birthdays & Anniversaries) */}
+        {!isShiftManager && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Card className="shadow-sm border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-700 pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Cake className="w-4 h-4 text-pink-500" />
+                  Próximos Cumpleaños (15 días)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {stats.upcomingBirthdays.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-2">No hay cumpleaños próximos</p>
+                ) : (
+                  <div className="space-y-3">
+                    {stats.upcomingBirthdays.map(emp => (
+                      <div key={emp.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-xs font-bold">
+                            {emp.nombre.charAt(0)}
+                          </div>
+                          <span className="font-medium">{emp.nombre}</span>
+                        </div>
+                        <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
+                          {format(emp.nextBirthday, "d 'de' MMMM", { locale: es })}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-700 pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-500" />
+                  Aniversarios Próximos (30 días)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {stats.upcomingAnniversaries.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-2">No hay aniversarios próximos</p>
+                ) : (
+                  <div className="space-y-3">
+                    {stats.upcomingAnniversaries.map(emp => (
+                      <div key={emp.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
+                            {emp.nombre.charAt(0)}
+                          </div>
+                          <div>
+                            <span className="font-medium block">{emp.nombre}</span>
+                            <span className="text-xs text-slate-500">Alta: {format(new Date(emp.fecha_alta), "d MMM yyyy", { locale: es })}</span>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          {emp.years} años
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

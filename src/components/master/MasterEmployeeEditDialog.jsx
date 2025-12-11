@@ -23,7 +23,7 @@ import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, 
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 
-export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
+export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions }) {
   const [formData, setFormData] = useState({
     nombre: "",
     codigo_empleado: "",
@@ -68,15 +68,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
   const { data: userRoleAssignments = [] } = useQuery({
     queryKey: ['userRoleAssignments', currentUser?.email],
     queryFn: () => base44.entities.UserRoleAssignment.filter({ user_email: currentUser?.email }),
-    enabled: !!currentUser?.email,
+    enabled: !!currentUser?.email && !propPermissions,
   });
 
   const { data: userRoles = [] } = useQuery({
     queryKey: ['userRoles'],
     queryFn: () => base44.entities.UserRole.list(),
+    enabled: !propPermissions,
   });
 
   const permissions = React.useMemo(() => {
+    if (propPermissions) return propPermissions;
     if (!currentUser) return {};
     if (currentUser.role === 'admin') return {
       contrato: { ver: true, editar: true },
@@ -97,7 +99,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
     });
 
     return perms;
-  }, [currentUser, userRoleAssignments, userRoles]);
+  }, [propPermissions, currentUser, userRoleAssignments, userRoles]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
