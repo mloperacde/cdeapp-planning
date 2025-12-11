@@ -50,38 +50,34 @@ export default function ShiftAbsenceReportPage() {
     fecha_fin: "",
     motivo: "",
     tipo: "Ausencia justificada",
+    absence_type_id: "",
     remunerada: true,
     notas: "",
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
-    initialData: [],
   });
 
-  const { data: absences } = useQuery({
+  const { data: absences = [] } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio'),
-    initialData: [],
   });
 
-  const { data: absenceTypes } = useQuery({
+  const { data: absenceTypes = [] } = useQuery({
     queryKey: ['absenceTypes'],
     queryFn: () => base44.entities.AbsenceType.list('orden'),
-    initialData: [],
   });
 
   const { data: vacations = [] } = useQuery({
     queryKey: ['vacations'],
     queryFn: () => base44.entities.Vacation.list(),
-    initialData: [],
   });
 
   const { data: holidays = [] } = useQuery({
     queryKey: ['holidays'],
     queryFn: () => base44.entities.Holiday.list(),
-    initialData: [],
   });
 
   const { data: currentUser } = useQuery({
@@ -183,13 +179,6 @@ export default function ShiftAbsenceReportPage() {
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Empleado desconocido";
   };
-
-  const employeesForSelect = useMemo(() => {
-    return employees.filter(emp => 
-      emp.disponibilidad === "Disponible" &&
-      (!searchTerm || emp.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [employees, searchTerm]);
 
   return (
     <div className="p-6 md:p-8">
