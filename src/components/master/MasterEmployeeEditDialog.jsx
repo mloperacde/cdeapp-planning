@@ -79,82 +79,23 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     enabled: !propPermissions,
   });
 
-  const permissions = React.useMemo(() => {
-    // Default permissions structure
-    const defaultPerms = {
-      contrato: { ver: false, editar: false },
-      campos: { editar_sensible: false, editar_contacto: false, ver_salario: false, ver_dni: false },
-      tabs: {
-        personal: true,
-        organizacion: true,
-        horarios: true,
-        taquilla: true,
-        contrato: false,
-        absentismo: false,
-        maquinas: true,
-        disponibilidad: true
-      }
-    };
-
-    if (propPermissions) {
-      // Safely merge propPermissions with defaults to ensure all keys exist
-      return {
-        ...defaultPerms,
-        ...propPermissions,
-        tabs: { ...defaultPerms.tabs, ...(propPermissions.tabs || {}) },
-        contrato: { ...defaultPerms.contrato, ...(propPermissions.contrato || {}) },
-        campos: { ...defaultPerms.campos, ...(propPermissions.campos || {}) }
-      };
+  // Simplificación radical: Usar los props directamente o defaults
+  // Eliminamos TODA la lógica de cálculo interno que causaba loops
+  // El componente padre es responsable de pasar los permisos correctos
+  const permissions = propPermissions || {
+    contrato: { ver: false, editar: false },
+    campos: { editar_sensible: false, editar_contacto: false, ver_salario: false, ver_dni: false },
+    tabs: {
+      personal: true,
+      organizacion: true,
+      horarios: true,
+      taquilla: true,
+      contrato: false,
+      absentismo: false,
+      maquinas: true,
+      disponibilidad: true
     }
-
-    if (!currentUser) return defaultPerms;
-
-    if (currentUser.role === 'admin') return {
-      contrato: { ver: true, editar: true },
-      campos: { editar_sensible: true, editar_contacto: true, ver_salario: true, ver_dni: true },
-      tabs: {
-        personal: true, organizacion: true, horarios: true, taquilla: true, 
-        contrato: true, absentismo: true, maquinas: true, disponibilidad: true
-      }
-    };
-
-    let perms = { 
-      ...defaultPerms,
-      tabs: { ...defaultPerms.tabs },
-      contrato: { ...defaultPerms.contrato },
-      campos: { ...defaultPerms.campos }
-    };
-
-    // Apply role-based permissions
-    const relevantRoles = userRoleAssignments
-      .map(assignment => userRoles.find(r => r.id === assignment.role_id))
-      .filter(Boolean);
-
-    relevantRoles.forEach(role => {
-      // Merge Tabs Permissions (OR logic: if one role allows, it's allowed)
-      if (role.permissions?.empleados_detalle?.pestanas) {
-        Object.keys(perms.tabs).forEach(tab => {
-          if (role.permissions.empleados_detalle.pestanas[tab]) {
-            perms.tabs[tab] = true;
-          }
-        });
-      }
-
-      // Merge Contract Permissions
-      if (role.permissions?.contrato?.ver) perms.contrato.ver = true;
-      if (role.permissions?.contrato?.editar) perms.contrato.editar = true;
-
-      // Merge Field Permissions
-      if (role.permissions?.campos_empleado) {
-        if (role.permissions.campos_empleado.editar_sensible) perms.campos.editar_sensible = true;
-        if (role.permissions.campos_empleado.editar_contacto) perms.campos.editar_contacto = true;
-        if (role.permissions.campos_empleado.ver_salario) perms.campos.ver_salario = true;
-        if (role.permissions.campos_empleado.ver_dni) perms.campos.ver_dni = true;
-      }
-    });
-
-    return perms;
-  }, [propPermissions, currentUser, userRoleAssignments, userRoles]);
+  };
 
   // Ensure active tab is allowed
   // Using stringified permissions to prevent infinite loops from reference instability

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRBAC } from "@/hooks/useRBAC";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -129,126 +130,59 @@ export default function EmployeesPage() {
     queryFn: () => base44.entities.UserRole.list(),
   });
 
-  // Stable keys for useMemo to prevent infinite loops from object references
-  const userRoleAssignmentsStr = JSON.stringify(userRoleAssignments);
-  const userRolesStr = JSON.stringify(userRoles);
-  const currentUserRole = currentUser?.role;
+  // Ya no necesitamos estas constantes ni el cálculo manual complejo
+  const { effectivePermissions: rawPermissions, hasRole, isAdmin } = useRBAC();
+  
+  const isShiftManager = hasRole('Jefe de Turno') && !isAdmin;
 
-  const { isShiftManager, permissions } = useMemo(() => {
-    let isShiftManager = false;
-    let isAdmin = false;
+  const permissions = useMemo(() => {
+     // Adaptador para que la estructura coincida con lo que espera la página actual
+     const p = rawPermissions || {};
+     
+     return {
+        ver_lista: p.empleados?.ver,
+        crear: p.empleados?.crear,
+        editar: p.empleados?.editar,
+        eliminar: p.empleados?.eliminar,
+        visibleDepartments: p.empleados?.departamentos_visibles || [],
+        campos: p.campos_empleado || {},
+        tabs: p.empleados_detalle?.pestanas || {},
+        contrato: p.contrato || {}
+     };
+  }, [rawPermissions]);
 
-    const perms = {
-      ver_lista: false,
-      crear: false,
-      editar: false,
-      eliminar: false,
-      visibleDepartments: [],
-      campos: {
-        ver_salario: false,
-        ver_bancarios: false,
-        ver_contacto: false,
-        ver_direccion: false,
-        ver_dni: false,
-        editar_sensible: false,
-        editar_contacto: false
-      }
-    };
+  // INTEGRACIÓN DEL NUEVO SISTEMA RBAC (HOOK CENTRAL)
+  // Eliminamos toda la lógica manual de cálculo
+  import { useRBAC } from "@/hooks/useRBAC";
+  
+  // Dentro del componente:
+  const { effectivePermissions: permissions, hasRole } = useRBAC();
+  const isShiftManager = hasRole('Jefe de Turno') && !hasRole('Admin');
+  
+  // Ajuste temporal para compatibilidad de estructura si el hook devuelve algo ligeramente distinto
+  const perms = React.useMemo(() => {
+     const p = permissions || {};
+     // Asegurar estructura
+     if (!p.campos) p.campos = p.campos_empleado || {};
+     if (!p.tabs) p.tabs = p.empleados_detalle?.pestanas || {};
+     if (!p.visibleDepartments) p.visibleDepartments = p.empleados?.departamentos_visibles || [];
+     
+     // Mapeo legacy para que el resto de la página funcione sin cambios masivos
+     return {
+        ver_lista: p.empleados?.ver,
+        crear: p.empleados?.crear,
+        editar: p.empleados?.editar,
+        eliminar: p.empleados?.eliminar,
+        visibleDepartments: p.visibleDepartments,
+        campos: p.campos,
+        tabs: p.tabs,
+        contrato: p.contrato
+     };
+  }, [permissions]);
 
-    if (currentUserRole === 'admin') {
-      isAdmin = true;
-      perms.ver_lista = true;
-      perms.crear = true;
-      perms.editar = true;
-      perms.eliminar = true;
-      perms.visibleDepartments = ['*'];
-      perms.campos = {
-        ver_salario: true,
-        ver_bancarios: true,
-        ver_contacto: true,
-        ver_direccion: true,
-        ver_dni: true,
-        editar_sensible: true,
-        editar_contacto: true
-      };
-      perms.tabs = {
-        personal: true, organizacion: true, horarios: true, taquilla: true, 
-        contrato: true, absentismo: true, maquinas: true, disponibilidad: true
-      };
-    } else {
-      const assignments = JSON.parse(userRoleAssignmentsStr || '[]');
-      const roles = JSON.parse(userRolesStr || '[]');
-
-      assignments.forEach(assignment => {
-        const role = roles.find(r => r.id === assignment.role_id);
-        if (role) {
-          if (role.role_name === 'Jefe de Turno') isShiftManager = true;
-          if (role.is_admin) isAdmin = true;
-
-          if (role.permissions) {
-            if (role.permissions.empleados?.ver) perms.ver_lista = true;
-            if (role.permissions.empleados?.crear) perms.crear = true;
-            if (role.permissions.empleados?.editar) perms.editar = true;
-            if (role.permissions.empleados?.eliminar) perms.eliminar = true;
-            
-            // Combine visible departments from all roles
-            const depts = role.permissions.empleados?.departamentos_visibles || [];
-            if (depts.includes('*')) {
-              perms.visibleDepartments = ['*'];
-            } else if (!perms.visibleDepartments.includes('*')) {
-              perms.visibleDepartments = [...new Set([...perms.visibleDepartments, ...depts])];
-            }
-
-            if (role.permissions.campos_empleado) {
-              if (role.permissions.campos_empleado.ver_salario) perms.campos.ver_salario = true;
-              if (role.permissions.campos_empleado.ver_bancarios) perms.campos.ver_bancarios = true;
-              if (role.permissions.campos_empleado.ver_contacto) perms.campos.ver_contacto = true;
-              if (role.permissions.campos_empleado.ver_direccion) perms.campos.ver_direccion = true;
-              if (role.permissions.campos_empleado.ver_dni) perms.campos.ver_dni = true;
-              if (role.permissions.campos_empleado.editar_sensible) perms.campos.editar_sensible = true;
-              if (role.permissions.campos_empleado.editar_contacto) perms.campos.editar_contacto = true;
-            }
-
-            if (role.permissions.empleados_detalle?.pestanas) {
-              if (!perms.tabs) perms.tabs = {};
-              Object.entries(role.permissions.empleados_detalle.pestanas).forEach(([key, val]) => {
-                if (val) perms.tabs[key] = true;
-              });
-            }
-          }
-        }
-      });
-    }
-    
-    // Default tabs if none set
-    if (!perms.tabs) {
-      perms.tabs = {
-        personal: true, organizacion: true, horarios: true, taquilla: true, 
-        contrato: false, absentismo: false, maquinas: true, disponibilidad: true
-      };
-    }
-
-    // Enforce restrictions for Shift Managers (unless Admin)
-    if (isShiftManager && !isAdmin) {
-      // Strictly limit to FABRICACION regardless of other roles
-      perms.visibleDepartments = ['FABRICACION'];
-
-      // Strictly hide sensitive data
-      if (perms.tabs) perms.tabs.contrato = false;
-      if (perms.campos) {
-        perms.campos.ver_bancarios = false;
-        perms.campos.ver_salario = false;
-      }
-    } else if (isShiftManager && perms.visibleDepartments.length === 0) {
-       // Fallback if not strictly enforced above (though the block above covers it)
-       perms.visibleDepartments = ['FABRICACION'];
-    }
-
-    // If user is Admin, they are NOT restricted as a shift manager
-    if (isAdmin) isShiftManager = false;
-
-    return { isShiftManager, permissions: perms };
-    }, [currentUserRole, userRoleAssignmentsStr, userRolesStr]);
+  // Sobreescribimos la variable permissions original con la procesada
+  // NOTA: Esto reemplaza el bloque useMemo original gigante.
+  const processedPermissions = perms;
 
   // Fetch ALL employees for stats
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
