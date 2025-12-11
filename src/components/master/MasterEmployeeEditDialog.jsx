@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
 
 export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions }) {
   const [formData, setFormData] = useState({
