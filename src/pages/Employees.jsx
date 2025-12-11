@@ -168,12 +168,19 @@ export default function EmployeesPage() {
     let list = allEmployees;
     
     // Filter by permitted departments
-    if (permissions.visibleDepartments && !permissions.visibleDepartments.includes('*')) {
-      const visibleDepts = permissions.visibleDepartments.map(d => String(d || "").toUpperCase());
-      list = list.filter(emp => 
-        !emp.departamento || 
-        (emp.departamento && visibleDepts.includes(String(emp.departamento).toUpperCase()))
-      );
+    if (permissions.visibleDepartments && Array.isArray(permissions.visibleDepartments) && !permissions.visibleDepartments.includes('*')) {
+      const visibleDepts = permissions.visibleDepartments
+        .filter(d => d !== null && d !== undefined)
+        .map(d => String(d).toUpperCase());
+        
+      list = list.filter(emp => {
+        if (!emp.departamento) return true; // Keep employees without department? Or filter them out? Assuming keep if permission is restrictive but emp has no dept, usually safe to hide or show? Logic above was (!emp.departamento || ...) so keeping it.
+        try {
+          return visibleDepts.includes(String(emp.departamento).toUpperCase());
+        } catch (e) {
+          return false;
+        }
+      });
     }
 
     return list;
