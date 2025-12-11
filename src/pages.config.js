@@ -55,7 +55,6 @@ import MyProfile from './pages/MyProfile';
 import MobileProfile from './pages/MobileProfile';
 import MobileNotifications from './pages/MobileNotifications';
 import Employees from './pages/Employees';
-import DepartmentManagement from './pages/DepartmentManagement';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
 import __Layout from './Layout.jsx';
 
@@ -118,7 +117,6 @@ export const PAGES = {
     "MobileProfile": MobileProfile,
     "MobileNotifications": MobileNotifications,
     "Employees": Employees,
-    "DepartmentManagement": DepartmentManagement,
     "EmployeesShiftManager": EmployeesShiftManager,
 }
 
