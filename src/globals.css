@@ -28,25 +28,25 @@ css
   }
   
   .dark {
-    --background: 222.2 84% 4.9%; /* Slate 950 - Fondo más oscuro */
-    --foreground: 210 40% 98%; /* Slate 50 - Texto principal claro */
-    --card: 222.2 47.4% 11.2%; /* Slate 900 - Tarjetas ligeramente más claras que el fondo */
+    --background: 222.2 47.4% 11.2%; /* Deep dark blue background - similar to #0f172a (Slate 950) but potentially slightly adjusted based on image vibe */
+    --foreground: 210 40% 98%; /* White text */
+    --card: 222.2 47.4% 15%; /* Slightly lighter card background - around #1e293b (Slate 800) */
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 47.4% 11.2%; /* Slate 900 */
+    --popover: 222.2 47.4% 15%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%; /* Blue 400 */
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%; /* Slate 800 */
+    --primary: 199 89% 48%; /* Vibrant Light Blue/Cyan accent - #0ea5e9 (Sky 500) */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 28% 17%; /* Dark secondary elements */
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%; /* Slate 800 */
-    --muted-foreground: 215 20.2% 65.1%; /* Slate 400 - Texto secundario suavizado */
-    --accent: 217.2 32.6% 17.5%; /* Slate 800 */
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 20.2% 65.1%; /* Soft grey text */
+    --accent: 199 89% 48%; /* Matching primary accent */
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%; /* Red 900 */
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%; /* Slate 800 - Bordes sutiles */
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 215 28% 20%; /* Subtle borders */
+    --input: 215 28% 20%;
+    --ring: 199 89% 48%;
   }
 }
 
