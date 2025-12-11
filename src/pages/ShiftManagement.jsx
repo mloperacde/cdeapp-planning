@@ -36,157 +36,146 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 export default function ShiftManagementPage() {
-  const [showShiftForm, setShowShiftForm] = useState(false);
-  const [editingShift, setEditingShift] = useState(null);
-  const [selectedWeek, setSelectedWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [selectedEmployee, setSelectedEmployee] = useState("all");
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [interestedUser, setInterestedUser] = useState(null);
   const queryClient = useQueryClient();
 
-  const [shiftFormData, setShiftFormData] = useState({
+  const [requestData, setRequestData] = useState({
     employee_id: "",
-    fecha: "",
-    turno: "Mañana",
-    hora_inicio: "07:00",
-    hora_fin: "15:00",
-    maquinas_asignadas: [],
-    estado: "Programado",
-    notas: "",
+    equipo: "",
+    fecha_cambio: "",
+    turno_actual: "Mañana",
+    turno_deseado: "Tarde",
+    motivo: "",
   });
 
-  const { data: employees } = useQuery({
+  // Current User
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre'),
-    initialData: [],
   });
 
-  const { data: shifts } = useQuery({
-    queryKey: ['shiftAssignments'],
-    queryFn: () => base44.entities.ShiftAssignment.list('-fecha'),
-    initialData: [],
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => base44.entities.TeamConfig.list(),
   });
 
-  const { data: swapRequests } = useQuery({
+  const { data: swapRequests = [] } = useQuery({
     queryKey: ['shiftSwapRequests'],
     queryFn: () => base44.entities.ShiftSwapRequest.list('-fecha_solicitud'),
-    initialData: [],
   });
 
-  const { data: machines } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('nombre'),
-    initialData: [],
-  });
+  const currentEmployee = useMemo(() => {
+    if (!currentUser || !employees) return null;
+    return employees.find(e => e.email === currentUser.email) || null;
+  }, [currentUser, employees]);
 
-  const saveShiftMutation = useMutation({
+  const createRequestMutation = useMutation({
     mutationFn: (data) => {
-      if (editingShift?.id) {
-        return base44.entities.ShiftAssignment.update(editingShift.id, data);
-      }
-      return base44.entities.ShiftAssignment.create(data);
+      const employee = employees.find(e => e.id === data.employee_id);
+      return base44.entities.ShiftSwapRequest.create({
+        solicitante_id: data.employee_id,
+        nombre_solicitante: employee?.nombre,
+        equipo_solicitante: employee?.equipo,
+        fecha_cambio: data.fecha_cambio,
+        turno_actual: data.turno_actual,
+        turno_deseado: data.turno_deseado,
+        motivo: data.motivo,
+        estado: "Publicado",
+        fecha_solicitud: new Date().toISOString(),
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shiftAssignments'] });
-      handleCloseShiftForm();
-    },
-  });
-
-  const deleteShiftMutation = useMutation({
-    mutationFn: (id) => base44.entities.ShiftAssignment.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shiftAssignments'] });
-    },
-  });
-
-  const updateSwapRequestMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ShiftSwapRequest.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shiftSwapRequests'] });
+      setShowRequestForm(false);
+      setRequestData({
+        employee_id: "",
+        equipo: "",
+        fecha_cambio: "",
+        turno_actual: "Mañana",
+        turno_deseado: "Tarde",
+        motivo: "",
+      });
     },
   });
 
-  const handleCloseShiftForm = () => {
-    setShowShiftForm(false);
-    setEditingShift(null);
-    setShiftFormData({
-      employee_id: "",
-      fecha: "",
-      turno: "Mañana",
-      hora_inicio: "07:00",
-      hora_fin: "15:00",
-      maquinas_asignadas: [],
-      estado: "Programado",
-      notas: "",
-    });
-  };
+  const expressInterestMutation = useMutation({
+    mutationFn: ({ requestId, receptorId, receptorName }) => {
+      return base44.entities.ShiftSwapRequest.update(requestId, {
+        receptor_id: receptorId,
+        nombre_receptor: receptorName,
+        estado: "Pendiente Aprobación",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shiftSwapRequests'] });
+      setInterestedUser(null);
+    },
+  });
 
-  const handleEditShift = (shift) => {
-    setEditingShift(shift);
-    setShiftFormData(shift);
-    setShowShiftForm(true);
-  };
-
-  const handleSubmitShift = (e) => {
+  const handleCreateRequest = (e) => {
     e.preventDefault();
-    saveShiftMutation.mutate(shiftFormData);
+    createRequestMutation.mutate(requestData);
   };
 
-  const handleDeleteShift = (id) => {
-    if (window.confirm('¿Eliminar este turno?')) {
-      deleteShiftMutation.mutate(id);
+  const handleInterest = (request) => {
+    // Determine the user who is interested. 
+    // Ideally this is the logged in user (currentEmployee).
+    // If testing without login, we might need a selector, but assuming logged in context or using a selector if user is admin.
+    // For now, let's use a dialog to select the employee if currentEmployee is not found (admin mode) or just confirm if found.
+    
+    if (currentEmployee) {
+      if (currentEmployee.equipo === request.equipo_solicitante) {
+        alert("No puedes intercambiar turno con alguien de tu mismo equipo (mismo turno).");
+        return;
+      }
+      if (window.confirm(`¿Confirmar interés en el cambio de turno para el ${request.fecha_cambio}?`)) {
+        expressInterestMutation.mutate({
+          requestId: request.id,
+          receptorId: currentEmployee.id,
+          receptorName: currentEmployee.nombre
+        });
+      }
+    } else {
+        // Fallback for demo/admin: Select who is interested
+        setInterestedUser(request);
     }
   };
 
-  const handleApproveSwap = (swapId) => {
-    updateSwapRequestMutation.mutate({
-      id: swapId,
-      data: {
-        estado: "Aprobada por Supervisor",
-        fecha_respuesta_supervisor: new Date().toISOString(),
-      }
+  const submitInterest = (employeeId) => {
+    const employee = employees.find(e => e.id === employeeId);
+    if (!employee) return;
+    
+    if (employee.equipo === interestedUser.equipo_solicitante) {
+        alert("No puedes intercambiar turno con alguien de tu mismo equipo.");
+        return;
+    }
+
+    expressInterestMutation.mutate({
+        requestId: interestedUser.id,
+        receptorId: employee.id,
+        receptorName: employee.nombre
     });
   };
 
-  const handleRejectSwap = (swapId) => {
-    updateSwapRequestMutation.mutate({
-      id: swapId,
-      data: {
-        estado: "Rechazada por Supervisor",
-        fecha_respuesta_supervisor: new Date().toISOString(),
-      }
-    });
-  };
-
-  const getEmployeeName = (id) => {
-    return employees.find(e => e.id === id)?.nombre || "Desconocido";
-  };
-
-  const weekDays = eachDayOfInterval({
-    start: selectedWeek,
-    end: addDays(selectedWeek, 6)
-  });
-
-  const filteredShifts = useMemo(() => {
-    return shifts.filter(shift => {
-      const employeeMatch = selectedEmployee === "all" || shift.employee_id === selectedEmployee;
-      const dateInWeek = weekDays.some(day => format(day, 'yyyy-MM-dd') === shift.fecha);
-      return employeeMatch && dateInWeek;
-    });
-  }, [shifts, selectedEmployee, weekDays]);
-
-  const pendingSwaps = useMemo(() => {
-    return swapRequests.filter(req => 
-      req.estado === "Pendiente" || req.estado === "Aceptada por Receptor"
-    );
-  }, [swapRequests]);
+  const openRequests = swapRequests.filter(req => req.estado === "Publicado");
+  const myRequests = currentEmployee 
+    ? swapRequests.filter(req => req.solicitante_id === currentEmployee.id || req.receptor_id === currentEmployee.id)
+    : [];
 
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("ShiftManagers")}>
+          <Link to={createPageUrl("Dashboard")}>
             <Button variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Jefes de Turno
+              Volver al Dashboard
             </Button>
           </Link>
         </div>
@@ -195,322 +184,273 @@ export default function ShiftManagementPage() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <RefreshCw className="w-8 h-8 text-blue-600" />
-              Intercambio de Turnos
+              Tablón de Cambios de Turno
             </h1>
             <p className="text-slate-600 mt-1">
-              Gestiona solicitudes de intercambio de turnos entre operarios
+              Publica y encuentra oportunidades de intercambio de turnos
             </p>
           </div>
           <Button
-            onClick={() => setShowShiftForm(true)}
+            onClick={() => {
+                if (currentEmployee) {
+                    setRequestData(prev => ({...prev, employee_id: currentEmployee.id, equipo: currentEmployee.equipo}));
+                }
+                setShowRequestForm(true);
+            }}
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Asignar Turno
+            Publicar Solicitud
           </Button>
         </div>
 
-        <Tabs defaultValue="calendar" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="calendar">Calendario de Turnos</TabsTrigger>
-            <TabsTrigger value="swaps">
-              Solicitudes de Intercambio ({pendingSwaps.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="calendar">
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Semana</Label>
-                    <Input
-                      type="date"
-                      value={format(selectedWeek, 'yyyy-MM-dd')}
-                      onChange={(e) => setSelectedWeek(startOfWeek(new Date(e.target.value), { weekStartsOn: 1 }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Empleado</Label>
-                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos los Empleados</SelectItem>
-                        {employees.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
+        <div className="grid gap-6">
+            <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4 flex items-start gap-3">
+                    <Users className="w-5 h-5 text-blue-600 mt-1" />
+                    <div>
+                        <h3 className="font-semibold text-blue-900">¿Cómo funciona?</h3>
+                        <p className="text-sm text-blue-800 mt-1">
+                            1. Publica tu solicitud indicando el turno que tienes y el que quieres.<br/>
+                            2. Espera a que un compañero de otro equipo se interese.<br/>
+                            3. Cuando haya coincidencia, la solicitud se enviará a los jefes de turno para aprobación.
+                        </p>
+                    </div>
+                </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  Turnos Semana {format(selectedWeek, "'del' d", { locale: es })} - 
-                  {format(addDays(selectedWeek, 6), "d 'de' MMMM", { locale: es })}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Empleado</TableHead>
-                        <TableHead>Turno</TableHead>
-                        <TableHead>Horario</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredShifts.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                            No hay turnos programados para esta semana
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredShifts.map(shift => (
-                          <TableRow key={shift.id} className="hover:bg-slate-50">
-                            <TableCell>
-                              {format(new Date(shift.fecha), "EEEE, d 'de' MMMM", { locale: es })}
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-semibold">{getEmployeeName(shift.employee_id)}</span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{shift.turno}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              {shift.hora_inicio} - {shift.hora_fin}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={
-                                shift.estado === "Completado" ? "bg-green-100 text-green-800" :
-                                shift.estado === "En Curso" ? "bg-blue-100 text-blue-800" :
-                                shift.estado === "Cancelado" ? "bg-red-100 text-red-800" :
-                                "bg-slate-100 text-slate-800"
-                              }>
-                                {shift.estado}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditShift(shift)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteShift(shift.id)}
-                                  className="hover:bg-red-50 hover:text-red-600"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <Tabs defaultValue="board">
+                <TabsList>
+                    <TabsTrigger value="board">Tablón de Anuncios ({openRequests.length})</TabsTrigger>
+                    <TabsTrigger value="my-requests">Mis Solicitudes ({myRequests.length})</TabsTrigger>
+                </TabsList>
 
-          <TabsContent value="swaps">
-            <Card>
-              <CardHeader>
-                <CardTitle>Solicitudes de Intercambio de Turnos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pendingSwaps.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500">
-                    No hay solicitudes de intercambio pendientes
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pendingSwaps.map(swap => (
-                      <div key={swap.id} className="border rounded-lg p-4 bg-slate-50">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge className={
-                                swap.estado === "Aceptada por Receptor" ? "bg-blue-100 text-blue-800" :
-                                "bg-yellow-100 text-yellow-800"
-                              }>
-                                {swap.estado}
-                              </Badge>
-                              <span className="text-xs text-slate-500">
-                                {format(new Date(swap.fecha_solicitud), "dd/MM/yyyy HH:mm")}
-                              </span>
+                <TabsContent value="board">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                        {openRequests.length === 0 ? (
+                            <div className="col-span-full text-center py-12 text-slate-500 bg-white rounded-lg border border-dashed">
+                                No hay solicitudes de cambio publicadas actualmente.
                             </div>
-                            <p className="font-semibold text-slate-900">
-                              {getEmployeeName(swap.solicitante_id)} ↔️ {getEmployeeName(swap.receptor_id)}
-                            </p>
-                            <p className="text-sm text-slate-600 mt-1">Motivo: {swap.motivo}</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApproveSwap(swap.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Aprobar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRejectSwap(swap.id)}
-                              className="text-red-600 hover:bg-red-50"
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Rechazar
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                        ) : (
+                            openRequests.map(req => (
+                                <Card key={req.id} className="hover:shadow-md transition-shadow">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex justify-between items-start">
+                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                {req.equipo_solicitante}
+                                            </Badge>
+                                            <span className="text-xs text-slate-500">
+                                                {format(new Date(req.fecha_solicitud), "d MMM")}
+                                            </span>
+                                        </div>
+                                        <CardTitle className="text-lg mt-2">{req.nombre_solicitante}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <Calendar className="w-4 h-4 text-slate-400" />
+                                                <span className="font-medium">
+                                                    {req.fecha_cambio ? format(new Date(req.fecha_cambio), "EEEE d MMMM", { locale: es }) : "Fecha no especificada"}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <div className="flex-1 p-2 bg-slate-50 rounded border text-center">
+                                                    <div className="text-xs text-slate-500 uppercase">Tiene</div>
+                                                    <div className="font-semibold text-slate-700">{req.turno_actual}</div>
+                                                </div>
+                                                <RefreshCw className="w-4 h-4 text-slate-400" />
+                                                <div className="flex-1 p-2 bg-blue-50 rounded border border-blue-100 text-center">
+                                                    <div className="text-xs text-blue-500 uppercase">Busca</div>
+                                                    <div className="font-semibold text-blue-700">{req.turno_deseado}</div>
+                                                </div>
+                                            </div>
+
+                                            {req.motivo && (
+                                                <p className="text-sm text-slate-600 italic">"{req.motivo}"</p>
+                                            )}
+
+                                            <Button 
+                                                className="w-full mt-2" 
+                                                onClick={() => handleInterest(req)}
+                                                disabled={currentEmployee?.id === req.solicitante_id}
+                                            >
+                                                {currentEmployee?.id === req.solicitante_id ? "Es tu solicitud" : "Me interesa"}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="my-requests">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Historial de Mis Solicitudes</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Fecha Cambio</TableHead>
+                                            <TableHead>Tipo</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                            <TableHead>Intercambio con</TableHead>
+                                            <TableHead>Turnos</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {myRequests.map(req => {
+                                            const isSolicitante = req.solicitante_id === currentEmployee?.id;
+                                            return (
+                                                <TableRow key={req.id}>
+                                                    <TableCell>
+                                                        {req.fecha_cambio ? format(new Date(req.fecha_cambio), "dd/MM/yyyy") : "-"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {isSolicitante ? "Publicada por mí" : "Aceptada por mí"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge className={
+                                                            req.estado === "Publicado" ? "bg-blue-100 text-blue-800" :
+                                                            req.estado === "Pendiente Aprobación" ? "bg-yellow-100 text-yellow-800" :
+                                                            req.estado === "Aprobada" ? "bg-green-100 text-green-800" :
+                                                            "bg-slate-100 text-slate-800"
+                                                        }>
+                                                            {req.estado}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {isSolicitante ? (req.nombre_receptor || "Esperando compañero...") : req.nombre_solicitante}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {req.turno_actual} ➔ {req.turno_deseado}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+        </div>
       </div>
 
-      {showShiftForm && (
-        <Dialog open={true} onOpenChange={handleCloseShiftForm}>
-          <DialogContent className="max-w-2xl">
+      {/* Modal Nueva Solicitud */}
+      <Dialog open={showRequestForm} onOpenChange={setShowRequestForm}>
+        <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {editingShift ? 'Editar Turno' : 'Nuevo Turno'}
-              </DialogTitle>
+                <DialogTitle>Publicar Solicitud de Cambio</DialogTitle>
             </DialogHeader>
-
-            <form onSubmit={handleSubmitShift} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleCreateRequest} className="space-y-4">
+                {!currentEmployee && (
+                    <div className="space-y-2">
+                        <Label>Empleado (Admin mode)</Label>
+                        <Select 
+                            value={requestData.employee_id} 
+                            onValueChange={(val) => {
+                                const emp = employees.find(e => e.id === val);
+                                setRequestData({...requestData, employee_id: val, equipo: emp?.equipo || ""});
+                            }}
+                        >
+                            <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                            <SelectContent>
+                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+                
                 <div className="space-y-2">
-                  <Label>Empleado *</Label>
-                  <Select
-                    value={shiftFormData.employee_id}
-                    onValueChange={(value) => setShiftFormData({...shiftFormData, employee_id: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees.map(emp => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Label>Fecha del Cambio</Label>
+                    <Input 
+                        type="date" 
+                        required 
+                        value={requestData.fecha_cambio}
+                        onChange={e => setRequestData({...requestData, fecha_cambio: e.target.value})}
+                    />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Tengo Turno</Label>
+                        <Select 
+                            value={requestData.turno_actual} 
+                            onValueChange={v => setRequestData({...requestData, turno_actual: v})}
+                        >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Mañana">Mañana</SelectItem>
+                                <SelectItem value="Tarde">Tarde</SelectItem>
+                                <SelectItem value="Noche">Noche</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Quiero Turno</Label>
+                        <Select 
+                            value={requestData.turno_deseado} 
+                            onValueChange={v => setRequestData({...requestData, turno_deseado: v})}
+                        >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Mañana">Mañana</SelectItem>
+                                <SelectItem value="Tarde">Tarde</SelectItem>
+                                <SelectItem value="Noche">Noche</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Fecha *</Label>
-                  <Input
-                    type="date"
-                    value={shiftFormData.fecha}
-                    onChange={(e) => setShiftFormData({...shiftFormData, fecha: e.target.value})}
-                    required
-                  />
+                    <Label>Motivo (Opcional)</Label>
+                    <Textarea 
+                        value={requestData.motivo}
+                        onChange={e => setRequestData({...requestData, motivo: e.target.value})}
+                        placeholder="Ej: Cita médica, asunto personal..."
+                    />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Turno *</Label>
-                  <Select
-                    value={shiftFormData.turno}
-                    onValueChange={(value) => setShiftFormData({...shiftFormData, turno: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mañana">Mañana</SelectItem>
-                      <SelectItem value="Tarde">Tarde</SelectItem>
-                      <SelectItem value="Noche">Noche</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" type="button" onClick={() => setShowRequestForm(false)}>Cancelar</Button>
+                    <Button type="submit" disabled={!requestData.fecha_cambio || !requestData.employee_id}>Publicar</Button>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Select
-                    value={shiftFormData.estado}
-                    onValueChange={(value) => setShiftFormData({...shiftFormData, estado: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Programado">Programado</SelectItem>
-                      <SelectItem value="Confirmado">Confirmado</SelectItem>
-                      <SelectItem value="En Curso">En Curso</SelectItem>
-                      <SelectItem value="Completado">Completado</SelectItem>
-                      <SelectItem value="Cancelado">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hora Inicio *</Label>
-                  <Input
-                    type="time"
-                    value={shiftFormData.hora_inicio}
-                    onChange={(e) => setShiftFormData({...shiftFormData, hora_inicio: e.target.value})}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hora Fin *</Label>
-                  <Input
-                    type="time"
-                    value={shiftFormData.hora_fin}
-                    onChange={(e) => setShiftFormData({...shiftFormData, hora_fin: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notas</Label>
-                <Textarea
-                  value={shiftFormData.notas || ""}
-                  onChange={(e) => setShiftFormData({...shiftFormData, notas: e.target.value})}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleCloseShiftForm}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveShiftMutation.isPending}>
-                  {saveShiftMutation.isPending ? "Guardando..." : "Guardar"}
-                </Button>
-              </div>
             </form>
-          </DialogContent>
-        </Dialog>
-      )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Selección Interesado (Solo para modo sin usuario logueado/admin) */}
+      <Dialog open={!!interestedUser} onOpenChange={() => setInterestedUser(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Confirmar Interés</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+                <p className="text-sm text-slate-600">
+                    Selecciona el empleado que está interesado en este cambio (Simulación de usuario logueado):
+                </p>
+                <Select onValueChange={submitInterest}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar empleado..." /></SelectTrigger>
+                    <SelectContent>
+                        {employees
+                            .filter(e => e.id !== interestedUser?.solicitante_id)
+                            .map(e => (
+                                <SelectItem key={e.id} value={e.id}>
+                                    {e.nombre} ({e.equipo})
+                                </SelectItem>
+                            ))
+                        }
+                    </SelectContent>
+                </Select>
+            </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
