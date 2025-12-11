@@ -181,9 +181,9 @@ export default function ShiftManagersPage() {
     {
       title: "Empleados",
       icon: Users,
-      url: createPageUrl("Employees"),
+      url: createPageUrl("EmployeesShiftManager"),
       color: "teal",
-      description: "Consulta y gestión de empleados"
+      description: "Consulta y gestión de personal de fabricación"
     },
     {
       title: "Asignaciones Máquinas",
