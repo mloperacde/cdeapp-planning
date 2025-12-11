@@ -77,8 +77,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   });
 
   const permissions = React.useMemo(() => {
-    if (propPermissions) return propPermissions;
-    if (!currentUser) return {};
     // Default permissions structure
     const defaultPerms = {
       contrato: { ver: false, editar: false },
@@ -95,6 +93,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       }
     };
 
+    if (propPermissions) {
+      // Safely merge propPermissions with defaults to ensure all keys exist
+      return {
+        ...defaultPerms,
+        ...propPermissions,
+        tabs: { ...defaultPerms.tabs, ...(propPermissions.tabs || {}) },
+        contrato: { ...defaultPerms.contrato, ...(propPermissions.contrato || {}) },
+        campos: { ...defaultPerms.campos, ...(propPermissions.campos || {}) }
+      };
+    }
+
     if (!currentUser) return defaultPerms;
 
     if (currentUser.role === 'admin') return {
@@ -106,7 +115,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       }
     };
 
-    let perms = { ...defaultPerms };
+    let perms = { 
+      ...defaultPerms,
+      tabs: { ...defaultPerms.tabs },
+      contrato: { ...defaultPerms.contrato },
+      campos: { ...defaultPerms.campos }
+    };
 
     // Apply role-based permissions
     const relevantRoles = userRoleAssignments
@@ -135,8 +149,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         if (role.permissions.campos_empleado.ver_dni) perms.campos.ver_dni = true;
       }
     });
-
-    return perms;
 
     return perms;
   }, [propPermissions, currentUser, userRoleAssignments, userRoles]);
