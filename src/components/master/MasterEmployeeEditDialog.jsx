@@ -23,6 +23,7 @@ import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, 
 import { toast } from "sonner";
 
 export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions }) {
+  const [activeTab, setActiveTab] = useState("personal");
   const [formData, setFormData] = useState({
     nombre: "",
     codigo_empleado: "",
@@ -153,6 +154,19 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     return perms;
   }, [propPermissions, currentUser, userRoleAssignments, userRoles]);
 
+  // Ensure active tab is allowed
+  useEffect(() => {
+    if (open && permissions?.tabs) {
+      if (!permissions.tabs[activeTab]) {
+        // Current tab not allowed, find first allowed
+        const allowed = Object.keys(permissions.tabs).find(key => permissions.tabs[key]);
+        if (allowed) {
+          setActiveTab(allowed);
+        }
+      }
+    }
+  }, [open, permissions, activeTab]);
+
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       // Audit Logging
@@ -197,7 +211,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <Tabs defaultValue="personal" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="flex flex-wrap w-full">
               {permissions.tabs.personal && (
                 <TabsTrigger value="personal" className="flex-1">
