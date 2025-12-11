@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import EmployeeSelect from "../common/EmployeeSelect";
 import {
   Table,
   TableBody,
@@ -19,16 +18,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { UserX, Plus, Edit, Trash2, Search, CheckCircle2, AlertCircle, Clock } from "lucide-react";
-import { format, isWithinInterval, addDays } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import AdvancedSearch from "../components/common/AdvancedSearch";
+import { createAbsence, updateAbsence, deleteAbsence } from "./AbsenceOperations";
 
 const EMPTY_ARRAY = [];
 
 export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
-  // Removed local filters state in favor of AdvancedSearch filters
+  const [filters, setFilters] = useState({});
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -61,6 +62,18 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
     initialData: EMPTY_ARRAY,
   });
 
+  const { data: vacations = [] } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list(),
+    initialData: [],
+  });
+
+  const { data: holidays = [] } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+    initialData: [],
+  });
+
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -83,27 +96,14 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   // Consolidado de empleados disponibles vs ausentes
   const availabilityStats = useMemo(() => {
-    // Usar solo empleados operativos si existen, de lo contrario maestros
-    // Evitar duplicar sumando ambas listas
     const targetList = employees.length > 0 ? employees : masterEmployees;
     
     const total = targetList.filter(e => (e.estado_empleado || "Alta") === "Alta").length;
     const ausentes = activeAbsencesConsolidated.length;
-    
-    // Calcular disponibles restando ausencias reales (no confiando en el flag estático)
-    // Aseguramos que no sea negativo si hay inconsistencias
     const disponibles = Math.max(0, total - ausentes);
     
     return { disponibles, ausentes, total };
   }, [employees, masterEmployees, activeAbsencesConsolidated]);
-
-  const departments = useMemo(() => {
-    const depts = new Set();
-    [...employees, ...masterEmployees].forEach(emp => {
-      if (emp.departamento) depts.add(emp.departamento);
-    });
-    return Array.from(depts).sort();
-  }, [employees, masterEmployees]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -144,7 +144,6 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      // Need full absence object for delete logic
       const absence = absences.find(a => a.id === id);
       if (absence) {
         const allEmployees = [...employees, ...masterEmployees];
@@ -202,15 +201,16 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
       const employee = employees.find(e => e.id === abs.employee_id) ||
                       masterEmployees.find(e => e.id === abs.employee_id);
       
+      const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
         getEmployeeName(abs.employee_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
         abs.motivo?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesDept = selectedDepartment === "all" || employee?.departamento === selectedDepartment;
+      // Add more filters if needed based on filters state (e.g., department)
       
-      return matchesSearch && matchesDept;
+      return matchesSearch;
     });
-  }, [activeAbsencesConsolidated, searchTerm, selectedDepartment, employees, masterEmployees]);
+  }, [activeAbsencesConsolidated, filters, employees, masterEmployees]);
 
   return (
     <div className="space-y-6">
@@ -272,8 +272,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
             <AdvancedSearch
               data={activeAbsencesConsolidated}
               onFilterChange={setFilters}
-              searchFields={['motivo']} // Nombre is derived, need to handle search in filteredAbsences
-              filterOptions={filterOptions}
+              searchFields={['motivo']} 
               placeholder="Buscar por empleado o motivo..."
               pageId={`absence_manager_${sourceContext}`}
             />
