@@ -171,7 +171,7 @@ export default function EmployeesPage() {
     if (permissions.visibleDepartments && !permissions.visibleDepartments.includes('*')) {
       list = list.filter(emp => 
         !emp.departamento || 
-        permissions.visibleDepartments.includes(emp.departamento?.toUpperCase())
+        (emp.departamento && permissions.visibleDepartments.includes(String(emp.departamento).toUpperCase()))
       );
     }
 
