@@ -171,6 +171,10 @@ export default function EmployeesPage() {
         editar_sensible: true,
         editar_contacto: true
       };
+      perms.tabs = {
+        personal: true, organizacion: true, horarios: true, taquilla: true, 
+        contrato: true, absentismo: true, maquinas: true, disponibilidad: true
+      };
     } else {
       const assignments = JSON.parse(userRoleAssignmentsStr || '[]');
       const roles = JSON.parse(userRolesStr || '[]');
@@ -204,9 +208,24 @@ export default function EmployeesPage() {
               if (role.permissions.campos_empleado.editar_sensible) perms.campos.editar_sensible = true;
               if (role.permissions.campos_empleado.editar_contacto) perms.campos.editar_contacto = true;
             }
+
+            if (role.permissions.empleados_detalle?.pestanas) {
+              if (!perms.tabs) perms.tabs = {};
+              Object.entries(role.permissions.empleados_detalle.pestanas).forEach(([key, val]) => {
+                if (val) perms.tabs[key] = true;
+              });
+            }
           }
         }
       });
+    }
+    
+    // Default tabs if none set
+    if (!perms.tabs) {
+      perms.tabs = {
+        personal: true, organizacion: true, horarios: true, taquilla: true, 
+        contrato: false, absentismo: false, maquinas: true, disponibilidad: true
+      };
     }
 
     // Default restricted logic for Shift Manager if no explicit permissions found (fallback)
