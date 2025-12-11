@@ -58,6 +58,7 @@ export default function AdvancedSearch({
       return prefs[0] || null;
     },
     enabled: !!user?.email && !!pageId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Handle preference loading with useEffect
