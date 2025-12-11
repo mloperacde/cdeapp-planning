@@ -157,10 +157,13 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   // Ensure active tab is allowed
   useEffect(() => {
     if (open && permissions?.tabs) {
-      if (!permissions.tabs[activeTab]) {
+      // Only check if activeTab is explicitly disallowed (false) or undefined in tabs config
+      const isAllowed = permissions.tabs[activeTab];
+      
+      if (!isAllowed) {
         // Current tab not allowed, find first allowed
         const allowed = Object.keys(permissions.tabs).find(key => permissions.tabs[key]);
-        if (allowed) {
+        if (allowed && allowed !== activeTab) {
           setActiveTab(allowed);
         }
       }
