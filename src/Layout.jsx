@@ -269,7 +269,6 @@ export default function Layout({ children, currentPageName }) {
                             isParentActive([
                               createPageUrl("Machines"),
                               createPageUrl("MachineManagement"),
-                              createPageUrl("MachinePlanning"),
                               createPageUrl("ProcessConfiguration"),
                               createPageUrl("MaintenanceTracking")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
