@@ -35,7 +35,9 @@ import {
   Building,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  IdCard,
+  Contact
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -58,17 +60,31 @@ const SORT_OPTIONS = [
   { field: 'fecha_alta', label: 'Fecha Alta' },
   { field: 'fecha_nacimiento', label: 'Fecha Nacimiento' },
   { field: 'fecha_fin_contrato', label: 'Fin Contrato' },
+  { field: 'antiguedad', label: 'Antigüedad' },
 ];
 
 const ALL_COLUMNS = {
+  codigo_empleado: { label: "Código", default: false },
   nombre: { label: "Empleado", default: true },
+  dni: { label: "DNI/NIE", default: false },
+  nuss: { label: "NUSS", default: false },
   departamento: { label: "Departamento / Puesto", default: true },
+  equipo: { label: "Equipo", default: false },
   contacto: { label: "Contacto", default: true },
+  direccion: { label: "Dirección", default: false },
+  nacionalidad: { label: "Nacionalidad", default: false },
+  sexo: { label: "Sexo", default: false },
   estado: { label: "Estado", default: true },
+  tipo_contrato: { label: "Contrato", default: false },
+  tipo_jornada: { label: "Jornada", default: false },
+  tipo_turno: { label: "Turno", default: false },
   datos_privados: { label: "Datos Privados", default: true },
   fecha_alta: { label: "Fecha Alta", default: false },
   fecha_fin_contrato: { label: "Fin Contrato", default: false },
   fecha_nacimiento: { label: "Fecha Nacimiento", default: false },
+  empresa_ett: { label: "ETT / Empresa", default: false },
+  formacion: { label: "Formación", default: false },
+  categoria: { label: "Categoría", default: false },
   acciones: { label: "Acciones", default: true }
 };
 
@@ -214,6 +230,10 @@ export default function EmployeesPage() {
     const estados = [...new Set(effectiveEmployees.map(e => e.estado_empleado).filter(Boolean))].sort();
     const tiposContrato = [...new Set(effectiveEmployees.map(e => e.tipo_contrato).filter(Boolean))].sort();
     const turnos = [...new Set(effectiveEmployees.map(e => e.tipo_turno).filter(Boolean))].sort();
+    const nacionalidades = [...new Set(effectiveEmployees.map(e => e.nacionalidad).filter(Boolean))].sort();
+    const sexos = [...new Set(effectiveEmployees.map(e => e.sexo).filter(Boolean))].sort();
+    const empresas = [...new Set(effectiveEmployees.map(e => e.empresa_ett).filter(Boolean))].sort();
+    const equipos = [...new Set(effectiveEmployees.map(e => e.equipo).filter(Boolean))].sort();
 
     return {
       // Hide departamento filter for shift managers as it's restricted
@@ -223,6 +243,10 @@ export default function EmployeesPage() {
           options: departamentos.map(d => ({ value: d, label: d }))
         }
       } : {}),
+      equipo: {
+        label: 'Equipo',
+        options: equipos.map(e => ({ value: e, label: e }))
+      },
       puesto: {
         label: 'Puesto',
         options: puestos.map(p => ({ value: p, label: p }))
@@ -238,6 +262,18 @@ export default function EmployeesPage() {
       tipo_turno: {
         label: 'Turno',
         options: turnos.map(t => ({ value: t, label: t }))
+      },
+      nacionalidad: {
+        label: 'Nacionalidad',
+        options: nacionalidades.map(n => ({ value: n, label: n }))
+      },
+      sexo: {
+        label: 'Sexo',
+        options: sexos.map(s => ({ value: s, label: s }))
+      },
+      empresa_ett: {
+        label: 'Empresa/ETT',
+        options: empresas.map(e => ({ value: e, label: e }))
       }
     };
   }, [effectiveEmployees, isShiftManager]);
@@ -269,7 +305,19 @@ export default function EmployeesPage() {
       const matchesTurno = !filters.tipo_turno || filters.tipo_turno === 'all' || 
         emp.tipo_turno === filters.tipo_turno;
 
-      return matchesSearch && matchesDept && matchesPuesto && matchesEstado && matchesContrato && matchesTurno;
+      const matchesNacionalidad = !filters.nacionalidad || filters.nacionalidad === 'all' ||
+        emp.nacionalidad === filters.nacionalidad;
+
+      const matchesSexo = !filters.sexo || filters.sexo === 'all' ||
+        emp.sexo === filters.sexo;
+
+      const matchesEmpresa = !filters.empresa_ett || filters.empresa_ett === 'all' ||
+        emp.empresa_ett === filters.empresa_ett;
+
+      const matchesEquipo = !filters.equipo || filters.equipo === 'all' ||
+        emp.equipo === filters.equipo;
+
+      return matchesSearch && matchesDept && matchesPuesto && matchesEstado && matchesContrato && matchesTurno && matchesNacionalidad && matchesSexo && matchesEmpresa && matchesEquipo;
     });
 
     if (filters.sortField) {
@@ -547,17 +595,27 @@ export default function EmployeesPage() {
                   <TableBody>
                     {currentViewEmployees.map((emp) => (
                       <TableRow key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        {visibleColumns.codigo_empleado && (
+                          <TableCell className="text-xs font-mono">{emp.codigo_empleado || '-'}</TableCell>
+                        )}
                         {visibleColumns.nombre && (
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
                                 {emp.nombre.charAt(0)}
                               </div>
-                              <div>
-                                <div className="font-medium text-slate-900 dark:text-slate-100">{emp.nombre}</div>
-                                <div className="text-xs text-slate-500 font-mono">{emp.codigo_empleado}</div>
-                              </div>
+                              <div className="font-medium text-slate-900 dark:text-slate-100">{emp.nombre}</div>
                             </div>
+                          </TableCell>
+                        )}
+                        {visibleColumns.dni && (
+                          <TableCell className="text-xs text-slate-600">
+                            {permissions.campos.ver_dni ? emp.dni || '-' : '******'}
+                          </TableCell>
+                        )}
+                        {visibleColumns.nuss && (
+                          <TableCell className="text-xs text-slate-600">
+                            {permissions.campos.ver_dni ? emp.nuss || '-' : '******'}
                           </TableCell>
                         )}
                         {visibleColumns.departamento && (
@@ -565,6 +623,9 @@ export default function EmployeesPage() {
                             <div className="text-sm text-slate-900 dark:text-slate-200">{emp.departamento || '-'}</div>
                             <div className="text-xs text-slate-500">{emp.puesto}</div>
                           </TableCell>
+                        )}
+                        {visibleColumns.equipo && (
+                          <TableCell className="text-xs">{emp.equipo || '-'}</TableCell>
                         )}
                         {visibleColumns.contacto && (
                           <TableCell>
@@ -586,6 +647,17 @@ export default function EmployeesPage() {
                             )}
                           </TableCell>
                         )}
+                        {visibleColumns.direccion && (
+                          <TableCell className="text-xs max-w-[150px] truncate" title={emp.direccion}>
+                            {permissions.campos.ver_direccion ? emp.direccion || '-' : '******'}
+                          </TableCell>
+                        )}
+                        {visibleColumns.nacionalidad && (
+                          <TableCell className="text-xs">{emp.nacionalidad || '-'}</TableCell>
+                        )}
+                        {visibleColumns.sexo && (
+                          <TableCell className="text-xs">{emp.sexo || '-'}</TableCell>
+                        )}
                         {visibleColumns.estado && (
                           <TableCell>
                             <Badge className={
@@ -596,6 +668,15 @@ export default function EmployeesPage() {
                               {emp.estado_empleado}
                             </Badge>
                           </TableCell>
+                        )}
+                        {visibleColumns.tipo_contrato && (
+                          <TableCell className="text-xs">{emp.tipo_contrato || '-'}</TableCell>
+                        )}
+                        {visibleColumns.tipo_jornada && (
+                          <TableCell className="text-xs">{emp.tipo_jornada || '-'}</TableCell>
+                        )}
+                        {visibleColumns.tipo_turno && (
+                          <TableCell className="text-xs">{emp.tipo_turno || '-'}</TableCell>
                         )}
                         {visibleColumns.datos_privados && (
                           <TableCell>
@@ -634,6 +715,17 @@ export default function EmployeesPage() {
                             {emp.fecha_nacimiento ? format(new Date(emp.fecha_nacimiento), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                         )}
+                        {visibleColumns.empresa_ett && (
+                          <TableCell className="text-xs">{emp.empresa_ett || '-'}</TableCell>
+                        )}
+                        {visibleColumns.formacion && (
+                          <TableCell className="text-xs max-w-[150px] truncate" title={emp.formacion}>
+                            {emp.formacion || '-'}
+                          </TableCell>
+                        )}
+                        {visibleColumns.categoria && (
+                          <TableCell className="text-xs">{emp.categoria || '-'}</TableCell>
+                        )}
                         {visibleColumns.acciones && (
                           <TableCell className="text-right">
                             {permissions.editar && (
@@ -645,8 +737,9 @@ export default function EmployeesPage() {
                                   setEditDialogOpen(true);
                                 }}
                                 className="h-8 w-8 p-0"
+                                title="Ver Ficha Completa"
                               >
-                                <Briefcase className="w-4 h-4 text-slate-500 hover:text-blue-600" />
+                                <IdCard className="w-5 h-5 text-blue-600 hover:text-blue-800" />
                               </Button>
                             )}
                           </TableCell>
