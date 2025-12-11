@@ -119,26 +119,16 @@ export default function EmployeesPage() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: userRoleAssignments = EMPTY_ARRAY } = useQuery({
-    queryKey: ['userRoleAssignments', currentUser?.email],
-    queryFn: () => base44.entities.UserRoleAssignment.filter({ user_email: currentUser?.email }),
-    enabled: !!currentUser?.email,
-  });
-
-  const { data: userRoles = EMPTY_ARRAY } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
-  });
-
-  // Ya no necesitamos estas constantes ni el cálculo manual complejo
+  // Use the centralized RBAC hook
   const { effectivePermissions: rawPermissions, hasRole, isAdmin } = useRBAC();
   
+  // Logic to determine if user is just a shift manager (and not admin)
+  // This might be redundant if RBAC handles everything, but kept for specific UI tweaks if any
   const isShiftManager = hasRole('Jefe de Turno') && !isAdmin;
 
+  // Adapter to match the component's expected permissions structure
   const permissions = useMemo(() => {
-     // Adaptador para que la estructura coincida con lo que espera la página actual
      const p = rawPermissions || {};
-     
      return {
         ver_lista: p.empleados?.ver,
         crear: p.empleados?.crear,
@@ -151,43 +141,11 @@ export default function EmployeesPage() {
      };
   }, [rawPermissions]);
 
-  // INTEGRACIÓN DEL NUEVO SISTEMA RBAC (HOOK CENTRAL)
-  // Eliminamos toda la lógica manual de cálculo
-  
-  // Dentro del componente:
-  const { effectivePermissions: permissions, hasRole } = useRBAC();
-  const isShiftManager = hasRole('Jefe de Turno') && !hasRole('Admin');
-  
-  // Ajuste temporal para compatibilidad de estructura si el hook devuelve algo ligeramente distinto
-  const perms = React.useMemo(() => {
-     const p = permissions || {};
-     // Asegurar estructura
-     if (!p.campos) p.campos = p.campos_empleado || {};
-     if (!p.tabs) p.tabs = p.empleados_detalle?.pestanas || {};
-     if (!p.visibleDepartments) p.visibleDepartments = p.empleados?.departamentos_visibles || [];
-     
-     // Mapeo legacy para que el resto de la página funcione sin cambios masivos
-     return {
-        ver_lista: p.empleados?.ver,
-        crear: p.empleados?.crear,
-        editar: p.empleados?.editar,
-        eliminar: p.empleados?.eliminar,
-        visibleDepartments: p.visibleDepartments,
-        campos: p.campos,
-        tabs: p.tabs,
-        contrato: p.contrato
-     };
-  }, [permissions]);
-
-  // Sobreescribimos la variable permissions original con la procesada
-  // NOTA: Esto reemplaza el bloque useMemo original gigante.
-  const processedPermissions = perms;
-
   // Fetch ALL employees for stats
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['allEmployeesMaster'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    enabled: permissions.ver_lista,
+    enabled: !!permissions.ver_lista,
     staleTime: 5 * 60 * 1000 // 5 minutes cache
   });
 
@@ -195,14 +153,14 @@ export default function EmployeesPage() {
   const { data: onboardings = EMPTY_ARRAY } = useQuery({
     queryKey: ['onboardings'],
     queryFn: () => base44.entities.EmployeeOnboarding.list(),
-    enabled: permissions.ver_lista && !isShiftManager
+    enabled: !!permissions.ver_lista && !isShiftManager
   });
 
   // Fetch Notifications (filtered later if needed)
   const { data: notifications = EMPTY_ARRAY } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => base44.entities.Notification.list(),
-    enabled: permissions.ver_lista && !isShiftManager
+    enabled: !!permissions.ver_lista && !isShiftManager
   });
 
   // Effective Employees List (Apply Permissions Restriction)
@@ -210,24 +168,15 @@ export default function EmployeesPage() {
     let list = allEmployees;
     
     // Filter by permitted departments
-    if (!permissions.visibleDepartments.includes('*')) {
+    if (permissions.visibleDepartments && !permissions.visibleDepartments.includes('*')) {
       list = list.filter(emp => 
-        !emp.departamento || // Include employees without dept? Maybe no. Let's include them only if explicit permission or maybe not.
-        // Assuming empty department is visible only if explicitly allowed or handled differently.
-        // Let's strict filter: must match one of the visible departments.
+        !emp.departamento || 
         permissions.visibleDepartments.includes(emp.departamento?.toUpperCase())
       );
     }
 
-    // Shift Manager hard constraint (redundant if permissions set correctly, but keeps safety)
-    if (isShiftManager) {
-      // Ensure logic matches: shift managers usually see Fabricacion.
-      // The permission logic above should handle it, but we can keep it as a double check if needed.
-      // Actually, let's rely on permissions.visibleDepartments which we defaulted to FABRICACION for shift managers in logic above.
-    }
-
     return list;
-  }, [allEmployees, permissions.visibleDepartments, isShiftManager]);
+  }, [allEmployees, permissions.visibleDepartments]);
 
   // Audit Logging Helper
   const logAction = async (actionType, targetEmployee, details = {}) => {
