@@ -26,7 +26,7 @@ export default function EnhancedRoleForm({ role, onClose }) {
       ausencias: { ver_propias: true, crear_propias: true, ver_todas: false, aprobar: false, rechazar: false, eliminar: false },
       perfil: { ver_propio: true, editar_propio: true, ver_otros: false, editar_otros: false },
       documentos: { ver: true, descargar: true, subir: false, editar: false, eliminar: false, gestionar_permisos: false },
-      empleados: { ver: true, crear: false, editar: false, eliminar: false },
+      empleados: { ver: true, crear: false, editar: false, eliminar: false, departamentos_visibles: [] },
       maquinas: { ver: true, actualizar_estado: false, planificar: false },
       mantenimiento: { ver: false, crear: false, actualizar: false, completar: false },
       comites: { ver: false, gestionar_miembros: false, gestionar_documentos: false }
@@ -87,6 +87,42 @@ export default function EnhancedRoleForm({ role, onClose }) {
     "Ausencias", "Comites", "PRL", "Taquillas", "Habilidades", 
     "Informes", "Configuracion", "Usuarios"
   ];
+
+  const availableDepartments = [
+    "FABRICACION", "MANTENIMIENTO", "ALMACEN", "CALIDAD", 
+    "OFICINA", "PLANIFICACION", "LIMPIEZA"
+  ];
+
+  const toggleDepartment = (dept) => {
+    const current = formData.permissions.empleados?.departamentos_visibles || [];
+    const updated = current.includes(dept)
+      ? current.filter(d => d !== dept)
+      : [...current, dept];
+    
+    setFormData({
+      ...formData,
+      permissions: {
+        ...formData.permissions,
+        empleados: {
+          ...formData.permissions.empleados,
+          departamentos_visibles: updated
+        }
+      }
+    });
+  };
+
+  const toggleAllDepartments = (checked) => {
+    setFormData({
+      ...formData,
+      permissions: {
+        ...formData.permissions,
+        empleados: {
+          ...formData.permissions.empleados,
+          departamentos_visibles: checked ? ["*"] : []
+        }
+      }
+    });
+  };
 
   const toggleModule = (module) => {
     const current = formData.permissions.modulos_acceso || [];
@@ -180,6 +216,40 @@ export default function EnhancedRoleForm({ role, onClose }) {
               ))}
             </div>
           </div>
+
+          {/* Configuración de Departamentos Visibles (Solo si tiene permiso de ver empleados) */}
+          {formData.permissions.empleados?.ver && (
+            <div className="space-y-3 p-4 border rounded-lg bg-slate-50">
+              <Label className="text-base font-semibold">Departamentos Visibles en Lista de Empleados</Label>
+              <div className="flex items-center space-x-2 mb-2">
+                <Checkbox
+                  id="dept-all"
+                  checked={formData.permissions.empleados?.departamentos_visibles?.includes("*")}
+                  onCheckedChange={toggleAllDepartments}
+                />
+                <label htmlFor="dept-all" className="text-sm font-medium">
+                  Ver Todos los Departamentos
+                </label>
+              </div>
+              
+              {!formData.permissions.empleados?.departamentos_visibles?.includes("*") && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 ml-4">
+                  {availableDepartments.map(dept => (
+                    <div key={dept} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`dept-${dept}`}
+                        checked={formData.permissions.empleados?.departamentos_visibles?.includes(dept)}
+                        onCheckedChange={() => toggleDepartment(dept)}
+                      />
+                      <label htmlFor={`dept-${dept}`} className="text-sm cursor-pointer">
+                        {dept}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Matriz de Permisos */}
           <RolePermissionsMatrix

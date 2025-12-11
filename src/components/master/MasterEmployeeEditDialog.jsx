@@ -79,24 +79,41 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
   const permissions = React.useMemo(() => {
     if (!currentUser) return {};
     if (currentUser.role === 'admin') return {
-      contrato: { ver: true, editar: true }
+      contrato: { ver: true, editar: true },
+      campos: { editar_sensible: true, editar_contacto: true }
     };
 
     let perms = {
-      contrato: { ver: false, editar: false }
+      contrato: { ver: false, editar: false },
+      campos: { editar_sensible: false, editar_contacto: false }
     };
 
     userRoleAssignments.forEach(assignment => {
       const role = userRoles.find(r => r.id === assignment.role_id);
       if (role?.permissions?.contrato?.ver) perms.contrato.ver = true;
       if (role?.permissions?.contrato?.editar) perms.contrato.editar = true;
+      if (role?.permissions?.campos_empleado?.editar_sensible) perms.campos.editar_sensible = true;
+      if (role?.permissions?.campos_empleado?.editar_contacto) perms.campos.editar_contacto = true;
     });
 
     return perms;
   }, [currentUser, userRoleAssignments, userRoles]);
 
   const saveMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
+      // Audit Logging
+      const actionType = employee?.id ? 'update' : 'create';
+      const details = employee?.id ? { changes: 'updated_record' } : { changes: 'created_record' };
+      
+      await base44.entities.EmployeeAuditLog.create({
+        action_type: actionType,
+        user_email: currentUser?.email,
+        target_employee_id: employee?.id || 'new',
+        target_employee_name: data.nombre,
+        details: JSON.stringify(details),
+        timestamp: new Date().toISOString()
+      });
+
       if (employee?.id) {
         return base44.entities.EmployeeMasterDatabase.update(employee.id, data);
       } else {
@@ -293,6 +310,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                   <Input
                     value={formData.direccion || ""}
                     onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                    disabled={!permissions.campos.editar_contacto}
                   />
                 </div>
 
@@ -302,6 +320,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                     type="email"
                     value={formData.email || ""}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={!permissions.campos.editar_contacto}
                   />
                 </div>
 
@@ -310,6 +329,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                   <Input
                     value={formData.telefono_movil || ""}
                     onChange={(e) => setFormData({ ...formData, telefono_movil: e.target.value })}
+                    disabled={!permissions.campos.editar_contacto}
                   />
                 </div>
 
@@ -319,6 +339,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                     placeholder="Nombre"
                     value={formData.contacto_emergencia_nombre || ""}
                     onChange={(e) => setFormData({ ...formData, contacto_emergencia_nombre: e.target.value })}
+                    disabled={!permissions.campos.editar_contacto}
                   />
                 </div>
 
@@ -327,6 +348,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose }) {
                   <Input
                     value={formData.contacto_emergencia_telefono || ""}
                     onChange={(e) => setFormData({ ...formData, contacto_emergencia_telefono: e.target.value })}
+                    disabled={!permissions.campos.editar_contacto}
                   />
                 </div>
 

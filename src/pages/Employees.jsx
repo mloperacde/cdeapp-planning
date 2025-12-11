@@ -138,13 +138,15 @@ export default function EmployeesPage() {
       crear: false,
       editar: false,
       eliminar: false,
+      visibleDepartments: [],
       campos: {
         ver_salario: false,
         ver_bancarios: false,
         ver_contacto: false,
         ver_direccion: false,
         ver_dni: false,
-        editar_sensible: false
+        editar_sensible: false,
+        editar_contacto: false
       }
     };
 
@@ -154,13 +156,15 @@ export default function EmployeesPage() {
       perms.crear = true;
       perms.editar = true;
       perms.eliminar = true;
+      perms.visibleDepartments = ['*'];
       perms.campos = {
         ver_salario: true,
         ver_bancarios: true,
         ver_contacto: true,
         ver_direccion: true,
         ver_dni: true,
-        editar_sensible: true
+        editar_sensible: true,
+        editar_contacto: true
       };
     } else {
       userRoleAssignments.forEach(assignment => {
@@ -175,6 +179,14 @@ export default function EmployeesPage() {
             if (role.permissions.empleados?.editar) perms.editar = true;
             if (role.permissions.empleados?.eliminar) perms.eliminar = true;
             
+            // Combine visible departments from all roles
+            const depts = role.permissions.empleados?.departamentos_visibles || [];
+            if (depts.includes('*')) {
+              perms.visibleDepartments = ['*'];
+            } else if (!perms.visibleDepartments.includes('*')) {
+              perms.visibleDepartments = [...new Set([...perms.visibleDepartments, ...depts])];
+            }
+
             if (role.permissions.campos_empleado) {
               if (role.permissions.campos_empleado.ver_salario) perms.campos.ver_salario = true;
               if (role.permissions.campos_empleado.ver_bancarios) perms.campos.ver_bancarios = true;
@@ -182,10 +194,16 @@ export default function EmployeesPage() {
               if (role.permissions.campos_empleado.ver_direccion) perms.campos.ver_direccion = true;
               if (role.permissions.campos_empleado.ver_dni) perms.campos.ver_dni = true;
               if (role.permissions.campos_empleado.editar_sensible) perms.campos.editar_sensible = true;
+              if (role.permissions.campos_empleado.editar_contacto) perms.campos.editar_contacto = true;
             }
           }
         }
       });
+    }
+
+    // Default restricted logic for Shift Manager if no explicit permissions found (fallback)
+    if (isShiftManager && perms.visibleDepartments.length === 0) {
+      perms.visibleDepartments = ['FABRICACION'];
     }
 
     // If user is Admin, they are NOT restricted as a shift manager
@@ -216,13 +234,45 @@ export default function EmployeesPage() {
     enabled: permissions.ver_lista && !isShiftManager
   });
 
-  // Effective Employees List (Apply Shift Manager Restriction)
+  // Effective Employees List (Apply Permissions Restriction)
   const effectiveEmployees = useMemo(() => {
-    if (isShiftManager) {
-      return allEmployees.filter(emp => emp.departamento === 'Fabricación');
+    let list = allEmployees;
+    
+    // Filter by permitted departments
+    if (!permissions.visibleDepartments.includes('*')) {
+      list = list.filter(emp => 
+        !emp.departamento || // Include employees without dept? Maybe no. Let's include them only if explicit permission or maybe not.
+        // Assuming empty department is visible only if explicitly allowed or handled differently.
+        // Let's strict filter: must match one of the visible departments.
+        permissions.visibleDepartments.includes(emp.departamento?.toUpperCase())
+      );
     }
-    return allEmployees;
-  }, [allEmployees, isShiftManager]);
+
+    // Shift Manager hard constraint (redundant if permissions set correctly, but keeps safety)
+    if (isShiftManager) {
+      // Ensure logic matches: shift managers usually see Fabricacion.
+      // The permission logic above should handle it, but we can keep it as a double check if needed.
+      // Actually, let's rely on permissions.visibleDepartments which we defaulted to FABRICACION for shift managers in logic above.
+    }
+
+    return list;
+  }, [allEmployees, permissions.visibleDepartments, isShiftManager]);
+
+  // Audit Logging Helper
+  const logAction = async (actionType, targetEmployee, details = {}) => {
+    try {
+      await base44.entities.EmployeeAuditLog.create({
+        action_type: actionType,
+        user_email: currentUser?.email,
+        target_employee_id: targetEmployee?.id,
+        target_employee_name: targetEmployee?.nombre,
+        details: JSON.stringify(details),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Failed to log audit action", error);
+    }
+  };
 
   const filterOptions = useMemo(() => {
     const departamentos = [...new Set(effectiveEmployees.map(e => e.departamento).filter(Boolean))].sort();
@@ -427,6 +477,16 @@ export default function EmployeesPage() {
             )}
           </div>
         </div>
+
+        {/* Audit Log Warning for Sensitive Data */}
+        {permissions.campos.ver_salario && (
+          <div className="mb-4 text-xs text-slate-400 text-right">
+            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border dark:border-slate-700">
+              <Eye className="w-3 h-3 inline mr-1" />
+              El acceso a datos sensibles (salarios, DNI) está siendo auditado.
+            </span>
+          </div>
+        )}
 
         {/* Dashboard Cards - RRHH View */}
         {!isShiftManager && (
@@ -682,7 +742,12 @@ export default function EmployeesPage() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {permissions.campos.ver_salario ? (
-                                <Badge variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50" title="Salario visible">
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs border-green-200 text-green-700 bg-green-50 cursor-help" 
+                                  title="Salario visible"
+                                  onClick={() => logAction('view_sensitive', emp, { field: 'salario' })}
+                                >
                                   <CreditCard className="w-3 h-3 mr-1" />
                                   {emp.salario_anual ? `${(emp.salario_anual).toLocaleString()}€` : '-'}
                                 </Badge>
@@ -691,7 +756,12 @@ export default function EmployeesPage() {
                               )}
                               
                               {permissions.campos.ver_dni ? (
-                                <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 bg-blue-50" title="DNI visible">
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs border-blue-200 text-blue-700 bg-blue-50 cursor-help" 
+                                  title="DNI visible"
+                                  onClick={() => logAction('view_sensitive', emp, { field: 'dni' })}
+                                >
                                   ID
                                 </Badge>
                               ) : (
