@@ -11,7 +11,8 @@ import {
 import { es } from "date-fns/locale";
 
 export default function WorkCalendar() {
-  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear());
+  const currentDate = new Date(selectedYear, 0, 1);
 
   const { data: holidays = [] } = useQuery({
     queryKey: ['holidays'],
@@ -26,6 +27,8 @@ export default function WorkCalendar() {
   const yearStart = startOfYear(currentDate);
   const yearEnd = endOfYear(currentDate);
   const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
+
+  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i);
 
   const getDayType = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -53,10 +56,24 @@ export default function WorkCalendar() {
   return (
     <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
       <CardHeader className="border-b border-slate-100">
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="w-5 h-5 text-blue-600" />
-          Calendario Laboral {format(currentDate, "yyyy")}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="w-5 h-5 text-blue-600" />
+            Calendario Laboral {selectedYear}
+          </CardTitle>
+          <div className="flex gap-2">
+            {years.map(year => (
+              <Badge 
+                key={year}
+                variant={selectedYear === year ? "default" : "outline"}
+                className={`cursor-pointer ${selectedYear === year ? "bg-blue-600" : "hover:bg-slate-100"}`}
+                onClick={() => setSelectedYear(year)}
+              >
+                {year}
+              </Badge>
+            ))}
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="p-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

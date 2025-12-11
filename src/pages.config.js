@@ -34,7 +34,6 @@ import CommitteeManagement from './pages/CommitteeManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import AppUserManagement from './pages/AppUserManagement';
-import RoleManagement from './pages/RoleManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import Messaging from './pages/Messaging';
 import IncentiveManagement from './pages/IncentiveManagement';
@@ -98,7 +97,6 @@ export const PAGES = {
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
     "EmployeeDataCorrection": EmployeeDataCorrection,
     "AppUserManagement": AppUserManagement,
-    "RoleManagement": RoleManagement,
     "DocumentManagement": DocumentManagement,
     "Messaging": Messaging,
     "IncentiveManagement": IncentiveManagement,

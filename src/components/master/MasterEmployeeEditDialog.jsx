@@ -67,31 +67,21 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: userRoleAssignments = EMPTY_ARRAY } = useQuery({
-    queryKey: ['userRoleAssignments', currentUser?.email],
-    queryFn: () => base44.entities.UserRoleAssignment.filter({ user_email: currentUser?.email }),
-    enabled: !!currentUser?.email && !propPermissions,
-  });
-
-  const { data: userRoles = EMPTY_ARRAY } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
-    enabled: !propPermissions,
-  });
+  // RBAC queries removed
 
   // Simplificación radical: Usar los props directamente o defaults
   // Eliminamos TODA la lógica de cálculo interno que causaba loops
   // El componente padre es responsable de pasar los permisos correctos
   const permissions = propPermissions || {
-    contrato: { ver: false, editar: false },
-    campos: { editar_sensible: false, editar_contacto: false, ver_salario: false, ver_dni: false },
+    contrato: { ver: true, editar: true },
+    campos: { editar_sensible: true, editar_contacto: true, ver_salario: true, ver_dni: true },
     tabs: {
       personal: true,
       organizacion: true,
       horarios: true,
       taquilla: true,
-      contrato: false,
-      absentismo: false,
+      contrato: true,
+      absentismo: true,
       maquinas: true,
       disponibilidad: true
     }

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRBAC } from "../components/roles/useRBAC";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -119,27 +119,36 @@ export default function EmployeesPage() {
     queryFn: () => base44.auth.me(),
   });
 
-  // Use the centralized RBAC hook
-  const { effectivePermissions: rawPermissions, hasRole, isAdmin } = useRBAC();
-  
-  // Logic to determine if user is just a shift manager (and not admin)
-  // This might be redundant if RBAC handles everything, but kept for specific UI tweaks if any
-  const isShiftManager = hasRole('Jefe de Turno') && !isAdmin;
+  // RBAC System Removed - Defaulting to Full Access
+  const isShiftManager = false; // Always show HR view
 
-  // Adapter to match the component's expected permissions structure
-  const permissions = useMemo(() => {
-     const p = rawPermissions || {};
-     return {
-        ver_lista: p.empleados?.ver,
-        crear: p.empleados?.crear,
-        editar: p.empleados?.editar,
-        eliminar: p.empleados?.eliminar,
-        visibleDepartments: p.empleados?.departamentos_visibles || [],
-        campos: p.campos_empleado || {},
-        tabs: p.empleados_detalle?.pestanas || {},
-        contrato: p.contrato || {}
-     };
-  }, [rawPermissions]);
+  const permissions = useMemo(() => ({
+    ver_lista: true,
+    crear: true,
+    editar: true,
+    eliminar: true,
+    visibleDepartments: ['*'],
+    campos: {
+      ver_salario: true,
+      ver_bancarios: true,
+      ver_dni: true,
+      ver_contacto: true,
+      ver_direccion: true,
+      editar_sensible: true,
+      editar_contacto: true
+    },
+    tabs: {
+      personal: true,
+      organizacion: true,
+      horarios: true,
+      taquilla: true,
+      contrato: true,
+      absentismo: true,
+      maquinas: true,
+      disponibilidad: true
+    },
+    contrato: { ver: true, editar: true }
+  }), []);
 
   // Fetch ALL employees for stats
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
