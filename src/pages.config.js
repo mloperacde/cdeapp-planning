@@ -3,7 +3,6 @@ import Machines from './pages/Machines';
 import Breaks from './pages/Breaks';
 import Configuration from './pages/Configuration';
 import TeamConfiguration from './pages/TeamConfiguration';
-import MachinePlanning from './pages/MachinePlanning';
 import AbsenceManagement from './pages/AbsenceManagement';
 import MachineAssignments from './pages/MachineAssignments';
 import ProcessConfiguration from './pages/ProcessConfiguration';
@@ -19,7 +18,6 @@ import MobileAppConfig from './pages/MobileAppConfig';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import ShiftManagement from './pages/ShiftManagement';
 import MLInsights from './pages/MLInsights';
-import DataImport from './pages/DataImport';
 import ShiftManagers from './pages/ShiftManagers';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import DailyPlanning from './pages/DailyPlanning';
@@ -34,10 +32,8 @@ import AttendanceManagement from './pages/AttendanceManagement';
 import SkillMatrix from './pages/SkillMatrix';
 import CommitteeManagement from './pages/CommitteeManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
-import LockerDataCleanup from './pages/LockerDataCleanup';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import AppUserManagement from './pages/AppUserManagement';
-import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
 import RoleManagement from './pages/RoleManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import Messaging from './pages/Messaging';
@@ -50,9 +46,7 @@ import MasterMachineView from './pages/MasterMachineView';
 import MessagingConfig from './pages/MessagingConfig';
 import ArticleManagement from './pages/ArticleManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import DirectDataEntry from './pages/DirectDataEntry';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
-import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import SystemReset from './pages/SystemReset';
 import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
@@ -73,7 +67,6 @@ export const PAGES = {
     "Breaks": Breaks,
     "Configuration": Configuration,
     "TeamConfiguration": TeamConfiguration,
-    "MachinePlanning": MachinePlanning,
     "AbsenceManagement": AbsenceManagement,
     "MachineAssignments": MachineAssignments,
     "ProcessConfiguration": ProcessConfiguration,
@@ -89,7 +82,6 @@ export const PAGES = {
     "SupportManagement1415": SupportManagement1415,
     "ShiftManagement": ShiftManagement,
     "MLInsights": MLInsights,
-    "DataImport": DataImport,
     "ShiftManagers": ShiftManagers,
     "AbsenceTypeConfig": AbsenceTypeConfig,
     "DailyPlanning": DailyPlanning,
@@ -104,10 +96,8 @@ export const PAGES = {
     "SkillMatrix": SkillMatrix,
     "CommitteeManagement": CommitteeManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
-    "LockerDataCleanup": LockerDataCleanup,
     "EmployeeDataCorrection": EmployeeDataCorrection,
     "AppUserManagement": AppUserManagement,
-    "LockerDuplicateCleanup": LockerDuplicateCleanup,
     "RoleManagement": RoleManagement,
     "DocumentManagement": DocumentManagement,
     "Messaging": Messaging,
@@ -120,9 +110,7 @@ export const PAGES = {
     "MessagingConfig": MessagingConfig,
     "ArticleManagement": ArticleManagement,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "DirectDataEntry": DirectDataEntry,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
-    "EmployeeDataCompletion": EmployeeDataCompletion,
     "SystemReset": SystemReset,
     "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
