@@ -74,9 +74,22 @@ export default function AdvancedSearch({
       };
       
       // Normalize comparison (handle undefined/null vs empty string)
-      const isDifferent = JSON.stringify(loadedFilters) !== JSON.stringify(currentState);
+      // JSON stringify isn't perfect for unordered keys but works for simple cases
+      // We also check specifically if key values are different
       
-      if (isDifferent) {
+      let needsUpdate = false;
+      if ((loadedFilters.search || "") !== (currentState.search || "")) needsUpdate = true;
+      if ((loadedFilters.sortField || "") !== (currentState.sortField || "")) needsUpdate = true;
+      if ((loadedFilters.sortDirection || "asc") !== (currentState.sortDirection || "asc")) needsUpdate = true;
+      
+      // Check rest filters
+      if (!needsUpdate) {
+         const { search, sortField, sortDirection, ...restLoaded } = loadedFilters;
+         const { search: s, sortField: sf, sortDirection: sd, ...restCurrent } = currentState;
+         if (JSON.stringify(restLoaded) !== JSON.stringify(restCurrent)) needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
         // Update local state
         if (loadedFilters.search !== undefined) setSearchTerm(loadedFilters.search);
         if (loadedFilters.sortField !== undefined) setSortField(loadedFilters.sortField);

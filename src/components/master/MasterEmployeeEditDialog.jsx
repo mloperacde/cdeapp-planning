@@ -170,14 +170,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         if (allowed && allowed !== activeTab) {
           setActiveTab(allowed);
         }
-      } else if (activeTab && permissions.tabs[activeTab] === false) {
-         // Double safety check: explicitly false in current permissions
-         const allowed = Object.keys(permissions.tabs).find(key => permissions.tabs[key]);
-         if (allowed && allowed !== activeTab) {
-           setActiveTab(allowed);
-         }
-      }
+      } 
     }
+    // Removed redundant check that could cause double updates
   }, [open, tabsPermissionsStr, activeTab]);
 
   const saveMutation = useMutation({
