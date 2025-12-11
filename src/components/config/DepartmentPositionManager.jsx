@@ -27,9 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import OrganizationalChart from "../hr/OrganizationalChart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DepartmentPositionManager() {
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState("editor"); // editor | chart
   const [editingDept, setEditingDept] = useState(null);
   const [editingPos, setEditingPos] = useState(null);
   const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false);
@@ -273,21 +276,33 @@ export default function DepartmentPositionManager() {
           <h2 className="text-lg font-semibold text-blue-900">Estructura Organizativa</h2>
           <p className="text-sm text-blue-700">Define departamentos, jerarquías y puestos con límites de personal.</p>
         </div>
-        <Button onClick={() => { resetDeptForm(); setIsDeptDialogOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Departamento
-        </Button>
+        <div className="flex gap-2">
+           <Tabs value={viewMode} onValueChange={setViewMode} className="w-auto">
+            <TabsList>
+              <TabsTrigger value="editor">Editor</TabsTrigger>
+              <TabsTrigger value="chart">Organigrama Visual</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button onClick={() => { resetDeptForm(); setIsDeptDialogOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Departamento
+          </Button>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {departments.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 border-2 border-dashed rounded-lg">
-            No hay estructura definida. Comienza creando un departamento.
-          </div>
-        ) : (
-          renderDepartmentTree(null)
-        )}
-      </div>
+      {viewMode === "editor" ? (
+        <div className="space-y-4">
+          {departments.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 border-2 border-dashed rounded-lg">
+              No hay estructura definida. Comienza creando un departamento.
+            </div>
+          ) : (
+            renderDepartmentTree(null)
+          )}
+        </div>
+      ) : (
+        <OrganizationalChart />
+      )}
 
       {/* Department Dialog */}
       <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
