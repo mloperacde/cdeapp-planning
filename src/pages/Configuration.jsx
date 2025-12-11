@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Building } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Building, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -165,6 +166,15 @@ export default function ConfigurationPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Link to={createPageUrl("Dashboard")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver al Dashboard
+            </Button>
+          </Link>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Settings className="w-8 h-8 text-blue-600" />

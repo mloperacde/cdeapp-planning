@@ -13,9 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeManager";
 import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder";
@@ -256,6 +258,15 @@ export default function MaintenanceTrackingPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Link to={createPageUrl("Machines")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver a Máquinas
+            </Button>
+          </Link>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">

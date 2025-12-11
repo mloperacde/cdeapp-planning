@@ -22,7 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 
@@ -230,7 +232,16 @@ export default function ProcessConfigurationPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 md:p-8 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <Link to={createPageUrl("Machines")}>
+          <Button variant="ghost" className="mb-2">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver a Máquinas
+          </Button>
+        </Link>
+      </div>
+
       <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader className="border-b border-slate-100">
           <div className="flex justify-between items-center">

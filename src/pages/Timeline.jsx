@@ -7,7 +7,9 @@ import { base44 } from "@/api/base44Client";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import WorkCalendar from "../components/absences/WorkCalendar";
 
 const EMPTY_ARRAY = [];
@@ -99,6 +101,15 @@ export default function Timeline() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       <div className="container mx-auto px-4 py-8 md:py-12">
+        <div className="mb-6">
+          <Link to={createPageUrl("Dashboard")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver al Dashboard
+            </Button>
+          </Link>
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
