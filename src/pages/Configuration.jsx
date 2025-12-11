@@ -125,10 +125,10 @@ export default function ConfigurationPage() {
           color: "blue"
         },
         {
-          title: "Gestión de Departamentos",
-          description: "Configura estructura organizativa y jerarquías",
-          icon: Building,
-          url: createPageUrl("DepartmentManagement"),
+          title: "Configuración Avanzada",
+          description: "Estructura organizativa, puestos y sincronización",
+          icon: Settings,
+          url: createPageUrl("AdvancedConfiguration"),
           color: "emerald"
         },
         {
