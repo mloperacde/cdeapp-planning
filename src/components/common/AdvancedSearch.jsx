@@ -60,31 +60,39 @@ export default function AdvancedSearch({
     enabled: !!user?.email && !!pageId,
   });
 
-  // Handle preference loading with useEffect (since onSuccess is deprecated in v5)
+  // Handle preference loading with useEffect
   React.useEffect(() => {
     if (savedPref && savedPref.filters) {
       const loadedFilters = savedPref.filters;
-      // Use JSON.stringify to prevent infinite loop from object reference comparison if needed,
-      // but here we just check if it's already applied or different.
-      // However, we want to run this only when savedPref loads/changes.
       
-      // Update local state
-      if (loadedFilters.search) setSearchTerm(loadedFilters.search);
-      if (loadedFilters.sortField) setSortField(loadedFilters.sortField);
-      if (loadedFilters.sortDirection) setSortDirection(loadedFilters.sortDirection);
+      // Check if current state is different to avoid unnecessary updates/loops
+      const currentState = {
+        search: searchTerm,
+        sortField,
+        sortDirection,
+        ...filters
+      };
       
-      const { search, sortField, sortDirection, ...restFilters } = loadedFilters;
-      setFilters(restFilters);
+      // Normalize comparison (handle undefined/null vs empty string)
+      const isDifferent = JSON.stringify(loadedFilters) !== JSON.stringify(currentState);
       
-      // Propagate changes
-      // Note: We avoid calling this if filters are already set to avoid loops, 
-      // but initial load should be fine.
-      onFilterChange({
-        searchTerm: loadedFilters.search || "",
-        sortField: loadedFilters.sortField || "",
-        sortDirection: loadedFilters.sortDirection || "asc",
-        ...restFilters
-      });
+      if (isDifferent) {
+        // Update local state
+        if (loadedFilters.search !== undefined) setSearchTerm(loadedFilters.search);
+        if (loadedFilters.sortField !== undefined) setSortField(loadedFilters.sortField);
+        if (loadedFilters.sortDirection !== undefined) setSortDirection(loadedFilters.sortDirection);
+        
+        const { search, sortField, sortDirection, ...restFilters } = loadedFilters;
+        setFilters(restFilters);
+        
+        // Propagate changes
+        onFilterChange({
+          searchTerm: loadedFilters.search || "",
+          sortField: loadedFilters.sortField || "",
+          sortDirection: loadedFilters.sortDirection || "asc",
+          ...restFilters
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedPref]);
