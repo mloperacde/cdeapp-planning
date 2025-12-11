@@ -434,6 +434,50 @@ export default function EmployeesPage() {
       return acc;
     }, {});
 
+    // Upcoming Birthdays (next 15 days)
+    const upcomingBirthdays = effectiveEmployees.filter(emp => {
+      if (!emp.fecha_nacimiento || emp.estado_empleado !== 'Alta') return false;
+      const birthDate = new Date(emp.fecha_nacimiento);
+      const thisYear = now.getFullYear();
+      let nextBirthday = new Date(thisYear, birthDate.getMonth(), birthDate.getDate());
+      
+      if (nextBirthday < now) {
+        nextBirthday = new Date(thisYear + 1, birthDate.getMonth(), birthDate.getDate());
+      }
+      
+      const diffTime = nextBirthday - now;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays >= 0 && diffDays <= 15) {
+        emp.nextBirthday = nextBirthday; // Attach for sorting/display
+        return true;
+      }
+      return false;
+    }).sort((a, b) => a.nextBirthday - b.nextBirthday);
+
+    // Upcoming Anniversaries (next 30 days)
+    const upcomingAnniversaries = effectiveEmployees.filter(emp => {
+      if (!emp.fecha_alta || emp.estado_empleado !== 'Alta') return false;
+      const startDate = new Date(emp.fecha_alta);
+      const thisYear = now.getFullYear();
+      let nextAnniversary = new Date(thisYear, startDate.getMonth(), startDate.getDate());
+      
+      if (nextAnniversary < now) {
+        nextAnniversary = new Date(thisYear + 1, startDate.getMonth(), startDate.getDate());
+      }
+      
+      const diffTime = nextAnniversary - now;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const years = nextAnniversary.getFullYear() - startDate.getFullYear();
+      
+      if (diffDays >= 0 && diffDays <= 30 && years > 0) {
+        emp.years = years;
+        emp.nextAnniversary = nextAnniversary;
+        return true;
+      }
+      return false;
+    }).sort((a, b) => a.nextAnniversary - b.nextAnniversary);
+
     return { 
       total, 
       activos, 
@@ -442,7 +486,9 @@ export default function EmployeesPage() {
       pendingOnboardings, 
       hrNotifications, 
       upcomingContractExpirations,
-      byDepartment
+      byDepartment,
+      upcomingBirthdays,
+      upcomingAnniversaries
     };
   }, [effectiveEmployees, onboardings, notifications]);
 
