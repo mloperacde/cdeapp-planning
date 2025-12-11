@@ -81,13 +81,10 @@ export default function EmployeesShiftManagerPage() {
   }, [visibleColumns]);
   
   // Permissions for Shift Manager View - STRICT
-  const permissions = {
+  const permissions = useMemo(() => ({
     ver_lista: true,
     crear: false,
-    editar: false, // Read-only view mainly, or limited edit? Usually Shift Managers just view or have limited edit.
-    // Let's assume view only for safety unless specified, or limited edit (e.g. phone).
-    // The user said "ficha de empleados... estarán ocultos los datos sensibles".
-    // We'll allow opening the dialog in read-only/restricted mode.
+    editar: false, 
     eliminar: false,
     visibleDepartments: ['FABRICACION'],
     campos: {
@@ -97,19 +94,19 @@ export default function EmployeesShiftManagerPage() {
       ver_direccion: true,
       ver_dni: false,
       editar_sensible: false,
-      editar_contacto: false // Adjust if they can edit phone
+      editar_contacto: false 
     },
     tabs: {
       personal: true, 
       organizacion: true, 
       horarios: true, 
       taquilla: true, 
-      contrato: false, // HIDDEN
-      absentismo: true, // Relevant for shift management
+      contrato: false, 
+      absentismo: true, 
       maquinas: true, 
       disponibilidad: true
     }
-  };
+  }), []);
 
   // Fetch ALL employees but filter in memory or API
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
