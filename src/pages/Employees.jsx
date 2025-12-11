@@ -420,7 +420,7 @@ export default function EmployeesPage() {
 
   if (!permissions.ver_lista) {
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-slate-500 dark:text-slate-400">
         No tienes permisos para ver el listado de empleados.
       </div>
     );
@@ -440,7 +440,7 @@ export default function EmployeesPage() {
 
         <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100 flex items-center gap-3">
               <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               Gestión de Empleados {isShiftManager ? "(Fabricación)" : "RRHH"}
             </h1>
@@ -480,47 +480,47 @@ export default function EmployeesPage() {
         {/* Dashboard Cards - RRHH View */}
         {!isShiftManager && (
           <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-blue-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total Empleados</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Total Empleados</p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
+                  <span className="text-2xl font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100">{stats.total}</span>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-green-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-green-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Disponibles</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Disponibles</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.disponibles}</span>
-                  <span className="text-xs text-slate-500">de {stats.activos} activos</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">de {stats.activos} activos</span>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-amber-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Vencimiento Contrato</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Vencimiento Contrato</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.upcomingContractExpirations}</span>
-                  <span className="text-xs text-slate-500">próximos 30 días</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">próximos 30 días</span>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-purple-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-purple-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Onboarding</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Onboarding</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.pendingOnboardings}</span>
-                  <span className="text-xs text-slate-500">pendientes</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">pendientes</span>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-red-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-red-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Notificaciones RRHH</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Notificaciones RRHH</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.hrNotifications}</span>
-                  <span className="text-xs text-slate-500">sin leer</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">sin leer</span>
                 </div>
               </CardContent>
             </Card>
@@ -530,29 +530,29 @@ export default function EmployeesPage() {
         {/* Dashboard Cards - Shift Manager View */}
         {isShiftManager && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-blue-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Personal Fabricación</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Personal Fabricación</p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
+                  <span className="text-2xl font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100">{stats.total}</span>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-green-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-green-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Disponibles</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Disponibles</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.disponibles}</span>
-                  <span className="text-xs text-slate-500">para turno</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">para turno</span>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 shadow-sm">
+            <Card className="bg-white dark:bg-card dark:bg-slate-800 border-l-4 border-l-amber-500 shadow-sm">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Vencimientos Próximos</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 dark:text-slate-400 uppercase">Vencimientos Próximos</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.upcomingContractExpirations}</span>
-                  <span className="text-xs text-slate-500">contratos</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">contratos</span>
                 </div>
               </CardContent>
             </Card>
@@ -562,8 +562,8 @@ export default function EmployeesPage() {
         {/* HR - Extended Info (Birthdays & Anniversaries) */}
         {!isShiftManager && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card className="shadow-sm border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-700 pb-3">
+            <Card className="shadow-sm border-0 bg-white dark:bg-card/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800 dark:border-slate-700 pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Cake className="w-4 h-4 text-pink-500" />
                   Próximos Cumpleaños (15 días)
@@ -571,7 +571,7 @@ export default function EmployeesPage() {
               </CardHeader>
               <CardContent className="p-4">
                 {stats.upcomingBirthdays.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-2">No hay cumpleaños próximos</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-2">No hay cumpleaños próximos</p>
                 ) : (
                   <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
                     {stats.upcomingBirthdays.map(emp => (
@@ -592,8 +592,8 @@ export default function EmployeesPage() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-700 pb-3">
+            <Card className="shadow-sm border-0 bg-white dark:bg-card/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800 dark:border-slate-700 pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Award className="w-4 h-4 text-amber-500" />
                   Aniversarios Próximos (30 días)
@@ -601,7 +601,7 @@ export default function EmployeesPage() {
               </CardHeader>
               <CardContent className="p-4">
                 {stats.upcomingAnniversaries.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-2">No hay aniversarios próximos</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-2">No hay aniversarios próximos</p>
                 ) : (
                   <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
                     {stats.upcomingAnniversaries.map(emp => (
@@ -612,7 +612,7 @@ export default function EmployeesPage() {
                           </div>
                           <div>
                             <span className="font-medium block">{emp.nombre}</span>
-                            <span className="text-xs text-slate-500">Alta: {format(new Date(emp.fecha_alta), "d MMM yyyy", { locale: es })}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Alta: {format(new Date(emp.fecha_alta), "d MMM yyyy", { locale: es })}</span>
                           </div>
                         </div>
                         <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
@@ -629,7 +629,7 @@ export default function EmployeesPage() {
 
         {/* HR - Departments Overview */}
         {!isShiftManager && (
-          <Card className="mb-8 border-0 shadow-sm bg-slate-50 dark:bg-slate-800/50">
+          <Card className="mb-8 border-0 shadow-sm bg-slate-50 dark:bg-slate-800/50 dark:bg-slate-800/50">
             <CardHeader className="py-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Building className="w-4 h-4" />
@@ -639,7 +639,7 @@ export default function EmployeesPage() {
             <CardContent className="py-3">
               <div className="flex flex-wrap gap-4">
                 {Object.entries(stats.byDepartment).map(([dept, count]) => (
-                  <div key={dept} className="flex items-center gap-2 bg-white dark:bg-slate-700 px-3 py-2 rounded-lg border dark:border-slate-600">
+                  <div key={dept} className="flex items-center gap-2 bg-white dark:bg-card dark:bg-slate-700 px-3 py-2 rounded-lg border dark:border-slate-600">
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{dept}</span>
                     <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-600 dark:text-slate-100">{count}</Badge>
                   </div>
@@ -650,7 +650,7 @@ export default function EmployeesPage() {
         )}
 
         {/* Search & Filter */}
-        <Card className="mb-6 shadow-sm border-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+        <Card className="mb-6 shadow-sm border-0 bg-white dark:bg-card/50 dark:bg-slate-900/50 backdrop-blur-sm">
           <CardContent className="p-4">
             <AdvancedSearch
               data={effectiveEmployees}
@@ -665,8 +665,8 @@ export default function EmployeesPage() {
         </Card>
 
         {/* Employees Table */}
-        <Card className="shadow-lg border-0 bg-white dark:bg-slate-900">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-4">
+        <Card className="shadow-lg border-0 bg-white dark:bg-card dark:bg-slate-900">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800 dark:border-slate-800 py-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Listado de Empleados</CardTitle>
               <DropdownMenu>
@@ -692,12 +692,12 @@ export default function EmployeesPage() {
           </CardHeader>
           <CardContent className="p-0">
             {currentViewEmployees.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">No se encontraron empleados.</div>
+              <div className="p-12 text-center text-slate-500 dark:text-slate-400">No se encontraron empleados.</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800/50">
+                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 dark:bg-slate-800/50">
                       {visibleColumns.nombre && <TableHead>Empleado</TableHead>}
                       {visibleColumns.departamento && <TableHead>Departamento / Puesto</TableHead>}
                       {visibleColumns.contacto && <TableHead>Contacto</TableHead>}
@@ -711,7 +711,7 @@ export default function EmployeesPage() {
                   </TableHeader>
                   <TableBody>
                     {currentViewEmployees.map((emp) => (
-                      <TableRow key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <TableRow key={emp.id} className="hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800/50">
                         {visibleColumns.codigo_empleado && (
                           <TableCell className="text-xs font-mono">{emp.codigo_empleado || '-'}</TableCell>
                         )}
@@ -721,7 +721,7 @@ export default function EmployeesPage() {
                               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
                                 {emp.nombre.charAt(0)}
                               </div>
-                              <div className="font-medium text-slate-900 dark:text-slate-100">{emp.nombre}</div>
+                              <div className="font-medium text-slate-900 dark:text-slate-100 dark:text-slate-100">{emp.nombre}</div>
                             </div>
                           </TableCell>
                         )}
@@ -737,8 +737,8 @@ export default function EmployeesPage() {
                         )}
                         {visibleColumns.departamento && (
                           <TableCell>
-                            <div className="text-sm text-slate-900 dark:text-slate-200">{emp.departamento || '-'}</div>
-                            <div className="text-xs text-slate-500">{emp.puesto}</div>
+                            <div className="text-sm text-slate-900 dark:text-slate-100 dark:text-slate-200">{emp.departamento || '-'}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">{emp.puesto}</div>
                           </TableCell>
                         )}
                         {visibleColumns.equipo && (
@@ -828,17 +828,17 @@ export default function EmployeesPage() {
                           </TableCell>
                         )}
                         {visibleColumns.fecha_alta && (
-                          <TableCell className="text-xs text-slate-500">
+                          <TableCell className="text-xs text-slate-500 dark:text-slate-400">
                             {emp.fecha_alta ? format(new Date(emp.fecha_alta), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                         )}
                         {visibleColumns.fecha_fin_contrato && (
-                          <TableCell className="text-xs text-slate-500">
+                          <TableCell className="text-xs text-slate-500 dark:text-slate-400">
                             {emp.fecha_fin_contrato ? format(new Date(emp.fecha_fin_contrato), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                         )}
                         {visibleColumns.fecha_nacimiento && (
-                          <TableCell className="text-xs text-slate-500">
+                          <TableCell className="text-xs text-slate-500 dark:text-slate-400">
                             {emp.fecha_nacimiento ? format(new Date(emp.fecha_nacimiento), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                         )}
@@ -878,8 +878,8 @@ export default function EmployeesPage() {
               </div>
             )}
           </CardContent>
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <span className="text-sm text-slate-500">
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 dark:border-slate-800 flex items-center justify-between">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               Mostrando {currentViewEmployees.length} de {filteredEmployees.length} registros
             </span>
             <div className="flex gap-2">

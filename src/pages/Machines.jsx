@@ -57,11 +57,11 @@ export default function MachinesPage() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <Cog className="w-8 h-8 text-blue-600" />
             Gestión de Máquinas
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Administra máquinas, procesos, planificación y mantenimiento
           </p>
         </div>
@@ -71,15 +71,15 @@ export default function MachinesPage() {
             const Icon = page.icon;
             return (
               <Link key={page.title} to={page.url}>
-                <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
+                <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm cursor-pointer group">
                   <CardContent className="p-6">
                     <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${colorClasses[page.color]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                       <Icon className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="font-semibold text-xl text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-semibold text-xl text-slate-900 dark:text-slate-100 mb-2 group-hover:text-blue-600 transition-colors">
                       {page.title}
                     </h3>
-                    <p className="text-sm text-slate-600">{page.description}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{page.description}</p>
                   </CardContent>
                 </Card>
               </Link>

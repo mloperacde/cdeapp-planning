@@ -192,7 +192,7 @@ export default function DashboardPage() {
     switch (widget.id) {
       case 'absence_kpis':
         return (
-          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <UserX className="w-5 h-5 text-red-600" />
@@ -221,7 +221,7 @@ export default function DashboardPage() {
 
       case 'daily_planning_summary':
         return (
-          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
@@ -258,7 +258,7 @@ export default function DashboardPage() {
 
       case 'machine_status':
         return (
-          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Cog className="w-5 h-5 text-green-600" />
@@ -297,7 +297,7 @@ export default function DashboardPage() {
 
       case 'upcoming_birthdays':
         return (
-          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Cake className="w-5 h-5 text-purple-600" />
@@ -332,7 +332,7 @@ export default function DashboardPage() {
 
       case 'maintenance_alerts':
         return (
-          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Wrench className="w-5 h-5 text-orange-600" />
@@ -375,7 +375,7 @@ export default function DashboardPage() {
         const availableFabricacion = fabricacionEmployees.filter(e => e?.disponibilidad === "Disponible").length;
         
         return (
-          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <Card key={widget.id} className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-indigo-600" />
