@@ -228,16 +228,27 @@ export default function EmployeesPage() {
       };
     }
 
-    // Default restricted logic for Shift Manager if no explicit permissions found (fallback)
-    if (isShiftManager && perms.visibleDepartments.length === 0) {
+    // Enforce restrictions for Shift Managers (unless Admin)
+    if (isShiftManager && !isAdmin) {
+      // Strictly limit to FABRICACION regardless of other roles
       perms.visibleDepartments = ['FABRICACION'];
+
+      // Strictly hide sensitive data
+      if (perms.tabs) perms.tabs.contrato = false;
+      if (perms.campos) {
+        perms.campos.ver_bancarios = false;
+        perms.campos.ver_salario = false;
+      }
+    } else if (isShiftManager && perms.visibleDepartments.length === 0) {
+       // Fallback if not strictly enforced above (though the block above covers it)
+       perms.visibleDepartments = ['FABRICACION'];
     }
 
     // If user is Admin, they are NOT restricted as a shift manager
     if (isAdmin) isShiftManager = false;
 
     return { isShiftManager, permissions: perms };
-  }, [currentUserRole, userRoleAssignmentsStr, userRolesStr]);
+    }, [currentUserRole, userRoleAssignmentsStr, userRolesStr]);
 
   // Fetch ALL employees for stats
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
