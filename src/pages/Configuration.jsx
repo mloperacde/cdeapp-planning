@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Building, ArrowLeft } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Building, ArrowLeft, UserCog, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -52,13 +52,7 @@ export default function ConfigurationPage() {
           url: createPageUrl("MasterEmployeeDatabase"),
           color: "blue"
         },
-        {
-          title: "Completar Datos de Empleados",
-          description: "Completa automáticamente campos vacíos",
-          icon: Award,
-          url: createPageUrl("EmployeeDataCompletion"),
-          color: "purple"
-        },
+
         {
           title: "Reiniciar Sistema",
           description: "Borrar todo y empezar de cero con archivo maestro",
@@ -118,6 +112,20 @@ export default function ConfigurationPage() {
     sistema: {
       title: "Sistema",
       modules: [
+        {
+          title: "Gestión de Usuarios App",
+          description: "Administra usuarios y accesos a la aplicación",
+          icon: UserCog,
+          url: createPageUrl("AppUserManagement"),
+          color: "blue"
+        },
+        {
+          title: "Gestión Documental",
+          description: "Repositorio y gestión de documentos",
+          icon: FolderOpen,
+          url: createPageUrl("DocumentManagement"),
+          color: "orange"
+        },
         {
           title: "Roles y Permisos",
           description: "Gestiona roles de usuario y permisos de acceso",

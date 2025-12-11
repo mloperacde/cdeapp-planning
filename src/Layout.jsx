@@ -25,6 +25,7 @@ import {
   MessageSquare,
   TrendingUp,
   Calendar as CalendarIcon,
+  LayoutDashboard,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -201,6 +202,17 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("AdvancedHRDashboard")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("AdvancedHRDashboard")} className="flex items-center gap-2 px-3 py-2">
+                              <LayoutDashboard className="w-4 h-4" />
+                              Dashboard RRHH
+                            </Link>
+                          </SidebarMenuButton>
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${

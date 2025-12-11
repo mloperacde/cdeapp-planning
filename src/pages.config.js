@@ -12,7 +12,6 @@ import ShiftHandover from './pages/ShiftHandover';
 import Dashboard from './pages/Dashboard';
 import Reports from './pages/Reports';
 import Notifications from './pages/Notifications';
-import UserManagement from './pages/UserManagement';
 import EmailNotifications from './pages/EmailNotifications';
 import MobileAppConfig from './pages/MobileAppConfig';
 import SupportManagement1415 from './pages/SupportManagement1415';
@@ -32,7 +31,6 @@ import AttendanceManagement from './pages/AttendanceManagement';
 import SkillMatrix from './pages/SkillMatrix';
 import CommitteeManagement from './pages/CommitteeManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
-import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import AppUserManagement from './pages/AppUserManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import Messaging from './pages/Messaging';
@@ -74,7 +72,6 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "Reports": Reports,
     "Notifications": Notifications,
-    "UserManagement": UserManagement,
     "EmailNotifications": EmailNotifications,
     "MobileAppConfig": MobileAppConfig,
     "SupportManagement1415": SupportManagement1415,
@@ -94,7 +91,6 @@ export const PAGES = {
     "SkillMatrix": SkillMatrix,
     "CommitteeManagement": CommitteeManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
-    "EmployeeDataCorrection": EmployeeDataCorrection,
     "AppUserManagement": AppUserManagement,
     "DocumentManagement": DocumentManagement,
     "Messaging": Messaging,
