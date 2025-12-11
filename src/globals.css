@@ -28,25 +28,25 @@ css
   }
   
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 7.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 7.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 217.2 91.2% 59.8%;
+    --background: 222.2 47.4% 11.2%; /* Slate 900 */
+    --foreground: 210 40% 98%; /* Slate 50 */
+    --card: 222.2 47.4% 11.2%; /* Slate 900 */
+    --card-foreground: 210 40% 98%; /* Slate 50 */
+    --popover: 222.2 47.4% 11.2%; /* Slate 900 */
+    --popover-foreground: 210 40% 98%; /* Slate 50 */
+    --primary: 217.2 91.2% 59.8%; /* Blue 400 */
+    --primary-foreground: 222.2 47.4% 11.2%; /* Slate 900 */
+    --secondary: 217.2 32.6% 17.5%; /* Slate 800 */
+    --secondary-foreground: 210 40% 98%; /* Slate 50 */
+    --muted: 217.2 32.6% 17.5%; /* Slate 800 */
+    --muted-foreground: 215 20.2% 65.1%; /* Slate 400 */
+    --accent: 217.2 32.6% 17.5%; /* Slate 800 */
+    --accent-foreground: 210 40% 98%; /* Slate 50 */
+    --destructive: 0 62.8% 30.6%; /* Red 900 */
+    --destructive-foreground: 210 40% 98%; /* Slate 50 */
+    --border: 217.2 32.6% 17.5%; /* Slate 800 */
+    --input: 217.2 32.6% 17.5%; /* Slate 800 */
+    --ring: 224.3 76.3% 48%; /* Blue 600 */
   }
 }
 
