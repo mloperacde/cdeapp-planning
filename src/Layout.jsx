@@ -88,7 +88,7 @@ export default function Layout({ children, currentPageName }) {
   return (
     <ThemeProvider>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:bg-background">
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:to-background dark:bg-background">
           <Sidebar className="border-r border-border bg-card/80 dark:bg-card/95 backdrop-blur-sm">
             <SidebarHeader className="border-b border-border p-4">
               <div className="flex items-center justify-between gap-3">

@@ -193,7 +193,7 @@ export default function DashboardPage() {
       case 'absence_kpis':
         return (
           <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <UserX className="w-5 h-5 text-red-600" />
                 KPIs de Ausencias
@@ -201,13 +201,13 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-3xl font-bold text-red-900">{activeAbsences.length}</div>
-                  <div className="text-sm text-red-700">Ausencias Activas</div>
+                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <div className="text-3xl font-bold text-red-900 dark:text-red-100">{activeAbsences.length}</div>
+                  <div className="text-sm text-red-700 dark:text-red-300">Ausencias Activas</div>
                 </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-3xl font-bold text-orange-900">{criticalAbsences.length}</div>
-                  <div className="text-sm text-orange-700">Críticas</div>
+                <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                  <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">{criticalAbsences.length}</div>
+                  <div className="text-sm text-orange-700 dark:text-orange-300">Críticas</div>
                 </div>
               </div>
               <Link to={createPageUrl("AbsenceManagement")}>
@@ -222,7 +222,7 @@ export default function DashboardPage() {
       case 'daily_planning_summary':
         return (
           <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
                 Planning Diario (Hoy)
@@ -230,21 +230,21 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-2 gap-3">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-900">{todayPlanningSummary.total}</div>
-                  <div className="text-xs text-blue-700">Total</div>
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{todayPlanningSummary.total}</div>
+                  <div className="text-xs text-blue-700 dark:text-blue-300">Total</div>
                 </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-900">{todayPlanningSummary.completed}</div>
-                  <div className="text-xs text-green-700">Completados</div>
+                <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-green-900 dark:text-green-100">{todayPlanningSummary.completed}</div>
+                  <div className="text-xs text-green-700 dark:text-green-300">Completados</div>
                 </div>
-                <div className="text-center p-3 bg-amber-50 rounded-lg">
-                  <div className="text-2xl font-bold text-amber-900">{todayPlanningSummary.inProgress}</div>
-                  <div className="text-xs text-amber-700">En Curso</div>
+                <div className="text-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">{todayPlanningSummary.inProgress}</div>
+                  <div className="text-xs text-amber-700 dark:text-amber-300">En Curso</div>
                 </div>
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold text-slate-900">{todayPlanningSummary.pending}</div>
-                  <div className="text-xs text-slate-700">Pendientes</div>
+                <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <div className="text-2xl font-bold text-slate-900 dark:text-white">{todayPlanningSummary.pending}</div>
+                  <div className="text-xs text-slate-700 dark:text-slate-300">Pendientes</div>
                 </div>
               </div>
               <Link to={createPageUrl("DailyPlanning")}>
@@ -259,7 +259,7 @@ export default function DashboardPage() {
       case 'machine_status':
         return (
           <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Cog className="w-5 h-5 text-green-600" />
                 Estado de Máquinas
@@ -267,20 +267,20 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <span className="text-sm font-medium text-green-900">Disponibles</span>
+                <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-green-900 dark:text-green-100">Disponibles</span>
                   <Badge className="bg-green-600 text-white text-lg px-3">
                     {machineStats.available}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                  <span className="text-sm font-medium text-red-900">No Disponibles</span>
+                <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-red-900 dark:text-red-100">No Disponibles</span>
                   <Badge className="bg-red-600 text-white text-lg px-3">
                     {machineStats.unavailable}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="text-sm font-medium text-blue-900">Total</span>
+                <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Total</span>
                   <Badge className="bg-blue-600 text-white text-lg px-3">
                     {machineStats.total}
                   </Badge>
@@ -298,7 +298,7 @@ export default function DashboardPage() {
       case 'upcoming_birthdays':
         return (
           <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Cake className="w-5 h-5 text-purple-600" />
                 Próximos Cumpleaños
@@ -306,7 +306,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
               {upcomingBirthdays.length === 0 ? (
-                <p className="text-center text-slate-500 py-4">No hay cumpleaños próximos</p>
+                <p className="text-center text-slate-500 dark:text-slate-400 py-4">No hay cumpleaños próximos</p>
               ) : (
                 <div className="space-y-2">
                   {upcomingBirthdays.map(emp => {
@@ -315,11 +315,11 @@ export default function DashboardPage() {
                     const isToday = isSameDay(thisYearBirthday, new Date());
                     
                     return (
-                      <div key={emp.id} className={`p-2 rounded-lg ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-slate-50'}`}>
+                      <div key={emp.id} className={`p-2 rounded-lg ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-slate-50 dark:bg-slate-800'}`}>
                         <div className="font-semibold text-sm">{emp.nombre}</div>
-                        <div className="text-xs text-slate-600">
+                        <div className="text-xs text-slate-600 dark:text-slate-400">
                           {format(thisYearBirthday, "d 'de' MMMM", { locale: es })}
-                          {isToday && <span className="ml-2 font-bold text-purple-700">¡HOY!</span>}
+                          {isToday && <span className="ml-2 font-bold text-purple-700 dark:text-purple-300">¡HOY!</span>}
                         </div>
                       </div>
                     );
@@ -333,7 +333,7 @@ export default function DashboardPage() {
       case 'maintenance_alerts':
         return (
           <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Wrench className="w-5 h-5 text-orange-600" />
                 Alertas de Mantenimiento
@@ -343,16 +343,16 @@ export default function DashboardPage() {
               {maintenanceAlerts.length === 0 ? (
                 <div className="text-center py-4">
                   <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm text-slate-600">No hay alertas pendientes</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">No hay alertas pendientes</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {maintenanceAlerts.slice(0, 5).map(maint => (
-                    <div key={maint.id} className="p-2 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="text-sm font-semibold text-orange-900">
+                    <div key={maint.id} className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200">
+                      <div className="text-sm font-semibold text-orange-900 dark:text-orange-100">
                         {machines.find(m => m?.id === maint?.machine_id)?.nombre || 'Máquina'}
                       </div>
-                      <div className="text-xs text-orange-700">
+                      <div className="text-xs text-orange-700 dark:text-orange-300">
                         {format(new Date(maint.fecha_programada), "d/MM/yyyy")} - {maint.tipo}
                       </div>
                     </div>
@@ -376,7 +376,7 @@ export default function DashboardPage() {
         
         return (
           <Card key={widget.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-indigo-600" />
                 Resumen de Equipos
@@ -384,20 +384,20 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg">
-                  <span className="text-sm font-medium text-indigo-900">Total Empleados</span>
+                <div className="flex justify-between items-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">Total Empleados</span>
                   <Badge className="bg-indigo-600 text-white text-lg px-3">
                     {employees.length}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <span className="text-sm font-medium text-green-900">Disponibles</span>
+                <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-green-900 dark:text-green-100">Disponibles</span>
                   <Badge className="bg-green-600 text-white text-lg px-3">
                     {Array.isArray(employees) ? employees.filter(e => e?.disponibilidad === "Disponible").length : 0}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="text-sm font-medium text-blue-900">Fabricación Disponible</span>
+                <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Fabricación Disponible</span>
                   <Badge className="bg-blue-600 text-white text-lg px-3">
                     {availableFabricacion}/{fabricacionEmployees.length}
                   </Badge>
@@ -422,18 +422,18 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white dark:text-white flex items-center gap-3">
               <BarChart3 className="w-8 h-8 text-blue-600" />
               Dashboard Principal
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-slate-600 dark:text-slate-400 dark:text-slate-400 mt-1">
               Resumen de información clave del sistema
             </p>
           </div>
           <Button
             onClick={() => setShowWidgetConfig(true)}
             variant="outline"
-            className="bg-white hover:bg-slate-50"
+            className="bg-white hover:bg-slate-50 dark:bg-slate-800"
           >
             <Settings className="w-4 h-4 mr-2" />
             Configurar Widgets
