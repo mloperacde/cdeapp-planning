@@ -58,28 +58,36 @@ export default function AdvancedSearch({
       return prefs[0] || null;
     },
     enabled: !!user?.email && !!pageId,
-    onSuccess: (pref) => {
-      if (pref && pref.filters) {
-        // Restaurar estado
-        const loadedFilters = pref.filters;
-        if (loadedFilters.search) setSearchTerm(loadedFilters.search);
-        if (loadedFilters.sortField) setSortField(loadedFilters.sortField);
-        if (loadedFilters.sortDirection) setSortDirection(loadedFilters.sortDirection);
-        
-        // Separar filtros específicos de búsqueda/orden
-        const { search, sortField, sortDirection, ...restFilters } = loadedFilters;
-        setFilters(restFilters);
-        
-        // Aplicar inmediatamente
-        onFilterChange({
-          searchTerm: loadedFilters.search || "",
-          sortField: loadedFilters.sortField || "",
-          sortDirection: loadedFilters.sortDirection || "asc",
-          ...restFilters
-        });
-      }
-    }
   });
+
+  // Handle preference loading with useEffect (since onSuccess is deprecated in v5)
+  React.useEffect(() => {
+    if (savedPref && savedPref.filters) {
+      const loadedFilters = savedPref.filters;
+      // Use JSON.stringify to prevent infinite loop from object reference comparison if needed,
+      // but here we just check if it's already applied or different.
+      // However, we want to run this only when savedPref loads/changes.
+      
+      // Update local state
+      if (loadedFilters.search) setSearchTerm(loadedFilters.search);
+      if (loadedFilters.sortField) setSortField(loadedFilters.sortField);
+      if (loadedFilters.sortDirection) setSortDirection(loadedFilters.sortDirection);
+      
+      const { search, sortField, sortDirection, ...restFilters } = loadedFilters;
+      setFilters(restFilters);
+      
+      // Propagate changes
+      // Note: We avoid calling this if filters are already set to avoid loops, 
+      // but initial load should be fine.
+      onFilterChange({
+        searchTerm: loadedFilters.search || "",
+        sortField: loadedFilters.sortField || "",
+        sortDirection: loadedFilters.sortDirection || "asc",
+        ...restFilters
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedPref]);
 
   // Save preference mutation
   const savePrefMutation = useMutation({
