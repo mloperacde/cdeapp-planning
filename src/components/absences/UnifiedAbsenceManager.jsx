@@ -21,7 +21,7 @@ import { UserX, Plus, Edit, Trash2, Search, CheckCircle2, AlertCircle, Clock } f
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import AdvancedSearch from "../components/common/AdvancedSearch";
+import AdvancedSearch from "../common/AdvancedSearch";
 import { createAbsence, updateAbsence, deleteAbsence } from "./AbsenceOperations";
 
 const EMPTY_ARRAY = [];
