@@ -166,9 +166,16 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       if (!isAllowed) {
         // Current tab not allowed, find first allowed
         const allowed = Object.keys(permissions.tabs).find(key => permissions.tabs[key]);
+        // Only update if allowed is different and strictly defined to avoid loops
         if (allowed && allowed !== activeTab) {
           setActiveTab(allowed);
         }
+      } else if (activeTab && permissions.tabs[activeTab] === false) {
+         // Double safety check: explicitly false in current permissions
+         const allowed = Object.keys(permissions.tabs).find(key => permissions.tabs[key]);
+         if (allowed && allowed !== activeTab) {
+           setActiveTab(allowed);
+         }
       }
     }
   }, [open, tabsPermissionsStr, activeTab]);
