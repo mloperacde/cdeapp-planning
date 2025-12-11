@@ -155,6 +155,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   }, [propPermissions, currentUser, userRoleAssignments, userRoles]);
 
   // Ensure active tab is allowed
+  // Using stringified permissions to prevent infinite loops from reference instability
+  const tabsPermissionsStr = JSON.stringify(permissions?.tabs);
+  
   useEffect(() => {
     if (open && permissions?.tabs) {
       // Only check if activeTab is explicitly disallowed (false) or undefined in tabs config
@@ -168,7 +171,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         }
       }
     }
-  }, [open, permissions, activeTab]);
+  }, [open, tabsPermissionsStr, activeTab]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
