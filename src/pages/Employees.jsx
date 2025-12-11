@@ -638,7 +638,7 @@ export default function EmployeesPage() {
                 {stats.upcomingBirthdays.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-2">No hay cumpleaños próximos</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
                     {stats.upcomingBirthdays.map(emp => (
                       <div key={emp.id} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
@@ -668,7 +668,7 @@ export default function EmployeesPage() {
                 {stats.upcomingAnniversaries.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-2">No hay aniversarios próximos</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
                     {stats.upcomingAnniversaries.map(emp => (
                       <div key={emp.id} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">

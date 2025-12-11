@@ -82,12 +82,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     if (!currentUser) return {};
     if (currentUser.role === 'admin') return {
       contrato: { ver: true, editar: true },
-      campos: { editar_sensible: true, editar_contacto: true }
+      campos: { editar_sensible: true, editar_contacto: true, ver_salario: true, ver_dni: true }
     };
 
     let perms = {
       contrato: { ver: false, editar: false },
-      campos: { editar_sensible: false, editar_contacto: false }
+      campos: { editar_sensible: false, editar_contacto: false, ver_salario: false, ver_dni: false }
     };
 
     userRoleAssignments.forEach(assignment => {
@@ -96,6 +96,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       if (role?.permissions?.contrato?.editar) perms.contrato.editar = true;
       if (role?.permissions?.campos_empleado?.editar_sensible) perms.campos.editar_sensible = true;
       if (role?.permissions?.campos_empleado?.editar_contacto) perms.campos.editar_contacto = true;
+      if (role?.permissions?.campos_empleado?.ver_salario) perms.campos.ver_salario = true;
+      if (role?.permissions?.campos_empleado?.ver_dni) perms.campos.ver_dni = true;
     });
 
     return perms;
@@ -248,21 +250,25 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>DNI/NIE</Label>
-                  <Input
-                    value={formData.dni || ""}
-                    onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
-                  />
-                </div>
+                {permissions.campos.ver_dni && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>DNI/NIE</Label>
+                      <Input
+                        value={formData.dni || ""}
+                        onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>NUSS</Label>
-                  <Input
-                    value={formData.nuss || ""}
-                    onChange={(e) => setFormData({ ...formData, nuss: e.target.value })}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label>NUSS</Label>
+                      <Input
+                        value={formData.nuss || ""}
+                        onChange={(e) => setFormData({ ...formData, nuss: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div className="space-y-2">
                   <Label>Sexo</Label>
@@ -758,15 +764,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Salario Anual (€)</Label>
-                    <Input
-                      type="number"
-                      value={formData.salario_anual || ""}
-                      onChange={(e) => setFormData({ ...formData, salario_anual: parseFloat(e.target.value) })}
-                      disabled={!permissions.contrato?.editar}
-                    />
-                  </div>
+                  {permissions.campos.ver_salario && (
+                    <div className="space-y-2">
+                      <Label>Salario Anual (€)</Label>
+                      <Input
+                        type="number"
+                        value={formData.salario_anual || ""}
+                        onChange={(e) => setFormData({ ...formData, salario_anual: parseFloat(e.target.value) })}
+                        disabled={!permissions.contrato?.editar}
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-2 md:col-span-2">
                     <Label>Evaluación de Responsable</Label>
