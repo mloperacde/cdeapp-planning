@@ -76,13 +76,18 @@ export function useRBAC() {
         if (p.empleados.eliminar) finalPerms.empleados.eliminar = true;
         
         // Departamentos: Si alguno tiene '*', es todo. Si no, suma de arrays.
-        const currentDepts = finalPerms.empleados.departamentos_visibles;
+        const currentDepts = finalPerms.empleados.departamentos_visibles || [];
         const newDepts = p.empleados.departamentos_visibles || [];
+        
+        // Convert to uppercase for consistent comparison
+        const currentDeptsUpper = currentDepts.map(d => String(d).toUpperCase());
+        const newDeptsUpper = newDepts.map(d => String(d).toUpperCase());
         
         if (currentDepts.includes('*') || newDepts.includes('*')) {
           finalPerms.empleados.departamentos_visibles = ['*'];
         } else {
-          finalPerms.empleados.departamentos_visibles = [...new Set([...currentDepts, ...newDepts])];
+          // Store original casing or normalized? Let's normalize to uppercase to be safe
+          finalPerms.empleados.departamentos_visibles = [...new Set([...currentDeptsUpper, ...newDeptsUpper])];
         }
       }
 
