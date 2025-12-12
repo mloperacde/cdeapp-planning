@@ -8,13 +8,13 @@ import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-export default function AbsenceNotifications({ absences, employees, absenceTypes }) {
+export default function AbsenceNotifications({ absences, employees, absenceTypes, masterEmployees = [] }) {
   const notifications = useMemo(() => {
     const now = new Date();
     const alerts = [];
 
     absences.forEach(absence => {
-      const employee = employees.find(e => e.id === absence.employee_id);
+      const employee = employees.find(e => e.id === absence.employee_id) || masterEmployees.find(e => e.id === absence.employee_id);
       if (!employee) return;
 
       const absenceType = absenceTypes?.find(t => t.nombre === absence.tipo);
