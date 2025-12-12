@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 import WorkOrderForm from "../components/planning/WorkOrderForm";
 import PlanningGantt from "../components/planning/PlanningGantt";
 import ResourceForecast from "../components/planning/ResourceForecast";
+import WorkOrderImporter from "../components/planning/WorkOrderImporter";
 
 export default function ProductionPlanningPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -100,6 +101,10 @@ export default function ProductionPlanningPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <WorkOrderImporter 
+            machines={machines} 
+            processes={processes} 
+          />
           <Button onClick={handleNewOrder} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Orden
