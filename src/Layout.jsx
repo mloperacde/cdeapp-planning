@@ -27,6 +27,8 @@ import {
   UserX,
   Calendar as CalendarIcon,
   LayoutDashboard,
+  Factory,
+  Settings2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -59,6 +61,7 @@ export default function Layout({ children, currentPageName }) {
     informes: false,
     maquinas: false,
     planning: false,
+    produccion: false,
   });
 
   const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
@@ -445,6 +448,55 @@ export default function Layout({ children, currentPageName }) {
                   </SidebarMenuItem>
 
 
+
+                  <Collapsible open={openSections.produccion} onOpenChange={() => toggleSection('produccion')}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                            isParentActive([
+                              createPageUrl("ProductionPlanning"),
+                              createPageUrl("ProcessTypes")
+                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <Factory className="w-5 h-5" />
+                              <span className="text-sm">Producción</span>
+                            </div>
+                            {openSections.produccion ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </div>
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="ml-6 mt-1 space-y-1">
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("ProductionPlanning")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("ProductionPlanning")} className="flex items-center gap-2 px-3 py-2">
+                              <CalendarIcon className="w-4 h-4" />
+                              Planificador
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("ProcessTypes")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("ProcessTypes")} className="flex items-center gap-2 px-3 py-2">
+                              <Settings2 className="w-4 h-4" />
+                              Tipos de Proceso
+                            </Link>
+                          </SidebarMenuButton>
+                        </div>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton
