@@ -94,7 +94,7 @@ export default function ResourceForecast({ orders, processes, machineProcesses, 
         balance: supply - demand
       };
     });
-  }, [days, orders, processTypes, employees, selectedTeam]);
+  }, [days, orders, processes, machineProcesses, employees, selectedTeam]);
 
   // Aggregate totals
   const totalDemand = forecast.reduce((sum, d) => sum + d.demand, 0);
