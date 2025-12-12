@@ -248,27 +248,50 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
       }
 
       // Batch Write
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
       const createOps = validPayloads.filter(p => p.type === 'create').map(p => p.data);
       const updateOps = validPayloads.filter(p => p.type === 'update');
 
+      // Create in smaller batches with delay
       if (createOps.length > 0) {
-        const chunkSize = 50;
+        const chunkSize = 20;
         for (let i = 0; i < createOps.length; i += chunkSize) {
-            await base44.entities.WorkOrder.bulkCreate(createOps.slice(i, i + chunkSize));
+            try {
+                await base44.entities.WorkOrder.bulkCreate(createOps.slice(i, i + chunkSize));
+                await delay(1000); // 1s delay between creation batches
+            } catch (e) {
+                console.error("Batch create error:", e);
+                addLog('error', `Error creando lote ${Math.floor(i/chunkSize) + 1}: ${e.message}`);
+                // If rate limit, wait longer
+                if (e.message && e.message.toLowerCase().includes("rate limit")) {
+                    await delay(5000);
+                }
+            }
         }
       }
 
-      // Parallel updates with throttling
-      // Reduced batch size and added delay to avoid rate limits
-      const BATCH_SIZE = 5; 
-      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-      
-      for (let i = 0; i < updateOps.length; i += BATCH_SIZE) {
-        const batch = updateOps.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(op => base44.entities.WorkOrder.update(op.id, op.data)));
-        // Add a small delay between batches to respect rate limits
-        if (i + BATCH_SIZE < updateOps.length) {
-            await delay(500); 
+      // Updates strictly sequential to avoid rate limits
+      for (let i = 0; i < updateOps.length; i++) {
+        const op = updateOps[i];
+        try {
+            await base44.entities.WorkOrder.update(op.id, op.data);
+            await delay(200); // 200ms delay between each update (~5 updates/sec)
+        } catch (e) {
+            const isRateLimit = e.message && e.message.toLowerCase().includes("rate limit");
+            if (isRateLimit) {
+                addLog('warning', `Rate limit en orden ${op.data.order_number}, reintentando en 3s...`);
+                await delay(3000); // Wait 3s
+                try {
+                    await base44.entities.WorkOrder.update(op.id, op.data);
+                    addLog('info', `Orden ${op.data.order_number} recuperada.`);
+                } catch (retryE) {
+                     addLog('error', `Error final actualizando orden ${op.data.order_number}: ${retryE.message}`);
+                     errorCount++;
+                }
+            } else {
+                addLog('error', `Error actualizando orden ${op.data.order_number}: ${e.message}`);
+                errorCount++;
+            }
         }
       }
 
