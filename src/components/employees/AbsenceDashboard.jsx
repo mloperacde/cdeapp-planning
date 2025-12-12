@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import AIDashboardSummary from "../reports/AIDashboardSummary";
 
-export default function AbsenceDashboard({ absences, employees }) {
+export default function AbsenceDashboard({ absences, employees, masterEmployees = [] }) {
   const { data: globalAbsenteeism, refetch: refetchAbsenteeism, isLoading: calculatingAbsenteeism } = useQuery({
     queryKey: ['globalAbsenteeism'],
     queryFn: async () => {
@@ -34,7 +33,7 @@ export default function AbsenceDashboard({ absences, employees }) {
   const byEmployee = useMemo(() => {
     const empCount = {};
     absences.forEach(abs => {
-      const emp = employees.find(e => e.id === abs.employee_id);
+      const emp = employees.find(e => e.id === abs.employee_id) || masterEmployees.find(e => e.id === abs.employee_id);
       const name = emp?.nombre || "Desconocido";
       empCount[name] = (empCount[name] || 0) + 1;
     });

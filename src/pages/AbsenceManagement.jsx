@@ -88,6 +88,11 @@ export default function AbsenceManagementPage() {
     queryFn: () => base44.entities.Employee.list('nombre'),
   });
 
+  const { data: masterEmployees = [] } = useQuery({
+    queryKey: ['employeeMasterDatabase'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+  });
+
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
@@ -115,84 +120,30 @@ export default function AbsenceManagementPage() {
     return Array.from(depts).sort();
   }, [employees]);
 
-  // Mutations
-  const updateEmployeeAvailability = async (employeeId, disponibilidad, ausenciaData = {}) => {
-    await base44.entities.Employee.update(employeeId, {
-      disponibilidad,
-      ausencia_inicio: ausenciaData.ausencia_inicio || null,
-      ausencia_fin: ausenciaData.ausencia_fin || null,
-      ausencia_motivo: ausenciaData.ausencia_motivo || null,
-    });
-  };
-
-  const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const dataWithStatus = {
-        ...data,
-        estado_aprobacion: data.estado_aprobacion || 'Pendiente',
-        solicitado_por: currentUser?.id || data.solicitado_por
-      };
-      
-      let result;
-      if (editingAbsence?.id) {
-        result = await base44.entities.Absence.update(editingAbsence.id, dataWithStatus);
-      } else {
-        result = await base44.entities.Absence.create(dataWithStatus);
-        
-        // Notify
-        const employee = employees.find(e => e.id === data.employee_id);
-        const type = absenceTypes.find(at => at.id === data.absence_type_id);
-        if (employee && type) {
-          await notifyAbsenceRequestRealtime(result.id, employee.nombre, type, format(new Date(data.fecha_inicio), "dd/MM/yyyy"));
-        }
-      }
-
-      await updateEmployeeAvailability(data.employee_id, "Ausente", {
-        ausencia_inicio: data.fecha_inicio,
-        ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
-        ausencia_motivo: data.motivo,
-      });
-
-      const type = absenceTypes.find(at => at.id === data.absence_type_id);
-      if (type) await calculateVacationPendingBalance(result, type, vacations, holidays);
-
-      const { updateEmployeeAbsenteeismDaily } = await import("../components/absences/AbsenteeismCalculator");
-      await updateEmployeeAbsenteeismDaily(data.employee_id);
-
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['absences'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
-      handleClose();
-      toast.success("Ausencia guardada correctamente");
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (absence) => {
-      const year = new Date(absence.fecha_inicio).getFullYear();
-      await removeAbsenceFromBalance(absence.id, absence.employee_id, year);
-      await base44.entities.Absence.delete(absence.id);
-      
-      const remaining = absences.filter(a => a.employee_id === absence.employee_id && a.id !== absence.id);
-      if (remaining.length === 0) await updateEmployeeAvailability(absence.employee_id, "Disponible");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['absences'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
-      toast.success("Ausencia eliminada");
-    },
-  });
-
-  // Handlers
-  const handleEdit = (absence) => { setEditingAbsence(absence); setShowForm(true); };
+  // Mutations and Handlers removed as UnifiedAbsenceManager handles them now for the list tab.
+  // We keep state for local dashboard if needed, but the main CRUD is in UnifiedAbsenceManager.
+  // The showForm/editingAbsence state might still be used if we want a global "New Absence" button in the header.
+  
+  // Handlers for the header button (New Absence)
+  // We can pass these to UnifiedAbsenceManager or use a ref, but simpler is to let UnifiedAbsenceManager handle its own form,
+  // or if we want the header button to work, we might need to expose the form. 
+  // For now, I'll rely on UnifiedAbsenceManager's internal button for the list view, 
+  // and if the header button is clicked, we can redirect to the list tab or open a dialog here.
+  // But wait, UnifiedAbsenceManager is only in "list" tab. 
+  // If user clicks "New Absence" in header, we should probably switch to "list" tab and open form, OR open a form here.
+  // Since I removed the manual table code, I should clean up the unused mutations if they are not used elsewhere.
+  // But wait, I see "New Absence" button in the header (line 240). 
+  // I should probably remove it or make it open a dialog that uses the shared create logic.
+  // To avoid duplication, let's keep the header button but make it use the shared operations logic if possible, 
+  // OR just rely on UnifiedAbsenceManager which has its own button.
+  // I will hide the header button since UnifiedAbsenceManager has one.
+  
   const handleClose = () => { setShowForm(false); setEditingAbsence(null); };
-  const handleSubmit = (data) => saveMutation.mutate(data);
-  const handleDelete = (absence) => { if (window.confirm('¿Eliminar ausencia?')) deleteMutation.mutate(absence); };
-  const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || "Desconocido";
+  // ... keeping necessary parts if any ...
+  const getEmployeeName = (id) => {
+    const emp = employees.find(e => e.id === id) || masterEmployees.find(e => e.id === id);
+    return emp?.nombre || "Desconocido";
+  };
   
   const debouncedSearchChange = useCallback(debounce((val) => setSearchTerm(val), 300), []);
 
@@ -237,10 +188,7 @@ export default function AbsenceManagementPage() {
               {isShiftManager ? "Gestión de equipo y reportes de turno" : "Control centralizado de RRHH"}
             </p>
           </div>
-          <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Ausencia
-          </Button>
+          {/* Button moved to UnifiedAbsenceManager inside list tab */}
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -286,7 +234,7 @@ export default function AbsenceManagementPage() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AbsenceDashboard absences={filteredAbsences} employees={employees} />
+              <AbsenceDashboard absences={filteredAbsences} employees={employees} masterEmployees={masterEmployees} />
               <div className="space-y-6">
                 <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
                 <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
@@ -295,62 +243,7 @@ export default function AbsenceManagementPage() {
           </TabsContent>
 
           <TabsContent value="list" className="space-y-6">
-            <Card>
-              <CardHeader className="border-b">
-                <div className="flex flex-col md:flex-row justify-between gap-4">
-                  <CardTitle>Registro de Ausencias</CardTitle>
-                  <div className="flex gap-2">
-                    <Input 
-                      placeholder="Buscar..." 
-                      className="w-full md:w-64" 
-                      onChange={(e) => debouncedSearchChange(e.target.value)}
-                    />
-                    {!isShiftManager && (
-                      <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                        <SelectTrigger className="w-40"><SelectValue placeholder="Depto"/></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          {departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Empleado</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Inicio</TableHead>
-                      <TableHead>Fin</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAbsences.slice(0, 50).map(absence => (
-                      <TableRow key={absence.id}>
-                        <TableCell className="font-medium">{getEmployeeName(absence.employee_id)}</TableCell>
-                        <TableCell><Badge variant="outline">{absence.tipo}</Badge></TableCell>
-                        <TableCell>{format(new Date(absence.fecha_inicio), 'dd/MM/yyyy HH:mm')}</TableCell>
-                        <TableCell>
-                          {absence.fecha_fin_desconocida ? <Badge>Indefinido</Badge> : format(new Date(absence.fecha_fin), 'dd/MM/yyyy HH:mm')}
-                        </TableCell>
-                        <TableCell><Badge variant={absence.estado_aprobacion === 'Aprobada' ? 'default' : 'secondary'}>{absence.estado_aprobacion}</Badge></TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(absence)}><Edit className="w-4 h-4"/></Button>
-                          {!isShiftManager && (
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(absence)} className="text-red-600"><Trash2 className="w-4 h-4"/></Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <UnifiedAbsenceManager sourceContext="absence_page" />
           </TabsContent>
 
           <TabsContent value="approval">
@@ -383,23 +276,7 @@ export default function AbsenceManagementPage() {
           </TabsContent>
         </Tabs>
 
-        {showForm && (
-          <Dialog open={true} onOpenChange={handleClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingAbsence ? 'Editar Ausencia' : 'Nueva Ausencia'}</DialogTitle>
-              </DialogHeader>
-              <AbsenceForm 
-                initialData={editingAbsence}
-                employees={employees}
-                absenceTypes={absenceTypes}
-                onSubmit={handleSubmit}
-                onCancel={handleClose}
-                isSubmitting={saveMutation.isPending}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        {/* Form dialog managed by UnifiedAbsenceManager in list tab */}
       </div>
     </div>
   );
