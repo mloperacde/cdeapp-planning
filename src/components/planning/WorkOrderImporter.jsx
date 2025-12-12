@@ -161,7 +161,22 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
 
           // Machine Lookup
           const machineName = getValue(row, 'machine_name');
-          const machine = machines.find(m => m.nombre.toLowerCase() === machineName?.toLowerCase());
+          let machine = null;
+          
+          if (machineName) {
+            const nameLower = machineName.toLowerCase();
+            machine = machines.find(m => {
+               // Try exact match on name or code
+               if (m.nombre.toLowerCase() === nameLower) return true;
+               if (m.codigo && m.codigo.toLowerCase() === nameLower) return true;
+               
+               // Try partial match: if DB name/code is contained in CSV string (e.g. "R V-TK-002" in "R V-TK-002 REACTOR...")
+               if (m.nombre.length > 3 && nameLower.includes(m.nombre.toLowerCase())) return true;
+               if (m.codigo && m.codigo.length > 3 && nameLower.includes(m.codigo.toLowerCase())) return true;
+               
+               return false;
+            });
+          }
           
           if (!machine) {
             addLog('warning', `Fila ${i+1}: Máquina '${machineName}' no encontrada. Orden ${orderNumber} omitida.`);
@@ -243,12 +258,18 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
         }
       }
 
-      // Parallel updates
-      // Using a reasonable batch size for Promise.all to avoid rate limits if any
-      const BATCH_SIZE = 20;
+      // Parallel updates with throttling
+      // Reduced batch size and added delay to avoid rate limits
+      const BATCH_SIZE = 5; 
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+      
       for (let i = 0; i < updateOps.length; i += BATCH_SIZE) {
         const batch = updateOps.slice(i, i + BATCH_SIZE);
         await Promise.all(batch.map(op => base44.entities.WorkOrder.update(op.id, op.data)));
+        // Add a small delay between batches to respect rate limits
+        if (i + BATCH_SIZE < updateOps.length) {
+            await delay(500); 
+        }
       }
 
       setSummary({
