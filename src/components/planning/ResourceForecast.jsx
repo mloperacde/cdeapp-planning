@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Users, TrendingUp, TrendingDown } from "lucide-react";
 import { addDays, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
