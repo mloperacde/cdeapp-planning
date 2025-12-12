@@ -668,46 +668,8 @@ export default function ShiftManagersPage() {
           </Card>
         )}
 
-        {/* Resumen de Ausencias Hoy - Agrupado por Equipo */}
-        {activeAbsencesToday.length > 0 && (
-          <Card className="shadow-lg border-0 bg-white dark:bg-card/80 dark:bg-card/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-              <CardTitle className="flex items-center gap-2">
-                <UserX className="w-5 h-5 text-red-600" />
-                Empleados Ausentes Hoy (en Equipos) ({activeAbsencesToday.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {Object.entries(absencesByTeam).map(([teamName, absences]) => {
-                  if (absences.length === 0) return null;
-                  
-                  return (
-                    <div key={teamName}>
-                      <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
-                        <Badge className="bg-purple-600">{teamName}</Badge>
-                        <span className="text-sm">({absences.length})</span>
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {absences.map(absence => (
-                          <div key={absence.id} className="p-3 border rounded-lg bg-red-50 dark:bg-red-900/20 border-red-200">
-                            <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{absence.employee?.nombre}</div>
-                            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                              {absence.employee?.departamento} - {absence.employee?.puesto}
-                            </div>
-                            <Badge variant="outline" className="mt-2 text-xs">
-                              {absence.tipo}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Unified Absence Manager */}
+        <UnifiedAbsenceManager sourceContext="shift_manager" />
       </div>
     </div>
   );

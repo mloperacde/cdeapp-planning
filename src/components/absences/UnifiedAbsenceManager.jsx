@@ -309,7 +309,6 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
               <TableHeader>
                 <TableRow className="bg-slate-50 dark:bg-slate-800">
                   <TableHead>Empleado</TableHead>
-                  <TableHead>Departamento</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Motivo</TableHead>
                   <TableHead>Desde</TableHead>
@@ -325,7 +324,6 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
                   return (
                     <TableRow key={abs.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                       <TableCell className="font-semibold">{getEmployeeName(abs.employee_id)}</TableCell>
-                      <TableCell>{emp?.departamento || "-"}</TableCell>
                       <TableCell><Badge variant="outline">{abs.tipo}</Badge></TableCell>
                       <TableCell>{abs.motivo}</TableCell>
                       <TableCell className="text-xs">
