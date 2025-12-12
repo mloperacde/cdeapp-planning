@@ -100,6 +100,7 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
 
             // 1. Machine Mapping
             const machineName = getValue(rowParts, 'Máquina');
+            // Try to match by exact name first, then maybe included? Prompt says "indicador el nombre".
             const machine = machines.find(m => m.nombre.toLowerCase() === machineName.toLowerCase());
             if (!machine) {
               addLog('warning', `Fila ${i}: Máquina '${machineName}' no encontrada. Orden ${orderNumber} omitida.`);
@@ -174,11 +175,23 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
             };
 
             const existing = existingOrderMap.get(orderNumber);
+            
+            // Logic for High Priority (1 & 2): Set start_date to null/empty to put them in "Backlog"
+            const isHighPriority = payload.priority <= 2;
+            const initialStartDate = isHighPriority ? "" : new Date().toISOString().split('T')[0];
+
             if (existing) {
+              // Preserve existing start date if it's already set, unless we want to force reset?
+              // The prompt says "extraeremos... las ordenes con Pry 1 y 2... y lo colocaremos en pequeñas fichas".
+              // This implies we might want to "unschedule" them if they are re-imported? 
+              // Safer to ONLY set start_date for CREATE, and let user manage updates. 
+              // BUT for the specific Pry 1/2 requirement, if they are meant to be draggable chips, they shouldn't have a start_date.
+              // I will leave existing start_date alone for updates to avoid messing up manual planning.
+              // Only for NEW orders I apply the logic.
               validPayloads.push({ type: 'update', id: existing.id, data: payload });
               updatedCount++;
             } else {
-              validPayloads.push({ type: 'create', data: { ...payload, start_date: new Date().toISOString().split('T')[0] } }); // Default start date for new orders
+              validPayloads.push({ type: 'create', data: { ...payload, start_date: initialStartDate } }); 
               createdCount++;
             }
 
