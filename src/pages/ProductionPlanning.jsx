@@ -14,10 +14,15 @@ import WorkOrderForm from "../components/planning/WorkOrderForm";
 import PlanningGantt from "../components/planning/PlanningGantt";
 import ResourceForecast from "../components/planning/ResourceForecast";
 import WorkOrderImporter from "../components/planning/WorkOrderImporter";
+import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export default function ProductionPlanningPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [dropDialogData, setDropDialogData] = useState(null);
+  const queryClient = useQueryClient();
   
   // Filtros
   const [dateRange, setDateRange] = useState({
@@ -59,6 +64,11 @@ export default function ProductionPlanningPage() {
     queryFn: () => base44.entities.TeamConfig.list(),
   });
 
+  const { data: holidays = [] } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+  });
+
   // Derived Data
   const filteredOrders = useMemo(() => {
     return workOrders.filter(order => {
@@ -86,6 +96,28 @@ export default function ProductionPlanningPage() {
   const handleNewOrder = () => {
     setEditingOrder(null);
     setIsFormOpen(true);
+  };
+
+  const handleOrderDrop = (order, dateStr, machineId) => {
+    setDropDialogData({
+      order,
+      dropDate: dateStr,
+      machineId
+    });
+  };
+
+  const scheduleMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.WorkOrder.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+      toast.success("Orden programada correctamente");
+      setDropDialogData(null);
+    },
+    onError: (err) => toast.error("Error al programar: " + err.message)
+  });
+
+  const handleScheduleConfirm = (id, data) => {
+     scheduleMutation.mutate({ id, data });
   };
 
   return (
@@ -192,6 +224,8 @@ export default function ProductionPlanningPage() {
             processes={processes}
             dateRange={dateRange}
             onEditOrder={handleEditOrder}
+            onOrderDrop={handleOrderDrop}
+            holidays={holidays}
           />
         </div>
 
@@ -215,6 +249,16 @@ export default function ProductionPlanningPage() {
         machines={machines}
         processes={processes}
         machineProcesses={machineProcesses}
+      />
+
+      <ScheduleOrderDialog 
+        open={!!dropDialogData}
+        onClose={() => setDropDialogData(null)}
+        order={dropDialogData?.order}
+        dropDate={dropDialogData?.dropDate}
+        processes={processes}
+        machineProcesses={machineProcesses}
+        onConfirm={handleScheduleConfirm}
       />
     </div>
   );
