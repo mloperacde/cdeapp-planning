@@ -238,7 +238,7 @@ export default function AbsenceManagementPage() {
               <AbsenceDashboard absences={filteredAbsences} employees={employees} masterEmployees={masterEmployees} />
               <div className="space-y-6">
                 <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
-                <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
+                <LongAbsenceAlert employees={employees} absences={filteredAbsences} masterEmployees={masterEmployees} />
               </div>
             </div>
           </TabsContent>

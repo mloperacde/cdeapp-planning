@@ -10,7 +10,7 @@ import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-export default function LongAbsenceAlert({ employees, absences }) {
+export default function LongAbsenceAlert({ employees, absences, masterEmployees = [] }) {
   const { data: lockerAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
@@ -38,7 +38,7 @@ export default function LongAbsenceAlert({ employees, absences }) {
         return false;
       }
     }).map(abs => {
-      const employee = employees.find(e => e.id === abs.employee_id);
+      const employee = employees.find(e => e.id === abs.employee_id) || masterEmployees.find(e => e.id === abs.employee_id);
       const locker = lockerAssignments.find(la => la.employee_id === abs.employee_id);
       const hasLocker = locker?.numero_taquilla_actual?.replace(/['"]/g, '').trim();
       

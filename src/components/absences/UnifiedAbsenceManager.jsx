@@ -313,7 +313,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
                   <TableHead>Motivo</TableHead>
                   <TableHead>Desde</TableHead>
                   <TableHead>Hasta</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>Estado de la ausencia</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
