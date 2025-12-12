@@ -270,27 +270,37 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
         }
       }
 
-      // Updates strictly sequential to avoid rate limits
+      // Updates strictly sequential with robust backoff strategy
       for (let i = 0; i < updateOps.length; i++) {
         const op = updateOps[i];
-        try {
-            await base44.entities.WorkOrder.update(op.id, op.data);
-            await delay(200); // 200ms delay between each update (~5 updates/sec)
-        } catch (e) {
-            const isRateLimit = e.message && e.message.toLowerCase().includes("rate limit");
-            if (isRateLimit) {
-                addLog('warning', `Rate limit en orden ${op.data.order_number}, reintentando en 3s...`);
-                await delay(3000); // Wait 3s
-                try {
-                    await base44.entities.WorkOrder.update(op.id, op.data);
-                    addLog('info', `Orden ${op.data.order_number} recuperada.`);
-                } catch (retryE) {
-                     addLog('error', `Error final actualizando orden ${op.data.order_number}: ${retryE.message}`);
-                     errorCount++;
+        let retries = 0;
+        const maxRetries = 5; // Increased retries
+        let success = false;
+
+        while (!success && retries <= maxRetries) {
+            try {
+                await base44.entities.WorkOrder.update(op.id, op.data);
+                success = true;
+                updatedCount++; // Track success count
+                // Adaptive delay: Start slow (500ms), can go faster if we implemented token bucket, 
+                // but for safety staying at 500ms is best for stability.
+                await delay(500); 
+            } catch (e) {
+                const isRateLimit = e.message && (e.message.toLowerCase().includes("rate limit") || e.message.includes("429"));
+                
+                if (isRateLimit && retries < maxRetries) {
+                    retries++;
+                    // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+                    const waitTime = Math.pow(2, retries) * 1000; 
+                    addLog('warning', `Límite de velocidad en orden ${op.data.order_number}. Reintento ${retries}/${maxRetries} en ${waitTime/1000}s...`);
+                    await delay(waitTime);
+                } else {
+                    // Non-recoverable error or max retries exceeded
+                    const errorMsg = isRateLimit ? "Límite de velocidad persistente" : e.message;
+                    addLog('error', `Error actualizando orden ${op.data.order_number}: ${errorMsg}`);
+                    errorCount++;
+                    break; // Stop retrying this item
                 }
-            } else {
-                addLog('error', `Error actualizando orden ${op.data.order_number}: ${e.message}`);
-                errorCount++;
             }
         }
       }
