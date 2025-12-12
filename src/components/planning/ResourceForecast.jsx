@@ -5,7 +5,7 @@ import { Users, TrendingUp, TrendingDown } from "lucide-react";
 import { addDays, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function ResourceForecast({ orders, processTypes, employees, selectedTeam, dateRange }) {
+export default function ResourceForecast({ orders, processes, machineProcesses, employees, selectedTeam, dateRange }) {
   // Generate days array
   const days = useMemo(() => {
     const start = new Date(dateRange.start);
@@ -30,9 +30,18 @@ export default function ResourceForecast({ orders, processTypes, employees, sele
         const end = new Date(order.committed_delivery_date);
         
         if (day >= start && day <= end) {
-          const process = processTypes.find(p => p.id === order.process_type_id);
-          if (process) {
-            demand += (process.operators_required || 1);
+          // Try to find specific machine-process assignment first
+          const mp = machineProcesses.find(
+            item => item.machine_id === order.machine_id && item.process_id === order.process_id
+          );
+          
+          if (mp && mp.operadores_requeridos) {
+            demand += mp.operadores_requeridos;
+          } else {
+             const process = processes.find(p => p.id === order.process_id);
+             if (process) {
+               demand += (process.operadores_requeridos || 1);
+             }
           }
         }
       });

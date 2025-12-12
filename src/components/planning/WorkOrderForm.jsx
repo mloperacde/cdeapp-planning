@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
-export default function WorkOrderForm({ open, onClose, orderToEdit, machines, processTypes }) {
+export default function WorkOrderForm({ open, onClose, orderToEdit, machines, processes, machineProcesses }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     order_number: "",
     machine_id: "",
-    process_type_id: "",
+    process_id: "",
     priority: "3",
     start_date: "",
     committed_delivery_date: "",
@@ -27,7 +28,7 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
       setFormData({
         order_number: orderToEdit.order_number,
         machine_id: orderToEdit.machine_id,
-        process_type_id: orderToEdit.process_type_id,
+        process_id: orderToEdit.process_id,
         priority: orderToEdit.priority?.toString() || "3",
         start_date: orderToEdit.start_date,
         committed_delivery_date: orderToEdit.committed_delivery_date,
@@ -38,7 +39,7 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
       setFormData({
         order_number: `WO-${new Date().getTime().toString().slice(-6)}`,
         machine_id: "",
-        process_type_id: "",
+        process_id: "",
         priority: "3",
         start_date: new Date().toISOString().split('T')[0],
         committed_delivery_date: "",
@@ -47,6 +48,40 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
       });
     }
   }, [orderToEdit, open]);
+
+  // Derived state for filtered lists
+  const availableProcesses = useMemo(() => {
+    if (!formData.machine_id) return processes;
+    const allowedProcessIds = machineProcesses
+      .filter(mp => mp.machine_id === formData.machine_id && mp.activo)
+      .map(mp => mp.process_id);
+    return processes.filter(p => allowedProcessIds.includes(p.id));
+  }, [processes, machineProcesses, formData.machine_id]);
+
+  const availableMachines = useMemo(() => {
+    if (!formData.process_id) return machines;
+    const allowedMachineIds = machineProcesses
+      .filter(mp => mp.process_id === formData.process_id && mp.activo)
+      .map(mp => mp.machine_id);
+    return machines.filter(m => allowedMachineIds.includes(m.id));
+  }, [machines, machineProcesses, formData.process_id]);
+
+  // Helper to get operators count for current selection
+  const getOperatorsRequired = () => {
+    if (formData.machine_id && formData.process_id) {
+      const mp = machineProcesses.find(
+        item => item.machine_id === formData.machine_id && item.process_id === formData.process_id
+      );
+      if (mp) return mp.operadores_requeridos;
+    }
+    if (formData.process_id) {
+      const p = processes.find(item => item.id === formData.process_id);
+      if (p) return p.operadores_requeridos;
+    }
+    return null;
+  };
+
+  const currentOperators = getOperatorsRequired();
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
@@ -125,31 +160,45 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Máquina *</Label>
-              <Select value={formData.machine_id} onValueChange={(val) => setFormData({...formData, machine_id: val})}>
+              <Select 
+                value={formData.machine_id} 
+                onValueChange={(val) => setFormData(prev => ({...prev, machine_id: val}))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar máquina" />
                 </SelectTrigger>
                 <SelectContent>
-                  {machines.map(m => (
+                  {availableMachines.map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Tipo de Proceso *</Label>
-              <Select value={formData.process_type_id} onValueChange={(val) => setFormData({...formData, process_type_id: val})}>
+              <Label>Proceso *</Label>
+              <Select 
+                value={formData.process_id} 
+                onValueChange={(val) => setFormData(prev => ({...prev, process_id: val}))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar proceso" />
                 </SelectTrigger>
                 <SelectContent>
-                  {processTypes.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name} ({p.operators_required} op)</SelectItem>
+                  {availableProcesses.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {currentOperators && (
+             <div className="flex justify-end">
+               <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  Requiere: {currentOperators} operador(es)
+               </Badge>
+             </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -38,9 +38,14 @@ export default function ProductionPlanningPage() {
     queryFn: () => base44.entities.WorkOrder.list(),
   });
 
-  const { data: processTypes = [] } = useQuery({
-    queryKey: ['processTypes'],
-    queryFn: () => base44.entities.ProcessType.list(),
+  const { data: processes = [] } = useQuery({
+    queryKey: ['processes'],
+    queryFn: () => base44.entities.Process.list(),
+  });
+
+  const { data: machineProcesses = [] } = useQuery({
+    queryKey: ['machineProcesses'],
+    queryFn: () => base44.entities.MachineProcess.list(),
   });
 
   const { data: employees = [] } = useQuery({
@@ -179,7 +184,7 @@ export default function ProductionPlanningPage() {
           <PlanningGantt 
             orders={filteredOrders} 
             machines={machines}
-            processTypes={processTypes}
+            processes={processes}
             dateRange={dateRange}
             onEditOrder={handleEditOrder}
           />
@@ -189,7 +194,8 @@ export default function ProductionPlanningPage() {
         <div className="min-h-0 flex flex-col">
           <ResourceForecast 
             orders={filteredOrders}
-            processTypes={processTypes}
+            processes={processes}
+            machineProcesses={machineProcesses}
             employees={employees}
             selectedTeam={selectedTeam}
             dateRange={dateRange}
@@ -202,7 +208,8 @@ export default function ProductionPlanningPage() {
         onClose={() => setIsFormOpen(false)}
         orderToEdit={editingOrder}
         machines={machines}
-        processTypes={processTypes}
+        processes={processes}
+        machineProcesses={machineProcesses}
       />
     </div>
   );

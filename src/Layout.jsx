@@ -296,7 +296,6 @@ export default function Layout({ children, currentPageName }) {
                             isParentActive([
                               createPageUrl("Machines"),
                               createPageUrl("MachineManagement"),
-                              createPageUrl("ProcessConfiguration"),
                               createPageUrl("MaintenanceTracking")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
@@ -322,8 +321,19 @@ export default function Layout({ children, currentPageName }) {
                               <Cog className="w-4 h-4" />
                               Gestión de Máquinas
                             </Link>
-                          </SidebarMenuButton>
-                        </div>
+                            </SidebarMenuButton>
+                            <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("MaintenanceTracking")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                            >
+                            <Link to={createPageUrl("MaintenanceTracking")} className="flex items-center gap-2 px-3 py-2">
+                              <Wrench className="w-4 h-4" />
+                              Mantenimiento
+                            </Link>
+                            </SidebarMenuButton>
+                            </div>
                       </CollapsibleContent>
                     </SidebarMenuItem>
                   </Collapsible>
@@ -456,7 +466,7 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("ProductionPlanning"),
-                              createPageUrl("ProcessTypes")
+                              createPageUrl("ProcessConfiguration")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
                         >
@@ -485,12 +495,12 @@ export default function Layout({ children, currentPageName }) {
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ProcessTypes")) ? 'bg-blue-50 text-blue-700' : ''
+                              isActive(createPageUrl("ProcessConfiguration")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
                           >
-                            <Link to={createPageUrl("ProcessTypes")} className="flex items-center gap-2 px-3 py-2">
+                            <Link to={createPageUrl("ProcessConfiguration")} className="flex items-center gap-2 px-3 py-2">
                               <Settings2 className="w-4 h-4" />
-                              Tipos de Proceso
+                              Configurar Procesos
                             </Link>
                           </SidebarMenuButton>
                         </div>

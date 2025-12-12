@@ -54,7 +54,6 @@ import MobileProfile from './pages/MobileProfile';
 import MobileNotifications from './pages/MobileNotifications';
 import Employees from './pages/Employees';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
-import ProcessTypes from './pages/ProcessTypes';
 import ProductionPlanning from './pages/ProductionPlanning';
 import __Layout from './Layout.jsx';
 
@@ -116,7 +115,6 @@ export const PAGES = {
     "MobileNotifications": MobileNotifications,
     "Employees": Employees,
     "EmployeesShiftManager": EmployeesShiftManager,
-    "ProcessTypes": ProcessTypes,
     "ProductionPlanning": ProductionPlanning,
 }
 

@@ -6,7 +6,7 @@ import { addDays, format, differenceInDays, isSameDay, parseISO } from "date-fns
 import { es } from "date-fns/locale";
 import { AlertCircle, CalendarClock } from "lucide-react";
 
-export default function PlanningGantt({ orders, machines, processTypes, dateRange, onEditOrder }) {
+export default function PlanningGantt({ orders, machines, processes, dateRange, onEditOrder }) {
   // Generate days array for the header
   const days = useMemo(() => {
     const start = new Date(dateRange.start);
@@ -99,7 +99,7 @@ export default function PlanningGantt({ orders, machines, processTypes, dateRang
                   // Skip if completely outside or invalid duration
                   if (duration <= 0) return null;
 
-                  const processType = processTypes.find(p => p.id === order.process_type_id);
+                  const process = processes.find(p => p.id === order.process_id);
                   const isLate = new Date(order.committed_delivery_date) < new Date(order.start_date);
 
                   return (
@@ -111,14 +111,14 @@ export default function PlanningGantt({ orders, machines, processTypes, dateRang
                         left: `${startOffset * 128 + 4}px`, // 128px = w-32
                         width: `${duration * 128 - 8}px`,
                       }}
-                      title={`${order.order_number} - ${processType?.name}`}
+                      title={`${order.order_number} - ${process?.nombre}`}
                     >
                       <div className="text-xs font-bold truncate flex items-center gap-1">
                         {order.order_number}
                         {isLate && <AlertCircle className="w-3 h-3 text-yellow-300" />}
                       </div>
                       <div className="text-[10px] opacity-90 truncate">
-                        {processType?.name || 'Proceso desconocido'}
+                        {process?.nombre || 'Proceso desconocido'}
                       </div>
                       <div className="text-[10px] opacity-80 mt-1 flex justify-between">
                         <span>P{order.priority}</span>
