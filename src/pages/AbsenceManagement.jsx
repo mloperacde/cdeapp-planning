@@ -237,7 +237,7 @@ export default function AbsenceManagementPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <AbsenceDashboard absences={filteredAbsences} employees={employees} masterEmployees={masterEmployees} />
               <div className="space-y-6">
-                <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
+                <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} masterEmployees={masterEmployees} />
                 <LongAbsenceAlert employees={employees} absences={filteredAbsences} masterEmployees={masterEmployees} />
               </div>
             </div>
