@@ -12,7 +12,9 @@ import {
   Clock,
   UserX,
   AlertTriangle,
-  Send
+  Send,
+  XCircle,
+  FileQuestion
 } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
@@ -406,13 +408,19 @@ export default function AttendanceAnalyzer() {
                       <div className="flex-1">
                         <div className="font-medium">{incident.employee.nombre}</div>
                         {incident.type === "unregistered_no_absence" && (
-                          <div className="text-red-700 font-bold">⚠️ Sin fichaje ni ausencia (Revisar)</div>
+                          <div className="flex items-center gap-1 text-red-700 font-bold">
+                            <FileQuestion className="w-3 h-3" />
+                            Sin fichaje ni ausencia
+                          </div>
                         )}
                         {incident.type === "absence_no_record" && (
                           <div className="text-red-700">Ausente sin registro</div>
                         )}
                         {incident.type === "presence_during_absence" && (
-                          <div className="text-red-700 font-bold">⛔ Fichaje durante ausencia reportada</div>
+                          <div className="flex items-center gap-1 text-red-700 font-bold">
+                            <XCircle className="w-3 h-3" />
+                            Fichaje durante ausencia reportada
+                          </div>
                         )}
                         {incident.type === "late" && (
                           <div className="text-amber-700">Retraso: {incident.minutes} min</div>
