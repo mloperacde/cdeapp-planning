@@ -43,6 +43,7 @@ import { debounce } from "lodash";
 // Components
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
+import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
 import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
