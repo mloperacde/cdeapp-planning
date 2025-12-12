@@ -24,6 +24,7 @@ import {
   Shield,
   MessageSquare,
   TrendingUp,
+  UserX,
   Calendar as CalendarIcon,
   LayoutDashboard,
 } from "lucide-react";
