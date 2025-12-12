@@ -98,14 +98,23 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   // Consolidado de empleados disponibles vs ausentes
   const availabilityStats = useMemo(() => {
-    const targetList = employees.length > 0 ? employees : masterEmployees;
+    let targetList = employees.length > 0 ? employees : masterEmployees;
+    
+    if (sourceContext === 'shift_manager') {
+      targetList = targetList.filter(e => e.departamento === 'FABRICACION');
+    }
     
     const total = targetList.filter(e => (e.estado_empleado || "Alta") === "Alta").length;
-    const ausentes = activeAbsencesConsolidated.length;
+    
+    const relevantAbsences = activeAbsencesConsolidated.filter(abs => 
+      targetList.some(e => e.id === abs.employee_id)
+    );
+    
+    const ausentes = relevantAbsences.length;
     const disponibles = Math.max(0, total - ausentes);
     
     return { disponibles, ausentes, total };
-  }, [employees, masterEmployees, activeAbsencesConsolidated]);
+  }, [employees, masterEmployees, activeAbsencesConsolidated, sourceContext]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
