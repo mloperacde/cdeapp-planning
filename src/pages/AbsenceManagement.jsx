@@ -41,34 +41,28 @@ import PaidLeaveBalance from "../components/absences/PaidLeaveBalance";
 import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
 import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
-import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
-import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
-import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
-import { debounce } from "lodash";
-import { toast } from 'sonner';
+          <TabsContent value="config">
+            <Card>
+              <CardHeader><CardTitle>Configuración de Ausencias</CardTitle></CardHeader>
+              <CardContent className="space-y-8">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Tipos de Ausencia</h3>
+                  <AbsenceTypeManager />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Días Pendientes y Residuales</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <VacationPendingBalancePanel employees={employees} compact={true} />
+                    <ResidualDaysManager employees={employees} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-import ApprovalFlowManager from "../components/absences/ApprovalFlowManager";
-import RecurringAbsenceMonitor from "../components/absences/RecurringAbsenceMonitor";
-import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
-import { notifySupervisorsAbsenceRequest } from "../components/notifications/NotificationService";
-import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
-import ResidualDaysManager from "../components/absences/ResidualDaysManager";
-import AbsenceForm from "../components/absences/AbsenceForm";
-
-export default function AbsenceManagementPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingAbsence, setEditingAbsence] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTeam, setSelectedTeam] = useState("all");
-  const [selectedDepartment, setSelectedDepartment] = useState("all");
-  const [activeTab, setActiveTab] = useState("list"); 
-  const queryClient = useQueryClient();
-
-  const { data: absences, isLoading } = useQuery({
-    queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio'),
-    initialData: [],
-  });
+          <TabsContent value="reports">
+            <AdvancedReportGenerator />
+          </TabsContent>
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],

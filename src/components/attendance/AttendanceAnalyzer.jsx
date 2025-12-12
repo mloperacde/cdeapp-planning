@@ -62,12 +62,117 @@ export default function AttendanceAnalyzer() {
     },
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
   const createAbsenceMutation = useMutation({
     mutationFn: (data) => base44.entities.Absence.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
     },
   });
+
+  const createIncidentMutation = useMutation({
+    mutationFn: async (incident) => {
+      const result = await base44.entities.AttendanceIncident.create(incident);
+      // Notify HR if high severity
+      if (incident.severity === 'high' || incident.severity === 'critical') {
+        const { notifyAttendanceDiscrepancy } = await import("../notifications/AdvancedNotificationService");
+        await notifyAttendanceDiscrepancy(
+          result.id, 
+          incident.employee_name_ref, // Pass name for notification
+          incident.description, 
+          incident.severity
+        );
+      }
+      return result;
+    },
+    onSuccess: () => {
+      toast.success("Incidencia registrada y notificada a RRHH");
+    },
+    onError: () => toast.error("Error al registrar incidencia")
+  });
+
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [selectedIncident, setSelectedIncident] = useState(null);
+
+  const handleAnalyzeWithAI = async () => {
+    setAnalyzing(true);
+    try {
+      // Prepare data summary for AI
+      const summary = {
+        date: selectedDate,
+        total_expected: analysis.totalExpected,
+        total_incidents: analysis.totalIncidents,
+        incidents_summary: analysis.incidents.map(i => ({
+          type: i.type,
+          employee: i.employee.nombre,
+          department: i.department,
+          severity: i.severity,
+          details: i.message
+        })),
+        department_stats: analysis.byDepartment
+      };
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Analyze the following attendance data for potential patterns or anomalies. 
+        Identify if specific departments have higher rates of lateness or absence. 
+        Suggest potential root causes (e.g., traffic for specific shift start times, team morale).
+        Highlight any recurring issues if visible (assume this is a snapshot).
+        Language: Spanish.
+        Data: ${JSON.stringify(summary)}`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            patterns: { type: "array", items: { type: "string" } },
+            recommendations: { type: "array", items: { type: "string" } },
+            risk_assessment: { type: "string" }
+          }
+        }
+      });
+
+      setAiAnalysis(response);
+      toast.success("Análisis de IA completado");
+    } catch (error) {
+      console.error("AI Analysis failed:", error);
+      toast.error("Error en análisis de IA");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleFlagIncident = (incident) => {
+    setSelectedIncident(incident);
+  };
+
+  const submitIncidentFlag = () => {
+    if (!selectedIncident) return;
+
+    createIncidentMutation.mutate({
+      employee_id: selectedIncident.employee.id,
+      date: selectedDate,
+      type: mapIncidentTypeToEnum(selectedIncident.type),
+      severity: selectedIncident.severity,
+      description: selectedIncident.message,
+      manager_comment: commentText,
+      flagged_by: currentUser?.id,
+      employee_name_ref: selectedIncident.employee.nombre // For notification helper
+    });
+    setSelectedIncident(null);
+    setCommentText("");
+  };
+
+  const mapIncidentTypeToEnum = (type) => {
+    if (type === 'late') return 'late_arrival';
+    if (type === 'early_exit') return 'early_exit';
+    if (type === 'absence_no_record' || type === 'unregistered_no_absence') return 'unreported_absence';
+    if (type === 'presence_during_absence') return 'presence_during_absence';
+    return 'other';
+  };
 
   const getExpectedShift = (employee, date) => {
     if (employee.tipo_turno === "Fijo Mañana") {
@@ -358,17 +463,93 @@ export default function AttendanceAnalyzer() {
             </div>
           </div>
 
-          {analysis.totalIncidents > 0 && (
+          <div className="flex gap-3 mt-4">
             <Button
-              onClick={handleCreateMissingAbsences}
-              className="bg-red-600 hover:bg-red-700 w-full"
+              onClick={handleAnalyzeWithAI}
+              disabled={analyzing}
+              className="flex-1 bg-purple-600 hover:bg-purple-700"
             >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Registrar Ausencias sin Justificar y Notificar a RRHH
+              {analyzing ? (
+                <>Analyzing...</> 
+              ) : (
+                <>
+                  <FileQuestion className="w-4 h-4 mr-2" />
+                  Analizar Patrones con IA
+                </>
+              )}
             </Button>
+            
+            {analysis.totalIncidents > 0 && (
+              <Button
+                onClick={handleCreateMissingAbsences}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Registrar Ausencias (Automático)
+              </Button>
+            )}
+          </div>
+
+          {aiAnalysis && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-4 animate-in fade-in slide-in-from-top-4">
+              <h3 className="font-bold text-purple-900 flex items-center gap-2 mb-2">
+                <FileQuestion className="w-5 h-5" />
+                Insights de IA
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <span className="font-semibold text-purple-800 text-sm">Patrones Detectados:</span>
+                  <ul className="list-disc list-inside text-sm text-purple-700 mt-1">
+                    {aiAnalysis.patterns?.map((p, i) => <li key={i}>{p}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <span className="font-semibold text-purple-800 text-sm">Recomendaciones:</span>
+                  <ul className="list-disc list-inside text-sm text-purple-700 mt-1">
+                    {aiAnalysis.recommendations?.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </div>
+                <div className="text-sm font-medium text-purple-900 bg-purple-100 p-2 rounded">
+                  Evaluación de Riesgo: {aiAnalysis.risk_assessment}
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Flagging Dialog */}
+      {selectedIncident && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>Reportar Incidencia</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="font-medium">{selectedIncident.employee.nombre}</p>
+                <p className="text-sm text-slate-500">{selectedIncident.message}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Comentarios del Manager</Label>
+                <textarea
+                  className="w-full p-2 border rounded-md"
+                  rows={3}
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Añadir contexto o justificación..."
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSelectedIncident(null)}>Cancelar</Button>
+                <Button onClick={submitIncidentFlag} className="bg-red-600 text-white">
+                  Reportar a RRHH
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Por Departamento */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -458,7 +639,17 @@ export default function AttendanceAnalyzer() {
                       </div>
                     </div>
                   </div>
-                  {getSeverityBadge(incident.severity)}
+                  <div className="flex items-center gap-2">
+                    {getSeverityBadge(incident.severity)}
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleFlagIncident(incident)}
+                      className="ml-2 text-xs h-7"
+                    >
+                      Reportar
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

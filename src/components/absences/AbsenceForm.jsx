@@ -168,17 +168,29 @@ export default function AbsenceForm({
     setIsGeneratingReasons(true);
     try {
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Generate 5 common and specific reasons for an employee absence of type "${selectedType.nombre}". Return them as a simple JSON array of strings. Language: Spanish.`,
+        prompt: `Generate 5 common and specific reasons for an employee absence of type "${selectedType.nombre}". 
+        Also, suggest a short standard note for administrative records for each reason.
+        Return as JSON array of objects with 'reason' and 'suggested_note'. Language: Spanish.`,
         response_json_schema: {
           type: "object",
           properties: {
-            reasons: { type: "array", items: { type: "string" } }
+            suggestions: { 
+              type: "array", 
+              items: { 
+                type: "object", 
+                properties: {
+                  reason: { type: "string" },
+                  suggested_note: { type: "string" }
+                }
+              } 
+            }
           }
         }
       });
       
-      if (response && response.reasons && Array.isArray(response.reasons)) {
-        setAiReasons(response.reasons);
+      if (response && response.suggestions && Array.isArray(response.suggestions)) {
+        setAiReasons(response.suggestions.map(s => s.reason));
+        // Optionally store notes map if needed, but for now just reasons for dropdown
         toast.success("Motivos sugeridos por IA generados");
       }
     } catch (error) {

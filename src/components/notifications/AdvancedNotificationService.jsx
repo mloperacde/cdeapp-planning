@@ -332,6 +332,40 @@ export const checkAndNotifyEvents = async () => {
   }
 };
 
+/**
+ * Notificar discrepancia de asistencia (Alta Prioridad)
+ */
+export const notifyAttendanceDiscrepancy = async (incidentId, employeeName, issueType, severity) => {
+  try {
+    // Notify HR admins
+    const employees = await base44.entities.Employee.list();
+    const hrAdmins = employees.filter(e => 
+      e.departamento === 'RRHH' || e.role === 'admin'
+    );
+
+    for (const admin of hrAdmins) {
+      await createAdvancedNotification({
+        destinatarioId: admin.id,
+        tipo: "alerta",
+        titulo: "🚨 Discrepancia de Asistencia Detectada",
+        mensaje: `Se ha detectado una discrepancia de severidad ${severity} para ${employeeName}: ${issueType}`,
+        prioridad: "urgente",
+        referenciaTipo: "AttendanceIncident",
+        referenciaId: incidentId,
+        accionUrl: "/attendance-management",
+        datosAdicionales: {
+          employee_name: employeeName,
+          severity,
+          issue_type: issueType,
+          notification_type: "attendance_discrepancy"
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error notifying attendance discrepancy:", error);
+  }
+};
+
 export default {
   createAdvancedNotification,
   notifyAbsenceDecisionAdvanced,
@@ -342,5 +376,6 @@ export default {
   notifyTrainingAssignment,
   notifyUrgentMaintenance,
   notifyAbsenceRequestRealtime,
+  notifyAttendanceDiscrepancy,
   checkAndNotifyEvents
 };
