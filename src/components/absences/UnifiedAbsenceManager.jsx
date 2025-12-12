@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,6 +37,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
     employee_id: "",
     fecha_inicio: "",
     fecha_fin: "",
+    fecha_fin_desconocida: false,
     motivo: "",
     tipo: "",
     notas: "",
@@ -165,6 +167,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
       employee_id: absence.employee_id,
       fecha_inicio: absence.fecha_inicio?.substring(0, 16) || "",
       fecha_fin: absence.fecha_fin?.substring(0, 16) || "",
+      fecha_fin_desconocida: absence.fecha_fin_desconocida || false,
       motivo: absence.motivo || "",
       tipo: absence.tipo || "",
       notas: absence.notas || "",
@@ -179,6 +182,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
       employee_id: "",
       fecha_inicio: "",
       fecha_fin: "",
+      fecha_fin_desconocida: false,
       motivo: "",
       tipo: "",
       notas: "",
@@ -206,9 +210,12 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
         getEmployeeName(abs.employee_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
         abs.motivo?.toLowerCase().includes(searchTerm.toLowerCase());
       
+      const isShiftManager = sourceContext === 'shift_manager';
+      if (isShiftManager && employee?.departamento !== 'FABRICACION') return false;
+
       return matchesSearch;
     });
-  }, [activeAbsencesConsolidated, filters, employees, masterEmployees]);
+  }, [activeAbsencesConsolidated, filters, employees, masterEmployees, sourceContext]);
 
   const handleSummarizeNotes = async (absenceId, notes) => {
     if (!notes || notes.length < 10) return;
@@ -455,13 +462,31 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Fecha y Hora Fin *</Label>
+                  <Label>Fecha y Hora Fin {formData.fecha_fin_desconocida ? '(Desconocida)' : '*'}</Label>
                   <Input
                     type="datetime-local"
                     value={formData.fecha_fin}
                     onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
-                    required
+                    required={!formData.fecha_fin_desconocida}
+                    disabled={formData.fecha_fin_desconocida}
                   />
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Checkbox 
+                      id="unknown_end" 
+                      checked={formData.fecha_fin_desconocida}
+                      onCheckedChange={(checked) => setFormData({ 
+                        ...formData, 
+                        fecha_fin_desconocida: checked,
+                        fecha_fin: checked ? "" : formData.fecha_fin
+                      })}
+                    />
+                    <label
+                      htmlFor="unknown_end"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Fecha fin desconocida
+                    </label>
+                  </div>
                 </div>
               </div>
 

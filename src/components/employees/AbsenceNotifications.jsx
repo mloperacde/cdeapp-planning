@@ -19,12 +19,12 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
 
       const absenceType = absenceTypes?.find(t => t.nombre === absence.tipo);
       const startDate = new Date(absence.fecha_inicio);
-      const endDate = new Date(absence.fecha_fin);
+      const endDate = absence.fecha_fin_desconocida ? now : new Date(absence.fecha_fin);
       const daysUntilStart = differenceInDays(startDate, now);
-      const duration = differenceInDays(endDate, startDate) + 1;
+      const duration = differenceInDays(endDate, startDate) + (absence.fecha_fin_desconocida ? 0 : 1);
 
       // Ausencia activa
-      if (now >= startDate && now <= endDate) {
+      if (now >= startDate && (absence.fecha_fin_desconocida || now <= endDate)) {
         alerts.push({
           id: `active-${absence.id}`,
           type: 'active',
@@ -32,7 +32,7 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
           employee: employee.nombre,
           absenceType: absence.tipo,
           message: `${employee.nombre} está actualmente ausente`,
-          details: `${absence.tipo} - ${format(startDate, 'dd/MM/yyyy')} a ${format(endDate, 'dd/MM/yyyy')}`,
+          details: `${absence.tipo} - ${format(startDate, 'dd/MM/yyyy')} a ${absence.fecha_fin_desconocida ? 'Actualidad' : format(endDate, 'dd/MM/yyyy')}`,
           duration: `${duration} días`,
           isCritical: absenceType?.es_critica || false,
           absenceId: absence.id,
@@ -60,7 +60,7 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
       }
 
       // Baja médica prolongada (más de 15 días)
-      if (absence.tipo === "Baja médica" && duration > 15 && now >= startDate && now <= endDate) {
+      if (absence.tipo === "Baja médica" && duration > 15 && now >= startDate && (absence.fecha_fin_desconocida || now <= endDate)) {
         alerts.push({
           id: `prolonged-${absence.id}`,
           type: 'prolonged',
@@ -76,7 +76,7 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
       }
 
       // Ausencia injustificada
-      if (absence.tipo === "Ausencia injustificada" && now >= startDate && now <= endDate) {
+      if (absence.tipo === "Ausencia injustificada" && now >= startDate && (absence.fecha_fin_desconocida || now <= endDate)) {
         alerts.push({
           id: `unjustified-${absence.id}`,
           type: 'unjustified',
