@@ -60,6 +60,11 @@ export default function ShiftAbsenceReportPage() {
     queryFn: () => base44.entities.Employee.list('nombre'),
   });
 
+  const { data: masterEmployees = [] } = useQuery({
+    queryKey: ['employeeMasterDatabase'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+  });
+
   const { data: absences = [] } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio'),
@@ -149,7 +154,8 @@ export default function ShiftAbsenceReportPage() {
   }, [absences]);
 
   const getEmployeeName = (employeeId) => {
-    const emp = employees.find(e => e.id === employeeId);
+    const emp = employees.find(e => e.id === employeeId) || 
+                masterEmployees.find(e => e.id === employeeId);
     return emp?.nombre || "Empleado desconocido";
   };
 
@@ -265,7 +271,8 @@ export default function ShiftAbsenceReportPage() {
                   </TableHeader>
                   <TableBody>
                     {activeAbsencesToday.map((absence) => {
-                      const employee = employees.find(e => e.id === absence.employee_id);
+                      const employee = employees.find(e => e.id === absence.employee_id) ||
+                                     masterEmployees.find(e => e.id === absence.employee_id);
                       return (
                         <TableRow key={absence.id} className="bg-red-50">
                           <TableCell>
@@ -277,7 +284,7 @@ export default function ShiftAbsenceReportPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{employee?.departamento}</Badge>
+                            <Badge variant="outline">{employee?.departamento || "-"}</Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">{absence.tipo}</Badge>
@@ -308,12 +315,13 @@ export default function ShiftAbsenceReportPage() {
             <CardContent className="p-6">
               <div className="space-y-3">
                 {todayAbsences.slice(0, 5).map((absence) => {
-                  const employee = employees.find(e => e.id === absence.employee_id);
+                  const employee = employees.find(e => e.id === absence.employee_id) ||
+                                 masterEmployees.find(e => e.id === absence.employee_id);
                   return (
                     <div key={absence.id} className="p-3 border rounded-lg bg-slate-50">
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-semibold text-slate-900">{employee?.nombre}</div>
+                          <div className="font-semibold text-slate-900">{employee?.nombre || "Desconocido"}</div>
                           <div className="text-sm text-slate-600 mt-1">
                             {absence.tipo} - {absence.motivo}
                           </div>
@@ -353,7 +361,9 @@ export default function ShiftAbsenceReportPage() {
             </div>
 
             <AbsenceForm
-              employees={employees}
+              employees={[...employees, ...masterEmployees].filter((emp, idx, self) => 
+                self.findIndex(e => e.id === emp.id) === idx
+              )}
               absenceTypes={absenceTypes}
               onSubmit={handleSubmit}
               onCancel={handleClose}
