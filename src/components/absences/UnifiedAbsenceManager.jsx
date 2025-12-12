@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { UserX, Plus, Edit, Trash2, Search, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { UserX, Plus, Edit, Trash2, Search, CheckCircle2, AlertCircle, Clock, FileText, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -206,11 +206,33 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
         getEmployeeName(abs.employee_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
         abs.motivo?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Add more filters if needed based on filters state (e.g., department)
-      
       return matchesSearch;
     });
   }, [activeAbsencesConsolidated, filters, employees, masterEmployees]);
+
+  const handleSummarizeNotes = async (absenceId, notes) => {
+    if (!notes || notes.length < 10) return;
+    
+    toast.info("Generando resumen con IA...");
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Summarize the following absence notes into a very short, concise sentence (max 10 words). Language: Spanish. Notes: "${notes}"`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            summary: { type: "string" }
+          }
+        }
+      });
+      
+      if (response && response.summary) {
+        toast.success("Resumen: " + response.summary, { duration: 5000 });
+      }
+    } catch (error) {
+      console.error("Error summarizing:", error);
+      toast.error("Error al resumir");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -321,6 +343,17 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          {abs.notas && abs.notas.length > 20 && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleSummarizeNotes(abs.id, abs.notas)}
+                              title="Resumir notas con IA"
+                              className="text-purple-600 hover:bg-purple-50"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(abs)}>
                             <Edit className="w-4 h-4" />
                           </Button>

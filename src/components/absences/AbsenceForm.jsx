@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Trash2, Infinity } from "lucide-react";
+import { Upload, Trash2, Infinity, Sparkles, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
@@ -95,6 +95,8 @@ export default function AbsenceForm({
   const [unknownEndDate, setUnknownEndDate] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isGeneratingReasons, setIsGeneratingReasons] = useState(false);
+  const [aiReasons, setAiReasons] = useState([]);
 
   useEffect(() => {
     if (initialData) {
@@ -142,6 +144,8 @@ export default function AbsenceForm({
   }, [employees, searchTerm]);
 
   const suggestedReasons = React.useMemo(() => {
+    if (aiReasons.length > 0) return aiReasons; // Prefer AI reasons if available
+
     const selectedType = absenceTypes.find(at => at.id === formData.absence_type_id);
     if (!selectedType) return [];
     
@@ -152,7 +156,38 @@ export default function AbsenceForm({
       }
     }
     return [];
-  }, [formData.absence_type_id, absenceTypes]);
+  }, [formData.absence_type_id, absenceTypes, aiReasons]);
+
+  const handleGenerateReasons = async () => {
+    const selectedType = absenceTypes.find(at => at.id === formData.absence_type_id);
+    if (!selectedType) {
+      toast.error("Seleccione un tipo de ausencia primero");
+      return;
+    }
+
+    setIsGeneratingReasons(true);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Generate 5 common and specific reasons for an employee absence of type "${selectedType.nombre}". Return them as a simple JSON array of strings. Language: Spanish.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            reasons: { type: "array", items: { type: "string" } }
+          }
+        }
+      });
+      
+      if (response && response.reasons && Array.isArray(response.reasons)) {
+        setAiReasons(response.reasons);
+        toast.success("Motivos sugeridos por IA generados");
+      }
+    } catch (error) {
+      console.error("Error generating reasons:", error);
+      toast.error("Error al generar sugerencias");
+    } finally {
+      setIsGeneratingReasons(false);
+    }
+  };
 
   const handleAbsenceTypeChange = (absenceTypeId) => {
     const selectedType = absenceTypes.find(at => at.id === absenceTypeId);
@@ -284,7 +319,20 @@ export default function AbsenceForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="motivo">Motivo *</Label>
+          <div className="flex justify-between items-center">
+            <Label htmlFor="motivo">Motivo *</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+              onClick={handleGenerateReasons}
+              disabled={isGeneratingReasons || !formData.absence_type_id}
+            >
+              {isGeneratingReasons ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1" />}
+              Sugerir con IA
+            </Button>
+          </div>
           {suggestedReasons.length > 0 ? (
             <Select
               value={formData.motivo}

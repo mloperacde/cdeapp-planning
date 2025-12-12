@@ -186,8 +186,31 @@ export default function AttendanceAnalyzer() {
               message: `Ausente sin registro de ausencia`,
               severity: "high"
             });
+          } else {
+             // Reconciliation: Recorded as "Ausencia" AND has reported Absence -> Good (Matched)
           }
-        } else if (record.estado === "Retraso") {
+        } else if (record.estado === "Presente" || record.estado === "A tiempo" || record.estado === "Retraso" || record.estado === "Salida anticipada") {
+           // Reconciliation: Recorded as Present (in some form)
+           const hasAbsence = hasAbsenceForDate(emp.id, selectedDate);
+           if (hasAbsence) {
+              // Flag discrepancy: Reported Absence BUT Presence Data Exists
+              byDepartment[dept].incidents.push({
+                type: "presence_during_absence",
+                employee: emp,
+                severity: "high"
+              });
+
+              incidents.push({
+                type: "presence_during_absence",
+                employee: emp,
+                department: dept,
+                message: `Fichaje detectado durante ausencia reportada`,
+                severity: "high"
+              });
+           }
+        }
+
+        if (record.estado === "Retraso") {
           byDepartment[dept].present++;
           byDepartment[dept].late++;
           byDepartment[dept].incidents.push({
@@ -383,10 +406,13 @@ export default function AttendanceAnalyzer() {
                       <div className="flex-1">
                         <div className="font-medium">{incident.employee.nombre}</div>
                         {incident.type === "unregistered_no_absence" && (
-                          <div className="text-red-700">Sin fichaje ni ausencia</div>
+                          <div className="text-red-700 font-bold">⚠️ Sin fichaje ni ausencia (Revisar)</div>
                         )}
                         {incident.type === "absence_no_record" && (
                           <div className="text-red-700">Ausente sin registro</div>
+                        )}
+                        {incident.type === "presence_during_absence" && (
+                          <div className="text-red-700 font-bold">⛔ Fichaje durante ausencia reportada</div>
                         )}
                         {incident.type === "late" && (
                           <div className="text-amber-700">Retraso: {incident.minutes} min</div>
