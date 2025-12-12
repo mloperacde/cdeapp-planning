@@ -135,7 +135,10 @@ export default function DashboardPage() {
     const nextWeek = new Date(today);
     nextWeek.setDate(today.getDate() + 7);
 
-    return employees.filter(emp => {
+    // Filter only active employees
+    const activeEmployees = employees.filter(e => e.estado_empleado === 'Alta');
+
+    return activeEmployees.filter(emp => {
       if (!emp?.fecha_nacimiento) return false;
       const birthDate = new Date(emp.fecha_nacimiento);
       const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
@@ -369,9 +372,8 @@ export default function DashboardPage() {
         );
 
       case 'team_summary':
-        const fabricacionEmployees = Array.isArray(employees) 
-          ? employees.filter(e => e?.departamento === "FABRICACION") 
-          : [];
+        const activeEmployees = Array.isArray(employees) ? employees.filter(e => e.estado_empleado === 'Alta') : [];
+        const fabricacionEmployees = activeEmployees.filter(e => e?.departamento === "FABRICACION");
         const availableFabricacion = fabricacionEmployees.filter(e => e?.disponibilidad === "Disponible").length;
         
         return (
@@ -387,13 +389,13 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
                   <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">Total Empleados</span>
                   <Badge className="bg-indigo-600 text-white text-lg px-3">
-                    {employees.length}
+                    {activeEmployees.length}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <span className="text-sm font-medium text-green-900 dark:text-green-100">Disponibles</span>
                   <Badge className="bg-green-600 text-white text-lg px-3">
-                    {Array.isArray(employees) ? employees.filter(e => e?.disponibilidad === "Disponible").length : 0}
+                    {activeEmployees.filter(e => e?.disponibilidad === "Disponible").length}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">

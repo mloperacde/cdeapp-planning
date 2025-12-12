@@ -39,8 +39,8 @@ export default function ShiftManagersPage() {
     queryKey: ['employees'],
     queryFn: async () => {
       const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
-      // Filtro estricto para Jefes de Turno: solo FABRICACION
-      return all.filter(e => e.departamento === 'FABRICACION');
+      // Filtro estricto para Jefes de Turno: solo FABRICACION y Activos
+      return all.filter(e => e.departamento === 'FABRICACION' && e.estado_empleado === 'Alta');
     },
   });
 

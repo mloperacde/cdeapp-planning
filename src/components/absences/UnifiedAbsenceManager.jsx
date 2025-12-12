@@ -98,16 +98,21 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   // Consolidado de empleados disponibles vs ausentes
   const availabilityStats = useMemo(() => {
+    // Base list
     let targetList = employees.length > 0 ? employees : masterEmployees;
     
+    // Filter by context
     if (sourceContext === 'shift_manager') {
       targetList = targetList.filter(e => e.departamento === 'FABRICACION');
     }
+
+    // Filter ONLY ACTIVE employees for counters
+    const activeEmployees = targetList.filter(e => (e.estado_empleado || "Alta") === "Alta");
     
-    const total = targetList.filter(e => (e.estado_empleado || "Alta") === "Alta").length;
+    const total = activeEmployees.length;
     
     const relevantAbsences = activeAbsencesConsolidated.filter(abs => 
-      targetList.some(e => e.id === abs.employee_id)
+      activeEmployees.some(e => e.id === abs.employee_id)
     );
     
     const ausentes = relevantAbsences.length;
