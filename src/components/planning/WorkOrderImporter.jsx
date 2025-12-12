@@ -108,14 +108,15 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
               continue;
             }
 
-            // 2. Process Mapping
-            const processName = getValue(rowParts, 'Tipo');
-            const process = processes.find(p => p.nombre.toLowerCase() === processName.toLowerCase());
-            if (!process) {
-              addLog('warning', `Fila ${i}: Tipo de proceso '${processName}' no encontrado. Orden ${orderNumber} omitida.`);
-              errorCount++;
-              continue;
-            }
+            // 2. Process Mapping (IGNORED per user request)
+            const process = null; 
+            // const processName = getValue(rowParts, 'Tipo');
+            // const process = processes.find(p => p.nombre.toLowerCase() === processName.toLowerCase());
+            // if (!process) {
+            //   addLog('warning', `Fila ${i}: Tipo de proceso '${processName}' no encontrado. Orden ${orderNumber} omitida.`);
+            //   errorCount++;
+            //   continue;
+            // }
 
             // 3. Data Mapping & Transformation
             const priorityStr = getValue(rowParts, 'Pry');
@@ -151,7 +152,7 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
             const payload = {
               order_number: orderNumber,
               machine_id: machine.id,
-              process_id: process.id,
+              process_id: null, // Process is now optional and configured later
               priority: Math.min(Math.max(priority, 1), 5), // Clamp 1-5
               status: status,
               committed_delivery_date: committedDeliveryDate,
