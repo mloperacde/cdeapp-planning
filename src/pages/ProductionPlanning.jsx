@@ -259,6 +259,7 @@ export default function ProductionPlanningPage() {
         processes={processes}
         machineProcesses={machineProcesses}
         onConfirm={handleScheduleConfirm}
+        holidays={holidays}
       />
     </div>
   );
