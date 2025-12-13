@@ -76,7 +76,18 @@ export default function AbsenceManagementPage() {
            (currentUser?.puesto?.toLowerCase().includes('jefe') || currentUser?.puesto?.toLowerCase().includes('shift'));
   }, [currentUser]);
 
-  const [activeTab, setActiveTab] = useState(isShiftManager ? "dashboard" : "dashboard");
+  // Handle initial tab from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get('tab');
+  const [activeTab, setActiveTab] = useState(initialTab || (isShiftManager ? "dashboard" : "dashboard"));
+
+  // Update URL when tab changes
+  const handleTabChange = (value) => {
+    setActiveTab(value);
+    const url = new URL(window.location);
+    url.searchParams.set('tab', value);
+    window.history.pushState({}, '', url);
+  };
 
   // Load Data
   const { data: absences = [], isLoading } = useQuery({
@@ -192,7 +203,7 @@ export default function AbsenceManagementPage() {
           {/* Button moved to UnifiedAbsenceManager inside list tab */}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-6 h-auto">
             <TabsTrigger value="dashboard" className="py-2"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
             <TabsTrigger value="list" className="py-2"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
@@ -248,11 +259,22 @@ export default function AbsenceManagementPage() {
           </TabsContent>
 
           <TabsContent value="approval">
-            <AbsenceApprovalPanel absences={absences} employees={employees} absenceTypes={absenceTypes} currentUser={currentUser} />
+            <AbsenceApprovalPanel 
+              absences={absences} 
+              employees={employees} 
+              masterEmployees={masterEmployees}
+              absenceTypes={absenceTypes} 
+              currentUser={currentUser} 
+            />
           </TabsContent>
 
           <TabsContent value="calendar">
-            <AbsenceCalendar absences={absences} employees={employees} absenceTypes={absenceTypes} />
+            <AbsenceCalendar 
+              absences={absences} 
+              employees={employees} 
+              masterEmployees={masterEmployees}
+              absenceTypes={absenceTypes} 
+            />
           </TabsContent>
 
           <TabsContent value="analysis">
