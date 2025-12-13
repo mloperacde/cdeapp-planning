@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { notifyAbsenceDecisionAdvanced } from "../notifications/AdvancedNotificationService";
 import PayrollExportButton from "./PayrollExportButton";
 
-export default function AbsenceApprovalPanel({ absences, employees, absenceTypes, currentUser }) {
+export default function AbsenceApprovalPanel({ absences, employees, masterEmployees = [], absenceTypes, currentUser }) {
   const [expandedId, setExpandedId] = useState(null);
   const [comentario, setComentario] = useState("");
   const queryClient = useQueryClient();
@@ -68,7 +68,8 @@ export default function AbsenceApprovalPanel({ absences, employees, absenceTypes
   };
 
   const getEmployeeName = (employeeId) => {
-    return employees.find(e => e.id === employeeId)?.nombre || "Desconocido";
+    const emp = employees.find(e => e.id === employeeId) || masterEmployees.find(e => e.id === employeeId);
+    return emp?.nombre || "Desconocido";
   };
 
   const getTypeName = (typeId) => {
