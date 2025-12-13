@@ -69,15 +69,15 @@ export default function ShiftManagersPage() {
     queryFn: () => base44.entities.Absence.list(),
   });
 
-  // Active absences today - SOLO de empleados en equipos
+  // Active absences today
   const activeAbsencesToday = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     
-    const employeesInTeams = employees.filter(e => e.equipo);
-    
+    // We use the 'employees' list which is already filtered for Fabricacion & Alta
     return absences.filter(abs => {
-      const employee = employeesInTeams.find(e => e.id === abs.employee_id);
+      // Check if absence belongs to one of our relevant employees
+      const employee = employees.find(e => e.id === abs.employee_id);
       if (!employee) return false;
       
       const start = new Date(abs.fecha_inicio);
