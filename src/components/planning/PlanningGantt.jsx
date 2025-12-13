@@ -63,9 +63,9 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
-    // We only handle dropping onto a Timeline Day (droppableId format: "timeline-machineId-date")
-    if (destination.droppableId.startsWith("timeline-")) {
-       const [, machineId, dateStr] = destination.droppableId.split("|"); // using pipe as separator to avoid issues
+    // We only handle dropping onto a Timeline Day (droppableId format: "timeline|machineId|date")
+    if (destination.droppableId.startsWith("timeline|")) {
+       const [, machineId, dateStr] = destination.droppableId.split("|");
        
        // Find order
        let order = null;
