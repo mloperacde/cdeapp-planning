@@ -24,6 +24,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import AdvancedSearch from "../common/AdvancedSearch";
 import { createAbsence, updateAbsence, deleteAbsence } from "./AbsenceOperations";
+import AbsenceForm from "./AbsenceForm";
 
 const EMPTY_ARRAY = [];
 
@@ -33,15 +34,7 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
   const [filters, setFilters] = useState({});
   const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
-    employee_id: "",
-    fecha_inicio: "",
-    fecha_fin: "",
-    fecha_fin_desconocida: false,
-    motivo: "",
-    tipo: "",
-    notas: "",
-  });
+  // formData state removed as it is handled by AbsenceForm component
 
   const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
@@ -177,35 +170,16 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   const handleEdit = (absence) => {
     setEditingAbsence(absence);
-    setFormData({
-      employee_id: absence.employee_id,
-      fecha_inicio: absence.fecha_inicio?.substring(0, 16) || "",
-      fecha_fin: absence.fecha_fin?.substring(0, 16) || "",
-      fecha_fin_desconocida: absence.fecha_fin_desconocida || false,
-      motivo: absence.motivo || "",
-      tipo: absence.tipo || "",
-      notas: absence.notas || "",
-    });
     setShowForm(true);
   };
 
   const handleClose = () => {
     setShowForm(false);
     setEditingAbsence(null);
-    setFormData({
-      employee_id: "",
-      fecha_inicio: "",
-      fecha_fin: "",
-      fecha_fin_desconocida: false,
-      motivo: "",
-      tipo: "",
-      notas: "",
-    });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    saveMutation.mutate(formData);
+  const handleFormSubmit = (data) => {
+    saveMutation.mutate(data);
   };
 
   const getEmployeeName = (employeeId) => {
@@ -408,128 +382,16 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
               </DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Empleado *</Label>
-                <Select
-                  value={formData.employee_id}
-                  onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar empleado" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {[...employees, ...masterEmployees]
-                      .filter((emp, idx, self) => self.findIndex(e => e.id === emp.id) === idx)
-                      .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
-                      .map(emp => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.nombre} {emp.departamento ? `- ${emp.departamento}` : ''}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Tipo de Ausencia *</Label>
-                  <Select
-                    value={formData.tipo}
-                    onValueChange={(value) => setFormData({ ...formData, tipo: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {absenceTypes.filter(t => t.activo && t.visible_empleados).map(type => (
-                        <SelectItem key={type.id} value={type.nombre}>
-                          {type.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Motivo *</Label>
-                  <Input
-                    value={formData.motivo}
-                    onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
-                    placeholder="Especificar motivo"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Fecha y Hora Inicio *</Label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.fecha_inicio}
-                    onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Fecha y Hora Fin {formData.fecha_fin_desconocida ? '(Desconocida)' : '*'}</Label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.fecha_fin}
-                    onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
-                    required={!formData.fecha_fin_desconocida}
-                    disabled={formData.fecha_fin_desconocida}
-                  />
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Checkbox 
-                      id="unknown_end" 
-                      checked={formData.fecha_fin_desconocida}
-                      onCheckedChange={(checked) => setFormData({ 
-                        ...formData, 
-                        fecha_fin_desconocida: checked,
-                        fecha_fin: checked ? "" : formData.fecha_fin
-                      })}
-                    />
-                    <label
-                      htmlFor="unknown_end"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Fecha fin desconocida
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notas Adicionales</Label>
-                <Textarea
-                  value={formData.notas}
-                  onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-                  rows={3}
-                  placeholder="Información adicional sobre la ausencia..."
-                />
-              </div>
-
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Nota:</strong> Esta comunicación quedará registrada como ausencia pendiente de aprobación 
-                  y se notificará a los responsables correspondientes.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  {saveMutation.isPending ? "Guardando..." : "Guardar Ausencia"}
-                </Button>
-              </div>
-            </form>
+            <AbsenceForm
+              initialData={editingAbsence}
+              employees={[...employees, ...masterEmployees].filter((emp, idx, self) => 
+                self.findIndex(e => e.id === emp.id) === idx
+              )}
+              absenceTypes={absenceTypes}
+              onSubmit={handleFormSubmit}
+              onCancel={handleClose}
+              isSubmitting={saveMutation.isPending}
+            />
           </DialogContent>
         </Dialog>
       )}
