@@ -168,7 +168,7 @@ export default function AbsenceNotifications({ absences, employees, absenceTypes
           ))}
         </div>
         {notifications.length > 3 && (
-          <Link to={createPageUrl("AbsenceManagement")}>
+          <Link to={`${createPageUrl("AbsenceManagement")}?tab=list`}>
             <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
               Ver {notifications.length - 3} más
             </Button>

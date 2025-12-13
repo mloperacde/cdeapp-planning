@@ -104,7 +104,7 @@ export default function LongAbsenceAlert({ employees, absences, masterEmployees 
           ))}
         </div>
         {longAbsences.length > 3 && (
-          <Link to={createPageUrl("AbsenceManagement")}>
+          <Link to={`${createPageUrl("AbsenceManagement")}?tab=list`}>
             <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
               Ver {longAbsences.length - 3} más
             </Button>
