@@ -78,13 +78,22 @@ export default function ProductionPlanningPage() {
       // Filter by Status
       if (selectedStatus !== "all" && order.status !== selectedStatus) return false;
       
-      // Filter by Date Range (Check overlap)
-      const orderStart = new Date(order.start_date);
-      const orderEnd = new Date(order.committed_delivery_date); // Using delivery date as end for visualization
-      const rangeStart = new Date(dateRange.start);
-      const rangeEnd = new Date(dateRange.end);
+      // Filter by Date Range (Check overlap) - ONLY for scheduled orders
+      if (order.start_date) {
+        const orderStart = new Date(order.start_date);
+        // Using delivery date as end for visualization, or start date if missing
+        const orderEnd = order.committed_delivery_date ? new Date(order.committed_delivery_date) : new Date(order.start_date); 
+        const rangeStart = new Date(dateRange.start);
+        const rangeEnd = new Date(dateRange.end);
+        
+        // If date is invalid (shouldn't happen if start_date exists), skip
+        if (isNaN(orderStart.getTime())) return false;
+        
+        return orderStart <= rangeEnd && orderEnd >= rangeStart;
+      }
       
-      return orderStart <= rangeEnd && orderEnd >= rangeStart;
+      // If no start_date (Backlog), include it so it appears in the "Sin Programar" column
+      return true;
     });
   }, [workOrders, selectedMachine, selectedStatus, dateRange]);
 
