@@ -7,7 +7,7 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function AbsenceCalendar({ absences, employees, absenceTypes, selectedDepartment = "all" }) {
+export default function AbsenceCalendar({ absences, employees, masterEmployees = [], absenceTypes, selectedDepartment = "all" }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedType, setSelectedType] = useState("all");
 
@@ -33,7 +33,7 @@ export default function AbsenceCalendar({ absences, employees, absenceTypes, sel
       
       if (!isInRange) return false;
       
-      const employee = employees.find(e => e.id === abs.employee_id);
+      const employee = employees.find(e => e.id === abs.employee_id) || masterEmployees.find(e => e.id === abs.employee_id);
       const matchesDept = filterDept === "all" || employee?.departamento === filterDept;
       const matchesType = selectedType === "all" || abs.absence_type_id === selectedType;
       
@@ -132,15 +132,16 @@ export default function AbsenceCalendar({ absences, employees, absenceTypes, sel
                 {absencesForDay.length > 0 && (
                   <div className="space-y-1">
                     {absencesForDay.slice(0, 2).map((abs, idx) => {
-                      const employee = employees.find(e => e.id === abs.employee_id);
+                      const employee = employees.find(e => e.id === abs.employee_id) || masterEmployees.find(e => e.id === abs.employee_id);
+                      const typeColor = getTypeColor(abs.absence_type_id);
                       return (
                         <div
                           key={abs.id}
-                          className="text-[10px] px-1 py-0.5 rounded truncate"
-                          style={{ backgroundColor: getTypeColor(abs.absence_type_id), color: 'white' }}
+                          className="text-[10px] px-1 py-0.5 rounded truncate font-medium"
+                          style={{ backgroundColor: typeColor, color: '#fff', textShadow: '0px 0px 2px rgba(0,0,0,0.5)' }}
                           title={`${employee?.nombre} - ${abs.tipo}`}
                         >
-                          {employee?.nombre?.split(' ')[0]}
+                          {employee?.nombre?.split(' ')[0] || "Desc."}
                         </div>
                       );
                     })}
