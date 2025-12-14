@@ -117,7 +117,10 @@ export default function AbsenceForm({
         notas: initialData.notas || "",
         remunerada: initialData.remunerada ?? true,
         fecha_fin_desconocida: initialData.fecha_fin_desconocida || false,
-        documentos_adjuntos: initialData.documentos_adjuntos || []
+        documentos_adjuntos: initialData.documentos_adjuntos || [],
+        // Format dates for input (substring to remove seconds/timezone if present)
+        fecha_inicio: initialData.fecha_inicio ? initialData.fecha_inicio.substring(0, 16) : "",
+        fecha_fin: initialData.fecha_fin ? initialData.fecha_fin.substring(0, 16) : ""
       }));
       setUnknownEndDate(initialData.fecha_fin_desconocida || false);
       
@@ -151,10 +154,16 @@ export default function AbsenceForm({
   }, [initialData, absenceTypes]);
 
   const employeesForSelect = React.useMemo(() => {
-    return employees.filter(emp => 
+    const filtered = employees.filter(emp => 
       !searchTerm || emp.nombre.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [employees, searchTerm]);
+    // Ensure selected employee is always in the list
+    if (formData.employee_id && !filtered.find(e => e.id === formData.employee_id)) {
+      const selected = employees.find(e => e.id === formData.employee_id);
+      if (selected) filtered.unshift(selected);
+    }
+    return filtered;
+  }, [employees, searchTerm, formData.employee_id]);
 
   const suggestedReasons = React.useMemo(() => {
     if (aiReasons.length > 0) return aiReasons; // Prefer AI reasons if available
@@ -312,7 +321,7 @@ export default function AbsenceForm({
                 className="mb-2"
               />
             </div>
-            {employeesForSelect.slice(0, 50).map((emp) => (
+            {employeesForSelect.slice(0, 100).map((emp) => (
               <SelectItem key={emp.id} value={emp.id}>
                 {emp.nombre} {emp.disponibilidad === "Ausente" && "(Ya ausente)"}
               </SelectItem>
