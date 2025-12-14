@@ -38,22 +38,22 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio'),
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
   });
 
   const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.Employee.list('nombre', 1000),
   });
 
   const { data: masterEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
   });
 
   const { data: absenceTypes = EMPTY_ARRAY } = useQuery({
     queryKey: ['absenceTypes'],
-    queryFn: () => base44.entities.AbsenceType.list('orden'),
+    queryFn: () => base44.entities.AbsenceType.list('orden', 1000),
     initialData: EMPTY_ARRAY,
   });
 

@@ -101,17 +101,17 @@ export default function AbsenceManagementPage() {
   // Load Data
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio'),
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
   });
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.Employee.list('nombre', 1000),
   });
 
   const { data: masterEmployees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
   });
 
   const { data: teams = [] } = useQuery({
@@ -121,7 +121,7 @@ export default function AbsenceManagementPage() {
 
   const { data: absenceTypes = [] } = useQuery({
     queryKey: ['absenceTypes'],
-    queryFn: () => base44.entities.AbsenceType.filter({ activo: true }, 'orden'),
+    queryFn: () => base44.entities.AbsenceType.filter({ activo: true }, 'orden', 1000),
   });
 
   const { data: vacations = [] } = useQuery({

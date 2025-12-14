@@ -155,9 +155,16 @@ export default function EmployeesPage() {
   // Fetch ALL employees for stats
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['allEmployeesMaster'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
     enabled: !!permissions.ver_lista,
     staleTime: 5 * 60 * 1000 // 5 minutes cache
+  });
+
+  // Fetch Absences for dynamic availability calculation
+  const { data: absences = EMPTY_ARRAY } = useQuery({
+    queryKey: ['activeAbsencesForStats'],
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
+    enabled: !!permissions.ver_lista,
   });
 
   // Fetch Onboardings
@@ -340,9 +347,30 @@ export default function EmployeesPage() {
   const stats = useMemo(() => {
     const total = effectiveEmployees.length;
     const activos = effectiveEmployees.filter(e => e.estado_empleado === 'Alta').length;
-    const disponibles = effectiveEmployees.filter(e => e.estado_empleado === 'Alta' && e.disponibilidad === 'Disponible').length;
-    const bajas = effectiveEmployees.filter(e => e.estado_empleado === 'Baja').length;
+    
+    // Calculate dynamic availability based on absences
     const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    
+    // Set of IDs of employees who are currently absent
+    const absentEmployeeIds = new Set();
+    absences.forEach(abs => {
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
+      
+      // Reset hours for day comparison if needed, or stick to time if precise
+      // Usually "Active today" means traversing the current moment
+      if (now >= start && now <= end) {
+        absentEmployeeIds.add(abs.employee_id);
+      }
+    });
+
+    // Available = Active AND Not in absent set
+    const disponibles = effectiveEmployees.filter(e => 
+      e.estado_empleado === 'Alta' && !absentEmployeeIds.has(e.id)
+    ).length;
+
+    const bajas = effectiveEmployees.filter(e => e.estado_empleado === 'Baja').length;
     
     // HR Specific Stats
     const pendingOnboardings = onboardings.filter(o => o.estado !== 'Completado').length;
@@ -418,7 +446,7 @@ export default function EmployeesPage() {
       upcomingBirthdays,
       upcomingAnniversaries
     };
-  }, [effectiveEmployees, onboardings, notifications]);
+  }, [effectiveEmployees, onboardings, notifications, absences]);
 
   if (!permissions.ver_lista) {
     return (
