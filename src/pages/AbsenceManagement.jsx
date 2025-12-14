@@ -264,7 +264,12 @@ export default function AbsenceManagementPage() {
           </TabsContent>
 
           <TabsContent value="list" className="space-y-6">
-            <UnifiedAbsenceManager sourceContext="absence_page" />
+            <UnifiedAbsenceManager 
+              sourceContext="absence_page" 
+              initialAbsences={absences} 
+              initialEmployees={employees}
+              initialMasterEmployees={masterEmployees}
+            />
           </TabsContent>
 
           <TabsContent value="approval">

@@ -326,6 +326,11 @@ export default function AbsenceForm({
                 {emp.nombre} {emp.disponibilidad === "Ausente" && "(Ya ausente)"}
               </SelectItem>
             ))}
+            {formData.employee_id && !employeesForSelect.find(e => e.id === formData.employee_id) && (
+               <SelectItem key={formData.employee_id} value={formData.employee_id}>
+                 {initialData?.employee_name || "Empleado seleccionado (Cargando...)"}
+               </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>

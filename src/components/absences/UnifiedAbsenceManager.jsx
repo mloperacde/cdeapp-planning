@@ -28,7 +28,10 @@ import AbsenceForm from "./AbsenceForm";
 
 const EMPTY_ARRAY = [];
 
-export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
+import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+
+export default function UnifiedAbsenceManager(props) {
+  const { sourceContext = "rrhh" } = props;
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [filters, setFilters] = useState({});
@@ -36,20 +39,27 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   // formData state removed as it is handled by AbsenceForm component
 
-  const { data: absences = EMPTY_ARRAY } = useQuery({
+  const { data: fetchedAbsences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
+    enabled: !props.initialAbsences,
   });
 
-  const { data: employees = EMPTY_ARRAY } = useQuery({
+  const { data: fetchedEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('nombre', 1000),
+    enabled: !props.initialEmployees,
   });
 
-  const { data: masterEmployees = EMPTY_ARRAY } = useQuery({
+  const { data: fetchedMasterEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
+    enabled: !props.initialMasterEmployees,
   });
+
+  const absences = props.initialAbsences || fetchedAbsences;
+  const employees = props.initialEmployees || fetchedEmployees;
+  const masterEmployees = props.initialMasterEmployees || fetchedMasterEmployees;
 
   const { data: absenceTypes = EMPTY_ARRAY } = useQuery({
     queryKey: ['absenceTypes'],
@@ -76,16 +86,22 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
 
   // Consolidado de ausencias activas
   const activeAbsencesConsolidated = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
     
     return absences.filter(abs => {
+      if (!abs.fecha_inicio) return false;
       const start = new Date(abs.fecha_inicio);
+      // If unknown end, use 'now' to ensure it counts as active, or far future.
+      // Consistent with AbsenceManagementPage:
       const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
       
-      return today >= start && today <= end;
+      // Use simple comparison for "Active Now" or "Active Today"
+      // If we want "Active Today" (at any point today):
+      // return isWithinInterval(now, { start: startOfDay(start), end: endOfDay(end) });
+      
+      // But user complained about congruency with Dashboard "Activas Ahora" (Active Now).
+      // So we use current time comparison.
+      return now >= start && now <= end;
     });
   }, [absences]);
 

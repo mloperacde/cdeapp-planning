@@ -354,16 +354,17 @@ export default function EmployeesPage() {
     
     // Set of IDs of employees who are currently absent
     const absentEmployeeIds = new Set();
-    absences.forEach(abs => {
-      const start = new Date(abs.fecha_inicio);
-      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
-      
-      // Reset hours for day comparison if needed, or stick to time if precise
-      // Usually "Active today" means traversing the current moment
-      if (now >= start && now <= end) {
-        absentEmployeeIds.add(abs.employee_id);
-      }
-    });
+    if (absences && Array.isArray(absences)) {
+      absences.forEach(abs => {
+        if (!abs.fecha_inicio) return;
+        const start = new Date(abs.fecha_inicio);
+        const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
+        
+        if (now >= start && now <= end) {
+          absentEmployeeIds.add(abs.employee_id);
+        }
+      });
+    }
 
     // Available = Active AND Not in absent set
     const disponibles = effectiveEmployees.filter(e => 
