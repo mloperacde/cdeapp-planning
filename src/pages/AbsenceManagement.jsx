@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from 'sonner';
 import { debounce } from "lodash";
@@ -76,10 +76,19 @@ export default function AbsenceManagementPage() {
            (currentUser?.puesto?.toLowerCase().includes('jefe') || currentUser?.puesto?.toLowerCase().includes('shift'));
   }, [currentUser]);
 
-  // Handle initial tab from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialTab = urlParams.get('tab');
-  const [activeTab, setActiveTab] = useState(initialTab || (isShiftManager ? "dashboard" : "dashboard"));
+  // Handle tab state and URL sync
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState("dashboard");
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    } else {
+      setActiveTab(isShiftManager ? "dashboard" : "dashboard");
+    }
+  }, [location.search, isShiftManager]);
 
   // Update URL when tab changes
   const handleTabChange = (value) => {

@@ -100,12 +100,25 @@ export default function AbsenceForm({
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
+      // Ensure we have an absence type ID if possible
+      let typeId = initialData.absence_type_id;
+      if (!typeId && initialData.tipo && absenceTypes.length > 0) {
+        const matchingType = absenceTypes.find(t => t.nombre === initialData.tipo);
+        if (matchingType) typeId = matchingType.id;
+      }
+
+      setFormData(prev => ({
+        ...prev,
         ...initialData,
+        employee_id: initialData.employee_id || "",
+        absence_type_id: typeId || "",
+        motivo: initialData.motivo || "",
+        tipo: initialData.tipo || "",
+        notas: initialData.notas || "",
         remunerada: initialData.remunerada ?? true,
         fecha_fin_desconocida: initialData.fecha_fin_desconocida || false,
         documentos_adjuntos: initialData.documentos_adjuntos || []
-      });
+      }));
       setUnknownEndDate(initialData.fecha_fin_desconocida || false);
       
       if (initialData.fecha_inicio && initialData.fecha_fin && !initialData.fecha_fin_desconocida) {
@@ -135,7 +148,7 @@ export default function AbsenceForm({
       setFullDay(false);
       setUnknownEndDate(false);
     }
-  }, [initialData]);
+  }, [initialData, absenceTypes]);
 
   const employeesForSelect = React.useMemo(() => {
     return employees.filter(emp => 

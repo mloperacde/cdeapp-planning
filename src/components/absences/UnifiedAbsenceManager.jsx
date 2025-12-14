@@ -108,7 +108,9 @@ export default function UnifiedAbsenceManager({ sourceContext = "rrhh" }) {
       activeEmployees.some(e => e.id === abs.employee_id)
     );
     
-    const ausentes = relevantAbsences.length;
+    // Count unique absent employees (in case of overlapping absences)
+    const uniqueAbsentEmployeeIds = new Set(relevantAbsences.map(abs => abs.employee_id));
+    const ausentes = uniqueAbsentEmployeeIds.size;
     const disponibles = Math.max(0, total - ausentes);
     
     return { disponibles, ausentes, total };
