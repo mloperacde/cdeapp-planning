@@ -1,121 +1,165 @@
-import Timeline from './pages/Timeline';
-import Machines from './pages/Machines';
-import Breaks from './pages/Breaks';
-import Configuration from './pages/Configuration';
-import TeamConfiguration from './pages/TeamConfiguration';
 import AbsenceManagement from './pages/AbsenceManagement';
-import MachineAssignments from './pages/MachineAssignments';
-import ProcessConfiguration from './pages/ProcessConfiguration';
-import MaintenanceTracking from './pages/MaintenanceTracking';
-import PerformanceManagement from './pages/PerformanceManagement';
-import ShiftHandover from './pages/ShiftHandover';
-import Dashboard from './pages/Dashboard';
-import Reports from './pages/Reports';
-import Notifications from './pages/Notifications';
-import EmailNotifications from './pages/EmailNotifications';
-import MobileAppConfig from './pages/MobileAppConfig';
-import SupportManagement1415 from './pages/SupportManagement1415';
-import ShiftManagement from './pages/ShiftManagement';
-import MLInsights from './pages/MLInsights';
-import ShiftManagers from './pages/ShiftManagers';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
-import DailyPlanning from './pages/DailyPlanning';
-import MachineManagement from './pages/MachineManagement';
-import MachineMaintenance from './pages/MachineMaintenance';
-import LockerManagement from './pages/LockerManagement';
 import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
-import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
-import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
-import EmployeeOnboarding from './pages/EmployeeOnboarding';
-import AttendanceManagement from './pages/AttendanceManagement';
-import SkillMatrix from './pages/SkillMatrix';
-import CommitteeManagement from './pages/CommitteeManagement';
-import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
-import AppUserManagement from './pages/AppUserManagement';
-import DocumentManagement from './pages/DocumentManagement';
-import Messaging from './pages/Messaging';
-import IncentiveManagement from './pages/IncentiveManagement';
-import MobileAbsences from './pages/MobileAbsences';
-import MobileVacations from './pages/MobileVacations';
-import MobilePlanning from './pages/MobilePlanning';
-import MobileChat from './pages/MobileChat';
-import MasterMachineView from './pages/MasterMachineView';
-import MessagingConfig from './pages/MessagingConfig';
-import ArticleManagement from './pages/ArticleManagement';
-import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
-import SystemReset from './pages/SystemReset';
-import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
+import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
-import NotificationCenter from './pages/NotificationCenter';
-import MyProfile from './pages/MyProfile';
-import MobileProfile from './pages/MobileProfile';
-import MobileNotifications from './pages/MobileNotifications';
+import AppUserManagement from './pages/AppUserManagement';
+import ArticleManagement from './pages/ArticleManagement';
+import AttendanceManagement from './pages/AttendanceManagement';
+import Breaks from './pages/Breaks';
+import CommitteeManagement from './pages/CommitteeManagement';
+import Configuration from './pages/Configuration';
+import DailyPlanning from './pages/DailyPlanning';
+import Dashboard from './pages/Dashboard';
+import DataImport from './pages/DataImport';
+import DepartmentManagement from './pages/DepartmentManagement';
+import DirectDataEntry from './pages/DirectDataEntry';
+import DocumentManagement from './pages/DocumentManagement';
+import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
+import EmailNotifications from './pages/EmailNotifications';
+import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
+import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
+import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
+import EmployeeList from './pages/EmployeeList';
+import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import Employees from './pages/Employees';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
+import HRDashboard from './pages/HRDashboard';
+import Home from './pages/Home';
+import IncentiveManagement from './pages/IncentiveManagement';
+import LockerDataCleanup from './pages/LockerDataCleanup';
+import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
+import LockerManagement from './pages/LockerManagement';
+import MLInsights from './pages/MLInsights';
+import MachineAssignments from './pages/MachineAssignments';
+import MachineMaintenance from './pages/MachineMaintenance';
+import MachineManagement from './pages/MachineManagement';
+import MachinePlanning from './pages/MachinePlanning';
+import Machines from './pages/Machines';
+import MaintenanceTracking from './pages/MaintenanceTracking';
+import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
+import MasterEmployeeView from './pages/MasterEmployeeView';
+import MasterMachineView from './pages/MasterMachineView';
+import Messaging from './pages/Messaging';
+import MessagingConfig from './pages/MessagingConfig';
+import MobileAbsences from './pages/MobileAbsences';
+import MobileAppConfig from './pages/MobileAppConfig';
+import MobileChat from './pages/MobileChat';
+import MobileNotifications from './pages/MobileNotifications';
+import MobilePlanning from './pages/MobilePlanning';
+import MobileProfile from './pages/MobileProfile';
+import MobileVacations from './pages/MobileVacations';
+import MyProfile from './pages/MyProfile';
+import NotificationCenter from './pages/NotificationCenter';
+import Notifications from './pages/Notifications';
+import PerformanceManagement from './pages/PerformanceManagement';
+import PredictiveMaintenance from './pages/PredictiveMaintenance';
+import ProcessConfiguration from './pages/ProcessConfiguration';
+import ProcessTypes from './pages/ProcessTypes';
 import ProductionPlanning from './pages/ProductionPlanning';
+import Reports from './pages/Reports';
+import RoleManagement from './pages/RoleManagement';
+import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
+import ShiftAssignments from './pages/ShiftAssignments';
+import ShiftHandover from './pages/ShiftHandover';
+import ShiftManagement from './pages/ShiftManagement';
+import ShiftManagers from './pages/ShiftManagers';
+import ShiftManagersDashboard from './pages/ShiftManagersDashboard';
+import SkillMatrix from './pages/SkillMatrix';
+import SupportManagement1415 from './pages/SupportManagement1415';
+import SystemReset from './pages/SystemReset';
+import TeamConfiguration from './pages/TeamConfiguration';
+import Timeline from './pages/Timeline';
+import UserManagement from './pages/UserManagement';
+import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import MobileAbsences from './pages/MobileAbsences';
+import MobileChat from './pages/MobileChat';
+import MobilePlanning from './pages/MobilePlanning';
+import MobileVacations from './pages/MobileVacations';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Timeline": Timeline,
-    "Machines": Machines,
-    "Breaks": Breaks,
-    "Configuration": Configuration,
-    "TeamConfiguration": TeamConfiguration,
     "AbsenceManagement": AbsenceManagement,
-    "MachineAssignments": MachineAssignments,
-    "ProcessConfiguration": ProcessConfiguration,
-    "MaintenanceTracking": MaintenanceTracking,
-    "PerformanceManagement": PerformanceManagement,
-    "ShiftHandover": ShiftHandover,
-    "Dashboard": Dashboard,
-    "Reports": Reports,
-    "Notifications": Notifications,
-    "EmailNotifications": EmailNotifications,
-    "MobileAppConfig": MobileAppConfig,
-    "SupportManagement1415": SupportManagement1415,
-    "ShiftManagement": ShiftManagement,
-    "MLInsights": MLInsights,
-    "ShiftManagers": ShiftManagers,
     "AbsenceTypeConfig": AbsenceTypeConfig,
-    "DailyPlanning": DailyPlanning,
-    "MachineManagement": MachineManagement,
-    "MachineMaintenance": MachineMaintenance,
-    "LockerManagement": LockerManagement,
     "AbsenceTypeInfo": AbsenceTypeInfo,
-    "EmployeeAbsenceInfo": EmployeeAbsenceInfo,
-    "ShiftAbsenceReport": ShiftAbsenceReport,
-    "EmployeeOnboarding": EmployeeOnboarding,
-    "AttendanceManagement": AttendanceManagement,
-    "SkillMatrix": SkillMatrix,
-    "CommitteeManagement": CommitteeManagement,
-    "ETTTemporaryEmployees": ETTTemporaryEmployees,
-    "AppUserManagement": AppUserManagement,
-    "DocumentManagement": DocumentManagement,
-    "Messaging": Messaging,
-    "IncentiveManagement": IncentiveManagement,
-    "MobileAbsences": MobileAbsences,
-    "MobileVacations": MobileVacations,
-    "MobilePlanning": MobilePlanning,
-    "MobileChat": MobileChat,
-    "MasterMachineView": MasterMachineView,
-    "MessagingConfig": MessagingConfig,
-    "ArticleManagement": ArticleManagement,
-    "WorkCalendarConfig": WorkCalendarConfig,
-    "MasterEmployeeDatabase": MasterEmployeeDatabase,
-    "SystemReset": SystemReset,
-    "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
+    "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedHRDashboard": AdvancedHRDashboard,
-    "NotificationCenter": NotificationCenter,
-    "MyProfile": MyProfile,
-    "MobileProfile": MobileProfile,
-    "MobileNotifications": MobileNotifications,
+    "AppUserManagement": AppUserManagement,
+    "ArticleManagement": ArticleManagement,
+    "AttendanceManagement": AttendanceManagement,
+    "Breaks": Breaks,
+    "CommitteeManagement": CommitteeManagement,
+    "Configuration": Configuration,
+    "DailyPlanning": DailyPlanning,
+    "Dashboard": Dashboard,
+    "DataImport": DataImport,
+    "DepartmentManagement": DepartmentManagement,
+    "DirectDataEntry": DirectDataEntry,
+    "DocumentManagement": DocumentManagement,
+    "ETTTemporaryEmployees": ETTTemporaryEmployees,
+    "EmailNotifications": EmailNotifications,
+    "EmployeeAbsenceInfo": EmployeeAbsenceInfo,
+    "EmployeeDataCompletion": EmployeeDataCompletion,
+    "EmployeeDataCorrection": EmployeeDataCorrection,
+    "EmployeeList": EmployeeList,
+    "EmployeeOnboarding": EmployeeOnboarding,
     "Employees": Employees,
     "EmployeesShiftManager": EmployeesShiftManager,
+    "HRDashboard": HRDashboard,
+    "Home": Home,
+    "IncentiveManagement": IncentiveManagement,
+    "LockerDataCleanup": LockerDataCleanup,
+    "LockerDuplicateCleanup": LockerDuplicateCleanup,
+    "LockerManagement": LockerManagement,
+    "MLInsights": MLInsights,
+    "MachineAssignments": MachineAssignments,
+    "MachineMaintenance": MachineMaintenance,
+    "MachineManagement": MachineManagement,
+    "MachinePlanning": MachinePlanning,
+    "Machines": Machines,
+    "MaintenanceTracking": MaintenanceTracking,
+    "MasterEmployeeDatabase": MasterEmployeeDatabase,
+    "MasterEmployeeView": MasterEmployeeView,
+    "MasterMachineView": MasterMachineView,
+    "Messaging": Messaging,
+    "MessagingConfig": MessagingConfig,
+    "MobileAbsences": MobileAbsences,
+    "MobileAppConfig": MobileAppConfig,
+    "MobileChat": MobileChat,
+    "MobileNotifications": MobileNotifications,
+    "MobilePlanning": MobilePlanning,
+    "MobileProfile": MobileProfile,
+    "MobileVacations": MobileVacations,
+    "MyProfile": MyProfile,
+    "NotificationCenter": NotificationCenter,
+    "Notifications": Notifications,
+    "PerformanceManagement": PerformanceManagement,
+    "PredictiveMaintenance": PredictiveMaintenance,
+    "ProcessConfiguration": ProcessConfiguration,
+    "ProcessTypes": ProcessTypes,
     "ProductionPlanning": ProductionPlanning,
+    "Reports": Reports,
+    "RoleManagement": RoleManagement,
+    "ShiftAbsenceReport": ShiftAbsenceReport,
+    "ShiftAssignments": ShiftAssignments,
+    "ShiftHandover": ShiftHandover,
+    "ShiftManagement": ShiftManagement,
+    "ShiftManagers": ShiftManagers,
+    "ShiftManagersDashboard": ShiftManagersDashboard,
+    "SkillMatrix": SkillMatrix,
+    "SupportManagement1415": SupportManagement1415,
+    "SystemReset": SystemReset,
+    "TeamConfiguration": TeamConfiguration,
+    "Timeline": Timeline,
+    "UserManagement": UserManagement,
+    "WorkCalendarConfig": WorkCalendarConfig,
+    "MobileAbsences": MobileAbsences,
+    "MobileChat": MobileChat,
+    "MobilePlanning": MobilePlanning,
+    "MobileVacations": MobileVacations,
 }
 
 export const pagesConfig = {

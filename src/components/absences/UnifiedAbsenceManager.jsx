@@ -187,7 +187,9 @@ export default function UnifiedAbsenceManager(props) {
   });
 
   const handleEdit = (absence) => {
-    setEditingAbsence(absence);
+    const emp = employees.find(e => e.id === absence.employee_id) || 
+                masterEmployees.find(e => e.id === absence.employee_id);
+    setEditingAbsence({ ...absence, employee_name: emp?.nombre || "Desconocido" });
     setShowForm(true);
   };
 

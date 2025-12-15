@@ -50,31 +50,31 @@ export default function DashboardPage() {
 
   const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list(),
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
     initialData: EMPTY_ARRAY,
   });
 
   const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.Employee.list('nombre', 1000),
     initialData: EMPTY_ARRAY,
   });
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
+    queryFn: () => base44.entities.Machine.list('nombre', 1000),
     initialData: EMPTY_ARRAY,
   });
 
   const { data: maintenances = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenances'],
-    queryFn: () => base44.entities.MaintenanceSchedule.list(),
+    queryFn: () => base44.entities.MaintenanceSchedule.list('fecha_programada', 1000),
     initialData: EMPTY_ARRAY,
   });
 
   const { data: productionPlannings = EMPTY_ARRAY } = useQuery({
     queryKey: ['dailyProductionPlannings'],
-    queryFn: () => base44.entities.DailyProductionPlanning.list(),
+    queryFn: () => base44.entities.DailyProductionPlanning.list('-fecha', 1000),
     initialData: EMPTY_ARRAY,
   });
 
