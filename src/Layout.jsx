@@ -501,12 +501,23 @@ export default function Layout({ children, currentPageName }) {
                             <Link to={createPageUrl("ProcessConfiguration")} className="flex items-center gap-2 px-3 py-2">
                               <Settings2 className="w-4 h-4" />
                               Configurar Procesos
-                            </Link>
-                          </SidebarMenuButton>
-                        </div>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+                              </Link>
+                              </SidebarMenuButton>
+                              <SidebarMenuButton
+                              asChild
+                              className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("DailyShiftPlanning")) ? 'bg-blue-50 text-blue-700' : ''
+                              }`}
+                              >
+                              <Link to={createPageUrl("DailyShiftPlanning")} className="flex items-center gap-2 px-3 py-2">
+                              <CalendarIcon className="w-4 h-4" />
+                              Planificación Diaria
+                              </Link>
+                              </SidebarMenuButton>
+                              </div>
+                              </CollapsibleContent>
+                              </SidebarMenuItem>
+                              </Collapsible>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton

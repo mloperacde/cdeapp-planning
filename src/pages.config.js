@@ -71,6 +71,7 @@ import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import __Layout from './Layout.jsx';
 
 
@@ -148,6 +149,7 @@ export const PAGES = {
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "DailyShiftPlanning": DailyShiftPlanning,
 }
 
 export const pagesConfig = {
