@@ -47,13 +47,9 @@ import MasterEmployeeView from './pages/MasterEmployeeView';
 import MasterMachineView from './pages/MasterMachineView';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
-import MobileAbsences from './pages/MobileAbsences';
 import MobileAppConfig from './pages/MobileAppConfig';
-import MobileChat from './pages/MobileChat';
 import MobileNotifications from './pages/MobileNotifications';
-import MobilePlanning from './pages/MobilePlanning';
 import MobileProfile from './pages/MobileProfile';
-import MobileVacations from './pages/MobileVacations';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
 import Notifications from './pages/Notifications';
@@ -77,10 +73,6 @@ import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import UserManagement from './pages/UserManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import mobileAbsences from './pages/mobileAbsences';
-import mobileChat from './pages/mobileChat';
-import mobilePlanning from './pages/mobilePlanning';
-import mobileVacations from './pages/mobileVacations';
 import MobileAbsences from './pages/MobileAbsences';
 import MobileChat from './pages/MobileChat';
 import MobilePlanning from './pages/MobilePlanning';
@@ -138,13 +130,9 @@ export const PAGES = {
     "MasterMachineView": MasterMachineView,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
-    "MobileAbsences": MobileAbsences,
     "MobileAppConfig": MobileAppConfig,
-    "MobileChat": MobileChat,
     "MobileNotifications": MobileNotifications,
-    "MobilePlanning": MobilePlanning,
     "MobileProfile": MobileProfile,
-    "MobileVacations": MobileVacations,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
     "Notifications": Notifications,
@@ -168,10 +156,6 @@ export const PAGES = {
     "Timeline": Timeline,
     "UserManagement": UserManagement,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "mobileAbsences": mobileAbsences,
-    "mobileChat": mobileChat,
-    "mobilePlanning": mobilePlanning,
-    "mobileVacations": mobileVacations,
     "MobileAbsences": MobileAbsences,
     "MobileChat": MobileChat,
     "MobilePlanning": MobilePlanning,
