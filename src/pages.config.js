@@ -64,6 +64,13 @@ import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import MobileAbsences from './pages/MobileAbsences';
+import MobilePlanning from './pages/MobilePlanning';
+import MobileVacations from './pages/MobileVacations';
+import MobileChat from './pages/MobileChat';
+import MobileProfile from './pages/MobileProfile';
+import MobileNotifications from './pages/MobileNotifications';
+import MobileAppConfig from './pages/MobileAppConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -134,6 +141,13 @@ export const PAGES = {
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "MobileAbsences": MobileAbsences,
+    "MobilePlanning": MobilePlanning,
+    "MobileVacations": MobileVacations,
+    "MobileChat": MobileChat,
+    "MobileProfile": MobileProfile,
+    "MobileNotifications": MobileNotifications,
+    "MobileAppConfig": MobileAppConfig,
 }
 
 export const pagesConfig = {
