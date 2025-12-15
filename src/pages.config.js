@@ -43,7 +43,6 @@ import MasterEmployeeView from './pages/MasterEmployeeView';
 import MasterMachineView from './pages/MasterMachineView';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
-import MobileAbsences from './pages/MobileAbsences';
 import MobileAppConfig from './pages/MobileAppConfig';
 import MobileChat from './pages/MobileChat';
 import MobileNotifications from './pages/MobileNotifications';
@@ -126,7 +125,6 @@ export const PAGES = {
     "MasterMachineView": MasterMachineView,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
-    "MobileAbsences": MobileAbsences,
     "MobileAppConfig": MobileAppConfig,
     "MobileChat": MobileChat,
     "MobileNotifications": MobileNotifications,
