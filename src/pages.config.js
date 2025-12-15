@@ -77,6 +77,13 @@ import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import UserManagement from './pages/UserManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import mobileAbsences from './pages/mobileAbsences';
+import mobileChat from './pages/mobileChat';
+import mobilePlanning from './pages/mobilePlanning';
+import mobileVacations from './pages/mobileVacations';
+import mobileAppConfig from './pages/mobileAppConfig';
+import mobileNotifications from './pages/mobileNotifications';
+import mobileProfile from './pages/mobileProfile';
 import MobileAbsences from './pages/MobileAbsences';
 import MobileChat from './pages/MobileChat';
 import MobilePlanning from './pages/MobilePlanning';
@@ -164,6 +171,13 @@ export const PAGES = {
     "Timeline": Timeline,
     "UserManagement": UserManagement,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "mobileAbsences": mobileAbsences,
+    "mobileChat": mobileChat,
+    "mobilePlanning": mobilePlanning,
+    "mobileVacations": mobileVacations,
+    "mobileAppConfig": mobileAppConfig,
+    "mobileNotifications": mobileNotifications,
+    "mobileProfile": mobileProfile,
     "MobileAbsences": MobileAbsences,
     "MobileChat": MobileChat,
     "MobilePlanning": MobilePlanning,
