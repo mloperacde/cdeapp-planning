@@ -12,8 +12,8 @@ import { UserCog, Save, UserCheck, User, Users, Factory, AlertCircle, CheckCircl
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import EmployeeSelect from "../components/common/EmployeeSelect";
-import EmployeeHelperList from "../components/machines/EmployeeHelperList";
+import EmployeeSelect from "../common/EmployeeSelect";
+import EmployeeHelperList from "../machines/EmployeeHelperList";
 
 const EMPTY_ARRAY = [];
 
