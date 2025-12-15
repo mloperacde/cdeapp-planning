@@ -70,13 +70,13 @@ import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import UserManagement from './pages/UserManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import EmployeeAbsences from './pages/EmployeeAbsences';
+import EmployeeChat from './pages/EmployeeChat';
+import EmployeePlanning from './pages/EmployeePlanning';
 import MobileAbsences from './pages/MobileAbsences';
 import MobileChat from './pages/MobileChat';
 import MobilePlanning from './pages/MobilePlanning';
 import MobileVacations from './pages/MobileVacations';
-import EmployeeAbsences from './pages/EmployeeAbsences';
-import EmployeeChat from './pages/EmployeeChat';
-import EmployeePlanning from './pages/EmployeePlanning';
 import __Layout from './Layout.jsx';
 
 
@@ -153,13 +153,13 @@ export const PAGES = {
     "Timeline": Timeline,
     "UserManagement": UserManagement,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "EmployeeAbsences": EmployeeAbsences,
+    "EmployeeChat": EmployeeChat,
+    "EmployeePlanning": EmployeePlanning,
     "MobileAbsences": MobileAbsences,
     "MobileChat": MobileChat,
     "MobilePlanning": MobilePlanning,
     "MobileVacations": MobileVacations,
-    "EmployeeAbsences": EmployeeAbsences,
-    "EmployeeChat": EmployeeChat,
-    "EmployeePlanning": EmployeePlanning,
 }
 
 export const pagesConfig = {
