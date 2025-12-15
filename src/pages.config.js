@@ -46,7 +46,6 @@ import MessagingConfig from './pages/MessagingConfig';
 import MobileAppConfig from './pages/MobileAppConfig';
 import MobileNotifications from './pages/MobileNotifications';
 import MobileProfile from './pages/MobileProfile';
-import MobileVacations from './pages/MobileVacations';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
 import Notifications from './pages/Notifications';
@@ -130,7 +129,6 @@ export const PAGES = {
     "MobileAppConfig": MobileAppConfig,
     "MobileNotifications": MobileNotifications,
     "MobileProfile": MobileProfile,
-    "MobileVacations": MobileVacations,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
     "Notifications": Notifications,
