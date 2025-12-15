@@ -45,6 +45,13 @@ import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import MasterMachineView from './pages/MasterMachineView';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
+import MobileAbsences from './pages/MobileAbsences';
+import MobileAppConfig from './pages/MobileAppConfig';
+import MobileChat from './pages/MobileChat';
+import MobileNotifications from './pages/MobileNotifications';
+import MobilePlanning from './pages/MobilePlanning';
+import MobileProfile from './pages/MobileProfile';
+import MobileVacations from './pages/MobileVacations';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
 import Notifications from './pages/Notifications';
@@ -64,13 +71,6 @@ import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import MobileAbsences from './pages/MobileAbsences';
-import MobilePlanning from './pages/MobilePlanning';
-import MobileVacations from './pages/MobileVacations';
-import MobileChat from './pages/MobileChat';
-import MobileProfile from './pages/MobileProfile';
-import MobileNotifications from './pages/MobileNotifications';
-import MobileAppConfig from './pages/MobileAppConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -122,6 +122,13 @@ export const PAGES = {
     "MasterMachineView": MasterMachineView,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
+    "MobileAbsences": MobileAbsences,
+    "MobileAppConfig": MobileAppConfig,
+    "MobileChat": MobileChat,
+    "MobileNotifications": MobileNotifications,
+    "MobilePlanning": MobilePlanning,
+    "MobileProfile": MobileProfile,
+    "MobileVacations": MobileVacations,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
     "Notifications": Notifications,
@@ -141,13 +148,6 @@ export const PAGES = {
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "MobileAbsences": MobileAbsences,
-    "MobilePlanning": MobilePlanning,
-    "MobileVacations": MobileVacations,
-    "MobileChat": MobileChat,
-    "MobileProfile": MobileProfile,
-    "MobileNotifications": MobileNotifications,
-    "MobileAppConfig": MobileAppConfig,
 }
 
 export const pagesConfig = {
