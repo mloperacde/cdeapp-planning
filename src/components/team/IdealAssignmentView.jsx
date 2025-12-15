@@ -408,6 +408,7 @@ export default function IdealAssignmentView() {
                 })}
             </div>
         </div>
+      </div>
 
       {/* History Dialog */}
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
