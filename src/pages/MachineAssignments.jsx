@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import EmployeeSelect from "../components/common/EmployeeSelect";
+import EmployeeHelperList from "../components/machines/EmployeeHelperList";
 
 const EMPTY_ARRAY = [];
 
@@ -89,6 +90,9 @@ export default function MachineAssignmentsPage() {
           operador_3: existing.operador_3 || null,
           operador_4: existing.operador_4 || null,
           operador_5: existing.operador_5 || null,
+          operador_6: existing.operador_6 || null,
+          operador_7: existing.operador_7 || null,
+          operador_8: existing.operador_8 || null,
         };
       } else {
         loadedAssignments[machine.id] = {
@@ -99,6 +103,9 @@ export default function MachineAssignmentsPage() {
           operador_3: null,
           operador_4: null,
           operador_5: null,
+          operador_6: null,
+          operador_7: null,
+          operador_8: null,
         };
       }
     });
@@ -162,6 +169,9 @@ export default function MachineAssignmentsPage() {
                     operador_3: sugg.operador_3 || next[machineId].operador_3,
                     operador_4: sugg.operador_4 || next[machineId].operador_4,
                     operador_5: sugg.operador_5 || next[machineId].operador_5,
+                    operador_6: sugg.operador_6 || next[machineId].operador_6,
+                    operador_7: sugg.operador_7 || next[machineId].operador_7,
+                    operador_8: sugg.operador_8 || next[machineId].operador_8,
                 };
             }
         });
@@ -185,6 +195,9 @@ export default function MachineAssignmentsPage() {
           operador_3: data.operador_3,
           operador_4: data.operador_4,
           operador_5: data.operador_5,
+          operador_6: data.operador_6,
+          operador_7: data.operador_7,
+          operador_8: data.operador_8,
       };
 
       const existing = machineAssignments.find(
@@ -234,49 +247,11 @@ export default function MachineAssignmentsPage() {
     return false;
   };
 
-  // Filter Logic - Improved
+  // Filter Logic - Relaxed for "Show All" capability
   const getAvailableEmployees = (machineId, role, currentAssignment) => {
-    if (!currentTeam) return [];
-    
-    const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
-    
+    // Relaxed filtering to allow picking anyone from FABRICACION if needed
     return employees.filter(emp => {
         if (emp.departamento !== "FABRICACION") return false;
-        
-        // Allow if available OR if already assigned
-        const isAssignedHere = Object.values(currentAssignment || {}).includes(emp.id);
-        if (emp.disponibilidad !== "Disponible" && !isAssignedHere) return false;
-        
-        if (emp.equipo !== teamName) return false;
-
-        const puesto = (emp.puesto || '').toUpperCase();
-        
-        if (role === 'RESPONSABLE') {
-            if (!puesto.includes('RESPONSABLE')) return false;
-            // Relaxed mastery check
-        } else if (role === 'SEGUNDA') {
-            if (!puesto.includes('2ª') && !puesto.includes('SEGUNDA')) return false;
-        } else if (role === 'OPERARIO') {
-            if (!puesto.includes('OPERARI')) return false;
-        }
-
-        // Exclusion (Cross-field)
-        if (currentAssignment) {
-            if (role === 'SEGUNDA') {
-                if (emp.id === currentAssignment.responsable_linea) return false;
-            }
-            if (role === 'OPERARIO') {
-                if (emp.id === currentAssignment.responsable_linea) return false;
-                if (emp.id === currentAssignment.segunda_linea) return false;
-                
-                const opSlots = ['operador_1', 'operador_2', 'operador_3', 'operador_4', 'operador_5'];
-                // Only exclude if assigned to ANOTHER operator slot
-                // (Handled implicitly by UI usually, but good to filter)
-                // If I am Op1, I shouldn't be in list for Op2
-                // We return candidate list. Select component will show current value.
-            }
-        }
-
         return true;
     });
   };
@@ -306,9 +281,9 @@ export default function MachineAssignmentsPage() {
         <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <UserCog className="w-8 h-8 text-blue-600" />
-              Asignación de Equipos Ideales
+              Asignación de Equipos
             </h1>
-            <p className="text-slate-500">Configura el personal óptimo para cada máquina por turno.</p>
+            <p className="text-slate-500">Configura el personal para cada máquina.</p>
         </div>
         
         <div className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-sm border">
@@ -337,41 +312,27 @@ export default function MachineAssignmentsPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {machines.map(machine => {
-            const assignment = assignments[machine.id] || {};
-            
-            // Get candidates
-            const responsables = getAvailableEmployees(machine.id, 'RESPONSABLE', assignment);
-            const segundas = getAvailableEmployees(machine.id, 'SEGUNDA', assignment);
-            
-            const getOps = (excludeSlot) => {
-                 const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
-                 return employees.filter(emp => {
-                    if (emp.departamento !== "FABRICACION") return false;
-                    
-                    const isAssignedHere = Object.values(assignment || {}).includes(emp.id);
-                    if (emp.disponibilidad !== "Disponible" && !isAssignedHere) return false;
-                    
-                    if (emp.equipo !== teamName) return false;
-                    
-                    const puesto = (emp.puesto || '').toUpperCase();
-                    if (!puesto.includes('OPERARI')) return false;
-                    
-                    // Exclusions
-                    if (emp.id === assignment.responsable_linea) return false;
-                    if (emp.id === assignment.segunda_linea) return false;
-                    
-                    const opSlots = ['operador_1', 'operador_2', 'operador_3', 'operador_4', 'operador_5'];
-                    for (const slot of opSlots) {
-                        if (slot !== excludeSlot && emp.id === assignment[slot]) return false;
-                    }
-                    return true;
-                 });
-            };
+      <div className="flex gap-6 h-[calc(100vh-200px)]">
+        {/* Helper Sidebar */}
+        <div className="w-80 hidden lg:block shrink-0">
+            <EmployeeHelperList 
+                employees={employees} 
+                currentTeam={currentTeam} 
+                machines={machines} 
+            />
+        </div>
 
-            return (
-                <Card key={machine.id} className="overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
+        {/* Machines Grid */}
+        <div className="flex-1 overflow-y-auto pr-2">
+            <div className="grid gap-6">
+                {machines.map(machine => {
+                    const assignment = assignments[machine.id] || {};
+                    
+                    // Candidates (Full list for dropdowns as requested)
+                    const candidates = getAvailableEmployees(machine.id);
+                    
+                    return (
+                        <Card key={machine.id} className="overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="bg-slate-50 border-b pb-4">
                         <div className="flex justify-between items-center">
                             <div>
@@ -412,7 +373,7 @@ export default function MachineAssignmentsPage() {
                                 <UserCheck className="w-4 h-4" /> Responsable de Línea
                             </Label>
                             <EmployeeSelect
-                                employees={responsables}
+                                employees={candidates}
                                 value={assignment.responsable_linea || ""}
                                 onValueChange={(val) => handleAssignmentChange(machine.id, 'responsable_linea', val)}
                                 placeholder="Seleccionar responsable"
@@ -425,7 +386,7 @@ export default function MachineAssignmentsPage() {
                                 <User className="w-4 h-4" /> Segunda de Línea
                             </Label>
                             <EmployeeSelect
-                                employees={segundas}
+                                employees={candidates}
                                 value={assignment.segunda_linea || ""}
                                 onValueChange={(val) => handleAssignmentChange(machine.id, 'segunda_linea', val)}
                                 placeholder="Seleccionar segunda"
@@ -437,15 +398,15 @@ export default function MachineAssignmentsPage() {
                             <Label className="flex items-center gap-2 text-slate-700">
                                 <Users className="w-4 h-4" /> Operarios de Línea
                             </Label>
-                            <div className="space-y-2">
-                                {[1, 2, 3, 4, 5].map(num => (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
                                     <div key={num} className="flex gap-2 items-center">
-                                        <Badge variant="outline" className="w-8 h-8 flex items-center justify-center shrink-0 bg-slate-100">
+                                        <Badge variant="outline" className="w-6 h-6 flex items-center justify-center shrink-0 bg-slate-100 text-[10px]">
                                             {num}
                                         </Badge>
                                         <div className="flex-1">
                                             <EmployeeSelect
-                                                employees={getOps(`operador_${num}`)}
+                                                employees={candidates}
                                                 value={assignment[`operador_${num}`] || ""}
                                                 onValueChange={(val) => handleAssignmentChange(machine.id, `operador_${num}`, val)}
                                                 placeholder={`Operario ${num}`}
@@ -458,8 +419,10 @@ export default function MachineAssignmentsPage() {
                         </div>
                     </CardContent>
                 </Card>
-            );
-        })}
+                    );
+                })}
+            </div>
+        </div>
       </div>
 
       {/* History Dialog */}

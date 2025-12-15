@@ -21,11 +21,6 @@ Deno.serve(async (req) => {
 
         // Filter employees for the specific team and department
         const teamEmployees = employees.filter(e => {
-            // Logic to match team (assuming team info is in employee record or implied)
-            // For this specific module, we often filter by the user's team, but here we'll assume the LLM can handle the raw list 
-            // and we provide the team_key filtering context if possible. 
-            // Better to filter here if we know the team name mapping, but let's pass all available ones 
-            // and let the prompt guide the selection based on 'equipo' field.
             return e.departamento === department && e.estado_empleado === 'Alta';
         });
 
@@ -66,7 +61,7 @@ Deno.serve(async (req) => {
         Rules:
         1. Assign a 'Responsable de Línea' (Line Lead) to each machine if possible. Must have 'RESPONSABLE' in position.
         2. Assign a 'Segunda de Línea' (Second Lead) to each machine if possible. Must have '2ª' or 'SEGUNDA' in position.
-        3. Assign up to 5 'Operarios' (Operators) per machine. Must have 'OPERARIO' in position.
+        3. Assign up to 8 'Operarios' (Operators) per machine. Must have 'OPERARIO' in position.
         4. PRIORITIZE machines with High Priority Work Orders.
         5. Match employees to machines they have skills/experience in (skills field contains machine IDs).
         6. DO NOT assign absent employees.
@@ -85,6 +80,7 @@ Deno.serve(async (req) => {
                     "operador_1": "EMPLOYEE_ID" | null,
                     "operador_2": "EMPLOYEE_ID" | null,
                     ...
+                    "operador_8": "EMPLOYEE_ID" | null,
                     "reasoning": "Short explanation of why this team was chosen"
                 },
                 ...
@@ -109,6 +105,9 @@ Deno.serve(async (req) => {
                                 operador_3: { type: ["string", "null"] },
                                 operador_4: { type: ["string", "null"] },
                                 operador_5: { type: ["string", "null"] },
+                                operador_6: { type: ["string", "null"] },
+                                operador_7: { type: ["string", "null"] },
+                                operador_8: { type: ["string", "null"] },
                                 reasoning: { type: "string" }
                             }
                         }
