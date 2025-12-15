@@ -39,55 +39,31 @@ import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
-import MachinePlanning from './pages/MachinePlanning';
 import Machines from './pages/Machines';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
-import MasterEmployeeView from './pages/MasterEmployeeView';
 import MasterMachineView from './pages/MasterMachineView';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
-import MobileAbsences from './pages/MobileAbsences';
-import MobileAppConfig from './pages/MobileAppConfig';
-import MobileChat from './pages/MobileChat';
-import MobileNotifications from './pages/MobileNotifications';
-import MobilePlanning from './pages/MobilePlanning';
-import MobileProfile from './pages/MobileProfile';
-import MobileVacations from './pages/MobileVacations';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
 import Notifications from './pages/Notifications';
 import PerformanceManagement from './pages/PerformanceManagement';
 import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import ProcessConfiguration from './pages/ProcessConfiguration';
-import ProcessTypes from './pages/ProcessTypes';
 import ProductionPlanning from './pages/ProductionPlanning';
 import Reports from './pages/Reports';
-import RoleManagement from './pages/RoleManagement';
 import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
 import ShiftAssignments from './pages/ShiftAssignments';
 import ShiftHandover from './pages/ShiftHandover';
 import ShiftManagement from './pages/ShiftManagement';
 import ShiftManagers from './pages/ShiftManagers';
-import ShiftManagersDashboard from './pages/ShiftManagersDashboard';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
-import UserManagement from './pages/UserManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import mobileAbsences from './pages/mobileAbsences';
-import mobileAppConfig from './pages/mobileAppConfig';
-import mobileChat from './pages/mobileChat';
-import mobileNotifications from './pages/mobileNotifications';
-import mobilePlanning from './pages/mobilePlanning';
-import mobileProfile from './pages/mobileProfile';
-import mobileVacations from './pages/mobileVacations';
-import MobileAbsences from './pages/MobileAbsences';
-import MobileChat from './pages/MobileChat';
-import MobilePlanning from './pages/MobilePlanning';
-import MobileVacations from './pages/MobileVacations';
 import __Layout from './Layout.jsx';
 
 
@@ -133,55 +109,31 @@ export const PAGES = {
     "MachineAssignments": MachineAssignments,
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
-    "MachinePlanning": MachinePlanning,
     "Machines": Machines,
     "MaintenanceTracking": MaintenanceTracking,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
-    "MasterEmployeeView": MasterEmployeeView,
     "MasterMachineView": MasterMachineView,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
-    "MobileAbsences": MobileAbsences,
-    "MobileAppConfig": MobileAppConfig,
-    "MobileChat": MobileChat,
-    "MobileNotifications": MobileNotifications,
-    "MobilePlanning": MobilePlanning,
-    "MobileProfile": MobileProfile,
-    "MobileVacations": MobileVacations,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
     "Notifications": Notifications,
     "PerformanceManagement": PerformanceManagement,
     "PredictiveMaintenance": PredictiveMaintenance,
     "ProcessConfiguration": ProcessConfiguration,
-    "ProcessTypes": ProcessTypes,
     "ProductionPlanning": ProductionPlanning,
     "Reports": Reports,
-    "RoleManagement": RoleManagement,
     "ShiftAbsenceReport": ShiftAbsenceReport,
     "ShiftAssignments": ShiftAssignments,
     "ShiftHandover": ShiftHandover,
     "ShiftManagement": ShiftManagement,
     "ShiftManagers": ShiftManagers,
-    "ShiftManagersDashboard": ShiftManagersDashboard,
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
     "SystemReset": SystemReset,
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
-    "UserManagement": UserManagement,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "mobileAbsences": mobileAbsences,
-    "mobileAppConfig": mobileAppConfig,
-    "mobileChat": mobileChat,
-    "mobileNotifications": mobileNotifications,
-    "mobilePlanning": mobilePlanning,
-    "mobileProfile": mobileProfile,
-    "mobileVacations": mobileVacations,
-    "MobileAbsences": MobileAbsences,
-    "MobileChat": MobileChat,
-    "MobilePlanning": MobilePlanning,
-    "MobileVacations": MobileVacations,
 }
 
 export const pagesConfig = {
