@@ -158,28 +158,27 @@ export default function AbsenceForm({
     const filtered = employees.filter(emp => 
       !searchTerm || emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
-    // Always include the current employee if selected, even if not in the search results
-    if (formData.employee_id) {
-      const inList = filtered.find(e => e.id === formData.employee_id);
-      if (!inList) {
-        // Try to find in full list
-        const selected = employees.find(e => e.id === formData.employee_id);
-        if (selected) {
-          filtered.unshift(selected);
-        } else if (initialData && initialData.employee_id === formData.employee_id) {
-            // If not found in list but exists in initialData, create a temporary option
-            // This handles cases where the employee list might be incomplete or filtered
-            filtered.unshift({
-                id: formData.employee_id,
-                nombre: initialData.employee_name || formData.employee_name || "Empleado (ID: " + formData.employee_id + ")",
-                disponibilidad: "Unknown"
-            });
-        }
-      }
-    }
     return filtered;
-  }, [employees, searchTerm, formData.employee_id, initialData, formData.employee_name]);
+  }, [employees, searchTerm]);
+
+  // Determine if we are in edit mode
+  const isEditing = !!(initialData && initialData.id);
+
+  // Get employee name for display in edit mode
+  const displayEmployeeName = React.useMemo(() => {
+    if (!formData.employee_id) return "";
+    
+    // Try to find in the provided employees list
+    const emp = employees.find(e => e.id === formData.employee_id);
+    if (emp) return emp.nombre;
+    
+    // Fallback to name in initialData if available
+    if (initialData && initialData.employee_id === formData.employee_id && initialData.employee_name) {
+      return initialData.employee_name;
+    }
+    
+    return "Empleado no encontrado (ID: " + formData.employee_id + ")";
+  }, [formData.employee_id, employees, initialData]);
 
   const suggestedReasons = React.useMemo(() => {
     if (aiReasons.length > 0) return aiReasons; // Prefer AI reasons if available
@@ -320,31 +319,36 @@ export default function AbsenceForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="employee_id">Empleado *</Label>
-        <Select
-          value={formData.employee_id}
-          onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-          required
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Buscar y seleccionar empleado" />
-          </SelectTrigger>
-          <SelectContent>
-            <div className="p-2">
-              <Input
-                placeholder="Buscar empleado..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-2"
-              />
-            </div>
-            {employeesForSelect.slice(0, 100).map((emp) => (
-              <SelectItem key={emp.id} value={emp.id}>
-                {emp.nombre} {emp.disponibilidad === "Ausente" && "(Ya ausente)"}
-              </SelectItem>
-            ))}
-            {/* Fallback item handled in employeesForSelect useMemo now */}
-          </SelectContent>
-        </Select>
+        {isEditing ? (
+          <div className="p-2 bg-slate-100 dark:bg-slate-800 border rounded-md text-slate-700 dark:text-slate-300 font-medium">
+            {displayEmployeeName}
+          </div>
+        ) : (
+          <Select
+            value={formData.employee_id}
+            onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
+            required
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Buscar y seleccionar empleado" />
+            </SelectTrigger>
+            <SelectContent>
+              <div className="p-2">
+                <Input
+                  placeholder="Buscar empleado..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mb-2"
+                />
+              </div>
+              {employeesForSelect.slice(0, 100).map((emp) => (
+                <SelectItem key={emp.id} value={emp.id}>
+                  {emp.nombre} {emp.disponibilidad === "Ausente" && "(Ya ausente)"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
