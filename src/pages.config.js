@@ -19,10 +19,14 @@ import DocumentManagement from './pages/DocumentManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
 import EmailNotifications from './pages/EmailNotifications';
 import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
+import EmployeeAbsences from './pages/EmployeeAbsences';
+import EmployeeChat from './pages/EmployeeChat';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import EmployeeList from './pages/EmployeeList';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
+import EmployeePlanning from './pages/EmployeePlanning';
+import EmployeeVacations from './pages/EmployeeVacations';
 import Employees from './pages/Employees';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
 import HRDashboard from './pages/HRDashboard';
@@ -43,9 +47,13 @@ import MasterEmployeeView from './pages/MasterEmployeeView';
 import MasterMachineView from './pages/MasterMachineView';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
+import MobileAbsences from './pages/MobileAbsences';
 import MobileAppConfig from './pages/MobileAppConfig';
+import MobileChat from './pages/MobileChat';
 import MobileNotifications from './pages/MobileNotifications';
+import MobilePlanning from './pages/MobilePlanning';
 import MobileProfile from './pages/MobileProfile';
+import MobileVacations from './pages/MobileVacations';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
 import Notifications from './pages/Notifications';
@@ -69,10 +77,10 @@ import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import UserManagement from './pages/UserManagement';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import EmployeeAbsences from './pages/EmployeeAbsences';
-import EmployeeChat from './pages/EmployeeChat';
-import EmployeePlanning from './pages/EmployeePlanning';
-import EmployeeVacations from './pages/EmployeeVacations';
+import mobileAbsences from './pages/mobileAbsences';
+import mobileChat from './pages/mobileChat';
+import mobilePlanning from './pages/mobilePlanning';
+import mobileVacations from './pages/mobileVacations';
 import MobileAbsences from './pages/MobileAbsences';
 import MobileChat from './pages/MobileChat';
 import MobilePlanning from './pages/MobilePlanning';
@@ -102,10 +110,14 @@ export const PAGES = {
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
     "EmailNotifications": EmailNotifications,
     "EmployeeAbsenceInfo": EmployeeAbsenceInfo,
+    "EmployeeAbsences": EmployeeAbsences,
+    "EmployeeChat": EmployeeChat,
     "EmployeeDataCompletion": EmployeeDataCompletion,
     "EmployeeDataCorrection": EmployeeDataCorrection,
     "EmployeeList": EmployeeList,
     "EmployeeOnboarding": EmployeeOnboarding,
+    "EmployeePlanning": EmployeePlanning,
+    "EmployeeVacations": EmployeeVacations,
     "Employees": Employees,
     "EmployeesShiftManager": EmployeesShiftManager,
     "HRDashboard": HRDashboard,
@@ -126,9 +138,13 @@ export const PAGES = {
     "MasterMachineView": MasterMachineView,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
+    "MobileAbsences": MobileAbsences,
     "MobileAppConfig": MobileAppConfig,
+    "MobileChat": MobileChat,
     "MobileNotifications": MobileNotifications,
+    "MobilePlanning": MobilePlanning,
     "MobileProfile": MobileProfile,
+    "MobileVacations": MobileVacations,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
     "Notifications": Notifications,
@@ -152,10 +168,10 @@ export const PAGES = {
     "Timeline": Timeline,
     "UserManagement": UserManagement,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "EmployeeAbsences": EmployeeAbsences,
-    "EmployeeChat": EmployeeChat,
-    "EmployeePlanning": EmployeePlanning,
-    "EmployeeVacations": EmployeeVacations,
+    "mobileAbsences": mobileAbsences,
+    "mobileChat": mobileChat,
+    "mobilePlanning": mobilePlanning,
+    "mobileVacations": mobileVacations,
     "MobileAbsences": MobileAbsences,
     "MobileChat": MobileChat,
     "MobilePlanning": MobilePlanning,
