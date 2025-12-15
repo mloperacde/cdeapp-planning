@@ -23,6 +23,7 @@ import EmployeeAbsences from './pages/EmployeeAbsences';
 import EmployeeChat from './pages/EmployeeChat';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
+import EmployeeList from './pages/EmployeeList';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import EmployeePlanning from './pages/EmployeePlanning';
 import EmployeeVacations from './pages/EmployeeVacations';
@@ -116,6 +117,7 @@ export const PAGES = {
     "EmployeeChat": EmployeeChat,
     "EmployeeDataCompletion": EmployeeDataCompletion,
     "EmployeeDataCorrection": EmployeeDataCorrection,
+    "EmployeeList": EmployeeList,
     "EmployeeOnboarding": EmployeeOnboarding,
     "EmployeePlanning": EmployeePlanning,
     "EmployeeVacations": EmployeeVacations,
