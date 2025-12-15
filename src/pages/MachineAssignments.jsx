@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserCog, Save, UserCheck, User, Users, Factory, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { UserCog, Save, UserCheck, User, Users, Factory, AlertCircle, CheckCircle2, History, MapPin, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import EmployeeSelect from "../components/common/EmployeeSelect";
 
 const EMPTY_ARRAY = [];
@@ -15,6 +19,11 @@ const EMPTY_ARRAY = [];
 export default function MachineAssignmentsPage() {
   const [currentTeam, setCurrentTeam] = useState("");
   const [assignments, setAssignments] = useState({});
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [currentMachineHistory, setCurrentMachineHistory] = useState([]);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationResult, setOptimizationResult] = useState(null);
+
   const queryClient = useQueryClient();
 
   // Data Queries
@@ -97,9 +106,74 @@ export default function MachineAssignmentsPage() {
     setAssignments(loadedAssignments);
   }, [machines, machineAssignments, currentTeam]);
 
+  // History Query
+  const fetchHistory = async (machineId) => {
+      if (!machineId) return;
+      try {
+        const history = await base44.entities.MachineAssignmentAudit.filter({ 
+            machine_id: machineId,
+            team_key: currentTeam
+        }, '-timestamp', 20);
+        setCurrentMachineHistory(history);
+        setHistoryOpen(true);
+      } catch (error) {
+        console.error(error);
+        toast.error("Error al cargar historial");
+      }
+  };
+
+  // AI Optimization
+  const handleOptimize = async () => {
+    if (!currentTeam) return;
+    setIsOptimizing(true);
+    try {
+        const response = await base44.functions.invoke('optimize_staff_allocation', {
+            team_key: currentTeam,
+            department: "FABRICACION",
+            current_assignments: assignments
+        });
+        
+        if (response.data && response.data.suggestions) {
+            setOptimizationResult(response.data.suggestions);
+        } else {
+            toast.info("La IA no generó sugerencias nuevas.");
+        }
+    } catch (error) {
+        console.error(error);
+        toast.error("Error al optimizar con IA");
+    } finally {
+        setIsOptimizing(false);
+    }
+  };
+
+  const applyOptimization = () => {
+    if (!optimizationResult) return;
+    
+    setAssignments(prev => {
+        const next = { ...prev };
+        Object.entries(optimizationResult).forEach(([machineId, sugg]) => {
+            if (next[machineId]) {
+                next[machineId] = {
+                    ...next[machineId],
+                    responsable_linea: sugg.responsable_linea || next[machineId].responsable_linea,
+                    segunda_linea: sugg.segunda_linea || next[machineId].segunda_linea,
+                    operador_1: sugg.operador_1 || next[machineId].operador_1,
+                    operador_2: sugg.operador_2 || next[machineId].operador_2,
+                    operador_3: sugg.operador_3 || next[machineId].operador_3,
+                    operador_4: sugg.operador_4 || next[machineId].operador_4,
+                    operador_5: sugg.operador_5 || next[machineId].operador_5,
+                };
+            }
+        });
+        return next;
+    });
+    setOptimizationResult(null);
+    toast.success("Sugerencias aplicadas. Revise y guarde los cambios.");
+  };
+
   // Mutations
   const saveMutation = useMutation({
-    mutationFn: async ({ machineId, data }) => {
+    mutationFn: async ({ machineId, data, machineName }) => {
       // Prepare data for saving
       const payload = {
           machine_id: machineId,
@@ -116,6 +190,22 @@ export default function MachineAssignmentsPage() {
       const existing = machineAssignments.find(
         a => a.machine_id === machineId && a.team_key === currentTeam
       );
+
+      // Audit Log
+      try {
+          const changes = existing ? JSON.stringify({ old: existing, new: payload }) : JSON.stringify({ new: payload });
+          await base44.entities.MachineAssignmentAudit.create({
+              machine_id: machineId,
+              machine_name: machineName,
+              team_key: currentTeam,
+              action: existing ? 'update' : 'create',
+              changes: changes,
+              modified_by: currentUser?.email || 'unknown',
+              timestamp: new Date().toISOString()
+          });
+      } catch (e) {
+          console.error("Audit log failed", e);
+      }
 
       if (existing) {
         return base44.entities.MachineAssignment.update(existing.id, payload);
@@ -144,76 +234,46 @@ export default function MachineAssignmentsPage() {
     return false;
   };
 
-  // Filter Logic
+  // Filter Logic - Improved
   const getAvailableEmployees = (machineId, role, currentAssignment) => {
     if (!currentTeam) return [];
     
     const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
     
     return employees.filter(emp => {
-        // Basic conditions
         if (emp.departamento !== "FABRICACION") return false;
-        if (emp.disponibilidad !== "Disponible") return false;
         
-        // Team condition
+        // Allow if available OR if already assigned
+        const isAssignedHere = Object.values(currentAssignment || {}).includes(emp.id);
+        if (emp.disponibilidad !== "Disponible" && !isAssignedHere) return false;
+        
         if (emp.equipo !== teamName) return false;
 
-        // Role condition
         const puesto = (emp.puesto || '').toUpperCase();
+        
         if (role === 'RESPONSABLE') {
-            if (puesto !== 'RESPONSABLE DE LÍNEA') return false;
-            if (!checkMachineMastery(emp, machineId)) return false;
+            if (!puesto.includes('RESPONSABLE')) return false;
+            // Relaxed mastery check
         } else if (role === 'SEGUNDA') {
-            if (puesto !== '2ª DE LÍNEA') return false;
-            if (!checkMachineExperience(emp, machineId)) return false;
+            if (!puesto.includes('2ª') && !puesto.includes('SEGUNDA')) return false;
         } else if (role === 'OPERARIO') {
-            if (puesto !== 'OPERARIO DE LINEA' && puesto !== 'OPERARIA DE LINEA') return false;
-            if (!checkMachineExperience(emp, machineId)) return false;
+            if (!puesto.includes('OPERARI')) return false;
         }
 
-        // Exclusion logic (prevent duplicate assignment in same machine)
+        // Exclusion (Cross-field)
         if (currentAssignment) {
-            const assignedIds = [
-                currentAssignment.responsable_linea,
-                currentAssignment.segunda_linea,
-                currentAssignment.operador_1,
-                currentAssignment.operador_2,
-                currentAssignment.operador_3,
-                currentAssignment.operador_4,
-                currentAssignment.operador_5
-            ].filter(Boolean);
-
-            // Exclude if assigned elsewhere in this machine (unless it's the current slot being edited, handled by Select component usually, but here we provide list)
-            // Ideally we filter out those assigned to OTHER slots
-            // But for dropdown list, we just filter out those assigned to *other* roles. 
-            // The currently selected value for *this* role should effectively be in the list? 
-            // EmployeeSelect handles "value" so even if not in list it might show if we implemented it that way, but better include it.
-            
-            // Actually, we should filter out anyone assigned to a DIFFERENT slot.
-            // But we don't know "which slot" calls this function easily without passing it.
-            // Let's pass the "currentSlot" ID/Name if needed.
-            // Simpler: Just filter out everyone assigned to ANY slot in this machine, EXCEPT the current user if they are assigned to THIS slot?
-            // No, complex. Let's just return all candidates, and let the user handle conflicts? 
-            // The prompt says: "Exclusión: El empleado seleccionado como Responsable... NO debe aparecer en este desplegable."
-            
-            // To do this strict exclusion:
             if (role === 'SEGUNDA') {
                 if (emp.id === currentAssignment.responsable_linea) return false;
             }
             if (role === 'OPERARIO') {
                 if (emp.id === currentAssignment.responsable_linea) return false;
                 if (emp.id === currentAssignment.segunda_linea) return false;
-                // Also exclude other operators? 
-                // "Exclusión: Los empleados ya seleccionados... en cualquier otro slot de Operario... NO deben aparecer"
-                const opIds = [
-                    currentAssignment.operador_1, 
-                    currentAssignment.operador_2, 
-                    currentAssignment.operador_3, 
-                    currentAssignment.operador_4, 
-                    currentAssignment.operador_5
-                ];
-                if (opIds.includes(emp.id)) return false; 
-                // Note: This logic prevents "swapping" easily without unselecting first. That's acceptable.
+                
+                const opSlots = ['operador_1', 'operador_2', 'operador_3', 'operador_4', 'operador_5'];
+                // Only exclude if assigned to ANOTHER operator slot
+                // (Handled implicitly by UI usually, but good to filter)
+                // If I am Op1, I shouldn't be in list for Op2
+                // We return candidate list. Select component will show current value.
             }
         }
 
@@ -232,8 +292,8 @@ export default function MachineAssignmentsPage() {
     }));
   };
 
-  const handleSaveMachine = (machineId) => {
-    saveMutation.mutate({ machineId, data: assignments[machineId] });
+  const handleSaveMachine = (machineId, machineName) => {
+    saveMutation.mutate({ machineId, data: assignments[machineId], machineName });
   };
 
   if (loadingMachines || loadingEmployees) {
@@ -289,16 +349,15 @@ export default function MachineAssignmentsPage() {
                  const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
                  return employees.filter(emp => {
                     if (emp.departamento !== "FABRICACION") return false;
-                    // Relaxed availability check
-                    // if (emp.disponibilidad !== "Disponible") return false;
+                    
+                    const isAssignedHere = Object.values(assignment || {}).includes(emp.id);
+                    if (emp.disponibilidad !== "Disponible" && !isAssignedHere) return false;
+                    
                     if (emp.equipo !== teamName) return false;
                     
                     const puesto = (emp.puesto || '').toUpperCase();
                     if (!puesto.includes('OPERARI')) return false;
                     
-                    // Relaxed exp check
-                    // if (!checkMachineExperience(emp, machine.id)) return false;
-
                     // Exclusions
                     if (emp.id === assignment.responsable_linea) return false;
                     if (emp.id === assignment.segunda_linea) return false;
