@@ -111,6 +111,7 @@ export default function AbsenceForm({
         ...prev,
         ...initialData,
         employee_id: initialData.employee_id || "",
+        employee_name: initialData.employee_name || "", // Ensure name is preserved
         absence_type_id: typeId || "",
         motivo: initialData.motivo || "",
         tipo: initialData.tipo || "",
@@ -155,15 +156,30 @@ export default function AbsenceForm({
 
   const employeesForSelect = React.useMemo(() => {
     const filtered = employees.filter(emp => 
-      !searchTerm || emp.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      !searchTerm || emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    // Ensure selected employee is always in the list
-    if (formData.employee_id && !filtered.find(e => e.id === formData.employee_id)) {
-      const selected = employees.find(e => e.id === formData.employee_id);
-      if (selected) filtered.unshift(selected);
+    
+    // Always include the current employee if selected, even if not in the search results
+    if (formData.employee_id) {
+      const inList = filtered.find(e => e.id === formData.employee_id);
+      if (!inList) {
+        // Try to find in full list
+        const selected = employees.find(e => e.id === formData.employee_id);
+        if (selected) {
+          filtered.unshift(selected);
+        } else if (initialData && initialData.employee_id === formData.employee_id) {
+            // If not found in list but exists in initialData, create a temporary option
+            // This handles cases where the employee list might be incomplete or filtered
+            filtered.unshift({
+                id: formData.employee_id,
+                nombre: initialData.employee_name || formData.employee_name || "Empleado (ID: " + formData.employee_id + ")",
+                disponibilidad: "Unknown"
+            });
+        }
+      }
     }
     return filtered;
-  }, [employees, searchTerm, formData.employee_id]);
+  }, [employees, searchTerm, formData.employee_id, initialData, formData.employee_name]);
 
   const suggestedReasons = React.useMemo(() => {
     if (aiReasons.length > 0) return aiReasons; // Prefer AI reasons if available
@@ -326,11 +342,7 @@ export default function AbsenceForm({
                 {emp.nombre} {emp.disponibilidad === "Ausente" && "(Ya ausente)"}
               </SelectItem>
             ))}
-            {formData.employee_id && !employeesForSelect.find(e => e.id === formData.employee_id) && (
-               <SelectItem key={formData.employee_id} value={formData.employee_id}>
-                 {initialData?.employee_name || employees.find(e => e.id === formData.employee_id)?.nombre || "Empleado desconocido"}
-               </SelectItem>
-            )}
+            {/* Fallback item handled in employeesForSelect useMemo now */}
           </SelectContent>
         </Select>
       </div>
