@@ -107,12 +107,21 @@ export default function UnifiedAbsenceManager(props) {
 
   // Consolidado de empleados disponibles vs ausentes
   const availabilityStats = useMemo(() => {
-    // Base list
-    let targetList = employees.length > 0 ? employees : masterEmployees;
+    // Merge lists to ensure we have all employees
+    const uniqueEmployeesMap = new Map();
+    [...masterEmployees, ...employees].forEach(emp => {
+      uniqueEmployeesMap.set(emp.id, emp);
+    });
+    
+    let targetList = Array.from(uniqueEmployeesMap.values());
     
     // Filter by context
     if (sourceContext === 'shift_manager') {
-      targetList = targetList.filter(e => e.departamento === 'FABRICACION');
+      targetList = targetList.filter(e => 
+        e.departamento?.toUpperCase() === 'FABRICACION' || 
+        e.puesto?.toUpperCase().includes('OPERARI') ||
+        e.equipo
+      );
     }
 
     // Filter ONLY ACTIVE employees for counters

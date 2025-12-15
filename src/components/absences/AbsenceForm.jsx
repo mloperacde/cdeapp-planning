@@ -328,7 +328,7 @@ export default function AbsenceForm({
             ))}
             {formData.employee_id && !employeesForSelect.find(e => e.id === formData.employee_id) && (
                <SelectItem key={formData.employee_id} value={formData.employee_id}>
-                 {initialData?.employee_name || "Empleado seleccionado (Cargando...)"}
+                 {initialData?.employee_name || employees.find(e => e.id === formData.employee_id)?.nombre || "Empleado desconocido"}
                </SelectItem>
             )}
           </SelectContent>
