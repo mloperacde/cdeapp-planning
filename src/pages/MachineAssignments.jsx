@@ -266,6 +266,17 @@ export default function MachineAssignmentsPage() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2 mb-6">
+        <Button 
+            onClick={handleOptimize} 
+            disabled={isOptimizing}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
+            {isOptimizing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+            {isOptimizing ? "Optimizando..." : "Optimizar con IA"}
+        </Button>
+      </div>
+
       <div className="grid gap-6">
         {machines.map(machine => {
             const assignment = assignments[machine.id] || {};
@@ -273,31 +284,20 @@ export default function MachineAssignmentsPage() {
             // Get candidates
             const responsables = getAvailableEmployees(machine.id, 'RESPONSABLE', assignment);
             const segundas = getAvailableEmployees(machine.id, 'SEGUNDA', assignment);
-            // For operators, we need to handle the "self-exclusion" logic carefully.
-            // If I am editing Operator 1, I shouldn't be excluded because I am in Operator 1 slot.
-            // My helper function filters out ALL operators.
-            // So I need a specific filter for each slot? 
-            // Let's rely on the Select component to show the "current value" even if filtered out?
-            // EmployeeSelect shows "selectedEmployee" if found in full list.
-            // But the dropdown list will filter them out.
-            // To fix "swapping" issue: The filter above excludes ALL operators. 
-            // If I am assigned to Op 1, I won't appear in Op 2 list. Correct.
-            // If I am assigned to Op 1, do I appear in Op 1 list?
-            // The helper `getAvailableEmployees` excludes `currentAssignment.operador_1`.
-            // So if I am Op 1, I am excluded. 
-            // So I won't see myself in the dropdown for Op 1.
-            // This is annoying. 
-            // Fix: Pass the current slot being edited to `getAvailableEmployees` to NOT exclude it.
             
             const getOps = (excludeSlot) => {
                  const teamName = teams.find(t => t.team_key === currentTeam)?.team_name;
                  return employees.filter(emp => {
                     if (emp.departamento !== "FABRICACION") return false;
-                    if (emp.disponibilidad !== "Disponible") return false;
+                    // Relaxed availability check
+                    // if (emp.disponibilidad !== "Disponible") return false;
                     if (emp.equipo !== teamName) return false;
+                    
                     const puesto = (emp.puesto || '').toUpperCase();
-                    if (puesto !== 'OPERARIO DE LINEA' && puesto !== 'OPERARIA DE LINEA') return false;
-                    if (!checkMachineExperience(emp, machine.id)) return false;
+                    if (!puesto.includes('OPERARI')) return false;
+                    
+                    // Relaxed exp check
+                    // if (!checkMachineExperience(emp, machine.id)) return false;
 
                     // Exclusions
                     if (emp.id === assignment.responsable_linea) return false;
@@ -317,16 +317,33 @@ export default function MachineAssignmentsPage() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <CardTitle className="text-xl">{machine.nombre}</CardTitle>
-                                <p className="text-sm text-slate-500 font-mono">{machine.codigo}</p>
+                                <div className="flex gap-4 text-sm text-slate-500 mt-1">
+                                    <span className="font-mono bg-slate-200 px-1 rounded">{machine.codigo}</span>
+                                    {machine.ubicacion && (
+                                        <span className="flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" /> {machine.ubicacion}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <Button 
-                                onClick={() => handleSaveMachine(machine.id)} 
-                                size="sm" 
-                                className="bg-blue-600 hover:bg-blue-700"
-                            >
-                                <Save className="w-4 h-4 mr-2" />
-                                Guardar
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => fetchHistory(machine.id)}
+                                >
+                                    <History className="w-4 h-4 mr-2" />
+                                    Historial
+                                </Button>
+                                <Button 
+                                    onClick={() => handleSaveMachine(machine.id, machine.nombre)} 
+                                    size="sm" 
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                    <Save className="w-4 h-4 mr-2" />
+                                    Guardar
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -341,12 +358,6 @@ export default function MachineAssignmentsPage() {
                                 onValueChange={(val) => handleAssignmentChange(machine.id, 'responsable_linea', val)}
                                 placeholder="Seleccionar responsable"
                             />
-                            {assignment.responsable_linea && !responsables.find(e => e.id === assignment.responsable_linea) && (
-                                <p className="text-xs text-amber-600 flex items-center mt-1">
-                                    <AlertCircle className="w-3 h-3 mr-1" /> 
-                                    El actual no cumple criterios
-                                </p>
-                            )}
                         </div>
 
                         {/* Segunda */}
@@ -391,6 +402,70 @@ export default function MachineAssignmentsPage() {
             );
         })}
       </div>
+
+      {/* History Dialog */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-md">
+            <DialogHeader>
+                <DialogTitle>Historial de Cambios</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="h-[300px] w-full pr-4">
+                {currentMachineHistory.length === 0 ? (
+                    <p className="text-center text-slate-500 py-4">No hay historial disponible</p>
+                ) : (
+                    <div className="space-y-4">
+                        {currentMachineHistory.map((entry, idx) => (
+                            <div key={idx} className="border-l-2 border-slate-200 pl-3 pb-2">
+                                <p className="text-sm font-medium">{entry.action === 'create' ? 'Creado' : 'Actualizado'}</p>
+                                <p className="text-xs text-slate-500">
+                                    {format(new Date(entry.timestamp), "dd/MM/yyyy HH:mm", { locale: es })}
+                                </p>
+                                <p className="text-xs text-slate-400">por {entry.modified_by}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Optimization Review Dialog */}
+      {optimizationResult && (
+        <Dialog open={!!optimizationResult} onOpenChange={() => setOptimizationResult(null)}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-purple-600" />
+                        Sugerencias de Optimización IA
+                    </DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="h-[400px] pr-4">
+                    <div className="space-y-4">
+                        {Object.entries(optimizationResult).map(([machineId, sugg]) => {
+                            const machineName = machines.find(m => m.id === machineId)?.nombre || machineId;
+                            return (
+                                <div key={machineId} className="bg-slate-50 p-3 rounded-lg border">
+                                    <h4 className="font-semibold text-sm mb-2">{machineName}</h4>
+                                    <div className="text-xs space-y-1">
+                                        {sugg.reasoning && <p className="italic text-slate-500 mb-2">"{sugg.reasoning}"</p>}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {sugg.responsable_linea && <div>Resp: <span className="font-medium">{employees.find(e => e.id === sugg.responsable_linea)?.nombre || sugg.responsable_linea}</span></div>}
+                                            {sugg.segunda_linea && <div>2ª: <span className="font-medium">{employees.find(e => e.id === sugg.segunda_linea)?.nombre || sugg.segunda_linea}</span></div>}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </ScrollArea>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setOptimizationResult(null)}>Cancelar</Button>
+                    <Button onClick={applyOptimization} className="bg-purple-600 hover:bg-purple-700">Aplicar Sugerencias</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
+
     </div>
   );
 }
