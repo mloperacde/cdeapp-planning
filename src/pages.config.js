@@ -23,7 +23,6 @@ import EmployeeAbsences from './pages/EmployeeAbsences';
 import EmployeeChat from './pages/EmployeeChat';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
-import EmployeeList from './pages/EmployeeList';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import EmployeePlanning from './pages/EmployeePlanning';
 import EmployeeVacations from './pages/EmployeeVacations';
@@ -81,10 +80,14 @@ import mobileAbsences from './pages/mobileAbsences';
 import mobileChat from './pages/mobileChat';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileVacations from './pages/mobileVacations';
+import mobileAppConfig from './pages/mobileAppConfig';
+import mobileNotifications from './pages/mobileNotifications';
+import mobileProfile from './pages/mobileProfile';
 import MobileAbsences from './pages/MobileAbsences';
 import MobileChat from './pages/MobileChat';
 import MobilePlanning from './pages/MobilePlanning';
 import MobileVacations from './pages/MobileVacations';
+import EmployeeList from './pages/EmployeeList';
 import __Layout from './Layout.jsx';
 
 
@@ -114,7 +117,6 @@ export const PAGES = {
     "EmployeeChat": EmployeeChat,
     "EmployeeDataCompletion": EmployeeDataCompletion,
     "EmployeeDataCorrection": EmployeeDataCorrection,
-    "EmployeeList": EmployeeList,
     "EmployeeOnboarding": EmployeeOnboarding,
     "EmployeePlanning": EmployeePlanning,
     "EmployeeVacations": EmployeeVacations,
@@ -172,10 +174,14 @@ export const PAGES = {
     "mobileChat": mobileChat,
     "mobilePlanning": mobilePlanning,
     "mobileVacations": mobileVacations,
+    "mobileAppConfig": mobileAppConfig,
+    "mobileNotifications": mobileNotifications,
+    "mobileProfile": mobileProfile,
     "MobileAbsences": MobileAbsences,
     "MobileChat": MobileChat,
     "MobilePlanning": MobilePlanning,
     "MobileVacations": MobileVacations,
+    "EmployeeList": EmployeeList,
 }
 
 export const pagesConfig = {
