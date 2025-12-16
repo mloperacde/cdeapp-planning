@@ -46,16 +46,26 @@ export default function EmployeeSelect({
     });
   }, [employees, filterFn]);
 
-  // Agrupar por departamento
+  // Agrupar por departamento o custom
   const groupedEmployees = useMemo(() => {
+    // Si los empleados ya vienen con una propiedad '_group', usamos esa
+    const hasCustomGroup = sortedEmployees.some(e => e._group);
+    
     const groups = {};
     sortedEmployees.forEach(emp => {
-      const dept = emp.departamento || "Sin departamento";
-      if (!groups[dept]) {
-        groups[dept] = [];
+      const groupName = hasCustomGroup ? (emp._group || "Otros") : (emp.departamento || "Sin departamento");
+      if (!groups[groupName]) {
+        groups[groupName] = [];
       }
-      groups[dept].push(emp);
+      groups[groupName].push(emp);
     });
+    
+    // Si es custom group, ordenamos para que "Cualificados" o "Recomendados" salgan primero si existen
+    if (hasCustomGroup) {
+        // Orden simple de claves si es necesario, o confiar en el orden de inserción/iteración
+        // Por ahora lo dejamos así, el componente CommandGroup renderizará en el orden de Object.entries
+    }
+    
     return groups;
   }, [sortedEmployees]);
 
