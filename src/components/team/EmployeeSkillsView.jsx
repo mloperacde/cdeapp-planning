@@ -16,6 +16,8 @@ export default function EmployeeSkillsView() {
     const queryClient = useQueryClient();
     const [filters, setFilters] = useState({});
     const [editingState, setEditingState] = useState({});
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 20;
 
     // Fetch Data
     const { data: employees = [] } = useQuery({
@@ -92,6 +94,7 @@ export default function EmployeeSkillsView() {
     // Handlers
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
+        setCurrentPage(1); // Reset to first page on filter change
     };
 
     const handleMachineChange = (employeeId, slot, machineId) => {
@@ -166,62 +169,90 @@ export default function EmployeeSkillsView() {
             </Card>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto border rounded-lg bg-white shadow-sm">
-                <Table>
-                    <TableHeader className="bg-slate-50 sticky top-0 z-10">
-                        <TableRow>
-                            <TableHead className="w-[200px]">Empleado</TableHead>
-                            <TableHead className="w-[150px]">Equipo</TableHead>
-                            <TableHead className="w-[150px]">Puesto</TableHead>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
-                                <TableHead key={i} className="min-w-[120px] text-center">Máquina {i}</TableHead>
-                            ))}
-                            <TableHead className="w-[80px] text-right sticky right-0 bg-slate-50">Acción</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredEmployees.map(emp => {
-                            const isEdited = !!editingState[emp.id];
-                            return (
-                                <TableRow key={emp.id} className="hover:bg-slate-50">
-                                    <TableCell className="font-medium">{emp.nombre}</TableCell>
-                                    <TableCell>{emp.equipo}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className="font-normal text-[10px]">{emp.puesto}</Badge>
-                                    </TableCell>
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => {
-                                        const currentVal = editingState[emp.id]?.[`maquina_${i}`] ?? emp[`maquina_${i}`];
-                                        return (
-                                            <TableCell key={i} className="p-1">
-                                                <Select 
-                                                    value={currentVal || "none"} 
-                                                    onValueChange={(v) => handleMachineChange(emp.id, i, v === "none" ? null : v)}
-                                                >
-                                                    <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-slate-100 focus:ring-0">
-                                                        <SelectValue placeholder="-" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">- Sin asignar -</SelectItem>
-                                                        {machines.map(m => (
-                                                            <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </TableCell>
-                                        );
-                                    })}
-                                    <TableCell className="text-right sticky right-0 bg-white group-hover:bg-slate-50">
-                                        {isEdited && (
-                                            <Button size="icon" className="h-8 w-8 bg-green-600 hover:bg-green-700" onClick={() => saveChanges(emp)}>
-                                                <Save className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
+            <div className="flex-1 overflow-auto border rounded-lg bg-white shadow-sm flex flex-col">
+                <div className="flex-1 overflow-auto">
+                    <Table>
+                        <TableHeader className="bg-slate-50 sticky top-0 z-10">
+                            <TableRow>
+                                <TableHead className="w-[200px]">Empleado</TableHead>
+                                <TableHead className="w-[150px]">Equipo</TableHead>
+                                <TableHead className="w-[150px]">Puesto</TableHead>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
+                                    <TableHead key={i} className="min-w-[120px] text-center">Máquina {i}</TableHead>
+                                ))}
+                                <TableHead className="w-[80px] text-right sticky right-0 bg-slate-50">Acción</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredEmployees
+                                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                                .map(emp => {
+                                const isEdited = !!editingState[emp.id];
+                                return (
+                                    <TableRow key={emp.id} className="hover:bg-slate-50">
+                                        <TableCell className="font-medium">{emp.nombre}</TableCell>
+                                        <TableCell>{emp.equipo}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className="font-normal text-[10px]">{emp.puesto}</Badge>
+                                        </TableCell>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => {
+                                            const currentVal = editingState[emp.id]?.[`maquina_${i}`] ?? emp[`maquina_${i}`];
+                                            return (
+                                                <TableCell key={i} className="p-1">
+                                                    <Select 
+                                                        value={currentVal || "none"} 
+                                                        onValueChange={(v) => handleMachineChange(emp.id, i, v === "none" ? null : v)}
+                                                    >
+                                                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-slate-100 focus:ring-0">
+                                                            <SelectValue placeholder="-" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">- Sin asignar -</SelectItem>
+                                                            {machines.map(m => (
+                                                                <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </TableCell>
+                                            );
+                                        })}
+                                        <TableCell className="text-right sticky right-0 bg-white group-hover:bg-slate-50">
+                                            {isEdited && (
+                                                <Button size="icon" className="h-8 w-8 bg-green-600 hover:bg-green-700" onClick={() => saveChanges(emp)}>
+                                                    <Save className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+                {/* Pagination Controls */}
+                <div className="p-4 border-t flex items-center justify-between bg-slate-50">
+                    <div className="text-sm text-slate-500">
+                        Mostrando {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filteredEmployees.length)} de {filteredEmployees.length} empleados
+                    </div>
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            Anterior
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredEmployees.length / pageSize), p + 1))}
+                            disabled={currentPage >= Math.ceil(filteredEmployees.length / pageSize)}
+                        >
+                            Siguiente
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     );
