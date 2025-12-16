@@ -116,14 +116,10 @@ export default function IdealAssignmentView() {
         }
 
         if (roleType === "OPERARIO") {
-            if (!puesto.includes("OPERARI")) return false;
-            // Loose experience: Prefer experienced but don't strictly exclude? 
-            // Prompt: "Criterios de Elegibilidad ... La machine_id ... debe estar presente ... (Según lo especificado... no una exclusión estricta)"
-            // So for Eligibility (Dropdown), we allow ALL operators in team?
-            // "Criterios de Elegibilidad para el Desplegable ... La machine_id ... debe estar presente"
-            // Re-reading strictly: "Criterios de Elegibilidad para el Desplegable... La machine_id ... debe estar presente... (Según lo especificado... no una exclusión estricta)".
-            // This is contradictory. "Debe estar presente" means strict. "(no una exclusión estricta)" means loose.
-            // I will err on side of loose for operators to ensure user has options, but put experienced ones on top.
+            if (!puesto.includes("OPERARI") && !puesto.includes("OPERARIO") && !puesto.includes("OPERARIA")) return false;
+            // Strict experience check as per latest requirement
+            const hasExp = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
+            if (!hasExp) return false;
             return true; 
         }
 
