@@ -369,24 +369,16 @@ export default function IdealAssignmentView() {
       </Button>
       </div>
 
-      <div className="flex gap-6 h-[calc(100vh-280px)]">
-        {/* Helper Sidebar */}
-        <div className="w-80 hidden lg:block shrink-0">
-            <EmployeeHelperList 
-                employees={employees} 
-                currentTeam={currentTeam} 
-                machines={machines} 
-            />
-        </div>
-
-        {/* Machines Grid */}
-        <div className="flex-1 overflow-y-auto pr-2 pb-10">
+      <div className="h-[calc(100vh-280px)] overflow-y-auto pr-2 pb-10">
+        <div className="grid grid-cols-1 gap-6">
             <div className="grid gap-6">
                 {machines.map(machine => {
                     const assignment = assignments[machine.id] || {};
                     
-                    // Candidates (Full list for dropdowns as requested)
-                    const candidates = getAvailableEmployees(machine.id);
+                    // Get candidates per role
+                    const responsables = getEmployeesForRole(machine.id, "RESPONSABLE");
+                    const segundas = getEmployeesForRole(machine.id, "SEGUNDA");
+                    const operarios = getEmployeesForRole(machine.id, "OPERARIO");
                     
                     return (
                         <Card key={machine.id} className="overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
@@ -430,10 +422,11 @@ export default function IdealAssignmentView() {
                                         <UserCheck className="w-4 h-4" /> Responsable de Línea
                                     </Label>
                                     <EmployeeSelect
-                                        employees={candidates}
+                                        employees={responsables}
                                         value={assignment.responsable_linea || ""}
                                         onValueChange={(val) => handleAssignmentChange(machine.id, 'responsable_linea', val)}
                                         placeholder="Seleccionar responsable"
+                                        showDepartment={false}
                                     />
                                 </div>
 
@@ -443,10 +436,11 @@ export default function IdealAssignmentView() {
                                         <User className="w-4 h-4" /> Segunda de Línea
                                     </Label>
                                     <EmployeeSelect
-                                        employees={candidates}
+                                        employees={segundas}
                                         value={assignment.segunda_linea || ""}
                                         onValueChange={(val) => handleAssignmentChange(machine.id, 'segunda_linea', val)}
                                         placeholder="Seleccionar segunda"
+                                        showDepartment={false}
                                     />
                                 </div>
 
@@ -463,7 +457,7 @@ export default function IdealAssignmentView() {
                                                 </Badge>
                                                 <div className="flex-1">
                                                     <EmployeeSelect
-                                                        employees={candidates}
+                                                        employees={operarios}
                                                         value={assignment[`operador_${num}`] || ""}
                                                         onValueChange={(val) => handleAssignmentChange(machine.id, `operador_${num}`, val)}
                                                         placeholder={`Operario ${num}`}
