@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserCog, Save, UserCheck, User, Users, History, MapPin, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +21,8 @@ export default function IdealAssignmentView() {
   const [assignments, setAssignments] = useState({});
   const [historyOpen, setHistoryOpen] = useState(false);
   const [currentMachineHistory, setCurrentMachineHistory] = useState([]);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationResult, setOptimizationResult] = useState(null);
   
   const queryClient = useQueryClient();
 
@@ -265,6 +267,58 @@ export default function IdealAssignmentView() {
       });
   };
 
+  // AI Optimization
+  const handleOptimize = async () => {
+    if (!currentTeam) return;
+    setIsOptimizing(true);
+    try {
+        const response = await base44.functions.invoke('optimize_staff_allocation', {
+            team_key: currentTeam,
+            department: "FABRICACION",
+            current_assignments: assignments
+        });
+        
+        if (response.data && response.data.suggestions) {
+            setOptimizationResult(response.data.suggestions);
+        } else {
+            toast.info("La IA no generó sugerencias nuevas.");
+        }
+    } catch (error) {
+        console.error(error);
+        toast.error("Error al optimizar con IA");
+    } finally {
+        setIsOptimizing(false);
+    }
+  };
+
+  const applyOptimization = () => {
+    if (!optimizationResult) return;
+    
+    setAssignments(prev => {
+        const next = { ...prev };
+        Object.entries(optimizationResult).forEach(([machineId, sugg]) => {
+            if (next[machineId]) {
+                next[machineId] = {
+                    ...next[machineId],
+                    responsable_linea: sugg.responsable_linea || next[machineId].responsable_linea,
+                    segunda_linea: sugg.segunda_linea || next[machineId].segunda_linea,
+                    operador_1: sugg.operador_1 || next[machineId].operador_1,
+                    operador_2: sugg.operador_2 || next[machineId].operador_2,
+                    operador_3: sugg.operador_3 || next[machineId].operador_3,
+                    operador_4: sugg.operador_4 || next[machineId].operador_4,
+                    operador_5: sugg.operador_5 || next[machineId].operador_5,
+                    operador_6: sugg.operador_6 || next[machineId].operador_6,
+                    operador_7: sugg.operador_7 || next[machineId].operador_7,
+                    operador_8: sugg.operador_8 || next[machineId].operador_8,
+                };
+            }
+        });
+        return next;
+    });
+    setOptimizationResult(null);
+    toast.success("Sugerencias aplicadas. Revise y guarde los cambios.");
+  };
+
   // 7. Save Mutation
   const saveMutation = useMutation({
     mutationFn: async ({ machineId, data, machineName }) => {
@@ -344,6 +398,55 @@ export default function IdealAssignmentView() {
     saveMutation.mutate({ machineId, data: assignments[machineId], machineName });
   };
 
+  const handleSaveAll = async () => {
+    // Identify modified assignments
+    const promises = [];
+    
+    // Iterate over all machines (assignments state covers all machines initialized)
+    Object.keys(assignments).forEach(machineId => {
+        const currentData = assignments[machineId];
+        const machine = machines.find(m => m.id === machineId);
+        const machineName = machine?.nombre || "Máquina";
+
+        // Check against DB data
+        const original = machineAssignments.find(a => a.machine_id === machineId && a.team_key === currentTeam);
+        
+        let isModified = false;
+        if (!original) {
+            // New assignment, check if it has any data
+            const hasData = Object.values(currentData).some(v => v !== null && v !== "" && (Array.isArray(v) ? v.length > 0 : true));
+            if (hasData) isModified = true;
+        } else {
+            // Compare fields
+            // Helper to clean array vs value
+            const getVal = (v) => Array.isArray(v) ? v[0] : v;
+            
+            if (getVal(original.responsable_linea) !== currentData.responsable_linea) isModified = true;
+            if (getVal(original.segunda_linea) !== currentData.segunda_linea) isModified = true;
+            for(let i=1; i<=8; i++) {
+                if ((original[`operador_${i}`] || null) !== (currentData[`operador_${i}`] || null)) isModified = true;
+            }
+        }
+
+        if (isModified) {
+            promises.push(saveMutation.mutateAsync({ machineId, data: currentData, machineName }));
+        }
+    });
+
+    if (promises.length === 0) {
+        toast.info("No hay cambios pendientes para guardar.");
+        return;
+    }
+
+    try {
+        await Promise.all(promises);
+        toast.success(`Se han guardado ${promises.length} configuraciones de máquinas.`);
+    } catch (error) {
+        console.error(error);
+        toast.error("Hubo errores al guardar algunas asignaciones.");
+    }
+  };
+
   const fetchHistory = async (machineId) => {
     if (!machineId) return;
     try {
@@ -359,10 +462,13 @@ export default function IdealAssignmentView() {
     }
   };
 
-
-
   if (loadingMachines || loadingEmployees) {
-    return <div className="p-8 text-center text-slate-500">Cargando datos...</div>;
+    return (
+        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+            <Loader2 className="w-8 h-8 mb-4 animate-spin text-blue-500" />
+            <p>Cargando configuración de equipos...</p>
+        </div>
+    );
   }
 
   return (
@@ -579,7 +685,6 @@ export default function IdealAssignmentView() {
             </DialogContent>
         </Dialog>
       )}
-
     </div>
   );
 }
