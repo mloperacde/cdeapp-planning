@@ -24,7 +24,8 @@ export default function EmployeeSelect({
   disabled = false,
   showDepartment = true,
   filterFn = null,
-  className = ""
+  className = "",
+  trigger
 }) {
   const [open, setOpen] = useState(false);
 
