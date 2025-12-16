@@ -110,30 +110,45 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      // Audit Logging
-      const actionType = employee?.id ? 'update' : 'create';
-      const details = employee?.id ? { changes: 'updated_record' } : { changes: 'created_record' };
-      
-      await base44.entities.EmployeeAuditLog.create({
-        action_type: actionType,
-        user_email: currentUser?.email,
-        target_employee_id: employee?.id || 'new',
-        target_employee_name: data.nombre,
-        details: JSON.stringify(details),
-        timestamp: new Date().toISOString()
-      });
+      // Clean data before sending (remove system fields that might cause issues if present)
+      const { id, created_date, updated_date, created_by, ...cleanData } = data;
+
+      // Audit Logging - Wrapped in try/catch to prevent blocking save
+      try {
+        if (currentUser?.email) {
+            const actionType = employee?.id ? 'update' : 'create';
+            const details = employee?.id ? { changes: 'updated_record' } : { changes: 'created_record' };
+            
+            await base44.entities.EmployeeAuditLog.create({
+                action_type: actionType,
+                user_email: currentUser.email,
+                target_employee_id: employee?.id || 'new',
+                target_employee_name: data.nombre,
+                details: JSON.stringify(details),
+                timestamp: new Date().toISOString()
+            });
+        }
+      } catch (auditError) {
+        console.warn("Audit log failed, proceeding with save:", auditError);
+      }
 
       if (employee?.id) {
-        return base44.entities.EmployeeMasterDatabase.update(employee.id, data);
+        return base44.entities.EmployeeMasterDatabase.update(employee.id, cleanData);
       } else {
-        return base44.entities.EmployeeMasterDatabase.create(data);
+        return base44.entities.EmployeeMasterDatabase.create(cleanData);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-      toast.success("Empleado guardado correctamente");
+      queryClient.invalidateQueries({ queryKey: ['allEmployeesMaster'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success("Empleado guardado y consolidado correctamente");
       onClose();
     },
+    onError: (error) => {
+        console.error("Error saving employee:", error);
+        toast.error(`Error al guardar los cambios: ${error.message || "Error desconocido"}`);
+    }
   });
 
   const isBaja = formData.estado_empleado === "Baja";
