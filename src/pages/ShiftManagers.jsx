@@ -8,7 +8,8 @@ import {
   LayoutDashboard,
   ArrowLeft,
   Filter,
-  Settings2
+  Settings2,
+  ArrowLeftRight
 } from "lucide-react";
 import ShiftDashboardCustomizer from "../components/shift-manager/ShiftDashboardCustomizer";
 import { 
@@ -267,63 +268,7 @@ export default function ShiftManagersPage() {
     });
   }, [teams, employees, teamSchedules, absencesByTeam, selectedTeamFilter]);
 
-  const modules = [
-    {
-      title: "Equipos de Turno",
-      icon: UsersRound,
-      url: createPageUrl("TeamConfiguration"),
-      color: "purple",
-      description: "Configura equipos rotativos"
-    },
-    {
-      title: "Empleados",
-      icon: Users,
-      url: createPageUrl("EmployeesShiftManager"),
-      color: "teal",
-      description: "Consulta y gestión de personal de fabricación"
-    },
-    {
-      title: "Asignaciones Máquinas",
-      icon: UserCog,
-      url: createPageUrl("MachineAssignments"),
-      color: "blue",
-      description: "Distribuye operarios"
-    },
-    {
-      title: "Intercambio Turnos",
-      icon: RefreshCw,
-      url: createPageUrl("ShiftManagement"),
-      color: "green",
-      description: "Gestiona intercambios",
-      badge: pendingSwaps.length > 0 ? pendingSwaps.length : null
-    },
-    {
-      title: "Gestión Taquillas",
-      icon: KeyRound,
-      url: createPageUrl("LockerManagement"),
-      color: "orange",
-      description: "Asigna vestuarios",
-      badge: lockersWithoutNumber > 0 ? lockersWithoutNumber : null
-    },
-    {
-      title: "Comunicación Ausencias",
-      icon: MessageSquare,
-      action: "absences",
-      color: "red",
-      description: "Reporta ausencias del turno"
-    }
-  ];
 
-  const colorClasses = {
-    purple: "from-purple-500 to-purple-600",
-    blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600",
-    orange: "from-orange-500 to-orange-600",
-    red: "from-red-500 to-red-600",
-    cyan: "from-cyan-500 to-cyan-600",
-    teal: "from-teal-500 to-teal-600",
-    violet: "from-violet-500 to-violet-600"
-  };
 
   if (activeView === "absences") {
     return (
