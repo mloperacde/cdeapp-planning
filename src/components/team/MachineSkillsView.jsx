@@ -10,6 +10,7 @@ import { Search } from "lucide-react";
 
 export default function MachineSkillsView() {
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedTeam, setSelectedTeam] = useState("all");
 
     // Fetch Data
     const { data: employees = [] } = useQuery({
@@ -22,10 +23,19 @@ export default function MachineSkillsView() {
         queryFn: () => base44.entities.Machine.list('orden', 1000),
     });
 
+    const { data: teams = [] } = useQuery({
+        queryKey: ['teamConfigs'],
+        queryFn: () => base44.entities.TeamConfig.list(),
+    });
+
     // Helper to get employees for a machine grouped by role and ordered by preference
     const getMachineStaff = (machineId, roleType) => {
         const candidates = employees.filter(e => {
             if (e.departamento !== "FABRICACION") return false;
+            
+            // Filter by Team
+            if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
+
             const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
             if (!hasMachine) return false;
 
@@ -57,8 +67,8 @@ export default function MachineSkillsView() {
     return (
         <div className="space-y-4 h-full flex flex-col">
             <Card className="bg-slate-50 shrink-0">
-                <CardContent className="p-4">
-                    <div className="max-w-md">
+                <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-end">
+                    <div className="flex-1 w-full md:max-w-md">
                         <Label>Buscar Máquina</Label>
                         <div className="relative">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -69,6 +79,20 @@ export default function MachineSkillsView() {
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
+                    </div>
+                    <div className="w-full md:w-[200px]">
+                        <Label>Filtrar por Equipo</Label>
+                        <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                            <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Todos los equipos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos los equipos</SelectItem>
+                                {teams.map(t => (
+                                    <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardContent>
             </Card>
