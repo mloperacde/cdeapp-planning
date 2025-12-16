@@ -522,10 +522,35 @@ export default function IdealAssignmentView() {
                 {machines.map(machine => {
                     const assignment = assignments[machine.id] || {};
                     
-                    // Get candidates per role
-                    const responsables = getEmployeesForRole(machine.id, "RESPONSABLE");
-                    const segundas = getEmployeesForRole(machine.id, "SEGUNDA");
-                    const operarios = getEmployeesForRole(machine.id, "OPERARIO");
+                    // Helper to filter candidates (exclude those assigned to other slots in THIS machine)
+                    const getEmployeesForRole = (role) => {
+                        const candidates = getCandidatesForDropdown(machine.id, role, assignment);
+                        return candidates.filter(c => {
+                            // Check if used in other roles
+                            const isResponsable = assignment.responsable_linea === c.id;
+                            const isSegunda = assignment.segunda_linea === c.id;
+                            // Check if assigned to any operator slot (1-8)
+                            const isOperator = [1,2,3,4,5,6,7,8].some(i => assignment[`operador_${i}`] === c.id);
+
+                            if (role === "RESPONSABLE") {
+                                return !isSegunda && !isOperator;
+                            }
+                            if (role === "SEGUNDA") {
+                                return !isResponsable && !isOperator;
+                            }
+                            if (role === "OPERARIO") {
+                                // For operators, we exclude Resp and Seg. 
+                                // We do NOT exclude other operators here because this same list is used for all operator dropdowns.
+                                // If we excluded 'John' (assigned to op_1), then the dropdown for op_1 wouldn't show 'John'.
+                                return !isResponsable && !isSegunda;
+                            }
+                            return true;
+                        });
+                    };
+
+                    const responsables = getEmployeesForRole("RESPONSABLE");
+                    const segundas = getEmployeesForRole("SEGUNDA");
+                    const operarios = getEmployeesForRole("OPERARIO");
                     
                     return (
                         <Card key={machine.id} className="overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
