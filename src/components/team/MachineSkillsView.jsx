@@ -233,7 +233,15 @@ export default function MachineSkillsView() {
                                             ))}
                                             <div className="flex items-center gap-2 mt-1">
                                                 {segundas.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno</span>}
-                                                <AddEmployeeButton machineId={machine.id} roleType="SEGUNDA" />
+                                                <EmployeeSelect 
+                                                    employees={getPotentialCandidates(machine.id, "SEGUNDA")}
+                                                    onValueChange={(empId) => updateEmployeeMachineMutation.mutate({ employeeId: empId, machineId: machine.id, action: 'add' })}
+                                                    trigger={
+                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
+                                                            <Plus className="w-4 h-4 text-slate-400" />
+                                                        </Button>
+                                                    }
+                                                />
                                             </div>
                                         </div>
                                     </TableCell>
