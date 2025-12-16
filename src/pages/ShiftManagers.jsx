@@ -22,18 +22,21 @@ import {
   MessageSquare,
   ArrowLeftRight,
   Coffee,
-  ArrowLeft
+  ArrowLeft,
+  Filter
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 
 const EMPTY_ARRAY = [];
 
 export default function ShiftManagersPage() {
   const [activeView, setActiveView] = React.useState("dashboard");
+  const [selectedTeamFilter, setSelectedTeamFilter] = React.useState("all");
   
   const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
@@ -79,6 +82,9 @@ export default function ShiftManagersPage() {
       // Check if absence belongs to one of our relevant employees
       const employee = employees.find(e => e.id === abs.employee_id);
       if (!employee) return false;
+
+      // Filter by team if selected
+      if (selectedTeamFilter !== "all" && employee.equipo !== selectedTeamFilter) return false;
       
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
@@ -87,7 +93,7 @@ export default function ShiftManagersPage() {
       
       return now >= start && now <= end;
     });
-  }, [absences, employees]);
+  }, [absences, employees, selectedTeamFilter]);
 
   // Ausencias por equipo
   const absencesByTeam = useMemo(() => {
@@ -109,17 +115,32 @@ export default function ShiftManagersPage() {
 
   // Pending swap requests
   const pendingSwaps = useMemo(() => {
-    return swapRequests.filter(req => 
-      req.estado === "Pendiente" || req.estado === "Aceptada por Receptor"
-    );
-  }, [swapRequests]);
+    return swapRequests.filter(req => {
+        if (req.estado !== "Pendiente" && req.estado !== "Aceptada por Receptor") return false;
+        
+        // Filter by team
+        if (selectedTeamFilter !== "all") {
+             const solicitante = employees.find(e => e.id === req.solicitante_id);
+             // If solicitante is not in the filtered list (because of strict filtering in employees query or team mismatch)
+             if (!solicitante || solicitante.equipo !== selectedTeamFilter) return false;
+        }
+        return true;
+    });
+  }, [swapRequests, employees, selectedTeamFilter]);
 
   // Lockers without assignment
   const lockersWithoutNumber = useMemo(() => {
-    return lockerAssignments.filter(la => 
-      la.requiere_taquilla !== false && !la.numero_taquilla_actual
-    ).length;
-  }, [lockerAssignments]);
+    return lockerAssignments.filter(la => {
+      if (la.requiere_taquilla === false || la.numero_taquilla_actual) return false;
+      
+      // Filter by team
+      if (selectedTeamFilter !== "all") {
+          const employee = employees.find(e => e.id === la.employee_id);
+          if (!employee || employee.equipo !== selectedTeamFilter) return false;
+      }
+      return true;
+    }).length;
+  }, [lockerAssignments, employees, selectedTeamFilter]);
 
   // Get shift for today
   const getTodayShift = (teamKey) => {
@@ -152,24 +173,26 @@ export default function ShiftManagersPage() {
 
   // Team stats with absences by team
   const teamStats = useMemo(() => {
-    return teams.map(team => {
-      const teamEmployees = employees.filter(emp => emp.equipo === team.team_name && (emp.estado_empleado || "Alta") === "Alta");
-      const absencesCount = absencesByTeam[team.team_name]?.length || 0;
-      
-      // Disponibles = Total Activos - Ausencias Reales
-      const available = Math.max(0, teamEmployees.length - absencesCount);
-      const shift = getTodayShift(team.team_key);
-      
-      return {
-        ...team,
-        total: teamEmployees.length,
-        available,
-        absent: absencesCount,
-        shift,
-        absencesCount
-      };
+    return teams
+        .filter(team => selectedTeamFilter === "all" || team.team_name === selectedTeamFilter)
+        .map(team => {
+        const teamEmployees = employees.filter(emp => emp.equipo === team.team_name && (emp.estado_empleado || "Alta") === "Alta");
+        const absencesCount = absencesByTeam[team.team_name]?.length || 0;
+        
+        // Disponibles = Total Activos - Ausencias Reales
+        const available = Math.max(0, teamEmployees.length - absencesCount);
+        const shift = getTodayShift(team.team_key);
+        
+        return {
+            ...team,
+            total: teamEmployees.length,
+            available,
+            absent: absencesCount,
+            shift,
+            absencesCount
+        };
     });
-  }, [teams, employees, teamSchedules, absencesByTeam]);
+  }, [teams, employees, teamSchedules, absencesByTeam, selectedTeamFilter]);
 
   const modules = [
     {
@@ -257,14 +280,30 @@ export default function ShiftManagersPage() {
           </Link>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <LayoutDashboard className="w-8 h-8 text-blue-600" />
-            Panel de Control - Jefes de Turno
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Vista general y acceso rápido a gestión de turnos
-          </p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+                <LayoutDashboard className="w-8 h-8 text-blue-600" />
+                Panel de Control - Jefes de Turno
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
+                Vista general y acceso rápido a gestión de turnos
+            </p>
+          </div>
+          <div className="flex items-center gap-2 bg-white dark:bg-card p-2 rounded-lg border shadow-sm">
+            <Filter className="w-4 h-4 text-slate-500 ml-2" />
+            <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
+                <SelectTrigger className="w-[180px] border-0 focus:ring-0">
+                    <SelectValue placeholder="Todos los Equipos" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los Equipos</SelectItem>
+                    {teams.map(t => (
+                        <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* KPIs Principales */}
@@ -273,9 +312,13 @@ export default function ShiftManagersPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 dark:text-green-200 font-medium">Empleados Disponibles (en Equipos)</p>
+                  <p className="text-xs text-green-700 dark:text-green-200 font-medium">Empleados Disponibles</p>
                   <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                    {employees.filter(e => e.disponibilidad === "Disponible" && e.equipo).length}
+                    {employees.filter(e => 
+                        e.disponibilidad === "Disponible" && 
+                        e.equipo && 
+                        (selectedTeamFilter === "all" || e.equipo === selectedTeamFilter)
+                    ).length}
                   </p>
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
