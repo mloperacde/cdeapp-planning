@@ -19,7 +19,7 @@ import {
     RequestsAndBirthdaysWidget, 
     AlertsWidget 
 } from "../components/shift-manager/ShiftDashboardWidgets";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -85,7 +85,7 @@ export default function ShiftManagersPage() {
       return merged.sort((a, b) => a.position - b.position);
   }, [widgetConfig]);
 
-  const saveConfigMutation = React.useMutation({
+  const saveConfigMutation = useMutation({
       mutationFn: async (newWidgets) => {
           const payload = {
               user_id: currentUser.id,
