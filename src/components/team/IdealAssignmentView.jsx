@@ -612,13 +612,22 @@ export default function IdealAssignmentView() {
                                     <Label className="flex items-center gap-2 text-indigo-700">
                                         <User className="w-4 h-4" /> Segunda de Línea
                                     </Label>
-                                    <EmployeeSelect
-                                        employees={segundas}
-                                        value={assignment.segunda_linea || ""}
-                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'segunda_linea', val)}
-                                        placeholder="Seleccionar segunda"
-                                        showDepartment={false}
-                                    />
+                                    <Select 
+                                        value={assignment.segunda_linea || "unassigned"}
+                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'segunda_linea', val === "unassigned" ? null : val)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar segunda" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="unassigned">Sin asignar</SelectItem>
+                                            {segundas.map(emp => (
+                                                <SelectItem key={emp.id} value={emp.id}>
+                                                    {emp.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 {/* Operarios */}
