@@ -235,12 +235,18 @@ export default function IdealAssignmentView() {
     }
   });
 
-  // Filter Logic - Relaxed for "Show All" capability
-  const getAvailableEmployees = (machineId, role, currentAssignment) => {
-    // Relaxed filtering to allow picking anyone from FABRICACION if needed
-    return employees.filter(emp => {
-        if (emp.departamento !== "FABRICACION") return false;
-        return true;
+  // Filter Logic with Grouping
+  const getAvailableEmployees = (machineId) => {
+    return employees.filter(emp => emp.departamento === "FABRICACION").map(emp => {
+        // Check if employee has this machine assigned in skills
+        const isQualified = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
+        return {
+            ...emp,
+            _group: isQualified ? "Cualificados / Con Experiencia" : "Resto de Fabricación"
+        };
+    }).sort((a, b) => {
+        if (a._group === b._group) return a.nombre.localeCompare(b.nombre);
+        return a._group === "Cualificados / Con Experiencia" ? -1 : 1;
     });
   };
 
@@ -257,6 +263,55 @@ export default function IdealAssignmentView() {
 
   const handleSaveMachine = (machineId, machineName) => {
     saveMutation.mutate({ machineId, data: assignments[machineId], machineName });
+  };
+
+  const handleSaveAll = async () => {
+    // Identify modified assignments
+    const promises = [];
+    
+    // Iterate over all machines (assignments state covers all machines initialized)
+    Object.keys(assignments).forEach(machineId => {
+        const currentData = assignments[machineId];
+        const machine = machines.find(m => m.id === machineId);
+        const machineName = machine?.nombre || "Máquina";
+
+        // Check against DB data
+        const original = machineAssignments.find(a => a.machine_id === machineId && a.team_key === currentTeam);
+        
+        let isModified = false;
+        if (!original) {
+            // New assignment, check if it has any data
+            const hasData = Object.values(currentData).some(v => v !== null && v !== "" && (Array.isArray(v) ? v.length > 0 : true));
+            if (hasData) isModified = true;
+        } else {
+            // Compare fields
+            // Helper to clean array vs value
+            const getVal = (v) => Array.isArray(v) ? v[0] : v;
+            
+            if (getVal(original.responsable_linea) !== currentData.responsable_linea) isModified = true;
+            if (getVal(original.segunda_linea) !== currentData.segunda_linea) isModified = true;
+            for(let i=1; i<=8; i++) {
+                if ((original[`operador_${i}`] || null) !== (currentData[`operador_${i}`] || null)) isModified = true;
+            }
+        }
+
+        if (isModified) {
+            promises.push(saveMutation.mutateAsync({ machineId, data: currentData, machineName }));
+        }
+    });
+
+    if (promises.length === 0) {
+        toast.info("No hay cambios pendientes para guardar.");
+        return;
+    }
+
+    try {
+        await Promise.all(promises);
+        toast.success(`Se han guardado ${promises.length} configuraciones de máquinas.`);
+    } catch (error) {
+        console.error(error);
+        toast.error("Hubo errores al guardar algunas asignaciones.");
+    }
   };
 
   if (loadingMachines || loadingEmployees) {
@@ -286,15 +341,26 @@ export default function IdealAssignmentView() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-6">
-        <Button 
-            onClick={handleOptimize} 
-            disabled={isOptimizing}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-        >
-            {isOptimizing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-            {isOptimizing ? "Optimizando..." : "Optimizar con IA"}
-        </Button>
+      <div className="flex items-center justify-between mb-6 bg-slate-50 p-3 rounded-lg border">
+      <div className="flex items-center gap-2">
+          <Button 
+              onClick={handleOptimize} 
+              disabled={isOptimizing}
+              variant="outline"
+              className="border-purple-200 text-purple-700 hover:bg-purple-50"
+          >
+              {isOptimizing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {isOptimizing ? "Optimizando..." : "Sugerir Distribución IA"}
+          </Button>
+      </div>
+
+      <Button 
+          onClick={handleSaveAll} 
+          className="bg-green-600 hover:bg-green-700 text-white shadow-sm"
+      >
+          <Save className="w-4 h-4 mr-2" />
+          Guardar Todos los Cambios
+      </Button>
       </div>
 
       <div className="flex gap-6 h-[calc(100vh-280px)]">
