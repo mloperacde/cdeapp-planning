@@ -124,6 +124,7 @@ export default function EmployeeSelect({
                       onValueChange(employee.id);
                       setOpen(false);
                     }}
+                    disabled={false}
                     className={cn(
                         "cursor-pointer",
                         employee.estado_empleado === "Baja" && "opacity-50"
