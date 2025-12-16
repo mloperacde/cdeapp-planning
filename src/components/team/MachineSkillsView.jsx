@@ -1,15 +1,20 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.jsx";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { Search, Plus, Loader2, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import EmployeeSelect from "@/components/common/EmployeeSelect";
+import { toast } from "sonner";
 
 export default function MachineSkillsView() {
+    const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedTeam, setSelectedTeam] = useState("all");
 
@@ -57,6 +62,105 @@ export default function MachineSkillsView() {
         });
 
         return candidates;
+    };
+
+    // Helper to get potential candidates (who match role but don't have machine)
+    const getPotentialCandidates = (machineId, roleType) => {
+         return employees.filter(e => {
+            if (e.departamento !== "FABRICACION") return false;
+            if ((e.estado_empleado || "Alta") !== "Alta") return false;
+            
+            // Filter by Team
+            if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
+
+            // Check if they ALREADY have the machine (we want those who DON'T)
+            const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
+            if (hasMachine) return false;
+
+            // Check role
+            const puesto = (e.puesto || "").toUpperCase();
+            if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) return true;
+            if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) return true;
+            if (roleType === "OPERARIO" && puesto.includes("OPERARI")) return true;
+            return false;
+        });
+    };
+
+    const updateEmployeeMachineMutation = useMutation({
+        mutationFn: async ({ employeeId, machineId, action }) => {
+            const employee = employees.find(e => e.id === employeeId);
+            if (!employee) throw new Error("Empleado no encontrado");
+
+            const payload = {};
+            
+            if (action === 'add') {
+                // Find first empty slot
+                let slot = -1;
+                for(let i=1; i<=10; i++) {
+                    if (!employee[`maquina_${i}`]) {
+                        slot = i;
+                        break;
+                    }
+                }
+                if (slot === -1) throw new Error("El empleado ya tiene 10 máquinas asignadas");
+                payload[`maquina_${slot}`] = machineId;
+            } 
+            else if (action === 'remove') {
+                // Find slot with machine
+                for(let i=1; i<=10; i++) {
+                    if (employee[`maquina_${i}`] === machineId) {
+                        payload[`maquina_${i}`] = null;
+                        // Don't break, remove duplicates if any
+                    }
+                }
+            }
+
+            return base44.entities.EmployeeMasterDatabase.update(employeeId, payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+            toast.success("Habilidad actualizada correctamente");
+        },
+        onError: (err) => {
+            toast.error(err.message || "Error al actualizar");
+        }
+    });
+
+    const AddEmployeeButton = ({ machineId, roleType }) => {
+        const [open, setOpen] = useState(false);
+        const candidates = getPotentialCandidates(machineId, roleType);
+
+        return (
+            <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
+                        <Plus className="w-4 h-4 text-slate-400" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-2">
+                    <Label className="text-xs mb-2 block">Añadir empleado a esta máquina</Label>
+                    <EmployeeSelect 
+                        employees={candidates}
+                        onValueChange={(empId) => {
+                            updateEmployeeMachineMutation.mutate({ employeeId: empId, machineId, action: 'add' });
+                            setOpen(false);
+                        }}
+                        placeholder="Buscar empleado..."
+                    />
+                </PopoverContent>
+            </Popover>
+        );
+    };
+
+    const RemoveEmployeeButton = ({ employeeId, machineId }) => {
+        return (
+            <button 
+                onClick={() => updateEmployeeMachineMutation.mutate({ employeeId, machineId, action: 'remove' })}
+                className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 hover:text-red-500"
+            >
+                <X className="w-3 h-3" />
+            </button>
+        );
     };
 
     const filteredMachines = useMemo(() => {
@@ -123,31 +227,43 @@ export default function MachineSkillsView() {
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">
                                             {responsables.map(e => (
-                                                <Badge key={e.id} variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100 font-normal justify-start">
+                                                <Badge key={e.id} variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100 font-normal justify-start group pr-1">
                                                     {e.nombre}
+                                                    <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
                                                 </Badge>
                                             ))}
-                                            {responsables.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno configurado</span>}
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {responsables.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno</span>}
+                                                <AddEmployeeButton machineId={machine.id} roleType="RESPONSABLE" />
+                                            </div>
                                         </div>
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">
                                             {segundas.map(e => (
-                                                <Badge key={e.id} variant="outline" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-normal justify-start">
+                                                <Badge key={e.id} variant="outline" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-normal justify-start group pr-1">
                                                     {e.nombre}
+                                                    <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
                                                 </Badge>
                                             ))}
-                                             {segundas.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno configurado</span>}
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {segundas.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno</span>}
+                                                <AddEmployeeButton machineId={machine.id} roleType="SEGUNDA" />
+                                            </div>
                                         </div>
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-wrap gap-1">
                                             {operarios.map(e => (
-                                                <Badge key={e.id} variant="outline" className="bg-slate-50 text-slate-700 font-normal">
+                                                <Badge key={e.id} variant="outline" className="bg-slate-50 text-slate-700 font-normal group pr-1">
                                                     {e.nombre}
+                                                    <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
                                                 </Badge>
                                             ))}
-                                             {operarios.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno configurado</span>}
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {operarios.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno</span>}
+                                                <AddEmployeeButton machineId={machine.id} roleType="OPERARIO" />
+                                            </div>
                                         </div>
                                     </TableCell>
                                 </TableRow>

@@ -60,10 +60,25 @@ export default function EmployeeSelect({
       groups[groupName].push(emp);
     });
     
-    // Si es custom group, ordenamos para que "Cualificados" o "Recomendados" salgan primero si existen
+    // Si es custom group, ordenamos
     if (hasCustomGroup) {
-        // Orden simple de claves si es necesario, o confiar en el orden de inserción/iteración
-        // Por ahora lo dejamos así, el componente CommandGroup renderizará en el orden de Object.entries
+        const orderedGroups = {};
+        const groupOrder = ["Sugeridos (Perfil Ideal)", "Con experiencia en máquina", "Con puesto correcto", "Otros en Equipo", "Otros"];
+        
+        // Add known groups first
+        groupOrder.forEach(key => {
+            if (groups[key]) {
+                orderedGroups[key] = groups[key];
+                delete groups[key];
+            }
+        });
+        
+        // Add remaining groups
+        Object.keys(groups).forEach(key => {
+            orderedGroups[key] = groups[key];
+        });
+        
+        return orderedGroups;
     }
     
     return groups;

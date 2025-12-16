@@ -242,25 +242,42 @@ export default function IdealAssignmentView() {
       const teamConfig = teams.find(t => t.team_key === currentTeam);
       const teamName = teamConfig ? teamConfig.team_name : "";
 
-      return employees.filter(emp => {
-          // 1. Must be in Fabricacion and Active
-          if (emp.departamento !== "FABRICACION") return false;
-          if (emp.estado_empleado && emp.estado_empleado !== "Alta") return false;
-          
-          // 2. Must be in the selected team
-          if (emp.equipo !== teamName) return false;
+      // Base candidates: Active employees in Fabricacion and current Team
+      const candidates = employees.filter(emp => 
+          emp.departamento === "FABRICACION" && 
+          (emp.estado_empleado || "Alta") === "Alta" &&
+          emp.equipo === teamName
+      );
 
-          // 3. Must have the machine configured
+      return candidates.map(emp => {
           const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
-          if (!hasMachine) return false;
-
-          // 4. Must match the role/position
+          
+          let matchesRole = false;
           const puesto = (emp.puesto || "").toUpperCase();
-          if (roleType === "RESPONSABLE" && !puesto.includes("RESPONSABLE")) return false;
-          if (roleType === "SEGUNDA" && !(puesto.includes("SEGUNDA") || puesto.includes("2ª") || puesto.includes("2A"))) return false;
-          if (roleType === "OPERARIO" && !puesto.includes("OPERARI")) return false;
+          if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) matchesRole = true;
+          else if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª") || puesto.includes("2A"))) matchesRole = true;
+          else if (roleType === "OPERARIO" && puesto.includes("OPERARI")) matchesRole = true;
+          else if (roleType === "ANY") matchesRole = true; // Fallback
 
-          return true;
+          let group = "Otros en Equipo";
+          if (hasMachine && matchesRole) {
+              group = "Sugeridos (Perfil Ideal)";
+          } else if (hasMachine) {
+              group = "Con experiencia en máquina";
+          } else if (matchesRole) {
+              group = "Con puesto correcto";
+          }
+
+          return { ...emp, _group: group };
+      }).sort((a, b) => {
+           // Sort priority
+           const priority = {
+               "Sugeridos (Perfil Ideal)": 0,
+               "Con experiencia en máquina": 1,
+               "Con puesto correcto": 2,
+               "Otros en Equipo": 3
+           };
+           return (priority[a._group] || 99) - (priority[b._group] || 99);
       });
   };
 
