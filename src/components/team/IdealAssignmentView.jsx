@@ -642,13 +642,22 @@ export default function IdealAssignmentView() {
                                                     {num}
                                                 </Badge>
                                                 <div className="flex-1">
-                                                    <EmployeeSelect
-                                                        employees={operarios}
-                                                        value={assignment[`operador_${num}`] || ""}
-                                                        onValueChange={(val) => handleAssignmentChange(machine.id, `operador_${num}`, val)}
-                                                        placeholder={`Operario ${num}`}
-                                                        showDepartment={false}
-                                                    />
+                                                    <Select 
+                                                        value={assignment[`operador_${num}`] || "unassigned"}
+                                                        onValueChange={(val) => handleAssignmentChange(machine.id, `operador_${num}`, val === "unassigned" ? null : val)}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder={`Operario ${num}`} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="unassigned">Sin asignar</SelectItem>
+                                                            {operarios.map(emp => (
+                                                                <SelectItem key={emp.id} value={emp.id}>
+                                                                    {emp.nombre}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
                                             </div>
                                         ))}
