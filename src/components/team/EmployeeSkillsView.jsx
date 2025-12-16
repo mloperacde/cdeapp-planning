@@ -119,12 +119,14 @@ export default function EmployeeSkillsView() {
     };
 
     return (
-        <div className="space-y-4 h-full flex flex-col">
-            {/* Filters */}
-            <Card className="bg-slate-50">
-                <CardContent className="p-4 flex flex-wrap gap-4 items-end">
-                    <div className="flex-1 min-w-[200px]">
-                        <Label>Buscar</Label>
+        <div className="h-full flex flex-col md:flex-row gap-4">
+            {/* Sidebar Filters */}
+            <Card className="w-full md:w-64 shrink-0 bg-slate-50 h-fit">
+                <CardContent className="p-4 flex flex-col gap-4">
+                    <div className="font-semibold text-lg border-b pb-2 mb-2">Filtros</div>
+                    
+                    <div className="space-y-2">
+                        <Label>Buscar Empleado</Label>
                         <div className="relative">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input 
@@ -135,41 +137,56 @@ export default function EmployeeSkillsView() {
                             />
                         </div>
                     </div>
-                    <div className="min-w-[150px]">
+
+                    <div className="space-y-2">
                         <Label>Equipo</Label>
                         <Select value={filters.equipo || "all"} onValueChange={(v) => handleFilterChange("equipo", v)}>
-                            <SelectTrigger className="bg-white"><SelectValue placeholder="Todos" /></SelectTrigger>
+                            <SelectTrigger className="bg-white w-full"><SelectValue placeholder="Todos" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos</SelectItem>
                                 {teams.map(t => <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="min-w-[150px]">
+
+                    <div className="space-y-2">
                         <Label>Puesto</Label>
                         <Select value={filters.puesto || "all"} onValueChange={(v) => handleFilterChange("puesto", v)}>
-                            <SelectTrigger className="bg-white"><SelectValue placeholder="Todos" /></SelectTrigger>
+                            <SelectTrigger className="bg-white w-full"><SelectValue placeholder="Todos" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos</SelectItem>
                                 {getUniquePositions().map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="min-w-[150px]">
+
+                    <div className="space-y-2">
                         <Label>Máquina Configurada</Label>
                         <Select value={filters.maquina || "all"} onValueChange={(v) => handleFilterChange("maquina", v)}>
-                            <SelectTrigger className="bg-white"><SelectValue placeholder="Todas" /></SelectTrigger>
+                            <SelectTrigger className="bg-white w-full"><SelectValue placeholder="Todas" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todas</SelectItem>
                                 {machines.map(m => <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
+                    
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-4"
+                        onClick={() => {
+                            setFilters({});
+                            setCurrentPage(1);
+                        }}
+                    >
+                        Limpiar Filtros
+                    </Button>
                 </CardContent>
             </Card>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto border rounded-lg bg-white shadow-sm flex flex-col">
+            <div className="flex-1 overflow-auto border rounded-lg bg-white shadow-sm flex flex-col min-w-0">
                 <div className="flex-1 overflow-auto">
                     <Table>
                         <TableHeader className="bg-slate-50 sticky top-0 z-10">

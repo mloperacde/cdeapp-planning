@@ -237,17 +237,23 @@ export default function IdealAssignmentView() {
 
   // Filter Logic with Grouping
   const getAvailableEmployees = (machineId) => {
-    return employees.filter(emp => emp.departamento === "FABRICACION").map(emp => {
-        // Check if employee has this machine assigned in skills
-        const isQualified = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
-        return {
-            ...emp,
-            _group: isQualified ? "Cualificados / Con Experiencia" : "Resto de Fabricación"
-        };
-    }).sort((a, b) => {
-        if (a._group === b._group) return a.nombre.localeCompare(b.nombre);
-        return a._group === "Cualificados / Con Experiencia" ? -1 : 1;
-    });
+    // We include all employees from FABRICACION
+    // We group them by qualification for this specific machine
+    return employees
+        .filter(emp => emp.departamento === "FABRICACION" && emp.estado_empleado === "Alta") // Only Active Employees
+        .map(emp => {
+            // Check if employee has this machine assigned in skills
+            const isQualified = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
+            return {
+                ...emp,
+                _group: isQualified ? "⭐ Cualificados / Con Experiencia" : "Otros Empleados Disponibles"
+            };
+        })
+        .sort((a, b) => {
+            if (a._group === b._group) return a.nombre.localeCompare(b.nombre);
+            // "Cualificados" comes first (since it starts with emoji or C, and O is after C)
+            return a._group.localeCompare(b._group); 
+        });
   };
 
   // Handlers

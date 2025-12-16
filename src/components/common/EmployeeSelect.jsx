@@ -104,11 +104,15 @@ export default function EmployeeSelect({
                 {emps.map((employee) => (
                   <CommandItem
                     key={employee.id}
-                    value={`${employee.nombre} ${employee.departamento || ""} ${employee.puesto || ""}`}
+                    value={`${employee.nombre} ${employee.departamento || ""} ${employee.puesto || ""} ${employee.id}`}
                     onSelect={() => {
-                      onValueChange(employee.id === value ? "" : employee.id);
+                      onValueChange(employee.id);
                       setOpen(false);
                     }}
+                    className={cn(
+                        "cursor-pointer",
+                        employee.estado_empleado === "Baja" && "opacity-50"
+                    )}
                   >
                     <Check
                       className={cn(
@@ -116,11 +120,14 @@ export default function EmployeeSelect({
                         value === employee.id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{employee.nombre}</div>
-                      {employee.puesto && (
-                        <div className="text-xs text-slate-500 truncate">{employee.puesto}</div>
-                      )}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className={cn("font-medium truncate", employee.estado_empleado === "Baja" && "line-through")}>
+                        {employee.nombre}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                         {employee.puesto && <span className="truncate">{employee.puesto}</span>}
+                         {employee.equipo && <span className="truncate border-l pl-2 border-slate-300">{employee.equipo}</span>}
+                      </div>
                     </div>
                   </CommandItem>
                 ))}
