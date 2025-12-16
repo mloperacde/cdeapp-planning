@@ -589,13 +589,22 @@ export default function IdealAssignmentView() {
                                     <Label className="flex items-center gap-2 text-blue-700">
                                         <UserCheck className="w-4 h-4" /> Responsable de Línea
                                     </Label>
-                                    <EmployeeSelect
-                                        employees={responsables}
-                                        value={assignment.responsable_linea || ""}
-                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'responsable_linea', val)}
-                                        placeholder="Seleccionar responsable"
-                                        showDepartment={false}
-                                    />
+                                    <Select 
+                                        value={assignment.responsable_linea || "unassigned"}
+                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'responsable_linea', val === "unassigned" ? null : val)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar responsable" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="unassigned">Sin asignar</SelectItem>
+                                            {responsables.map(emp => (
+                                                <SelectItem key={emp.id} value={emp.id}>
+                                                    {emp.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 {/* Segunda */}
