@@ -119,7 +119,8 @@ export default function EmployeeSelect({
                 {emps.map((employee) => (
                   <CommandItem
                     key={employee.id}
-                    value={`${employee.nombre} ${employee.departamento || ""} ${employee.puesto || ""} ${employee.id}`}
+                    value={employee.id}
+                    keywords={[employee.nombre, employee.departamento || "", employee.puesto || "", employee.equipo || ""]}
                     onSelect={() => {
                       onValueChange(employee.id);
                       setOpen(false);

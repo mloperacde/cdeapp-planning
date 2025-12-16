@@ -83,8 +83,8 @@ export default function EmployeesShiftManagerPage() {
   // Permissions for Shift Manager View - STRICT
   const permissions = useMemo(() => ({
     ver_lista: true,
-    crear: false,
-    editar: false, 
+    crear: true,
+    editar: true, 
     eliminar: false,
     visibleDepartments: ['FABRICACION'],
     campos: {
@@ -93,8 +93,8 @@ export default function EmployeesShiftManagerPage() {
       ver_contacto: true,
       ver_direccion: true,
       ver_dni: false,
-      editar_sensible: false,
-      editar_contacto: false 
+      editar_sensible: true,
+      editar_contacto: true 
     },
     tabs: {
       personal: true, 
