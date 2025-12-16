@@ -235,25 +235,33 @@ export default function IdealAssignmentView() {
     }
   });
 
-  // Filter Logic with Grouping
-  const getAvailableEmployees = (machineId) => {
-    // We include all employees from FABRICACION
-    // We group them by qualification for this specific machine
-    return employees
-        .filter(emp => emp.departamento === "FABRICACION" && emp.estado_empleado === "Alta") // Only Active Employees
-        .map(emp => {
-            // Check if employee has this machine assigned in skills
-            const isQualified = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
-            return {
-                ...emp,
-                _group: isQualified ? "⭐ Cualificados / Con Experiencia" : "Otros Empleados Disponibles"
-            };
-        })
-        .sort((a, b) => {
-            if (a._group === b._group) return a.nombre.localeCompare(b.nombre);
-            // "Cualificados" comes first (since it starts with emoji or C, and O is after C)
-            return a._group.localeCompare(b._group); 
-        });
+  // Helper to get employees for a machine specific role
+  const getEmployeesForRole = (machineId, roleType) => {
+      if (!currentTeam) return [];
+      
+      const teamConfig = teams.find(t => t.team_key === currentTeam);
+      const teamName = teamConfig ? teamConfig.team_name : "";
+
+      return employees.filter(emp => {
+          // 1. Must be in Fabricacion and Active
+          if (emp.departamento !== "FABRICACION") return false;
+          if (emp.estado_empleado && emp.estado_empleado !== "Alta") return false;
+          
+          // 2. Must be in the selected team
+          if (emp.equipo !== teamName) return false;
+
+          // 3. Must have the machine configured
+          const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
+          if (!hasMachine) return false;
+
+          // 4. Must match the role/position
+          const puesto = (emp.puesto || "").toUpperCase();
+          if (roleType === "RESPONSABLE" && !puesto.includes("RESPONSABLE")) return false;
+          if (roleType === "SEGUNDA" && !(puesto.includes("SEGUNDA") || puesto.includes("2ª") || puesto.includes("2A"))) return false;
+          if (roleType === "OPERARIO" && !puesto.includes("OPERARI")) return false;
+
+          return true;
+      });
   };
 
   // Handlers
