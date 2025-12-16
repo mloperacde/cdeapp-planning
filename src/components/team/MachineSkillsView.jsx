@@ -126,31 +126,8 @@ export default function MachineSkillsView() {
         }
     });
 
-    const AddEmployeeButton = ({ machineId, roleType }) => {
-        const [open, setOpen] = useState(false);
-        const candidates = getPotentialCandidates(machineId, roleType);
-
-        return (
-            <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
-                        <Plus className="w-4 h-4 text-slate-400" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-2">
-                    <Label className="text-xs mb-2 block">Añadir empleado a esta máquina</Label>
-                    <EmployeeSelect 
-                        employees={candidates}
-                        onValueChange={(empId) => {
-                            updateEmployeeMachineMutation.mutate({ employeeId: empId, machineId, action: 'add' });
-                            setOpen(false);
-                        }}
-                        placeholder="Buscar empleado..."
-                    />
-                </PopoverContent>
-            </Popover>
-        );
-    };
+    // Removed nested Popover AddEmployeeButton definition to fix selection issue
+    // Using EmployeeSelect directly in render with custom trigger
 
     const RemoveEmployeeButton = ({ employeeId, machineId }) => {
         return (
