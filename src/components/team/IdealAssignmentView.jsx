@@ -223,42 +223,38 @@ export default function IdealAssignmentView() {
     setAssignments(loadedAssignments);
   }, [machines, machineAssignments, currentTeam, employees]); // Added employees dependency
 
-  // 6. Get Candidates for Dropdown (Filter out exclusions)
+  // 6. Get Candidates for Dropdown
   const getCandidatesForDropdown = (machineId, roleType, currentMachineData) => {
-      const allEligible = getEligibleEmployees(machineId, roleType);
-      
-      // Filter out candidates already assigned in THIS machine to OTHER roles
-      // Note: currentMachineData contains the CURRENT selection state for this machine
-      const assignedInMachine = new Set();
-      if (currentMachineData.responsable_linea) assignedInMachine.add(currentMachineData.responsable_linea);
-      if (currentMachineData.segunda_linea) assignedInMachine.add(currentMachineData.segunda_linea);
-      for(let i=1; i<=8; i++) {
-          if (currentMachineData[`operador_${i}`]) assignedInMachine.add(currentMachineData[`operador_${i}`]);
-      }
+      // Include ALL team employees, but group them by relevance
+      if (!currentTeam) return [];
 
-      return allEligible.map(emp => {
-          // If employee is assigned to current slot? We don't know the current slot here easily without passing it.
-          // But the Dropdown needs the list.
-          // The Dropdown value is handled by EmployeeSelect.
-          // We should mark "disabled" or filter out?
-          // If we filter out, the current value might disappear if it was invalid?
-          // Better to filter out ONLY if it's assigned to ANOTHER slot.
-          // But `assignedInMachine` includes the current slot's value too.
-          // We will pass `excludeIds` to EmployeeSelect or filter here.
-          // Let's filter out only if `assignedInMachine` has it.
-          // Wait, if I'm selecting "Responsable", and "John" is currently "Responsable", he is in `assignedInMachine`.
-          // If I filter him out, I can't see him to keep him selected (or he disappears).
-          // So I need to exclude `assignedInMachine` MINUS `currentValue`.
-          // I'll handle exclusion in the render loop where I have `currentValue`.
-          
+      const teamConfig = teams.find(t => t.team_key === currentTeam);
+      const teamName = teamConfig ? teamConfig.team_name : "";
+
+      const allTeamEmployees = employees.filter(emp => {
+          if (emp.departamento !== "FABRICACION") return false;
+          if (emp.equipo !== teamName) return false;
+          if (emp.disponibilidad !== "Disponible") return false;
+          return true;
+      });
+
+      return allTeamEmployees.map(emp => {
           let group = "Otros";
           const slot = getExperienceSlot(emp, machineId);
-          if (slot <= 10) group = "Con experiencia";
-          if (roleType === "OPERARIO" && slot > 10) group = "Sin experiencia específica"; // If loose matching
+          const puesto = (emp.puesto || "").toUpperCase();
+
+          let matchesRole = false;
+          if (roleType === "RESPONSABLE" && (puesto.includes("RESPONSABLE"))) matchesRole = true;
+          else if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) matchesRole = true;
+          else if (roleType === "OPERARIO" && (puesto.includes("OPERARI"))) matchesRole = true;
+
+          if (matchesRole && slot <= 10) group = "Sugeridos (Perfil Ideal)"; 
+          else if (matchesRole) group = "Con puesto correcto";
+          else if (slot <= 10) group = "Con experiencia en máquina";
 
           return { ...emp, _group: group, _slot: slot };
       }).sort((a, b) => {
-           if (a._slot !== b._slot) return a._slot - b._slot;
+           // Sort priority handled by EmployeeSelect grouping usually, but we sort internal list too
            return a.nombre.localeCompare(b.nombre);
       });
   };
@@ -589,22 +585,12 @@ export default function IdealAssignmentView() {
                                     <Label className="flex items-center gap-2 text-blue-700">
                                         <UserCheck className="w-4 h-4" /> Responsable de Línea
                                     </Label>
-                                    <Select 
-                                        value={assignment.responsable_linea || "unassigned"}
-                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'responsable_linea', val === "unassigned" ? null : val)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar responsable" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="unassigned">Sin asignar</SelectItem>
-                                            {responsables.map(emp => (
-                                                <SelectItem key={emp.id} value={emp.id}>
-                                                    {emp.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <EmployeeSelect 
+                                        employees={responsables}
+                                        value={assignment.responsable_linea}
+                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'responsable_linea', val)}
+                                        placeholder="Seleccionar responsable..."
+                                    />
                                 </div>
 
                                 {/* Segunda */}
@@ -612,22 +598,12 @@ export default function IdealAssignmentView() {
                                     <Label className="flex items-center gap-2 text-indigo-700">
                                         <User className="w-4 h-4" /> Segunda de Línea
                                     </Label>
-                                    <Select 
-                                        value={assignment.segunda_linea || "unassigned"}
-                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'segunda_linea', val === "unassigned" ? null : val)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar segunda" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="unassigned">Sin asignar</SelectItem>
-                                            {segundas.map(emp => (
-                                                <SelectItem key={emp.id} value={emp.id}>
-                                                    {emp.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <EmployeeSelect 
+                                        employees={segundas}
+                                        value={assignment.segunda_linea}
+                                        onValueChange={(val) => handleAssignmentChange(machine.id, 'segunda_linea', val)}
+                                        placeholder="Seleccionar segunda..."
+                                    />
                                 </div>
 
                                 {/* Operarios */}
@@ -642,22 +618,12 @@ export default function IdealAssignmentView() {
                                                     {num}
                                                 </Badge>
                                                 <div className="flex-1">
-                                                    <Select 
-                                                        value={assignment[`operador_${num}`] || "unassigned"}
-                                                        onValueChange={(val) => handleAssignmentChange(machine.id, `operador_${num}`, val === "unassigned" ? null : val)}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder={`Operario ${num}`} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="unassigned">Sin asignar</SelectItem>
-                                                            {operarios.map(emp => (
-                                                                <SelectItem key={emp.id} value={emp.id}>
-                                                                    {emp.nombre}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <EmployeeSelect 
+                                                        employees={operarios}
+                                                        value={assignment[`operador_${num}`]}
+                                                        onValueChange={(val) => handleAssignmentChange(machine.id, `operador_${num}`, val)}
+                                                        placeholder={`Operario ${num}`}
+                                                    />
                                                 </div>
                                             </div>
                                         ))}

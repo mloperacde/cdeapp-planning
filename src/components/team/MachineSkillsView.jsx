@@ -69,7 +69,7 @@ export default function MachineSkillsView() {
          return employees.filter(e => {
             if (e.departamento !== "FABRICACION") return false;
             if ((e.estado_empleado || "Alta") !== "Alta") return false;
-            
+
             // Filter by Team
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
 
@@ -77,12 +77,19 @@ export default function MachineSkillsView() {
             const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
             if (hasMachine) return false;
 
-            // Check role
+            return true;
+        }).map(e => {
+            let group = "Otros";
             const puesto = (e.puesto || "").toUpperCase();
-            if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) return true;
-            if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) return true;
-            if (roleType === "OPERARIO" && puesto.includes("OPERARI")) return true;
-            return false;
+            let isSuggested = false;
+
+            if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) isSuggested = true;
+            else if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) isSuggested = true;
+            else if (roleType === "OPERARIO" && puesto.includes("OPERARI")) isSuggested = true;
+
+            if (isSuggested) group = "Sugeridos";
+
+            return { ...e, _group: group };
         });
     };
 
