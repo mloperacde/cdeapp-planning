@@ -234,7 +234,7 @@ export default function IdealAssignmentView() {
       const allTeamEmployees = employees.filter(emp => {
           if (emp.departamento !== "FABRICACION") return false;
           if (emp.equipo !== teamName) return false;
-          if (emp.disponibilidad !== "Disponible") return false;
+          // Allow absent employees to be selected, but they will trigger a warning
           return true;
       });
 

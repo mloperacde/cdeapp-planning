@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from "react";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -124,6 +127,12 @@ export default function EmployeeSelect({
                     key={employee.id}
                     value={`${employee.nombre} ${employee.departamento || ""} ${employee.puesto || ""} ${employee.id}`}
                     onSelect={() => {
+                      if (employee.disponibilidad === "Ausente") {
+                          const returnDate = employee.ausencia_fin 
+                              ? format(new Date(employee.ausencia_fin), "dd/MM/yyyy", { locale: es })
+                              : "fecha desconocida";
+                          toast.warning(`Este empleado está ausente hasta: ${returnDate}`);
+                      }
                       onValueChange(employee.id);
                       setOpen(false);
                     }}
@@ -132,7 +141,7 @@ export default function EmployeeSelect({
                         "cursor-pointer",
                         employee.estado_empleado === "Baja" && "opacity-50"
                     )}
-                  >
+                    >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
@@ -140,15 +149,23 @@ export default function EmployeeSelect({
                       )}
                     />
                     <div className="flex-1 min-w-0 text-left">
-                      <div className={cn("font-medium truncate", employee.estado_empleado === "Baja" && "line-through")}>
+                      <div className={cn("flex items-center gap-2 font-medium truncate", employee.estado_empleado === "Baja" && "line-through")}>
                         {employee.nombre}
+                        {employee.disponibilidad === "Ausente" && (
+                            <span className="flex items-center text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                {employee.ausencia_fin 
+                                    ? `Hasta ${format(new Date(employee.ausencia_fin), "dd/MM", { locale: es })}` 
+                                    : "Ausente"}
+                            </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                          {employee.puesto && <span className="truncate">{employee.puesto}</span>}
                          {employee.equipo && <span className="truncate border-l pl-2 border-slate-300">{employee.equipo}</span>}
                       </div>
                     </div>
-                  </CommandItem>
+                    </CommandItem>
                 ))}
               </CommandGroup>
             ))}
