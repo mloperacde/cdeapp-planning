@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserCog, Save, UserCheck, User, Users, History, MapPin, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { UserCog, Save, UserCheck, User, Users, History, MapPin, Sparkles, Loader2, AlertCircle, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -390,6 +390,24 @@ export default function IdealAssignmentView() {
     saveMutation.mutate({ machineId, data: assignments[machineId], machineName });
   };
 
+  const handleAutoSuggest = (machineId) => {
+      const suggestion = calculateDefaultAssignment(machineId);
+      // Merge with current assignment to keep manually set slots? 
+      // Or overwrite? "Sugiera ... configuraciones ... permitiendo aprobar o ajustar".
+      // Usually auto-suggest implies overwriting empty slots or optimizing all.
+      // Let's overwrite but maybe keep manual locks? No, simple overwrite is best for "Suggest".
+      // User can adjust afterwards.
+      
+      setAssignments(prev => ({
+          ...prev,
+          [machineId]: {
+              ...prev[machineId],
+              ...suggestion
+          }
+      }));
+      toast.info("Sugerencia aplicada. Revise y ajuste si es necesario.");
+  };
+
   const handleSaveAll = async () => {
     // Identify modified assignments
     const promises = [];
@@ -560,6 +578,16 @@ export default function IdealAssignmentView() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleAutoSuggest(machine.id)}
+                                            className="border-amber-200 text-amber-700 hover:bg-amber-50"
+                                            title="Sugerir personal basado en habilidades y disponibilidad"
+                                        >
+                                            <Wand2 className="w-4 h-4 mr-2" />
+                                            Sugerir
+                                        </Button>
                                         <Button
                                             variant="outline"
                                             size="sm"
