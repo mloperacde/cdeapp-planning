@@ -122,51 +122,65 @@ export default function EmployeeSelect({
             <CommandEmpty>No se encontraron empleados</CommandEmpty>
             {Object.entries(groupedEmployees).map(([department, emps]) => (
               <CommandGroup key={department} heading={department}>
-                {emps.map((employee) => (
-                  <CommandItem
-                    key={employee.id}
-                    value={`${employee.nombre} ${employee.departamento || ""} ${employee.puesto || ""} ${employee.id}`}
-                    onSelect={() => {
-                      if (employee.disponibilidad === "Ausente") {
-                          const returnDate = employee.ausencia_fin 
-                              ? format(new Date(employee.ausencia_fin), "dd/MM/yyyy", { locale: es })
-                              : "fecha desconocida";
-                          toast.warning(`Este empleado está ausente hasta: ${returnDate}`);
-                      }
-                      onValueChange(employee.id);
-                      setOpen(false);
-                    }}
-                    disabled={false}
-                    className={cn(
-                        "cursor-pointer",
-                        employee.estado_empleado === "Baja" && "opacity-50"
-                    )}
-                    >
-                    <Check
+                {emps.map((employee) => {
+                  const handleSelect = () => {
+                    if (employee.disponibilidad === "Ausente") {
+                        const returnDate = employee.ausencia_fin 
+                            ? format(new Date(employee.ausencia_fin), "dd/MM/yyyy", { locale: es })
+                            : "fecha desconocida";
+                        toast.warning(`Este empleado está ausente hasta: ${returnDate}`);
+                    }
+                    onValueChange(employee.id);
+                    setOpen(false);
+                  };
+
+                  return (
+                    <CommandItem
+                      key={employee.id}
+                      value={`${employee.nombre} ${employee.departamento || ""} ${employee.puesto || ""} ${employee.id}`.toLowerCase()}
+                      onSelect={handleSelect}
+                      disabled={false}
                       className={cn(
-                        "mr-2 h-4 w-4",
-                        value === employee.id ? "opacity-100" : "opacity-0"
+                          "cursor-pointer",
+                          employee.estado_empleado === "Baja" && "opacity-50"
                       )}
-                    />
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className={cn("flex items-center gap-2 font-medium truncate", employee.estado_empleado === "Baja" && "line-through")}>
-                        {employee.nombre}
-                        {employee.disponibilidad === "Ausente" && (
-                            <span className="flex items-center text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
-                                <AlertTriangle className="w-3 h-3 mr-1" />
-                                {employee.ausencia_fin 
-                                    ? `Hasta ${format(new Date(employee.ausencia_fin), "dd/MM", { locale: es })}` 
-                                    : "Ausente"}
-                            </span>
-                        )}
+                      >
+                      {/* Wrapper div to ensure click events are captured even if CommandItem fails */}
+                      <div 
+                        className="flex items-center w-full"
+                        onClick={(e) => {
+                          // Ensure click triggers selection even if command item event handling fails
+                          e.stopPropagation();
+                          handleSelect();
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4 shrink-0",
+                            value === employee.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className={cn("flex items-center gap-2 font-medium truncate", employee.estado_empleado === "Baja" && "line-through")}>
+                            {employee.nombre}
+                            {employee.disponibilidad === "Ausente" && (
+                                <span className="flex items-center text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+                                    <AlertTriangle className="w-3 h-3 mr-1" />
+                                    {employee.ausencia_fin 
+                                        ? `Hasta ${format(new Date(employee.ausencia_fin), "dd/MM", { locale: es })}` 
+                                        : "Ausente"}
+                                </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                             {employee.puesto && <span className="truncate">{employee.puesto}</span>}
+                             {employee.equipo && <span className="truncate border-l pl-2 border-slate-300">{employee.equipo}</span>}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                         {employee.puesto && <span className="truncate">{employee.puesto}</span>}
-                         {employee.equipo && <span className="truncate border-l pl-2 border-slate-300">{employee.equipo}</span>}
-                      </div>
-                    </div>
                     </CommandItem>
-                ))}
+                  );
+                })}
               </CommandGroup>
             ))}
           </CommandList>
