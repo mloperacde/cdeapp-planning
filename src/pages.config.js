@@ -66,13 +66,13 @@ import ShiftAssignments from './pages/ShiftAssignments';
 import ShiftHandover from './pages/ShiftHandover';
 import ShiftManagement from './pages/ShiftManagement';
 import ShiftManagers from './pages/ShiftManagers';
+import ShiftPlanning from './pages/ShiftPlanning';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import ShiftPlanning from './pages/ShiftPlanning';
 import __Layout from './Layout.jsx';
 
 
@@ -145,13 +145,13 @@ export const PAGES = {
     "ShiftHandover": ShiftHandover,
     "ShiftManagement": ShiftManagement,
     "ShiftManagers": ShiftManagers,
+    "ShiftPlanning": ShiftPlanning,
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
     "SystemReset": SystemReset,
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "ShiftPlanning": ShiftPlanning,
 }
 
 export const pagesConfig = {

@@ -22,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft, Check, GripVertical } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft, Check, GripVertical, ArrowUpDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -38,6 +39,8 @@ export default function ProcessConfigurationPage() {
   const [machineAssignments, setMachineAssignments] = useState({});
   const [filters, setFilters] = useState({});
   const [editingOperators, setEditingOperators] = useState(null);
+  const [sortBy, setSortBy] = useState('nombre');
+  const [filterTipo, setFilterTipo] = useState('all');
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -66,30 +69,46 @@ export default function ProcessConfigurationPage() {
     initialData: EMPTY_ARRAY,
   });
 
+  // Get unique machine types
+  const machineTypes = React.useMemo(() => {
+    const types = new Set(machines.map(m => m.tipo).filter(Boolean));
+    return Array.from(types).sort();
+  }, [machines]);
+
   // Filtered machines with their processes
   const filteredMachines = React.useMemo(() => {
     let result = machines.filter(m => {
       const searchTerm = filters.searchTerm || "";
-      return !searchTerm || 
+      const matchesSearch = !searchTerm || 
         m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesType = filterTipo === 'all' || m.tipo === filterTipo;
+      
+      return matchesSearch && matchesType;
     });
 
-    if (filters.sortField) {
-      result = [...result].sort((a, b) => {
-        let aVal = a[filters.sortField];
-        let bVal = b[filters.sortField];
-        
-        if (!aVal) return 1;
-        if (!bVal) return -1;
-        
-        const comparison = String(aVal).localeCompare(String(bVal));
-        return filters.sortDirection === 'desc' ? -comparison : comparison;
-      });
-    }
+    // Sort machines
+    result = [...result].sort((a, b) => {
+      if (sortBy === 'nombre') {
+        return (a.nombre || "").localeCompare(b.nombre || "", 'es');
+      }
+      if (sortBy === 'codigo') {
+        return (a.codigo || "").localeCompare(b.codigo || "", 'es');
+      }
+      if (sortBy === 'tipo') {
+        const typeCompare = (a.tipo || "").localeCompare(b.tipo || "", 'es');
+        if (typeCompare !== 0) return typeCompare;
+        return (a.nombre || "").localeCompare(b.nombre || "", 'es');
+      }
+      if (sortBy === 'orden') {
+        return (a.orden || 0) - (b.orden || 0);
+      }
+      return 0;
+    });
     
     return result;
-  }, [machines, filters]);
+  }, [machines, filters, sortBy, filterTipo]);
 
   const getMachineProcesses = (machineId) => {
     const machineProcs = machineProcesses.filter(mp => mp.machine_id === machineId && mp.activo);
@@ -359,7 +378,7 @@ export default function ProcessConfigurationPage() {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="mb-6">
+          <div className="mb-6 space-y-4">
             <AdvancedSearch
               data={processes}
               onFilterChange={setFilters}
@@ -367,6 +386,40 @@ export default function ProcessConfigurationPage() {
               placeholder="Buscar máquina por nombre o código..."
               pageId="process_configuration"
             />
+            
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium whitespace-nowrap">Ordenar por:</Label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nombre">Nombre</SelectItem>
+                    <SelectItem value="codigo">Código</SelectItem>
+                    <SelectItem value="tipo">Tipo</SelectItem>
+                    <SelectItem value="orden">Orden</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {machineTypes.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium whitespace-nowrap">Tipo:</Label>
+                  <Select value={filterTipo} onValueChange={setFilterTipo}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los tipos</SelectItem>
+                      {machineTypes.map(tipo => (
+                        <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
 
           {isLoading ? (
@@ -433,29 +486,38 @@ export default function ProcessConfigurationPage() {
                             <span className="text-xs text-slate-400">• Arrastra para reordenar</span>
                           </div>
                           <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id)}>
-                            <Droppable droppableId={`machine-${machine.id}`}>
-                              {(provided) => (
+                            <Droppable droppableId={`machine-${machine.id}`} type="PROCESS">
+                              {(provided, snapshot) => (
                                 <div 
                                   {...provided.droppableProps}
                                   ref={provided.innerRef}
-                                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"
+                                  className={`space-y-2 min-h-[60px] rounded-lg transition-all ${
+                                    snapshot.isDraggingOver ? 'bg-blue-50/50 ring-2 ring-blue-300 ring-inset' : ''
+                                  }`}
                                 >
-                                  {machineProcs.map((mp, index) => (
-                                    <Draggable key={mp.id} draggableId={mp.id} index={index}>
-                                      {(provided, snapshot) => (
-                                        <div
-                                          ref={provided.innerRef}
-                                          {...provided.draggableProps}
-                                          className={`flex items-center justify-between p-3 bg-slate-50 rounded-lg border hover:border-blue-300 hover:bg-blue-50 transition-all group ${
-                                            snapshot.isDragging ? 'shadow-lg border-blue-400 bg-blue-50' : ''
-                                          }`}
-                                        >
-                                          <div 
-                                            {...provided.dragHandleProps}
-                                            className="cursor-grab active:cursor-grabbing mr-2"
-                                          >
-                                            <GripVertical className="w-4 h-4 text-slate-400" />
-                                          </div>
+                                 {machineProcs.map((mp, index) => (
+                                   <Draggable key={mp.id} draggableId={mp.id} index={index}>
+                                     {(provided, snapshot) => (
+                                       <div
+                                         ref={provided.innerRef}
+                                         {...provided.draggableProps}
+                                         className={`flex items-center justify-between p-3 bg-slate-50 rounded-lg border transition-all group ${
+                                           snapshot.isDragging 
+                                             ? 'shadow-2xl border-blue-500 bg-blue-100 scale-105 z-50 ring-2 ring-blue-300' 
+                                             : 'hover:border-blue-300 hover:bg-blue-50 hover:shadow-md'
+                                         }`}
+                                         style={{
+                                           ...provided.draggableProps.style,
+                                           cursor: snapshot.isDragging ? 'grabbing' : 'default'
+                                         }}
+                                       >
+                                         <div 
+                                           {...provided.dragHandleProps}
+                                           className="cursor-grab active:cursor-grabbing mr-3 p-1 hover:bg-slate-200 rounded transition-colors"
+                                           onClick={(e) => e.stopPropagation()}
+                                         >
+                                           <GripVertical className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
+                                         </div>
                                           <div className="flex-1 min-w-0">
                                             <div className="font-medium text-sm truncate">
                                               {mp.processName}
