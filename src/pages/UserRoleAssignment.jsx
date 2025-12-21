@@ -61,12 +61,30 @@ export default function UserRoleAssignmentPage() {
         await base44.entities.UserRole.update(role.id, { active: false });
       }
       
-      return await base44.entities.UserRole.create({
+      const newRole = await base44.entities.UserRole.create({
         ...data,
         user_email: selectedUser.email,
         assigned_by: currentUser?.email,
         assigned_date: new Date().toISOString()
       });
+
+      // Send notification to user
+      try {
+        const roleName = roles.find(r => r.id === data.role_id)?.name || 'nuevo rol';
+        await base44.functions.invoke('sendNotification', {
+          user_emails: [selectedUser.email],
+          tipo: 'Alerta Sistema',
+          prioridad: 'Alta',
+          titulo: '🔐 Rol Actualizado',
+          mensaje: `Se te ha asignado el rol de ${roleName}. Tus permisos han sido actualizados.`,
+          enlace: '/Dashboard',
+          check_preferences: false
+        });
+      } catch (e) {
+        console.error('Failed to send notification:', e);
+      }
+
+      return newRole;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userRoles'] });
@@ -125,9 +143,9 @@ export default function UserRoleAssignmentPage() {
     setShowDialog(true);
   };
 
-  const handleRevoke = (userRoleId) => {
+  const handleRevoke = (userRoleId, userEmail) => {
     if (window.confirm('¿Revocar este rol? Se eliminarán todos los permisos asociados.')) {
-      revokeMutation.mutate(userRoleId);
+      revokeMutation.mutate({ id: userRoleId, userEmail });
     }
   };
 
