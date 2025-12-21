@@ -61,6 +61,7 @@ import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionPlanning from './pages/ProductionPlanning';
 import Reports from './pages/Reports';
+import RoleManagement from './pages/RoleManagement';
 import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
 import ShiftAssignments from './pages/ShiftAssignments';
 import ShiftHandover from './pages/ShiftHandover';
@@ -73,9 +74,9 @@ import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import RoleManagement from './pages/RoleManagement';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import DeploymentGuide from './pages/DeploymentGuide';
+import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
 import __Layout from './Layout.jsx';
 
 
@@ -143,6 +144,7 @@ export const PAGES = {
     "ProcessConfiguration": ProcessConfiguration,
     "ProductionPlanning": ProductionPlanning,
     "Reports": Reports,
+    "RoleManagement": RoleManagement,
     "ShiftAbsenceReport": ShiftAbsenceReport,
     "ShiftAssignments": ShiftAssignments,
     "ShiftHandover": ShiftHandover,
@@ -155,9 +157,9 @@ export const PAGES = {
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "RoleManagement": RoleManagement,
     "UserRoleAssignment": UserRoleAssignment,
     "DeploymentGuide": DeploymentGuide,
+    "AdminDeploymentGuide": AdminDeploymentGuide,
 }
 
 export const pagesConfig = {
