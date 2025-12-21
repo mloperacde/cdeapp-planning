@@ -139,6 +139,7 @@ export default function MachineSkillsView() {
     const RemoveEmployeeButton = ({ employeeId, machineId }) => {
         return (
             <button 
+                type="button"
                 onClick={() => updateEmployeeMachineMutation.mutate({ employeeId, machineId, action: 'remove' })}
                 className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 hover:text-red-500"
             >

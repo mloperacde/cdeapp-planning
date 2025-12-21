@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Save, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import AdvancedSearch from "../common/AdvancedSearch";
 
@@ -113,6 +114,16 @@ export default function EmployeeSkillsView() {
         updateMutation.mutate({ employeeId: employee.id, data: changes });
     };
 
+    const saveAllChanges = () => {
+        const promises = Object.keys(editingState).map(empId => {
+            return updateMutation.mutateAsync({ employeeId: empId, data: editingState[empId] });
+        });
+        
+        Promise.all(promises)
+            .then(() => toast.success("Todos los cambios guardados"))
+            .catch(() => toast.error("Error al guardar algunos cambios"));
+    };
+
     const getUniquePositions = () => {
         const positions = new Set(employees.filter(e => e.departamento === "FABRICACION").map(e => e.puesto).filter(Boolean));
         return Array.from(positions);
@@ -187,6 +198,15 @@ export default function EmployeeSkillsView() {
 
             {/* Table */}
             <div className="flex-1 overflow-auto border rounded-lg bg-white shadow-sm flex flex-col min-w-0">
+                {Object.keys(editingState).length > 0 && (
+                    <div className="p-2 bg-yellow-50 border-b flex justify-between items-center px-4">
+                        <span className="text-sm text-yellow-800 font-medium">Hay cambios sin guardar</span>
+                        <Button size="sm" onClick={saveAllChanges} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                            <Save className="w-4 h-4 mr-2" />
+                            Guardar Todo ({Object.keys(editingState).length})
+                        </Button>
+                    </div>
+                )}
                 <div className="flex-1 overflow-auto">
                     <Table>
                         <TableHeader className="bg-slate-50 sticky top-0 z-10">
@@ -206,8 +226,13 @@ export default function EmployeeSkillsView() {
                                 .map(emp => {
                                 const isEdited = !!editingState[emp.id];
                                 return (
-                                    <TableRow key={emp.id} className="hover:bg-slate-50">
-                                        <TableCell className="font-medium">{emp.nombre}</TableCell>
+                                    <TableRow key={emp.id} className={cn("hover:bg-slate-50", emp.disponibilidad === "Ausente" ? "bg-red-50 hover:bg-red-100" : "")}>
+                                        <TableCell className={cn("font-medium", emp.disponibilidad === "Ausente" ? "text-red-700" : "")}>
+                                            {emp.nombre}
+                                            {emp.disponibilidad === "Ausente" && (
+                                                <span className="ml-2 text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded-full">Ausente</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell>{emp.equipo}</TableCell>
                                         <TableCell>
                                             <Badge variant="outline" className="font-normal text-[10px]">{emp.puesto}</Badge>

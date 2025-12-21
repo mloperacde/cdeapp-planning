@@ -95,6 +95,7 @@ export default function EmployeeSelect({
       <PopoverTrigger asChild>
         {trigger ? trigger : (
           <Button
+            type="button"
             variant="outline"
             role="combobox"
             aria-expanded={open}
