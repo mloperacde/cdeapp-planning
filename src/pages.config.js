@@ -77,6 +77,8 @@ import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import DeploymentGuide from './pages/DeploymentGuide';
 import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
+import UserManual from './pages/UserManual';
+import QuickStartGuide from './pages/QuickStartGuide';
 import __Layout from './Layout.jsx';
 
 
@@ -160,6 +162,8 @@ export const PAGES = {
     "UserRoleAssignment": UserRoleAssignment,
     "DeploymentGuide": DeploymentGuide,
     "AdminDeploymentGuide": AdminDeploymentGuide,
+    "UserManual": UserManual,
+    "QuickStartGuide": QuickStartGuide,
 }
 
 export const pagesConfig = {
