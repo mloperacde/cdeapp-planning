@@ -1,5 +1,7 @@
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { Shield } from "lucide-react";
 
 export function usePermissions() {
   const { data: currentUser } = useQuery({
