@@ -60,6 +60,7 @@ import ThemeToggle from "../components/common/ThemeToggle";
 import ChatbotButton from "../components/chatbot/ChatbotButton";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "../components/notifications/NotificationBell";
+import ErrorBoundary from "../components/common/ErrorBoundary";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -99,9 +100,10 @@ export default function Layout({ children, currentPageName }) {
   const isParentActive = (urls) => urls.some(url => location.pathname === url);
 
   return (
-    <ThemeProvider>
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:to-background dark:bg-background">
+    <ErrorBoundary>
+      <ThemeProvider>
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:to-background dark:bg-background">
           <Sidebar className="border-r border-border bg-card/80 dark:bg-card/95 backdrop-blur-sm">
             <SidebarHeader className="border-b border-border p-4">
               <div className="flex flex-col gap-3">
@@ -709,5 +711,6 @@ export default function Layout({ children, currentPageName }) {
         </div>
         </SidebarProvider>
         </ThemeProvider>
+        </ErrorBoundary>
         );
         }

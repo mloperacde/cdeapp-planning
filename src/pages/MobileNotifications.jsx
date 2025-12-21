@@ -3,22 +3,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, ArrowLeft } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 
 export default function MobileNotifications() {
   return (
-    <div className="p-4 max-w-md mx-auto space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <Bell className="w-5 h-5 text-blue-600" />
-          Notificaciones
-        </h1>
-        <Link to={createPageUrl("MobileProfile")}>
-          <Button variant="ghost" size="sm">Volver</Button>
-        </Link>
-      </div>
+    <ErrorBoundary>
+      <div className="p-4 max-w-md mx-auto space-y-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Bell className="w-5 h-5 text-blue-600" />
+            Notificaciones
+          </h1>
+          <Link to={createPageUrl("Mobile")}>
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Volver
+            </Button>
+          </Link>
+        </div>
       
       <Card>
         <CardHeader>
@@ -48,6 +53,7 @@ export default function MobileNotifications() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

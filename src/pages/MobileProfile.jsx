@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { User, Settings } from "lucide-react";
+import { User, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 
 export default function MobileProfile() {
   const { data: user } = useQuery({
@@ -14,16 +15,20 @@ export default function MobileProfile() {
   });
 
   return (
-    <div className="p-4 max-w-md mx-auto space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <User className="w-5 h-5 text-blue-600" />
-          Mi Perfil
-        </h1>
-        <Link to={createPageUrl("Dashboard")}>
-          <Button variant="ghost" size="sm">Volver</Button>
-        </Link>
-      </div>
+    <ErrorBoundary>
+      <div className="p-4 max-w-md mx-auto space-y-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600" />
+            Mi Perfil
+          </h1>
+          <Link to={createPageUrl("Mobile")}>
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Volver
+            </Button>
+          </Link>
+        </div>
       
       <Card>
         <CardHeader className="flex flex-row items-center gap-4 pb-2">
@@ -48,6 +53,7 @@ export default function MobileProfile() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
