@@ -73,6 +73,8 @@ import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import RoleManagement from './pages/RoleManagement';
+import UserRoleAssignment from './pages/UserRoleAssignment';
 import __Layout from './Layout.jsx';
 
 
@@ -152,6 +154,8 @@ export const PAGES = {
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "RoleManagement": RoleManagement,
+    "UserRoleAssignment": UserRoleAssignment,
 }
 
 export const pagesConfig = {

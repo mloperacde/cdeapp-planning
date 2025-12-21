@@ -62,6 +62,7 @@ export default function Layout({ children, currentPageName }) {
     maquinas: false,
     planning: false,
     produccion: false,
+    configuracion: false,
   });
 
   const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
@@ -531,19 +532,66 @@ export default function Layout({ children, currentPageName }) {
                               </SidebarMenuItem>
                               </Collapsible>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("Configuration")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("Configuration")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Settings className="w-5 h-5" />
-                        <span className="text-sm">Configuración</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <Collapsible open={openSections.configuracion} onOpenChange={() => toggleSection('configuracion')}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                            isParentActive([
+                              createPageUrl("Configuration"),
+                              createPageUrl("RoleManagement"),
+                              createPageUrl("UserRoleAssignment")
+                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <Settings className="w-5 h-5" />
+                              <span className="text-sm">Configuración</span>
+                            </div>
+                            {openSections.configuracion ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </div>
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="ml-6 mt-1 space-y-1">
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("Configuration")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("Configuration")} className="flex items-center gap-2 px-3 py-2">
+                              <Settings className="w-4 h-4" />
+                              General
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("RoleManagement")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("RoleManagement")} className="flex items-center gap-2 px-3 py-2">
+                              <Shield className="w-4 h-4" />
+                              Gestión de Roles
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("UserRoleAssignment")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("UserRoleAssignment")} className="flex items-center gap-2 px-3 py-2">
+                              <Users className="w-4 h-4" />
+                              Asignación de Roles
+                            </Link>
+                          </SidebarMenuButton>
+                        </div>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
