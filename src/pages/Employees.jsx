@@ -157,7 +157,15 @@ export default function EmployeesPage() {
   // Fetch ALL employees for stats
   const { data: allEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['allEmployeesMaster'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
+    queryFn: async () => {
+      // Sync availability before loading
+      try {
+        await base44.functions.invoke('sync_employee_availability_bulk');
+      } catch (e) {
+        console.error("Sync failed", e);
+      }
+      return base44.entities.EmployeeMasterDatabase.list('nombre', 1000);
+    },
     enabled: !!permissions.ver_lista,
     staleTime: 5 * 60 * 1000 // 5 minutes cache
   });

@@ -47,7 +47,7 @@ export default function DashboardPage() {
   React.useEffect(() => {
     const init = async () => {
       try {
-        await base44.functions.invoke('update_employee_availability');
+        await base44.functions.invoke('sync_employee_availability_bulk');
       } catch (e) {
         console.error("Background sync failed", e);
       }
