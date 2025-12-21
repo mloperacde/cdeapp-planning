@@ -183,18 +183,30 @@ export default function NotificationCenter() {
               filteredNotifications.map((notif) => (
                 <Card 
                   key={notif.id} 
-                  className={`shadow-md ${!notif.leida ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'bg-white'}`}
+                  className={`shadow-md transition-all hover:shadow-lg ${
+                    !notif.leida ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'bg-white'
+                  } ${
+                    notif.prioridad === 'Crítica' ? 'border-red-500 border-2' : ''
+                  }`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           {getTypeIcon(notif.tipo)}
                           <Badge variant="outline" className="text-xs">
                             {notif.tipo}
                           </Badge>
+                          <Badge className={`text-xs ${
+                            notif.prioridad === 'Crítica' ? 'bg-red-600' :
+                            notif.prioridad === 'Alta' ? 'bg-orange-600' :
+                            notif.prioridad === 'Media' ? 'bg-blue-600' :
+                            'bg-slate-600'
+                          }`}>
+                            {notif.prioridad}
+                          </Badge>
                           {!notif.leida && (
-                            <Badge className="bg-blue-600 text-xs">Nueva</Badge>
+                            <Badge className="bg-green-600 text-xs">Nueva</Badge>
                           )}
                         </div>
                         <h3 className="font-semibold text-slate-900 mb-1">{notif.titulo}</h3>
