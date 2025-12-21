@@ -301,7 +301,7 @@ export default function RoleManagementPage() {
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           placeholder="ej: Supervisor de Producción"
                           required
-                          disabled={editingRole?.is_system_role}
+ 
                         />
                       </div>
                       <div className="space-y-2">
@@ -311,7 +311,7 @@ export default function RoleManagementPage() {
                           onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                           placeholder="ej: SUPERVISOR_PROD"
                           required
-                          disabled={editingRole?.is_system_role}
+ 
                         />
                       </div>
                     </div>
@@ -367,19 +367,9 @@ export default function RoleManagementPage() {
                     <PermissionsEditor
                       permissions={formData.permissions}
                       onChange={(perms) => setFormData({ ...formData, permissions: perms })}
-                      disabled={editingRole?.is_system_role}
                     />
                   </CardContent>
                 </Card>
-
-                {editingRole?.is_system_role && (
-                  <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <AlertCircle className="w-4 h-4 text-amber-600" />
-                    <p className="text-sm text-amber-800">
-                      Este es un rol del sistema y no puede ser modificado
-                    </p>
-                  </div>
-                )}
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={handleClose}>
@@ -388,7 +378,7 @@ export default function RoleManagementPage() {
                   <Button 
                     type="submit" 
                     className="bg-blue-600 hover:bg-blue-700"
-                    disabled={saveMutation.isPending || editingRole?.is_system_role}
+                    disabled={saveMutation.isPending}
                   >
                     {saveMutation.isPending ? "Guardando..." : "Guardar Rol"}
                   </Button>

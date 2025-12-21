@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, UserPlus, Shield, Trash2, Calendar, AlertCircle } from "lucide-react";
+import { Users, UserPlus, Shield, Trash2, Calendar, AlertCircle, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -53,6 +53,14 @@ export default function UserRoleAssignmentPage() {
 
   const assignMutation = useMutation({
     mutationFn: async (data) => {
+      // Deactivate existing roles
+      const existingRoles = userRoles.filter(ur => 
+        ur.user_email === selectedUser.email && ur.active
+      );
+      for (const role of existingRoles) {
+        await base44.entities.UserRole.update(role.id, { active: false });
+      }
+      
       return await base44.entities.UserRole.create({
         ...data,
         user_email: selectedUser.email,
@@ -62,8 +70,9 @@ export default function UserRoleAssignmentPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userRoles'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserRoles'] });
       handleClose();
-      toast.success("Rol asignado correctamente");
+      toast.success("Rol asignado. Los cambios se aplicarán inmediatamente.");
     },
   });
 
@@ -71,7 +80,8 @@ export default function UserRoleAssignmentPage() {
     mutationFn: (id) => base44.entities.UserRole.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userRoles'] });
-      toast.success("Rol revocado");
+      queryClient.invalidateQueries({ queryKey: ['currentUserRoles'] });
+      toast.success("Rol revocado. Los cambios se aplicarán inmediatamente.");
     },
   });
 
@@ -86,8 +96,19 @@ export default function UserRoleAssignmentPage() {
     setShowDialog(true);
   };
 
+  const handleChangeRole = (employee, currentRoleId) => {
+    setSelectedUser(employee);
+    setFormData({
+      role_id: currentRoleId,
+      expires_at: "",
+      notes: "",
+      active: true
+    });
+    setShowDialog(true);
+  };
+
   const handleRevoke = (userRoleId) => {
-    if (window.confirm('¿Revocar este rol? El usuario perderá los permisos asociados.')) {
+    if (window.confirm('¿Revocar este rol? Se eliminarán todos los permisos asociados.')) {
       revokeMutation.mutate(userRoleId);
     }
   };
@@ -196,17 +217,31 @@ export default function UserRoleAssignmentPage() {
                           Sin roles
                         </Badge>
                       ) : (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2">
                           {employee.assignedRoles.map((ur) => (
-                            <Badge key={ur.id} className="bg-blue-100 text-blue-800 flex items-center gap-1">
-                              {getRoleName(ur.role_id)}
-                              <button
-                                onClick={() => handleRevoke(ur.id)}
-                                className="ml-1 hover:text-red-600"
+                            <div key={ur.id} className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
+                              <span className="text-xs font-medium text-blue-800">
+                                {getRoleName(ur.role_id)}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 hover:bg-blue-100"
+                                onClick={() => handleChangeRole(employee, ur.role_id)}
+                                title="Cambiar rol"
                               >
-                                ×
-                              </button>
-                            </Badge>
+                                <Edit className="w-3 h-3 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 hover:bg-red-100"
+                                onClick={() => handleRevoke(ur.id)}
+                                title="Revocar rol"
+                              >
+                                <X className="w-3 h-3 text-red-600" />
+                              </Button>
+                            </div>
                           ))}
                         </div>
                       )}
