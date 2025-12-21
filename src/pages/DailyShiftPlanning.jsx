@@ -31,7 +31,15 @@ export default function DailyShiftPlanningPage() {
 
     const { data: employees = [] } = useQuery({
         queryKey: ['employees'],
-        queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+        queryFn: async () => {
+            // Sync availability before loading
+            try {
+                await base44.functions.invoke('update_employee_availability');
+            } catch (e) {
+                console.error("Sync failed", e);
+            }
+            return base44.entities.EmployeeMasterDatabase.list('nombre');
+        },
     });
 
     const { data: workOrders = [] } = useQuery({

@@ -115,6 +115,12 @@ export default function ShiftManagersPage() {
   const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
+      // Sync availability before loading
+      try {
+        await base44.functions.invoke('update_employee_availability');
+      } catch (e) {
+        console.error("Sync failed", e);
+      }
       const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
       // Filtro estricto para Jefes de Turno: solo FABRICACION y Activos
       return all.filter(e => e.departamento === 'FABRICACION' && e.estado_empleado === 'Alta');
