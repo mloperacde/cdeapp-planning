@@ -232,7 +232,7 @@ export default function IdealAssignmentView() {
 
   // 6. Get Candidates for Dropdown
   const getCandidatesForDropdown = (machineId, roleType, currentMachineData) => {
-      // Include ALL team employees, but group them by relevance
+      // Include team employees + fixed shift employees from FABRICACION
       if (!currentTeam) return [];
 
       const teamConfig = teams.find(t => t.team_key === currentTeam);
@@ -240,7 +240,13 @@ export default function IdealAssignmentView() {
 
       const allTeamEmployees = employees.filter(emp => {
           if (emp.departamento !== "FABRICACION") return false;
-          if (emp.equipo !== teamName) return false;
+          
+          // Include employees from the team OR fixed shift employees
+          const isTeamMember = emp.equipo === teamName;
+          const isFixedShift = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
+          
+          if (!isTeamMember && !isFixedShift) return false;
+          
           // Allow absent employees to be selected, but they will trigger a warning
           return true;
       });
@@ -249,6 +255,7 @@ export default function IdealAssignmentView() {
           let group = "Otros";
           const slot = getExperienceSlot(emp, machineId);
           const puesto = (emp.puesto || "").toUpperCase();
+          const isFixedShift = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
 
           let matchesRole = false;
           if (roleType === "RESPONSABLE" && (puesto.includes("RESPONSABLE"))) matchesRole = true;
@@ -258,6 +265,7 @@ export default function IdealAssignmentView() {
           if (matchesRole && slot <= 10) group = "Sugeridos (Perfil Ideal)"; 
           else if (matchesRole) group = "Con puesto correcto";
           else if (slot <= 10) group = "Con experiencia en máquina";
+          else if (isFixedShift) group = "Turno Fijo";
 
           return { ...emp, _group: group, _slot: slot };
       }).sort((a, b) => {
@@ -352,6 +360,38 @@ export default function IdealAssignmentView() {
         a => a.machine_id === machineId && a.team_key === currentTeam
       );
 
+      // Update employee machine assignments (maquina_1 to maquina_10)
+      const assignedEmployeeIds = ids;
+      
+      for (const empId of assignedEmployeeIds) {
+          const employee = employees.find(e => e.id === empId);
+          if (!employee) continue;
+          
+          // Check if machine already assigned
+          const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => employee[`maquina_${i}`] === machineId);
+          
+          if (!hasMachine) {
+              // Find first empty slot
+              let emptySlot = null;
+              for (let i = 1; i <= 10; i++) {
+                  if (!employee[`maquina_${i}`]) {
+                      emptySlot = i;
+                      break;
+                  }
+              }
+              
+              if (emptySlot) {
+                  try {
+                      await base44.entities.EmployeeMasterDatabase.update(empId, {
+                          [`maquina_${emptySlot}`]: machineId
+                      });
+                  } catch (e) {
+                      console.warn(`Failed to update employee ${employee.nombre} machine assignment`, e);
+                  }
+              }
+          }
+      }
+
       // Audit Log
       try {
           const changes = existing ? JSON.stringify({ old: existing, new: payload }) : JSON.stringify({ new: payload });
@@ -377,6 +417,7 @@ export default function IdealAssignmentView() {
     onSuccess: () => {
       toast.success("Asignaciones guardadas exitosamente");
       queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
     onError: (err) => {
       toast.error(err.message || "Error al guardar asignaciones");
