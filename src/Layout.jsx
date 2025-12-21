@@ -30,6 +30,7 @@ import {
   Factory,
   Settings2,
   BookOpen,
+  CheckCircle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -592,12 +593,34 @@ export default function Layout({ children, currentPageName }) {
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("DeploymentGuide")) ? 'bg-blue-50 text-blue-700' : ''
+                              isActive(createPageUrl("AdminDeploymentGuide")) ? 'bg-blue-50 text-blue-700' : ''
                             }`}
                           >
-                            <Link to={createPageUrl("DeploymentGuide")} className="flex items-center gap-2 px-3 py-2">
-                              <BookOpen className="w-4 h-4" />
+                            <Link to={createPageUrl("AdminDeploymentGuide")} className="flex items-center gap-2 px-3 py-2">
+                              <Shield className="w-4 h-4" />
                               Guía de Implementación
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("UserManual")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("UserManual")} className="flex items-center gap-2 px-3 py-2">
+                              <BookOpen className="w-4 h-4" />
+                              Manual de Usuario
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("QuickStartGuide")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("QuickStartGuide")} className="flex items-center gap-2 px-3 py-2">
+                              <CheckCircle className="w-4 h-4" />
+                              Inicio Rápido
                             </Link>
                           </SidebarMenuButton>
                         </div>
