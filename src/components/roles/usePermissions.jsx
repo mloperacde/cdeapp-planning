@@ -20,8 +20,9 @@ export function usePermissions() {
       });
     },
     enabled: !!currentUser?.email,
-    staleTime: 1000, // 1 second to refresh immediately
-    refetchInterval: 2000, // Refetch every 2 seconds
+    staleTime: 0, // No cache - always fresh
+    refetchInterval: 1000, // Refetch every second for immediate updates
+    refetchOnWindowFocus: true,
   });
 
   const { data: roles = [] } = useQuery({
@@ -38,8 +39,9 @@ export function usePermissions() {
       }
       return Array.from(uniqueMap.values());
     },
-    staleTime: 1000,
-    refetchInterval: 2000,
+    staleTime: 0,
+    refetchInterval: 1000,
+    refetchOnWindowFocus: true,
   });
 
   // Get user's role with highest level

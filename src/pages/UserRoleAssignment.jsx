@@ -87,10 +87,14 @@ export default function UserRoleAssignmentPage() {
       return newRole;
     },
     onSuccess: () => {
+      // Force immediate cache invalidation
       queryClient.invalidateQueries({ queryKey: ['userRoles'] });
       queryClient.invalidateQueries({ queryKey: ['currentUserRoles'] });
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.refetchQueries({ queryKey: ['userRoles'] });
+      queryClient.refetchQueries({ queryKey: ['currentUserRoles'] });
       handleClose();
-      toast.success("Rol asignado. Los cambios se aplicarán inmediatamente.");
+      toast.success("Rol asignado y aplicado inmediatamente.");
     },
   });
 
@@ -115,9 +119,13 @@ export default function UserRoleAssignmentPage() {
       }
     },
     onSuccess: () => {
+      // Force immediate cache invalidation
       queryClient.invalidateQueries({ queryKey: ['userRoles'] });
       queryClient.invalidateQueries({ queryKey: ['currentUserRoles'] });
-      toast.success("Rol revocado. Los cambios se aplicarán inmediatamente.");
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.refetchQueries({ queryKey: ['userRoles'] });
+      queryClient.refetchQueries({ queryKey: ['currentUserRoles'] });
+      toast.success("Rol revocado y cambios aplicados inmediatamente.");
     },
   });
 
