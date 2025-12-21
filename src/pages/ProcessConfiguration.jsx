@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ export default function ProcessConfigurationPage() {
   const [showMachineAssignment, setShowMachineAssignment] = useState(null);
   const [machineAssignments, setMachineAssignments] = useState({});
   const [filters, setFilters] = useState({});
+  const [editingOperators, setEditingOperators] = useState(null);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -104,32 +105,40 @@ export default function ProcessConfigurationPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      let savedProcess;
       if (editingProcess?.id) {
-        savedProcess = await base44.entities.Process.update(editingProcess.id, data);
+        return await base44.entities.Process.update(editingProcess.id, data);
       } else {
-        savedProcess = await base44.entities.Process.create(data);
-        
-        // Si es un nuevo proceso, asignarlo a todas las máquinas
-        if (machines.length > 0) {
-          const machineAssignments = machines.map(machine => ({
-            machine_id: machine.id,
-            process_id: savedProcess.id,
-            operadores_requeridos: data.operadores_requeridos || 1,
-            activo: true
-          }));
-          await base44.entities.MachineProcess.bulkCreate(machineAssignments);
-        }
+        return await base44.entities.Process.create(data);
       }
-      return savedProcess;
     },
-    onSuccess: () => {
+    onSuccess: (savedProcess) => {
       queryClient.invalidateQueries({ queryKey: ['processes'] });
-      queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
       handleClose();
-      toast.success("Proceso guardado correctamente");
+      
+      // Si es un nuevo proceso, abrir diálogo para configurar máquinas
+      if (!editingProcess?.id) {
+        toast.success("Proceso creado. Configure las máquinas donde se puede realizar.");
+        setTimeout(() => {
+          handleOpenProcessConfiguration(savedProcess);
+        }, 300);
+      } else {
+        toast.success("Proceso actualizado correctamente");
+      }
     },
   });
+
+  const handleOpenProcessConfiguration = (process) => {
+    // Configurar proceso en máquinas
+    const assignments = {};
+    machines.forEach(machine => {
+      assignments[machine.id] = {
+        checked: false,
+        operadores: process.operadores_requeridos || 1
+      };
+    });
+    setMachineAssignments(assignments);
+    setShowMachineAssignment({ ...process, isProcessConfig: true });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Process.delete(id),
@@ -141,31 +150,61 @@ export default function ProcessConfigurationPage() {
 
   const saveMachineAssignmentsMutation = useMutation({
     mutationFn: async (data) => {
-      const { machineId, assignments } = data;
+      const isProcessConfig = showMachineAssignment?.isProcessConfig;
       
-      // Eliminar asignaciones anteriores de esta máquina
-      const existing = machineProcesses.filter(mp => mp.machine_id === machineId);
-      await Promise.all(existing.map(mp => base44.entities.MachineProcess.delete(mp.id)));
-      
-      // Crear nuevas asignaciones
-      const newAssignments = Object.entries(assignments)
-        .filter(([_, assigned]) => assigned.checked)
-        .map(([processId, assigned]) => ({
-          machine_id: machineId,
-          process_id: processId,
-          operadores_requeridos: assigned.operadores || 1,
-          activo: true
-        }));
+      if (isProcessConfig) {
+        // Configurando proceso en múltiples máquinas
+        const { processId, assignments } = data;
+        const newAssignments = Object.entries(assignments)
+          .filter(([_, assigned]) => assigned.checked)
+          .map(([machineId, assigned]) => ({
+            machine_id: machineId,
+            process_id: processId,
+            operadores_requeridos: assigned.operadores || 1,
+            activo: true
+          }));
 
-      if (newAssignments.length > 0) {
-        await base44.entities.MachineProcess.bulkCreate(newAssignments);
+        if (newAssignments.length > 0) {
+          await base44.entities.MachineProcess.bulkCreate(newAssignments);
+        }
+      } else {
+        // Configurando máquina con múltiples procesos
+        const { machineId, assignments } = data;
+        const existing = machineProcesses.filter(mp => mp.machine_id === machineId);
+        await Promise.all(existing.map(mp => base44.entities.MachineProcess.delete(mp.id)));
+        
+        const newAssignments = Object.entries(assignments)
+          .filter(([_, assigned]) => assigned.checked)
+          .map(([processId, assigned]) => ({
+            machine_id: machineId,
+            process_id: processId,
+            operadores_requeridos: assigned.operadores || 1,
+            activo: true
+          }));
+
+        if (newAssignments.length > 0) {
+          await base44.entities.MachineProcess.bulkCreate(newAssignments);
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
       setShowMachineAssignment(null);
       setMachineAssignments({});
-      toast.success("Asignaciones guardadas correctamente");
+      toast.success("Configuración guardada correctamente");
+    },
+  });
+
+  const updateOperatorsMutation = useMutation({
+    mutationFn: async ({ machineProcessId, operadores }) => {
+      return await base44.entities.MachineProcess.update(machineProcessId, {
+        operadores_requeridos: operadores
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+      setEditingOperators(null);
+      toast.success("Operadores actualizados");
     },
   });
 
@@ -245,9 +284,30 @@ export default function ProcessConfigurationPage() {
   };
 
   const handleSaveMachineAssignments = () => {
-    saveMachineAssignmentsMutation.mutate({
-      machineId: showMachineAssignment.id,
-      assignments: machineAssignments
+    const isProcessConfig = showMachineAssignment?.isProcessConfig;
+    
+    if (isProcessConfig) {
+      saveMachineAssignmentsMutation.mutate({
+        processId: showMachineAssignment.id,
+        assignments: machineAssignments
+      });
+    } else {
+      saveMachineAssignmentsMutation.mutate({
+        machineId: showMachineAssignment.id,
+        assignments: machineAssignments
+      });
+    }
+  };
+
+  const handleToggleMachine = (machineId) => {
+    const machine = machines.find(m => m.id === machineId);
+    setMachineAssignments({
+      ...machineAssignments,
+      [machineId]: {
+        checked: !machineAssignments[machineId]?.checked,
+        operadores: machineAssignments[machineId]?.operadores || 
+                   showMachineAssignment?.operadores_requeridos || 1
+      }
     });
   };
 
@@ -352,7 +412,7 @@ export default function ProcessConfigurationPage() {
                             {machineProcs.map((mp) => (
                               <div
                                 key={mp.id}
-                                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border hover:border-blue-300 hover:bg-blue-50 transition-all"
+                                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border hover:border-blue-300 hover:bg-blue-50 transition-all group"
                               >
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-sm truncate">
@@ -362,9 +422,51 @@ export default function ProcessConfigurationPage() {
                                     {mp.processCode}
                                   </div>
                                 </div>
-                                <Badge className="ml-2 bg-purple-100 text-purple-800 shrink-0">
-                                  {mp.operadores_requeridos} op.
-                                </Badge>
+                                {editingOperators === mp.id ? (
+                                  <div className="flex items-center gap-2 ml-2">
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="20"
+                                      defaultValue={mp.operadores_requeridos}
+                                      className="w-16 h-7 text-xs"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          updateOperatorsMutation.mutate({
+                                            machineProcessId: mp.id,
+                                            operadores: parseInt(e.target.value) || 1
+                                          });
+                                        }
+                                        if (e.key === 'Escape') {
+                                          setEditingOperators(null);
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <Button
+                                      size="icon"
+                                      className="h-7 w-7 bg-green-600 hover:bg-green-700"
+                                      onClick={(e) => {
+                                        const input = e.target.closest('div').querySelector('input');
+                                        updateOperatorsMutation.mutate({
+                                          machineProcessId: mp.id,
+                                          operadores: parseInt(input.value) || 1
+                                        });
+                                      }}
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Badge 
+                                    className="ml-2 bg-purple-100 text-purple-800 shrink-0 cursor-pointer hover:bg-purple-200 transition-colors"
+                                    onClick={() => setEditingOperators(mp.id)}
+                                    title="Click para editar operadores"
+                                  >
+                                    {mp.operadores_requeridos} op.
+                                    <Edit className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </Badge>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -468,14 +570,16 @@ export default function ProcessConfigurationPage() {
         </Dialog>
       )}
 
-      {/* Process Assignment Dialog */}
+      {/* Configuration Dialog */}
       {showMachineAssignment && (
         <Dialog open={true} onOpenChange={() => setShowMachineAssignment(null)}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Cog className="w-5 h-5 text-blue-600" />
-                Configurar Procesos: {showMachineAssignment.nombre}
+                {showMachineAssignment.isProcessConfig 
+                  ? `Configurar Máquinas para: ${showMachineAssignment.nombre}`
+                  : `Configurar Procesos: ${showMachineAssignment.nombre}`}
               </DialogTitle>
             </DialogHeader>
 
@@ -493,57 +597,120 @@ export default function ProcessConfigurationPage() {
                         <span className="font-semibold ml-2">{showMachineAssignment.ubicacion}</span>
                       </div>
                     )}
+                    {showMachineAssignment.operadores_requeridos && (
+                      <div>
+                        <span className="text-slate-700 dark:text-slate-300">Operadores por defecto:</span>
+                        <Badge className="ml-2 bg-purple-600">
+                          {showMachineAssignment.operadores_requeridos}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold">Selecciona los procesos que puede realizar esta máquina:</Label>
-                {processes.filter(p => p.activo).map((process) => (
-                  <Card key={process.id} className={`
-                    border-2 transition-all
-                    ${machineAssignments[process.id]?.checked 
-                      ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
-                      : 'border-slate-200 hover:border-slate-300'}
-                  `}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-1">
-                          <Checkbox
-                            id={`process-${process.id}`}
-                            checked={machineAssignments[process.id]?.checked || false}
-                            onCheckedChange={() => handleToggleProcess(process.id)}
-                          />
-                          <label htmlFor={`process-${process.id}`} className="flex-1 cursor-pointer">
-                            <div>
-                              <div className="font-semibold text-slate-900 dark:text-slate-100">{process.nombre}</div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">{process.codigo}</Badge>
-                                {process.descripcion && (
-                                  <span className="text-xs text-slate-500 dark:text-slate-400">{process.descripcion}</span>
-                                )}
-                              </div>
-                            </div>
-                          </label>
-                        </div>
-
-                        {machineAssignments[process.id]?.checked && (
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs">Operadores:</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="20"
-                              value={machineAssignments[process.id]?.operadores || 1}
-                              onChange={(e) => handleOperatorsChange(process.id, e.target.value)}
-                              className="w-20"
+                <Label className="text-base font-semibold">
+                  {showMachineAssignment.isProcessConfig 
+                    ? 'Selecciona las máquinas donde se puede realizar este proceso:'
+                    : 'Selecciona los procesos que puede realizar esta máquina:'}
+                </Label>
+                
+                {showMachineAssignment.isProcessConfig ? (
+                  // Configurando proceso -> mostrar máquinas
+                  machines.map((machine) => (
+                    <Card key={machine.id} className={`
+                      border-2 transition-all
+                      ${machineAssignments[machine.id]?.checked 
+                        ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-slate-200 hover:border-slate-300'}
+                    `}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <Checkbox
+                              id={`machine-${machine.id}`}
+                              checked={machineAssignments[machine.id]?.checked || false}
+                              onCheckedChange={() => handleToggleMachine(machine.id)}
                             />
+                            <label htmlFor={`machine-${machine.id}`} className="flex-1 cursor-pointer">
+                              <div>
+                                <div className="font-semibold text-slate-900 dark:text-slate-100">{machine.nombre}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">{machine.codigo}</Badge>
+                                  {machine.ubicacion && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">📍 {machine.ubicacion}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
                           </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+                          {machineAssignments[machine.id]?.checked && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs">Operadores:</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={machineAssignments[machine.id]?.operadores || 1}
+                                onChange={(e) => handleOperatorsChange(machine.id, e.target.value)}
+                                className="w-20"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  // Configurando máquina -> mostrar procesos
+                  processes.filter(p => p.activo).map((process) => (
+                    <Card key={process.id} className={`
+                      border-2 transition-all
+                      ${machineAssignments[process.id]?.checked 
+                        ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-slate-200 hover:border-slate-300'}
+                    `}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <Checkbox
+                              id={`process-${process.id}`}
+                              checked={machineAssignments[process.id]?.checked || false}
+                              onCheckedChange={() => handleToggleProcess(process.id)}
+                            />
+                            <label htmlFor={`process-${process.id}`} className="flex-1 cursor-pointer">
+                              <div>
+                                <div className="font-semibold text-slate-900 dark:text-slate-100">{process.nombre}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">{process.codigo}</Badge>
+                                  {process.descripcion && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">{process.descripcion}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+
+                          {machineAssignments[process.id]?.checked && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs">Operadores:</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={machineAssignments[process.id]?.operadores || 1}
+                                onChange={(e) => handleOperatorsChange(process.id, e.target.value)}
+                                className="w-20"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
