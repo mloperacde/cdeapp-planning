@@ -34,7 +34,7 @@ export default function DailyShiftPlanningPage() {
         queryFn: async () => {
             // Sync availability before loading
             try {
-                await base44.functions.invoke('update_employee_availability');
+                await base44.functions.invoke('sync_employee_availability_bulk');
             } catch (e) {
                 console.error("Sync failed", e);
             }
