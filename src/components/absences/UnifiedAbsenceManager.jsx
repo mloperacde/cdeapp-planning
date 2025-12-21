@@ -167,13 +167,14 @@ export default function UnifiedAbsenceManager(props) {
     onSuccess: async () => {
       // Sync availability status
       try {
-          await base44.functions.invoke('update_employee_availability');
+          await base44.functions.invoke('sync_employee_availability_bulk');
       } catch (e) {
           console.error("Sync availability failed", e);
       }
       
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
       queryClient.invalidateQueries({ queryKey: ['globalAbsenteeism'] });
@@ -195,13 +196,14 @@ export default function UnifiedAbsenceManager(props) {
     },
     onSuccess: async () => {
       try {
-          await base44.functions.invoke('update_employee_availability');
+          await base44.functions.invoke('sync_employee_availability_bulk');
       } catch (e) {
           console.error("Sync availability failed", e);
       }
       
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
       toast.success("Ausencia eliminada");
