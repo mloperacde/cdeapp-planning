@@ -24,7 +24,6 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import AdvancedSearch from "../common/AdvancedSearch";
 import { createAbsence, updateAbsence, deleteAbsence } from "./AbsenceOperations";
-import { base44 } from "@/api/base44Client"; // Ensure this import exists or is kept
 import AbsenceForm from "./AbsenceForm";
 
 const EMPTY_ARRAY = [];
