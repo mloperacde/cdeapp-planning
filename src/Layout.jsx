@@ -59,6 +59,7 @@ import { ThemeProvider } from "../components/common/ThemeProvider";
 import ThemeToggle from "../components/common/ThemeToggle";
 import ChatbotButton from "../components/chatbot/ChatbotButton";
 import { Button } from "@/components/ui/button";
+import NotificationBell from "../components/notifications/NotificationBell";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -114,7 +115,10 @@ export default function Layout({ children, currentPageName }) {
                       <p className="text-xs text-slate-500 dark:text-slate-400">Gestión de Empleados y Planificador</p>
                     </div>
                   </div>
-                  <ThemeToggle />
+                  <div className="flex items-center gap-2">
+                    <NotificationBell />
+                    <ThemeToggle />
+                  </div>
                 </div>
                 {currentUser && (
                   <div className="flex items-center justify-between gap-2 pt-2 border-t">

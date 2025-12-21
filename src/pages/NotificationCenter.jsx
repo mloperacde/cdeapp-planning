@@ -5,16 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, Mail, MessageSquare, Smartphone, Check, Trash2, Settings as SettingsIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Bell, Mail, MessageSquare, Smartphone, Check, Trash2, Settings as SettingsIcon, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import NotificationTemplateManager from "../components/notifications/NotificationTemplateManager";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function NotificationCenter() {
   const [activeTab, setActiveTab] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -34,10 +37,17 @@ export default function NotificationCenter() {
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['pushNotifications', employee?.id],
-    queryFn: () => base44.entities.PushNotification.filter({ employee_id: employee.id }, '-created_date'),
+    queryFn: async () => {
+      if (!employee?.id) return [];
+      return await base44.entities.PushNotification.filter(
+        { employee_id: employee.id },
+        '-created_date',
+        100
+      );
+    },
     initialData: [],
     enabled: !!employee?.id,
-    refetchInterval: 30000,
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time
   });
 
   const markAsReadMutation = useMutation({
@@ -69,11 +79,16 @@ export default function NotificationCenter() {
   });
 
   const filteredNotifications = notifications.filter(n => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'unread') return !n.leida;
-    if (activeTab === 'absence') return n.tipo?.toLowerCase().includes('ausencia');
-    if (activeTab === 'sync') return n.tipo?.toLowerCase().includes('sincronización');
-    return true;
+    // Tab filter
+    let tabMatch = true;
+    if (activeTab === 'unread') tabMatch = !n.leida;
+    else if (activeTab === 'absence') tabMatch = n.tipo?.toLowerCase().includes('ausencia');
+    else if (activeTab === 'sync') tabMatch = n.tipo?.toLowerCase().includes('sincronización');
+    
+    // Priority filter
+    const priorityMatch = priorityFilter === 'all' || n.prioridad === priorityFilter;
+    
+    return tabMatch && priorityMatch;
   });
 
   const unreadCount = notifications.filter(n => !n.leida).length;
@@ -101,6 +116,12 @@ export default function NotificationCenter() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Link to={createPageUrl("NotificationSettings")}>
+              <Button variant="outline">
+                <SettingsIcon className="w-4 h-4 mr-2" />
+                Preferencias
+              </Button>
+            </Link>
             {unreadCount > 0 && (
               <Button
                 variant="outline"
@@ -111,6 +132,25 @@ export default function NotificationCenter() {
                 Marcar todas como leídas
               </Button>
             )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-500" />
+            <Label className="text-sm">Prioridad:</Label>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="Crítica">Crítica</SelectItem>
+                <SelectItem value="Alta">Alta</SelectItem>
+                <SelectItem value="Media">Media</SelectItem>
+                <SelectItem value="Baja">Baja</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

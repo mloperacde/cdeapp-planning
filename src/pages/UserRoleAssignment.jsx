@@ -77,7 +77,25 @@ export default function UserRoleAssignmentPage() {
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (id) => base44.entities.UserRole.delete(id),
+    mutationFn: async (data) => {
+      const { id, userEmail } = data;
+      await base44.entities.UserRole.delete(id);
+
+      // Send notification
+      try {
+        await base44.functions.invoke('sendNotification', {
+          user_emails: [userEmail],
+          tipo: 'Alerta Sistema',
+          prioridad: 'Alta',
+          titulo: '🔐 Rol Revocado',
+          mensaje: 'Se ha revocado tu rol. Tus permisos han sido actualizados.',
+          enlace: '/Dashboard',
+          check_preferences: false
+        });
+      } catch (e) {
+        console.error('Failed to send notification:', e);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userRoles'] });
       queryClient.invalidateQueries({ queryKey: ['currentUserRoles'] });
@@ -236,7 +254,7 @@ export default function UserRoleAssignmentPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-5 w-5 hover:bg-red-100"
-                                onClick={() => handleRevoke(ur.id)}
+                                onClick={() => handleRevoke(ur.id, employee.email)}
                                 title="Revocar rol"
                               >
                                 <X className="w-3 h-3 text-red-600" />
