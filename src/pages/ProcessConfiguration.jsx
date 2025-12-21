@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft, Check, GripVertical, ArrowUpDown } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft, Check, GripVertical, ArrowUpDown, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Link } from "react-router-dom";
@@ -49,6 +49,7 @@ export default function ProcessConfigurationPage() {
     descripcion: "",
     operadores_requeridos: 1,
     activo: true,
+    selectedMachines: [],
   });
 
   const { data: processes = EMPTY_ARRAY, isLoading } = useQuery({
@@ -147,25 +148,32 @@ export default function ProcessConfigurationPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      if (editingProcess?.id) {
-        return await base44.entities.Process.update(editingProcess.id, data);
-      } else {
-        return await base44.entities.Process.create(data);
-      }
-    },
-    onSuccess: (savedProcess) => {
-      queryClient.invalidateQueries({ queryKey: ['processes'] });
-      handleClose();
+      const { selectedMachines, ...processData } = data;
       
-      // Si es un nuevo proceso, abrir diálogo para configurar máquinas
-      if (!editingProcess?.id) {
-        toast.success("Proceso creado. Configure las máquinas donde se puede realizar.");
-        setTimeout(() => {
-          handleOpenProcessConfiguration(savedProcess);
-        }, 300);
+      let savedProcess;
+      if (editingProcess?.id) {
+        savedProcess = await base44.entities.Process.update(editingProcess.id, processData);
       } else {
-        toast.success("Proceso actualizado correctamente");
+        savedProcess = await base44.entities.Process.create(processData);
+        
+        // Crear asignaciones a las máquinas seleccionadas
+        if (selectedMachines && selectedMachines.length > 0) {
+          const assignments = selectedMachines.map(machineId => ({
+            machine_id: machineId,
+            process_id: savedProcess.id,
+            operadores_requeridos: processData.operadores_requeridos || 1,
+            activo: true
+          }));
+          await base44.entities.MachineProcess.bulkCreate(assignments);
+        }
       }
+      return savedProcess;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['processes'] });
+      queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+      handleClose();
+      toast.success("Proceso guardado correctamente");
     },
   });
 
@@ -277,7 +285,61 @@ export default function ProcessConfigurationPage() {
       descripcion: "",
       operadores_requeridos: 1,
       activo: true,
+      selectedMachines: [],
     });
+  };
+
+  const handleMachineDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(filteredMachines);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update orden for all machines
+    const updates = items.map((item, index) => 
+      base44.entities.Machine.update(item.id, { orden: index })
+    );
+
+    try {
+      await Promise.all(updates);
+      queryClient.invalidateQueries({ queryKey: ['machines'] });
+      toast.success("Orden de máquinas actualizado");
+    } catch (error) {
+      toast.error("Error al actualizar orden");
+    }
+  };
+
+  const handleCopyProcess = (machine, mp) => {
+    const otherMachines = machines.filter(m => m.id !== machine.id);
+    const existingAssignments = machineProcesses.filter(mproc => mproc.process_id === mp.process_id);
+    const assignedMachineIds = new Set(existingAssignments.map(a => a.machine_id));
+    
+    const availableMachines = otherMachines.filter(m => !assignedMachineIds.has(m.id));
+    
+    if (availableMachines.length === 0) {
+      toast.info("Este proceso ya está asignado a todas las máquinas");
+      return;
+    }
+
+    setShowMachineAssignment({
+      id: mp.process_id,
+      nombre: mp.processName,
+      codigo: mp.processCode,
+      operadores_requeridos: mp.operadores_requeridos,
+      isProcessConfig: true,
+      isCopy: true,
+      sourceMachineId: machine.id
+    });
+
+    const assignments = {};
+    availableMachines.forEach(m => {
+      assignments[m.id] = {
+        checked: false,
+        operadores: mp.operadores_requeridos
+      };
+    });
+    setMachineAssignments(assignments);
   };
 
   const handleSubmit = (e) => {
@@ -429,16 +491,40 @@ export default function ProcessConfigurationPage() {
               No se encontraron máquinas con los filtros seleccionados
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {filteredMachines.map((machine) => {
-                const machineProcs = getMachineProcesses(machine.id);
-                return (
-                  <Card key={machine.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <Cog className="w-6 h-6 text-blue-600" />
+            <DragDropContext onDragEnd={handleMachineDragEnd}>
+              <Droppable droppableId="machines-list" type="MACHINE">
+                {(provided, snapshot) => (
+                  <div 
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className={`grid grid-cols-1 gap-4 ${
+                      snapshot.isDraggingOver ? 'bg-blue-50/30 rounded-lg p-2' : ''
+                    }`}
+                  >
+                    {filteredMachines.map((machine, machineIndex) => (
+                      <Draggable key={machine.id} draggableId={machine.id} index={machineIndex}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={snapshot.isDragging ? 'z-50' : ''}
+                          >
+                            <Card className={`border-l-4 border-l-blue-500 transition-all ${
+                              snapshot.isDragging 
+                                ? 'shadow-2xl scale-105 ring-2 ring-blue-400 bg-blue-50' 
+                                : 'hover:shadow-md'
+                            }`}>
+                            <CardHeader className="pb-3">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3">
+                                    <div 
+                                      {...provided.dragHandleProps}
+                                      className="cursor-grab active:cursor-grabbing p-2 hover:bg-slate-100 rounded transition-colors"
+                                    >
+                                      <GripVertical className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
+                                    </div>
+                                    <Cog className="w-6 h-6 text-blue-600" />
                             <div>
                               <CardTitle className="text-xl">{machine.nombre}</CardTitle>
                               <div className="flex items-center gap-2 mt-1">
@@ -451,22 +537,24 @@ export default function ProcessConfigurationPage() {
                                   </span>
                                 )}
                               </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenMachineAssignment(machine)}
+                                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                              >
+                                <Settings className="w-4 h-4 mr-2" />
+                                Configurar Procesos
+                              </Button>
                             </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenMachineAssignment(machine)}
-                          className="bg-blue-50 hover:bg-blue-100 border-blue-200"
-                        >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Configurar Procesos
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {machineProcs.length === 0 ? (
+                          </CardHeader>
+                          <CardContent>
+                            {(() => {
+                              const machineProcs = getMachineProcesses(machine.id);
+                              return machineProcs.length === 0 ? (
                         <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-lg border-2 border-dashed">
                           <Cog className="w-12 h-12 mx-auto mb-2 opacity-30" />
                           <p className="text-sm">No hay procesos configurados para esta máquina</p>
@@ -526,6 +614,15 @@ export default function ProcessConfigurationPage() {
                                               {mp.processCode}
                                             </div>
                                           </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => handleCopyProcess(machine, mp)}
+                                            title="Copiar a otras máquinas"
+                                          >
+                                            <Copy className="w-3 h-3 text-slate-600" />
+                                          </Button>
                                           {editingOperators === mp.id ? (
                                             <div className="flex items-center gap-2 ml-2">
                                               <Input
@@ -580,13 +677,20 @@ export default function ProcessConfigurationPage() {
                               )}
                             </Droppable>
                           </DragDropContext>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                              </div>
+                            ) : null;
+                            })()}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
           )}
         </CardContent>
       </Card>
@@ -651,6 +755,44 @@ export default function ProcessConfigurationPage() {
                   Número de operadores necesarios por defecto para este proceso
                 </p>
               </div>
+
+              {!editingProcess && (
+                <div className="space-y-2">
+                  <Label>Asignar a Máquinas (opcional)</Label>
+                  <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto space-y-2">
+                    {machines.map((machine) => (
+                      <div key={machine.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`new-machine-${machine.id}`}
+                          checked={formData.selectedMachines.includes(machine.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFormData({
+                                ...formData,
+                                selectedMachines: [...formData.selectedMachines, machine.id]
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                selectedMachines: formData.selectedMachines.filter(id => id !== machine.id)
+                              });
+                            }
+                          }}
+                        />
+                        <label 
+                          htmlFor={`new-machine-${machine.id}`} 
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          {machine.nombre} <span className="text-xs text-slate-500">({machine.codigo})</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Puedes configurar las máquinas después de crear el proceso
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -722,13 +864,15 @@ export default function ProcessConfigurationPage() {
               <div className="space-y-3">
                 <Label className="text-base font-semibold">
                   {showMachineAssignment.isProcessConfig 
-                    ? 'Selecciona las máquinas donde se puede realizar este proceso:'
+                    ? showMachineAssignment.isCopy 
+                      ? 'Selecciona las máquinas adicionales para este proceso:'
+                      : 'Selecciona las máquinas donde se puede realizar este proceso:'
                     : 'Selecciona los procesos que puede realizar esta máquina:'}
                 </Label>
                 
                 {showMachineAssignment.isProcessConfig ? (
                   // Configurando proceso -> mostrar máquinas
-                  machines.map((machine) => (
+                  machines.filter(m => !showMachineAssignment.isCopy || m.id !== showMachineAssignment.sourceMachineId).map((machine) => (
                     <Card key={machine.id} className={`
                       border-2 transition-all
                       ${machineAssignments[machine.id]?.checked 
