@@ -100,13 +100,22 @@ export default function EmployeeSelect({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className={cn("w-full justify-between", className)}
+            className={cn(
+                "w-full justify-between", 
+                className,
+                selectedEmployee?.disponibilidad === "Ausente" ? "bg-red-50 text-red-900 border-red-200 hover:bg-red-100 hover:text-red-900" : ""
+            )}
           >
             {selectedEmployee ? (
-              <span className="truncate">
+              <span className="truncate flex items-center gap-2">
                 {selectedEmployee.nombre}
+                {selectedEmployee.disponibilidad === "Ausente" && (
+                     <AlertTriangle className="w-3 h-3 text-red-500" />
+                )}
                 {showDepartment && selectedEmployee.departamento && (
-                  <span className="text-slate-500 ml-2">• {selectedEmployee.departamento}</span>
+                  <span className={cn("ml-1", selectedEmployee.disponibilidad === "Ausente" ? "text-red-700/70" : "text-slate-500")}>
+                      • {selectedEmployee.departamento}
+                  </span>
                 )}
               </span>
             ) : (
@@ -165,7 +174,7 @@ export default function EmployeeSelect({
                           <div className={cn("flex items-center gap-2 font-medium truncate", employee.estado_empleado === "Baja" && "line-through")}>
                             {employee.nombre}
                             {employee.disponibilidad === "Ausente" && (
-                                <span className="flex items-center text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+                                <span className="flex items-center text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-200 font-bold">
                                     <AlertTriangle className="w-3 h-3 mr-1" />
                                     {employee.ausencia_fin 
                                         ? `Hasta ${format(new Date(employee.ausencia_fin), "dd/MM", { locale: es })}` 

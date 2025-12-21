@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.jsx";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Loader2, X } from "lucide-react";
+import { Search, Plus, Loader2, X, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -212,8 +213,18 @@ export default function MachineSkillsView() {
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">
                                             {responsables.map(e => (
-                                                <Badge key={e.id} variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100 font-normal justify-start group pr-1">
+                                                <Badge 
+                                                    key={e.id} 
+                                                    variant="outline" 
+                                                    className={cn(
+                                                        "font-normal justify-start group pr-1",
+                                                        e.disponibilidad === "Ausente" 
+                                                            ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
+                                                            : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                                    )}
+                                                >
                                                     {e.nombre}
+                                                    {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
                                                     <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
                                                 </Badge>
                                             ))}
@@ -234,8 +245,18 @@ export default function MachineSkillsView() {
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">
                                             {segundas.map(e => (
-                                                <Badge key={e.id} variant="outline" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-normal justify-start group pr-1">
+                                                <Badge 
+                                                    key={e.id} 
+                                                    variant="outline" 
+                                                    className={cn(
+                                                        "font-normal justify-start group pr-1",
+                                                        e.disponibilidad === "Ausente" 
+                                                            ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
+                                                            : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                                                    )}
+                                                >
                                                     {e.nombre}
+                                                    {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
                                                     <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
                                                 </Badge>
                                             ))}
@@ -256,8 +277,18 @@ export default function MachineSkillsView() {
                                     <TableCell className="align-top">
                                         <div className="flex flex-wrap gap-1">
                                             {operarios.map(e => (
-                                                <Badge key={e.id} variant="outline" className="bg-slate-50 text-slate-700 font-normal group pr-1">
+                                                <Badge 
+                                                    key={e.id} 
+                                                    variant="outline" 
+                                                    className={cn(
+                                                        "font-normal justify-start group pr-1",
+                                                        e.disponibilidad === "Ausente" 
+                                                            ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
+                                                            : "bg-slate-50 text-slate-700"
+                                                    )}
+                                                >
                                                     {e.nombre}
+                                                    {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
                                                     <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
                                                 </Badge>
                                             ))}
