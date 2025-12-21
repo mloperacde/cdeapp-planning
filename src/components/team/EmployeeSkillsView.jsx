@@ -36,14 +36,60 @@ export default function EmployeeSkillsView() {
         queryFn: () => base44.entities.TeamConfig.list(),
     });
 
+    const { data: machineAssignments = [] } = useQuery({
+        queryKey: ['machineAssignments'],
+        queryFn: () => base44.entities.MachineAssignment.list(),
+    });
+
     // Update Mutation
     const updateMutation = useMutation({
         mutationFn: async ({ employeeId, data }) => {
+            const employee = employees.find(e => e.id === employeeId);
+            if (!employee) throw new Error("Empleado no encontrado");
+
+            // Check which machines were removed
+            const removedMachines = [];
+            for (let i = 1; i <= 10; i++) {
+                const oldMachine = employee[`maquina_${i}`];
+                const newMachine = data[`maquina_${i}`];
+                if (oldMachine && newMachine === null) {
+                    removedMachines.push(oldMachine);
+                }
+            }
+
+            // Remove from MachineAssignments if machine was removed
+            if (removedMachines.length > 0) {
+                const assignmentsToUpdate = machineAssignments.filter(ma => 
+                    removedMachines.includes(ma.machine_id) && (
+                        ma.responsable_linea?.includes(employeeId) ||
+                        ma.segunda_linea?.includes(employeeId) ||
+                        [1,2,3,4,5,6,7,8].some(i => ma[`operador_${i}`] === employeeId)
+                    )
+                );
+
+                for (const assignment of assignmentsToUpdate) {
+                    const updateData = {};
+                    if (assignment.responsable_linea?.includes(employeeId)) {
+                        updateData.responsable_linea = assignment.responsable_linea.filter(id => id !== employeeId);
+                    }
+                    if (assignment.segunda_linea?.includes(employeeId)) {
+                        updateData.segunda_linea = assignment.segunda_linea.filter(id => id !== employeeId);
+                    }
+                    for (let i = 1; i <= 8; i++) {
+                        if (assignment[`operador_${i}`] === employeeId) {
+                            updateData[`operador_${i}`] = null;
+                        }
+                    }
+                    await base44.entities.MachineAssignment.update(assignment.id, updateData);
+                }
+            }
+
             return base44.entities.EmployeeMasterDatabase.update(employeeId, data);
         },
         onSuccess: () => {
             toast.success("Perfil actualizado");
             queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+            queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
             setEditingState({});
         },
         onError: () => toast.error("Error al actualizar")

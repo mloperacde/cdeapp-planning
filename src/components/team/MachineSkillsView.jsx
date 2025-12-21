@@ -102,6 +102,11 @@ export default function MachineSkillsView() {
         });
     };
 
+    const { data: machineAssignments = [] } = useQuery({
+        queryKey: ['machineAssignments'],
+        queryFn: () => base44.entities.MachineAssignment.list(),
+    });
+
     const updateEmployeeMachineMutation = useMutation({
         mutationFn: async ({ employeeId, machineId, action }) => {
             const employee = employees.find(e => e.id === employeeId);
@@ -122,12 +127,36 @@ export default function MachineSkillsView() {
                 payload[`maquina_${slot}`] = machineId;
             } 
             else if (action === 'remove') {
-                // Find slot with machine
+                // Find slot with machine and remove from MachineAssignments too
                 for(let i=1; i<=10; i++) {
                     if (employee[`maquina_${i}`] === machineId) {
                         payload[`maquina_${i}`] = null;
-                        // Don't break, remove duplicates if any
                     }
+                }
+
+                // Remove from all team assignments
+                const assignmentsToUpdate = machineAssignments.filter(ma => 
+                    ma.machine_id === machineId && (
+                        ma.responsable_linea?.includes(employeeId) ||
+                        ma.segunda_linea?.includes(employeeId) ||
+                        [1,2,3,4,5,6,7,8].some(i => ma[`operador_${i}`] === employeeId)
+                    )
+                );
+
+                for (const assignment of assignmentsToUpdate) {
+                    const updateData = {};
+                    if (assignment.responsable_linea?.includes(employeeId)) {
+                        updateData.responsable_linea = assignment.responsable_linea.filter(id => id !== employeeId);
+                    }
+                    if (assignment.segunda_linea?.includes(employeeId)) {
+                        updateData.segunda_linea = assignment.segunda_linea.filter(id => id !== employeeId);
+                    }
+                    for (let i = 1; i <= 8; i++) {
+                        if (assignment[`operador_${i}`] === employeeId) {
+                            updateData[`operador_${i}`] = null;
+                        }
+                    }
+                    await base44.entities.MachineAssignment.update(assignment.id, updateData);
                 }
             }
 
@@ -135,6 +164,7 @@ export default function MachineSkillsView() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+            queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
             toast.success("Habilidad actualizada correctamente");
         },
         onError: (err) => {
