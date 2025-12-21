@@ -22,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft, Check } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Cog, Link as LinkIcon, ArrowLeft, Check, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
@@ -100,7 +101,29 @@ export default function ProcessConfigurationPage() {
         processCode: process?.codigo,
         processActive: process?.activo
       };
-    }).filter(mp => mp.processName);
+    }).filter(mp => mp.processName).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  };
+
+  const handleDragEnd = async (result, machineId) => {
+    if (!result.destination) return;
+
+    const machineProcs = getMachineProcesses(machineId);
+    const items = Array.from(machineProcs);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update orden for all items
+    const updates = items.map((item, index) => 
+      base44.entities.MachineProcess.update(item.id, { orden: index })
+    );
+
+    try {
+      await Promise.all(updates);
+      queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+      toast.success("Orden actualizado");
+    } catch (error) {
+      toast.error("Error al actualizar orden");
+    }
   };
 
   const saveMutation = useMutation({
@@ -405,71 +428,96 @@ export default function ProcessConfigurationPage() {
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <div className="text-sm font-medium text-slate-600 mb-3">
+                          <div className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
                             Procesos disponibles ({machineProcs.length})
+                            <span className="text-xs text-slate-400">• Arrastra para reordenar</span>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {machineProcs.map((mp) => (
-                              <div
-                                key={mp.id}
-                                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border hover:border-blue-300 hover:bg-blue-50 transition-all group"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm truncate">
-                                    {mp.processName}
-                                  </div>
-                                  <div className="text-xs text-slate-500">
-                                    {mp.processCode}
-                                  </div>
+                          <DragDropContext onDragEnd={(result) => handleDragEnd(result, machine.id)}>
+                            <Droppable droppableId={`machine-${machine.id}`}>
+                              {(provided) => (
+                                <div 
+                                  {...provided.droppableProps}
+                                  ref={provided.innerRef}
+                                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"
+                                >
+                                  {machineProcs.map((mp, index) => (
+                                    <Draggable key={mp.id} draggableId={mp.id} index={index}>
+                                      {(provided, snapshot) => (
+                                        <div
+                                          ref={provided.innerRef}
+                                          {...provided.draggableProps}
+                                          className={`flex items-center justify-between p-3 bg-slate-50 rounded-lg border hover:border-blue-300 hover:bg-blue-50 transition-all group ${
+                                            snapshot.isDragging ? 'shadow-lg border-blue-400 bg-blue-50' : ''
+                                          }`}
+                                        >
+                                          <div 
+                                            {...provided.dragHandleProps}
+                                            className="cursor-grab active:cursor-grabbing mr-2"
+                                          >
+                                            <GripVertical className="w-4 h-4 text-slate-400" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-medium text-sm truncate">
+                                              {mp.processName}
+                                            </div>
+                                            <div className="text-xs text-slate-500">
+                                              {mp.processCode}
+                                            </div>
+                                          </div>
+                                          {editingOperators === mp.id ? (
+                                            <div className="flex items-center gap-2 ml-2">
+                                              <Input
+                                                type="number"
+                                                min="1"
+                                                max="20"
+                                                defaultValue={mp.operadores_requeridos}
+                                                className="w-16 h-7 text-xs"
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    updateOperatorsMutation.mutate({
+                                                      machineProcessId: mp.id,
+                                                      operadores: parseInt(e.target.value) || 1
+                                                    });
+                                                  }
+                                                  if (e.key === 'Escape') {
+                                                    setEditingOperators(null);
+                                                  }
+                                                }}
+                                                autoFocus
+                                              />
+                                              <Button
+                                                size="icon"
+                                                className="h-7 w-7 bg-green-600 hover:bg-green-700"
+                                                onClick={(e) => {
+                                                  const input = e.target.closest('div').querySelector('input');
+                                                  updateOperatorsMutation.mutate({
+                                                    machineProcessId: mp.id,
+                                                    operadores: parseInt(input.value) || 1
+                                                  });
+                                                }}
+                                              >
+                                                <Check className="w-3 h-3" />
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            <Badge 
+                                              className="ml-2 bg-purple-100 text-purple-800 shrink-0 cursor-pointer hover:bg-purple-200 transition-colors"
+                                              onClick={() => setEditingOperators(mp.id)}
+                                              title="Click para editar operadores"
+                                            >
+                                              {mp.operadores_requeridos} op.
+                                              <Edit className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      )}
+                                    </Draggable>
+                                  ))}
+                                  {provided.placeholder}
                                 </div>
-                                {editingOperators === mp.id ? (
-                                  <div className="flex items-center gap-2 ml-2">
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="20"
-                                      defaultValue={mp.operadores_requeridos}
-                                      className="w-16 h-7 text-xs"
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          updateOperatorsMutation.mutate({
-                                            machineProcessId: mp.id,
-                                            operadores: parseInt(e.target.value) || 1
-                                          });
-                                        }
-                                        if (e.key === 'Escape') {
-                                          setEditingOperators(null);
-                                        }
-                                      }}
-                                      autoFocus
-                                    />
-                                    <Button
-                                      size="icon"
-                                      className="h-7 w-7 bg-green-600 hover:bg-green-700"
-                                      onClick={(e) => {
-                                        const input = e.target.closest('div').querySelector('input');
-                                        updateOperatorsMutation.mutate({
-                                          machineProcessId: mp.id,
-                                          operadores: parseInt(input.value) || 1
-                                        });
-                                      }}
-                                    >
-                                      <Check className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <Badge 
-                                    className="ml-2 bg-purple-100 text-purple-800 shrink-0 cursor-pointer hover:bg-purple-200 transition-colors"
-                                    onClick={() => setEditingOperators(mp.id)}
-                                    title="Click para editar operadores"
-                                  >
-                                    {mp.operadores_requeridos} op.
-                                    <Edit className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </Badge>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                              )}
+                            </Droppable>
+                          </DragDropContext>
                         </div>
                       )}
                     </CardContent>

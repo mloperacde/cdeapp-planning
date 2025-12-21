@@ -138,7 +138,8 @@ export default function Layout({ children, currentPageName }) {
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
                               createPageUrl("Timeline"),
-                              createPageUrl("DailyPlanning")
+                              createPageUrl("DailyPlanning"),
+                              createPageUrl("ShiftPlanning")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
                         >
@@ -173,6 +174,17 @@ export default function Layout({ children, currentPageName }) {
                             <Link to={createPageUrl("DailyPlanning")} className="flex items-center gap-2 px-3 py-2">
                               <Clock className="w-4 h-4" />
                               Planning Diario
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("ShiftPlanning")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("ShiftPlanning")} className="flex items-center gap-2 px-3 py-2">
+                              <UsersRound className="w-4 h-4" />
+                              Planificación de Turnos
                             </Link>
                           </SidebarMenuButton>
                         </div>
