@@ -40,8 +40,10 @@ import {
   Clock,
   AlertCircle,
   IdCard,
-  Contact
+  Contact,
+  AlertTriangle
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -742,17 +744,41 @@ export default function EmployeesPage() {
                   </TableHeader>
                   <TableBody>
                     {currentViewEmployees.map((emp) => (
-                      <TableRow key={emp.id} className="hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800/50">
+                      <TableRow 
+                        key={emp.id} 
+                        className={cn(
+                          "hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800/50",
+                          emp.disponibilidad === "Ausente" && "bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                        )}
+                      >
                         {visibleColumns.codigo_empleado && (
                           <TableCell className="text-xs font-mono">{emp.codigo_empleado || '-'}</TableCell>
                         )}
                         {visibleColumns.nombre && (
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
+                              <div className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs",
+                                emp.disponibilidad === "Ausente" 
+                                  ? "bg-red-100 text-red-700" 
+                                  : "bg-blue-100 text-blue-700"
+                              )}>
                                 {emp.nombre.charAt(0)}
                               </div>
-                              <div className="font-medium text-slate-900 dark:text-slate-100 dark:text-slate-100">{emp.nombre}</div>
+                              <div>
+                                <div className={cn(
+                                  "font-medium",
+                                  emp.disponibilidad === "Ausente" ? "text-red-700 dark:text-red-400" : "text-slate-900 dark:text-slate-100"
+                                )}>
+                                  {emp.nombre}
+                                  {emp.disponibilidad === "Ausente" && (
+                                    <span className="ml-2 inline-flex items-center text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full border border-red-200">
+                                      <AlertTriangle className="w-3 h-3 mr-1" />
+                                      Ausente
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </TableCell>
                         )}

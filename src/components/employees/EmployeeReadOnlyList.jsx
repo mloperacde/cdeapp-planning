@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, ArrowUpDown } from "lucide-react";
+import { Users, ArrowUpDown, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import AdvancedSearch from "../common/AdvancedSearch";
 
 export default function EmployeeReadOnlyList() {
@@ -242,12 +243,21 @@ export default function EmployeeReadOnlyList() {
                 </TableHeader>
                 <TableBody>
                   {filteredAndSortedEmployees.map((emp) => (
-                    <TableRow key={emp.id} className="dark:border-slate-800 dark:hover:bg-slate-800/50">
+                    <TableRow 
+                      key={emp.id} 
+                      className={cn(
+                        "dark:border-slate-800 dark:hover:bg-slate-800/50",
+                        emp.disponibilidad === "Ausente" && "bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30"
+                      )}
+                    >
                       <TableCell className="font-mono text-xs dark:text-slate-300">
                         {emp.codigo_empleado || '-'}
                       </TableCell>
-                      <TableCell className="font-semibold dark:text-slate-200">
-                        {emp.nombre}
+                      <TableCell className={cn("font-semibold dark:text-slate-200", emp.disponibilidad === "Ausente" && "text-red-700 dark:text-red-400")}>
+                        <div className="flex items-center gap-2">
+                          {emp.nombre}
+                          {emp.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                        </div>
                       </TableCell>
                       <TableCell className="dark:text-slate-300">{emp.departamento || '-'}</TableCell>
                       <TableCell className="dark:text-slate-300">{emp.puesto || '-'}</TableCell>
