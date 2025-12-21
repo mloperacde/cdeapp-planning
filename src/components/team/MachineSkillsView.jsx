@@ -223,7 +223,7 @@ export default function MachineSkillsView() {
                                                     employees={getPotentialCandidates(machine.id, "RESPONSABLE")}
                                                     onValueChange={(empId) => updateEmployeeMachineMutation.mutate({ employeeId: empId, machineId: machine.id, action: 'add' })}
                                                     trigger={
-                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
+                                                        <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
                                                             <Plus className="w-4 h-4 text-slate-400" />
                                                         </Button>
                                                     }
@@ -245,7 +245,7 @@ export default function MachineSkillsView() {
                                                     employees={getPotentialCandidates(machine.id, "SEGUNDA")}
                                                     onValueChange={(empId) => updateEmployeeMachineMutation.mutate({ employeeId: empId, machineId: machine.id, action: 'add' })}
                                                     trigger={
-                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
+                                                        <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
                                                             <Plus className="w-4 h-4 text-slate-400" />
                                                         </Button>
                                                     }
@@ -267,7 +267,7 @@ export default function MachineSkillsView() {
                                                     employees={getPotentialCandidates(machine.id, "OPERARIO")}
                                                     onValueChange={(empId) => updateEmployeeMachineMutation.mutate({ employeeId: empId, machineId: machine.id, action: 'add' })}
                                                     trigger={
-                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
+                                                        <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hover:bg-slate-100">
                                                             <Plus className="w-4 h-4 text-slate-400" />
                                                         </Button>
                                                     }
