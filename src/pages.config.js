@@ -1,6 +1,7 @@
 import AbsenceManagement from './pages/AbsenceManagement';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
+import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
 import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
 import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
@@ -15,6 +16,7 @@ import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
 import DataImport from './pages/DataImport';
 import DepartmentManagement from './pages/DepartmentManagement';
+import DeploymentGuide from './pages/DeploymentGuide';
 import DirectDataEntry from './pages/DirectDataEntry';
 import DocumentManagement from './pages/DocumentManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
@@ -60,6 +62,7 @@ import PerformanceManagement from './pages/PerformanceManagement';
 import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionPlanning from './pages/ProductionPlanning';
+import QuickStartGuide from './pages/QuickStartGuide';
 import Reports from './pages/Reports';
 import RoleManagement from './pages/RoleManagement';
 import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
@@ -73,12 +76,9 @@ import SupportManagement1415 from './pages/SupportManagement1415';
 import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
-import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import UserRoleAssignment from './pages/UserRoleAssignment';
-import DeploymentGuide from './pages/DeploymentGuide';
-import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
 import UserManual from './pages/UserManual';
-import QuickStartGuide from './pages/QuickStartGuide';
+import UserRoleAssignment from './pages/UserRoleAssignment';
+import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -86,6 +86,7 @@ export const PAGES = {
     "AbsenceManagement": AbsenceManagement,
     "AbsenceTypeConfig": AbsenceTypeConfig,
     "AbsenceTypeInfo": AbsenceTypeInfo,
+    "AdminDeploymentGuide": AdminDeploymentGuide,
     "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
     "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedHRDashboard": AdvancedHRDashboard,
@@ -100,6 +101,7 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "DataImport": DataImport,
     "DepartmentManagement": DepartmentManagement,
+    "DeploymentGuide": DeploymentGuide,
     "DirectDataEntry": DirectDataEntry,
     "DocumentManagement": DocumentManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
@@ -145,6 +147,7 @@ export const PAGES = {
     "PredictiveMaintenance": PredictiveMaintenance,
     "ProcessConfiguration": ProcessConfiguration,
     "ProductionPlanning": ProductionPlanning,
+    "QuickStartGuide": QuickStartGuide,
     "Reports": Reports,
     "RoleManagement": RoleManagement,
     "ShiftAbsenceReport": ShiftAbsenceReport,
@@ -158,12 +161,9 @@ export const PAGES = {
     "SystemReset": SystemReset,
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
-    "WorkCalendarConfig": WorkCalendarConfig,
-    "UserRoleAssignment": UserRoleAssignment,
-    "DeploymentGuide": DeploymentGuide,
-    "AdminDeploymentGuide": AdminDeploymentGuide,
     "UserManual": UserManual,
-    "QuickStartGuide": QuickStartGuide,
+    "UserRoleAssignment": UserRoleAssignment,
+    "WorkCalendarConfig": WorkCalendarConfig,
 }
 
 export const pagesConfig = {

@@ -18,13 +18,15 @@ export function usePermissions() {
       });
     },
     enabled: !!currentUser?.email,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 1000, // 1 second to refresh immediately
+    refetchInterval: 2000, // Refetch every 2 seconds
   });
 
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
     queryFn: () => base44.entities.Role.list(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 1000,
+    refetchInterval: 2000,
   });
 
   // Get user's role with highest level

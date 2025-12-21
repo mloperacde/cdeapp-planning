@@ -31,6 +31,9 @@ import {
   Settings2,
   BookOpen,
   CheckCircle,
+  LogOut,
+  UserCircle,
+  Key,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -55,6 +58,7 @@ import {
 import { ThemeProvider } from "../components/common/ThemeProvider";
 import ThemeToggle from "../components/common/ThemeToggle";
 import ChatbotButton from "../components/chatbot/ChatbotButton";
+import { Button } from "@/components/ui/button";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -99,17 +103,42 @@ export default function Layout({ children, currentPageName }) {
         <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:to-background dark:bg-background">
           <Sidebar className="border-r border-border bg-card/80 dark:bg-card/95 backdrop-blur-sm">
             <SidebarHeader className="border-b border-border p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
-                    <CalendarIcon className="w-6 h-6 text-white" />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
+                      <CalendarIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">CdeApp Planning</h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Gestión de Empleados y Planificador</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">CdeApp Planning</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Gestión de Empleados y Planificador</p>
-                  </div>
+                  <ThemeToggle />
                 </div>
-                <ThemeToggle />
+                {currentUser && (
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                        <UserCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
+                          {currentUser.full_name || currentUser.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => base44.auth.logout()}
+                      title="Cerrar Sesión"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </SidebarHeader>
 
@@ -623,15 +652,41 @@ export default function Layout({ children, currentPageName }) {
                               Inicio Rápido
                             </Link>
                           </SidebarMenuButton>
-                        </div>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-        </Sidebar>
+                          </div>
+                          </CollapsibleContent>
+                          </SidebarMenuItem>
+                          </Collapsible>
+                          </SidebarMenu>
+                          </SidebarGroupContent>
+                          </SidebarGroup>
+                          {currentUser && (
+                          <SidebarGroup className="mt-auto border-t border-border pt-4">
+                          <SidebarGroupContent>
+                          <SidebarMenu>
+                          <SidebarMenuItem>
+                          <SidebarMenuButton
+                          onClick={() => {
+                          const newPassword = prompt("Introduce tu nueva contraseña:");
+                          if (newPassword) {
+                            base44.auth.updateMe({ password: newPassword })
+                              .then(() => alert("Contraseña actualizada"))
+                              .catch(() => alert("Error al actualizar contraseña"));
+                          }
+                          }}
+                          className="hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm"
+                          >
+                          <div className="flex items-center gap-3 px-3 py-2">
+                          <Key className="w-4 h-4" />
+                          <span>Cambiar Contraseña</span>
+                          </div>
+                          </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          </SidebarMenu>
+                          </SidebarGroupContent>
+                          </SidebarGroup>
+                          )}
+                          </SidebarContent>
+                          </Sidebar>
 
         <main className="flex-1 flex flex-col">
           <header className="bg-card/80 backdrop-blur-sm border-b border-border px-6 py-4 md:hidden">
