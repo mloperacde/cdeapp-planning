@@ -26,7 +26,18 @@ export function usePermissions() {
 
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
-    queryFn: () => base44.entities.Role.list(),
+    queryFn: async () => {
+      const allRoles = await base44.entities.Role.list();
+      // Deduplicate by code, keep the newest
+      const uniqueMap = new Map();
+      for (const role of allRoles) {
+        const existing = uniqueMap.get(role.code);
+        if (!existing || new Date(role.created_date) > new Date(existing.created_date)) {
+          uniqueMap.set(role.code, role);
+        }
+      }
+      return Array.from(uniqueMap.values());
+    },
     staleTime: 1000,
     refetchInterval: 2000,
   });

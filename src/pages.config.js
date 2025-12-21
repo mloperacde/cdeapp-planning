@@ -80,6 +80,7 @@ import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import NotificationSettings from './pages/NotificationSettings';
+import Mobile from './pages/Mobile';
 import __Layout from './Layout.jsx';
 
 
@@ -166,6 +167,7 @@ export const PAGES = {
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
     "NotificationSettings": NotificationSettings,
+    "Mobile": Mobile,
 }
 
 export const pagesConfig = {
