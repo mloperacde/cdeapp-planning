@@ -176,30 +176,43 @@ export default function ShiftPlanningPage() {
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
+    if (result.source.droppableId === result.destination.droppableId) return;
 
     const { source, destination } = result;
     
-    // Parse droppable IDs: "machine-{machineId}-{role}"
-    const sourceParts = source.droppableId.split('-');
-    const destParts = destination.droppableId.split('-');
-    
-    const sourceMachine = sourceParts[1];
-    const sourceRole = sourceParts[2];
-    const destMachine = destParts[1];
-    const destRole = destParts[2];
+    // Parse droppable IDs
+    const sourceId = source.droppableId;
+    const destId = destination.droppableId;
 
-    if (sourceMachine === 'unassigned') {
-      // Assigning from unassigned pool
-      const employeeId = result.draggableId;
-      handleAssignmentChange(destMachine, destRole, employeeId);
-    } else if (destMachine === 'unassigned') {
-      // Removing assignment
-      handleAssignmentChange(sourceMachine, sourceRole, null);
-    } else {
-      // Moving between machines/roles
-      const employeeId = assignments[sourceMachine]?.[sourceRole];
-      handleAssignmentChange(sourceMachine, sourceRole, null);
-      handleAssignmentChange(destMachine, destRole, employeeId);
+    // Extract employee ID from draggableId
+    let employeeId = result.draggableId;
+    
+    // If dragging from a machine role, extract the actual employee ID
+    if (sourceId.startsWith('machine-') && sourceId !== 'unassigned-pool') {
+      const parts = sourceId.split('-');
+      const machineId = parts[1];
+      const role = parts.slice(2).join('_'); // Handle 'operador_1', etc.
+      employeeId = assignments[machineId]?.[role];
+      
+      if (!employeeId) return;
+      
+      // Clear source
+      handleAssignmentChange(machineId, role, null);
+    }
+
+    // Set destination (only if dropping on a machine role)
+    if (destId.startsWith('machine-') && destId !== 'unassigned-pool') {
+      const parts = destId.split('-');
+      const machineId = parts[1];
+      const role = parts.slice(2).join('_');
+      
+      // Check if destination already has an employee
+      if (assignments[machineId]?.[role]) {
+        toast.warning("Esta posición ya está ocupada");
+        return;
+      }
+      
+      handleAssignmentChange(machineId, role, employeeId);
     }
   };
 
@@ -290,30 +303,41 @@ export default function ShiftPlanningPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
-                    <Droppable droppableId="unassigned-pool">
-                      {(provided) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
-                          {availableEmployees.map((emp, index) => (
-                            <Draggable key={emp.id} draggableId={emp.id} index={index}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className={`p-2 rounded-lg border bg-white cursor-grab active:cursor-grabbing transition-all ${
-                                    snapshot.isDragging ? 'shadow-lg border-blue-400' : 'hover:border-blue-300'
-                                  }`}
-                                >
-                                  <div className="text-sm font-medium truncate">{emp.nombre}</div>
-                                  <div className="text-xs text-slate-500">{emp.puesto}</div>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
+                   <Droppable droppableId="unassigned-pool" type="EMPLOYEE">
+                     {(provided, snapshot) => (
+                       <div 
+                         ref={provided.innerRef} 
+                         {...provided.droppableProps} 
+                         className={`space-y-2 min-h-[100px] rounded-lg p-2 transition-all ${
+                           snapshot.isDraggingOver ? 'bg-blue-50/50 ring-2 ring-blue-300 ring-inset' : ''
+                         }`}
+                       >
+                         {availableEmployees.map((emp, index) => (
+                           <Draggable key={emp.id} draggableId={emp.id} index={index}>
+                             {(provided, snapshot) => (
+                               <div
+                                 ref={provided.innerRef}
+                                 {...provided.draggableProps}
+                                 {...provided.dragHandleProps}
+                                 className={`p-3 rounded-lg border bg-white cursor-grab active:cursor-grabbing transition-all ${
+                                   snapshot.isDragging 
+                                     ? 'shadow-2xl border-blue-500 scale-105 ring-2 ring-blue-300 z-50' 
+                                     : 'hover:border-blue-300 hover:shadow-md'
+                                 }`}
+                                 style={{
+                                   ...provided.draggableProps.style,
+                                 }}
+                               >
+                                 <div className="text-sm font-medium truncate">{emp.nombre}</div>
+                                 <div className="text-xs text-slate-500">{emp.puesto}</div>
+                               </div>
+                             )}
+                           </Draggable>
+                         ))}
+                         {provided.placeholder}
+                       </div>
+                     )}
+                   </Droppable>
                   </CardContent>
                 </Card>
               </div>
@@ -338,13 +362,13 @@ export default function ShiftPlanningPage() {
                         <CardContent>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Responsable */}
-                            <Droppable droppableId={`machine-${machine.id}-responsable_linea`}>
+                            <Droppable droppableId={`machine-${machine.id}-responsable_linea`} type="EMPLOYEE">
                               {(provided, snapshot) => (
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.droppableProps}
-                                  className={`p-3 rounded-lg border-2 border-dashed transition-all ${
-                                    snapshot.isDraggingOver ? 'border-blue-400 bg-blue-50' : 'border-slate-200'
+                                  className={`p-3 rounded-lg border-2 border-dashed transition-all min-h-[80px] ${
+                                    snapshot.isDraggingOver ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' : 'border-slate-200'
                                   }`}
                                 >
                                   <Label className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1">
@@ -352,15 +376,17 @@ export default function ShiftPlanningPage() {
                                   </Label>
                                   {assignment.responsable_linea ? (
                                     <Draggable 
-                                      draggableId={`${machine.id}-resp-${assignment.responsable_linea}`}
+                                      draggableId={`assigned-${machine.id}-resp-${assignment.responsable_linea}`}
                                       index={0}
                                     >
-                                      {(provided) => (
+                                      {(provided, snapshot) => (
                                         <div
                                           ref={provided.innerRef}
                                           {...provided.draggableProps}
                                           {...provided.dragHandleProps}
-                                          className="p-2 bg-white rounded border cursor-grab active:cursor-grabbing"
+                                          className={`p-2 bg-white rounded border cursor-grab active:cursor-grabbing transition-all ${
+                                            snapshot.isDragging ? 'shadow-2xl scale-105 ring-2 ring-blue-400' : ''
+                                          }`}
                                         >
                                           <div className="text-sm font-medium truncate">
                                             {getEmployeeById(assignment.responsable_linea)?.nombre}
@@ -369,7 +395,7 @@ export default function ShiftPlanningPage() {
                                       )}
                                     </Draggable>
                                   ) : (
-                                    <div className="text-xs text-slate-400 italic">Suelta aquí</div>
+                                    <div className="text-xs text-slate-400 italic p-2">Arrastra empleado aquí</div>
                                   )}
                                   {provided.placeholder}
                                 </div>
@@ -377,13 +403,13 @@ export default function ShiftPlanningPage() {
                             </Droppable>
 
                             {/* Segunda */}
-                            <Droppable droppableId={`machine-${machine.id}-segunda_linea`}>
+                            <Droppable droppableId={`machine-${machine.id}-segunda_linea`} type="EMPLOYEE">
                               {(provided, snapshot) => (
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.droppableProps}
-                                  className={`p-3 rounded-lg border-2 border-dashed transition-all ${
-                                    snapshot.isDraggingOver ? 'border-blue-400 bg-blue-50' : 'border-slate-200'
+                                  className={`p-3 rounded-lg border-2 border-dashed transition-all min-h-[80px] ${
+                                    snapshot.isDraggingOver ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' : 'border-slate-200'
                                   }`}
                                 >
                                   <Label className="text-xs font-semibold text-indigo-700 mb-2 flex items-center gap-1">
@@ -391,15 +417,17 @@ export default function ShiftPlanningPage() {
                                   </Label>
                                   {assignment.segunda_linea ? (
                                     <Draggable 
-                                      draggableId={`${machine.id}-seg-${assignment.segunda_linea}`}
+                                      draggableId={`assigned-${machine.id}-seg-${assignment.segunda_linea}`}
                                       index={0}
                                     >
-                                      {(provided) => (
+                                      {(provided, snapshot) => (
                                         <div
                                           ref={provided.innerRef}
                                           {...provided.draggableProps}
                                           {...provided.dragHandleProps}
-                                          className="p-2 bg-white rounded border cursor-grab active:cursor-grabbing"
+                                          className={`p-2 bg-white rounded border cursor-grab active:cursor-grabbing transition-all ${
+                                            snapshot.isDragging ? 'shadow-2xl scale-105 ring-2 ring-blue-400' : ''
+                                          }`}
                                         >
                                           <div className="text-sm font-medium truncate">
                                             {getEmployeeById(assignment.segunda_linea)?.nombre}
@@ -408,7 +436,7 @@ export default function ShiftPlanningPage() {
                                       )}
                                     </Draggable>
                                   ) : (
-                                    <div className="text-xs text-slate-400 italic">Suelta aquí</div>
+                                    <div className="text-xs text-slate-400 italic p-2">Arrastra empleado aquí</div>
                                   )}
                                   {provided.placeholder}
                                 </div>
@@ -422,34 +450,38 @@ export default function ShiftPlanningPage() {
                               </Label>
                               <div className="space-y-2">
                                 {[1, 2, 3, 4, 5].map(num => (
-                                  <Droppable key={num} droppableId={`machine-${machine.id}-operador_${num}`}>
+                                  <Droppable key={num} droppableId={`machine-${machine.id}-operador_${num}`} type="EMPLOYEE">
                                     {(provided, snapshot) => (
                                       <div
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
-                                        className={`p-2 rounded border border-dashed text-xs transition-all ${
-                                          snapshot.isDraggingOver ? 'border-blue-400 bg-blue-50' : 'border-slate-200'
+                                        className={`p-2 rounded border-2 border-dashed transition-all min-h-[50px] flex items-center ${
+                                          snapshot.isDraggingOver ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' : 'border-slate-200'
                                         }`}
                                       >
-                                        <Badge variant="outline" className="mr-1 text-[10px]">{num}</Badge>
+                                        <Badge variant="outline" className="mr-2 text-[10px] shrink-0">{num}</Badge>
                                         {assignment[`operador_${num}`] ? (
                                           <Draggable 
-                                            draggableId={`${machine.id}-op${num}-${assignment[`operador_${num}`]}`}
+                                            draggableId={`assigned-${machine.id}-op${num}-${assignment[`operador_${num}`]}`}
                                             index={0}
                                           >
-                                            {(provided) => (
-                                              <span
+                                            {(provided, snapshot) => (
+                                              <div
                                                 ref={provided.innerRef}
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
-                                                className="cursor-grab active:cursor-grabbing truncate inline-block"
+                                                className={`flex-1 p-1.5 bg-white rounded border cursor-grab active:cursor-grabbing transition-all ${
+                                                  snapshot.isDragging ? 'shadow-2xl scale-105 ring-2 ring-blue-400' : ''
+                                                }`}
                                               >
-                                                {getEmployeeById(assignment[`operador_${num}`])?.nombre}
-                                              </span>
+                                                <div className="text-sm font-medium truncate">
+                                                  {getEmployeeById(assignment[`operador_${num}`])?.nombre}
+                                                </div>
+                                              </div>
                                             )}
                                           </Draggable>
                                         ) : (
-                                          <span className="text-slate-400 italic">Vacío</span>
+                                          <span className="text-xs text-slate-400 italic">Arrastra empleado aquí</span>
                                         )}
                                         {provided.placeholder}
                                       </div>
