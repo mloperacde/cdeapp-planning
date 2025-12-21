@@ -92,7 +92,7 @@ export default function IdealAssignmentView() {
       return { slot, category, name: emp.nombre };
   };
 
-  // Helper to filter eligible employees per role/machine (for both pre-selection and dropdown)
+  // Helper to filter eligible employees per role/machine (for pre-selection only - strict criteria)
   const getEligibleEmployees = (machineId, roleType) => {
     if (!currentTeam) return [];
     
@@ -100,11 +100,10 @@ export default function IdealAssignmentView() {
     const teamName = teamConfig ? teamConfig.team_name : "";
 
     return employees.filter(emp => {
-        // Common Criteria
+        // Common Criteria for pre-selection (strict)
         if (emp.departamento !== "FABRICACION") return false;
         if (emp.equipo !== teamName) return false;
-        // if (emp.disponibilidad !== "Disponible") return false; // Optional: maybe show unavailable in dropdown but greyed out? Prompt says "disponibilidad == Disponible" for eligibility.
-        if (emp.disponibilidad !== "Disponible") return false;
+        if (emp.disponibilidad !== "Disponible") return false; // Only available for pre-selection
 
         const puesto = (emp.puesto || "").toUpperCase();
         
