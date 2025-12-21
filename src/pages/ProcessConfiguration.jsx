@@ -678,7 +678,7 @@ export default function ProcessConfigurationPage() {
                             </Droppable>
                           </DragDropContext>
                               </div>
-                            ) : null;
+                            );
                             })()}
                           </CardContent>
                         </Card>
