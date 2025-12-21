@@ -45,7 +45,15 @@ export default function DashboardPage() {
   const [user, setUser] = useState(null);
 
   React.useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => setUser(null));
+    const init = async () => {
+      try {
+        await base44.functions.invoke('update_employee_availability');
+      } catch (e) {
+        console.error("Background sync failed", e);
+      }
+      base44.auth.me().then(setUser).catch(() => setUser(null));
+    };
+    init();
   }, []);
 
   const { data: absences = EMPTY_ARRAY } = useQuery({
