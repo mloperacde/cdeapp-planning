@@ -257,15 +257,34 @@ export default function IdealAssignmentView() {
           const puesto = (emp.puesto || "").toUpperCase();
           const isFixedShift = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
 
-          let matchesRole = false;
-          if (roleType === "RESPONSABLE" && (puesto.includes("RESPONSABLE"))) matchesRole = true;
-          else if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) matchesRole = true;
-          else if (roleType === "OPERARIO" && (puesto.includes("OPERARI"))) matchesRole = true;
+          // Check if this employee is assigned to this role in another team
+          const assignedInOtherTeam = machineAssignments.some(ma => {
+              if (ma.machine_id !== machineId || ma.team_key === currentTeam) return false;
+              
+              if (roleType === "RESPONSABLE" && ma.responsable_linea?.includes(emp.id)) return true;
+              if (roleType === "SEGUNDA" && ma.segunda_linea?.includes(emp.id)) return true;
+              if (roleType === "OPERARIO") {
+                  return [1,2,3,4,5,6,7,8].some(i => ma[`operador_${i}`] === emp.id);
+              }
+              return false;
+          });
 
-          if (matchesRole && slot <= 10) group = "Sugeridos (Perfil Ideal)"; 
+          let matchesRole = false;
+          if (!isFixedShift) {
+              // Normal employees: check role match
+              if (roleType === "RESPONSABLE" && (puesto.includes("RESPONSABLE"))) matchesRole = true;
+              else if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) matchesRole = true;
+              else if (roleType === "OPERARIO" && (puesto.includes("OPERARI"))) matchesRole = true;
+          } else {
+              // Fixed shift employees: can fill any role
+              matchesRole = true;
+          }
+
+          if (assignedInOtherTeam && isFixedShift) group = "Sugeridos (Asignado en otro equipo)";
+          else if (matchesRole && slot <= 10) group = "Sugeridos (Perfil Ideal)"; 
           else if (matchesRole) group = "Con puesto correcto";
           else if (slot <= 10) group = "Con experiencia en máquina";
-          else if (isFixedShift) group = "Turno Fijo";
+          else if (isFixedShift) group = "Turno Fijo (Disponible)";
 
           return { ...emp, _group: group, _slot: slot };
       }).sort((a, b) => {
