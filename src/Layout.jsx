@@ -29,6 +29,7 @@ import {
   LayoutDashboard,
   Factory,
   Settings2,
+  BookOpen,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -586,6 +587,17 @@ export default function Layout({ children, currentPageName }) {
                             <Link to={createPageUrl("UserRoleAssignment")} className="flex items-center gap-2 px-3 py-2">
                               <Users className="w-4 h-4" />
                               Asignación de Roles
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("DeploymentGuide")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("DeploymentGuide")} className="flex items-center gap-2 px-3 py-2">
+                              <BookOpen className="w-4 h-4" />
+                              Guía de Implementación
                             </Link>
                           </SidebarMenuButton>
                         </div>

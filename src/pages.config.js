@@ -75,6 +75,7 @@ import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import RoleManagement from './pages/RoleManagement';
 import UserRoleAssignment from './pages/UserRoleAssignment';
+import DeploymentGuide from './pages/DeploymentGuide';
 import __Layout from './Layout.jsx';
 
 
@@ -156,6 +157,7 @@ export const PAGES = {
     "WorkCalendarConfig": WorkCalendarConfig,
     "RoleManagement": RoleManagement,
     "UserRoleAssignment": UserRoleAssignment,
+    "DeploymentGuide": DeploymentGuide,
 }
 
 export const pagesConfig = {
