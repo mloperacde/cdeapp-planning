@@ -510,6 +510,49 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label>Máquina</Label>
+              <Select 
+                value={formData.machine_id} 
+                onValueChange={(val) => {
+                  const machine = machines.find(m => m.id === val);
+                  setFormData({
+                    ...formData, 
+                    machine_id: val,
+                    machine_name: machine?.nombre || ""
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar máquina" />
+                </SelectTrigger>
+                <SelectContent>
+                  {machines.map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Equipo</Label>
+              <Select 
+                value={formData.team_key} 
+                onValueChange={(val) => setFormData({...formData, team_key: val})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar equipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map(t => (
+                    <SelectItem key={t.team_key} value={t.team_key}>{t.team_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Inspector *</Label>
               <EmployeeSelect 
                 employees={employees}
@@ -533,6 +576,74 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                   <SelectItem value="Rechazado">✗ Rechazado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <h4 className="font-semibold mb-3">Personal de Línea</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Responsable de Línea</Label>
+                <EmployeeSelect 
+                  employees={employees}
+                  value={formData.responsable_linea}
+                  onValueChange={(val) => {
+                    const emp = employees.find(e => e.id === val);
+                    setFormData({
+                      ...formData, 
+                      responsable_linea: val,
+                      responsable_linea_name: emp?.nombre || ""
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Segunda de Línea</Label>
+                <EmployeeSelect 
+                  employees={employees}
+                  value={formData.segunda_linea}
+                  onValueChange={(val) => {
+                    const emp = employees.find(e => e.id === val);
+                    setFormData({
+                      ...formData, 
+                      segunda_linea: val,
+                      segunda_linea_name: emp?.nombre || ""
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between items-center">
+                <Label>Operarios de Línea</Label>
+                <Button type="button" size="sm" variant="outline" onClick={addOperario}>
+                  + Añadir Operario
+                </Button>
+              </div>
+              {formData.operarios && formData.operarios.length > 0 && (
+                <div className="space-y-2">
+                  {formData.operarios.map((op, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <EmployeeSelect 
+                        employees={employees}
+                        value={op.id}
+                        onValueChange={(val) => updateOperario(idx, val)}
+                        className="flex-1"
+                      />
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => removeOperario(idx)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -611,6 +722,41 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
               rows={4}
               placeholder="Detalles de la inspección, defectos encontrados, observaciones..."
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Imágenes de la Inspección</Label>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={uploadingImages}
+              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {uploadingImages && <p className="text-xs text-blue-600">Subiendo imágenes...</p>}
+            {formData.images && formData.images.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {formData.images.map((url, idx) => (
+                  <div key={idx} className="relative group">
+                    <img 
+                      src={url} 
+                      alt={`Inspección ${idx + 1}`} 
+                      className="w-full h-24 object-cover rounded border"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
+                      onClick={() => removeImage(idx)}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">

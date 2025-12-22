@@ -52,7 +52,7 @@ export default function DailyShiftPlanningPage() {
 
     const { data: processes = [] } = useQuery({
         queryKey: ['processes'],
-        queryFn: () => base44.entities.Process.list(),
+        queryFn: () => base44.entities.Process.filter({ activo: true }),
     });
 
     const { data: teams = [] } = useQuery({

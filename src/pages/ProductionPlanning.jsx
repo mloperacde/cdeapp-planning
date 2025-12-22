@@ -48,7 +48,7 @@ export default function ProductionPlanningPage() {
 
   const { data: processes = [] } = useQuery({
     queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.list(),
+    queryFn: () => base44.entities.Process.filter({ activo: true }),
   });
 
   const { data: machineProcesses = [] } = useQuery({
