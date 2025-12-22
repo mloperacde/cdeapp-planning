@@ -48,15 +48,18 @@ import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import MasterMachineView from './pages/MasterMachineView';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
+import Mobile from './pages/Mobile';
 import MobileAbsences from './pages/MobileAbsences';
 import MobileAppConfig from './pages/MobileAppConfig';
 import MobileChat from './pages/MobileChat';
+import MobileHome from './pages/MobileHome';
 import MobileNotifications from './pages/MobileNotifications';
 import MobilePlanning from './pages/MobilePlanning';
 import MobileProfile from './pages/MobileProfile';
 import MobileVacations from './pages/MobileVacations';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
+import NotificationSettings from './pages/NotificationSettings';
 import Notifications from './pages/Notifications';
 import PerformanceManagement from './pages/PerformanceManagement';
 import PredictiveMaintenance from './pages/PredictiveMaintenance';
@@ -79,9 +82,6 @@ import Timeline from './pages/Timeline';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import NotificationSettings from './pages/NotificationSettings';
-import Mobile from './pages/Mobile';
-import MobileHome from './pages/MobileHome';
 import __Layout from './Layout.jsx';
 
 
@@ -136,15 +136,18 @@ export const PAGES = {
     "MasterMachineView": MasterMachineView,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
+    "Mobile": Mobile,
     "MobileAbsences": MobileAbsences,
     "MobileAppConfig": MobileAppConfig,
     "MobileChat": MobileChat,
+    "MobileHome": MobileHome,
     "MobileNotifications": MobileNotifications,
     "MobilePlanning": MobilePlanning,
     "MobileProfile": MobileProfile,
     "MobileVacations": MobileVacations,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
+    "NotificationSettings": NotificationSettings,
     "Notifications": Notifications,
     "PerformanceManagement": PerformanceManagement,
     "PredictiveMaintenance": PredictiveMaintenance,
@@ -167,9 +170,6 @@ export const PAGES = {
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "NotificationSettings": NotificationSettings,
-    "Mobile": Mobile,
-    "MobileHome": MobileHome,
 }
 
 export const pagesConfig = {

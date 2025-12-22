@@ -44,7 +44,15 @@ export default function DailyShiftPlanningPage() {
 
     const { data: workOrders = [] } = useQuery({
         queryKey: ['workOrders'],
-        queryFn: () => base44.entities.WorkOrder.filter({ status: { $in: ['Pendiente', 'En Progreso'] } }),
+        queryFn: () => base44.entities.WorkOrder.filter({ 
+            status: { $in: ['Pendiente', 'En Progreso'] },
+            start_date: date // Solo órdenes programadas para la fecha seleccionada
+        }),
+    });
+
+    const { data: processes = [] } = useQuery({
+        queryKey: ['processes'],
+        queryFn: () => base44.entities.Process.list(),
     });
 
     const { data: teams = [] } = useQuery({
@@ -143,6 +151,10 @@ export default function DailyShiftPlanningPage() {
         return workOrders.filter(wo => wo.machine_id === machineId);
     };
 
+    const getProcessName = (processId) => {
+        return processes.find(p => p.id === processId)?.nombre || 'N/A';
+    };
+
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -151,7 +163,7 @@ export default function DailyShiftPlanningPage() {
                         <Briefcase className="w-8 h-8 text-blue-600" />
                         Planificación Diaria de Turno
                     </h1>
-                    <p className="text-slate-500">Gestiona la asignación real de personal para hoy.</p>
+                    <p className="text-slate-500">Resumen de máquinas con órdenes asignadas y gestión de personal. La asignación de personas la realiza el agente IA.</p>
                 </div>
                 <div className="flex items-center gap-4">
                      <Button onClick={() => saveMutation.mutate()} className="bg-green-600 hover:bg-green-700 text-white">
@@ -235,13 +247,22 @@ export default function DailyShiftPlanningPage() {
                                             {orders.length > 0 ? (
                                                 <div className="flex flex-col gap-1">
                                                     {orders.map(o => (
-                                                        <span key={o.id} className="flex items-center gap-1">
-                                                            <ArrowRight className="w-3 h-3" /> {o.product_name || o.order_number} (P{o.priority})
-                                                        </span>
+                                                        <div key={o.id} className="flex flex-col gap-0.5 p-1.5 bg-blue-50 rounded border border-blue-100">
+                                                            <div className="flex items-center gap-1 font-medium text-slate-700">
+                                                                <ArrowRight className="w-3 h-3 text-blue-600" /> 
+                                                                {o.order_number} - P{o.priority}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-600 ml-4">
+                                                                {o.product_name || o.product_article_code || 'Sin nombre'}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-500 ml-4">
+                                                                Proceso: {getProcessName(o.process_id)} | Cant: {o.quantity || 0}
+                                                            </div>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <span className="italic">Sin órdenes pendientes</span>
+                                                <span className="italic text-slate-400">Sin órdenes programadas para esta fecha</span>
                                             )}
                                         </div>
                                     </div>

@@ -189,92 +189,74 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
                     );
                   })}
 
-                  {/* Scheduled Orders Overlay */}
-                  {machine.scheduled.map(order => {
-                    const startDate = parseISO(order.start_date);
-                    // committed_delivery_date might be far in future, but we show BAR based on planned duration or committed?
-                    // User said "estimación de fecha fin" in dialog. Assuming committed_delivery_date IS the end date.
-                    const endDate = parseISO(order.committed_delivery_date);
-                    
-                    // We need to map dates to grid positions (skipping weekends/holidays)
-                    // This is tricky with CSS absolute positioning if the grid skips days.
-                    // Solution: Calculate "Index" in the filtered `days` array.
-                    const startIndex = days.findIndex(d => isSameDay(d, startDate));
-                    // If start date is not in view (e.g. weekend or outside range), we might have issues.
-                    // If start date is a weekend, maybe snap to next working day?
-                    
-                    let effectiveStartIndex = startIndex;
-                    let effectiveEndIndex = days.findIndex(d => isSameDay(d, endDate));
-                    
-                    // If completely outside view
-                    if (effectiveStartIndex === -1 && effectiveEndIndex === -1) {
-                         // Check if spanning over the view
-                         if (startDate < days[0] && endDate > days[days.length-1]) {
-                             effectiveStartIndex = 0;
-                             effectiveEndIndex = days.length - 1;
-                         } else {
-                             return null; 
+                  {/* Scheduled Orders - Stacked Compact Cards */}
+                  <div className="absolute inset-0 p-2 space-y-1 overflow-visible">
+                   {machine.scheduled.map((order, idx) => {
+                     const startDate = parseISO(order.start_date);
+                     const endDate = parseISO(order.committed_delivery_date);
+
+                     const startIndex = days.findIndex(d => isSameDay(d, startDate));
+                     let effectiveStartIndex = startIndex;
+                     let effectiveEndIndex = days.findIndex(d => isSameDay(d, endDate));
+
+                     if (effectiveStartIndex === -1 && effectiveEndIndex === -1) {
+                       if (startDate < days[0] && endDate > days[days.length-1]) {
+                         effectiveStartIndex = 0;
+                         effectiveEndIndex = days.length - 1;
+                       } else {
+                         return null; 
+                       }
+                     }
+
+                     if (effectiveStartIndex === -1) {
+                       if (startDate < days[0]) effectiveStartIndex = 0;
+                       else return null;
+                     }
+
+                     if (effectiveEndIndex === -1) {
+                       if (endDate > days[days.length-1]) effectiveEndIndex = days.length - 1;
+                       else {
+                         if (endDate < days[0]) return null;
+                         effectiveEndIndex = days.length - 1; 
+                         for (let i = days.length - 1; i >= 0; i--) {
+                           if (days[i] <= endDate) {
+                             effectiveEndIndex = i;
+                             break;
+                           }
                          }
-                    }
+                       }
+                     }
 
-                    // Clip start
-                    if (effectiveStartIndex === -1) {
-                        if (startDate < days[0]) effectiveStartIndex = 0;
-                        else return null; // Starts after view
-                    }
-                    
-                    // Clip end
-                    if (effectiveEndIndex === -1) {
-                        if (endDate > days[days.length-1]) effectiveEndIndex = days.length - 1;
-                        else {
-                            // Ends before view starts?
-                            if (endDate < days[0]) return null;
-                            // Ends after view?
-                            // Logic handles by finding index. If not found and > last, set to last.
-                            // If we are here, it means endDate is not in `days`. Could be weekend.
-                            // Find nearest previous working day?
-                            // Or just find index of LAST day <= endDate
-                            effectiveEndIndex = days.length - 1; 
-                            for (let i = days.length - 1; i >= 0; i--) {
-                                if (days[i] <= endDate) {
-                                    effectiveEndIndex = i;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                     const durationCols = effectiveEndIndex - effectiveStartIndex + 1;
+                     if (durationCols <= 0) return null;
 
-                    const durationCols = effectiveEndIndex - effectiveStartIndex + 1;
-                    if (durationCols <= 0) return null;
+                     const process = processes.find(p => p.id === order.process_id);
+                     const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
 
-                    const process = processes.find(p => p.id === order.process_id);
-                    const isLate = new Date(order.committed_delivery_date) < new Date(order.start_date);
-
-                    return (
-                      <div
-                        key={order.id}
-                        onClick={() => onEditOrder(order)}
-                        className={`absolute top-2 bottom-2 rounded-md shadow-sm border-l-4 cursor-pointer p-2 flex flex-col justify-center overflow-hidden transition-all text-white group-hover/item:scale-105 z-10 ${getPriorityColor(order.priority)}`}
-                        style={{
-                          left: `${effectiveStartIndex * 128 + 4}px`, // 128px = w-32
-                          width: `${durationCols * 128 - 8}px`,
-                        }}
-                        title={`${order.order_number} - ${process?.nombre}`}
-                      >
-                        <div className="text-xs font-bold truncate flex items-center gap-1">
-                          {order.order_number}
-                          {isLate && <AlertCircle className="w-3 h-3 text-yellow-300" />}
-                        </div>
-                        <div className="text-[10px] opacity-90 truncate">
-                          {process?.nombre || 'Proceso desconocido'}
-                        </div>
-                        <div className="text-[10px] opacity-80 mt-1 flex justify-between">
-                          <span>P{order.priority}</span>
-                          <span>{order.status}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                     return (
+                       <div
+                         key={order.id}
+                         onClick={() => onEditOrder(order)}
+                         className={`absolute h-8 rounded shadow-sm border cursor-pointer px-2 py-1 flex items-center gap-2 text-xs transition-all hover:shadow-md hover:z-20 ${getPriorityColor(order.priority)} text-white`}
+                         style={{
+                           left: `${effectiveStartIndex * 128 + 4}px`,
+                           width: `${durationCols * 128 - 8}px`,
+                           top: `${idx * 36 + 4}px`,
+                         }}
+                         title={`${order.order_number} - ${order.product_name || ''}`}
+                       >
+                         <div className="flex items-center gap-1 min-w-0 flex-1">
+                           <span className="font-bold shrink-0">P{order.priority}</span>
+                           <span className="font-medium truncate">{order.order_number}</span>
+                           {isLate && <AlertCircle className="w-3 h-3 text-yellow-300 shrink-0" />}
+                         </div>
+                         <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 shrink-0">
+                           {order.quantity || 0}
+                         </Badge>
+                       </div>
+                     );
+                   })}
+                  </div>
                 </div>
               </div>
             ))}

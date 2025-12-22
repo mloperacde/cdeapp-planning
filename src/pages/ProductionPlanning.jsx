@@ -12,11 +12,13 @@ import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO } from "da
 import { es } from "date-fns/locale";
 import WorkOrderForm from "../components/planning/WorkOrderForm";
 import PlanningGantt from "../components/planning/PlanningGantt";
+import MachineOrdersList from "../components/planning/MachineOrdersList";
 import ResourceForecast from "../components/planning/ResourceForecast";
 import WorkOrderImporter from "../components/planning/WorkOrderImporter";
 import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProductionPlanningPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -225,17 +227,35 @@ export default function ProductionPlanningPage() {
       </Card>
 
       <div className="flex-1 min-h-0 grid grid-rows-[2fr_1fr] gap-6">
-        {/* Gantt View */}
+        {/* Main Planning View */}
         <div className="min-h-0 flex flex-col">
-          <PlanningGantt 
-            orders={filteredOrders} 
-            machines={machines}
-            processes={processes}
-            dateRange={dateRange}
-            onEditOrder={handleEditOrder}
-            onOrderDrop={handleOrderDrop}
-            holidays={holidays}
-          />
+          <Tabs defaultValue="gantt" className="h-full flex flex-col">
+            <TabsList className="flex-shrink-0">
+              <TabsTrigger value="gantt">Vista Gantt</TabsTrigger>
+              <TabsTrigger value="list">Vista Lista por Máquina</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="gantt" className="flex-1 min-h-0 mt-2">
+              <PlanningGantt 
+                orders={filteredOrders} 
+                machines={machines}
+                processes={processes}
+                dateRange={dateRange}
+                onEditOrder={handleEditOrder}
+                onOrderDrop={handleOrderDrop}
+                holidays={holidays}
+              />
+            </TabsContent>
+
+            <TabsContent value="list" className="flex-1 min-h-0 mt-2">
+              <MachineOrdersList 
+                machines={machines}
+                orders={filteredOrders}
+                processes={processes}
+                onEditOrder={handleEditOrder}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Resource Forecast */}
