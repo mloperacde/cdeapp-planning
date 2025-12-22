@@ -6,7 +6,7 @@ import { es } from "date-fns/locale";
 import { AlertCircle, CalendarClock, GripVertical, AlertTriangle } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-export default function PlanningGantt({ orders, machines, processes, dateRange, onEditOrder, onOrderDrop, holidays = [] }) {
+export default function PlanningGantt({ orders = [], machines = [], processes = [], dateRange, onEditOrder, onOrderDrop, holidays = [] }) {
   // 1. Calculate Working Days (Skip weekends and holidays)
   const days = useMemo(() => {
     const start = new Date(dateRange.start);
