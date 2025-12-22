@@ -38,7 +38,7 @@ export default function ProductionPlanningPage() {
   // Data Fetching
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: () => base44.entities.Machine.list(),
   });
 
   const { data: workOrders = [] } = useQuery({

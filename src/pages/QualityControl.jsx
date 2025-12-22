@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, AlertTriangle, Search, Plus, Calendar, User, FileText, Upload, Image } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, Search, Plus, Calendar, User, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -42,16 +42,6 @@ export default function QualityControlPage() {
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
-  });
-
-  const { data: machines = [] } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-  });
-
-  const { data: teams = [] } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
   });
 
   const createMutation = useMutation({
@@ -318,8 +308,6 @@ export default function QualityControlPage() {
         inspection={editingInspection}
         workOrders={workOrders}
         employees={employees}
-        machines={machines}
-        teams={teams}
         currentUser={currentUser}
         onSubmit={(data) => {
           if (editingInspection) {
@@ -333,22 +321,14 @@ export default function QualityControlPage() {
   );
 }
 
-function InspectionFormDialog({ open, onClose, inspection, workOrders, employees, machines, teams, currentUser, onSubmit }) {
+function InspectionFormDialog({ open, onClose, inspection, workOrders, employees, currentUser, onSubmit }) {
   const [formData, setFormData] = useState({
     work_order_id: "",
-    machine_id: "",
-    machine_name: "",
     product_article_code: "",
     product_name: "",
     inspection_date: new Date().toISOString(),
     inspector_id: "",
     inspector_name: "",
-    team_key: "",
-    responsable_linea_id: "",
-    responsable_linea_name: "",
-    segunda_linea_id: "",
-    segunda_linea_name: "",
-    operarios: [],
     result: "Aprobado",
     quantity_inspected: 0,
     quantity_approved: 0,
@@ -357,10 +337,8 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
     rework_required: false,
     rework_assigned_to: "",
     severity: "Media",
-    defects_found: [],
-    images: []
+    defects_found: []
   });
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   React.useEffect(() => {
     if (inspection) {
@@ -369,19 +347,11 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
       const emp = employees.find(e => e.email === currentUser?.email);
       setFormData({
         work_order_id: "",
-        machine_id: "",
-        machine_name: "",
         product_article_code: "",
         product_name: "",
         inspection_date: new Date().toISOString(),
         inspector_id: emp?.id || "",
         inspector_name: emp?.nombre || currentUser?.full_name || "",
-        team_key: "",
-        responsable_linea_id: "",
-        responsable_linea_name: "",
-        segunda_linea_id: "",
-        segunda_linea_name: "",
-        operarios: [],
         result: "Aprobado",
         quantity_inspected: 0,
         quantity_approved: 0,
@@ -390,42 +360,10 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
         rework_required: false,
         rework_assigned_to: "",
         severity: "Media",
-        defects_found: [],
-        images: []
+        defects_found: []
       });
     }
   }, [inspection, employees, currentUser, open]);
-
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    setUploadingImage(true);
-    try {
-      const uploadPromises = files.map(file => 
-        base44.integrations.Core.UploadFile({ file })
-      );
-      const results = await Promise.all(uploadPromises);
-      const urls = results.map(r => r.file_url);
-      
-      setFormData(prev => ({
-        ...prev,
-        images: [...(prev.images || []), ...urls]
-      }));
-      toast.success(`${files.length} imagen(es) subida(s)`);
-    } catch (error) {
-      toast.error("Error al subir imágenes");
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const removeImage = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -448,14 +386,11 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                 value={formData.work_order_id} 
                 onValueChange={(val) => {
                   const wo = workOrders.find(w => w.id === val);
-                  const machine = machines.find(m => m.id === wo?.machine_id);
                   setFormData({
                     ...formData, 
                     work_order_id: val,
                     product_name: wo?.product_name || "",
-                    product_article_code: wo?.product_article_code || "",
-                    machine_id: wo?.machine_id || "",
-                    machine_name: machine?.nombre || ""
+                    product_article_code: wo?.product_article_code || ""
                   });
                 }}
               >
@@ -473,28 +408,6 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
             </div>
 
             <div className="space-y-2">
-              <Label>Máquina *</Label>
-              <Select 
-                value={formData.machine_id} 
-                onValueChange={(val) => {
-                  const machine = machines.find(m => m.id === val);
-                  setFormData({...formData, machine_id: val, machine_name: machine?.nombre || ""});
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar máquina" />
-                </SelectTrigger>
-                <SelectContent>
-                  {machines.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
               <Label>Fecha y Hora Inspección *</Label>
               <Input 
                 type="datetime-local"
@@ -502,80 +415,6 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                 onChange={(e) => setFormData({...formData, inspection_date: new Date(e.target.value).toISOString()})}
                 required
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Equipo</Label>
-              <Select value={formData.team_key} onValueChange={(val) => setFormData({...formData, team_key: val})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar equipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.map(t => (
-                    <SelectItem key={t.team_key} value={t.team_key}>{t.team_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="font-semibold text-blue-900">Personal de Línea</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Responsable de Línea</Label>
-                <EmployeeSelect 
-                  employees={employees}
-                  value={formData.responsable_linea_id}
-                  onValueChange={(val) => {
-                    const emp = employees.find(e => e.id === val);
-                    setFormData({...formData, responsable_linea_id: val, responsable_linea_name: emp?.nombre || ""});
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Segunda de Línea</Label>
-                <EmployeeSelect 
-                  employees={employees}
-                  value={formData.segunda_linea_id}
-                  onValueChange={(val) => {
-                    const emp = employees.find(e => e.id === val);
-                    setFormData({...formData, segunda_linea_id: val, segunda_linea_name: emp?.nombre || ""});
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Operarios de Línea (Ctrl+Click para múltiple selección)</Label>
-              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2 bg-white">
-                {employees.filter(e => e.estado_empleado === "Alta").map(emp => {
-                  const isSelected = formData.operarios?.some(o => o.id === emp.id);
-                  return (
-                    <label key={emp.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData(prev => ({
-                              ...prev,
-                              operarios: [...(prev.operarios || []), { id: emp.id, nombre: emp.nombre }]
-                            }));
-                          } else {
-                            setFormData(prev => ({
-                              ...prev,
-                              operarios: prev.operarios.filter(o => o.id !== emp.id)
-                            }));
-                          }
-                        }}
-                      />
-                      <span className="truncate">{emp.nombre}</span>
-                    </label>
-                  );
-                })}
-              </div>
             </div>
           </div>
 
@@ -682,54 +521,6 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
               rows={4}
               placeholder="Detalles de la inspección, defectos encontrados, observaciones..."
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Imágenes de la Inspección</Label>
-            <div className="border-2 border-dashed rounded-lg p-4 text-center">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                id="image-upload"
-                disabled={uploadingImage}
-              />
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <div className="flex flex-col items-center gap-2">
-                  {uploadingImage ? (
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  ) : (
-                    <Upload className="w-8 h-8 text-slate-400" />
-                  )}
-                  <p className="text-sm text-slate-600">
-                    {uploadingImage ? "Subiendo..." : "Click para subir imágenes"}
-                  </p>
-                </div>
-              </label>
-            </div>
-            
-            {formData.images?.length > 0 && (
-              <div className="grid grid-cols-4 gap-2 mt-3">
-                {formData.images.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <img 
-                      src={url} 
-                      alt={`Inspección ${index + 1}`}
-                      className="w-full h-20 object-cover rounded border"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <XCircle className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
