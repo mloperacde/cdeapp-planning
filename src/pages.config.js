@@ -64,7 +64,6 @@ import Notifications from './pages/Notifications';
 import PerformanceManagement from './pages/PerformanceManagement';
 import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import ProcessConfiguration from './pages/ProcessConfiguration';
-import ProductionPlanning from './pages/ProductionPlanning';
 import QuickStartGuide from './pages/QuickStartGuide';
 import Reports from './pages/Reports';
 import RoleManagement from './pages/RoleManagement';
@@ -82,6 +81,7 @@ import Timeline from './pages/Timeline';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
 import __Layout from './Layout.jsx';
 
@@ -153,7 +153,6 @@ export const PAGES = {
     "PerformanceManagement": PerformanceManagement,
     "PredictiveMaintenance": PredictiveMaintenance,
     "ProcessConfiguration": ProcessConfiguration,
-    "ProductionPlanning": ProductionPlanning,
     "QuickStartGuide": QuickStartGuide,
     "Reports": Reports,
     "RoleManagement": RoleManagement,
@@ -171,6 +170,7 @@ export const PAGES = {
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "ProductionPlanning": ProductionPlanning,
     "QualityControl": QualityControl,
 }
 

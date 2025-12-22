@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle, Activity, TrendingUp, Clock, ArrowLeft } from "lucide-react";
+import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle, Activity, TrendingUp, Clock, ArrowLeft, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useDebounce } from "../components/utils/useDebounce";
 import { usePagination } from "../components/utils/usePagination";
 import AdvancedSearch from "../components/common/AdvancedSearch";
+import MachineOrderManager from "../components/machines/MachineOrderManager";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ const EMPTY_ARRAY = [];
 export default function MachineManagement() {
   const [filters, setFilters] = useState({});
   const [editingStatus, setEditingStatus] = useState(null);
+  const [showOrderManager, setShowOrderManager] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
@@ -249,6 +251,15 @@ export default function MachineManagement() {
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowOrderManager(true)}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                  Ordenar Máquinas
+                </Button>
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-slate-600 dark:text-slate-400">Página {currentPage} de {totalPages}</span>
@@ -528,6 +539,14 @@ export default function MachineManagement() {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showOrderManager && (
+        <Dialog open={true} onOpenChange={() => setShowOrderManager(false)}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <MachineOrderManager />
           </DialogContent>
         </Dialog>
       )}

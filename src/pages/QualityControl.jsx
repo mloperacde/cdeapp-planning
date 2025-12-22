@@ -39,6 +39,16 @@ export default function QualityControlPage() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
+  const { data: machines = [] } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list('orden'),
+  });
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+  });
+
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -308,6 +318,8 @@ export default function QualityControlPage() {
         inspection={editingInspection}
         workOrders={workOrders}
         employees={employees}
+        machines={machines}
+        teams={teams}
         currentUser={currentUser}
         onSubmit={(data) => {
           if (editingInspection) {
@@ -321,7 +333,7 @@ export default function QualityControlPage() {
   );
 }
 
-function InspectionFormDialog({ open, onClose, inspection, workOrders, employees, currentUser, onSubmit }) {
+function InspectionFormDialog({ open, onClose, inspection, workOrders, employees, machines, teams, currentUser, onSubmit }) {
   const [formData, setFormData] = useState({
     work_order_id: "",
     product_article_code: "",
@@ -337,12 +349,27 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
     rework_required: false,
     rework_assigned_to: "",
     severity: "Media",
-    defects_found: []
+    defects_found: [],
+    machine_id: "",
+    machine_name: "",
+    team_key: "",
+    responsable_linea: "",
+    responsable_linea_name: "",
+    segunda_linea: "",
+    segunda_linea_name: "",
+    operarios: [],
+    images: []
   });
+
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   React.useEffect(() => {
     if (inspection) {
-      setFormData(inspection);
+      setFormData({
+        ...inspection,
+        operarios: inspection.operarios || [],
+        images: inspection.images || []
+      });
     } else {
       const emp = employees.find(e => e.email === currentUser?.email);
       setFormData({
@@ -360,7 +387,16 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
         rework_required: false,
         rework_assigned_to: "",
         severity: "Media",
-        defects_found: []
+        defects_found: [],
+        machine_id: "",
+        machine_name: "",
+        team_key: "",
+        responsable_linea: "",
+        responsable_linea_name: "",
+        segunda_linea: "",
+        segunda_linea_name: "",
+        operarios: [],
+        images: []
       });
     }
   }, [inspection, employees, currentUser, open]);
@@ -368,6 +404,60 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
+  };
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    setUploadingImages(true);
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const { data } = await base44.integrations.Core.UploadFile({ file });
+        return data.file_url;
+      });
+      const urls = await Promise.all(uploadPromises);
+      setFormData(prev => ({
+        ...prev,
+        images: [...(prev.images || []), ...urls]
+      }));
+      toast.success(`${files.length} imagen(es) subida(s)`);
+    } catch (error) {
+      toast.error("Error al subir imágenes");
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const removeImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addOperario = () => {
+    setFormData(prev => ({
+      ...prev,
+      operarios: [...(prev.operarios || []), { id: "", name: "" }]
+    }));
+  };
+
+  const removeOperario = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      operarios: prev.operarios.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateOperario = (index, empId) => {
+    const emp = employees.find(e => e.id === empId);
+    setFormData(prev => ({
+      ...prev,
+      operarios: prev.operarios.map((op, i) => 
+        i === index ? { id: empId, name: emp?.nombre || "" } : op
+      )
+    }));
   };
 
   const selectedOrder = workOrders.find(wo => wo.id === formData.work_order_id);
