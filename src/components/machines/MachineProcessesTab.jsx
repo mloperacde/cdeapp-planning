@@ -28,6 +28,32 @@ export default function MachineProcessesTab({ machine }) {
     queryFn: () => base44.entities.MachineProcess.list(),
   });
 
+  const saveMachineAssignmentsMutation = useMutation({
+    mutationFn: async (assignments) => {
+      const existing = machineProcesses.filter(mp => mp.machine_id === machine.id);
+      await Promise.all(existing.map(mp => base44.entities.MachineProcess.delete(mp.id)));
+      
+      const newAssignments = Object.entries(assignments)
+        .filter(([_, assigned]) => assigned.checked)
+        .map(([processId, assigned]) => ({
+          machine_id: machine.id,
+          process_id: processId,
+          operadores_requeridos: assigned.operadores || 1,
+          activo: true
+        }));
+
+      if (newAssignments.length > 0) {
+        await base44.entities.MachineProcess.bulkCreate(newAssignments);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+      setShowConfig(false);
+      setMachineAssignments({});
+      toast.success("Configuración guardada correctamente");
+    },
+  });
+
   const getMachineProcesses = () => {
     const machineProcs = machineProcesses.filter(mp => mp.machine_id === machine.id && mp.activo);
     return machineProcs.map(mp => {
@@ -137,6 +163,10 @@ export default function MachineProcessesTab({ machine }) {
         operadores: parseInt(value) || 1
       }
     });
+  };
+
+  const handleSaveConfig = () => {
+    saveMachineAssignmentsMutation.mutate(machineAssignments);
   };
 
   const machineProcs = getMachineProcesses();
@@ -358,7 +388,7 @@ export default function MachineProcessesTab({ machine }) {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={() => saveMachineAssignmentsMutation.mutate(machineAssignments)}
+                  onClick={handleSaveConfig}
                   className="bg-blue-600 hover:bg-blue-700"
                   disabled={saveMachineAssignmentsMutation.isPending}
                 >

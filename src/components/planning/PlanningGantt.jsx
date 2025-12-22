@@ -28,9 +28,10 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
     return dayList;
   }, [dateRange, holidays]);
 
-  // 2. Group orders by machine
+  // 2. Sort machines by orden and group orders
   const machineRows = useMemo(() => {
-    return machines.map(machine => {
+    const sortedMachines = [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    return sortedMachines.map(machine => {
       const machineOrders = orders.filter(o => o.machine_id === machine.id);
       
       // Separate scheduled vs unscheduled (backlog)
@@ -45,7 +46,7 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
         backlog
       };
     });
-  }, [machines, orders]);
+  }, [machines, orders]); // machineRows recalculates when machines change (including orden)
 
   const getPriorityColor = (priority) => {
     switch(priority) {

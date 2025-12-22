@@ -7,6 +7,11 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function MachineOrdersList({ machines, orders, processes, onEditOrder }) {
+  // Sort machines by orden field
+  const sortedMachines = React.useMemo(() => {
+    return [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  }, [machines]);
+
   const getPriorityBadge = (priority) => {
     const colors = {
       1: "bg-red-500 text-white",
@@ -31,7 +36,7 @@ export default function MachineOrdersList({ machines, orders, processes, onEditO
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto p-4 space-y-4">
-        {machines.map(machine => {
+        {sortedMachines.map(machine => {
           const machineOrders = getMachineOrders(machine.id);
           if (machineOrders.length === 0) return null;
 

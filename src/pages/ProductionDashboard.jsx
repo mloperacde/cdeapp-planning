@@ -118,7 +118,8 @@ export default function ProductionDashboardPage() {
 
   // Production by Machine
   const productionByMachine = useMemo(() => {
-    const data = machines.map(machine => {
+    const sortedMachines = [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    const data = sortedMachines.map(machine => {
       const machineOrders = workOrders.filter(wo => wo.machine_id === machine.id);
       return {
         name: machine.nombre,
@@ -455,7 +456,7 @@ export default function ProductionDashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {machines.map(machine => {
+            {[...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0)).map(machine => {
               const status = machineStatuses.find(ms => ms.machine_id === machine.id);
               const isAvailable = status?.estado_disponibilidad === "Disponible";
               const cycleDeviation = status?.tiempo_ciclo_actual && status?.tiempo_ciclo_estandar
