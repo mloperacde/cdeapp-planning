@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle, Activity, TrendingUp, Clock, ArrowLeft, ArrowUpDown } from "lucide-react";
+import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle, Activity, TrendingUp, Clock, ArrowLeft, ArrowUpDown, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { useDebounce } from "../components/utils/useDebounce";
 import { usePagination } from "../components/utils/usePagination";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineOrderManager from "../components/machines/MachineOrderManager";
+import MachineDetailCard from "../components/machines/MachineDetailCard";
 import {
   Dialog,
   DialogContent,
