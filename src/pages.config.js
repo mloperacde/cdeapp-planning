@@ -40,6 +40,7 @@ import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
+import MachineMaster from './pages/MachineMaster';
 import Machines from './pages/Machines';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
@@ -75,14 +76,13 @@ import ShiftManagers from './pages/ShiftManagers';
 import ShiftPlanning from './pages/ShiftPlanning';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
+import SystemHealth from './pages/SystemHealth';
 import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import SystemHealth from './pages/SystemHealth';
-import MachineMaster from './pages/MachineMaster';
 import __Layout from './Layout.jsx';
 
 
@@ -129,6 +129,7 @@ export const PAGES = {
     "MachineAssignments": MachineAssignments,
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
+    "MachineMaster": MachineMaster,
     "Machines": Machines,
     "MaintenanceTracking": MaintenanceTracking,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
@@ -164,14 +165,13 @@ export const PAGES = {
     "ShiftPlanning": ShiftPlanning,
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
+    "SystemHealth": SystemHealth,
     "SystemReset": SystemReset,
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "SystemHealth": SystemHealth,
-    "MachineMaster": MachineMaster,
 }
 
 export const pagesConfig = {

@@ -44,10 +44,6 @@ export default function QualityControlPage() {
     queryFn: () => base44.entities.Machine.list('orden'),
   });
 
-  const sortedMachines = React.useMemo(() => {
-    return [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  }, [machines]);
-
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
@@ -533,7 +529,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                   <SelectValue placeholder="Seleccionar máquina" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sortedMachines.map(m => (
+                  {machines.map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
                   ))}
                 </SelectContent>
