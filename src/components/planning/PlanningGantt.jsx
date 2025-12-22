@@ -119,51 +119,45 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
                     </div>
                   </div>
                   
-                  {/* Backlog Area */}
-                  <div className="flex-1 bg-slate-100/50 dark:bg-slate-900/50 p-2 min-h-[60px]">
-                     <div className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">
-                       Sin Programar ({machine.backlog.length})
-                     </div>
-                     <Droppable droppableId={`backlog|${machine.id}`}>
-                       {(provided) => (
-                         <div 
-                           ref={provided.innerRef} 
-                           {...provided.droppableProps}
-                           className="space-y-2 min-h-[20px]"
-                         >
-                           {machine.backlog.map((order, index) => (
-                             <Draggable key={order.id} draggableId={order.id} index={index}>
-                               {(provided, snapshot) => (
-                                 <div
-                                   ref={provided.innerRef}
-                                   {...provided.draggableProps}
-                                   {...provided.dragHandleProps}
-                                   className={`bg-white dark:bg-slate-800 p-2 rounded border shadow-sm text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${snapshot.isDragging ? 'opacity-80 ring-2 ring-blue-500 z-50' : ''}`}
-                                   style={provided.draggableProps.style}
-                                 >
-                                   <div className="flex justify-between items-start mb-1">
-                                      <span className="font-bold text-blue-700 dark:text-blue-400">{order.order_number}</span>
-                                      <Badge variant="outline" className={`h-4 px-1 text-[9px] ${order.priority <= 2 ? 'bg-red-50 text-red-600 border-red-200' : ''}`}>
-                                        P{order.priority}
-                                      </Badge>
-                                   </div>
-                                   <div className="truncate font-medium" title={order.product_article_code}>
-                                      {order.product_article_code || 'Sin art.'}
-                                   </div>
-                                   <div className="text-muted-foreground truncate" title={order.product_name}>
-                                      {order.product_name || 'Sin nombre'}
-                                   </div>
-                                   <div className="mt-1 flex justify-between text-[10px] text-slate-400">
-                                      <span>Cant: {order.quantity}</span>
-                                   </div>
-                                 </div>
-                               )}
-                             </Draggable>
-                           ))}
-                           {provided.placeholder}
-                         </div>
-                       )}
-                     </Droppable>
+                  {/* Backlog Area - Compact */}
+                  <div className="flex-1 bg-slate-100/50 dark:bg-slate-900/50 p-1.5 min-h-[40px]">
+                    <div className="text-[9px] font-semibold text-slate-400 mb-1 uppercase tracking-wider">
+                      Sin Programar ({machine.backlog.length})
+                    </div>
+                    <Droppable droppableId={`backlog|${machine.id}`}>
+                      {(provided) => (
+                        <div 
+                          ref={provided.innerRef} 
+                          {...provided.droppableProps}
+                          className="space-y-1 min-h-[20px]"
+                        >
+                          {machine.backlog.map((order, index) => (
+                            <Draggable key={order.id} draggableId={order.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`bg-white dark:bg-slate-800 px-1.5 py-1 rounded border shadow-sm text-[10px] cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${snapshot.isDragging ? 'opacity-80 ring-2 ring-blue-500 z-50' : ''}`}
+                                  style={provided.draggableProps.style}
+                                >
+                                  <div className="flex justify-between items-center gap-1">
+                                     <span className="font-bold text-blue-700 dark:text-blue-400 text-[11px]">{order.order_number}</span>
+                                     <Badge variant="outline" className={`h-3 px-1 text-[8px] ${order.priority <= 2 ? 'bg-red-50 text-red-600 border-red-200' : ''}`}>
+                                       P{order.priority}
+                                     </Badge>
+                                  </div>
+                                  <div className="truncate text-[9px] text-slate-600" title={order.product_name}>
+                                     {order.product_name || order.product_article_code || 'Sin nombre'}
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
                   </div>
                 </div>
 
