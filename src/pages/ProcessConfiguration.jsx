@@ -60,7 +60,7 @@ export default function ProcessConfigurationPage() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('nombre'),
+    queryFn: () => base44.entities.Machine.list('orden'),
     initialData: EMPTY_ARRAY,
   });
 

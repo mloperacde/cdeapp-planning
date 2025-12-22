@@ -488,11 +488,14 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                   <SelectValue placeholder="Seleccionar orden" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workOrders.map(wo => (
-                    <SelectItem key={wo.id} value={wo.id}>
-                      {wo.order_number} - {wo.product_name || wo.product_article_code}
-                    </SelectItem>
-                  ))}
+                  {workOrders.map(wo => {
+                    const machine = machines.find(m => m.id === wo.machine_id);
+                    return (
+                      <SelectItem key={wo.id} value={wo.id}>
+                        {wo.order_number} - {wo.product_name || wo.product_article_code} {machine ? `(${machine.nombre})` : ''}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

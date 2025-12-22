@@ -83,6 +83,7 @@ import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
+import ProductionDashboard from './pages/ProductionDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -172,6 +173,7 @@ export const PAGES = {
     "WorkCalendarConfig": WorkCalendarConfig,
     "ProductionPlanning": ProductionPlanning,
     "QualityControl": QualityControl,
+    "ProductionDashboard": ProductionDashboard,
 }
 
 export const pagesConfig = {

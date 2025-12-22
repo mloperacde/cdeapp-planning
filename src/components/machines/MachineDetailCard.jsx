@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, Upload, FileText, Image as ImageIcon, Wrench, TrendingUp, X, Download } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Upload, FileText, Image as ImageIcon, Wrench, TrendingUp, X, Download, Settings2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import MachineProcessesTab from "./MachineProcessesTab";
 
 export default function MachineDetailCard({ machine, onClose }) {
   const [editMode, setEditMode] = useState(false);
@@ -150,7 +152,15 @@ export default function MachineDetailCard({ machine, onClose }) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <Tabs defaultValue="info" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="info">Información</TabsTrigger>
+            <TabsTrigger value="processes">Procesos</TabsTrigger>
+            <TabsTrigger value="files">Archivos</TabsTrigger>
+            <TabsTrigger value="maintenance">Mantenimiento</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="info" className="space-y-6">
           {/* Información Básica */}
           <Card>
             <CardHeader>
@@ -385,7 +395,14 @@ export default function MachineDetailCard({ machine, onClose }) {
             </CardContent>
           </Card>
 
-          {/* Próximos Mantenimientos */}
+          </TabsContent>
+
+          <TabsContent value="processes">
+            <MachineProcessesTab machine={machine} />
+          </TabsContent>
+
+          <TabsContent value="files" className="space-y-6">
+          {/* Imágenes */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -414,7 +431,10 @@ export default function MachineDetailCard({ machine, onClose }) {
             </CardContent>
           </Card>
 
-          {/* Historial de Mantenimientos */}
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="space-y-6">
+          {/* Próximos Mantenimientos */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -444,7 +464,8 @@ export default function MachineDetailCard({ machine, onClose }) {
               )}
             </CardContent>
           </Card>
-        </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

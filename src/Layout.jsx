@@ -529,8 +529,10 @@ export default function Layout({ children, currentPageName }) {
                         <SidebarMenuButton
                           className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
                             isParentActive([
+                              createPageUrl("ProductionDashboard"),
                               createPageUrl("ProductionPlanning"),
-                              createPageUrl("ProcessConfiguration")
+                              createPageUrl("ProcessConfiguration"),
+                              createPageUrl("DailyShiftPlanning")
                             ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
                           }`}
                         >
@@ -545,6 +547,17 @@ export default function Layout({ children, currentPageName }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-6 mt-1 space-y-1">
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("ProductionDashboard")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("ProductionDashboard")} className="flex items-center gap-2 px-3 py-2">
+                              <BarChart3 className="w-4 h-4" />
+                              Dashboard Producción
+                            </Link>
+                          </SidebarMenuButton>
                           <SidebarMenuButton
                             asChild
                             className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
