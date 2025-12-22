@@ -30,6 +30,7 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
 
   // 2. Group orders by machine (machines already sorted by 'orden' from query)
   const machineRows = useMemo(() => {
+    if (!Array.isArray(machines)) return [];
     return machines.map(machine => {
       const machineOrders = orders.filter(o => o.machine_id === machine.id);
       
