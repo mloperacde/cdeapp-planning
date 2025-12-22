@@ -7,10 +7,8 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function MachineOrdersList({ machines, orders, processes, onEditOrder }) {
-  // Sort machines by orden field
-  const sortedMachines = React.useMemo(() => {
-    return [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  }, [machines]);
+  // Machines are already sorted by 'orden' from query
+  const sortedMachines = machines;
 
   const getPriorityBadge = (priority) => {
     const colors = {
