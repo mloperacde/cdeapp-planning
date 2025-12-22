@@ -19,8 +19,17 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { format, subDays, startOfDay, endOfDay, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function ProductionDashboardPage() {
+  return (
+    <ProtectedPage module="planning" action="view">
+      <ProductionDashboardContent />
+    </ProtectedPage>
+  );
+}
+
+function ProductionDashboardContent() {
   const [dateRange, setDateRange] = useState("7days");
   const [selectedMachine, setSelectedMachine] = useState("all");
 
