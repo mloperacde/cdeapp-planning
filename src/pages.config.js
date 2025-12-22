@@ -26,14 +26,11 @@ import EmployeeAbsences from './pages/EmployeeAbsences';
 import EmployeeChat from './pages/EmployeeChat';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
-import EmployeeList from './pages/EmployeeList';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
-import EmployeePlanning from './pages/EmployeePlanning';
 import EmployeeVacations from './pages/EmployeeVacations';
 import Employees from './pages/Employees';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
 import HRDashboard from './pages/HRDashboard';
-import Home from './pages/Home';
 import IncentiveManagement from './pages/IncentiveManagement';
 import LockerDataCleanup from './pages/LockerDataCleanup';
 import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
@@ -45,7 +42,6 @@ import MachineManagement from './pages/MachineManagement';
 import Machines from './pages/Machines';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
-import MasterMachineView from './pages/MasterMachineView';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
 import Mobile from './pages/Mobile';
@@ -85,6 +81,7 @@ import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import DataMigration from './pages/DataMigration';
+import SystemHealth from './pages/SystemHealth';
 import __Layout from './Layout.jsx';
 
 
@@ -117,14 +114,11 @@ export const PAGES = {
     "EmployeeChat": EmployeeChat,
     "EmployeeDataCompletion": EmployeeDataCompletion,
     "EmployeeDataCorrection": EmployeeDataCorrection,
-    "EmployeeList": EmployeeList,
     "EmployeeOnboarding": EmployeeOnboarding,
-    "EmployeePlanning": EmployeePlanning,
     "EmployeeVacations": EmployeeVacations,
     "Employees": Employees,
     "EmployeesShiftManager": EmployeesShiftManager,
     "HRDashboard": HRDashboard,
-    "Home": Home,
     "IncentiveManagement": IncentiveManagement,
     "LockerDataCleanup": LockerDataCleanup,
     "LockerDuplicateCleanup": LockerDuplicateCleanup,
@@ -136,7 +130,6 @@ export const PAGES = {
     "Machines": Machines,
     "MaintenanceTracking": MaintenanceTracking,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
-    "MasterMachineView": MasterMachineView,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
     "Mobile": Mobile,
@@ -176,6 +169,7 @@ export const PAGES = {
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
     "DataMigration": DataMigration,
+    "SystemHealth": SystemHealth,
 }
 
 export const pagesConfig = {

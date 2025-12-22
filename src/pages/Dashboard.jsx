@@ -56,7 +56,7 @@ function DashboardContent() {
   React.useEffect(() => {
     const init = async () => {
       try {
-        await base44.functions.invoke('sync_employee_availability_bulk');
+        await base44.functions.invoke('syncEmployeeData');
       } catch (e) {
         console.error("Background sync failed", e);
       }

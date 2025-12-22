@@ -117,7 +117,7 @@ export default function ShiftManagersPage() {
     queryFn: async () => {
       // Sync availability before loading
       try {
-        await base44.functions.invoke('sync_employee_availability_bulk');
+        await base44.functions.invoke('syncEmployeeData');
       } catch (e) {
         console.error("Sync failed", e);
       }

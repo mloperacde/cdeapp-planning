@@ -34,6 +34,7 @@ import {
   LogOut,
   UserCircle,
   Key,
+  Database,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -694,6 +695,17 @@ export default function Layout({ children, currentPageName }) {
                             <Link to={createPageUrl("DataMigration")} className="flex items-center gap-2 px-3 py-2">
                               <BookOpen className="w-4 h-4" />
                               Migración de Datos
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
+                              isActive(createPageUrl("SystemHealth")) ? 'bg-blue-50 text-blue-700' : ''
+                            }`}
+                          >
+                            <Link to={createPageUrl("SystemHealth")} className="flex items-center gap-2 px-3 py-2">
+                              <Activity className="w-4 h-4" />
+                              Salud del Sistema
                             </Link>
                           </SidebarMenuButton>
                           </div>
