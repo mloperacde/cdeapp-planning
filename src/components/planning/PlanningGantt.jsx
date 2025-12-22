@@ -28,10 +28,9 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
     return dayList;
   }, [dateRange, holidays]);
 
-  // 2. Sort machines by orden and group orders
+  // 2. Group orders by machine (machines already sorted by 'orden' from query)
   const machineRows = useMemo(() => {
-    const sortedMachines = [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
-    return sortedMachines.map(machine => {
+    return machines.map(machine => {
       const machineOrders = orders.filter(o => o.machine_id === machine.id);
       
       // Separate scheduled vs unscheduled (backlog)

@@ -1,11 +1,20 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Building, ArrowLeft, UserCog, FolderOpen } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Cog, Package, Building, ArrowLeft, UserCog, FolderOpen, Activity, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function ConfigurationPage() {
+  return (
+    <ProtectedPage module="configuration" action="view">
+      <ConfigurationContent />
+    </ProtectedPage>
+  );
+}
+
+function ConfigurationContent() {
   const configModules = {
     rrhh: {
       title: "Recursos Humanos",
@@ -79,13 +88,7 @@ export default function ConfigurationPage() {
     produccion: {
       title: "Producción",
       modules: [
-        {
-          title: "Archivo Maestro de Máquinas",
-          description: "Gestión centralizada del catálogo de máquinas",
-          icon: Cog,
-          url: createPageUrl("MasterMachineView"),
-          color: "slate"
-        },
+
         {
           title: "Configuración de Procesos",
           description: "Define procesos y requisitos por máquina",
@@ -153,6 +156,20 @@ export default function ConfigurationPage() {
           icon: MessageSquare,
           url: createPageUrl("MessagingConfig"),
           color: "indigo"
+        },
+        {
+          title: "Migración de Datos",
+          description: "Migra datos legacy a base maestra",
+          icon: Database,
+          url: createPageUrl("DataMigration"),
+          color: "blue"
+        },
+        {
+          title: "Salud del Sistema",
+          description: "Monitoreo y sincronización de datos",
+          icon: Activity,
+          url: createPageUrl("SystemHealth"),
+          color: "green"
         }
       ]
     }
