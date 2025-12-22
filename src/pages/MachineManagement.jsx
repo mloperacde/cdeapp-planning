@@ -212,10 +212,10 @@ function MachineManagementContent() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <Cog className="w-8 h-8 text-blue-600" />
-            Gestión de Estados de Máquinas
+            Consulta de Máquinas
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Control de disponibilidad y órdenes de producción
+            Vista de estado y disponibilidad de máquinas (Solo lectura)
           </p>
         </div>
 
@@ -262,15 +262,6 @@ function MachineManagementContent() {
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowOrderManager(true)}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                  Ordenar Máquinas
-                </Button>
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-slate-600 dark:text-slate-400">Página {currentPage} de {totalPages}</span>
@@ -346,22 +337,7 @@ function MachineManagementContent() {
                             >
                               <Eye className="w-5 h-5 text-blue-600" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleQuickToggle(machine.id, status.estado_disponibilidad);
-                              }}
-                              disabled={updateStatusMutation.isPending}
-                              title="Cambiar disponibilidad"
-                            >
-                              {isAvailable ? (
-                                <Power className="w-5 h-5 text-green-600" />
-                              ) : (
-                                <PowerOff className="w-5 h-5 text-red-600" />
-                              )}
-                            </Button>
+
                           </div>
                         </div>
 
@@ -385,14 +361,7 @@ function MachineManagementContent() {
                           </div>
                         </div>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full mt-3"
-                          onClick={() => handleEditStatus(machine)}
-                        >
-                          Editar Estado
-                        </Button>
+
                       </CardContent>
                     </Card>
                   );
@@ -403,190 +372,12 @@ function MachineManagementContent() {
         </Card>
       </div>
 
-      {editingStatus && (
-        <Dialog open={true} onOpenChange={() => setEditingStatus(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                Estado: {editingStatus.machine.nombre}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Estado de Disponibilidad</Label>
-                <Select
-                  value={editingStatus.estado_disponibilidad}
-                  onValueChange={(value) => setEditingStatus({
-                    ...editingStatus,
-                    estado_disponibilidad: value
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Disponible">Disponible</SelectItem>
-                    <SelectItem value="No disponible">No disponible</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Estado de Producción</Label>
-                <Select
-                  value={editingStatus.estado_produccion}
-                  onValueChange={(value) => setEditingStatus({
-                    ...editingStatus,
-                    estado_produccion: value
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sin orden">Sin orden</SelectItem>
-                    <SelectItem value="Orden nueva">Orden nueva</SelectItem>
-                    <SelectItem value="Orden en curso">Orden en curso</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notas</Label>
-                <Textarea
-                  value={editingStatus.notas_estado || ""}
-                  onChange={(e) => setEditingStatus({
-                    ...editingStatus,
-                    notas_estado: e.target.value
-                  })}
-                  rows={3}
-                  placeholder="Notas sobre el estado actual..."
-                />
-              </div>
-
-              {editingStatus.estado_produccion !== "Sin orden" && (
-                <div className="border-t pt-4 space-y-4">
-                  <h4 className="font-semibold flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-blue-600" />
-                    Datos de Producción en Tiempo Real
-                  </h4>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Artículo en Curso</Label>
-                      <Select
-                        value={editingStatus.articulo_en_curso}
-                        onValueChange={(value) => setEditingStatus({ ...editingStatus, articulo_en_curso: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar artículo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {articles.map(art => (
-                            <SelectItem key={art.id} value={art.id}>
-                              {art.nombre} ({art.codigo})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Lotes Producidos</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={editingStatus.lotes_producidos}
-                        onChange={(e) => setEditingStatus({ ...editingStatus, lotes_producidos: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Tiempo Ciclo Estándar (min)</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={editingStatus.tiempo_ciclo_estandar || ""}
-                        onChange={(e) => setEditingStatus({ ...editingStatus, tiempo_ciclo_estandar: parseFloat(e.target.value) || null })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Tiempo Ciclo Actual (min)</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={editingStatus.tiempo_ciclo_actual || ""}
-                        onChange={(e) => setEditingStatus({ ...editingStatus, tiempo_ciclo_actual: parseFloat(e.target.value) || null })}
-                      />
-                    </div>
-
-                    <div className="space-y-2 col-span-2">
-                      <Label>Hora Inicio Producción</Label>
-                      <Input
-                        type="datetime-local"
-                        value={editingStatus.hora_inicio_produccion}
-                        onChange={(e) => setEditingStatus({ ...editingStatus, hora_inicio_produccion: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="space-y-2 col-span-2">
-                      <Label>Motivo Desviación (si aplica)</Label>
-                      <Input
-                        value={editingStatus.motivo_desviacion}
-                        onChange={(e) => setEditingStatus({ ...editingStatus, motivo_desviacion: e.target.value })}
-                        placeholder="Ej: Parada por ajuste de máquina"
-                      />
-                    </div>
-                  </div>
-
-                  {editingStatus.tiempo_ciclo_actual && editingStatus.tiempo_ciclo_estandar && (
-                    <div className={`p-3 rounded-lg ${
-                      ((editingStatus.tiempo_ciclo_actual - editingStatus.tiempo_ciclo_estandar) / editingStatus.tiempo_ciclo_estandar * 100) > 20
-                        ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-300'
-                        : 'bg-green-50 dark:bg-green-900/20 border-2 border-green-300'
-                    }`}>
-                      <p className="text-sm font-semibold flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4" />
-                        Desviación: {(((editingStatus.tiempo_ciclo_actual - editingStatus.tiempo_ciclo_estandar) / editingStatus.tiempo_ciclo_estandar) * 100).toFixed(1)}%
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setEditingStatus(null)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSaveStatus}
-                  disabled={updateStatusMutation.isPending}
-                  className="bg-blue-600"
-                >
-                  {updateStatusMutation.isPending ? "Guardando..." : "Guardar"}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {showOrderManager && (
-        <Dialog open={true} onOpenChange={() => setShowOrderManager(false)}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <MachineOrderManager />
-          </DialogContent>
-        </Dialog>
-      )}
-
       {selectedMachine && (
         <MachineDetailCard 
           machine={selectedMachine} 
           onClose={() => setSelectedMachine(null)} 
         />
       )}
-      </div>
-      );
-      }
+    </div>
+  );
+}

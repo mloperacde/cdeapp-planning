@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Cog, Settings, Activity, Wrench, ArrowLeft } from "lucide-react";
+import { Cog, Settings, Activity, Wrench, ArrowLeft, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "../components/roles/ProtectedPage";
 
@@ -17,11 +17,18 @@ export default function MachinesPage() {
 function MachinesContent() {
   const subPages = [
     {
-      title: "Gestión de Máquinas",
-      description: "Administra el inventario completo de máquinas",
+      title: "Archivo Maestro",
+      description: "Gestión completa del catálogo de máquinas",
       icon: Cog,
-      url: createPageUrl("MachineManagement"),
+      url: createPageUrl("MachineMaster"),
       color: "blue"
+    },
+    {
+      title: "Consulta de Máquinas",
+      description: "Vista de estado y disponibilidad",
+      icon: Activity,
+      url: createPageUrl("MachineManagement"),
+      color: "indigo"
     },
     {
       title: "Configuración de Procesos",
@@ -33,7 +40,7 @@ function MachinesContent() {
     {
       title: "Planning de Máquinas",
       description: "Planifica asignaciones de máquinas por equipo",
-      icon: Activity,
+      icon: Database,
       url: createPageUrl("MachinePlanning"),
       color: "emerald"
     },
@@ -48,6 +55,7 @@ function MachinesContent() {
 
   const colorClasses = {
     blue: "from-blue-500 to-blue-600",
+    indigo: "from-indigo-500 to-indigo-600",
     purple: "from-purple-500 to-purple-600",
     emerald: "from-emerald-500 to-emerald-600",
     orange: "from-orange-500 to-orange-600"
