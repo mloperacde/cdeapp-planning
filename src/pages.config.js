@@ -83,6 +83,7 @@ import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import QualityControl from './pages/QualityControl';
+import MachineOrderConfig from './pages/MachineOrderConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -172,6 +173,7 @@ export const PAGES = {
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
     "QualityControl": QualityControl,
+    "MachineOrderConfig": MachineOrderConfig,
 }
 
 export const pagesConfig = {
