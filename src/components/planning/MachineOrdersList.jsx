@@ -6,9 +6,8 @@ import { Factory, Calendar, AlertCircle, Edit } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function MachineOrdersList({ machines, orders, processes, onEditOrder }) {
-  // Machines are already sorted by 'orden' from query
-  const sortedMachines = machines;
+export default function MachineOrdersList({ machines = [], orders, processes, onEditOrder }) {
+  // Machines are already sorted by 'orden' from query - use them directly
 
   const getPriorityBadge = (priority) => {
     const colors = {
@@ -34,7 +33,7 @@ export default function MachineOrdersList({ machines, orders, processes, onEditO
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto p-4 space-y-4">
-        {sortedMachines.map(machine => {
+        {machines.map(machine => {
           const machineOrders = getMachineOrders(machine.id);
           if (machineOrders.length === 0) return null;
 
