@@ -79,7 +79,8 @@ function DashboardContent() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('nombre', 1000),
+    queryFn: () => base44.entities.Machine.list('orden'),
+    staleTime: 5 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
 

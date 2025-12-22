@@ -53,7 +53,8 @@ function MaintenanceTrackingContent() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
+    queryFn: () => base44.entities.Machine.list('orden'),
+    staleTime: 5 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
 

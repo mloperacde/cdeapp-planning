@@ -15,6 +15,7 @@ import DailyPlanning from './pages/DailyPlanning';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
 import DataImport from './pages/DataImport';
+import DataMigration from './pages/DataMigration';
 import DepartmentManagement from './pages/DepartmentManagement';
 import DeploymentGuide from './pages/DeploymentGuide';
 import DirectDataEntry from './pages/DirectDataEntry';
@@ -80,7 +81,6 @@ import Timeline from './pages/Timeline';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import DataMigration from './pages/DataMigration';
 import SystemHealth from './pages/SystemHealth';
 import __Layout from './Layout.jsx';
 
@@ -103,6 +103,7 @@ export const PAGES = {
     "DailyShiftPlanning": DailyShiftPlanning,
     "Dashboard": Dashboard,
     "DataImport": DataImport,
+    "DataMigration": DataMigration,
     "DepartmentManagement": DepartmentManagement,
     "DeploymentGuide": DeploymentGuide,
     "DirectDataEntry": DirectDataEntry,
@@ -168,7 +169,6 @@ export const PAGES = {
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "DataMigration": DataMigration,
     "SystemHealth": SystemHealth,
 }
 
