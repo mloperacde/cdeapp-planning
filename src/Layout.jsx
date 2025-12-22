@@ -6,6 +6,7 @@ import {
   Clock,
   Settings,
   Activity,
+  Database,
   Coffee,
   Cog,
   ArrowLeftRight,
