@@ -4,24 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cog, Power, PowerOff, Package, Search, CheckCircle2, XCircle, AlertCircle, Activity, TrendingUp, Clock, ArrowLeft, ArrowUpDown, Eye } from "lucide-react";
+import { Cog, CheckCircle2, Package, ArrowLeft, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useDebounce } from "../components/utils/useDebounce";
 import { usePagination } from "../components/utils/usePagination";
 import AdvancedSearch from "../components/common/AdvancedSearch";
-import MachineOrderManager from "../components/machines/MachineOrderManager";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import ProtectedPage from "../components/roles/ProtectedPage";
 
 const EMPTY_ARRAY = [];
@@ -36,8 +24,6 @@ export default function MachineManagement() {
 
 function MachineManagementContent() {
   const [filters, setFilters] = useState({});
-  const [editingStatus, setEditingStatus] = useState(null);
-  const [showOrderManager, setShowOrderManager] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const queryClient = useQueryClient();
 
@@ -56,29 +42,7 @@ function MachineManagementContent() {
     initialData: EMPTY_ARRAY,
   });
 
-  const { data: articles = EMPTY_ARRAY } = useQuery({
-    queryKey: ['articles'],
-    queryFn: () => base44.entities.Article.list(),
-    initialData: EMPTY_ARRAY,
-  });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ machineId, statusData }) => {
-      const existing = machineStatuses.find(ms => ms.machine_id === machineId);
-      
-      if (existing) {
-        return base44.entities.MachineStatus.update(existing.id, statusData);
-      }
-      return base44.entities.MachineStatus.create({
-        machine_id: machineId,
-        ...statusData
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['machineStatuses'] });
-      setEditingStatus(null);
-    },
-  });
 
   const getStatus = (machineId) => {
     return machineStatuses.find(ms => ms.machine_id === machineId) || {
@@ -126,67 +90,6 @@ function MachineManagementContent() {
   }, [machines, filters, machineStatuses]);
 
   const { currentPage, totalPages, paginatedItems, goToPage, nextPage, prevPage } = usePagination(filteredMachines, 24);
-
-  const handleQuickToggle = (machineId, currentDisp) => {
-    const newDisp = currentDisp === "Disponible" ? "No disponible" : "Disponible";
-    updateStatusMutation.mutate({
-      machineId,
-      statusData: {
-        estado_disponibilidad: newDisp,
-        fecha_actualizacion: new Date().toISOString()
-      }
-    });
-  };
-
-  const handleEditStatus = (machine) => {
-    const status = getStatus(machine.id);
-    setEditingStatus({
-      machine,
-      estado_disponibilidad: status.estado_disponibilidad || "Disponible",
-      estado_produccion: status.estado_produccion || "Sin orden",
-      notas_estado: status.notas_estado || "",
-      articulo_en_curso: status.articulo_en_curso || "",
-      lotes_producidos: status.lotes_producidos || 0,
-      tiempo_ciclo_actual: status.tiempo_ciclo_actual || null,
-      tiempo_ciclo_estandar: status.tiempo_ciclo_estandar || null,
-      hora_inicio_produccion: status.hora_inicio_produccion || "",
-      alerta_desviacion: status.alerta_desviacion || false,
-      motivo_desviacion: status.motivo_desviacion || "",
-    });
-  };
-
-  const handleSaveStatus = () => {
-    if (!editingStatus) return;
-    
-    const statusData = {
-      estado_disponibilidad: editingStatus.estado_disponibilidad,
-      estado_produccion: editingStatus.estado_produccion,
-      notas_estado: editingStatus.notas_estado,
-      articulo_en_curso: editingStatus.articulo_en_curso,
-      lotes_producidos: editingStatus.lotes_producidos,
-      tiempo_ciclo_actual: editingStatus.tiempo_ciclo_actual,
-      tiempo_ciclo_estandar: editingStatus.tiempo_ciclo_estandar,
-      hora_inicio_produccion: editingStatus.hora_inicio_produccion,
-      motivo_desviacion: editingStatus.motivo_desviacion,
-      fecha_actualizacion: new Date().toISOString()
-    };
-
-    // Auto-detectar alertas
-    if (editingStatus.tiempo_ciclo_actual && editingStatus.tiempo_ciclo_estandar) {
-      const desviacion = ((editingStatus.tiempo_ciclo_actual - editingStatus.tiempo_ciclo_estandar) / editingStatus.tiempo_ciclo_estandar) * 100;
-      statusData.alerta_desviacion = desviacion > 20;
-      if (desviacion > 20 && !statusData.motivo_desviacion) {
-        statusData.motivo_desviacion = `Tiempo de ciclo ${desviacion.toFixed(1)}% por encima del estándar`;
-      }
-    } else {
-      statusData.alerta_desviacion = false;
-    }
-    
-    updateStatusMutation.mutate({
-      machineId: editingStatus.machine.id,
-      statusData
-    });
-  };
 
   const availableCount = filteredMachines.filter(m => 
     getStatus(m.id).estado_disponibilidad === "Disponible"
