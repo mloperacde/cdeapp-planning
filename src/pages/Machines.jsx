@@ -4,8 +4,17 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Cog, Settings, Activity, Wrench, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function MachinesPage() {
+  return (
+    <ProtectedPage module="machines" action="view">
+      <MachinesContent />
+    </ProtectedPage>
+  );
+}
+
+function MachinesContent() {
   const subPages = [
     {
       title: "Gestión de Máquinas",

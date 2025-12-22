@@ -19,8 +19,17 @@ import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function ProductionPlanningPage() {
+  return (
+    <ProtectedPage module="planning" action="view">
+      <ProductionPlanningContent />
+    </ProtectedPage>
+  );
+}
+
+function ProductionPlanningContent() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [dropDialogData, setDropDialogData] = useState(null);

@@ -11,10 +11,19 @@ import { Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import WorkCalendar from "../components/absences/WorkCalendar";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 const EMPTY_ARRAY = [];
 
 export default function Timeline() {
+  return (
+    <ProtectedPage module="planning" action="view">
+      <TimelineContent />
+    </ProtectedPage>
+  );
+}
+
+function TimelineContent() {
   const now = new Date();
   const [viewMode, setViewMode] = useState('day');
   const [selectedDate, setSelectedDate] = useState(now);

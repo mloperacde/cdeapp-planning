@@ -21,10 +21,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 const EMPTY_ARRAY = [];
 
 export default function MachineManagement() {
+  return (
+    <ProtectedPage module="machines" action="view">
+      <MachineManagementContent />
+    </ProtectedPage>
+  );
+}
+
+function MachineManagementContent() {
   const [filters, setFilters] = useState({});
   const [editingStatus, setEditingStatus] = useState(null);
   const [showOrderManager, setShowOrderManager] = useState(false);
