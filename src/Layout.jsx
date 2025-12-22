@@ -81,6 +81,16 @@ export default function Layout({ children, currentPageName }) {
     staleTime: 5 * 60 * 1000, // Cache por 5 minutos
   });
 
+  // Detect mobile and redirect to MobileHome
+  React.useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isMobilePage = location.pathname.includes('Mobile');
+    
+    if (isMobile && !isMobilePage && currentUser) {
+      window.location.href = createPageUrl('MobileHome');
+    }
+  }, [location.pathname, currentUser]);
+
   const { data: employee, isLoading: employeeLoading } = useQuery({
     queryKey: ['currentEmployee', currentUser?.email],
     queryFn: async () => {
