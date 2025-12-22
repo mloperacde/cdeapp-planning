@@ -29,10 +29,19 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import AdvancedSearch from "../components/common/AdvancedSearch";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 const EMPTY_ARRAY = [];
 
 export default function ProcessConfigurationPage() {
+  return (
+    <ProtectedPage module="machines" action="configure_processes">
+      <ProcessConfigurationContent />
+    </ProtectedPage>
+  );
+}
+
+function ProcessConfigurationContent() {
   const [showForm, setShowForm] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [showMachineAssignment, setShowMachineAssignment] = useState(null);

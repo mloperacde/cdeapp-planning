@@ -24,10 +24,19 @@ import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder
 import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenance";
 import KanbanView from "../components/maintenance/KanbanView";
 import AdvancedSearch from "../components/common/AdvancedSearch";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 const EMPTY_ARRAY = [];
 
 export default function MaintenanceTrackingPage() {
+  return (
+    <ProtectedPage module="maintenance" action="view">
+      <MaintenanceTrackingContent />
+    </ProtectedPage>
+  );
+}
+
+function MaintenanceTrackingContent() {
   const [currentTab, setCurrentTab] = useState('kanban');
   const [showForm, setShowForm] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState(null);
