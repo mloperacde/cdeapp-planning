@@ -37,6 +37,7 @@ function MachineManagementContent() {
   const [filters, setFilters] = useState({});
   const [editingStatus, setEditingStatus] = useState(null);
   const [showOrderManager, setShowOrderManager] = useState(false);
+  const [selectedMachine, setSelectedMachine] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
@@ -321,38 +322,48 @@ function MachineManagementContent() {
                   const status = getStatus(machine.id);
                   const isAvailable = status.estado_disponibilidad === "Disponible";
                   const prodStatus = status.estado_produccion;
-                  
+
                   return (
                     <Card 
                       key={machine.id} 
-                      className={`border-2 transition-all cursor-pointer ${
+                      className={`border-2 transition-all ${
                         isAvailable ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : 'border-red-300 bg-red-50 dark:bg-red-900/20'
                       }`}
-                      onClick={() => handleEditStatus(machine)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
-                          <div>
+                          <div className="flex-1">
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">{machine.nombre}</h3>
                             <p className="text-xs text-slate-600 dark:text-slate-400">{machine.codigo}</p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleQuickToggle(machine.id, status.estado_disponibilidad);
-                            }}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            {isAvailable ? (
-                              <Power className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <PowerOff className="w-5 h-5 text-red-600" />
-                            )}
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSelectedMachine(machine)}
+                              title="Ver ficha completa"
+                            >
+                              <Eye className="w-5 h-5 text-blue-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickToggle(machine.id, status.estado_disponibilidad);
+                              }}
+                              disabled={updateStatusMutation.isPending}
+                              title="Cambiar disponibilidad"
+                            >
+                              {isAvailable ? (
+                                <Power className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <PowerOff className="w-5 h-5 text-red-600" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">Disponibilidad</span>
@@ -360,7 +371,7 @@ function MachineManagementContent() {
                               {status.estado_disponibilidad}
                             </Badge>
                           </div>
-                          
+
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">Producción</span>
                             <Badge variant="outline" className={
@@ -372,6 +383,15 @@ function MachineManagementContent() {
                             </Badge>
                           </div>
                         </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-3"
+                          onClick={() => handleEditStatus(machine)}
+                        >
+                          Editar Estado
+                        </Button>
                       </CardContent>
                     </Card>
                   );
@@ -559,6 +579,13 @@ function MachineManagementContent() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
-  );
-}
+
+      {selectedMachine && (
+        <MachineDetailCard 
+          machine={selectedMachine} 
+          onClose={() => setSelectedMachine(null)} 
+        />
+      )}
+      </div>
+      );
+      }
