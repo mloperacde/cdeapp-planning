@@ -51,11 +51,13 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
 
   // Derived state for filtered lists
   const availableProcesses = useMemo(() => {
-    if (!formData.machine_id) return processes;
+    // Si no hay máquina seleccionada, mostrar TODOS los procesos configurados
+    if (!formData.machine_id) return processes.filter(p => p.activo);
+    // Si hay máquina, filtrar por los procesos que puede hacer esa máquina
     const allowedProcessIds = machineProcesses
       .filter(mp => mp.machine_id === formData.machine_id && mp.activo)
       .map(mp => mp.process_id);
-    return processes.filter(p => allowedProcessIds.includes(p.id));
+    return processes.filter(p => allowedProcessIds.includes(p.id) && p.activo);
   }, [processes, machineProcesses, formData.machine_id]);
 
   const availableMachines = useMemo(() => {
