@@ -28,9 +28,9 @@ export default function PlanningGantt({ orders, machines, processes, dateRange, 
     return dayList;
   }, [dateRange, holidays]);
 
-  // 2. Group orders by machine (machines already sorted by 'orden' from query)
+  // Group orders by machine (machines already sorted by 'orden' from query)
   const machineRows = useMemo(() => {
-    if (!Array.isArray(machines)) return [];
+    if (!Array.isArray(machines) || machines.length === 0) return [];
     return machines.map(machine => {
       const machineOrders = orders.filter(o => o.machine_id === machine.id);
       
