@@ -214,7 +214,7 @@ function ConfigurationContent() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" className="mb-2">
+            <Button type="button" variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver al Dashboard
             </Button>

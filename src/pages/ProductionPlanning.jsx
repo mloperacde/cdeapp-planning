@@ -158,7 +158,7 @@ function ProductionPlanningContent() {
             machines={machines} 
             processes={processes} 
           />
-          <Button onClick={handleNewOrder} className="bg-blue-600 hover:bg-blue-700">
+          <Button type="button" onClick={handleNewOrder} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Orden
           </Button>
@@ -241,8 +241,8 @@ function ProductionPlanningContent() {
         <div className="min-h-0 flex flex-col">
           <Tabs defaultValue="gantt" className="h-full flex flex-col">
             <TabsList className="flex-shrink-0">
-              <TabsTrigger value="gantt">Vista Gantt</TabsTrigger>
-              <TabsTrigger value="list">Vista Lista por Máquina</TabsTrigger>
+              <TabsTrigger value="gantt" type="button">Vista Gantt</TabsTrigger>
+              <TabsTrigger value="list" type="button">Vista Lista por Máquina</TabsTrigger>
             </TabsList>
             
             <TabsContent value="gantt" className="flex-1 min-h-0 mt-2">
