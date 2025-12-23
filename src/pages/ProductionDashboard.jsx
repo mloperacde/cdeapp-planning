@@ -171,20 +171,20 @@ function ProductionDashboardContent() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   return (
-    <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Factory className="w-8 h-8 text-blue-600" />
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <Factory className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
             Dashboard de Producción
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 mt-1">
             Métricas clave y análisis de rendimiento en tiempo real
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-3 w-full sm:w-auto">
           <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Todas las máquinas" />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +195,7 @@ function ProductionDashboardContent() {
             </SelectContent>
           </Select>
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -208,68 +208,68 @@ function ProductionDashboardContent() {
       </div>
 
       {/* KPIs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-blue-700 font-medium">OEE (Overall Equipment Effectiveness)</p>
-                <p className="text-3xl font-bold text-blue-900">{kpis.oee.toFixed(1)}%</p>
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">OEE (Overall Equipment Effectiveness)</p>
+                <p className="text-2xl md:text-3xl font-bold text-blue-900 dark:text-blue-100">{kpis.oee.toFixed(1)}%</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                   {kpis.oee >= 85 ? "Excelente" : kpis.oee >= 70 ? "Bueno" : "Mejorable"}
                 </p>
               </div>
-              <Gauge className="w-12 h-12 text-blue-600 opacity-50" />
+              <Gauge className="w-8 h-8 md:w-12 md:h-12 text-blue-600 dark:text-blue-400 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-4">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
+          <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-green-700 font-medium">Disponibilidad</p>
-                <p className="text-3xl font-bold text-green-900">{kpis.availability.toFixed(1)}%</p>
-                <p className="text-xs text-green-600 mt-1">
+                <p className="text-xs text-green-700 dark:text-green-300 font-medium">Disponibilidad</p>
+                <p className="text-2xl md:text-3xl font-bold text-green-900 dark:text-green-100">{kpis.availability.toFixed(1)}%</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
                   {machines.length} máquinas
                 </p>
               </div>
-              <Activity className="w-12 h-12 text-green-600 opacity-50" />
+              <Activity className="w-8 h-8 md:w-12 md:h-12 text-green-600 dark:text-green-400 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-4">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800">
+          <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-purple-700 font-medium">Tiempo Ciclo Promedio</p>
-                <p className="text-3xl font-bold text-purple-900">{kpis.avgCycleTime.toFixed(1)}</p>
-                <p className="text-xs text-purple-600 mt-1">minutos</p>
+                <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Tiempo Ciclo Promedio</p>
+                <p className="text-2xl md:text-3xl font-bold text-purple-900 dark:text-purple-100">{kpis.avgCycleTime.toFixed(1)}</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">minutos</p>
               </div>
-              <Clock className="w-12 h-12 text-purple-600 opacity-50" />
+              <Clock className="w-8 h-8 md:w-12 md:h-12 text-purple-600 dark:text-purple-400 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <CardContent className="p-4">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800">
+          <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-orange-700 font-medium">Tasa de Calidad</p>
-                <p className="text-3xl font-bold text-orange-900">{kpis.qualityRate.toFixed(1)}%</p>
-                <p className="text-xs text-orange-600 mt-1">
+                <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">Tasa de Calidad</p>
+                <p className="text-2xl md:text-3xl font-bold text-orange-900 dark:text-orange-100">{kpis.qualityRate.toFixed(1)}%</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                   {kpis.approvedCount}/{kpis.totalInspected} aprobadas
                 </p>
               </div>
-              <CheckCircle2 className="w-12 h-12 text-orange-600 opacity-50" />
+              <CheckCircle2 className="w-8 h-8 md:w-12 md:h-12 text-orange-600 dark:text-orange-400 opacity-50" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Órdenes de Trabajo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -277,7 +277,7 @@ function ProductionDashboardContent() {
                 <p className="text-sm text-slate-500">Completadas</p>
                 <p className="text-2xl font-bold text-green-600">{kpis.completed}</p>
               </div>
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
+              <CheckCircle2 className="w-6 h-6 md:w-8 md:h-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -319,14 +319,14 @@ function ProductionDashboardContent() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Production by Machine */}
-        <Card>
+        <Card className="dark:bg-card/80">
           <CardHeader>
-            <CardTitle className="text-lg">Producción por Máquina</CardTitle>
+            <CardTitle className="text-base md:text-lg dark:text-slate-100">Producción por Máquina</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="overflow-x-auto">
+            <ResponsiveContainer width="100%" height={300} className="min-w-[300px]">
               <BarChart data={productionByMachine}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
@@ -342,12 +342,12 @@ function ProductionDashboardContent() {
         </Card>
 
         {/* Production by Process */}
-        <Card>
+        <Card className="dark:bg-card/80">
           <CardHeader>
-            <CardTitle className="text-lg">Distribución por Proceso</CardTitle>
+            <CardTitle className="text-base md:text-lg dark:text-slate-100">Distribución por Proceso</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="overflow-x-auto">
+            <ResponsiveContainer width="100%" height={300} className="min-w-[300px]">
               <PieChart>
                 <Pie
                   data={productionByProcess}
@@ -370,20 +370,20 @@ function ProductionDashboardContent() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Workload Analysis */}
-        <Card>
+        <Card className="dark:bg-card/80">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-base md:text-lg flex items-center gap-2 dark:text-slate-100">
               <Package className="w-5 h-5 text-purple-600" />
               Carga de Trabajo por Máquina
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             {workloadData.length === 0 ? (
-              <p className="text-center text-slate-400 py-8">Sin datos de carga</p>
+              <p className="text-center text-slate-400 dark:text-slate-500 py-8">Sin datos de carga</p>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={300} className="min-w-[300px]">
                 <BarChart data={workloadData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
@@ -409,9 +409,9 @@ function ProductionDashboardContent() {
         </Card>
 
         {/* Quality Indicators */}
-        <Card>
+        <Card className="dark:bg-card/80">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-base md:text-lg flex items-center gap-2 dark:text-slate-100">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
               Indicadores de Calidad
             </CardTitle>
@@ -458,12 +458,12 @@ function ProductionDashboardContent() {
       </div>
 
       {/* Machine Performance Details */}
-      <Card>
+      <Card className="dark:bg-card/80">
         <CardHeader>
-          <CardTitle className="text-lg">Rendimiento de Máquinas</CardTitle>
+          <CardTitle className="text-base md:text-lg dark:text-slate-100">Rendimiento de Máquinas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {machines.map(machine => {
               const status = machineStatuses.find(ms => ms.machine_id === machine.id);
               const isAvailable = status?.estado_disponibilidad === "Disponible";
@@ -472,8 +472,8 @@ function ProductionDashboardContent() {
                 : 0;
               
               return (
-                <Card key={machine.id} className={`border-2 ${isAvailable ? 'border-green-300' : 'border-red-300'}`}>
-                  <CardContent className="p-4">
+                <Card key={machine.id} className={`border-2 ${isAvailable ? 'border-green-300 dark:border-green-700' : 'border-red-300 dark:border-red-700'} dark:bg-card/60`}>
+                  <CardContent className="p-3 md:p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h4 className="font-bold text-sm">{machine.nombre}</h4>

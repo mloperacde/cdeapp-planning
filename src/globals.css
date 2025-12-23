@@ -28,25 +28,46 @@ css
   }
   
   .dark {
-    --background: 222.2 47.4% 11.2%; /* Deep dark blue background - similar to #0f172a (Slate 950) but potentially slightly adjusted based on image vibe */
-    --foreground: 210 40% 98%; /* White text */
-    --card: 222.2 47.4% 15%; /* Slightly lighter card background - around #1e293b (Slate 800) */
+    --background: 222.2 47.4% 11.2%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 47.4% 15%;
     --card-foreground: 210 40% 98%;
     --popover: 222.2 47.4% 15%;
     --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%; /* Vibrant Light Blue/Cyan accent - #0ea5e9 (Sky 500) */
+    --primary: 199 89% 48%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 215 28% 17%; /* Dark secondary elements */
+    --secondary: 215 28% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 215 28% 17%;
-    --muted-foreground: 215 20.2% 65.1%; /* Soft grey text */
-    --accent: 199 89% 48%; /* Matching primary accent */
+    --muted-foreground: 215 20.2% 70%; /* Increased contrast */
+    --accent: 199 89% 48%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 50%;
     --destructive-foreground: 210 40% 98%;
-    --border: 215 28% 20%; /* Subtle borders */
-    --input: 215 28% 20%;
+    --border: 215 28% 25%; /* More visible borders */
+    --input: 215 28% 25%;
     --ring: 199 89% 48%;
+  }
+  
+  /* Dark mode specific improvements */
+  .dark .bg-white {
+    background-color: hsl(var(--card));
+  }
+  
+  .dark .text-slate-900 {
+    color: hsl(var(--foreground));
+  }
+  
+  .dark .text-slate-600 {
+    color: hsl(var(--muted-foreground));
+  }
+  
+  .dark .border-slate-200 {
+    border-color: hsl(var(--border));
+  }
+  
+  .dark .bg-slate-50 {
+    background-color: hsl(var(--muted));
   }
 }
 

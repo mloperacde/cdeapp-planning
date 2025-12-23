@@ -132,14 +132,14 @@ export default function QualityControlPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <CheckCircle2 className="w-6 h-6 md:w-8 md:h-8 text-green-600" />
             Control de Calidad
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 mt-1">
             Registro e inspección de órdenes de trabajo
           </p>
         </div>
@@ -150,7 +150,7 @@ export default function QualityControlPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -240,11 +240,12 @@ export default function QualityControlPage() {
       </Card>
 
       {/* Inspections Table */}
-      <Card>
+      <Card className="dark:bg-card/80">
         <CardHeader>
-          <CardTitle>Historial de Inspecciones</CardTitle>
+          <CardTitle className="dark:text-slate-100">Historial de Inspecciones</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
+          <div className="min-w-[800px]">
           <Table>
             <TableHeader>
               <TableRow>
@@ -305,6 +306,7 @@ export default function QualityControlPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -464,12 +466,12 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto dark:bg-slate-900">
         <DialogHeader>
           <DialogTitle>{inspection ? "Detalles de Inspección" : "Nueva Inspección de Calidad"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Orden de Trabajo</Label>
               <Select 
@@ -511,7 +513,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Máquina</Label>
               <Select 
@@ -554,7 +556,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Inspector *</Label>
               <EmployeeSelect 
@@ -584,7 +586,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
 
           <div className="border-t pt-4">
             <h4 className="font-semibold mb-3">Personal de Línea</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Responsable de Línea</Label>
                 <EmployeeSelect 
@@ -650,7 +652,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Cantidad Inspeccionada</Label>
               <Input 
