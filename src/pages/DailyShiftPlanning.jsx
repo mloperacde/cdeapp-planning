@@ -166,14 +166,14 @@ function DailyShiftPlanningContent() {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-                        <Briefcase className="w-8 h-8 text-blue-600" />
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+                        <Briefcase className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
                         Planificación Diaria de Turno
                     </h1>
-                    <p className="text-slate-500">Resumen de máquinas con órdenes asignadas y gestión de personal. La asignación de personas la realiza el agente IA.</p>
+                    <p className="text-sm md:text-base text-slate-500 dark:text-slate-400">Resumen de máquinas con órdenes asignadas y gestión de personal. La asignación de personas la realiza el agente IA.</p>
                 </div>
                 <div className="flex items-center gap-4">
                      <Button onClick={() => saveMutation.mutate()} className="bg-green-600 hover:bg-green-700 text-white">
@@ -184,8 +184,8 @@ function DailyShiftPlanningContent() {
             </div>
 
             {/* Controls */}
-            <Card className="bg-slate-50 border-blue-100">
-                <CardContent className="p-4 flex flex-wrap gap-4 items-end">
+            <Card className="bg-slate-50 dark:bg-slate-800/50 border-blue-100 dark:border-blue-800">
+                <CardContent className="p-4 flex flex-col md:flex-row flex-wrap gap-3 md:gap-4 items-stretch md:items-end">
                     <div className="space-y-2">
                         <Label>Fecha</Label>
                         <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-white" />
@@ -238,15 +238,15 @@ function DailyShiftPlanningContent() {
             )}
 
             {/* Machines Grid */}
-            <div className="grid gap-6">
+            <div className="grid gap-4 md:gap-6">
                 {machines.map(machine => {
                     const currentStaff = planning[machine.id] || {};
                     const orders = getMachineOrders(machine.id);
                     const hasHighPriority = orders.some(o => o.priority >= 4);
 
                     return (
-                        <Card key={machine.id} className={`overflow-hidden border-l-4 ${hasHighPriority ? 'border-l-red-500' : 'border-l-blue-500'}`}>
-                            <CardHeader className="bg-slate-50 border-b pb-3 pt-3">
+                        <Card key={machine.id} className={`overflow-hidden border-l-4 ${hasHighPriority ? 'border-l-red-500 dark:border-l-red-600' : 'border-l-blue-500 dark:border-l-blue-600'} dark:bg-slate-900/50`}>
+                            <CardHeader className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-700 pb-3 pt-3">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <CardTitle className="text-lg flex items-center gap-2">

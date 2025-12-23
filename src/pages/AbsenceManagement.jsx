@@ -197,7 +197,7 @@ function AbsenceManagementContent() {
   });
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Link to={createPageUrl(isShiftManager ? "ShiftManagers" : "Dashboard")}>
@@ -210,11 +210,11 @@ function AbsenceManagementContent() {
 
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <UserX className="w-8 h-8 text-blue-600" />
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <UserX className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
               Gestión Integral de Ausencias
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 mt-1">
               {isShiftManager ? "Gestión de equipo y reportes de turno" : "Control centralizado de RRHH"}
             </p>
           </div>
@@ -222,7 +222,7 @@ function AbsenceManagementContent() {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-6 h-auto">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
             <TabsTrigger value="dashboard" className="py-2"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
             <TabsTrigger value="list" className="py-2"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
             
@@ -237,8 +237,8 @@ function AbsenceManagementContent() {
             )}
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <TabsContent value="dashboard" className="space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-center">

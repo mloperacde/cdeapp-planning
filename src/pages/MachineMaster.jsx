@@ -114,7 +114,7 @@ function MachineMasterContent() {
   const tiposUnicos = [...new Set(machines.map(m => m.tipo).filter(Boolean))];
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Link to={createPageUrl("Machines")}>
@@ -127,11 +127,11 @@ function MachineMasterContent() {
 
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <Cog className="w-8 h-8 text-blue-600" />
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <Cog className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
               Archivo Maestro de Máquinas
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 mt-1">
               Gestión completa del catálogo de máquinas
             </p>
           </div>

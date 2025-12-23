@@ -423,7 +423,7 @@ function DashboardContent() {
                   </Badge>
                 </div>
               </div>
-              <Link to={createPageUrl("Employees")}>
+              <Link to={createPageUrl("MasterEmployeeDatabase")}>
                 <Button className="w-full mt-4" variant="outline">
                   Ver Empleados
                 </Button>

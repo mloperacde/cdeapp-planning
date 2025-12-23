@@ -29,9 +29,7 @@ import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import EmployeeVacations from './pages/EmployeeVacations';
-import Employees from './pages/Employees';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
-import HRDashboard from './pages/HRDashboard';
 import IncentiveManagement from './pages/IncentiveManagement';
 import LockerDataCleanup from './pages/LockerDataCleanup';
 import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
@@ -41,7 +39,6 @@ import MachineAssignments from './pages/MachineAssignments';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
-import Machines from './pages/Machines';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import Messaging from './pages/Messaging';
@@ -118,9 +115,7 @@ export const PAGES = {
     "EmployeeDataCorrection": EmployeeDataCorrection,
     "EmployeeOnboarding": EmployeeOnboarding,
     "EmployeeVacations": EmployeeVacations,
-    "Employees": Employees,
     "EmployeesShiftManager": EmployeesShiftManager,
-    "HRDashboard": HRDashboard,
     "IncentiveManagement": IncentiveManagement,
     "LockerDataCleanup": LockerDataCleanup,
     "LockerDuplicateCleanup": LockerDuplicateCleanup,
@@ -130,7 +125,6 @@ export const PAGES = {
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
     "MachineMaster": MachineMaster,
-    "Machines": Machines,
     "MaintenanceTracking": MaintenanceTracking,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
     "Messaging": Messaging,

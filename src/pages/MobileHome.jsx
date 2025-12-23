@@ -88,16 +88,16 @@ export default function MobileHome() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 p-4">
       <div className="max-w-md mx-auto space-y-4">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                 ¡Hola, {user.full_name?.split(' ')[0] || 'Usuario'}!
               </h1>
-              <p className="text-sm text-slate-500 mt-1">{user.email}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{user.email}</p>
             </div>
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
               {user.full_name?.charAt(0) || "U"}
@@ -109,15 +109,15 @@ export default function MobileHome() {
         <div className="space-y-3">
           {menuItems.map((item) => (
             <Link key={item.title} to={item.link}>
-              <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white">
+              <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-800">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-lg`}>
                       <item.icon className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">{item.title}</h3>
-                      <p className="text-xs text-slate-500">{item.description}</p>
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{item.title}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{item.description}</p>
                     </div>
                   </div>
                 </CardContent>
