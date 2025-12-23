@@ -88,7 +88,7 @@ function DailyPlanningContent() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" className="mb-2">
+            <Button type="button" variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver al Dashboard
             </Button>
@@ -106,6 +106,7 @@ function DailyPlanningContent() {
             </p>
           </div>
           <Button
+            type="button"
             onClick={handleCallSchedulingAssistant}
             disabled={isCalling}
             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
@@ -191,19 +192,19 @@ function DailyPlanningContent() {
         {/* Tabs para diferentes departamentos */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="production" className="flex items-center gap-2">
+            <TabsTrigger value="production" className="flex items-center gap-2" type="button">
               <Factory className="w-4 h-4" />
               Fabricación
             </TabsTrigger>
-            <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <TabsTrigger value="maintenance" className="flex items-center gap-2" type="button">
               <Wrench className="w-4 h-4" />
               Mantenimiento
             </TabsTrigger>
-            <TabsTrigger value="warehouse" className="flex items-center gap-2">
+            <TabsTrigger value="warehouse" className="flex items-center gap-2" type="button">
               <Package className="w-4 h-4" />
               Almacén
             </TabsTrigger>
-            <TabsTrigger value="quality" className="flex items-center gap-2">
+            <TabsTrigger value="quality" className="flex items-center gap-2" type="button">
               <ClipboardCheck className="w-4 h-4" />
               Calidad
             </TabsTrigger>
