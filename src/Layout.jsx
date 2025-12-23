@@ -62,17 +62,11 @@ import ChatbotButton from "../components/chatbot/ChatbotButton";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "../components/notifications/NotificationBell";
 import ErrorBoundary from "../components/common/ErrorBoundary";
+import { useModuleAccess } from "../components/roles/useModuleAccess";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
-  const [openSections, setOpenSections] = useState({
-    empleados: false,
-    informes: false,
-    maquinas: false,
-    planning: false,
-    produccion: false,
-    configuracion: false,
-  });
+  const { canAccessModule, isMobile } = useModuleAccess();
 
   const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
     queryKey: ['currentUser'],
@@ -190,47 +184,53 @@ export default function Layout({ children, currentPageName }) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
-                    isActive(createPageUrl("AdvancedHRDashboard")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
-                  }`}
-                >
-                  <Link to={createPageUrl("AdvancedHRDashboard")} className="flex items-center gap-3 px-3 py-2">
-                    <LayoutDashboard className="w-4 h-4" />
-                    Dashboard RRHH
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {canAccessModule('hr_dashboard') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                      isActive(createPageUrl("AdvancedHRDashboard")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                    }`}
+                  >
+                    <Link to={createPageUrl("AdvancedHRDashboard")} className="flex items-center gap-3 px-3 py-2">
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard RRHH
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
-                    isActive(createPageUrl("MasterEmployeeDatabase")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
-                  }`}
-                >
-                  <Link to={createPageUrl("MasterEmployeeDatabase")} className="flex items-center gap-3 px-3 py-2">
-                    <Users className="w-4 h-4" />
-                    Base de Empleados
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {canAccessModule('employees') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                      isActive(createPageUrl("MasterEmployeeDatabase")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                    }`}
+                  >
+                    <Link to={createPageUrl("MasterEmployeeDatabase")} className="flex items-center gap-3 px-3 py-2">
+                      <Users className="w-4 h-4" />
+                      Base de Empleados
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
-                    isActive(createPageUrl("AbsenceManagement")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
-                  }`}
-                >
-                  <Link to={createPageUrl("AbsenceManagement")} className="flex items-center gap-3 px-3 py-2">
-                    <UserX className="w-4 h-4" />
-                    Gestión Ausencias
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {canAccessModule('absences') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                      isActive(createPageUrl("AbsenceManagement")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                    }`}
+                  >
+                    <Link to={createPageUrl("AbsenceManagement")} className="flex items-center gap-3 px-3 py-2">
+                      <UserX className="w-4 h-4" />
+                      Gestión Ausencias
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
 
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -637,6 +637,20 @@ export default function Layout({ children, currentPageName }) {
     <Link to={createPageUrl("MobileAppConfig")} className="flex items-center gap-3 px-3 py-2">
       <Smartphone className="w-4 h-4" />
       Config. App Móvil
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("ModuleAccessConfig")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("ModuleAccessConfig")} className="flex items-center gap-3 px-3 py-2">
+      <Shield className="w-4 h-4" />
+      Acceso a Módulos
     </Link>
   </SidebarMenuButton>
 </SidebarMenuItem>
