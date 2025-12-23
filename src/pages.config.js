@@ -81,6 +81,9 @@ import Timeline from './pages/Timeline';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import UserInvitations from './pages/UserInvitations';
+import AcceptInvitation from './pages/AcceptInvitation';
+import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import __Layout from './Layout.jsx';
 
 
@@ -168,6 +171,9 @@ export const PAGES = {
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "UserInvitations": UserInvitations,
+    "AcceptInvitation": AcceptInvitation,
+    "MachineDailyPlanning": MachineDailyPlanning,
 }
 
 export const pagesConfig = {
