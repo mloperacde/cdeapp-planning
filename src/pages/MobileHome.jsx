@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -12,10 +13,14 @@ import {
   MessageSquare, 
   ClipboardList,
   LogOut,
-  Settings
+  Settings,
+  Lock
 } from "lucide-react";
+import { useModuleAccess } from "../components/roles/useModuleAccess";
 
 export default function MobileHome() {
+  const { canAccessModule } = useModuleAccess();
+
   const { data: user, isLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
@@ -25,6 +30,24 @@ export default function MobileHome() {
         return null;
       }
     },
+  });
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['unreadNotifications', user?.email],
+    queryFn: () => base44.entities.PushNotification.filter({ 
+      user_email: user.email, 
+      leida: false 
+    }),
+    enabled: !!user?.email,
+  });
+
+  const { data: absences = [] } = useQuery({
+    queryKey: ['myPendingAbsences', user?.email],
+    queryFn: () => base44.entities.Absence.filter({ 
+      solicitado_por: user.email,
+      estado_aprobacion: 'Pendiente'
+    }),
+    enabled: !!user?.email && canAccessModule('absences'),
   });
 
   useEffect(() => {
@@ -49,43 +72,58 @@ export default function MobileHome() {
     return null; // Will redirect
   }
 
-  const menuItems = [
+  const allMenuItems = [
     {
       title: "Mis Ausencias",
       description: "Solicitar y gestionar ausencias",
       icon: Calendar,
       color: "from-blue-500 to-blue-600",
-      link: createPageUrl("MobileAbsences")
+      link: createPageUrl("MobileAbsences"),
+      moduleKey: "absences",
+      badge: absences.length > 0 ? absences.length : null,
+      badgeColor: "bg-blue-600"
     },
     {
       title: "Mi Planificación",
       description: "Ver mi horario y turnos",
       icon: ClipboardList,
       color: "from-purple-500 to-purple-600",
-      link: createPageUrl("MobilePlanning")
+      link: createPageUrl("MobilePlanning"),
+      moduleKey: "daily_planning"
     },
     {
       title: "Notificaciones",
       description: "Ver mis notificaciones",
       icon: Bell,
       color: "from-orange-500 to-orange-600",
-      link: createPageUrl("MobileNotifications")
+      link: createPageUrl("MobileNotifications"),
+      moduleKey: "notifications",
+      badge: notifications.length > 0 ? notifications.length : null,
+      badgeColor: "bg-orange-600"
     },
     {
       title: "Mensajes",
       description: "Chat con el equipo",
       icon: MessageSquare,
       color: "from-green-500 to-green-600",
-      link: createPageUrl("MobileChat")
+      link: createPageUrl("MobileChat"),
+      moduleKey: "messaging"
     },
     {
       title: "Mi Perfil",
       description: "Configuración y datos",
       icon: User,
       color: "from-indigo-500 to-indigo-600",
-      link: createPageUrl("MobileProfile")
+      link: createPageUrl("MobileProfile"),
+      moduleKey: null // Always accessible
     }
   ];
+
+  const menuItems = useMemo(() => {
+    return allMenuItems.filter(item => 
+      !item.moduleKey || canAccessModule(item.moduleKey)
+    );
+  }, [allMenuItems, canAccessModule]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 p-4">
@@ -112,8 +150,13 @@ export default function MobileHome() {
               <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-800">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-lg`}>
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-lg relative`}>
                       <item.icon className="w-6 h-6" />
+                      {item.badge && (
+                        <Badge className={`absolute -top-2 -right-2 ${item.badgeColor} text-white text-xs px-2 py-0.5`}>
+                          {item.badge}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-slate-900 dark:text-slate-100">{item.title}</h3>
@@ -125,6 +168,25 @@ export default function MobileHome() {
             </Link>
           ))}
         </div>
+
+        {/* Locked Modules Notice */}
+        {allMenuItems.length > menuItems.length && (
+          <Card className="bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {allMenuItems.length - menuItems.length} módulos bloqueados
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Contacta con tu administrador para solicitar acceso
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <div className="mt-6 space-y-2">
