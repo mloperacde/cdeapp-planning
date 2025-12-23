@@ -507,7 +507,10 @@ export default function AbsenceForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => document.getElementById('documents-upload').click()}
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById('documents-upload').click();
+          }}
           disabled={uploadingFiles}
           className="w-full"
         >
@@ -526,7 +529,10 @@ export default function AbsenceForm({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => removeDocument(idx)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    removeDocument(idx);
+                  }}
                 >
                   <Trash2 className="w-3 h-3 text-red-600" />
                 </Button>

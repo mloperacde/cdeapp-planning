@@ -163,6 +163,7 @@ export default function BrandingConfig() {
                   className="flex-1"
                 />
                 <Button
+                  type="button"
                   onClick={handleUploadLogo}
                   disabled={!logoFile || isUploading}
                   className="bg-blue-600 hover:bg-blue-700"
@@ -222,7 +223,7 @@ export default function BrandingConfig() {
           </div>
 
           <div className="flex justify-end pt-4 border-t">
-            <Button onClick={handleSaveConfig} className="bg-green-600 hover:bg-green-700">
+            <Button type="button" onClick={handleSaveConfig} className="bg-green-600 hover:bg-green-700">
               <Save className="w-4 h-4 mr-2" />
               Guardar Configuración
             </Button>
