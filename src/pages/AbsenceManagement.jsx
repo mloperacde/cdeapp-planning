@@ -56,6 +56,7 @@ import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
 import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
 import ProtectedPage from "../components/roles/ProtectedPage";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function AbsenceManagementPage() {
   return (
@@ -199,14 +200,10 @@ function AbsenceManagementContent() {
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to={createPageUrl(isShiftManager ? "ShiftManagers" : "Dashboard")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              {isShiftManager ? "Volver a Gestión de Turnos" : "Volver al Dashboard"}
-            </Button>
-          </Link>
-        </div>
+        <Breadcrumbs items={[
+          { label: "RRHH", url: createPageUrl("AdvancedHRDashboard") },
+          { label: "Gestión de Ausencias" }
+        ]} />
 
         <div className="flex justify-between items-center mb-8">
           <div>

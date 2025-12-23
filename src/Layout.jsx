@@ -161,567 +161,527 @@ export default function Layout({ children, currentPageName }) {
 
           <SidebarContent className="p-2">
             <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-3">
-                Menú Principal
+              <SidebarGroupLabel className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider px-3 py-2">
+                📊 Principal
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("Dashboard")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
+                      className={`hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-200 rounded-lg mb-1 ${
+                        isActive(createPageUrl("Dashboard")) ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold' : ''
                       }`}
                     >
                       <Link to={createPageUrl("Dashboard")} className="flex items-center gap-3 px-3 py-2.5">
                         <BarChart3 className="w-5 h-5" />
-                        <span className="text-sm">Dashboard</span>
+                        <span className="text-sm">Dashboard General</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+          </SidebarGroup>
 
-                  <Collapsible open={openSections.planning} onOpenChange={() => toggleSection('planning')}>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                            isParentActive([
-                              createPageUrl("Timeline"),
-                              createPageUrl("DailyPlanning"),
-                              createPageUrl("ShiftPlanning")
-                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <Activity className="w-5 h-5" />
-                              <span className="text-sm">Planning</span>
-                            </div>
-                            {openSections.planning ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </div>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("Timeline")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("Timeline")} className="flex items-center gap-2 px-3 py-2">
-                              <Activity className="w-4 h-4" />
-                              Línea de Tiempo
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("DailyPlanning")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("DailyPlanning")} className="flex items-center gap-2 px-3 py-2">
-                              <Clock className="w-4 h-4" />
-                              Planning Diario
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ShiftPlanning")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("ShiftPlanning")} className="flex items-center gap-2 px-3 py-2">
-                              <UsersRound className="w-4 h-4" />
-                              Planificación de Turnos
-                            </Link>
-                          </SidebarMenuButton>
-                        </div>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+          {/* MÓDULO RRHH */}
+          <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase tracking-wider px-3 py-2 mt-2">
+            👥 Recursos Humanos
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("AdvancedHRDashboard")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("AdvancedHRDashboard")} className="flex items-center gap-3 px-3 py-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard RRHH
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
-                  <Collapsible open={openSections.empleados} onOpenChange={() => toggleSection('empleados')}>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                            isParentActive([
-                              createPageUrl("HRDashboard"), // Added HRDashboard here
-                              createPageUrl("MasterEmployeeDatabase"),
-                              createPageUrl("ETTTemporaryEmployees"),
-                              createPageUrl("EmployeeOnboarding"),
-                              createPageUrl("AttendanceManagement"),
-                              createPageUrl("CommitteeManagement")
-                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <Users className="w-5 h-5" />
-                              <span className="text-sm">RRHH</span>
-                            </div>
-                            {openSections.empleados ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </div>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("AdvancedHRDashboard")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("AdvancedHRDashboard")} className="flex items-center gap-2 px-3 py-2">
-                              <LayoutDashboard className="w-4 h-4" />
-                              Dashboard RRHH
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("MasterEmployeeDatabase")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("MasterEmployeeDatabase")} className="flex items-center gap-2 px-3 py-2">
-                              <Users className="w-4 h-4" />
-                              Base de Datos Empleados
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("AbsenceManagement")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("AbsenceManagement")} className="flex items-center gap-2 px-3 py-2">
-                              <UserX className="w-4 h-4" />
-                              Gestión de Ausencias
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ETTTemporaryEmployees")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("ETTTemporaryEmployees")} className="flex items-center gap-2 px-3 py-2">
-                              <Clock className="w-4 h-4" />
-                              ETT y Temporales
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("EmployeeOnboarding")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("EmployeeOnboarding")} className="flex items-center gap-2 px-3 py-2">
-                              <UserPlus className="w-4 h-4" />
-                              Onboarding
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("AttendanceManagement")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("AttendanceManagement")} className="flex items-center gap-2 px-3 py-2">
-                              <ClipboardCheck className="w-4 h-4" />
-                              Gestión de Presencia
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("CommitteeManagement")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("CommitteeManagement")} className="flex items-center gap-2 px-3 py-2">
-                              <Shield className="w-4 h-4" />
-                              Comités y PRL
-                            </Link>
-                          </SidebarMenuButton>
-                        </div>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("MasterEmployeeDatabase")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("MasterEmployeeDatabase")} className="flex items-center gap-3 px-3 py-2">
+                    <Users className="w-4 h-4" />
+                    Base de Empleados
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
-                  <Collapsible open={openSections.maquinas} onOpenChange={() => toggleSection('maquinas')}>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                            isParentActive([
-                              createPageUrl("Machines"),
-                              createPageUrl("MachineManagement"),
-                              createPageUrl("MaintenanceTracking")
-                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <Cog className="w-5 h-5" />
-                              <span className="text-sm">Máquinas</span>
-                            </div>
-                            {openSections.maquinas ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </div>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("Machines")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("Machines")} className="flex items-center gap-2 px-3 py-2">
-                              <Cog className="w-4 h-4" />
-                              Gestión de Máquinas
-                            </Link>
-                            </SidebarMenuButton>
-                            <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("MaintenanceTracking")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                            >
-                            <Link to={createPageUrl("MaintenanceTracking")} className="flex items-center gap-2 px-3 py-2">
-                              <Wrench className="w-4 h-4" />
-                              Mantenimiento
-                            </Link>
-                            </SidebarMenuButton>
-                            </div>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("AbsenceManagement")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("AbsenceManagement")} className="flex items-center gap-3 px-3 py-2">
+                    <UserX className="w-4 h-4" />
+                    Gestión Ausencias
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("ShiftManagers")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("ShiftManagers")} className="flex items-center gap-3 px-3 py-2.5">
-                        <UsersRound className="w-5 h-5" />
-                        <span className="text-sm">Jefes de Turno</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("ETTTemporaryEmployees")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("ETTTemporaryEmployees")} className="flex items-center gap-3 px-3 py-2">
+                    <Clock className="w-4 h-4" />
+                    ETT y Temporales
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("Messaging")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("Messaging")} className="flex items-center gap-3 px-3 py-2.5">
-                        <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm">Mensajería</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("EmployeeOnboarding")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("EmployeeOnboarding")} className="flex items-center gap-3 px-3 py-2">
+                    <UserPlus className="w-4 h-4" />
+                    Onboarding
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("IncentiveManagement")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("IncentiveManagement")} className="flex items-center gap-3 px-3 py-2.5">
-                        <TrendingUp className="w-5 h-5" />
-                        <span className="text-sm">Plan de Incentivos</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("AttendanceManagement")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("AttendanceManagement")} className="flex items-center gap-3 px-3 py-2">
+                    <ClipboardCheck className="w-4 h-4" />
+                    Control Presencia
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("QualityControl")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("QualityControl")} className="flex items-center gap-3 px-3 py-2.5">
-                        <CheckCircle className="w-5 h-5" />
-                        <span className="text-sm">Control de Calidad</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("CommitteeManagement")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("CommitteeManagement")} className="flex items-center gap-3 px-3 py-2">
+                    <Shield className="w-4 h-4" />
+                    Comités y PRL
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
-                  <Collapsible open={openSections.informes} onOpenChange={() => toggleSection('informes')}>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                            isParentActive([
-                              createPageUrl("Reports"),
-                              createPageUrl("MLInsights")
-                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <FileText className="w-5 h-5" />
-                              <span className="text-sm">Informes</span>
-                            </div>
-                            {openSections.informes ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </div>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("Reports")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("Reports")} className="flex items-center gap-2 px-3 py-2">
-                              <FileText className="w-4 h-4" />
-                              Reportes Generales
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("MLInsights")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("MLInsights")} className="flex items-center gap-2 px-3 py-2">
-                              <Activity className="w-4 h-4" />
-                              Análisis Predictivo ML
-                            </Link>
-                          </SidebarMenuButton>
-                        </div>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                    isActive(createPageUrl("IncentiveManagement")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                  }`}
+                >
+                  <Link to={createPageUrl("IncentiveManagement")} className="flex items-center gap-3 px-3 py-2">
+                    <TrendingUp className="w-4 h-4" />
+                    Plan Incentivos
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+          </SidebarGroup>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("NotificationCenter")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("NotificationCenter")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Bell className="w-5 h-5" />
-                        <span className="text-sm">Centro Notificaciones</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+          {/* MÓDULO PLANIFICACIÓN */}
+          <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider px-3 py-2 mt-2">
+            📅 Planificación
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("Timeline")) ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("Timeline")} className="flex items-center gap-3 px-3 py-2">
+      <Activity className="w-4 h-4" />
+      Timeline Recursos
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                        isActive(createPageUrl("MobileAppConfig")) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                      }`}
-                    >
-                      <Link to={createPageUrl("MobileAppConfig")} className="flex items-center gap-3 px-3 py-2.5">
-                        <Smartphone className="w-5 h-5" />
-                        <span className="text-sm">App Móvil</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("DailyPlanning")) ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("DailyPlanning")} className="flex items-center gap-3 px-3 py-2">
+      <CalendarIcon className="w-4 h-4" />
+      Planning Diario
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
 
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("ShiftPlanning")) ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("ShiftPlanning")} className="flex items-center gap-3 px-3 py-2">
+      <UsersRound className="w-4 h-4" />
+      Planning Turnos
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
 
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("ShiftManagers")) ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("ShiftManagers")} className="flex items-center gap-3 px-3 py-2">
+      <UsersRound className="w-4 h-4" />
+      Jefes de Turno
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+</SidebarMenu>
+</SidebarGroupContent>
+</SidebarGroup>
 
-                  <Collapsible open={openSections.produccion} onOpenChange={() => toggleSection('produccion')}>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                            isParentActive([
-                              createPageUrl("ProductionDashboard"),
-                              createPageUrl("ProductionPlanning"),
-                              createPageUrl("ProcessConfiguration"),
-                              createPageUrl("DailyShiftPlanning")
-                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <Factory className="w-5 h-5" />
-                              <span className="text-sm">Producción</span>
-                            </div>
-                            {openSections.produccion ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </div>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ProductionDashboard")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("ProductionDashboard")} className="flex items-center gap-2 px-3 py-2">
-                              <BarChart3 className="w-4 h-4" />
-                              Dashboard Producción
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ProductionPlanning")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("ProductionPlanning")} className="flex items-center gap-2 px-3 py-2">
-                              <CalendarIcon className="w-4 h-4" />
-                              Planificador
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("ProcessConfiguration")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("ProcessConfiguration")} className="flex items-center gap-2 px-3 py-2">
-                              <Settings2 className="w-4 h-4" />
-                              Configurar Procesos
-                              </Link>
-                              </SidebarMenuButton>
-                              <SidebarMenuButton
-                              asChild
-                              className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("DailyShiftPlanning")) ? 'bg-blue-50 text-blue-700' : ''
-                              }`}
-                              >
-                              <Link to={createPageUrl("DailyShiftPlanning")} className="flex items-center gap-2 px-3 py-2">
-                              <CalendarIcon className="w-4 h-4" />
-                              Planificación Diaria
-                              </Link>
-                              </SidebarMenuButton>
-                              </div>
-                              </CollapsibleContent>
-                              </SidebarMenuItem>
-                              </Collapsible>
+{/* MÓDULO PRODUCCIÓN */}
+<SidebarGroup>
+<SidebarGroupLabel className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider px-3 py-2 mt-2">
+🏭 Producción
+</SidebarGroupLabel>
+<SidebarGroupContent>
+<SidebarMenu>
 
-                  <Collapsible open={openSections.configuracion} onOpenChange={() => toggleSection('configuracion')}>
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
-                            isParentActive([
-                              createPageUrl("Configuration"),
-                              createPageUrl("RoleManagement"),
-                              createPageUrl("UserRoleAssignment")
-                            ]) ? 'bg-blue-100 text-blue-700 font-semibold' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <Settings className="w-5 h-5" />
-                              <span className="text-sm">Configuración</span>
-                            </div>
-                            {openSections.configuracion ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </div>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-6 mt-1 space-y-1">
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("Configuration")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("Configuration")} className="flex items-center gap-2 px-3 py-2">
-                              <Settings className="w-4 h-4" />
-                              General
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("RoleManagement")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("RoleManagement")} className="flex items-center gap-2 px-3 py-2">
-                              <Shield className="w-4 h-4" />
-                              Gestión de Roles
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("UserRoleAssignment")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("UserRoleAssignment")} className="flex items-center gap-2 px-3 py-2">
-                              <Users className="w-4 h-4" />
-                              Asignación de Roles
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("AdminDeploymentGuide")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("AdminDeploymentGuide")} className="flex items-center gap-2 px-3 py-2">
-                              <Shield className="w-4 h-4" />
-                              Guía de Implementación
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("UserManual")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("UserManual")} className="flex items-center gap-2 px-3 py-2">
-                              <BookOpen className="w-4 h-4" />
-                              Manual de Usuario
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("QuickStartGuide")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("QuickStartGuide")} className="flex items-center gap-2 px-3 py-2">
-                              <CheckCircle className="w-4 h-4" />
-                              Inicio Rápido
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("DataMigration")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("DataMigration")} className="flex items-center gap-2 px-3 py-2">
-                              <BookOpen className="w-4 h-4" />
-                              Migración de Datos
-                            </Link>
-                          </SidebarMenuButton>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg text-sm ${
-                              isActive(createPageUrl("SystemHealth")) ? 'bg-blue-50 text-blue-700' : ''
-                            }`}
-                          >
-                            <Link to={createPageUrl("SystemHealth")} className="flex items-center gap-2 px-3 py-2">
-                              <Activity className="w-4 h-4" />
-                              Salud del Sistema
-                            </Link>
-                          </SidebarMenuButton>
-                          </div>
-                          </CollapsibleContent>
-                          </SidebarMenuItem>
-                          </Collapsible>
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("ProductionDashboard")) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("ProductionDashboard")} className="flex items-center gap-3 px-3 py-2">
+      <BarChart3 className="w-4 h-4" />
+      Dashboard Producción
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("ProductionPlanning")) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("ProductionPlanning")} className="flex items-center gap-3 px-3 py-2">
+      <CalendarIcon className="w-4 h-4" />
+      Planificador Órdenes
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("ProcessConfiguration")) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("ProcessConfiguration")} className="flex items-center gap-3 px-3 py-2">
+      <Settings2 className="w-4 h-4" />
+      Config. Procesos
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("MachineManagement")) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("MachineManagement")} className="flex items-center gap-3 px-3 py-2">
+      <Activity className="w-4 h-4" />
+      Consulta Máquinas
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+</SidebarMenu>
+</SidebarGroupContent>
+</SidebarGroup>
+
+{/* MÓDULO MANTENIMIENTO */}
+<SidebarGroup>
+<SidebarGroupLabel className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase tracking-wider px-3 py-2 mt-2">
+🔧 Mantenimiento
+</SidebarGroupLabel>
+<SidebarGroupContent>
+<SidebarMenu>
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-orange-50 dark:hover:bg-orange-900/30 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("MachineMaster")) ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("MachineMaster")} className="flex items-center gap-3 px-3 py-2">
+      <Database className="w-4 h-4" />
+      Archivo Maestro
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-orange-50 dark:hover:bg-orange-900/30 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("MaintenanceTracking")) ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("MaintenanceTracking")} className="flex items-center gap-3 px-3 py-2">
+      <Wrench className="w-4 h-4" />
+      Seguimiento
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+</SidebarMenu>
+</SidebarGroupContent>
+</SidebarGroup>
+
+{/* MÓDULO CALIDAD */}
+<SidebarGroup>
+<SidebarGroupLabel className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider px-3 py-2 mt-2">
+✓ Calidad
+</SidebarGroupLabel>
+<SidebarGroupContent>
+<SidebarMenu>
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("QualityControl")) ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("QualityControl")} className="flex items-center gap-3 px-3 py-2">
+      <CheckCircle className="w-4 h-4" />
+      Control de Calidad
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+</SidebarMenu>
+</SidebarGroupContent>
+</SidebarGroup>
+
+{/* COMUNICACIÓN */}
+<SidebarGroup>
+<SidebarGroupLabel className="text-xs font-semibold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider px-3 py-2 mt-2">
+💬 Comunicación
+</SidebarGroupLabel>
+<SidebarGroupContent>
+<SidebarMenu>
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-cyan-50 dark:hover:bg-cyan-900/30 hover:text-cyan-700 dark:hover:text-cyan-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("Messaging")) ? 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("Messaging")} className="flex items-center gap-3 px-3 py-2">
+      <MessageSquare className="w-4 h-4" />
+      Mensajería
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-cyan-50 dark:hover:bg-cyan-900/30 hover:text-cyan-700 dark:hover:text-cyan-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("NotificationCenter")) ? 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("NotificationCenter")} className="flex items-center gap-3 px-3 py-2">
+      <Bell className="w-4 h-4" />
+      Notificaciones
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+</SidebarMenu>
+</SidebarGroupContent>
+</SidebarGroup>
+
+{/* INFORMES */}
+<SidebarGroup>
+<SidebarGroupLabel className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider px-3 py-2 mt-2">
+📈 Análisis
+</SidebarGroupLabel>
+<SidebarGroupContent>
+<SidebarMenu>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("Reports")) ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("Reports")} className="flex items-center gap-3 px-3 py-2">
+      <FileText className="w-4 h-4" />
+      Informes
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("MLInsights")) ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("MLInsights")} className="flex items-center gap-3 px-3 py-2">
+      <Activity className="w-4 h-4" />
+      Análisis Predictivo
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+</SidebarMenu>
+</SidebarGroupContent>
+</SidebarGroup>
+
+{/* CONFIGURACIÓN */}
+<SidebarGroup>
+<SidebarGroupLabel className="text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wider px-3 py-2 mt-2">
+⚙️ Configuración
+</SidebarGroupLabel>
+<SidebarGroupContent>
+<SidebarMenu>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("Configuration")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("Configuration")} className="flex items-center gap-3 px-3 py-2">
+      <Settings className="w-4 h-4" />
+      General
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("RoleManagement")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("RoleManagement")} className="flex items-center gap-3 px-3 py-2">
+      <Shield className="w-4 h-4" />
+      Gestión Roles
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("UserRoleAssignment")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("UserRoleAssignment")} className="flex items-center gap-3 px-3 py-2">
+      <Users className="w-4 h-4" />
+      Asignación Roles
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("MobileAppConfig")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("MobileAppConfig")} className="flex items-center gap-3 px-3 py-2">
+      <Smartphone className="w-4 h-4" />
+      Config. App Móvil
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg text-sm ${
+      isActive(createPageUrl("DataMigration")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("DataMigration")} className="flex items-center gap-3 px-3 py-2">
+      <Database className="w-4 h-4" />
+      Migración Datos
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg text-sm ${
+      isActive(createPageUrl("SystemHealth")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("SystemHealth")} className="flex items-center gap-3 px-3 py-2">
+      <Activity className="w-4 h-4" />
+      Salud Sistema
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg text-sm ${
+      isActive(createPageUrl("UserManual")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("UserManual")} className="flex items-center gap-3 px-3 py-2">
+      <BookOpen className="w-4 h-4" />
+      Manual Usuario
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
                           </SidebarMenu>
                           </SidebarGroupContent>
                           </SidebarGroup>

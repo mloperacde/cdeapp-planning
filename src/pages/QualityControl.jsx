@@ -15,6 +15,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import EmployeeSelect from "../components/common/EmployeeSelect";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function QualityControlPage() {
   const [showForm, setShowForm] = useState(false);
@@ -133,6 +134,10 @@ export default function QualityControlPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4 md:space-y-6">
+      <Breadcrumbs items={[
+        { label: "Calidad", url: createPageUrl("QualityControl") },
+        { label: "Control de Calidad" }
+      ]} />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">

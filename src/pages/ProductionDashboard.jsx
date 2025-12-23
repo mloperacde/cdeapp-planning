@@ -20,6 +20,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { format, subDays, startOfDay, endOfDay, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import ProtectedPage from "../components/roles/ProtectedPage";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function ProductionDashboardPage() {
   return (
@@ -172,6 +173,10 @@ function ProductionDashboardContent() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-4 md:space-y-6">
+      <Breadcrumbs items={[
+        { label: "Producción", url: createPageUrl("ProductionDashboard") },
+        { label: "Dashboard" }
+      ]} />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
