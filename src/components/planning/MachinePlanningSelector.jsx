@@ -155,6 +155,7 @@ export default function MachinePlanningSelector({
         </div>
 
         <Button
+          type="button"
           onClick={handleAdd}
           disabled={!selectedMachineId || !selectedProcessId}
           className="w-full mt-4 bg-blue-600 hover:bg-blue-700"

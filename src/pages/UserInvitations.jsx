@@ -149,7 +149,7 @@ function UserInvitationsContent() {
               Invita usuarios y gestiona accesos a la plataforma
             </p>
           </div>
-          <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Button type="button" onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
             <UserPlus className="w-4 h-4 mr-2" />
             Invitar Usuario
           </Button>
@@ -246,6 +246,7 @@ function UserInvitationsContent() {
                           {invitation.estado === "Pendiente" && (
                             <>
                               <Button
+                                type="button"
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => copyLink(invitation.invitation_link)}
@@ -254,6 +255,7 @@ function UserInvitationsContent() {
                                 <Copy className="w-4 h-4" />
                               </Button>
                               <Button
+                                type="button"
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => resendInvitationMutation.mutate(invitation)}
@@ -262,6 +264,7 @@ function UserInvitationsContent() {
                                 <RefreshCw className="w-4 h-4" />
                               </Button>
                               <Button
+                                type="button"
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => cancelInvitationMutation.mutate(invitation.id)}

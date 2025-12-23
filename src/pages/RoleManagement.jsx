@@ -176,7 +176,7 @@ export default function RoleManagementPage() {
                 Configura roles personalizados y asigna permisos específicos
               </p>
             </div>
-            <Button onClick={() => setShowDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Button type="button" onClick={() => setShowDialog(true)} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-4 h-4 mr-2" />
               Nuevo Rol
             </Button>
@@ -189,7 +189,7 @@ export default function RoleManagementPage() {
             <div className="p-12 text-center text-slate-500">
               <Shield className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p>No hay roles configurados</p>
-              <Button onClick={() => setShowDialog(true)} variant="link" className="mt-2">
+              <Button type="button" onClick={() => setShowDialog(true)} variant="link" className="mt-2">
                 Crear el primer rol
               </Button>
             </div>
@@ -255,6 +255,7 @@ export default function RoleManagementPage() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDuplicate(role)}
@@ -263,6 +264,7 @@ export default function RoleManagementPage() {
                           <Copy className="w-4 h-4" />
                         </Button>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           onClick={() => handleEdit(role)}
@@ -271,6 +273,7 @@ export default function RoleManagementPage() {
                         </Button>
                         {!role.is_system_role && (
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDelete(role.id, role)}

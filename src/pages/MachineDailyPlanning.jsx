@@ -375,6 +375,7 @@ function MachineDailyPlanningContent() {
                           </div>
                         </div>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveMachine(index)}
@@ -418,6 +419,7 @@ function MachineDailyPlanningContent() {
         {/* Actions */}
         <div className="flex flex-col md:flex-row gap-3 justify-end">
           <Button
+            type="button"
             variant="outline"
             onClick={() => handleSave(false)}
             disabled={planningData.maquinas_planificadas.length === 0 || savePlanningMutation.isPending}
@@ -426,6 +428,7 @@ function MachineDailyPlanningContent() {
             Guardar Borrador
           </Button>
           <Button
+            type="button"
             onClick={() => handleSave(true)}
             disabled={
               planningData.maquinas_planificadas.length === 0 || 
