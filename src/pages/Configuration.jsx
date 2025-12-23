@@ -130,6 +130,13 @@ function ConfigurationContent() {
           color: "orange"
         },
         {
+          title: "Acceso a Módulos (Web/App)",
+          description: "Controla qué módulos son accesibles desde web y app móvil por rol",
+          icon: Shield,
+          url: createPageUrl("ModuleAccessConfig"),
+          color: "purple"
+        },
+        {
           title: "Roles y Permisos",
           description: "Gestiona roles de usuario y permisos de acceso",
           icon: Shield,
