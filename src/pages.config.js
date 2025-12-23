@@ -1,6 +1,7 @@
 import AbsenceManagement from './pages/AbsenceManagement';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
+import AcceptInvitation from './pages/AcceptInvitation';
 import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
 import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
 import AdvancedConfiguration from './pages/AdvancedConfiguration';
@@ -36,6 +37,7 @@ import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
 import LockerManagement from './pages/LockerManagement';
 import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
+import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
@@ -78,12 +80,11 @@ import SystemHealth from './pages/SystemHealth';
 import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
+import UserInvitations from './pages/UserInvitations';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import UserInvitations from './pages/UserInvitations';
-import AcceptInvitation from './pages/AcceptInvitation';
-import MachineDailyPlanning from './pages/MachineDailyPlanning';
+import BrandingConfig from './pages/BrandingConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -91,6 +92,7 @@ export const PAGES = {
     "AbsenceManagement": AbsenceManagement,
     "AbsenceTypeConfig": AbsenceTypeConfig,
     "AbsenceTypeInfo": AbsenceTypeInfo,
+    "AcceptInvitation": AcceptInvitation,
     "AdminDeploymentGuide": AdminDeploymentGuide,
     "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
     "AdvancedConfiguration": AdvancedConfiguration,
@@ -126,6 +128,7 @@ export const PAGES = {
     "LockerManagement": LockerManagement,
     "MLInsights": MLInsights,
     "MachineAssignments": MachineAssignments,
+    "MachineDailyPlanning": MachineDailyPlanning,
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
     "MachineMaster": MachineMaster,
@@ -168,12 +171,11 @@ export const PAGES = {
     "SystemReset": SystemReset,
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
+    "UserInvitations": UserInvitations,
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "UserInvitations": UserInvitations,
-    "AcceptInvitation": AcceptInvitation,
-    "MachineDailyPlanning": MachineDailyPlanning,
+    "BrandingConfig": BrandingConfig,
 }
 
 export const pagesConfig = {

@@ -116,6 +116,13 @@ function ConfigurationContent() {
       title: "Sistema",
       modules: [
         {
+          title: "Apariencia y Marca",
+          description: "Personaliza logotipo, nombre y colores",
+          icon: Palette,
+          url: createPageUrl("BrandingConfig"),
+          color: "purple"
+        },
+        {
           title: "Gestión de Accesos",
           description: "Invita usuarios y gestiona accesos web/móvil",
           icon: UserCog,

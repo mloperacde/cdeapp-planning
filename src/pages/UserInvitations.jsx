@@ -57,8 +57,8 @@ function UserInvitationsContent() {
   });
 
   const { data: roles = [] } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
+    queryKey: ['roles'],
+    queryFn: () => base44.entities.Role.list(),
   });
 
   const { data: employees = [] } = useQuery({
@@ -306,12 +306,32 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
     notas: ""
   });
 
+  const [hasChanges, setHasChanges] = useState(false);
+
+  React.useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasChanges]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    setHasChanges(false);
     onSubmit(formData);
   };
 
+  const handleFieldChange = (field, value) => {
+    setFormData({...formData, [field]: value});
+    setHasChanges(true);
+  };
+
   const togglePlatform = (platform) => {
+    setHasChanges(true);
     setFormData(prev => ({
       ...prev,
       plataformas_habilitadas: prev.plataformas_habilitadas.includes(platform)
@@ -336,7 +356,7 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
               <Input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => handleFieldChange('email', e.target.value)}
                 placeholder="usuario@ejemplo.com"
                 required
               />
@@ -346,7 +366,7 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
               <Label>Nombre Completo *</Label>
               <Input
                 value={formData.nombre_completo}
-                onChange={(e) => setFormData({...formData, nombre_completo: e.target.value})}
+                onChange={(e) => handleFieldChange('nombre_completo', e.target.value)}
                 placeholder="Juan Pérez García"
                 required
               />
@@ -356,7 +376,7 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Rol a Asignar *</Label>
-              <Select value={formData.role_id} onValueChange={(val) => setFormData({...formData, role_id: val})}>
+              <Select value={formData.role_id} onValueChange={(val) => handleFieldChange('role_id', val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar rol..." />
                 </SelectTrigger>
@@ -371,11 +391,14 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
                   ))}
                 </SelectContent>
               </Select>
+              {roles.length === 0 && (
+                <p className="text-xs text-amber-600">⚠️ No hay roles disponibles. Crea roles primero.</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label>Vincular a Empleado (opcional)</Label>
-              <Select value={formData.employee_id} onValueChange={(val) => setFormData({...formData, employee_id: val})}>
+              <Select value={formData.employee_id} onValueChange={(val) => handleFieldChange('employee_id', val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sin vincular..." />
                 </SelectTrigger>
@@ -428,7 +451,7 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
             <Label>Notas (opcional)</Label>
             <Textarea
               value={formData.notas}
-              onChange={(e) => setFormData({...formData, notas: e.target.value})}
+              onChange={(e) => handleFieldChange('notas', e.target.value)}
               placeholder="Información adicional sobre la invitación..."
               rows={3}
             />

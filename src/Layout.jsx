@@ -69,6 +69,15 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const { canAccessModule, isMobile } = useModuleAccess();
 
+  const { data: brandingConfig } = useQuery({
+    queryKey: ['appConfig', 'branding'],
+    queryFn: async () => {
+      const configs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
+      return configs[0] || null;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -115,12 +124,26 @@ export default function Layout({ children, currentPageName }) {
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
-                      <CalendarIcon className="w-6 h-6 text-white" />
-                    </div>
+                    {brandingConfig?.logo_url ? (
+                      <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg bg-white dark:bg-slate-800 flex items-center justify-center p-1">
+                        <img 
+                          src={brandingConfig.logo_url} 
+                          alt="Logo" 
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
+                        <CalendarIcon className="w-6 h-6 text-white" />
+                      </div>
+                    )}
                     <div>
-                      <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">CdeApp Planning</h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Gestión de Empleados y Planificador</p>
+                      <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                        {brandingConfig?.app_name || 'CdeApp Planning'}
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {brandingConfig?.app_subtitle || 'Gestión de Empleados y Planificador'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

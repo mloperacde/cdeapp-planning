@@ -46,8 +46,21 @@ function MachineDailyPlanningContent() {
     notas: "",
     estado: "Borrador"
   });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const queryClient = useQueryClient();
+
+  // Prevenir salida con cambios sin guardar
+  React.useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -95,6 +108,7 @@ function MachineDailyPlanningContent() {
       toast.success("Planning guardado correctamente");
       queryClient.invalidateQueries({ queryKey: ['dailyMachinePlannings'] });
       setPlanningData({ maquinas_planificadas: [], notas: "", estado: "Borrador" });
+      setHasUnsavedChanges(false);
     },
     onError: (error) => {
       toast.error("Error al guardar: " + error.message);
@@ -160,6 +174,7 @@ function MachineDailyPlanningContent() {
       ...prev,
       maquinas_planificadas: [...prev.maquinas_planificadas, machineData]
     }));
+    setHasUnsavedChanges(true);
     toast.success(`${machineData.machine_nombre} añadida al planning`);
   };
 
@@ -168,6 +183,7 @@ function MachineDailyPlanningContent() {
       ...prev,
       maquinas_planificadas: prev.maquinas_planificadas.filter((_, i) => i !== index)
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleSave = (confirmar = false) => {
@@ -383,10 +399,19 @@ function MachineDailyPlanningContent() {
           <CardContent>
             <Textarea
               value={planningData.notas}
-              onChange={(e) => setPlanningData({...planningData, notas: e.target.value})}
+              onChange={(e) => {
+                setPlanningData({...planningData, notas: e.target.value});
+                setHasUnsavedChanges(true);
+              }}
               placeholder="Añade notas sobre esta planificación (ej: consideraciones especiales, ajustes necesarios...)"
               rows={3}
             />
+            {hasUnsavedChanges && (
+              <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Tienes cambios sin guardar
+              </p>
+            )}
           </CardContent>
         </Card>
 

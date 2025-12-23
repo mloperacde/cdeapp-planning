@@ -108,14 +108,20 @@ export default function MachinePlanningSelector({
                   <SelectValue placeholder="Elegir proceso..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {compatibleProcesses.map(proc => (
-                    <SelectItem key={proc.id} value={proc.id}>
-                      {proc.nombre} 
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        {proc.operadores_requeridos || 1} op.
-                      </Badge>
-                    </SelectItem>
-                  ))}
+                  {compatibleProcesses.length === 0 ? (
+                    <div className="p-3 text-xs text-amber-600">
+                      ⚠️ No hay procesos configurados para esta máquina
+                    </div>
+                  ) : (
+                    compatibleProcesses.map(proc => (
+                      <SelectItem key={proc.id} value={proc.id}>
+                        {proc.nombre} 
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          {proc.operadores_requeridos || 1} op.
+                        </Badge>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
