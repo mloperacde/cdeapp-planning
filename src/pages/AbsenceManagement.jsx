@@ -220,16 +220,16 @@ function AbsenceManagementContent() {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
-            <TabsTrigger value="dashboard" className="py-2"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
-            <TabsTrigger value="list" className="py-2"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
+            <TabsTrigger value="dashboard" className="py-2" type="button"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
+            <TabsTrigger value="list" className="py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
             
             {!isShiftManager && (
               <>
-                <TabsTrigger value="approval" className="py-2"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
-                <TabsTrigger value="calendar" className="py-2"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
-                <TabsTrigger value="analysis" className="py-2"><Activity className="w-4 h-4 mr-2"/> Análisis & IA</TabsTrigger>
-                <TabsTrigger value="config" className="py-2"><Settings className="w-4 h-4 mr-2"/> Configuración</TabsTrigger>
-                <TabsTrigger value="reports" className="py-2"><BarChart3 className="w-4 h-4 mr-2"/> Informes</TabsTrigger>
+                <TabsTrigger value="approval" className="py-2" type="button"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
+                <TabsTrigger value="calendar" className="py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
+                <TabsTrigger value="analysis" className="py-2" type="button"><Activity className="w-4 h-4 mr-2"/> Análisis & IA</TabsTrigger>
+                <TabsTrigger value="config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Configuración</TabsTrigger>
+                <TabsTrigger value="reports" className="py-2" type="button"><BarChart3 className="w-4 h-4 mr-2"/> Informes</TabsTrigger>
               </>
             )}
           </TabsList>
