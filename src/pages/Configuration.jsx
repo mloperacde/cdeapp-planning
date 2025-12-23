@@ -116,6 +116,13 @@ function ConfigurationContent() {
       title: "Sistema",
       modules: [
         {
+          title: "Gestión de Accesos",
+          description: "Invita usuarios y gestiona accesos web/móvil",
+          icon: UserCog,
+          url: createPageUrl("UserInvitations"),
+          color: "green"
+        },
+        {
           title: "Gestión de Usuarios App",
           description: "Administra usuarios y accesos a la aplicación",
           icon: UserCog,

@@ -35,6 +35,7 @@ import {
   LogOut,
   UserCircle,
   Key,
+  Boxes,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -367,6 +368,22 @@ export default function Layout({ children, currentPageName }) {
     </Link>
   </SidebarMenuButton>
 </SidebarMenuItem>
+
+{canAccessModule('daily_planning') && (
+  <SidebarMenuItem>
+    <SidebarMenuButton
+      asChild
+      className={`hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200 rounded-lg mb-1 ${
+        isActive(createPageUrl("MachineDailyPlanning")) ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold' : ''
+      }`}
+    >
+      <Link to={createPageUrl("MachineDailyPlanning")} className="flex items-center gap-3 px-3 py-2">
+        <Boxes className="w-4 h-4" />
+        Planning Máquinas
+      </Link>
+    </SidebarMenuButton>
+  </SidebarMenuItem>
+)}
 </SidebarMenu>
 </SidebarGroupContent>
 </SidebarGroup>
