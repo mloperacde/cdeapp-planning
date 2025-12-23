@@ -232,7 +232,7 @@ function DashboardContent() {
                 </div>
               </div>
               <Link to={createPageUrl("AbsenceManagement")}>
-                <Button className="w-full mt-4" variant="outline">
+                <Button type="button" className="w-full mt-4" variant="outline">
                   Ver Detalles
                 </Button>
               </Link>
@@ -269,7 +269,7 @@ function DashboardContent() {
                 </div>
               </div>
               <Link to={createPageUrl("DailyPlanning")}>
-                <Button className="w-full mt-4" variant="outline">
+                <Button type="button" className="w-full mt-4" variant="outline">
                   Ir al Planning
                 </Button>
               </Link>
@@ -308,7 +308,7 @@ function DashboardContent() {
                 </div>
               </div>
               <Link to={createPageUrl("MachineManagement")}>
-                <Button className="w-full mt-4" variant="outline">
+                <Button type="button" className="w-full mt-4" variant="outline">
                   Ver Máquinas
                 </Button>
               </Link>
@@ -381,7 +381,7 @@ function DashboardContent() {
                 </div>
               )}
               <Link to={createPageUrl("MaintenanceTracking")}>
-                <Button className="w-full mt-4" variant="outline">
+                <Button type="button" className="w-full mt-4" variant="outline">
                   Ver Mantenimientos
                 </Button>
               </Link>
@@ -424,7 +424,7 @@ function DashboardContent() {
                 </div>
               </div>
               <Link to={createPageUrl("MasterEmployeeDatabase")}>
-                <Button className="w-full mt-4" variant="outline">
+                <Button type="button" className="w-full mt-4" variant="outline">
                   Ver Empleados
                 </Button>
               </Link>
@@ -451,6 +451,7 @@ function DashboardContent() {
             </p>
           </div>
           <Button
+            type="button"
             onClick={() => setShowWidgetConfig(true)}
             variant="outline"
             className="bg-white hover:bg-slate-50 dark:bg-slate-800"
