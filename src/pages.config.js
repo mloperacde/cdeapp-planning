@@ -52,6 +52,7 @@ import MobileNotifications from './pages/MobileNotifications';
 import MobilePlanning from './pages/MobilePlanning';
 import MobileProfile from './pages/MobileProfile';
 import MobileVacations from './pages/MobileVacations';
+import ModuleAccessConfig from './pages/ModuleAccessConfig';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
 import NotificationSettings from './pages/NotificationSettings';
@@ -80,7 +81,6 @@ import Timeline from './pages/Timeline';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import ModuleAccessConfig from './pages/ModuleAccessConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -139,6 +139,7 @@ export const PAGES = {
     "MobilePlanning": MobilePlanning,
     "MobileProfile": MobileProfile,
     "MobileVacations": MobileVacations,
+    "ModuleAccessConfig": ModuleAccessConfig,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
     "NotificationSettings": NotificationSettings,
@@ -167,7 +168,6 @@ export const PAGES = {
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "ModuleAccessConfig": ModuleAccessConfig,
 }
 
 export const pagesConfig = {

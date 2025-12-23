@@ -21,6 +21,7 @@ import { format, subDays, startOfDay, endOfDay, parseISO, differenceInMinutes } 
 import { es } from "date-fns/locale";
 import ProtectedPage from "../components/roles/ProtectedPage";
 import Breadcrumbs from "../components/common/Breadcrumbs";
+import { createPageUrl } from "@/utils";
 
 export default function ProductionDashboardPage() {
   return (
