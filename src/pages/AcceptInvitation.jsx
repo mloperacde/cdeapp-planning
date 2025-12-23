@@ -96,11 +96,8 @@ export default function AcceptInvitation() {
     setIsSubmitting(true);
 
     try {
-      // Crear usuario en Base44 Auth (usando signup si existe, o directamente)
-      // Nota: Base44 maneja autenticación internamente, aquí simulamos el flujo
-      
-      // 1. Asignar el rol al usuario
-      await base44.entities.UserRoleAssignment.create({
+      // 1. Asignar el rol al usuario (UserRole no UserRoleAssignment)
+      await base44.entities.UserRole.create({
         user_email: invitation.email,
         role_id: invitation.role_id,
         assigned_by: invitation.invited_by,

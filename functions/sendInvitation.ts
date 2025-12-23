@@ -23,8 +23,9 @@ Deno.serve(async (req) => {
     token_expiration.setDate(token_expiration.getDate() + 7);
 
     // Obtener nombre del rol
-    const role = await base44.asServiceRole.entities.UserRole.filter({ id: role_id });
-    const role_name = role[0]?.name || 'Usuario';
+    const roles = await base44.asServiceRole.entities.UserRole.list();
+    const role = roles.find(r => r.id === role_id);
+    const role_name = role?.role_name || role?.name || 'Usuario';
 
     // Crear invitación
     const invitation = await base44.asServiceRole.entities.UserInvitation.create({
