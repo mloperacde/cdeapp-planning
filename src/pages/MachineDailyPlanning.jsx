@@ -28,6 +28,7 @@ import Breadcrumbs from "../components/common/Breadcrumbs";
 import EmployeeAvailabilityPanel from "../components/availability/EmployeeAvailabilityPanel";
 import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
 import ViabilityTrafficLight from "../components/planning/ViabilityTrafficLight";
+import AvailabilityDebugPanel from "../components/planning/AvailabilityDebugPanel";
 
 export default function MachineDailyPlanningPage() {
   return (
@@ -291,12 +292,19 @@ function MachineDailyPlanningContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Panel de disponibilidad */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-4">
             <EmployeeAvailabilityPanel
               employees={employees}
               absences={absences}
               selectedDate={selectedDate}
             />
+            {currentUser?.role === 'admin' && (
+              <AvailabilityDebugPanel
+                employees={employees}
+                absences={absences}
+                selectedDate={selectedDate}
+              />
+            )}
           </div>
 
           {/* Semáforo */}
