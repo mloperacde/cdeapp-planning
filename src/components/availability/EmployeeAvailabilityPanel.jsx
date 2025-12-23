@@ -13,16 +13,23 @@ export default function EmployeeAvailabilityPanel({
   showDetails = true 
 }) {
   const availability = useMemo(() => {
+    console.log('📊 Calculando disponibilidad:', { 
+      totalEmployees: employees.length, 
+      fecha: selectedDate 
+    });
+
     // Filtrar empleados de FABRICACION con puestos clave
-    const fabricacionEmployees = employees.filter(emp => 
-      emp.departamento === "FABRICACION" &&
-      emp.estado_empleado === "Alta" &&
-      emp.incluir_en_planning === true &&
-      ["Responsable de Línea", "Segunda de Línea", "Operaria/o de Línea"].includes(emp.puesto)
-    );
+    const fabricacionEmployees = employees.filter(emp => {
+      const cumple = emp.departamento === "FABRICACION" &&
+        emp.estado_empleado === "Alta" &&
+        emp.incluir_en_planning !== false; // Más permisivo
+      return cumple;
+    });
+
+    console.log('👷 Empleados FABRICACION:', fabricacionEmployees.length);
 
     // Ausencias confirmadas para la fecha seleccionada
-    const selectedDateObj = new Date(selectedDate);
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
     const ausenciasConfirmadas = absences.filter(abs => {
       if (abs.estado_aprobacion !== "Aprobada") return false;
       
@@ -36,6 +43,8 @@ export default function EmployeeAvailabilityPanel({
       return fin && selectedDateObj >= inicio && selectedDateObj <= fin;
     });
 
+    console.log('🚫 Ausencias confirmadas:', ausenciasConfirmadas.length);
+
     // Empleados ausentes (únicos)
     const empleadosAusentesIds = new Set(ausenciasConfirmadas.map(a => a.employee_id));
     const empleadosAusentes = fabricacionEmployees.filter(emp => 
@@ -46,6 +55,8 @@ export default function EmployeeAvailabilityPanel({
     const ausentes = empleadosAusentes.length;
     const disponibles = total - ausentes;
     const porcentajeDisponible = total > 0 ? (disponibles / total) * 100 : 100;
+
+    console.log('✅ Resultado:', { total, ausentes, disponibles });
 
     return {
       total,

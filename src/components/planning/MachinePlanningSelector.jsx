@@ -2,8 +2,9 @@ import React, { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Cog } from "lucide-react";
+import { Plus, Cog, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function MachinePlanningSelector({ 
@@ -14,6 +15,7 @@ export default function MachinePlanningSelector({
 }) {
   const [selectedMachineId, setSelectedMachineId] = useState("");
   const [selectedProcessId, setSelectedProcessId] = useState("");
+  const [observaciones, setObservaciones] = useState("");
 
   // Máquinas disponibles (no ya planificadas)
   const availableMachines = useMemo(() => {
@@ -48,12 +50,14 @@ export default function MachinePlanningSelector({
       machine_codigo: machine.codigo,
       process_id: process.id,
       process_nombre: process.nombre,
-      operadores_requeridos: process.operadores_requeridos || 1
+      operadores_requeridos: process.operadores_requeridos || 1,
+      observaciones: observaciones || ""
     });
 
     // Reset
     setSelectedMachineId("");
     setSelectedProcessId("");
+    setObservaciones("");
   };
 
   return (
@@ -64,68 +68,83 @@ export default function MachinePlanningSelector({
           <h3 className="font-semibold text-blue-900 dark:text-blue-100">Añadir Máquina al Planning</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-          <div className="space-y-2">
-            <Label className="text-xs">Seleccionar Máquina</Label>
-            <Select value={selectedMachineId} onValueChange={(val) => {
-              setSelectedMachineId(val);
-              setSelectedProcessId(""); // Reset proceso
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Elegir máquina..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableMachines.map(machine => (
-                  <SelectItem key={machine.id} value={machine.id}>
-                    <div className="flex items-center gap-2">
-                      <Cog className="w-3 h-3" />
-                      {machine.nombre} ({machine.codigo})
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {availableMachines.length === 0 && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                ⚠️ Todas las máquinas ya están planificadas
-              </p>
-            )}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+            <div className="space-y-2">
+              <Label className="text-xs">Seleccionar Máquina</Label>
+              <Select value={selectedMachineId} onValueChange={(val) => {
+                setSelectedMachineId(val);
+                setSelectedProcessId(""); // Reset proceso
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Elegir máquina..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMachines.map(machine => (
+                    <SelectItem key={machine.id} value={machine.id}>
+                      <div className="flex items-center gap-2">
+                        <Cog className="w-3 h-3" />
+                        {machine.nombre} ({machine.codigo})
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {availableMachines.length === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Todas las máquinas ya están planificadas
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Seleccionar Proceso</Label>
+              <Select 
+                value={selectedProcessId} 
+                onValueChange={setSelectedProcessId}
+                disabled={!selectedMachineId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Elegir proceso..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {compatibleProcesses.map(proc => (
+                    <SelectItem key={proc.id} value={proc.id}>
+                      {proc.nombre} 
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {proc.operadores_requeridos || 1} op.
+                      </Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              {selectedProcess && (
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-700">
+                  <p className="text-xs text-purple-700 dark:text-purple-300">
+                    Operadores necesarios:
+                  </p>
+                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                    {selectedProcess.operadores_requeridos || 1}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs">Seleccionar Proceso</Label>
-            <Select 
-              value={selectedProcessId} 
-              onValueChange={setSelectedProcessId}
-              disabled={!selectedMachineId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Elegir proceso..." />
-              </SelectTrigger>
-              <SelectContent>
-                {compatibleProcesses.map(proc => (
-                  <SelectItem key={proc.id} value={proc.id}>
-                    {proc.nombre} 
-                    <Badge variant="outline" className="ml-2 text-xs">
-                      {proc.operadores_requeridos || 1} op.
-                    </Badge>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            {selectedProcess && (
-              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-700">
-                <p className="text-xs text-purple-700 dark:text-purple-300">
-                  Operadores necesarios:
-                </p>
-                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                  {selectedProcess.operadores_requeridos || 1}
-                </p>
-              </div>
-            )}
+            <Label className="text-xs flex items-center gap-2">
+              <MessageSquare className="w-3 h-3" />
+              Observaciones (opcional)
+            </Label>
+            <Input
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder="Ej: Verificar ajuste antes de arrancar, Producto nuevo..."
+              className="text-sm"
+            />
           </div>
         </div>
 

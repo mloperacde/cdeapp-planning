@@ -103,14 +103,20 @@ function MachineDailyPlanningContent() {
 
   // Calcular disponibilidad
   const availability = useMemo(() => {
-    const fabricacionEmployees = employees.filter(emp => 
-      emp.departamento === "FABRICACION" &&
-      emp.estado_empleado === "Alta" &&
-      emp.incluir_en_planning === true &&
-      ["Responsable de Línea", "Segunda de Línea", "Operaria/o de Línea"].includes(emp.puesto)
-    );
+    console.log('🔍 Calculando disponibilidad:', { 
+      totalEmployees: employees.length, 
+      fecha: selectedDate 
+    });
 
-    const selectedDateObj = new Date(selectedDate);
+    const fabricacionEmployees = employees.filter(emp => {
+      return emp.departamento === "FABRICACION" &&
+        emp.estado_empleado === "Alta" &&
+        emp.incluir_en_planning !== false;
+    });
+
+    console.log('👷 Empleados FABRICACION Alta:', fabricacionEmployees.length);
+
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
     const ausenciasConfirmadas = absences.filter(abs => {
       if (abs.estado_aprobacion !== "Aprobada") return false;
       const inicio = new Date(abs.fecha_inicio);
@@ -120,9 +126,13 @@ function MachineDailyPlanningContent() {
       return fin && selectedDateObj >= inicio && selectedDateObj <= fin;
     });
 
+    console.log('🚫 Ausencias ese día:', ausenciasConfirmadas.length);
+
     const empleadosAusentesIds = new Set(ausenciasConfirmadas.map(a => a.employee_id));
     const ausentes = fabricacionEmployees.filter(emp => empleadosAusentesIds.has(emp.id)).length;
     const disponibles = fabricacionEmployees.length - ausentes;
+
+    console.log('✅ Disponibles:', disponibles, '/', fabricacionEmployees.length);
 
     return {
       total: fabricacionEmployees.length,
@@ -328,17 +338,24 @@ function MachineDailyPlanningContent() {
                               ({maq.machine_codigo})
                             </span>
                           </div>
-                          <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-600 dark:text-slate-400">Proceso:</span>
-                              <Badge variant="outline">{maq.process_nombre}</Badge>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 dark:text-slate-400">Proceso:</span>
+                                <Badge variant="outline">{maq.process_nombre}</Badge>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 dark:text-slate-400">Operadores:</span>
+                                <Badge className="bg-purple-600 text-white">
+                                  {maq.operadores_requeridos}
+                                </Badge>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-600 dark:text-slate-400">Operadores:</span>
-                              <Badge className="bg-purple-600 text-white">
-                                {maq.operadores_requeridos}
-                              </Badge>
-                            </div>
+                            {maq.observaciones && (
+                              <div className="text-xs text-slate-600 dark:text-slate-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-700">
+                                <strong>📝 Observaciones:</strong> {maq.observaciones}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <Button

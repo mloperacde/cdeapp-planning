@@ -620,6 +620,20 @@ export default function Layout({ children, currentPageName }) {
   <SidebarMenuButton
     asChild
     className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
+      isActive(createPageUrl("UserInvitations")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+    }`}
+  >
+    <Link to={createPageUrl("UserInvitations")} className="flex items-center gap-3 px-3 py-2">
+      <UserPlus className="w-4 h-4" />
+      Gestión de Accesos
+    </Link>
+  </SidebarMenuButton>
+</SidebarMenuItem>
+
+<SidebarMenuItem>
+  <SidebarMenuButton
+    asChild
+    className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
       isActive(createPageUrl("RoleManagement")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
     }`}
   >
