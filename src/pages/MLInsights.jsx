@@ -23,16 +23,19 @@ export default function MLInsightsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: predictions } = useQuery({
+  const { data: predictions = [] } = useQuery({
     queryKey: ['mlPredictions'],
     queryFn: () => base44.entities.MLPrediction.list('-fecha_prediccion'),
     initialData: [],
+    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
+    retry: 1, // Solo 1 reintento en caso de error
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: shifts } = useQuery({
