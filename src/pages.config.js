@@ -85,6 +85,7 @@ import UserInvitations from './pages/UserInvitations';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
+import SystemAudit from './pages/SystemAudit';
 import __Layout from './Layout.jsx';
 
 
@@ -176,6 +177,7 @@ export const PAGES = {
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
+    "SystemAudit": SystemAudit,
 }
 
 export const pagesConfig = {
