@@ -27,8 +27,6 @@ import WorkCalendar from "../components/absences/WorkCalendar";
 import HolidayVacationPanel from "../components/absences/HolidayVacationPanel";
 import ProductionMonitor from "../components/machines/ProductionMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProtectedPage from "../components/roles/ProtectedPage";
-
 const EMPTY_ARRAY = [];
 
 const AVAILABLE_WIDGETS = [
@@ -41,14 +39,6 @@ const AVAILABLE_WIDGETS = [
 ];
 
 export default function DashboardPage() {
-  return (
-    <ProtectedPage module="dashboard" action="view">
-      <DashboardContent />
-    </ProtectedPage>
-  );
-}
-
-function DashboardContent() {
   const [showWidgetConfig, setShowWidgetConfig] = useState(false);
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [user, setUser] = useState(null);

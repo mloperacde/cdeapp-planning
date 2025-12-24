@@ -55,18 +55,9 @@ import AbsenceForm from "../components/absences/AbsenceForm";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
 import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
-import ProtectedPage from "../components/roles/ProtectedPage";
 import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function AbsenceManagementPage() {
-  return (
-    <ProtectedPage module="absences" action="view">
-      <AbsenceManagementContent />
-    </ProtectedPage>
-  );
-}
-
-function AbsenceManagementContent() {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");

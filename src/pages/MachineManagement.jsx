@@ -10,19 +10,9 @@ import { createPageUrl } from "@/utils";
 import { usePagination } from "../components/utils/usePagination";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
-import ProtectedPage from "../components/roles/ProtectedPage";
-
 const EMPTY_ARRAY = [];
 
 export default function MachineManagement() {
-  return (
-    <ProtectedPage module="machines" action="view">
-      <MachineManagementContent />
-    </ProtectedPage>
-  );
-}
-
-function MachineManagementContent() {
   const [filters, setFilters] = useState({});
   const [selectedMachine, setSelectedMachine] = useState(null);
   const queryClient = useQueryClient();
