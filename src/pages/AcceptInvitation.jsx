@@ -41,9 +41,17 @@ export default function AcceptInvitation() {
 
   const loadInvitation = async (invToken) => {
     try {
-      const invitations = await base44.entities.UserInvitation.filter({ 
-        invitation_token: invToken 
-      });
+      // Intentar sin autenticación primero (para usuarios nuevos)
+      let invitations = [];
+      try {
+        invitations = await base44.entities.UserInvitation.filter({ 
+          invitation_token: invToken 
+        });
+      } catch (authError) {
+        // Si falla por autenticación, mostrar error más claro
+        setValidationError("No se pudo validar la invitación. Intenta acceder desde el enlace enviado por email.");
+        return;
+      }
 
       if (invitations.length === 0) {
         setValidationError("Invitación no encontrada. El enlace puede ser inválido.");

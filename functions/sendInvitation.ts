@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       invited_by: user.email,
       invited_by_name: user.full_name,
       notas: notas || '',
-      invitation_link: `${new URL(req.url).origin}/accept-invitation?token=${invitation_token}`
+      invitation_link: `https://cdeplanning.base44.app/accept-invitation?token=${invitation_token}`
     });
 
     // Enviar email
