@@ -59,10 +59,12 @@ export default function EmergencyTeamManager({ employees = [] }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: emergencyMembers } = useQuery({
+  const { data: emergencyMembers = [] } = useQuery({
     queryKey: ['emergencyTeamMembers'],
     queryFn: () => base44.entities.EmergencyTeamMember.list(),
     initialData: [],
+    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
+    retry: 1, // Solo 1 reintento
   });
 
   const deleteMutation = useMutation({

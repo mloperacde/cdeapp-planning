@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -30,28 +29,35 @@ export default function CommitteeManagementPage() {
   const [selectedCommittee, setSelectedCommittee] = useState(null);
   const [currentTab, setCurrentTab] = useState("company");
 
-  const { data: committeeMembers } = useQuery({
+  const { data: committeeMembers = [] } = useQuery({
     queryKey: ['committeeMembers'],
     queryFn: () => base44.entities.CommitteeMember.list(),
     initialData: [],
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: riskAssessments } = useQuery({
+  const { data: riskAssessments = [] } = useQuery({
     queryKey: ['riskAssessments'],
     queryFn: () => base44.entities.RiskAssessment.list('-fecha_evaluacion'),
     initialData: [],
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
-  const { data: incidents } = useQuery({
+  const { data: incidents = [] } = useQuery({
     queryKey: ['workIncidents'],
     queryFn: () => base44.entities.WorkIncident.list('-fecha_hora'),
     initialData: [],
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
   const activeIncidents = incidents.filter(i => 
