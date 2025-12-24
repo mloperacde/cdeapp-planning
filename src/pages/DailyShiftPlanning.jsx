@@ -12,17 +12,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import EmployeeSelect from "../components/common/EmployeeSelect";
-import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function DailyShiftPlanningPage() {
-  return (
-    <ProtectedPage module="planning" action="edit">
-      <DailyShiftPlanningContent />
-    </ProtectedPage>
-  );
-}
-
-function DailyShiftPlanningContent() {
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [shift, setShift] = useState("Mañana");
     const [currentTeam, setCurrentTeam] = useState("");
