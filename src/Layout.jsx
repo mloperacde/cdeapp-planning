@@ -1,5 +1,9 @@
 //agrega al inicio del componente layout
-
+console.log('Rutas activas:', {
+  machinePlanning: createPageUrl("MachinePlanning"),
+  machineDailyPlanning: createPageUrl("MachineDailyPlanning"),
+  currentPath: location.pathname
+});
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
