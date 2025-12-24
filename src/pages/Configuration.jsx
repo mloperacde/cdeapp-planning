@@ -133,20 +133,7 @@ export default function ConfigurationPage() {
           url: createPageUrl("DocumentManagement"),
           color: "orange"
         },
-        {
-          title: "Acceso a Módulos (Web/App)",
-          description: "Controla qué módulos son accesibles desde web y app móvil por rol",
-          icon: Shield,
-          url: createPageUrl("ModuleAccessConfig"),
-          color: "purple"
-        },
-        {
-          title: "Roles y Permisos",
-          description: "Gestiona roles de usuario y permisos de acceso",
-          icon: Shield,
-          url: createPageUrl("RoleManagement"),
-          color: "blue"
-        },
+
         {
           title: "Configuración Avanzada",
           description: "Estructura organizativa, puestos y sincronización",
