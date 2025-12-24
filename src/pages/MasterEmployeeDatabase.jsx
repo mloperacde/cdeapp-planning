@@ -105,8 +105,7 @@ export default function MasterEmployeeDatabasePage() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(50);
+
   
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem("masterEmployeeColumns");
@@ -155,8 +154,8 @@ export default function MasterEmployeeDatabasePage() {
   }, [currentUser, userRoleAssignments, userRoles]);
 
   const { data: masterEmployees = EMPTY_ARRAY, isLoading } = useQuery({
-    queryKey: ['employeeMasterDatabase', page, pageSize],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', pageSize, page * pageSize),
+    queryKey: ['employeeMasterDatabase'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', 10000),
   });
 
   const { data: userPermissions } = useQuery({
@@ -722,30 +721,7 @@ export default function MasterEmployeeDatabasePage() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
-                    <span className="text-sm text-slate-500 dark:text-slate-400">
-                      Página {page + 1}
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Anterior
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(p => p + 1)}
-                        disabled={masterEmployees.length < pageSize}
-                      >
-                        Siguiente
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <div className="flex items-center justify-end border-t border-slate-100 dark:border-slate-800 pt-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 min-w-[140px]">

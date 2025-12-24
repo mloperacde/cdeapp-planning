@@ -407,11 +407,14 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={null}>Sin vincular</SelectItem>
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.nombre} - {emp.codigo_empleado}
-                    </SelectItem>
-                  ))}
+                  {employees
+                    .filter(emp => emp.estado_empleado === 'Alta')
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                    .map(emp => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.nombre}{emp.codigo_empleado ? ` - ${emp.codigo_empleado}` : ''}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

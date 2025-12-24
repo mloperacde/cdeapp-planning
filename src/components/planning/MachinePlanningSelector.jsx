@@ -24,11 +24,11 @@ export default function MachinePlanningSelector({
 
   // Procesos compatibles con la máquina seleccionada
   const compatibleProcesses = useMemo(() => {
-    if (!selectedMachineId) return processes;
+    if (!selectedMachineId) return [];
     
     const machine = machines.find(m => m.id === selectedMachineId);
     if (!machine || !machine.procesos_ids || machine.procesos_ids.length === 0) {
-      return processes; // Si no tiene restricción, mostrar todos
+      return []; // Si no tiene procesos configurados, devolver array vacío
     }
     
     return processes.filter(p => machine.procesos_ids.includes(p.id));

@@ -120,16 +120,21 @@ function MachineDailyPlanningContent() {
   const availability = useMemo(() => {
     console.log('🔍 Calculando disponibilidad:', { 
       totalEmployees: employees.length, 
-      fecha: selectedDate 
+      fecha: selectedDate,
+      team: selectedTeam
     });
 
+    // FILTRAR POR EQUIPO Y DEPARTAMENTO
     const fabricacionEmployees = employees.filter(emp => {
-      return emp.departamento === "FABRICACION" &&
-        emp.estado_empleado === "Alta" &&
-        emp.incluir_en_planning !== false;
+      const isActive = emp.estado_empleado === "Alta";
+      const isFabricacion = emp.departamento === "FABRICACION";
+      const incluir = emp.incluir_en_planning !== false;
+      const matchesTeam = !selectedTeam || emp.equipo === teams.find(t => t.team_key === selectedTeam)?.team_name;
+      
+      return isActive && isFabricacion && incluir && matchesTeam;
     });
 
-    console.log('👷 Empleados FABRICACION Alta:', fabricacionEmployees.length);
+    console.log('👷 Empleados FABRICACION del equipo seleccionado:', fabricacionEmployees.length);
 
     const selectedDateObj = new Date(selectedDate + 'T00:00:00');
     const ausenciasConfirmadas = absences.filter(abs => {
@@ -147,14 +152,14 @@ function MachineDailyPlanningContent() {
     const ausentes = fabricacionEmployees.filter(emp => empleadosAusentesIds.has(emp.id)).length;
     const disponibles = fabricacionEmployees.length - ausentes;
 
-    console.log('✅ Disponibles:', disponibles, '/', fabricacionEmployees.length);
+    console.log('✅ Disponibles del equipo:', disponibles, '/', fabricacionEmployees.length);
 
     return {
       total: fabricacionEmployees.length,
       ausentes,
       disponibles
     };
-  }, [employees, absences, selectedDate]);
+  }, [employees, absences, selectedDate, selectedTeam, teams]);
 
   const totalRequeridos = useMemo(() => {
     return planningData.maquinas_planificadas.reduce((sum, m) => sum + (m.operadores_requeridos || 0), 0);
@@ -285,6 +290,7 @@ function MachineDailyPlanningContent() {
                 <p><strong>📅 Fecha:</strong> {format(new Date(selectedDate), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</p>
                 <p><strong>⏰ Turno:</strong> {selectedTurno}</p>
                 <p><strong>👥 Equipo:</strong> {teams.find(t => t.team_key === selectedTeam)?.team_name || selectedTeam}</p>
+                <p><strong>✅ Disponibles:</strong> {availability.disponibles} empleados del equipo {teams.find(t => t.team_key === selectedTeam)?.team_name}</p>
               </div>
             </div>
           </CardContent>

@@ -9,6 +9,7 @@ import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import AppUserManagement from './pages/AppUserManagement';
 import ArticleManagement from './pages/ArticleManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
+import BrandingConfig from './pages/BrandingConfig';
 import Breaks from './pages/Breaks';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
@@ -84,7 +85,6 @@ import UserInvitations from './pages/UserInvitations';
 import UserManual from './pages/UserManual';
 import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import BrandingConfig from './pages/BrandingConfig';
 import __Layout from './Layout.jsx';
 
 
@@ -100,6 +100,7 @@ export const PAGES = {
     "AppUserManagement": AppUserManagement,
     "ArticleManagement": ArticleManagement,
     "AttendanceManagement": AttendanceManagement,
+    "BrandingConfig": BrandingConfig,
     "Breaks": Breaks,
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
@@ -175,7 +176,6 @@ export const PAGES = {
     "UserManual": UserManual,
     "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "BrandingConfig": BrandingConfig,
 }
 
 export const pagesConfig = {
