@@ -24,6 +24,8 @@ export default function IncentivePlanConfiguration() {
     queryKey: ['incentivePlans'],
     queryFn: () => base44.entities.IncentivePlan.list('-anio'),
     initialData: [],
+    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
+    retry: 1,
   });
 
   const deleteMutation = useMutation({

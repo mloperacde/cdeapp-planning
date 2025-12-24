@@ -20,12 +20,15 @@ export default function IncentiveEvaluation() {
     queryKey: ['incentivePlans'],
     queryFn: () => base44.entities.IncentivePlan.filter({ activo: true }),
     initialData: [],
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: configs = [] } = useQuery({
@@ -35,6 +38,8 @@ export default function IncentiveEvaluation() {
       : Promise.resolve([]),
     initialData: [],
     enabled: !!selectedPlan,
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
   const { data: results = [] } = useQuery({
@@ -44,6 +49,8 @@ export default function IncentiveEvaluation() {
       : Promise.resolve([]),
     initialData: [],
     enabled: !!selectedPlan,
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
   const calculateMutation = useMutation({
