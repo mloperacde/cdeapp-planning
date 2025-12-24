@@ -55,7 +55,6 @@ import MobileNotifications from './pages/MobileNotifications';
 import MobilePlanning from './pages/MobilePlanning';
 import MobileProfile from './pages/MobileProfile';
 import MobileVacations from './pages/MobileVacations';
-import ModuleAccessConfig from './pages/ModuleAccessConfig';
 import MyProfile from './pages/MyProfile';
 import NotificationCenter from './pages/NotificationCenter';
 import NotificationSettings from './pages/NotificationSettings';
@@ -68,7 +67,6 @@ import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
 import QuickStartGuide from './pages/QuickStartGuide';
 import Reports from './pages/Reports';
-import RoleManagement from './pages/RoleManagement';
 import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
 import ShiftAssignments from './pages/ShiftAssignments';
 import ShiftHandover from './pages/ShiftHandover';
@@ -77,15 +75,14 @@ import ShiftManagers from './pages/ShiftManagers';
 import ShiftPlanning from './pages/ShiftPlanning';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
+import SystemAudit from './pages/SystemAudit';
 import SystemHealth from './pages/SystemHealth';
 import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
 import Timeline from './pages/Timeline';
 import UserInvitations from './pages/UserInvitations';
 import UserManual from './pages/UserManual';
-import UserRoleAssignment from './pages/UserRoleAssignment';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import SystemAudit from './pages/SystemAudit';
 import __Layout from './Layout.jsx';
 
 
@@ -147,7 +144,6 @@ export const PAGES = {
     "MobilePlanning": MobilePlanning,
     "MobileProfile": MobileProfile,
     "MobileVacations": MobileVacations,
-    "ModuleAccessConfig": ModuleAccessConfig,
     "MyProfile": MyProfile,
     "NotificationCenter": NotificationCenter,
     "NotificationSettings": NotificationSettings,
@@ -160,7 +156,6 @@ export const PAGES = {
     "QualityControl": QualityControl,
     "QuickStartGuide": QuickStartGuide,
     "Reports": Reports,
-    "RoleManagement": RoleManagement,
     "ShiftAbsenceReport": ShiftAbsenceReport,
     "ShiftAssignments": ShiftAssignments,
     "ShiftHandover": ShiftHandover,
@@ -169,15 +164,14 @@ export const PAGES = {
     "ShiftPlanning": ShiftPlanning,
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
+    "SystemAudit": SystemAudit,
     "SystemHealth": SystemHealth,
     "SystemReset": SystemReset,
     "TeamConfiguration": TeamConfiguration,
     "Timeline": Timeline,
     "UserInvitations": UserInvitations,
     "UserManual": UserManual,
-    "UserRoleAssignment": UserRoleAssignment,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "SystemAudit": SystemAudit,
 }
 
 export const pagesConfig = {
