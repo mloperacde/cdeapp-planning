@@ -3,14 +3,12 @@ import { ArrowLeft, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import ProtectedPage from "../components/roles/ProtectedPage";
 import Breadcrumbs from "../components/common/Breadcrumbs";
 import BrandingConfig from "../components/config/BrandingConfig";
 
 export default function BrandingConfigPage() {
   return (
-    <ProtectedPage module="configuration" action="edit_general">
-      <div className="p-4 md:p-6 lg:p-8">
+    <div className="p-4 md:p-6 lg:p-8">
         <div className="max-w-5xl mx-auto">
           <Breadcrumbs items={[
             { label: "Configuración", url: createPageUrl("Configuration") },
@@ -30,6 +28,5 @@ export default function BrandingConfigPage() {
           <BrandingConfig />
         </div>
       </div>
-    </ProtectedPage>
   );
 }
