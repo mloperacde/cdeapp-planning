@@ -4,17 +4,7 @@ import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import ProtectedPage from "../components/roles/ProtectedPage";
-
 export default function ConfigurationPage() {
-  return (
-    <ProtectedPage module="configuration" action="view">
-      <ConfigurationContent />
-    </ProtectedPage>
-  );
-}
-
-function ConfigurationContent() {
   const configModules = {
     rrhh: {
       title: "Recursos Humanos",

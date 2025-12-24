@@ -6,17 +6,7 @@ import IncentivePlanConfiguration from "../components/incentives/IncentivePlanCo
 import DepartmentObjectiveConfig from "../components/incentives/DepartmentObjectiveConfig";
 import EmployeeResultsManager from "../components/incentives/EmployeeResultsManager";
 import IncentiveEvaluation from "../components/incentives/IncentiveEvaluation";
-import ProtectedPage from "../components/roles/ProtectedPage";
-
 export default function IncentiveManagementPage() {
-  return (
-    <ProtectedPage module="incentives" action="view">
-      <IncentiveManagementContent />
-    </ProtectedPage>
-  );
-}
-
-function IncentiveManagementContent() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
