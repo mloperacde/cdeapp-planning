@@ -16,17 +16,9 @@ import ProductionPlanningTab from "../components/dailyplanning/ProductionPlannin
 import MaintenancePlanningTab from "../components/dailyplanning/MaintenancePlanningTab";
 import WarehousePlanningTab from "../components/dailyplanning/WarehousePlanningTab";
 import QualityPlanningTab from "../components/dailyplanning/QualityPlanningTab";
-import ProtectedPage from "../components/roles/ProtectedPage";
+
 
 export default function DailyPlanningPage() {
-  return (
-    <ProtectedPage module="planning" action="view">
-      <DailyPlanningContent />
-    </ProtectedPage>
-  );
-}
-
-function DailyPlanningContent() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTeam, setSelectedTeam] = useState('team_1');
   const [activeTab, setActiveTab] = useState('production');

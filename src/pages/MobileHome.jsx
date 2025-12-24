@@ -16,10 +16,10 @@ import {
   Settings,
   Lock
 } from "lucide-react";
-import { useModuleAccess } from "../components/roles/useModuleAccess";
+
 
 export default function MobileHome() {
-  const { canAccessModule } = useModuleAccess();
+
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['currentUser'],

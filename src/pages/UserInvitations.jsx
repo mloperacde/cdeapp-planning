@@ -29,18 +29,9 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import ProtectedPage from "../components/roles/ProtectedPage";
 import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function UserInvitationsPage() {
-  return (
-    <ProtectedPage module="configuration" action="manage_users">
-      <UserInvitationsContent />
-    </ProtectedPage>
-  );
-}
-
-function UserInvitationsContent() {
   const [showForm, setShowForm] = useState(false);
   const [selectedInvitation, setSelectedInvitation] = useState(null);
   
@@ -56,9 +47,14 @@ function UserInvitationsContent() {
     queryFn: () => base44.entities.UserInvitation.list('-created_date'),
   });
 
-  const { data: roles = [] } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => base44.entities.Role.list(),
+  const { data: baseRoles = [] } = useQuery({
+    queryKey: ['base44Roles'],
+    queryFn: async () => {
+      // Fetch roles from Base44 native system
+      const users = await base44.entities.User.list();
+      const uniqueRoles = [...new Set(users.map(u => u.role).filter(Boolean))];
+      return uniqueRoles.map(r => ({ id: r, name: r, active: true }));
+    },
   });
 
   const { data: employees = [] } = useQuery({
@@ -288,7 +284,7 @@ function UserInvitationsContent() {
         {showForm && (
           <InvitationFormDialog
             currentUser={currentUser}
-            roles={roles}
+            baseRoles={baseRoles}
             employees={employees}
             onClose={() => setShowForm(false)}
             onSubmit={(data) => sendInvitationMutation.mutate(data)}
@@ -299,7 +295,7 @@ function UserInvitationsContent() {
   );
 }
 
-function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit }) {
+function InvitationFormDialog({ currentUser, baseRoles, employees, onClose, onSubmit }) {
   const [formData, setFormData] = useState({
     email: "",
     nombre_completo: "",
@@ -384,19 +380,20 @@ function InvitationFormDialog({ currentUser, roles, employees, onClose, onSubmit
                   <SelectValue placeholder="Seleccionar rol..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.filter(r => r.active).map(role => (
-                    <SelectItem key={role.id} value={role.id}>
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-3 h-3" />
-                        {role.name}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="admin">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-3 h-3" />
+                      Admin
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="user">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-3 h-3" />
+                      User
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
-              {roles.length === 0 && (
-                <p className="text-xs text-amber-600">⚠️ No hay roles disponibles. Crea roles primero.</p>
-              )}
             </div>
 
             <div className="space-y-2">
