@@ -48,20 +48,57 @@ function MachineDailyPlanningContent() {
     estado: "Borrador"
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showDraftOptions, setShowDraftOptions] = useState(false);
 
   const queryClient = useQueryClient();
 
-  // Prevenir salida con cambios sin guardar
+  // Cargar borrador al inicio
+  React.useEffect(() => {
+    const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;
+    const savedDraft = localStorage.getItem(draftKey);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setShowDraftOptions(true);
+        // No cargamos automáticamente, mostramos opción
+      } catch (e) {
+        console.error('Error parsing draft:', e);
+      }
+    }
+  }, [selectedDate, selectedTurno, selectedTeam]);
+
+  // Auto-guardar borrador cada 2 minutos
+  React.useEffect(() => {
+    if (planningData.maquinas_planificadas.length === 0) return;
+
+    const interval = setInterval(() => {
+      const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;
+      localStorage.setItem(draftKey, JSON.stringify({
+        ...planningData,
+        timestamp: new Date().toISOString()
+      }));
+      toast.success("Borrador guardado automáticamente", { duration: 2000 });
+    }, 2 * 60 * 1000); // 2 minutos
+
+    return () => clearInterval(interval);
+  }, [planningData, selectedDate, selectedTurno, selectedTeam]);
+
+  // Guardar borrador al salir
   React.useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
+      if (hasUnsavedChanges && planningData.maquinas_planificadas.length > 0) {
+        const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;
+        localStorage.setItem(draftKey, JSON.stringify({
+          ...planningData,
+          timestamp: new Date().toISOString()
+        }));
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, planningData, selectedDate, selectedTurno, selectedTeam]);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -192,6 +229,31 @@ function MachineDailyPlanningContent() {
     setHasUnsavedChanges(true);
   };
 
+  const handleLoadDraft = () => {
+    const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;
+    const savedDraft = localStorage.getItem(draftKey);
+    if (savedDraft) {
+      const draft = JSON.parse(savedDraft);
+      setPlanningData({
+        maquinas_planificadas: draft.maquinas_planificadas || [],
+        notas: draft.notas || "",
+        estado: "Borrador"
+      });
+      setHasUnsavedChanges(true);
+      setShowDraftOptions(false);
+      toast.success("Borrador cargado");
+    }
+  };
+
+  const handleDeleteDraft = () => {
+    const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;
+    localStorage.removeItem(draftKey);
+    setPlanningData({ maquinas_planificadas: [], notas: "", estado: "Borrador" });
+    setHasUnsavedChanges(false);
+    setShowDraftOptions(false);
+    toast.success("Borrador eliminado");
+  };
+
   const handleSave = (confirmar = false) => {
     const planningToSave = {
       fecha: selectedDate,
@@ -211,6 +273,12 @@ function MachineDailyPlanningContent() {
       confirmado_por: confirmar ? currentUser?.email : null,
       fecha_confirmacion: confirmar ? new Date().toISOString() : null
     };
+
+    // Si se confirma, eliminar borrador local
+    if (confirmar) {
+      const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;
+      localStorage.removeItem(draftKey);
+    }
 
     savePlanningMutation.mutate(planningToSave);
   };
@@ -234,6 +302,38 @@ function MachineDailyPlanningContent() {
             Planifica qué máquinas arrancar según disponibilidad de personal
           </p>
         </div>
+
+        {/* Opciones de borrador */}
+        {showDraftOptions && (
+          <Card className="mb-6 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                  <span className="font-semibold text-amber-900 dark:text-amber-100">
+                    Borrador encontrado para esta fecha/turno/equipo
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadDraft}
+                    className="bg-white hover:bg-amber-50"
+                  >
+                    Continuar Borrador
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDraftOptions(false)}
+                    className="bg-white hover:bg-slate-50"
+                  >
+                    Comenzar Nuevo
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filtros */}
         <Card className="mb-6 shadow-lg border-0">
@@ -431,29 +531,41 @@ function MachineDailyPlanningContent() {
         </Card>
 
         {/* Actions */}
-        <div className="flex flex-col md:flex-row gap-3 justify-end">
+        <div className="flex flex-col md:flex-row gap-3 justify-between">
           <Button
             type="button"
             variant="outline"
-            onClick={() => handleSave(false)}
-            disabled={planningData.maquinas_planificadas.length === 0 || savePlanningMutation.isPending}
+            onClick={handleDeleteDraft}
+            disabled={planningData.maquinas_planificadas.length === 0}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
-            <Save className="w-4 h-4 mr-2" />
-            Guardar Borrador
+            <Trash2 className="w-4 h-4 mr-2" />
+            Eliminar Borrador
           </Button>
-          <Button
-            type="button"
-            onClick={() => handleSave(true)}
-            disabled={
-              planningData.maquinas_planificadas.length === 0 || 
-              estadoViabilidad === "ROJO" ||
-              savePlanningMutation.isPending
-            }
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <CheckCircle2 className="w-4 h-4 mr-2" />
-            Confirmar Planning
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleSave(false)}
+              disabled={planningData.maquinas_planificadas.length === 0 || savePlanningMutation.isPending}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Guardar Borrador
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleSave(true)}
+              disabled={
+                planningData.maquinas_planificadas.length === 0 || 
+                estadoViabilidad === "ROJO" ||
+                savePlanningMutation.isPending
+              }
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Confirmar Planning
+            </Button>
+          </div>
         </div>
 
         {estadoViabilidad === "ROJO" && (

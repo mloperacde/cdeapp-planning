@@ -546,6 +546,9 @@ function ProcessConfigurationContent() {
                                     📍 {machine.ubicacion}
                                   </span>
                                 )}
+                                <Badge variant="outline" className="text-xs">
+                                  Orden: {machine.orden ?? machineIndex}
+                                </Badge>
                               </div>
                                   </div>
                                 </div>
