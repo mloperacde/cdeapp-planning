@@ -47,7 +47,7 @@ export default function MobileHome() {
       solicitado_por: user.email,
       estado_aprobacion: 'Pendiente'
     }),
-    enabled: !!user?.email && canAccessModule('absences'),
+    enabled: !!user?.email,
   });
 
   useEffect(() => {
@@ -119,11 +119,7 @@ export default function MobileHome() {
     }
   ];
 
-  const menuItems = useMemo(() => {
-    return allMenuItems.filter(item => 
-      !item.moduleKey || canAccessModule(item.moduleKey)
-    );
-  }, [allMenuItems, canAccessModule]);
+  const menuItems = allMenuItems;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 p-4">
@@ -169,24 +165,7 @@ export default function MobileHome() {
           ))}
         </div>
 
-        {/* Locked Modules Notice */}
-        {allMenuItems.length > menuItems.length && (
-          <Card className="bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-slate-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {allMenuItems.length - menuItems.length} módulos bloqueados
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Contacta con tu administrador para solicitar acceso
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
 
         {/* Quick Actions */}
         <div className="mt-6 space-y-2">
