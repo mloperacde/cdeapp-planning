@@ -1,3 +1,4 @@
+//agrega al inicio del componente layout
 
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
