@@ -24,19 +24,10 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import EmployeeSelect from "../components/common/EmployeeSelect";
-import ProtectedPage from "../components/roles/ProtectedPage";
 
 const EMPTY_ARRAY = [];
 
 export default function ShiftPlanningPage() {
-  return (
-    <ProtectedPage module="planning" action="edit">
-      <ShiftPlanningContent />
-    </ProtectedPage>
-  );
-}
-
-function ShiftPlanningContent() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState("Mañana");
   const [assignments, setAssignments] = useState({});
