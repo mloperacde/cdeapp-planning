@@ -132,62 +132,34 @@ export default function MasterEmployeeDatabasePage() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: userRoleAssignments = EMPTY_ARRAY } = useQuery({
-    queryKey: ['userRoleAssignments', currentUser?.email],
-    queryFn: () => base44.entities.UserRoleAssignment.filter({ user_email: currentUser?.email }),
-    enabled: !!currentUser?.email,
-  });
-
-  const { data: userRoles = EMPTY_ARRAY } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
-  });
-
   const canCreateEmployee = useMemo(() => {
     if (!currentUser) return false;
-    if (currentUser.role === 'admin') return true;
-    
-    return userRoleAssignments.some(assignment => {
-      const role = userRoles.find(r => r.id === assignment.role_id);
-      return role?.permissions?.empleados?.crear === true;
-    });
-  }, [currentUser, userRoleAssignments, userRoles]);
+    return currentUser.role === 'admin';
+  }, [currentUser]);
 
   const { data: masterEmployees = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', 10000),
   });
 
-  const { data: userPermissions } = useQuery({
-    queryKey: ['userPermissions', currentUser?.email],
-    queryFn: async () => {
-      if (!currentUser) return null;
-      if (currentUser.role === 'admin') return { isAdmin: true };
-      
-      const roles = await base44.entities.UserRole.list();
-      const assignments = await base44.entities.UserRoleAssignment.filter({ user_email: currentUser.email });
-      const userRoleIds = assignments.map(a => a.role_id);
-      const activeRoles = roles.filter(r => userRoleIds.includes(r.id));
-      
-      const perms = {
-        ver_salario: false,
-        ver_dni: false,
-        ver_contacto: false,
-        ver_direccion: false,
-        ver_bancarios: false
-      };
-
-      activeRoles.forEach(role => {
-        if (role.permissions?.campos_empleado?.ver_salario) perms.ver_salario = true;
-        if (role.permissions?.campos_empleado?.ver_dni) perms.ver_dni = true;
-        if (role.permissions?.campos_empleado?.ver_contacto) perms.ver_contacto = true;
-        if (role.permissions?.campos_empleado?.ver_direccion) perms.ver_direccion = true;
-        if (role.permissions?.campos_empleado?.ver_bancarios) perms.ver_bancarios = true;
-      });
-      return perms;
-    },
-    enabled: !!currentUser
-  });
+  const userPermissions = useMemo(() => {
+    if (!currentUser) return null;
+    if (currentUser.role === 'admin') return { 
+      isAdmin: true,
+      ver_salario: true,
+      ver_dni: true,
+      ver_contacto: true,
+      ver_direccion: true,
+      ver_bancarios: true
+    };
+    return {
+      ver_salario: false,
+      ver_dni: false,
+      ver_contacto: false,
+      ver_direccion: false,
+      ver_bancarios: false
+    };
+  }, [currentUser]);
 
   // const { data: employees = [] } = useQuery({
   //   queryKey: ['employees'],
