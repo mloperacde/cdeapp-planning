@@ -1,67 +1,154 @@
-import React, { useState, useEffect } from 'react';
+// ProcessConfiguration.jsx - VERSIÓN MEJORADA CON DEBUG
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
 
 const ProcessConfiguration = () => {
   const [processes, setProcesses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProcess, setSelectedProcess] = useState('');
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    categories: []
-  });
-
-  // 1. Cargar procesos desde localStorage o API
-  useEffect(() => {
-    loadProcesses();
-  }, []);
-
-  const loadProcesses = () => {
-    setLoading(true);
+  const [debugInfo, setDebugInfo] = useState([]);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 5;
+  
+  const addDebug = (message, data = null) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const debugEntry = {
+      time: timestamp,
+      message,
+      data: data ? JSON.stringify(data).substring(0, 100) : null
+    };
     
-    // Intentar cargar desde localStorage primero
-    const savedProcesses = localStorage.getItem('processTypesMaster');
+    setDebugInfo(prev => [debugEntry, ...prev.slice(0, 9)]); // Mantener solo 10 últimas
+    console.log(`[${timestamp}] ${message}`, data || '');
+  };
+
+  // Función para buscar procesos en TODAS las posibles ubicaciones
+  const findProcessesEverywhere = () => {
+    addDebug("🔍 Buscando procesos en todas las ubicaciones...");
     
-    if (savedProcesses) {
+    const possibleKeys = [
+      'processTypesMaster',
+      'processTypes',
+      'availableProcesses',
+      'productionProcesses',
+      'machinesData',
+      'maquinas',
+      'equipmentList'
+    ];
+    
+    let allProcesses = [];
+    const foundInKeys = [];
+    
+    possibleKeys.forEach(key => {
       try {
-        const parsed = JSON.parse(savedProcesses);
-        setProcesses(parsed);
-        updateStats(parsed);
-        console.log(`✅ Cargados ${parsed.length} procesos desde localStorage`);
+        const data = localStorage.getItem(key);
+        if (data) {
+          const parsed = JSON.parse(data);
+          
+          // Verificar si es un array
+          if (Array.isArray(parsed)) {
+            foundInKeys.push(`${key} (${parsed.length} items)`);
+            
+            // Si son procesos directos, agregarlos
+            if (parsed.length > 0 && parsed[0].code) {
+              allProcesses = [...allProcesses, ...parsed];
+            }
+            // Si son máquinas, extraer sus procesos
+            else if (parsed.length > 0 && (parsed[0].name || parsed[0].nombre)) {
+              parsed.forEach(machine => {
+                if (machine.processes && Array.isArray(machine.processes)) {
+                  allProcesses = [...allProcesses, ...machine.processes.map(p => ({
+                    ...p,
+                    machineName: machine.name || machine.nombre
+                  }))];
+                }
+                if (machine.procesos && Array.isArray(machine.procesos)) {
+                  allProcesses = [...allProcesses, ...machine.procesos.map(p => ({
+                    ...p,
+                    machineName: machine.name || machine.nombre
+                  }))];
+                }
+              });
+            }
+          }
+        }
       } catch (error) {
-        console.error('Error al parsear procesos:', error);
-        fetchProcessesFromAPI();
+        console.error(`Error al leer ${key}:`, error);
       }
-    } else {
-      // Si no hay en localStorage, buscar en API
-      fetchProcessesFromAPI();
-    }
+    });
     
-    setLoading(false);
+    addDebug(`Encontrados en: ${foundInKeys.join(', ')}`);
+    addDebug(`Procesos totales encontrados: ${allProcesses.length}`);
+    
+    // Eliminar duplicados por código
+    const uniqueProcesses = [];
+    const seenCodes = new Set();
+    
+    allProcesses.forEach(process => {
+      if (process.code && !seenCodes.has(process.code)) {
+        seenCodes.add(process.code);
+        uniqueProcesses.push(process);
+      }
+    });
+    
+    addDebug(`Procesos únicos después de eliminar duplicados: ${uniqueProcesses.length}`);
+    
+    return uniqueProcesses;
   };
 
-  const fetchProcessesFromAPI = async () => {
-    try {
-      // Usar React Query si está configurado
-      const data = await base44.get('/process-types'); // Ajusta el endpoint según tu API
-      setProcesses(data);
-      updateStats(data);
+  // Cargar procesos con retry
+  useEffect(() => {
+    const loadProcesses = () => {
+      addDebug("🔄 Iniciando carga de procesos...");
       
-      // Guardar en localStorage para uso futuro
-      localStorage.setItem('processTypesMaster', JSON.stringify(data));
+      // Buscar en todas partes
+      const foundProcesses = findProcessesEverywhere();
       
-      console.log(`✅ Cargados ${data.length} procesos desde API`);
-    } catch (error) {
-      console.error('Error al cargar procesos desde API:', error);
-      
-      // Usar datos de ejemplo como fallback
-      const exampleProcesses = getExampleProcesses();
-      setProcesses(exampleProcesses);
-      updateStats(exampleProcesses);
-    }
-  };
+      if (foundProcesses.length > 0) {
+        addDebug(`✅ Procesos cargados: ${foundProcesses.length}`, foundProcesses);
+        setProcesses(foundProcesses);
+        setLoading(false);
+        
+        // Guardar en localStorage para uso futuro
+        localStorage.setItem('processConfigCache', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          processes: foundProcesses
+        }));
+      } else {
+        addDebug("⚠️ No se encontraron procesos. Reintentando...");
+        
+        if (retryCount < maxRetries) {
+          // Reintentar después de un delay
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 1000 * (retryCount + 1)); // Delay incremental
+        } else {
+          // Usar datos de ejemplo como último recurso
+          addDebug("⚠️ Usando datos de ejemplo después de múltiples intentos");
+          const exampleProcesses = getExampleProcesses();
+          setProcesses(exampleProcesses);
+          setLoading(false);
+        }
+      }
+    };
 
+    loadProcesses();
+    
+    // Escuchar eventos de almacenamiento (cuando otras pestañas actualizan datos)
+    const handleStorageChange = (e) => {
+      if (e.key && (e.key.includes('process') || e.key.includes('machine'))) {
+        addDebug(`📡 Storage actualizado: ${e.key}. Recargando...`);
+        loadProcesses();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [retryCount]);
+
+  // Datos de ejemplo
   const getExampleProcesses = () => {
     return [
       {
@@ -81,385 +168,214 @@ const ProcessConfiguration = () => {
         time: "120 min",
         status: "active",
         machines: ["CNC-01", "CNC-02"]
-      },
-      {
-        id: 3,
-        name: "Impresión 3D",
-        code: "IMPRESION_3D",
-        category: "Prototipado",
-        time: "180 min",
-        status: "active",
-        machines: ["3D-Printer-01"]
       }
     ];
   };
 
-  const updateStats = (processList) => {
-    const total = processList.length;
-    const active = processList.filter(p => p.status === 'active').length;
-    const categories = [...new Set(processList.map(p => p.category))];
-    
-    setStats({ total, active, categories });
+  // Forzar recarga
+  const forceReload = () => {
+    setRetryCount(0);
+    setLoading(true);
+    addDebug("🔄 Forzando recarga de procesos...");
   };
 
-  const handleProcessSelect = (e) => {
-    const value = e.target.value;
-    setSelectedProcess(value);
-    
-    // Encontrar el proceso completo seleccionado
-    const selected = processes.find(p => p.code === value || p.id.toString() === value);
-    if (selected) {
-      console.log('Proceso seleccionado:', selected);
-      // Puedes hacer algo con el proceso seleccionado
-    }
-  };
-
-  const refreshProcesses = () => {
-    // Limpiar caché y recargar
-    localStorage.removeItem('processTypesMaster');
-    localStorage.removeItem('processTypesCache');
-    loadProcesses();
-  };
-
+  // Sincronizar con ProcessTypes
   const syncWithProcessTypes = () => {
-    // Redirigir a la página de ProcessTypes para gestionar procesos
-    window.location.href = '/process-types'; // Ajusta la ruta según tu router
+    addDebug("🔄 Sincronizando con ProcessTypes...");
+    // Abrir ProcessTypes en nueva pestaña o redirigir
+    window.open('/process-types', '_blank');
   };
-
-  // Usar React Query si lo prefieres
-  const { data: queryData, isLoading: queryLoading } = useQuery({
-    queryKey: ['processTypes'],
-    queryFn: () => base44.get('/process-types'),
-    enabled: false, // No cargar automáticamente, usamos nuestro método
-  });
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Cargando procesos...</p>
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-600">Cargando procesos...</p>
+        <p className="text-sm text-gray-500 mt-2">Intento {retryCount + 1} de {maxRetries}</p>
+        <button 
+          onClick={forceReload}
+          className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+        >
+          Reintentar ahora
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="process-configuration">
-      {/* Header con estadísticas */}
-      <div className="page-header">
-        <h1>Configuración de Procesos</h1>
-        <div className="process-stats">
-          <span className="stat-item">
-            <strong>📊 Total:</strong> {stats.total}
-          </span>
-          <span className="stat-item">
-            <strong>✅ Activos:</strong> {stats.active}
-          </span>
-          <span className="stat-item">
-            <strong>🗂️ Categorías:</strong> {stats.categories.length}
-          </span>
-          <button 
-            className="btn-refresh"
-            onClick={refreshProcesses}
-            title="Actualizar lista de procesos"
-          >
-            ↻ Actualizar
-          </button>
-          <button 
-            className="btn-sync"
-            onClick={syncWithProcessTypes}
-            title="Ir a Tipos de Procesos"
-          >
-            🔄 Gestionar Procesos
-          </button>
+    <div className="p-6 max-w-6xl mx-auto">
+      {/* Header con Debug */}
+      <div className="bg-gradient-to-r from-blue-900 to-indigo-800 text-white rounded-xl p-6 mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">⚙️ Configuración de Procesos</h1>
+            <p className="text-blue-100">
+              {processes.length} procesos disponibles | Última actualización: {new Date().toLocaleTimeString()}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={forceReload}
+              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            >
+              ↻ Recargar
+            </button>
+            <button
+              onClick={syncWithProcessTypes}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            >
+              🔄 ProcessTypes
+            </button>
+          </div>
+        </div>
+        
+        {/* Debug Info Collapsible */}
+        <details className="mt-4 bg-black/20 rounded-lg overflow-hidden">
+          <summary className="p-3 cursor-pointer flex items-center gap-2">
+            <span className="font-mono">🔧 Debug Information ({debugInfo.length} eventos)</span>
+          </summary>
+          <div className="p-3 bg-black/30 font-mono text-sm max-h-60 overflow-y-auto">
+            {debugInfo.map((entry, index) => (
+              <div key={index} className="mb-1 border-b border-white/10 pb-1">
+                <span className="text-green-400">[{entry.time}]</span>{' '}
+                <span className="text-white">{entry.message}</span>
+                {entry.data && (
+                  <div className="text-gray-300 text-xs mt-1">{entry.data}</div>
+                )}
+              </div>
+            ))}
+            {debugInfo.length === 0 && (
+              <div className="text-gray-400">No hay eventos de debug aún</div>
+            )}
+          </div>
+        </details>
+      </div>
+
+      {/* Panel de estadísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="text-sm text-blue-600 font-medium">Procesos Totales</div>
+          <div className="text-2xl font-bold text-blue-800">{processes.length}</div>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="text-sm text-green-600 font-medium">Procesos Activos</div>
+          <div className="text-2xl font-bold text-green-800">
+            {processes.filter(p => p.status === 'active').length}
+          </div>
+        </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="text-sm text-purple-600 font-medium">Categorías Únicas</div>
+          <div className="text-2xl font-bold text-purple-800">
+            {[...new Set(processes.map(p => p.category))].length}
+          </div>
         </div>
       </div>
 
-      {/* Selector de proceso */}
-      <div className="form-section">
-        <h2>Seleccionar Proceso</h2>
-        <div className="form-group">
-          <label htmlFor="processSelect">Proceso:</label>
+      {/* Selector de Proceso */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 className="text-xl font-bold mb-4 text-gray-800">Seleccionar Proceso</h2>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Buscar Proceso:
+          </label>
+          <input
+            type="text"
+            placeholder="Escriba el nombre o código del proceso..."
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => {
+              // Implementar búsqueda si es necesario
+            }}
+          />
+        </div>
+        
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Seleccionar Proceso:
+          </label>
           <select
-            id="processSelect"
-            value={selectedProcess}
-            onChange={handleProcessSelect}
-            className="process-select"
+            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            defaultValue=""
           >
-            <option value="">-- Seleccionar un proceso --</option>
+            <option value="">-- Seleccione un proceso --</option>
             {processes
               .filter(p => p.status === 'active')
               .map(process => (
-                <option key={process.id} value={process.code}>
+                <option key={process.code || process.id} value={process.code}>
                   {process.name} ({process.code}) - {process.time}
+                  {process.machineName && ` [${process.machineName}]`}
                 </option>
               ))
             }
           </select>
+          <p className="text-sm text-gray-500 mt-2">
+            {processes.filter(p => p.status === 'active').length} procesos activos disponibles
+          </p>
         </div>
 
-        {/* Mostrar detalles del proceso seleccionado */}
-        {selectedProcess && (
-          <div className="process-details">
-            <h3>Detalles del Proceso</h3>
-            {(() => {
-              const process = processes.find(
-                p => p.code === selectedProcess || p.id.toString() === selectedProcess
-              );
-              if (process) {
-                return (
-                  <div className="details-card">
-                    <p><strong>Nombre:</strong> {process.name}</p>
-                    <p><strong>Código:</strong> <code>{process.code}</code></p>
-                    <p><strong>Categoría:</strong> {process.category}</p>
-                    <p><strong>Tiempo estimado:</strong> {process.time}</p>
-                    <p><strong>Máquinas compatibles:</strong></p>
-                    <ul>
-                      {process.machines?.map((machine, index) => (
-                        <li key={index}>{machine}</li>
-                      )) || <li>No especificadas</li>}
-                    </ul>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-          </div>
-        )}
-
-        {/* Lista completa de procesos disponibles */}
-        <div className="process-list">
-          <h3>Procesos Disponibles ({processes.length})</h3>
-          <div className="process-grid">
+        {/* Lista de procesos */}
+        <div>
+          <h3 className="text-lg font-bold mb-4 text-gray-800">Todos los Procesos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {processes.map(process => (
               <div 
-                key={process.id} 
-                className={`process-card ${process.status === 'active' ? 'active' : 'inactive'}`}
+                key={process.code || process.id} 
+                className={`border rounded-lg p-4 ${
+                  process.status === 'active' 
+                    ? 'border-green-200 bg-green-50' 
+                    : 'border-gray-200 bg-gray-50'
+                }`}
               >
-                <h4>{process.name}</h4>
-                <div className="process-code">{process.code}</div>
-                <div className="process-meta">
-                  <span className="category-badge">{process.category}</span>
-                  <span className="time-badge">{process.time}</span>
-                  <span className={`status-badge ${process.status}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-bold text-gray-800">{process.name}</h4>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    process.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
                     {process.status === 'active' ? 'Activo' : 'Inactivo'}
                   </span>
                 </div>
-                <p className="process-machines">
-                  <small>Máquinas: {process.machines?.join(', ') || 'No especificadas'}</small>
-                </p>
+                <div className="text-sm font-mono text-gray-600 mb-2">{process.code}</div>
+                <div className="text-sm text-gray-700 mb-1">
+                  <span className="font-medium">Categoría:</span> {process.category}
+                </div>
+                <div className="text-sm text-gray-700 mb-1">
+                  <span className="font-medium">Tiempo:</span> {process.time}
+                </div>
+                {process.machineName && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    <span className="font-medium">Máquina:</span> {process.machineName}
+                  </div>
+                )}
+                {process.machines && Array.isArray(process.machines) && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    <span className="font-medium">Máquinas:</span> {process.machines.join(', ')}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Estilos CSS en línea o importar CSS */}
-      <style jsx>{`
-        .process-configuration {
-          padding: 20px;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-        
-        .page-header {
-          background: linear-gradient(135deg, #2c3e50, #4a6491);
-          color: white;
-          padding: 25px;
-          border-radius: 10px;
-          margin-bottom: 25px;
-        }
-        
-        .page-header h1 {
-          margin: 0 0 15px 0;
-          font-size: 2rem;
-        }
-        
-        .process-stats {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 15px;
-          align-items: center;
-        }
-        
-        .stat-item {
-          background: rgba(255, 255, 255, 0.1);
-          padding: 8px 15px;
-          border-radius: 6px;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .btn-refresh, .btn-sync {
-          padding: 8px 15px;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: 600;
-          transition: all 0.3s;
-        }
-        
-        .btn-refresh {
-          background: #f39c12;
-          color: white;
-        }
-        
-        .btn-refresh:hover {
-          background: #d68910;
-        }
-        
-        .btn-sync {
-          background: #3498db;
-          color: white;
-        }
-        
-        .btn-sync:hover {
-          background: #2980b9;
-        }
-        
-        .form-section {
-          background: white;
-          padding: 25px;
-          border-radius: 10px;
-          box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-          margin-bottom: 25px;
-        }
-        
-        .form-group {
-          margin-bottom: 20px;
-        }
-        
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          font-weight: 600;
-          color: #2c3e50;
-        }
-        
-        .process-select {
-          width: 100%;
-          padding: 12px 15px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 1rem;
-          background-color: white;
-          cursor: pointer;
-        }
-        
-        .process-details {
-          margin-top: 25px;
-          padding: 20px;
-          background: #f8f9fa;
-          border-radius: 8px;
-          border-left: 4px solid #3498db;
-        }
-        
-        .details-card {
-          background: white;
-          padding: 15px;
-          border-radius: 6px;
-          margin-top: 10px;
-        }
-        
-        .process-list {
-          margin-top: 30px;
-        }
-        
-        .process-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
-          margin-top: 15px;
-        }
-        
-        .process-card {
-          background: white;
-          padding: 20px;
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-          border-top: 4px solid #3498db;
-        }
-        
-        .process-card.inactive {
-          border-top-color: #95a5a6;
-          opacity: 0.7;
-        }
-        
-        .process-card h4 {
-          margin: 0 0 10px 0;
-          color: #2c3e50;
-        }
-        
-        .process-code {
-          font-family: monospace;
-          color: #7f8c8d;
-          font-size: 0.9rem;
-          margin-bottom: 10px;
-        }
-        
-        .process-meta {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-bottom: 10px;
-        }
-        
-        .category-badge, .time-badge, .status-badge {
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-        
-        .category-badge {
-          background: #e8f4fc;
-          color: #3498db;
-        }
-        
-        .time-badge {
-          background: #d4edda;
-          color: #155724;
-        }
-        
-        .status-badge.active {
-          background: #d4edda;
-          color: #155724;
-        }
-        
-        .status-badge.inactive {
-          background: #f8d7da;
-          color: #721c24;
-        }
-        
-        .process-machines {
-          color: #666;
-          font-size: 0.85rem;
-          margin-top: 10px;
-        }
-        
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 200px;
-        }
-        
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #f3f3f3;
-          border-top: 4px solid #3498db;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 15px;
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+      {/* Información técnica */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h3 className="font-bold text-gray-800 mb-2">ℹ️ Información Técnica</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          Esta página busca procesos en: processTypesMaster, processTypes, availableProcesses, 
+          productionProcesses, machinesData, maquinas, equipmentList
+        </p>
+        <div className="text-xs font-mono bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto">
+          <div>// Para MachineDailyPlanning.jsx:</div>
+          <div>// Asegúrate de usar la misma lógica de búsqueda</div>
+          <div className="mt-2">
+            const processes = JSON.parse(localStorage.getItem('processTypesMaster')) ||<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;JSON.parse(localStorage.getItem('processTypes')) ||<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[];
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
