@@ -45,13 +45,7 @@ import MachinePlanningSelector from "../components/planning/MachinePlanningSelec
 import ViabilityTrafficLight from "../components/planning/ViabilityTrafficLight";
 import AvailabilityDebugPanel from "../components/planning/AvailabilityDebugPanel";
 
-export default function MachineDailyPlanningPage() {
-  return (
-    <PermissionCheck module="planning" action="create">
-      <MachineDailyPlanningContent />
-    </PermissionCheck>
-  );
-}
+
 
 function MachineDailyPlanningContent() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
