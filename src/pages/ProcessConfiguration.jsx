@@ -944,4 +944,5 @@ export default function ProcessConfigurationPage() {
                     id="nombre"
                     value={formData.nombre}
                     onChange={(e) => {
-                    setFormData}
+                      setFormData({ ...formData, nombre: e.target.value });
+                     
