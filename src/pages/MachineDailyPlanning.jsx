@@ -144,10 +144,23 @@ function MachineDailyPlanningContent() {
   // DEBUG: Ver procesos y máquinas
   React.useEffect(() => {
     if (processes.length > 0 && machines.length > 0) {
-      console.log('=== DEBUG PROCESOS Y MÁQUINAS ===');
-      console.log('Procesos activos:', processes.length);
-      console.log('Máquinas:', machines.length);
-      
+      console.log('=== DEBUG PROCESOS Y MÁQUINAS ===', {
+  procesos: processes.map(p => ({
+    id: p.id,
+    nombre: p.proceso_nombre,
+    activo: p.activo,
+    maquinas_asignadas: p.maquinas_asignadas,
+    tipo: typeof p.maquinas_asignadas,
+    esArray: Array.isArray(p.maquinas_asignadas),
+    longitud: Array.isArray(p.maquinas_asignadas) ? p.maquinas_asignadas.length : 'N/A'
+  })),
+  maquinas: machines.map(m => ({
+    id: m.id,
+    nombre: m.machine_nombre,
+    procesos_asignados: m.procesos_asignados,
+    tipo: typeof m.procesos_asignados
+  }))
+});
       // Verificar un proceso de ejemplo
       const procesoEjemplo = processes[0];
       if (procesoEjemplo) {
@@ -204,11 +217,18 @@ function MachineDailyPlanningContent() {
     });
 
     console.log('✅ Empleados filtrados:', {
-      total: employees.length,
-      filtrados: fabricacionEmployees.length,
-      equipo: selectedTeam,
-      nombreEquipo: teams.find(t => t.team_key === selectedTeam)?.team_name
-    });
+  totalEmployees: employees.length,
+  fabricacionEmployees: fabricacionEmployees.length,
+  equipoSeleccionado: selectedTeam,
+  nombreEquipo: teams.find(t => t.team_key === selectedTeam)?.team_name,
+  muestraEmpleados: fabricacionEmployees.slice(0, 5).map(e => ({
+    id: e.id,
+    nombre: e.nombre,
+    equipo: e.equipo,
+    departamento: e.departamento,
+    estado: e.estado_empleado
+  }))
+});
 
     const selectedDateObj = new Date(selectedDate + 'T00:00:00');
     const ausenciasConfirmadas = absences.filter(abs => {
