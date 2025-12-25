@@ -938,4 +938,12 @@ export default function ProcessConfigurationPage() {
                   )}
                 </div>
               </div>
-  
+
+              <div className="space-y-2">
+                <Label htmlFor="descripcion">Descripción</Label>
+                <Textarea
+                  id="descripcion"
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                  rows={3}
+      
