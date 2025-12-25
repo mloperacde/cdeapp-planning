@@ -184,7 +184,7 @@ export default function Layout({ children, currentPageName }) {
                 📊 Principal
               </SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu
+                <SidebarMenu>
             </SidebarMenu>
           </SidebarGroupContent>
           </SidebarGroup>
