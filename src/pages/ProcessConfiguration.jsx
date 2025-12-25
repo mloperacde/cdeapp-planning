@@ -946,4 +946,271 @@ export default function ProcessConfigurationPage() {
                   value={formData.descripcion}
                   onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   rows={3}
-      
+                  placeholder="Descripción del proceso..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="operadores">Operadores Requeridos *</Label>
+                <Input
+                  id="operadores"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={formData.operadores_requeridos}
+                  onChange={(e) => {
+                    setFormData({ 
+                      ...formData, 
+                      operadores_requeridos: parseInt(e.target.value) || 1 
+                    });
+                    if (formErrors.operadores_requeridos) {
+                      setFormErrors({ ...formErrors, operadores_requeridos: null });
+                    }
+                  }}
+                  required
+                  className={formErrors.operadores_requeridos ? "border-red-500" : ""}
+                />
+                {formErrors.operadores_requeridos && (
+                  <p className="text-sm text-red-500">{formErrors.operadores_requeridos}</p>
+                )}
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Número de operadores necesarios por defecto para este proceso
+                </p>
+              </div>
+
+              {!editingProcess && (
+                <div className="space-y-2">
+                  <Label>Asignar a Máquinas (opcional)</Label>
+                  <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto space-y-2">
+                    {machines.map((machine) => (
+                      <div key={machine.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`new-machine-${machine.id}`}
+                          checked={formData.selectedMachines.includes(machine.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFormData({
+                                ...formData,
+                                selectedMachines: [...formData.selectedMachines, machine.id]
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                selectedMachines: formData.selectedMachines.filter(id => id !== machine.id)
+                              });
+                            }
+                          }}
+                        />
+                        <label 
+                          htmlFor={`new-machine-${machine.id}`} 
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          {machine.nombre} <span className="text-xs text-slate-500">({machine.codigo})</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Puedes configurar las máquinas después de crear el proceso
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="activo"
+                  checked={formData.activo}
+                  onCheckedChange={(checked) => setFormData({ ...formData, activo: checked })}
+                />
+                <label htmlFor="activo" className="text-sm font-medium">
+                  Proceso activo
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={handleClose}>
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={saveMutation.isPending}
+                >
+                  {saveMutation.isPending ? "Guardando..." : "Guardar Proceso"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Diálogo de Configuración de Máquina */}
+      {showMachineAssignment && (
+        <Dialog open={true} onOpenChange={() => setShowMachineAssignment(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Cog className="w-5 h-5 text-blue-600" />
+                {showMachineAssignment.isProcessConfig 
+                  ? `Configurar Máquinas para: ${showMachineAssignment.nombre}`
+                  : `Configurar Procesos: ${showMachineAssignment.nombre}`}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4 text-sm">
+                    <div>
+                      <span className="text-slate-700 dark:text-slate-300">Código:</span>
+                      <span className="font-semibold ml-2">{showMachineAssignment.codigo}</span>
+                    </div>
+                    {showMachineAssignment.ubicacion && (
+                      <div>
+                        <span className="text-slate-700 dark:text-slate-300">Ubicación:</span>
+                        <span className="font-semibold ml-2">{showMachineAssignment.ubicacion}</span>
+                      </div>
+                    )}
+                    {showMachineAssignment.operadores_requeridos && (
+                      <div>
+                        <span className="text-slate-700 dark:text-slate-300">Operadores por defecto:</span>
+                        <Badge className="ml-2 bg-purple-600">
+                          {showMachineAssignment.operadores_requeridos}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">
+                  {showMachineAssignment.isProcessConfig 
+                    ? showMachineAssignment.isCopy 
+                      ? 'Selecciona las máquinas adicionales para este proceso:'
+                      : 'Selecciona las máquinas donde se puede realizar este proceso:'
+                    : 'Selecciona los procesos que puede realizar esta máquina:'}
+                </Label>
+                
+                {showMachineAssignment.isProcessConfig ? (
+                  // Configurando proceso -> mostrar máquinas
+                  machines
+                    .filter(m => !showMachineAssignment.isCopy || m.id !== showMachineAssignment.sourceMachineId)
+                    .map((machine) => (
+                    <Card key={machine.id} className={`
+                      border-2 transition-all
+                      ${machineAssignments[machine.id]?.checked 
+                        ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-slate-200 hover:border-slate-300'}
+                    `}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <Checkbox
+                              id={`machine-${machine.id}`}
+                              checked={machineAssignments[machine.id]?.checked || false}
+                              onCheckedChange={() => handleToggleMachine(machine.id)}
+                            />
+                            <label htmlFor={`machine-${machine.id}`} className="flex-1 cursor-pointer">
+                              <div>
+                                <div className="font-semibold text-slate-900 dark:text-slate-100">{machine.nombre}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">{machine.codigo}</Badge>
+                                  {machine.ubicacion && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">📍 {machine.ubicacion}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+
+                          {machineAssignments[machine.id]?.checked && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs">Operadores:</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={machineAssignments[machine.id]?.operadores || 1}
+                                onChange={(e) => handleOperatorsChange(machine.id, e.target.value)}
+                                className="w-20"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  // Configurando máquina -> mostrar procesos
+                  processes.filter(p => p.activo).map((process) => (
+                    <Card key={process.id} className={`
+                      border-2 transition-all
+                      ${machineAssignments[process.id]?.checked 
+                        ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-slate-200 hover:border-slate-300'}
+                    `}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <Checkbox
+                              id={`process-${process.id}`}
+                              checked={machineAssignments[process.id]?.checked || false}
+                              onCheckedChange={() => handleToggleProcess(process.id)}
+                            />
+                            <label htmlFor={`process-${process.id}`} className="flex-1 cursor-pointer">
+                              <div>
+                                <div className="font-semibold text-slate-900 dark:text-slate-100">{process.nombre}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">{process.codigo}</Badge>
+                                  {process.descripcion && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">{process.descripcion}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+
+                          {machineAssignments[process.id]?.checked && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs">Operadores:</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={machineAssignments[process.id]?.operadores || 1}
+                                onChange={(e) => handleOperatorsChange(process.id, e.target.value)}
+                                className="w-20"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowMachineAssignment(null)}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSaveMachineAssignments}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={saveMachineAssignmentsMutation.isPending}
+                >
+                  {saveMachineAssignmentsMutation.isPending ? "Guardando..." : "Guardar Configuración"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}      
