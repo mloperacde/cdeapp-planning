@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 // ============================================
 // ICONOS (sin dependencias)
@@ -21,10 +21,10 @@ const IconLoading = () => <span className="animate-spin">↻</span>;
 // SERVICIO PARA CARGAR DATOS (simulación)
 // ============================================
 const MachineService = {
-  // Esta función simula la carga del archivo maestro de máquinas
   async getMachines() {
-    // En una app real, esto vendría de una API o archivo JSON
-    // Por ahora simulamos con datos más realistas
+    // Simulamos carga de API
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     return [
       {
         id: 1,
@@ -95,25 +95,10 @@ const MachineService = {
         ultimoMantenimiento: "2023-12-15",
         ubicacion: "Taller 2",
         orden: 5
-      },
-      {
-        id: 6,
-        codigo: "MAQ-006",
-        nombre: "Taladro Radial",
-        modelo: "TR-25",
-        fabricante: "Delta",
-        estado: "activa",
-        capacidad: "Ø25mm máximo",
-        procesos: ["Taladrado", "Avellanado", "Escariado"],
-        horasUso: 420,
-        ultimoMantenimiento: "2024-02-20",
-        ubicacion: "Taller 1",
-        orden: 6
       }
     ];
   },
 
-  // Procesos disponibles en el sistema (maestro de procesos)
   getProcesses() {
     return [
       { id: "corte", nombre: "Corte preciso", descripcion: "Corte de piezas con tolerancias estrechas" },
@@ -129,7 +114,6 @@ const MachineService = {
     ];
   },
 
-  // Tipos de procesos generales
   getProcessTypes() {
     return [
       'Manufactura',
@@ -637,7 +621,7 @@ const useMachines = () => {
   }, []);
 
   // Filtrar y ordenar máquinas
-  const filteredAndSortedMachines = React.useMemo(() => {
+  const filteredAndSortedMachines = useMemo(() => {
     let filtered = machines.filter(machine => {
       const matchesSearch = 
         machine.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -918,4 +902,23 @@ const ProcessConfigurationPage = () => {
                     {machines.filter(m => m.estado === 'activa').length}
                   </p>
                 </div>
-                <div
+                <div className="bg-yellow-50 p-3 rounded-lg">
+                  <p className="text-sm text-yellow-600 font-medium">Mantenimiento</p>
+                  <p className="text-xl font-bold text-yellow-700">
+                    {machines.filter(m => m.estado === 'mantenimiento').length}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <p className="text-sm text-purple-600 font-medium">Procesos</p>
+                  <p className="text-xl font-bold text-purple-700">
+                    {machines.reduce((acc, m) => acc + (m.procesos ? m.procesos.length : 0), 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Columna derecha: Lista de máquinas */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <h2 className="text-xl font-semibold
