@@ -1,981 +1,467 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { base44 } from "@/api/base44Client"; // Asegúrate de importar el cliente
-import { useQuery } from "@tanstack/react-query"; // Importa React Query
+import React, { useState, useEffect } from 'react';
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 
-// ============================================
-// ICONOS (sin dependencias)
-// ============================================
-const IconSearch = () => <span className="text-gray-400">🔍</span>;
-const IconFilter = () => <span className="text-gray-400">⚡</span>;
-const IconPlus = () => <span className="text-gray-400">➕</span>;
-const IconTrash = () => <span className="text-gray-400">🗑️</span>;
-const IconEdit = () => <span className="text-gray-400">✏️</span>;
-const IconSave = () => <span className="text-gray-400">💾</span>;
-const IconMenu = () => <span className="text-gray-400">☰</span>;
-const IconCheck = () => <span className="text-green-500">✓</span>;
-const IconError = () => <span className="text-red-500">✗</span>;
-const IconAlert = () => <span className="text-yellow-500">⚠️</span>;
-const IconArrowUp = () => <span className="text-gray-400">↑</span>;
-const IconArrowDown = () => <span className="text-gray-400">↓</span>;
-const IconLoading = () => <span className="animate-spin">↻</span>;
+const ProcessConfiguration = () => {
+  const [processes, setProcesses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProcess, setSelectedProcess] = useState('');
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    categories: []
+  });
 
-// ============================================
-// SERVICIO PARA CARGAR DATOS REALES
-// ============================================
-const MachineService = {
-  // Esta función ahora usa React Query como en MachineMaster
-  async getMachines() {
-    // Usamos el mismo cliente y método que en MachineMaster
-    try {
-      const machines = await base44.entities.Machine.list('orden');
-      console.log('✅ Máquinas cargadas desde Base44:', machines);
-      return machines;
-    } catch (error) {
-      console.error('❌ Error cargando máquinas desde Base44:', error);
-      // Retornar array vacío en caso de error
-      return [];
+  // 1. Cargar procesos desde localStorage o API
+  useEffect(() => {
+    loadProcesses();
+  }, []);
+
+  const loadProcesses = () => {
+    setLoading(true);
+    
+    // Intentar cargar desde localStorage primero
+    const savedProcesses = localStorage.getItem('processTypesMaster');
+    
+    if (savedProcesses) {
+      try {
+        const parsed = JSON.parse(savedProcesses);
+        setProcesses(parsed);
+        updateStats(parsed);
+        console.log(`✅ Cargados ${parsed.length} procesos desde localStorage`);
+      } catch (error) {
+        console.error('Error al parsear procesos:', error);
+        fetchProcessesFromAPI();
+      }
+    } else {
+      // Si no hay en localStorage, buscar en API
+      fetchProcessesFromAPI();
     }
-  },
+    
+    setLoading(false);
+  };
 
-  getProcesses() {
-    // Estos procesos podrían también venir de Base44 si los tienes en una entidad
+  const fetchProcessesFromAPI = async () => {
+    try {
+      // Usar React Query si está configurado
+      const data = await base44.get('/process-types'); // Ajusta el endpoint según tu API
+      setProcesses(data);
+      updateStats(data);
+      
+      // Guardar en localStorage para uso futuro
+      localStorage.setItem('processTypesMaster', JSON.stringify(data));
+      
+      console.log(`✅ Cargados ${data.length} procesos desde API`);
+    } catch (error) {
+      console.error('Error al cargar procesos desde API:', error);
+      
+      // Usar datos de ejemplo como fallback
+      const exampleProcesses = getExampleProcesses();
+      setProcesses(exampleProcesses);
+      updateStats(exampleProcesses);
+    }
+  };
+
+  const getExampleProcesses = () => {
     return [
-      { id: "corte", nombre: "Corte preciso", descripcion: "Corte de materiales con tolerancias estrechas" },
-      { id: "torneado", nombre: "Torneado externo", descripcion: "Torneado de superficies cilíndricas externas" },
-      { id: "torneado-int", nombre: "Torneado interno", descripcion: "Torneado de superficies cilíndricas internas" },
-      { id: "fresado", nombre: "Fresado plano", descripcion: "Fresado de superficies planas" },
-      { id: "fresado-3d", nombre: "Fresado 3D", descripcion: "Fresado tridimensional complejo" },
-      { id: "taladrado", nombre: "Taladrado", descripcion: "Perforación de materiales" },
-      { id: "roscado", nombre: "Roscado", descripcion: "Corte de roscas internas y externas" },
-      { id: "prensado", nombre: "Prensado", descripcion: "Aplicación de presión para conformado" },
-      { id: "doblado", nombre: "Doblado", descripcion: "Doblado de chapas metálicas" },
-      { id: "soldadura-mig", nombre: "Soldadura MIG", descripcion: "Soldadura por arco con gas inerte metálico" },
-      { id: "soldadura-tig", nombre: "Soldadura TIG", descripcion: "Soldadura por arco con gas inerte de tungsteno" },
-      { id: "pulido", nombre: "Pulido", descripcion: "Acabado superficial por pulido" },
-      { id: "pintura", nombre: "Pintura", descripcion: "Aplicación de pintura y recubrimientos" },
-      { id: "ensamblaje", nombre: "Ensamblaje", descripcion: "Ensamblaje de componentes" },
-      { id: "control-calidad", nombre: "Control de Calidad", descripcion: "Verificación de especificaciones" }
+      {
+        id: 1,
+        name: "Corte por láser",
+        code: "CORTE_LASER",
+        category: "Corte",
+        time: "45 min",
+        status: "active",
+        machines: ["Láser-01", "Láser-02"]
+      },
+      {
+        id: 2,
+        name: "Fresado CNC",
+        code: "FRESADO_CNC",
+        category: "Mecanizado",
+        time: "120 min",
+        status: "active",
+        machines: ["CNC-01", "CNC-02"]
+      },
+      {
+        id: 3,
+        name: "Impresión 3D",
+        code: "IMPRESION_3D",
+        category: "Prototipado",
+        time: "180 min",
+        status: "active",
+        machines: ["3D-Printer-01"]
+      }
     ];
-  },
+  };
 
-  getProcessTypes() {
-    return [
-      'Manufactura',
-      'Ensamblaje', 
-      'Control de Calidad',
-      'Embalaje',
-      'Logística',
-      'Tratamiento Térmico',
-      'Acabado Superficial',
-      'Pruebas y Verificación',
-      'Mantenimiento',
-      'Calibración'
-    ];
-  }
-};
+  const updateStats = (processList) => {
+    const total = processList.length;
+    const active = processList.filter(p => p.status === 'active').length;
+    const categories = [...new Set(processList.map(p => p.category))];
+    
+    setStats({ total, active, categories });
+  };
 
-// ============================================
-// COMPONENTE 1: MachineList (Adaptado para datos reales)
-// ============================================
-const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine, onMoveUp, onMoveDown }) => {
-  return (
-    <div className="space-y-3">
-      {machines.map((machine, index) => (
-        <div key={machine.id}>
-          <div
-            className={`bg-white border rounded-lg p-4 shadow-sm ${
-              machine.estado === 'activa' ? 'border-green-200' :
-              machine.estado === 'inactiva' ? 'border-gray-200' :
-              'border-yellow-200'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <IconMenu />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-900">{machine.codigo}</span>
-                    <span className="font-medium text-gray-900">{machine.nombre}</span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      machine.estado === 'activa' ? 'bg-green-100 text-green-800' :
-                      machine.estado === 'inactiva' ? 'bg-gray-100 text-gray-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {machine.estado === 'activa' ? 'Activa' :
-                       machine.estado === 'inactiva' ? 'Inactiva' : 'Mantenimiento'}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p><span className="font-medium">Tipo:</span> {machine.tipo || 'Sin tipo'}</p>
-                    <p><span className="font-medium">Ubicación:</span> {machine.ubicacion || 'Sin ubicación'}</p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {/* Los procesos podrían venir de otra entidad en Base44 */}
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                        {machine.tipo || 'Proceso principal'}
-                      </span>
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                        {machine.marca || 'Sin marca'}
-                      </span>
-                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
-                        {machine.modelo || 'Sin modelo'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onEdit(machine.id)}
-                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title={editingMachine === machine.id ? "Guardar" : "Editar"}
-                >
-                  {editingMachine === machine.id ? <IconSave /> : <IconEdit />}
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm('¿Eliminar esta máquina del proceso actual?')) {
-                      onDelete(machine.id);
-                    }
-                  }}
-                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Eliminar"
-                >
-                  <IconTrash />
-                </button>
-              </div>
-            </div>
-            
-            {editingMachine === machine.id && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                    <select
-                      value={machine.estado || 'activa'}
-                      onChange={(e) => onUpdate(machine.id, { estado: e.target.value })}
-                      className="border border-gray-300 rounded px-3 py-1 text-sm w-full"
-                    >
-                      <option value="activa">Activa</option>
-                      <option value="inactiva">Inactiva</option>
-                      <option value="mantenimiento">Mantenimiento</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Proceso Asignado</label>
-                    <select
-                      value={machine.procesoAsignado || ""}
-                      onChange={(e) => onUpdate(machine.id, { 
-                        procesoAsignado: e.target.value,
-                        procesoActual: e.target.options[e.target.selectedIndex].text
-                      })}
-                      className="border border-gray-300 rounded px-3 py-1 text-sm w-full"
-                    >
-                      <option value="">Seleccionar proceso</option>
-                      <option value="corte">Corte preciso</option>
-                      <option value="ensamblaje">Ensamblaje</option>
-                      <option value="empaquetado">Empaquetado</option>
-                      <option value="control-calidad">Control de Calidad</option>
-                      {/* Agrega más opciones según tus procesos */}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Controles para mover */}
-          <div className="flex justify-end gap-2 mt-1">
-            {index > 0 && (
-              <button
-                onClick={() => onMoveUp(index)}
-                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
-              >
-                <IconArrowUp /> Subir
-              </button>
-            )}
-            {index < machines.length - 1 && (
-              <button
-                onClick={() => onMoveDown(index)}
-                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
-              >
-                <IconArrowDown /> Bajar
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
+  const handleProcessSelect = (e) => {
+    const value = e.target.value;
+    setSelectedProcess(value);
+    
+    // Encontrar el proceso completo seleccionado
+    const selected = processes.find(p => p.code === value || p.id.toString() === value);
+    if (selected) {
+      console.log('Proceso seleccionado:', selected);
+      // Puedes hacer algo con el proceso seleccionado
+    }
+  };
 
-// ============================================
-// COMPONENTE 2: ProcessForm (Mismo)
-// ============================================
-const ProcessForm = ({
-  formData,
-  formErrors,
-  handleInputChange,
-  isSubmitting,
-  handleSubmit,
-  processTypes,
-  availableProcesses
-}) => {
-  const priorities = [
-    { value: 'baja', label: 'Baja', color: 'bg-green-100 text-green-800' },
-    { value: 'media', label: 'Media', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'alta', label: 'Alta', color: 'bg-red-100 text-red-800' },
-    { value: 'critica', label: 'Crítica', color: 'bg-purple-100 text-purple-800' }
-  ];
+  const refreshProcesses = () => {
+    // Limpiar caché y recargar
+    localStorage.removeItem('processTypesMaster');
+    localStorage.removeItem('processTypesCache');
+    loadProcesses();
+  };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Nombre del Proceso */}
-        <div>
-          <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre del Proceso *
-          </label>
-          <input
-            type="text"
-            id="nombre"
-            name="nombre"
-            value={formData.nombre}
-            onChange={handleInputChange}
-            placeholder="ej: Línea de envasado primario"
-            required
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-              formErrors.nombre ? 'border-red-500' : 'border-gray-300'
-            }`}
-          />
-          {formErrors.nombre && (
-            <p className="mt-1 text-sm text-red-600">{formErrors.nombre}</p>
-          )}
-        </div>
+  const syncWithProcessTypes = () => {
+    // Redirigir a la página de ProcessTypes para gestionar procesos
+    window.location.href = '/process-types'; // Ajusta la ruta según tu router
+  };
 
-        {/* Tipo de Proceso */}
-        <div>
-          <label htmlFor="tipoProceso" className="block text-sm font-medium text-gray-700 mb-1">
-            Tipo de Proceso *
-          </label>
-          <select
-            id="tipoProceso"
-            name="tipoProceso"
-            value={formData.tipoProceso}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-              formErrors.tipoProceso ? 'border-red-500' : 'border-gray-300'
-            }`}
-            required
-          >
-            <option value="">Seleccionar tipo</option>
-            {processTypes.map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          {formErrors.tipoProceso && (
-            <p className="mt-1 text-sm text-red-600">{formErrors.tipoProceso}</p>
-          )}
-        </div>
+  // Usar React Query si lo prefieres
+  const { data: queryData, isLoading: queryLoading } = useQuery({
+    queryKey: ['processTypes'],
+    queryFn: () => base44.get('/process-types'),
+    enabled: false, // No cargar automáticamente, usamos nuestro método
+  });
 
-        {/* Código del Proceso */}
-        <div>
-          <label htmlFor="codigo" className="block text-sm font-medium text-gray-700 mb-1">
-            Código del Proceso
-          </label>
-          <input
-            type="text"
-            id="codigo"
-            name="codigo"
-            value={formData.codigo}
-            onChange={handleInputChange}
-            placeholder="ej: PROC-ENV-001"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          />
-        </div>
-
-        {/* Duración Estimada */}
-        <div>
-          <label htmlFor="duracionEstimada" className="block text-sm font-medium text-gray-700 mb-1">
-            Duración Estimada (horas)
-          </label>
-          <input
-            type="number"
-            id="duracionEstimada"
-            name="duracionEstimada"
-            value={formData.duracionEstimada}
-            onChange={handleInputChange}
-            min="0.5"
-            step="0.5"
-            placeholder="ej: 8.5"
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-              formErrors.duracionEstimada ? 'border-red-500' : 'border-gray-300'
-            }`}
-          />
-          {formErrors.duracionEstimada && (
-            <p className="mt-1 text-sm text-red-600">{formErrors.duracionEstimada}</p>
-          )}
-        </div>
-
-        {/* Prioridad */}
-        <div>
-          <label htmlFor="prioridad" className="block text-sm font-medium text-gray-700 mb-1">
-            Prioridad
-          </label>
-          <select
-            id="prioridad"
-            name="prioridad"
-            value={formData.prioridad}
-            onChange={handleInputChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          >
-            {priorities.map((priority) => (
-              <option key={priority.value} value={priority.value}>
-                {priority.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Proceso Específico */}
-        <div>
-          <label htmlFor="procesoEspecifico" className="block text-sm font-medium text-gray-700 mb-1">
-            Proceso Específico
-          </label>
-          <select
-            id="procesoEspecifico"
-            name="procesoEspecifico"
-            value={formData.procesoEspecifico}
-            onChange={handleInputChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          >
-            <option value="">Seleccionar proceso específico</option>
-            {availableProcesses.map((process) => (
-              <option key={process.id} value={process.id}>
-                {process.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Descripción */}
-      <div>
-        <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
-          Descripción Detallada *
-        </label>
-        <textarea
-          id="descripcion"
-          name="descripcion"
-          value={formData.descripcion}
-          onChange={handleInputChange}
-          placeholder="Describa el proceso paso a paso, requisitos, materiales, etc."
-          rows="4"
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-            formErrors.descripcion ? 'border-red-500' : 'border-gray-300'
-          }`}
-          required
-        />
-        {formErrors.descripcion && (
-          <p className="mt-1 text-sm text-red-600">{formErrors.descripcion}</p>
-        )}
-        <p className="mt-1 text-xs text-gray-500">
-          {formData.descripcion.length}/1000 caracteres
-        </p>
-      </div>
-
-      {/* Botón de envío */}
-      <div className="pt-4 border-t border-gray-200">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-            isSubmitting
-              ? 'bg-blue-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
-          } text-white flex items-center justify-center gap-2`}
-        >
-          {isSubmitting ? (
-            <>
-              <IconLoading />
-              Guardando Proceso...
-            </>
-          ) : (
-            'Guardar Configuración del Proceso'
-          )}
-        </button>
-      </div>
-    </form>
-  );
-};
-
-// ============================================
-// COMPONENTE 3: ValidationMessages
-// ============================================
-const ValidationMessages = ({ submitError, submitSuccess, formErrors, isLoading, machinesCount }) => {
-  const hasErrors = Object.keys(formErrors).length > 0;
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="mb-6">
-        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
-          <IconLoading />
-          <span>Cargando máquinas desde el archivo maestro...</span>
-        </div>
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Cargando procesos...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3 mb-6">
-      {/* Error de envío */}
-      {submitError && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          <IconError />
-          <span>{submitError}</span>
-        </div>
-      )}
-
-      {/* Éxito de envío */}
-      {submitSuccess && (
-        <div className="flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-          <IconCheck />
-          <span>¡Proceso guardado exitosamente!</span>
-        </div>
-      )}
-
-      {/* Errores de validación */}
-      {hasErrors && (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <IconAlert />
-            <span className="font-medium">Corrige los siguientes errores:</span>
-          </div>
-          <ul className="list-disc list-inside space-y-1 ml-6">
-            {Object.entries(formErrors).map(([field, error]) => (
-              <li key={field} className="text-sm">{error}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Información de máquinas cargadas */}
-      {!isLoading && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
-          <div className="flex items-center gap-2">
-            <IconCheck />
-            <span>
-              <strong>{machinesCount} máquinas</strong> cargadas desde el archivo maestro
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ============================================
-// DATOS INICIALES DEL FORMULARIO
-// ============================================
-const initialFormData = {
-  codigo: '',
-  nombre: '',
-  descripcion: '',
-  tipoProceso: '',
-  procesoEspecifico: '',
-  duracionEstimada: '',
-  prioridad: 'media',
-  departamento: 'Manufactura',
-  responsable: '',
-  materiales: '',
-  recursosNecesarios: '',
-  instruccionesEspeciales: '',
-  version: '1.0'
-};
-
-// ============================================
-// HOOKS PERSONALIZADOS
-// ============================================
-
-// Hook para manejo de formulario
-const useProcessForm = (initialData) => {
-  const [formData, setFormData] = useState(initialData);
-  const [formErrors, setFormErrors] = useState({});
-
-  const handleInputChange = useCallback((e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  }, [formErrors]);
-
-  const validateForm = useCallback(() => {
-    const errors = {};
-    
-    if (!formData.nombre.trim()) {
-      errors.nombre = 'El nombre del proceso es requerido';
-    } else if (formData.nombre.length < 3) {
-      errors.nombre = 'El nombre debe tener al menos 3 caracteres';
-    }
-
-    if (!formData.tipoProceso) {
-      errors.tipoProceso = 'Debe seleccionar un tipo de proceso';
-    }
-
-    if (!formData.descripcion.trim()) {
-      errors.descripcion = 'La descripción es requerida';
-    } else if (formData.descripcion.length < 10) {
-      errors.descripcion = 'La descripción debe tener al menos 10 caracteres';
-    }
-
-    if (formData.duracionEstimada && isNaN(parseFloat(formData.duracionEstimada))) {
-      errors.duracionEstimada = 'La duración debe ser un número válido';
-    } else if (formData.duracionEstimada && parseFloat(formData.duracionEstimada) <= 0) {
-      errors.duracionEstimada = 'La duración debe ser mayor a 0';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  }, [formData]);
-
-  const resetForm = useCallback(() => {
-    setFormData(initialData);
-    setFormErrors({});
-  }, [initialData]);
-
-  return {
-    formData,
-    formErrors,
-    handleInputChange,
-    validateForm,
-    resetForm,
-    setFormData
-  };
-};
-
-// Hook para manejo de máquinas (USANDO REACT QUERY COMO EN MACHINEMASTER)
-const useMachines = () => {
-  // Usamos el mismo hook useQuery que en MachineMaster
-  const { data: machines = [], isLoading } = useQuery({
-    queryKey: ['machines', 'process-config'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('orden');
-  const [editingMachine, setEditingMachine] = useState(null);
-  const [newMachineName, setNewMachineName] = useState('');
-
-  // Filtrar y ordenar máquinas
-  const filteredAndSortedMachines = useMemo(() => {
-    let filtered = machines.filter(machine => {
-      const matchesSearch = 
-        machine.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.tipo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || machine.estado === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-
-    // Ordenar
-    return filtered.sort((a, b) => {
-      if (sortBy === 'nombre') return (a.nombre || '').localeCompare(b.nombre || '');
-      if (sortBy === 'codigo') return (a.codigo || '').localeCompare(b.codigo || '');
-      if (sortBy === 'estado') return (a.estado || '').localeCompare(b.estado || '');
-      return (a.orden || 0) - (b.orden || 0);
-    });
-  }, [machines, searchTerm, statusFilter, sortBy]);
-
-  const moveMachineUp = useCallback((index) => {
-    // Esta función ahora solo afecta el orden local, no el maestro
-    if (index <= 0) return;
-    
-    const newMachines = [...filteredAndSortedMachines];
-    const temp = newMachines[index];
-    newMachines[index] = newMachines[index - 1];
-    newMachines[index - 1] = temp;
-    
-    // Actualizar órdenes locales para visualización
-    const updatedMachines = newMachines.map((machine, idx) => ({
-      ...machine,
-      ordenLocal: idx + 1 // Usamos un campo diferente para no modificar el orden maestro
-    }));
-    
-    // Aquí normalmente guardarías en Base44 si quieres persistir el orden
-    console.log('Orden local actualizado:', updatedMachines);
-  }, [filteredAndSortedMachines]);
-
-  const moveMachineDown = useCallback((index) => {
-    if (index >= filteredAndSortedMachines.length - 1) return;
-    
-    const newMachines = [...filteredAndSortedMachines];
-    const temp = newMachines[index];
-    newMachines[index] = newMachines[index + 1];
-    newMachines[index + 1] = temp;
-    
-    const updatedMachines = newMachines.map((machine, idx) => ({
-      ...machine,
-      ordenLocal: idx + 1
-    }));
-    
-    console.log('Orden local actualizado:', updatedMachines);
-  }, [filteredAndSortedMachines]);
-
-  const addMachine = useCallback(() => {
-    // Esta función podría crear una máquina temporal para el proceso
-    if (!newMachineName.trim()) {
-      alert('Por favor ingrese el nombre de la máquina');
-      return;
-    }
-
-    const newMachine = {
-      id: `temp-${Date.now()}`,
-      codigo: `TEMP-${Date.now().toString().slice(-4)}`,
-      nombre: newMachineName,
-      tipo: 'Temporal',
-      ubicacion: 'Por asignar',
-      estado: 'activa',
-      ordenLocal: filteredAndSortedMachines.length + 1
-    };
-
-    console.log('Máquina temporal añadida:', newMachine);
-    setNewMachineName('');
-    
-    // Mostrar mensaje
-    alert('Máquina temporal añadida. Para añadir al archivo maestro, use la página de Máquinas.');
-  }, [newMachineName, filteredAndSortedMachines.length]);
-
-  const deleteMachine = useCallback((id) => {
-    // Solo elimina del contexto local del proceso
-    console.log('Eliminando máquina del proceso (solo local):', id);
-  }, []);
-
-  const updateMachine = useCallback((id, updates) => {
-    // Solo actualiza en el contexto local del proceso
-    console.log('Actualizando máquina en proceso (solo local):', id, updates);
-  }, []);
-
-  return {
-    machines,
-    filteredAndSortedMachines,
-    isLoading,
-    searchTerm,
-    setSearchTerm,
-    statusFilter,
-    setStatusFilter,
-    sortBy,
-    setSortBy,
-    editingMachine,
-    setEditingMachine,
-    newMachineName,
-    setNewMachineName,
-    moveMachineUp,
-    moveMachineDown,
-    addMachine,
-    deleteMachine,
-    updateMachine
-  };
-};
-
-// ============================================
-// COMPONENTE PRINCIPAL
-// ============================================
-const ProcessConfigurationPage = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-
-  // Cargar tipos de procesos y procesos disponibles
-  const [processTypes, setProcessTypes] = useState([]);
-  const [availableProcesses, setAvailableProcesses] = useState([]);
-
-  useEffect(() => {
-    setProcessTypes(MachineService.getProcessTypes());
-    setAvailableProcesses(MachineService.getProcesses());
-  }, []);
-
-  // Usar nuestros hooks personalizados
-  const {
-    formData,
-    formErrors,
-    handleInputChange,
-    validateForm,
-    resetForm
-  } = useProcessForm(initialFormData);
-
-  const {
-    machines,
-    filteredAndSortedMachines,
-    isLoading,
-    searchTerm,
-    setSearchTerm,
-    statusFilter,
-    setStatusFilter,
-    sortBy,
-    setSortBy,
-    editingMachine,
-    setEditingMachine,
-    newMachineName,
-    setNewMachineName,
-    moveMachineUp,
-    moveMachineDown,
-    addMachine,
-    deleteMachine,
-    updateMachine
-  } = useMachines();
-
-  // Manejar envío del formulario
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError('');
-    setSubmitSuccess(false);
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Simulación de llamada a API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Preparar datos para envío
-      const processData = {
-        ...formData,
-        maquinas: filteredAndSortedMachines.map(m => ({
-          id: m.id,
-          codigo: m.codigo,
-          nombre: m.nombre,
-          tipo: m.tipo,
-          ubicacion: m.ubicacion,
-          orden: m.ordenLocal || m.orden,
-          procesoAsignado: m.procesoAsignado || m.tipo || 'Principal'
-        })),
-        totalMaquinas: filteredAndSortedMachines.length,
-        fechaCreacion: new Date().toISOString(),
-        creadoPor: 'Usuario Actual'
-      };
-
-      console.log('✅ Proceso guardado con máquinas reales:', processData);
-      
-      // Aquí podrías guardar en Base44 usando:
-      // await base44.entities.ProcessConfiguration.create(processData);
-      
-      setSubmitSuccess(true);
-      resetForm();
-      
-      setTimeout(() => setSubmitSuccess(false), 3000);
-    } catch (error) {
-      setSubmitError('Error al guardar el proceso. Por favor, intente nuevamente.');
-      console.error('Error:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Resetear todo
-  const handleReset = () => {
-    if (window.confirm('¿Está seguro de que desea resetear todos los datos?')) {
-      resetForm();
-      setSearchTerm('');
-      setStatusFilter('all');
-      setSortBy('orden');
-      setSubmitError('');
-      setSubmitSuccess(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Configuración de Procesos de Producción</h1>
-          <p className="text-gray-600 mt-2">
-            Configure procesos usando el archivo maestro de máquinas ({machines.length} máquinas disponibles)
-          </p>
-        </div>
-
-        {/* Mensajes de estado */}
-        <ValidationMessages
-          submitError={submitError}
-          submitSuccess={submitSuccess}
-          formErrors={formErrors}
-          isLoading={isLoading}
-          machinesCount={machines.length}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Columna izquierda: Formulario de proceso */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Información del Proceso</h2>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Limpiar formulario
-                </button>
-              </div>
-
-              <ProcessForm
-                formData={formData}
-                formErrors={formErrors}
-                handleInputChange={handleInputChange}
-                isSubmitting={isSubmitting}
-                handleSubmit={handleSubmit}
-                processTypes={processTypes}
-                availableProcesses={availableProcesses}
-              />
-            </div>
-
-            {/* Estadísticas */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Resumen del Proceso</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-sm text-blue-600 font-medium">Máquinas en Proceso</p>
-                  <p className="text-xl font-bold text-blue-700">{filteredAndSortedMachines.length}</p>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-sm text-green-600 font-medium">Disponibles</p>
-                  <p className="text-xl font-bold text-green-700">{machines.length}</p>
-                </div>
-                <div className="bg-yellow-50 p-3 rounded-lg">
-                  <p className="text-sm text-yellow-600 font-medium">Filtradas</p>
-                  <p className="text-xl font-bold text-yellow-700">
-                    {filteredAndSortedMachines.length}
-                  </p>
-                </div>
-                <div className="bg-purple-50 p-3 rounded-lg">
-                  <p className="text-sm text-purple-600 font-medium">Tipos Únicos</p>
-                  <p className="text-xl font-bold text-purple-700">
-                    {[...new Set(machines.map(m => m.tipo).filter(Boolean))].length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Columna derecha: Lista de máquinas */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Máquinas Asignadas al Proceso</h2>
-              
-              {/* Buscador y filtros */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                    <IconSearch />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Buscar máquinas..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
-                  />
-                </div>
-                
-                <div className="flex gap-2">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">Todos</option>
-                    <option value="activa">Activas</option>
-                    <option value="inactiva">Inactivas</option>
-                    <option value="mantenimiento">Mantenimiento</option>
-                  </select>
-                  
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="orden">Orden</option>
-                    <option value="nombre">Nombre</option>
-                    <option value="codigo">Código</option>
-                    <option value="tipo">Tipo</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Información del origen de datos */}
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-700 flex items-center gap-2">
-                <IconCheck />
-                <span>
-                  <strong>Conexión exitosa:</strong> Mostrando {filteredAndSortedMachines.length} de {machines.length} máquinas del archivo maestro
-                </span>
-              </p>
-            </div>
-
-            {/* Lista de máquinas */}
-            <div className="mb-4">
-              {filteredAndSortedMachines.length > 0 ? (
-                <>
-                  <MachineList
-                    machines={filteredAndSortedMachines}
-                    onEdit={setEditingMachine}
-                    onDelete={deleteMachine}
-                    onUpdate={updateMachine}
-                    editingMachine={editingMachine}
-                    onMoveUp={moveMachineUp}
-                    onMoveDown={moveMachineDown}
-                  />
-                  
-                  <div className="mt-4 text-sm text-gray-500">
-                    <p className="flex items-center gap-2">
-                      <span>💡</span>
-                      <span>
-                        <strong>Nota:</strong> Los cambios en el orden se aplican solo a este proceso
-                      </span>
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="mx-auto w-16 h-16 mb-4">
-                    <IconFilter />
-                  </div>
-                  <p className="text-gray-500 mb-2">
-                    {isLoading ? 'Cargando máquinas...' : 'No hay máquinas que coincidan con los filtros'}
-                  </p>
-                  {!isLoading && machines.length > 0 && (
-                    <p className="text-sm text-gray-400">
-                      Hay {machines.length} máquinas en el sistema. Prueba con otros filtros.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Nota informativa */}
-        <div className="mt-6 text-sm text-gray-500">
-          <p><span role="img" aria-label="info">ℹ️</span> 
-            <strong>Origen de datos:</strong> Las máquinas se cargan desde el archivo maestro (Base44). 
-            Para modificar máquinas permanentemente, use la página "Archivo Maestro de Máquinas".
-          </p>
+    <div className="process-configuration">
+      {/* Header con estadísticas */}
+      <div className="page-header">
+        <h1>Configuración de Procesos</h1>
+        <div className="process-stats">
+          <span className="stat-item">
+            <strong>📊 Total:</strong> {stats.total}
+          </span>
+          <span className="stat-item">
+            <strong>✅ Activos:</strong> {stats.active}
+          </span>
+          <span className="stat-item">
+            <strong>🗂️ Categorías:</strong> {stats.categories.length}
+          </span>
+          <button 
+            className="btn-refresh"
+            onClick={refreshProcesses}
+            title="Actualizar lista de procesos"
+          >
+            ↻ Actualizar
+          </button>
+          <button 
+            className="btn-sync"
+            onClick={syncWithProcessTypes}
+            title="Ir a Tipos de Procesos"
+          >
+            🔄 Gestionar Procesos
+          </button>
         </div>
       </div>
+
+      {/* Selector de proceso */}
+      <div className="form-section">
+        <h2>Seleccionar Proceso</h2>
+        <div className="form-group">
+          <label htmlFor="processSelect">Proceso:</label>
+          <select
+            id="processSelect"
+            value={selectedProcess}
+            onChange={handleProcessSelect}
+            className="process-select"
+          >
+            <option value="">-- Seleccionar un proceso --</option>
+            {processes
+              .filter(p => p.status === 'active')
+              .map(process => (
+                <option key={process.id} value={process.code}>
+                  {process.name} ({process.code}) - {process.time}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+
+        {/* Mostrar detalles del proceso seleccionado */}
+        {selectedProcess && (
+          <div className="process-details">
+            <h3>Detalles del Proceso</h3>
+            {(() => {
+              const process = processes.find(
+                p => p.code === selectedProcess || p.id.toString() === selectedProcess
+              );
+              if (process) {
+                return (
+                  <div className="details-card">
+                    <p><strong>Nombre:</strong> {process.name}</p>
+                    <p><strong>Código:</strong> <code>{process.code}</code></p>
+                    <p><strong>Categoría:</strong> {process.category}</p>
+                    <p><strong>Tiempo estimado:</strong> {process.time}</p>
+                    <p><strong>Máquinas compatibles:</strong></p>
+                    <ul>
+                      {process.machines?.map((machine, index) => (
+                        <li key={index}>{machine}</li>
+                      )) || <li>No especificadas</li>}
+                    </ul>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+          </div>
+        )}
+
+        {/* Lista completa de procesos disponibles */}
+        <div className="process-list">
+          <h3>Procesos Disponibles ({processes.length})</h3>
+          <div className="process-grid">
+            {processes.map(process => (
+              <div 
+                key={process.id} 
+                className={`process-card ${process.status === 'active' ? 'active' : 'inactive'}`}
+              >
+                <h4>{process.name}</h4>
+                <div className="process-code">{process.code}</div>
+                <div className="process-meta">
+                  <span className="category-badge">{process.category}</span>
+                  <span className="time-badge">{process.time}</span>
+                  <span className={`status-badge ${process.status}`}>
+                    {process.status === 'active' ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <p className="process-machines">
+                  <small>Máquinas: {process.machines?.join(', ') || 'No especificadas'}</small>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Estilos CSS en línea o importar CSS */}
+      <style jsx>{`
+        .process-configuration {
+          padding: 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+        
+        .page-header {
+          background: linear-gradient(135deg, #2c3e50, #4a6491);
+          color: white;
+          padding: 25px;
+          border-radius: 10px;
+          margin-bottom: 25px;
+        }
+        
+        .page-header h1 {
+          margin: 0 0 15px 0;
+          font-size: 2rem;
+        }
+        
+        .process-stats {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 15px;
+          align-items: center;
+        }
+        
+        .stat-item {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 8px 15px;
+          border-radius: 6px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .btn-refresh, .btn-sync {
+          padding: 8px 15px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.3s;
+        }
+        
+        .btn-refresh {
+          background: #f39c12;
+          color: white;
+        }
+        
+        .btn-refresh:hover {
+          background: #d68910;
+        }
+        
+        .btn-sync {
+          background: #3498db;
+          color: white;
+        }
+        
+        .btn-sync:hover {
+          background: #2980b9;
+        }
+        
+        .form-section {
+          background: white;
+          padding: 25px;
+          border-radius: 10px;
+          box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+          margin-bottom: 25px;
+        }
+        
+        .form-group {
+          margin-bottom: 20px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 8px;
+          font-weight: 600;
+          color: #2c3e50;
+        }
+        
+        .process-select {
+          width: 100%;
+          padding: 12px 15px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 1rem;
+          background-color: white;
+          cursor: pointer;
+        }
+        
+        .process-details {
+          margin-top: 25px;
+          padding: 20px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border-left: 4px solid #3498db;
+        }
+        
+        .details-card {
+          background: white;
+          padding: 15px;
+          border-radius: 6px;
+          margin-top: 10px;
+        }
+        
+        .process-list {
+          margin-top: 30px;
+        }
+        
+        .process-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 20px;
+          margin-top: 15px;
+        }
+        
+        .process-card {
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+          border-top: 4px solid #3498db;
+        }
+        
+        .process-card.inactive {
+          border-top-color: #95a5a6;
+          opacity: 0.7;
+        }
+        
+        .process-card h4 {
+          margin: 0 0 10px 0;
+          color: #2c3e50;
+        }
+        
+        .process-code {
+          font-family: monospace;
+          color: #7f8c8d;
+          font-size: 0.9rem;
+          margin-bottom: 10px;
+        }
+        
+        .process-meta {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        
+        .category-badge, .time-badge, .status-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+        
+        .category-badge {
+          background: #e8f4fc;
+          color: #3498db;
+        }
+        
+        .time-badge {
+          background: #d4edda;
+          color: #155724;
+        }
+        
+        .status-badge.active {
+          background: #d4edda;
+          color: #155724;
+        }
+        
+        .status-badge.inactive {
+          background: #f8d7da;
+          color: #721c24;
+        }
+        
+        .process-machines {
+          color: #666;
+          font-size: 0.85rem;
+          margin-top: 10px;
+        }
+        
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 200px;
+        }
+        
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #f3f3f3;
+          border-top: 4px solid #3498db;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default ProcessConfigurationPage;
+export default ProcessConfiguration;
