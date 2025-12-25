@@ -1,115 +1,137 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Importamos iconos de react-icons (más común en base44)
-import { 
-  FiSearch, 
-  FiFilter, 
-  FiPlus, 
-  FiTrash2, 
-  FiEdit, 
-  FiSave, 
-  FiX, 
-  FiMenu,
-  FiCheckCircle,
-  FiXCircle,
-  FiAlertCircle
-} from 'react-icons/fi';
 
 // ============================================
-// COMPONENTE 1: MachineList (SIN drag & drop)
+// COMPONENTES DE ICONOS SIMPLES (sin dependencias)
 // ============================================
-const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine }) => {
+const IconSearch = () => <span className="text-gray-400">🔍</span>;
+const IconFilter = () => <span className="text-gray-400">⚡</span>;
+const IconPlus = () => <span className="text-gray-400">➕</span>;
+const IconTrash = () => <span className="text-gray-400">🗑️</span>;
+const IconEdit = () => <span className="text-gray-400">✏️</span>;
+const IconSave = () => <span className="text-gray-400">💾</span>;
+const IconClose = () => <span className="text-gray-400">✕</span>;
+const IconMenu = () => <span className="text-gray-400">☰</span>;
+const IconCheck = () => <span className="text-green-500">✓</span>;
+const IconError = () => <span className="text-red-500">✗</span>;
+const IconAlert = () => <span className="text-yellow-500">⚠️</span>;
+const IconArrowUp = () => <span className="text-gray-400">↑</span>;
+const IconArrowDown = () => <span className="text-gray-400">↓</span>;
+
+// ============================================
+// COMPONENTE 1: MachineList
+// ============================================
+const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine, onMoveUp, onMoveDown }) => {
   return (
     <div className="space-y-3">
-      {machines.map((machine) => (
-        <div
-          key={machine.id}
-          className={`bg-white border rounded-lg p-4 shadow-sm ${
-            machine.status === 'active' ? 'border-green-200' :
-            machine.status === 'inactive' ? 'border-gray-200' :
-            'border-yellow-200'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FiMenu className="text-gray-400 w-5 h-5" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900">
-                    {editingMachine === machine.id ? (
-                      <input
-                        type="text"
-                        value={machine.name}
-                        onChange={(e) => onUpdate(machine.id, { name: e.target.value })}
-                        className="border-b border-gray-300 focus:border-blue-500 focus:outline-none"
-                        autoFocus
-                      />
-                    ) : (
-                      machine.name
-                    )}
-                  </span>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    machine.status === 'active' ? 'bg-green-100 text-green-800' :
-                    machine.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {machine.status === 'active' ? 'Activa' :
-                     machine.status === 'inactive' ? 'Inactiva' : 'Mantenimiento'}
-                  </span>
+      {machines.map((machine, index) => (
+        <div key={machine.id}>
+          <div
+            className={`bg-white border rounded-lg p-4 shadow-sm ${
+              machine.status === 'active' ? 'border-green-200' :
+              machine.status === 'inactive' ? 'border-gray-200' :
+              'border-yellow-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <IconMenu />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900">
+                      {editingMachine === machine.id ? (
+                        <input
+                          type="text"
+                          value={machine.name}
+                          onChange={(e) => onUpdate(machine.id, { name: e.target.value })}
+                          className="border-b border-gray-300 focus:border-blue-500 focus:outline-none"
+                          autoFocus
+                        />
+                      ) : (
+                        machine.name
+                      )}
+                    </span>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      machine.status === 'active' ? 'bg-green-100 text-green-800' :
+                      machine.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {machine.status === 'active' ? 'Activa' :
+                       machine.status === 'inactive' ? 'Inactiva' : 'Mantenimiento'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">{machine.process}</p>
                 </div>
-                <p className="text-sm text-gray-600">{machine.process}</p>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onEdit(machine.id)}
+                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title={editingMachine === machine.id ? "Guardar" : "Editar"}
+                >
+                  {editingMachine === machine.id ? <IconSave /> : <IconEdit />}
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('¿Eliminar esta máquina?')) {
+                      onDelete(machine.id);
+                    }
+                  }}
+                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Eliminar"
+                >
+                  <IconTrash />
+                </button>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onEdit(machine.id)}
-                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                {editingMachine === machine.id ? (
-                  <FiSave className="w-4 h-4" />
-                ) : (
-                  <FiEdit className="w-4 h-4" />
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  if (window.confirm('¿Eliminar esta máquina?')) {
-                    onDelete(machine.id);
-                  }
-                }}
-                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <FiTrash2 className="w-4 h-4" />
-              </button>
-            </div>
+            {editingMachine === machine.id && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-2 gap-4">
+                  <select
+                    value={machine.status}
+                    onChange={(e) => onUpdate(machine.id, { status: e.target.value })}
+                    className="border border-gray-300 rounded px-3 py-1 text-sm"
+                  >
+                    <option value="active">Activa</option>
+                    <option value="inactive">Inactiva</option>
+                    <option value="maintenance">Mantenimiento</option>
+                  </select>
+                  <select
+                    value={machine.process}
+                    onChange={(e) => onUpdate(machine.id, { process: e.target.value })}
+                    className="border border-gray-300 rounded px-3 py-1 text-sm"
+                  >
+                    <option value="Corte">Corte</option>
+                    <option value="Fresado">Fresado</option>
+                    <option value="Torneado">Torneado</option>
+                    <option value="Soldadura">Soldadura</option>
+                    <option value="Sin asignar">Sin asignar</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
           
-          {editingMachine === machine.id && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-2 gap-4">
-                <select
-                  value={machine.status}
-                  onChange={(e) => onUpdate(machine.id, { status: e.target.value })}
-                  className="border border-gray-300 rounded px-3 py-1 text-sm"
-                >
-                  <option value="active">Activa</option>
-                  <option value="inactive">Inactiva</option>
-                  <option value="maintenance">Mantenimiento</option>
-                </select>
-                <select
-                  value={machine.process}
-                  onChange={(e) => onUpdate(machine.id, { process: e.target.value })}
-                  className="border border-gray-300 rounded px-3 py-1 text-sm"
-                >
-                  <option value="Corte">Corte</option>
-                  <option value="Fresado">Fresado</option>
-                  <option value="Torneado">Torneado</option>
-                  <option value="Soldadura">Soldadura</option>
-                  <option value="Sin asignar">Sin asignar</option>
-                </select>
-              </div>
-            </div>
-          )}
+          {/* Controles para mover */}
+          <div className="flex justify-end gap-2 mt-1">
+            {index > 0 && (
+              <button
+                onClick={() => onMoveUp(index)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
+              >
+                <IconArrowUp /> Subir
+              </button>
+            )}
+            {index < machines.length - 1 && (
+              <button
+                onClick={() => onMoveDown(index)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
+              >
+                <IconArrowDown /> Bajar
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -267,13 +289,13 @@ const ProcessForm = ({
             isSubmitting
               ? 'bg-blue-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700'
-          } text-white`}
+          } text-white flex items-center justify-center gap-2`}
         >
           {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
+            <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               Guardando...
-            </span>
+            </>
           ) : (
             'Guardar Configuración del Proceso'
           )}
@@ -294,7 +316,7 @@ const ValidationMessages = ({ submitError, submitSuccess, formErrors }) => {
       {/* Error de envío */}
       {submitError && (
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          <FiXCircle className="w-5 h-5 flex-shrink-0" />
+          <IconError />
           <span>{submitError}</span>
         </div>
       )}
@@ -302,7 +324,7 @@ const ValidationMessages = ({ submitError, submitSuccess, formErrors }) => {
       {/* Éxito de envío */}
       {submitSuccess && (
         <div className="flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-          <FiCheckCircle className="w-5 h-5 flex-shrink-0" />
+          <IconCheck />
           <span>¡Proceso guardado exitosamente!</span>
         </div>
       )}
@@ -311,7 +333,7 @@ const ValidationMessages = ({ submitError, submitSuccess, formErrors }) => {
       {hasErrors && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <FiAlertCircle className="w-5 h-5" />
+            <IconAlert />
             <span className="font-medium">Corrige los siguientes errores:</span>
           </div>
           <ul className="list-disc list-inside space-y-1 ml-6">
@@ -409,7 +431,7 @@ const useProcessForm = (initialData) => {
   };
 };
 
-// Hook para manejo de máquinas (SIN drag & drop)
+// Hook para manejo de máquinas
 const useMachines = (initialMachinesList) => {
   const [machines, setMachines] = useState(initialMachinesList);
   const [searchTerm, setSearchTerm] = useState('');
@@ -435,16 +457,37 @@ const useMachines = (initialMachinesList) => {
     });
   }, [machines, searchTerm, statusFilter, sortBy]);
 
-  // Función para mover máquina (simplificada)
-  const moveMachine = useCallback((fromIndex, toIndex) => {
+  // Función para mover máquina hacia arriba
+  const moveMachineUp = useCallback((index) => {
+    if (index <= 0) return;
+    
     const newMachines = [...machines];
-    const [movedMachine] = newMachines.splice(fromIndex, 1);
-    newMachines.splice(toIndex, 0, movedMachine);
+    const temp = newMachines[index];
+    newMachines[index] = newMachines[index - 1];
+    newMachines[index - 1] = temp;
     
     // Actualizar órdenes
-    const updatedMachines = newMachines.map((machine, index) => ({
+    const updatedMachines = newMachines.map((machine, idx) => ({
       ...machine,
-      order: index + 1
+      order: idx + 1
+    }));
+    
+    setMachines(updatedMachines);
+  }, [machines]);
+
+  // Función para mover máquina hacia abajo
+  const moveMachineDown = useCallback((index) => {
+    if (index >= machines.length - 1) return;
+    
+    const newMachines = [...machines];
+    const temp = newMachines[index];
+    newMachines[index] = newMachines[index + 1];
+    newMachines[index + 1] = temp;
+    
+    // Actualizar órdenes
+    const updatedMachines = newMachines.map((machine, idx) => ({
+      ...machine,
+      order: idx + 1
     }));
     
     setMachines(updatedMachines);
@@ -488,7 +531,8 @@ const useMachines = (initialMachinesList) => {
     setEditingMachine,
     newMachineName,
     setNewMachineName,
-    moveMachine,
+    moveMachineUp,
+    moveMachineDown,
     addMachine,
     deleteMachine,
     updateMachine
@@ -496,7 +540,7 @@ const useMachines = (initialMachinesList) => {
 };
 
 // ============================================
-// COMPONENTE PRINCIPAL (SIN drag & drop)
+// COMPONENTE PRINCIPAL
 // ============================================
 const ProcessConfigurationPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -525,7 +569,8 @@ const ProcessConfigurationPage = () => {
     setEditingMachine,
     newMachineName,
     setNewMachineName,
-    moveMachine,
+    moveMachineUp,
+    moveMachineDown,
     addMachine,
     deleteMachine,
     updateMachine
@@ -654,7 +699,9 @@ const ProcessConfigurationPage = () => {
               {/* Buscador y filtros */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <IconSearch />
+                  </div>
                   <input
                     type="text"
                     placeholder="Buscar máquinas..."
@@ -703,67 +750,31 @@ const ProcessConfigurationPage = () => {
                 onClick={addMachine}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
-                <FiPlus className="w-5 h-5" />
-                Agregar
+                <IconPlus /> Agregar
               </button>
-            </div>
-
-            {/* Controles para mover máquinas (reemplazo de drag & drop) */}
-            <div className="mb-4 flex gap-2">
-              <button
-                onClick={() => {
-                  // Lógica para mover máquinas manualmente
-                  const fromIndex = 0; // Ejemplo
-                  const toIndex = 1;   // Ejemplo
-                  moveMachine(fromIndex, toIndex);
-                }}
-                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
-              >
-                Reordenar
-              </button>
-              <p className="text-sm text-gray-500 flex items-center">
-                <FiAlertCircle className="w-4 h-4 mr-1" />
-                Use los botones de flecha para reordenar
-              </p>
             </div>
 
             {/* Lista de máquinas */}
-            <div className="space-y-3">
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-2">
+                <IconAlert /> Use los botones "Subir" y "Bajar" para reordenar
+              </p>
+              
               <MachineList
                 machines={filteredAndSortedMachines}
                 onEdit={setEditingMachine}
                 onDelete={deleteMachine}
                 onUpdate={updateMachine}
                 editingMachine={editingMachine}
+                onMoveUp={moveMachineUp}
+                onMoveDown={moveMachineDown}
               />
-              
-              {/* Botones de flecha para mover (alternativa a drag & drop) */}
-              {filteredAndSortedMachines.map((machine, index) => (
-                <div key={`controls-${machine.id}`} className="flex justify-end gap-2 mt-1">
-                  {index > 0 && (
-                    <button
-                      onClick={() => moveMachine(index, index - 1)}
-                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                    >
-                      ↑ Subir
-                    </button>
-                  )}
-                  {index < filteredAndSortedMachines.length - 1 && (
-                    <button
-                      onClick={() => moveMachine(index, index + 1)}
-                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                    >
-                      ↓ Bajar
-                    </button>
-                  )}
-                </div>
-              ))}
             </div>
 
             {/* Mensaje si no hay máquinas */}
             {filteredAndSortedMachines.length === 0 && (
               <div className="text-center py-8">
-                <FiFilter className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <IconFilter className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">No se encontraron máquinas con los filtros aplicados</p>
               </div>
             )}
@@ -772,7 +783,7 @@ const ProcessConfigurationPage = () => {
 
         {/* Nota informativa */}
         <div className="mt-6 text-sm text-gray-500">
-          <p>💡 <strong>Nota:</strong> Use los botones "Subir" y "Bajar" para reorganizar el orden de producción.</p>
+          <p><span role="img" aria-label="idea">💡</span> <strong>Nota:</strong> Use los botones "Subir" y "Bajar" para reorganizar el orden de producción.</p>
         </div>
       </div>
     </div>
