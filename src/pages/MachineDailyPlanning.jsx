@@ -172,17 +172,27 @@ function MachineDailyPlanningContent() {
 
     // FILTRAR POR EQUIPO Y DEPARTAMENTO
     const fabricacionEmployees = employees.filter(emp => {
-      const isActive = emp.estado_empleado === "Alta";
-      const isFabricacion = emp.departamento === "FABRICACION";
-      const incluir = emp.incluir_en_planning !== false;
-      const matchesTeam = !selectedTeam || 
-  (emp.equipo && teams.find(t => t.team_name === emp.equipo)?.team_key === selectedTeam);
-    });
-console.log('🔍 DEBUG Equipos:', {
-  selectedTeam,
-  teams: teams.map(t => ({ key: t.team_key, name: t.team_name })),
-  employeeTeam: emp.equipo,
-  matchesTeam: matchesTeam
+  const isActive = emp.estado_empleado === "Alta";
+  const isFabricacion = emp.departamento === "FABRICACION";
+  const incluir = emp.incluir_en_planning !== false;
+  
+  // Para debugging
+  const teamMatch = teams.find(t => t.team_name === emp.equipo);
+  const matchesTeam = !selectedTeam || 
+    (emp.equipo && teamMatch?.team_key === selectedTeam);
+  
+  console.log('🔍 DEBUG Empleado:', {
+    nombre: emp.nombre,
+    equipo: emp.equipo,
+    selectedTeam,
+    teamMatch,
+    matchesTeam,
+    isActive,
+    isFabricacion,
+    incluir
+  });
+  
+  return isActive && isFabricacion && incluir && matchesTeam;
 });
     console.log('👷 Empleados FABRICACION del equipo seleccionado:', fabricacionEmployees.length);
 
