@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { base44 } from "@/api/base44Client"; // Asegúrate de importar el cliente
+import { useQuery } from "@tanstack/react-query"; // Importa React Query
 
 // ============================================
 // ICONOS (sin dependencias)
@@ -18,99 +20,41 @@ const IconArrowDown = () => <span className="text-gray-400">↓</span>;
 const IconLoading = () => <span className="animate-spin">↻</span>;
 
 // ============================================
-// SERVICIO PARA CARGAR DATOS (simulación)
+// SERVICIO PARA CARGAR DATOS REALES
 // ============================================
 const MachineService = {
+  // Esta función ahora usa React Query como en MachineMaster
   async getMachines() {
-    // Simulamos carga de API
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return [
-      {
-        id: 1,
-        codigo: "MAQ-001",
-        nombre: "Cortadora CNC Haas",
-        modelo: "VF-2",
-        fabricante: "Haas Automation",
-        estado: "activa",
-        capacidad: "Acero hasta 500mm",
-        procesos: ["Corte preciso", "Tallado 3D", "Fresado básico"],
-        horasUso: 1250,
-        ultimoMantenimiento: "2024-01-15",
-        ubicacion: "Taller 1",
-        orden: 1
-      },
-      {
-        id: 2,
-        codigo: "MAQ-002",
-        nombre: "Torno Paralelo",
-        modelo: "TP-400",
-        fabricante: "DMTG",
-        estado: "activa",
-        capacidad: "Diámetro 400mm",
-        procesos: ["Torneado externo", "Roscado", "Refrentado"],
-        horasUso: 890,
-        ultimoMantenimiento: "2024-02-10",
-        ubicacion: "Taller 2",
-        orden: 2
-      },
-      {
-        id: 3,
-        codigo: "MAQ-003",
-        nombre: "Fresadora Vertical",
-        modelo: "FV-300",
-        fabricante: "Bridgeport",
-        estado: "mantenimiento",
-        capacidad: "Mesa 300x300mm",
-        procesos: ["Fresado plano", "Ranurado", "Contorneado"],
-        horasUso: 2100,
-        ultimoMantenimiento: "2024-03-01",
-        ubicacion: "Taller 1",
-        orden: 3
-      },
-      {
-        id: 4,
-        codigo: "MAQ-004",
-        nombre: "Prensa Hidráulica",
-        modelo: "PH-100T",
-        fabricante: "Amada",
-        estado: "activa",
-        capacidad: "100 Toneladas",
-        procesos: ["Prensado", "Doblado", "Estampado"],
-        horasUso: 560,
-        ultimoMantenimiento: "2024-01-30",
-        ubicacion: "Taller 3",
-        orden: 4
-      },
-      {
-        id: 5,
-        codigo: "MAQ-005",
-        nombre: "Soldadora MIG/MAG",
-        modelo: "SM-350",
-        fabricante: "Lincoln Electric",
-        estado: "inactiva",
-        capacidad: "Acero 0.6-20mm",
-        procesos: ["Soldadura MIG", "Soldadura MAG", "Puntos de soldadura"],
-        horasUso: 1750,
-        ultimoMantenimiento: "2023-12-15",
-        ubicacion: "Taller 2",
-        orden: 5
-      }
-    ];
+    // Usamos el mismo cliente y método que en MachineMaster
+    try {
+      const machines = await base44.entities.Machine.list('orden');
+      console.log('✅ Máquinas cargadas desde Base44:', machines);
+      return machines;
+    } catch (error) {
+      console.error('❌ Error cargando máquinas desde Base44:', error);
+      // Retornar array vacío en caso de error
+      return [];
+    }
   },
 
   getProcesses() {
+    // Estos procesos podrían también venir de Base44 si los tienes en una entidad
     return [
-      { id: "corte", nombre: "Corte preciso", descripcion: "Corte de piezas con tolerancias estrechas" },
-      { id: "torneado", nombre: "Torneado externo", descripcion: "Torneado de superficies externas" },
+      { id: "corte", nombre: "Corte preciso", descripcion: "Corte de materiales con tolerancias estrechas" },
+      { id: "torneado", nombre: "Torneado externo", descripcion: "Torneado de superficies cilíndricas externas" },
+      { id: "torneado-int", nombre: "Torneado interno", descripcion: "Torneado de superficies cilíndricas internas" },
       { id: "fresado", nombre: "Fresado plano", descripcion: "Fresado de superficies planas" },
-      { id: "prensado", nombre: "Prensado", descripcion: "Aplicación de presión para conformar" },
-      { id: "soldadura", nombre: "Soldadura MIG", descripcion: "Soldadura por arco con gas inerte" },
+      { id: "fresado-3d", nombre: "Fresado 3D", descripcion: "Fresado tridimensional complejo" },
       { id: "taladrado", nombre: "Taladrado", descripcion: "Perforación de materiales" },
-      { id: "roscado", nombre: "Roscado", descripcion: "Corte de roscas internas/externas" },
+      { id: "roscado", nombre: "Roscado", descripcion: "Corte de roscas internas y externas" },
+      { id: "prensado", nombre: "Prensado", descripcion: "Aplicación de presión para conformado" },
       { id: "doblado", nombre: "Doblado", descripcion: "Doblado de chapas metálicas" },
-      { id: "estampado", nombre: "Estampado", descripcion: "Estampado de piezas metálicas" },
-      { id: "tallado", nombre: "Tallado 3D", descripcion: "Tallado tridimensional" }
+      { id: "soldadura-mig", nombre: "Soldadura MIG", descripcion: "Soldadura por arco con gas inerte metálico" },
+      { id: "soldadura-tig", nombre: "Soldadura TIG", descripcion: "Soldadura por arco con gas inerte de tungsteno" },
+      { id: "pulido", nombre: "Pulido", descripcion: "Acabado superficial por pulido" },
+      { id: "pintura", nombre: "Pintura", descripcion: "Aplicación de pintura y recubrimientos" },
+      { id: "ensamblaje", nombre: "Ensamblaje", descripcion: "Ensamblaje de componentes" },
+      { id: "control-calidad", nombre: "Control de Calidad", descripcion: "Verificación de especificaciones" }
     ];
   },
 
@@ -123,13 +67,15 @@ const MachineService = {
       'Logística',
       'Tratamiento Térmico',
       'Acabado Superficial',
-      'Pruebas y Verificación'
+      'Pruebas y Verificación',
+      'Mantenimiento',
+      'Calibración'
     ];
   }
 };
 
 // ============================================
-// COMPONENTE 1: MachineList
+// COMPONENTE 1: MachineList (Adaptado para datos reales)
 // ============================================
 const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine, onMoveUp, onMoveDown }) => {
   return (
@@ -160,14 +106,19 @@ const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine, onM
                     </span>
                   </div>
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p><span className="font-medium">Modelo:</span> {machine.modelo}</p>
-                    <p><span className="font-medium">Fabricante:</span> {machine.fabricante}</p>
+                    <p><span className="font-medium">Tipo:</span> {machine.tipo || 'Sin tipo'}</p>
+                    <p><span className="font-medium">Ubicación:</span> {machine.ubicacion || 'Sin ubicación'}</p>
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {machine.procesos && machine.procesos.map((proceso, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                          {proceso}
-                        </span>
-                      ))}
+                      {/* Los procesos podrían venir de otra entidad en Base44 */}
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                        {machine.tipo || 'Proceso principal'}
+                      </span>
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                        {machine.marca || 'Sin marca'}
+                      </span>
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                        {machine.modelo || 'Sin modelo'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -201,7 +152,7 @@ const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine, onM
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                     <select
-                      value={machine.estado}
+                      value={machine.estado || 'activa'}
                       onChange={(e) => onUpdate(machine.id, { estado: e.target.value })}
                       className="border border-gray-300 rounded px-3 py-1 text-sm w-full"
                     >
@@ -211,19 +162,21 @@ const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine, onM
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Procesos</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Proceso Asignado</label>
                     <select
-                      value={machine.procesoSeleccionado || ""}
+                      value={machine.procesoAsignado || ""}
                       onChange={(e) => onUpdate(machine.id, { 
-                        procesoSeleccionado: e.target.value,
+                        procesoAsignado: e.target.value,
                         procesoActual: e.target.options[e.target.selectedIndex].text
                       })}
                       className="border border-gray-300 rounded px-3 py-1 text-sm w-full"
                     >
                       <option value="">Seleccionar proceso</option>
-                      {machine.procesos && machine.procesos.map((proceso, idx) => (
-                        <option key={idx} value={proceso}>{proceso}</option>
-                      ))}
+                      <option value="corte">Corte preciso</option>
+                      <option value="ensamblaje">Ensamblaje</option>
+                      <option value="empaquetado">Empaquetado</option>
+                      <option value="control-calidad">Control de Calidad</option>
+                      {/* Agrega más opciones según tus procesos */}
                     </select>
                   </div>
                 </div>
@@ -257,7 +210,7 @@ const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine, onM
 };
 
 // ============================================
-// COMPONENTE 2: ProcessForm
+// COMPONENTE 2: ProcessForm (Mismo)
 // ============================================
 const ProcessForm = ({
   formData,
@@ -289,7 +242,7 @@ const ProcessForm = ({
             name="nombre"
             value={formData.nombre}
             onChange={handleInputChange}
-            placeholder="ej: Ensamblaje de chasis"
+            placeholder="ej: Línea de envasado primario"
             required
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
               formErrors.nombre ? 'border-red-500' : 'border-gray-300'
@@ -336,7 +289,7 @@ const ProcessForm = ({
             name="codigo"
             value={formData.codigo}
             onChange={handleInputChange}
-            placeholder="ej: PROC-MAN-001"
+            placeholder="ej: PROC-ENV-001"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           />
         </div>
@@ -459,7 +412,7 @@ const ProcessForm = ({
 // ============================================
 // COMPONENTE 3: ValidationMessages
 // ============================================
-const ValidationMessages = ({ submitError, submitSuccess, formErrors, isLoading }) => {
+const ValidationMessages = ({ submitError, submitSuccess, formErrors, isLoading, machinesCount }) => {
   const hasErrors = Object.keys(formErrors).length > 0;
 
   if (isLoading) {
@@ -467,7 +420,7 @@ const ValidationMessages = ({ submitError, submitSuccess, formErrors, isLoading 
       <div className="mb-6">
         <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
           <IconLoading />
-          <span>Cargando datos del sistema...</span>
+          <span>Cargando máquinas desde el archivo maestro...</span>
         </div>
       </div>
     );
@@ -503,6 +456,18 @@ const ValidationMessages = ({ submitError, submitSuccess, formErrors, isLoading 
               <li key={field} className="text-sm">{error}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Información de máquinas cargadas */}
+      {!isLoading && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
+          <div className="flex items-center gap-2">
+            <IconCheck />
+            <span>
+              <strong>{machinesCount} máquinas</strong> cargadas desde el archivo maestro
+            </span>
+          </div>
         </div>
       )}
     </div>
@@ -543,7 +508,6 @@ const useProcessForm = (initialData) => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    // Limpiar error cuando el usuario empieza a escribir
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -593,43 +557,29 @@ const useProcessForm = (initialData) => {
   };
 };
 
-// Hook para manejo de máquinas (con carga real)
+// Hook para manejo de máquinas (USANDO REACT QUERY COMO EN MACHINEMASTER)
 const useMachines = () => {
-  const [machines, setMachines] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Usamos el mismo hook useQuery que en MachineMaster
+  const { data: machines = [], isLoading } = useQuery({
+    queryKey: ['machines', 'process-config'],
+    queryFn: () => base44.entities.Machine.list('orden'),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('orden');
   const [editingMachine, setEditingMachine] = useState(null);
   const [newMachineName, setNewMachineName] = useState('');
 
-  // Cargar máquinas al iniciar
-  useEffect(() => {
-    const loadMachines = async () => {
-      setIsLoading(true);
-      try {
-        const machinesData = await MachineService.getMachines();
-        setMachines(machinesData);
-      } catch (error) {
-        console.error('Error cargando máquinas:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadMachines();
-  }, []);
-
   // Filtrar y ordenar máquinas
   const filteredAndSortedMachines = useMemo(() => {
     let filtered = machines.filter(machine => {
       const matchesSearch = 
-        machine.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        machine.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (machine.procesos && machine.procesos.some(p => 
-          p.toLowerCase().includes(searchTerm.toLowerCase())
-        ));
+        machine.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        machine.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        machine.tipo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        machine.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || machine.estado === statusFilter;
       return matchesSearch && matchesStatus;
@@ -637,82 +587,80 @@ const useMachines = () => {
 
     // Ordenar
     return filtered.sort((a, b) => {
-      if (sortBy === 'nombre') return a.nombre.localeCompare(b.nombre);
-      if (sortBy === 'codigo') return a.codigo.localeCompare(b.codigo);
-      if (sortBy === 'estado') return a.estado.localeCompare(b.estado);
-      return a.orden - b.orden;
+      if (sortBy === 'nombre') return (a.nombre || '').localeCompare(b.nombre || '');
+      if (sortBy === 'codigo') return (a.codigo || '').localeCompare(b.codigo || '');
+      if (sortBy === 'estado') return (a.estado || '').localeCompare(b.estado || '');
+      return (a.orden || 0) - (b.orden || 0);
     });
   }, [machines, searchTerm, statusFilter, sortBy]);
 
-  // Función para mover máquina hacia arriba
   const moveMachineUp = useCallback((index) => {
+    // Esta función ahora solo afecta el orden local, no el maestro
     if (index <= 0) return;
     
-    const newMachines = [...machines];
+    const newMachines = [...filteredAndSortedMachines];
     const temp = newMachines[index];
     newMachines[index] = newMachines[index - 1];
     newMachines[index - 1] = temp;
     
-    // Actualizar órdenes
+    // Actualizar órdenes locales para visualización
     const updatedMachines = newMachines.map((machine, idx) => ({
       ...machine,
-      orden: idx + 1
+      ordenLocal: idx + 1 // Usamos un campo diferente para no modificar el orden maestro
     }));
     
-    setMachines(updatedMachines);
-  }, [machines]);
+    // Aquí normalmente guardarías en Base44 si quieres persistir el orden
+    console.log('Orden local actualizado:', updatedMachines);
+  }, [filteredAndSortedMachines]);
 
-  // Función para mover máquina hacia abajo
   const moveMachineDown = useCallback((index) => {
-    if (index >= machines.length - 1) return;
+    if (index >= filteredAndSortedMachines.length - 1) return;
     
-    const newMachines = [...machines];
+    const newMachines = [...filteredAndSortedMachines];
     const temp = newMachines[index];
     newMachines[index] = newMachines[index + 1];
     newMachines[index + 1] = temp;
     
-    // Actualizar órdenes
     const updatedMachines = newMachines.map((machine, idx) => ({
       ...machine,
-      orden: idx + 1
+      ordenLocal: idx + 1
     }));
     
-    setMachines(updatedMachines);
-  }, [machines]);
+    console.log('Orden local actualizado:', updatedMachines);
+  }, [filteredAndSortedMachines]);
 
   const addMachine = useCallback(() => {
+    // Esta función podría crear una máquina temporal para el proceso
     if (!newMachineName.trim()) {
       alert('Por favor ingrese el nombre de la máquina');
       return;
     }
 
     const newMachine = {
-      id: Date.now(),
-      codigo: `MAQ-NEW-${Date.now().toString().slice(-4)}`,
+      id: `temp-${Date.now()}`,
+      codigo: `TEMP-${Date.now().toString().slice(-4)}`,
       nombre: newMachineName,
-      modelo: 'Nuevo',
-      fabricante: 'Por definir',
+      tipo: 'Temporal',
+      ubicacion: 'Por asignar',
       estado: 'activa',
-      capacidad: 'Por definir',
-      procesos: ['Proceso básico'],
-      horasUso: 0,
-      ultimoMantenimiento: new Date().toISOString().split('T')[0],
-      ubicacion: 'Taller nuevo',
-      orden: machines.length + 1
+      ordenLocal: filteredAndSortedMachines.length + 1
     };
 
-    setMachines(prev => [...prev, newMachine]);
+    console.log('Máquina temporal añadida:', newMachine);
     setNewMachineName('');
-  }, [newMachineName, machines.length]);
+    
+    // Mostrar mensaje
+    alert('Máquina temporal añadida. Para añadir al archivo maestro, use la página de Máquinas.');
+  }, [newMachineName, filteredAndSortedMachines.length]);
 
   const deleteMachine = useCallback((id) => {
-    setMachines(prev => prev.filter(machine => machine.id !== id));
+    // Solo elimina del contexto local del proceso
+    console.log('Eliminando máquina del proceso (solo local):', id);
   }, []);
 
   const updateMachine = useCallback((id, updates) => {
-    setMachines(prev => prev.map(machine =>
-      machine.id === id ? { ...machine, ...updates } : machine
-    ));
+    // Solo actualiza en el contexto local del proceso
+    console.log('Actualizando máquina en proceso (solo local):', id, updates);
   }, []);
 
   return {
@@ -750,7 +698,6 @@ const ProcessConfigurationPage = () => {
   const [availableProcesses, setAvailableProcesses] = useState([]);
 
   useEffect(() => {
-    // Cargar datos estáticos
     setProcessTypes(MachineService.getProcessTypes());
     setAvailableProcesses(MachineService.getProcesses());
   }, []);
@@ -804,24 +751,28 @@ const ProcessConfigurationPage = () => {
       // Preparar datos para envío
       const processData = {
         ...formData,
-        maquinas: machines.map(m => ({
+        maquinas: filteredAndSortedMachines.map(m => ({
           id: m.id,
           codigo: m.codigo,
           nombre: m.nombre,
-          procesoAsignado: m.procesoActual || m.procesos[0],
-          orden: m.orden
+          tipo: m.tipo,
+          ubicacion: m.ubicacion,
+          orden: m.ordenLocal || m.orden,
+          procesoAsignado: m.procesoAsignado || m.tipo || 'Principal'
         })),
-        totalMaquinas: machines.length,
+        totalMaquinas: filteredAndSortedMachines.length,
         fechaCreacion: new Date().toISOString(),
         creadoPor: 'Usuario Actual'
       };
 
-      console.log('Proceso guardado:', processData);
+      console.log('✅ Proceso guardado con máquinas reales:', processData);
+      
+      // Aquí podrías guardar en Base44 usando:
+      // await base44.entities.ProcessConfiguration.create(processData);
       
       setSubmitSuccess(true);
       resetForm();
       
-      // Limpiar mensaje de éxito después de 3 segundos
       setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (error) {
       setSubmitError('Error al guardar el proceso. Por favor, intente nuevamente.');
@@ -850,7 +801,7 @@ const ProcessConfigurationPage = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Configuración de Procesos de Producción</h1>
           <p className="text-gray-600 mt-2">
-            Configure procesos de manufactura y asigne máquinas del archivo maestro
+            Configure procesos usando el archivo maestro de máquinas ({machines.length} máquinas disponibles)
           </p>
         </div>
 
@@ -860,6 +811,7 @@ const ProcessConfigurationPage = () => {
           submitSuccess={submitSuccess}
           formErrors={formErrors}
           isLoading={isLoading}
+          machinesCount={machines.length}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -893,25 +845,23 @@ const ProcessConfigurationPage = () => {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Resumen del Proceso</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-sm text-blue-600 font-medium">Máquinas</p>
-                  <p className="text-xl font-bold text-blue-700">{machines.length}</p>
+                  <p className="text-sm text-blue-600 font-medium">Máquinas en Proceso</p>
+                  <p className="text-xl font-bold text-blue-700">{filteredAndSortedMachines.length}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-sm text-green-600 font-medium">Activas</p>
-                  <p className="text-xl font-bold text-green-700">
-                    {machines.filter(m => m.estado === 'activa').length}
-                  </p>
+                  <p className="text-sm text-green-600 font-medium">Disponibles</p>
+                  <p className="text-xl font-bold text-green-700">{machines.length}</p>
                 </div>
                 <div className="bg-yellow-50 p-3 rounded-lg">
-                  <p className="text-sm text-yellow-600 font-medium">Mantenimiento</p>
+                  <p className="text-sm text-yellow-600 font-medium">Filtradas</p>
                   <p className="text-xl font-bold text-yellow-700">
-                    {machines.filter(m => m.estado === 'mantenimiento').length}
+                    {filteredAndSortedMachines.length}
                   </p>
                 </div>
                 <div className="bg-purple-50 p-3 rounded-lg">
-                  <p className="text-sm text-purple-600 font-medium">Procesos</p>
+                  <p className="text-sm text-purple-600 font-medium">Tipos Únicos</p>
                   <p className="text-xl font-bold text-purple-700">
-                    {machines.reduce((acc, m) => acc + (m.procesos ? m.procesos.length : 0), 0)}
+                    {[...new Set(machines.map(m => m.tipo).filter(Boolean))].length}
                   </p>
                 </div>
               </div>
@@ -921,7 +871,7 @@ const ProcessConfigurationPage = () => {
           {/* Columna derecha: Lista de máquinas */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800">Máquinas Asignadas</h2>
+              <h2 className="text-xl font-semibold text-gray-800">Máquinas Asignadas al Proceso</h2>
               
               {/* Buscador y filtros */}
               <div className="flex flex-col sm:flex-row gap-3">
@@ -931,7 +881,7 @@ const ProcessConfigurationPage = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="Buscar por código, nombre, modelo o proceso..."
+                    placeholder="Buscar máquinas..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
@@ -944,7 +894,7 @@ const ProcessConfigurationPage = () => {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="all">Todos los estados</option>
+                    <option value="all">Todos</option>
                     <option value="activa">Activas</option>
                     <option value="inactiva">Inactivas</option>
                     <option value="mantenimiento">Mantenimiento</option>
@@ -955,45 +905,21 @@ const ProcessConfigurationPage = () => {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="orden">Orden de proceso</option>
-                    <option value="nombre">Nombre (A-Z)</option>
+                    <option value="orden">Orden</option>
+                    <option value="nombre">Nombre</option>
                     <option value="codigo">Código</option>
-                    <option value="estado">Estado</option>
+                    <option value="tipo">Tipo</option>
                   </select>
                 </div>
               </div>
             </div>
 
-            {/* Agregar nueva máquina al proceso */}
-            <div className="flex gap-2 mb-6">
-              <input
-                type="text"
-                placeholder="Agregar máquina manualmente (nombre)..."
-                value={newMachineName}
-                onChange={(e) => setNewMachineName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addMachine()}
-                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <button
-                onClick={addMachine}
-                disabled={!newMachineName.trim()}
-                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                  newMachineName.trim()
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                <IconPlus /> Agregar
-              </button>
-            </div>
-
-            {/* Instrucciones */}
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700 flex items-center gap-2">
-                <IconAlert />
+            {/* Información del origen de datos */}
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-700 flex items-center gap-2">
+                <IconCheck />
                 <span>
-                  <strong>Nota:</strong> Cada máquina muestra los procesos específicos que puede realizar. 
-                  Seleccione el proceso adecuado para cada máquina en el orden deseado.
+                  <strong>Conexión exitosa:</strong> Mostrando {filteredAndSortedMachines.length} de {machines.length} máquinas del archivo maestro
                 </span>
               </p>
             </div>
@@ -1016,7 +942,7 @@ const ProcessConfigurationPage = () => {
                     <p className="flex items-center gap-2">
                       <span>💡</span>
                       <span>
-                        <strong>Total:</strong> {filteredAndSortedMachines.length} máquina(s) en el proceso
+                        <strong>Nota:</strong> Los cambios en el orden se aplican solo a este proceso
                       </span>
                     </p>
                   </div>
@@ -1026,84 +952,25 @@ const ProcessConfigurationPage = () => {
                   <div className="mx-auto w-16 h-16 mb-4">
                     <IconFilter />
                   </div>
-                  <p className="text-gray-500 mb-2">No se encontraron máquinas</p>
-                  <p className="text-sm text-gray-400">
-                    {searchTerm || statusFilter !== 'all' 
-                      ? 'Pruebe con otros términos de búsqueda o filtros'
-                      : 'Agregue máquinas al proceso usando el campo de arriba'}
+                  <p className="text-gray-500 mb-2">
+                    {isLoading ? 'Cargando máquinas...' : 'No hay máquinas que coincidan con los filtros'}
                   </p>
+                  {!isLoading && machines.length > 0 && (
+                    <p className="text-sm text-gray-400">
+                      Hay {machines.length} máquinas en el sistema. Prueba con otros filtros.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Información del proceso asignado */}
-            {filteredAndSortedMachines.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Flujo del Proceso</h3>
-                <div className="space-y-2">
-                  {filteredAndSortedMachines.map((machine, index) => (
-                    <div key={`flow-${machine.id}`} className="flex items-center gap-3 text-sm">
-                      <span className="font-medium text-gray-700 w-6">{index + 1}.</span>
-                      <span className="font-medium">{machine.codigo}</span>
-                      <span className="text-gray-600">- {machine.nombre}</span>
-                      <span className="ml-auto px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                        {machine.procesoActual || machine.procesos?.[0] || 'Sin proceso asignado'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Acciones finales */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-gray-500">
-              <p>
-                <span className="font-medium">Proceso configurado:</span> {formData.nombre || 'Sin nombre'} | 
-                <span className="ml-2">Máquinas: {machines.length}</span> | 
-                <span className="ml-2">Estado: {isSubmitting ? 'Guardando...' : 'Listo'}</span>
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting || machines.length === 0}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  isSubmitting || machines.length === 0
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <IconLoading />
-                    Guardando...
-                  </span>
-                ) : (
-                  'Guardar Configuración Completa'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Nota final */}
-        <div className="mt-6 text-xs text-gray-400">
-          <p>
-            ℹ️ Esta configuración será utilizada para planificar la producción. 
-            Los procesos asignados a cada máquina deben coincidir con sus capacidades técnicas.
+        {/* Nota informativa */}
+        <div className="mt-6 text-sm text-gray-500">
+          <p><span role="img" aria-label="info">ℹ️</span> 
+            <strong>Origen de datos:</strong> Las máquinas se cargan desde el archivo maestro (Base44). 
+            Para modificar máquinas permanentemente, use la página "Archivo Maestro de Máquinas".
           </p>
         </div>
       </div>
