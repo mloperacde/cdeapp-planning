@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -45,7 +45,8 @@ import {
   CheckCircle, 
   XCircle,
   Package,
-  Settings
+  Settings,
+  Search
 } from "lucide-react";
 import { toast } from "sonner";
 import MachineProcessesTab from "@/components/machines/MachineProcessesTab";
@@ -67,16 +68,58 @@ export default function ProcessConfiguration() {
     activo: true
   });
 
+  // Debug: Ver entidades disponibles
+  useEffect(() => {
+    console.log("🔍 Entidades disponibles en base44:", Object.keys(base44.entities || {}));
+  }, []);
+
   // Fetch processes
   const { data: processes = [], isLoading } = useQuery({
     queryKey: ['processes'],
     queryFn: () => base44.entities.Process.list(),
+    onError: (error) => {
+      console.error("❌ Error cargando procesos:", error);
+      toast.error("Error al cargar procesos");
+    }
   });
 
-  // Fetch machines for selector
-  const { data: machines = [] } = useQuery({
+  // Fetch machines for selector - CON DEBUG
+  const { 
+    data: machines = [], 
+    isLoading: isLoadingMachines,
+    refetch: refetchMachines 
+  } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.filter({ activo: true }),
+    queryFn: async () => {
+      try {
+        console.log("🔄 Cargando máquinas...");
+        // Primero prueba list() para ver todas
+        const allMachines = await base44.entities.Machine.list();
+        console.log("✅ Máquinas cargadas (list):", allMachines);
+        
+        // Luego prueba con filtro activo
+        const activeMachines = await base44.entities.Machine.filter({ activo: true });
+        console.log("✅ Máquinas activas (filter):", activeMachines);
+        
+        return activeMachines;
+      } catch (error) {
+        console.error("❌ Error en query de máquinas:", error);
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      console.log(`✅ ${data.length} máquinas cargadas exitosamente`);
+      if (data.length > 0 && !selectedMachine) {
+        // Auto-seleccionar primera máquina
+        setSelectedMachine(data[0]);
+        console.log("📌 Máquina auto-seleccionada:", data[0].nombre);
+      }
+    },
+    onError: (error) => {
+      console.error("❌ Error crítico cargando máquinas:", error);
+      toast.error("No se pudieron cargar las máquinas. Verifica permisos.");
+    },
+    retry: 1
   });
 
   // Create/Update mutation
@@ -228,6 +271,7 @@ export default function ProcessConfiguration() {
 
   // Handle machine selection for process assignment
   const handleSelectMachine = (machine) => {
+    console.log("🖱️ Máquina seleccionada:", machine);
     setSelectedMachine(machine);
   };
 
@@ -237,7 +281,10 @@ export default function ProcessConfiguration() {
     { value: "calidad", label: "Calidad" },
     { value: "mantenimiento", label: "Mantenimiento" },
     { value: "embalaje", label: "Embalaje" },
-    { value: "almacen", label: "Almacén" }
+    { value: "almacen", label: "Almacén" },
+    { value: "inspeccion", label: "Inspección" },
+    { value: "limpieza", label: "Limpieza" },
+    { value: "control", label: "Control" }
   ];
 
   return (
@@ -249,10 +296,22 @@ export default function ProcessConfiguration() {
             Gestiona los procesos de producción y sus asignaciones a máquinas
           </p>
         </div>
-        <Button onClick={handleCreate} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Proceso
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => refetchMachines()}
+            title="Recargar máquinas"
+            className="flex items-center gap-2"
+          >
+            <Search className="w-4 h-4" />
+            Recargar
+          </Button>
+          <Button onClick={handleCreate} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Proceso
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="processes" className="space-y-6">
@@ -278,7 +337,8 @@ export default function ProcessConfiguration() {
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8 text-slate-400">
-                  Cargando procesos...
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2">Cargando procesos...</p>
                 </div>
               ) : processes.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-lg">
@@ -413,29 +473,91 @@ export default function ProcessConfiguration() {
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <Label>Seleccionar Máquina</Label>
-                    <Select onValueChange={handleSelectMachine}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecciona una máquina..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {machines.map((machine) => (
-                          <SelectItem key={machine.id} value={machine.id}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{machine.nombre}</span>
-                              <span className="text-xs text-slate-500">
-                                ({machine.codigo})
-                              </span>
-                              {machine.ubicacion && (
-                                <Badge variant="outline" className="ml-auto text-xs">
-                                  {machine.ubicacion}
+                    <div className="flex items-center justify-between mb-2">
+                      <Label htmlFor="machine-select">Seleccionar Máquina</Label>
+                      <div className="text-xs text-slate-500">
+                        {machines.length} máquinas disponibles
+                      </div>
+                    </div>
+                    
+                    {isLoadingMachines ? (
+                      <div className="border rounded-lg p-4 text-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-sm text-slate-500 mt-2">Cargando máquinas...</p>
+                      </div>
+                    ) : machines.length === 0 ? (
+                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                        <Package className="w-10 h-10 mx-auto text-slate-300" />
+                        <p className="text-sm text-slate-500 mt-2">No hay máquinas disponibles</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Verifica que la entidad "Machine" exista y tenga datos
+                        </p>
+                        <div className="flex gap-2 justify-center mt-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => refetchMachines()}
+                          >
+                            <Search className="w-3 h-3 mr-1" />
+                            Reintentar
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.location.href = "/machines"}
+                          >
+                            Ir a Máquinas
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Select 
+                        value={selectedMachine?.id || ""}
+                        onValueChange={(machineId) => {
+                          const machine = machines.find(m => m.id === machineId);
+                          if (machine) {
+                            handleSelectMachine(machine);
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="machine-select" className="w-full">
+                          <SelectValue placeholder="Selecciona una máquina...">
+                            {selectedMachine ? (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{selectedMachine.nombre}</span>
+                                <span className="text-xs text-slate-500">
+                                  ({selectedMachine.codigo})
+                                </span>
+                              </div>
+                            ) : "Selecciona una máquina..."}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {machines.map((machine) => (
+                            <SelectItem key={machine.id} value={machine.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium truncate">{machine.nombre}</div>
+                                  <div className="text-xs text-slate-500 truncate">
+                                    {machine.codigo} • {machine.ubicacion || "Sin ubicación"}
+                                  </div>
+                                </div>
+                                <Badge 
+                                  variant={machine.activo ? "default" : "outline"} 
+                                  className={`shrink-0 ${
+                                    machine.activo 
+                                      ? "bg-green-100 text-green-800 hover:bg-green-200" 
+                                      : "text-slate-500"
+                                  }`}
+                                >
+                                  {machine.activo ? "Activa" : "Inactiva"}
                                 </Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   {selectedMachine ? (
@@ -446,20 +568,40 @@ export default function ProcessConfiguration() {
                           <p className="text-sm text-slate-500">
                             Código: {selectedMachine.codigo} • Ubicación: {selectedMachine.ubicacion || "N/A"}
                           </p>
+                          <div className="text-xs text-slate-400 mt-1">
+                            ID: {selectedMachine.id} • Procesos asignados: {selectedMachine.procesos_ids?.length || 0}
+                          </div>
                         </div>
-                        <Badge variant="outline">
-                          {selectedMachine.activo ? "Activa" : "Inactiva"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">
+                            {selectedMachine.activo ? "Activa" : "Inactiva"}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              console.log("📊 Debug máquina:", selectedMachine);
+                              toast.info("Máquina enviada a consola para debug");
+                            }}
+                            title="Debug"
+                            className="h-7 w-7 p-0"
+                          >
+                            🔍
+                          </Button>
+                        </div>
                       </div>
                       
                       <MachineProcessesTab machine={selectedMachine} />
                     </div>
-                  ) : (
+                  ) : machines.length > 0 ? (
                     <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-lg">
                       <Settings className="w-12 h-12 mx-auto text-slate-300" />
                       <p className="mt-4">Selecciona una máquina para configurar sus procesos</p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        {machines.length} máquinas disponibles
+                      </p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
