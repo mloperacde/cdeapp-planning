@@ -546,37 +546,6 @@ export default function ProcessConfigurationPage() {
     toast.success(`Configuración de ${machine.nombre} exportada`);
   };
 
-  // Nueva función: Asignación masiva
-  const handleBulkAssign = (process) => {
-    setBulkProcessAssignment(process);
-    setSelectedMachines([]);
-  };
-
-  const handleBulkSave = async () => {
-    if (selectedMachines.length === 0) {
-      toast.error("Seleccione al menos una máquina");
-      return;
-    }
-
-    const assignments = selectedMachines.map(machineId => ({
-      machine_id: machineId,
-      process_id: bulkProcessAssignment.id,
-      operadores_requeridos: bulkProcessAssignment.operadores_requeridos || 1,
-      activo: true,
-      orden: 0 // Se asignará automáticamente
-    }));
-
-    try {
-      await base44.entities.MachineProcess.bulkCreate(assignments);
-      queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
-      setBulkProcessAssignment(null);
-      setSelectedMachines([]);
-      toast.success(`Proceso asignado a ${selectedMachines.length} máquina(s)`);
-    } catch (error) {
-      toast.error(`Error en asignación masiva: ${error.message}`);
-    }
-  };
-
   return (
     <div className="space-y-6 p-6 md:p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -947,4 +916,32 @@ export default function ProcessConfigurationPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="codigo">Código *</Label>
+                  <Input
+                    id="codigo"
+                    value={formData.codigo}
+                    onChange={(e) => {
+                      setFormData({ ...formData, codigo: e.target.value });
+                      if (formErrors.codigo) {
+                        setFormErrors({ ...formErrors, codigo: null });
+                      }
+                    }}
+                    placeholder="ej: PROC-001"
+                    required
+                    className={formErrors.codigo ? "border-red-500" : ""}
+                  />
+                  {formErrors.codigo && (
+                    <p className="text-sm text-red-500">{formErrors.codigo}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nombre">Nombre *</Label>
+                  <Input
+                    id="nombre"
+                    value={formData.nombre}
+                    onChange={(e) => {
+                    setFormData}
