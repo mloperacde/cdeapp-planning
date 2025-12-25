@@ -1,13 +1,321 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { Search, Filter, Plus, Trash2, Edit, Save, X, GripVertical } from 'lucide-react';
+import { Search, Filter, Plus, Trash2, Edit, Save, X, GripVertical, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-// Componentes auxiliares para dividir la lógica
-import MachineList from './components/MachineList';
-import ProcessForm from './components/ProcessForm';
-import ValidationMessages from './components/ValidationMessages';
+// ============================================
+// COMPONENTE 1: MachineList (integrado)
+// ============================================
+const MachineList = ({ machines, onEdit, onDelete, onUpdate, editingMachine }) => {
+  return (
+    <div className="space-y-3">
+      {machines.map((machine) => (
+        <div
+          key={machine.id}
+          className={`bg-white border rounded-lg p-4 shadow-sm ${
+            machine.status === 'active' ? 'border-green-200' :
+            machine.status === 'inactive' ? 'border-gray-200' :
+            'border-yellow-200'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <GripVertical className="text-gray-400 w-5 h-5" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-900">
+                    {editingMachine === machine.id ? (
+                      <input
+                        type="text"
+                        value={machine.name}
+                        onChange={(e) => onUpdate(machine.id, { name: e.target.value })}
+                        className="border-b border-gray-300 focus:border-blue-500 focus:outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      machine.name
+                    )}
+                  </span>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    machine.status === 'active' ? 'bg-green-100 text-green-800' :
+                    machine.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {machine.status === 'active' ? 'Activa' :
+                     machine.status === 'inactive' ? 'Inactiva' : 'Mantenimiento'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">{machine.process}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onEdit(machine.id)}
+                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                {editingMachine === machine.id ? (
+                  <Save className="w-4 h-4" />
+                ) : (
+                  <Edit className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('¿Eliminar esta máquina?')) {
+                    onDelete(machine.id);
+                  }
+                }}
+                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {editingMachine === machine.id && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 gap-4">
+                <select
+                  value={machine.status}
+                  onChange={(e) => onUpdate(machine.id, { status: e.target.value })}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                >
+                  <option value="active">Activa</option>
+                  <option value="inactive">Inactiva</option>
+                  <option value="maintenance">Mantenimiento</option>
+                </select>
+                <select
+                  value={machine.process}
+                  onChange={(e) => onUpdate(machine.id, { process: e.target.value })}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                >
+                  <option value="Corte">Corte</option>
+                  <option value="Fresado">Fresado</option>
+                  <option value="Torneado">Torneado</option>
+                  <option value="Soldadura">Soldadura</option>
+                  <option value="Sin asignar">Sin asignar</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
-// Datos iniciales y utilidades
+// ============================================
+// COMPONENTE 2: ProcessForm (integrado)
+// ============================================
+const ProcessForm = ({
+  formData,
+  formErrors,
+  handleInputChange,
+  isSubmitting,
+  handleSubmit
+}) => {
+  const processTypes = [
+    'Manufactura',
+    'Ensamblaje', 
+    'Control de Calidad',
+    'Embalaje',
+    'Logística'
+  ];
+
+  const priorities = [
+    { value: 'baja', label: 'Baja', color: 'bg-green-100 text-green-800' },
+    { value: 'media', label: 'Media', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'alta', label: 'Alta', color: 'bg-red-100 text-red-800' },
+    { value: 'critica', label: 'Crítica', color: 'bg-purple-100 text-purple-800' }
+  ];
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Nombre del Proceso */}
+        <div>
+          <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
+            Nombre del Proceso *
+          </label>
+          <input
+            type="text"
+            id="nombre"
+            name="nombre"
+            value={formData.nombre}
+            onChange={handleInputChange}
+            placeholder="ej: Ensamblaje"
+            required
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+              formErrors.nombre ? 'border-red-500' : 'border-gray-300'
+            }`}
+          />
+          {formErrors.nombre && (
+            <p className="mt-1 text-sm text-red-600">{formErrors.nombre}</p>
+          )}
+        </div>
+
+        {/* Tipo de Proceso */}
+        <div>
+          <label htmlFor="tipoProceso" className="block text-sm font-medium text-gray-700 mb-1">
+            Tipo de Proceso *
+          </label>
+          <select
+            id="tipoProceso"
+            name="tipoProceso"
+            value={formData.tipoProceso}
+            onChange={handleInputChange}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+              formErrors.tipoProceso ? 'border-red-500' : 'border-gray-300'
+            }`}
+            required
+          >
+            <option value="">Seleccionar tipo</option>
+            {processTypes.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          {formErrors.tipoProceso && (
+            <p className="mt-1 text-sm text-red-600">{formErrors.tipoProceso}</p>
+          )}
+        </div>
+
+        {/* Duración Estimada */}
+        <div>
+          <label htmlFor="duracionEstimada" className="block text-sm font-medium text-gray-700 mb-1">
+            Duración Estimada (horas)
+          </label>
+          <input
+            type="number"
+            id="duracionEstimada"
+            name="duracionEstimada"
+            value={formData.duracionEstimada}
+            onChange={handleInputChange}
+            min="1"
+            placeholder="ej: 8"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+              formErrors.duracionEstimada ? 'border-red-500' : 'border-gray-300'
+            }`}
+          />
+          {formErrors.duracionEstimada && (
+            <p className="mt-1 text-sm text-red-600">{formErrors.duracionEstimada}</p>
+          )}
+        </div>
+
+        {/* Prioridad */}
+        <div>
+          <label htmlFor="prioridad" className="block text-sm font-medium text-gray-700 mb-1">
+            Prioridad
+          </label>
+          <select
+            id="prioridad"
+            name="prioridad"
+            value={formData.prioridad}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          >
+            {priorities.map((priority) => (
+              <option key={priority.value} value={priority.value}>
+                {priority.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Descripción */}
+      <div>
+        <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
+          Descripción
+        </label>
+        <textarea
+          id="descripcion"
+          name="descripcion"
+          value={formData.descripcion}
+          onChange={handleInputChange}
+          placeholder="Describe el proceso, requisitos especiales, etc."
+          rows="3"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+            formErrors.descripcion ? 'border-red-500' : 'border-gray-300'
+          }`}
+        />
+        {formErrors.descripcion && (
+          <p className="mt-1 text-sm text-red-600">{formErrors.descripcion}</p>
+        )}
+        <p className="mt-1 text-xs text-gray-500">
+          {formData.descripcion.length}/500 caracteres
+        </p>
+      </div>
+
+      {/* Botón de envío */}
+      <div className="pt-4 border-t border-gray-200">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+            isSubmitting
+              ? 'bg-blue-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          } text-white`}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              Guardando...
+            </span>
+          ) : (
+            'Guardar Configuración del Proceso'
+          )}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// ============================================
+// COMPONENTE 3: ValidationMessages (integrado)
+// ============================================
+const ValidationMessages = ({ submitError, submitSuccess, formErrors }) => {
+  const hasErrors = Object.keys(formErrors).length > 0;
+
+  return (
+    <div className="space-y-3 mb-6">
+      {/* Error de envío */}
+      {submitError && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <XCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{submitError}</span>
+        </div>
+      )}
+
+      {/* Éxito de envío */}
+      {submitSuccess && (
+        <div className="flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+          <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          <span>¡Proceso guardado exitosamente!</span>
+        </div>
+      )}
+
+      {/* Errores de validación */}
+      {hasErrors && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">Corrige los siguientes errores:</span>
+          </div>
+          <ul className="list-disc list-inside space-y-1 ml-6">
+            {Object.entries(formErrors).map(([field, error]) => (
+              <li key={field} className="text-sm">{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================
+// DATOS INICIALES
+// ============================================
 const initialFormData = {
   nombre: '',
   descripcion: '',
@@ -28,22 +336,11 @@ const initialMachines = [
   { id: 5, name: 'Soldadora', status: 'active', process: 'Soldadura', order: 5 },
 ];
 
-const processTypes = [
-  'Manufactura',
-  'Ensamblaje', 
-  'Control de Calidad',
-  'Embalaje',
-  'Logística'
-];
+// ============================================
+// HOOKS PERSONALIZADOS
+// ============================================
 
-const priorities = [
-  { value: 'baja', label: 'Baja', color: 'bg-green-100 text-green-800' },
-  { value: 'media', label: 'Media', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'alta', label: 'Alta', color: 'bg-red-100 text-red-800' },
-  { value: 'critica', label: 'Crítica', color: 'bg-purple-100 text-purple-800' }
-];
-
-// Hook personalizado para manejo de formulario
+// Hook para manejo de formulario
 const useProcessForm = (initialData) => {
   const [formData, setFormData] = useState(initialData);
   const [formErrors, setFormErrors] = useState({});
@@ -100,7 +397,7 @@ const useProcessForm = (initialData) => {
   };
 };
 
-// Hook personalizado para manejo de máquinas
+// Hook para manejo de máquinas
 const useMachines = (initialMachinesList) => {
   const [machines, setMachines] = useState(initialMachinesList);
   const [searchTerm, setSearchTerm] = useState('');
@@ -187,7 +484,9 @@ const useMachines = (initialMachinesList) => {
   };
 };
 
-// Componente principal
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 const ProcessConfigurationPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -234,8 +533,8 @@ const ProcessConfigurationPage = () => {
     setIsSubmitting(true);
 
     try {
-      // Aquí iría la llamada a la API
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulación
+      // Simulación de llamada a API
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Preparar datos para envío
       const processData = {
@@ -276,18 +575,6 @@ const ProcessConfigurationPage = () => {
     }
   };
 
-  // Si hay un error crítico de carga, mostrar mensaje
-  if (false) { // Cambiar por tu lógica real de carga
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando configuración...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
@@ -325,8 +612,6 @@ const ProcessConfigurationPage = () => {
                 formData={formData}
                 formErrors={formErrors}
                 handleInputChange={handleInputChange}
-                processTypes={processTypes}
-                priorities={priorities}
                 isSubmitting={isSubmitting}
                 handleSubmit={handleSubmit}
               />
@@ -421,112 +706,13 @@ const ProcessConfigurationPage = () => {
                     ref={provided.innerRef}
                     className="space-y-3"
                   >
-                    {filteredAndSortedMachines.map((machine, index) => (
-                      <Draggable
-                        key={machine.id}
-                        draggableId={machine.id.toString()}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`bg-white border rounded-lg p-4 transition-all ${
-                              snapshot.isDragging ? 'shadow-lg' : 'shadow-sm'
-                            } ${
-                              machine.status === 'active' ? 'border-green-200' :
-                              machine.status === 'inactive' ? 'border-gray-200' :
-                              'border-yellow-200'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <GripVertical className="text-gray-400 w-5 h-5" />
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900">
-                                      {editingMachine === machine.id ? (
-                                        <input
-                                          type="text"
-                                          value={machine.name}
-                                          onChange={(e) => updateMachine(machine.id, { name: e.target.value })}
-                                          className="border-b border-gray-300 focus:border-blue-500 focus:outline-none"
-                                          autoFocus
-                                        />
-                                      ) : (
-                                        machine.name
-                                      )}
-                                    </span>
-                                    <span className={`px-2 py-1 text-xs rounded-full ${
-                                      machine.status === 'active' ? 'bg-green-100 text-green-800' :
-                                      machine.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                                      'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                      {machine.status === 'active' ? 'Activa' :
-                                       machine.status === 'inactive' ? 'Inactiva' : 'Mantenimiento'}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm text-gray-600">{machine.process}</p>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => setEditingMachine(
-                                    editingMachine === machine.id ? null : machine.id
-                                  )}
-                                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                >
-                                  {editingMachine === machine.id ? (
-                                    <Save className="w-4 h-4" />
-                                  ) : (
-                                    <Edit className="w-4 h-4" />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (window.confirm('¿Eliminar esta máquina?')) {
-                                      deleteMachine(machine.id);
-                                    }
-                                  }}
-                                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {editingMachine === machine.id && (
-                              <div className="mt-4 pt-4 border-t border-gray-200">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <select
-                                    value={machine.status}
-                                    onChange={(e) => updateMachine(machine.id, { status: e.target.value })}
-                                    className="border border-gray-300 rounded px-3 py-1 text-sm"
-                                  >
-                                    <option value="active">Activa</option>
-                                    <option value="inactive">Inactiva</option>
-                                    <option value="maintenance">Mantenimiento</option>
-                                  </select>
-                                  <select
-                                    value={machine.process}
-                                    onChange={(e) => updateMachine(machine.id, { process: e.target.value })}
-                                    className="border border-gray-300 rounded px-3 py-1 text-sm"
-                                  >
-                                    <option value="Corte">Corte</option>
-                                    <option value="Fresado">Fresado</option>
-                                    <option value="Torneado">Torneado</option>
-                                    <option value="Soldadura">Soldadura</option>
-                                    <option value="Sin asignar">Sin asignar</option>
-                                  </select>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                    <MachineList
+                      machines={filteredAndSortedMachines}
+                      onEdit={setEditingMachine}
+                      onDelete={deleteMachine}
+                      onUpdate={updateMachine}
+                      editingMachine={editingMachine}
+                    />
                     {provided.placeholder}
                   </div>
                 )}
