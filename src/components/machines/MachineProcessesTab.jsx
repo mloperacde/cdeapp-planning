@@ -19,28 +19,32 @@ export default function MachineProcessesTab({ machine }) {
   const queryClient = useQueryClient();
 
   const { data: processes = [] } = useQuery({
-    queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.filter({ activo: true }),
-  });
+  queryKey: ['processes'],
+  queryFn: () => base44.entities.Process.filter({ activo: true }),
+});
 
-  const { data: machineProcesses = [] } = useQuery({
-    queryKey: ['machineProcesses'],
-    queryFn: () => base44.entities.MachineProcess.list(),
-  });
+const { data: machineProcesses = [] } = useQuery({
+  queryKey: ['machineProcesses', machine.id],
+  queryFn: () => base44.entities.MachineProcess.filter({ 
+    machine_id: machine.id,
+    activo: true 
+  }),
+  enabled: !!machine.id,
+});
 
-  const saveMachineAssignmentsMutation = useMutation({
-    mutationFn: async (assignments) => {
-      const existing = machineProcesses.filter(mp => mp.machine_id === machine.id);
-      await Promise.all(existing.map(mp => base44.entities.MachineProcess.delete(mp.id)));
-      
-      const newAssignments = Object.entries(assignments)
-        .filter(([_, assigned]) => assigned.checked)
-        .map(([processId, assigned]) => ({
-          machine_id: machine.id,
-          process_id: processId,
-          operadores_requeridos: assigned.operadores || 1,
-          activo: true
-        }));
+  const getMachineProcesses = () => {
+  return machineProcesses.map(mp => {
+    const process = processes.find(p => p.id === mp.process_id);
+    if (!process || !process.activo) return null;
+    
+    return {
+      ...mp,
+      processName: process.nombre,
+      processCode: process.codigo,
+      processActive: process.activo
+    };
+  }).filter(Boolean).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+};
 
       if (newAssignments.length > 0) {
         await base44.entities.MachineProcess.bulkCreate(newAssignments);
