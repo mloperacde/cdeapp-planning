@@ -175,11 +175,15 @@ function MachineDailyPlanningContent() {
       const isActive = emp.estado_empleado === "Alta";
       const isFabricacion = emp.departamento === "FABRICACION";
       const incluir = emp.incluir_en_planning !== false;
-      const matchesTeam = !selectedTeam || emp.equipo === teams.find(t => t.team_key === selectedTeam)?.team_name;
-      
-      return isActive && isFabricacion && incluir && matchesTeam;
+      constconst matchesTeam = !selectedTeam || 
+  (emp.equipo && teams.find(t => t.team_name === emp.equipo)?.team_key === selectedTeam);
     });
-
+console.log('🔍 DEBUG Equipos:', {
+  selectedTeam,
+  teams: teams.map(t => ({ key: t.team_key, name: t.team_name })),
+  employeeTeam: emp.equipo,
+  matchesTeam: matchesTeam
+});
     console.log('👷 Empleados FABRICACION del equipo seleccionado:', fabricacionEmployees.length);
 
     const selectedDateObj = new Date(selectedDate + 'T00:00:00');
