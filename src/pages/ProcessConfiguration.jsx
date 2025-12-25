@@ -945,4 +945,4 @@ export default function ProcessConfigurationPage() {
               <DialogDescription>
                 Complete los datos del proceso. Los campos con * son obligatorios.
               </DialogDescription>
-            </DialogHeader
+            </DialogHeader>
