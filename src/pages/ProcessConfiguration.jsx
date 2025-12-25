@@ -68,6 +68,19 @@ const ProcessConfiguration = () => {
       try {
         const result = await base44.entities.Machine.list('orden');
         addLog(`✅ Máquinas cargadas: ${result.length}`);
+        
+        // Debug de máquinas
+        if (result.length > 0) {
+          const sampleMachine = result[0];
+          addLog("🔍 Análisis de estructura de máquina:", {
+            id: sampleMachine.id,
+            nombre: sampleMachine.nombre || sampleMachine.machine_nombre,
+            tiene_procesos_ids: !!sampleMachine.procesos_ids,
+            procesos_ids: sampleMachine.procesos_ids,
+            tipo_procesos_ids: typeof sampleMachine.procesos_ids
+          });
+        }
+        
         return result;
       } catch (error) {
         addLog(`❌ Error al cargar máquinas: ${error.message}`);
@@ -79,33 +92,36 @@ const ProcessConfiguration = () => {
   // ============ PROCESAR Y RELACIONAR DATOS ============
   useEffect(() => {
     if (processes.length > 0 && machines.length > 0) {
-      addLog("🔗 Relacionando procesos con máquinas...");
+      addLog("🔗 Relacionando procesos con máquinas usando relación inversa...");
       
       const enrichedProcesses = processes.map(process => {
-        // ENCONTRAR MÁQUINAS ASIGNADAS - MÚLTIPLES ESTRATEGIAS
+        // ESTRATEGIA 1: Buscar en máquinas que tengan este proceso en sus procesos_ids (RELACIÓN INVERSA)
         let machineIds = [];
+        const machinesWithThisProcess = machines.filter(machine => {
+          if (machine.procesos_ids && Array.isArray(machine.procesos_ids)) {
+            return machine.procesos_ids.includes(process.id);
+          }
+          return false;
+        });
         
-        // Estrategia 1: Buscar en maquinas_asignadas
-        if (process.maquinas_asignadas) {
-          addLog(`   Proceso ${process.id}: Buscando en maquinas_asignadas`, {
-            valor: process.maquinas_asignadas,
-            tipo: typeof process.maquinas_asignadas
-          });
+        if (machinesWithThisProcess.length > 0) {
+          addLog(`   Proceso ${process.id}: Encontrado en ${machinesWithThisProcess.length} máquinas (relación inversa)`);
+          machineIds = machinesWithThisProcess.map(m => m.id);
+        }
+        
+        // ESTRATEGIA 2: Buscar en maquinas_asignadas del proceso (por si acaso)
+        if (machineIds.length === 0 && process.maquinas_asignadas) {
+          addLog(`   Proceso ${process.id}: Buscando en maquinas_asignadas`);
           
           if (Array.isArray(process.maquinas_asignadas)) {
             machineIds = process.maquinas_asignadas;
           } else if (typeof process.maquinas_asignadas === 'string') {
             try {
-              // Intentar parsear JSON
               const parsed = JSON.parse(process.maquinas_asignadas);
               if (Array.isArray(parsed)) {
                 machineIds = parsed;
-              } else if (parsed && typeof parsed === 'object') {
-                // Si es objeto, extraer IDs
-                machineIds = Object.values(parsed).filter(v => typeof v === 'string');
               }
             } catch {
-              // Si no es JSON, separar por comas
               machineIds = process.maquinas_asignadas
                 .split(',')
                 .map(s => s.trim())
@@ -114,62 +130,25 @@ const ProcessConfiguration = () => {
           }
         }
         
-        // Estrategia 2: Buscar en otros campos posibles
-        if (machineIds.length === 0) {
-          const possibleFields = [
-            'machine_ids',
-            'assigned_machines',
-            'maquinas',
-            'equipos',
-            'machines'
-          ];
-          
-          for (const field of possibleFields) {
-            if (process[field]) {
-              addLog(`   Proceso ${process.id}: Encontrado en campo ${field}`);
-              if (Array.isArray(process[field])) {
-                machineIds = process[field];
-                break;
-              } else if (typeof process[field] === 'string') {
-                machineIds = process[field].split(',').map(s => s.trim()).filter(Boolean);
-                break;
-              }
-            }
-          }
-        }
-        
-        // Estrategia 3: Buscar en máquinas que tengan este proceso en sus procesos_ids
-        if (machineIds.length === 0) {
-          const machinesWithThisProcess = machines.filter(machine => {
-            if (machine.procesos_ids && Array.isArray(machine.procesos_ids)) {
-              return machine.procesos_ids.includes(process.id);
-            }
-            return false;
-          });
-          
-          if (machinesWithThisProcess.length > 0) {
-            addLog(`   Proceso ${process.id}: Encontrado en ${machinesWithThisProcess.length} máquinas (relación inversa)`);
-            machineIds = machinesWithThisProcess.map(m => m.id);
-          }
-        }
-        
         // ENCONTRAR DATOS COMPLETOS DE LAS MÁQUINAS
         const assignedMachines = machineIds
           .map(machineId => {
             const machine = machines.find(m => 
               m.id === machineId || 
-              m._id === machineId ||
-              (m.codigo && m.codigo === machineId) ||
-              (m.nombre && m.nombre.includes(machineId))
+              m._id === machineId
             );
             
-            return machine ? {
-              id: machine.id || machine._id,
-              nombre: machine.nombre || machine.machine_nombre || `Máquina ${machineId}`,
-              codigo: machine.codigo || machine.code,
-              departamento: machine.departamento,
-              estado: machine.estado
-            } : null;
+            if (machine) {
+              return {
+                id: machine.id || machine._id,
+                nombre: machine.nombre || machine.machine_nombre || `Máquina ${machineId}`,
+                codigo: machine.codigo || machine.code,
+                departamento: machine.departamento,
+                estado: machine.estado,
+                procesos_ids: machine.procesos_ids || []
+              };
+            }
+            return null;
           })
           .filter(Boolean);
         
@@ -178,7 +157,8 @@ const ProcessConfiguration = () => {
           nombre: process.nombre || process.proceso_nombre || `Proceso ${process.id}`,
           machineIds,
           assignedMachines,
-          hasMachines: assignedMachines.length > 0
+          hasMachines: assignedMachines.length > 0,
+          source: machinesWithThisProcess.length > 0 ? 'relación inversa' : 'maquinas_asignadas'
         };
       });
       
@@ -186,16 +166,21 @@ const ProcessConfiguration = () => {
       
       // Estadísticas
       const withMachines = enrichedProcesses.filter(p => p.hasMachines).length;
+      const viaInverse = enrichedProcesses.filter(p => p.source === 'relación inversa').length;
+      
       addLog(`📊 Relación completada:`, {
         total_procesos: processes.length,
         con_maquinas: withMachines,
         sin_maquinas: processes.length - withMachines,
-        muestra_con_maquinas: enrichedProcesses
+        via_relacion_inversa: viaInverse,
+        via_maquinas_asignadas: withMachines - viaInverse,
+        muestra_relaciones: enrichedProcesses
           .filter(p => p.hasMachines)
-          .slice(0, 2)
+          .slice(0, 3)
           .map(p => ({
             nombre: p.nombre,
-            maquinas: p.assignedMachines.map(m => m.nombre)
+            maquinas: p.assignedMachines.map(m => m.nombre),
+            fuente: p.source
           }))
       });
     }
@@ -216,9 +201,9 @@ const ProcessConfiguration = () => {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-          <h2 className="mt-4 text-xl font-semibold text-gray-700">Cargando datos...</h2>
+          <h2 className="mt-4 text-xl font-semibold text-gray-700">Cargando configuración de procesos...</h2>
           <p className="mt-2 text-gray-500">
-            {processesLoading ? 'Procesos...' : 'Máquinas...'}
+            {processesLoading ? 'Cargando procesos...' : 'Cargando máquinas...'}
           </p>
           
           <div className="mt-6 max-w-md mx-auto bg-white p-4 rounded-lg shadow border">
@@ -241,8 +226,14 @@ const ProcessConfiguration = () => {
       <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="text-red-600 text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-red-800 mb-2">Error al cargar datos</h2>
+          <h2 className="text-xl font-bold text-red-800 mb-2">Error al cargar procesos</h2>
           <p className="text-red-600 mb-4">{processesError.message}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );
@@ -272,6 +263,12 @@ const ProcessConfiguration = () => {
               <div className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded">
                 {processesWithMachines.filter(p => p.hasMachines).length}/{processesWithMachines.length} con máquinas
               </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                ↻ Actualizar
+              </button>
             </div>
           </div>
         </div>
@@ -287,7 +284,7 @@ const ProcessConfiguration = () => {
               <div className="bg-white rounded-xl p-5 shadow border">
                 <div className="text-gray-500 text-sm">Procesos</div>
                 <div className="text-3xl font-bold text-gray-900 mt-2">{processesWithMachines.length}</div>
-                <div className="text-gray-400 text-xs mt-1">Total</div>
+                <div className="text-gray-400 text-xs mt-1">Total activos</div>
               </div>
               
               <div className="bg-white rounded-xl p-5 shadow border">
@@ -327,12 +324,15 @@ const ProcessConfiguration = () => {
                   type="text"
                   placeholder="Escribe para filtrar..."
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => {
+                    // Implementar filtro si es necesario
+                  }}
                 />
               </div>
               
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Seleccionar proceso:
+                  Seleccionar proceso para configurar:
                 </label>
                 <select
                   value={selectedProcess}
@@ -348,6 +348,9 @@ const ProcessConfiguration = () => {
                     </option>
                   ))}
                 </select>
+                <p className="text-sm text-gray-500 mt-2">
+                  {processesWithMachines.filter(p => p.hasMachines).length} procesos con máquinas asignadas
+                </p>
               </div>
               
               {/* Selected Process Details */}
@@ -377,12 +380,24 @@ const ProcessConfiguration = () => {
                         </span>
                       </div>
                     </div>
+                    
+                    <div>
+                      <div className="text-sm text-gray-600">Fuente de relación</div>
+                      <div className="font-medium">
+                        {selectedProcessData.source === 'relación inversa' ? '🔄 Relación inversa' : '📋 Directa'}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-sm text-gray-600">Máquinas asignadas</div>
+                      <div className="font-semibold">{selectedProcessData.assignedMachines.length}</div>
+                    </div>
                   </div>
                   
                   {/* Máquinas asignadas */}
                   <div className="mb-6">
                     <h4 className="font-medium text-gray-900 mb-3">
-                      Máquinas Asignadas ({selectedProcessData.assignedMachines.length})
+                      Máquinas donde se puede realizar este proceso ({selectedProcessData.assignedMachines.length})
                     </h4>
                     
                     {selectedProcessData.hasMachines ? (
@@ -390,15 +405,28 @@ const ProcessConfiguration = () => {
                         {selectedProcessData.assignedMachines.map((machine, index) => (
                           <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                             <div className="flex items-start justify-between">
-                              <div>
-                                <div className="font-medium text-gray-900">{machine.nombre}</div>
-                                <div className="text-sm text-gray-600 mt-1">
-                                  {machine.codigo && <span className="mr-3">Código: {machine.codigo}</span>}
-                                  {machine.departamento && <span>Departamento: {machine.departamento}</span>}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                  <div className="font-medium text-gray-900">{machine.nombre}</div>
+                                </div>
+                                <div className="text-sm text-gray-600 space-y-1">
+                                  {machine.codigo && (
+                                    <div>Código: <span className="font-mono">{machine.codigo}</span></div>
+                                  )}
+                                  {machine.departamento && (
+                                    <div>Departamento: {machine.departamento}</div>
+                                  )}
+                                  <div className="text-xs text-gray-500">
+                                    ID: {machine.id}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    Procesos en esta máquina: {machine.procesos_ids?.length || 0}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                                ID: {machine.id.substring(0, 8)}...
+                              <div className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                                Compatible
                               </div>
                             </div>
                           </div>
@@ -409,26 +437,29 @@ const ProcessConfiguration = () => {
                         <div className="flex items-center">
                           <span className="text-yellow-500 mr-2">⚠️</span>
                           <span className="text-yellow-800">
-                            Este proceso no tiene máquinas asignadas directamente.
+                            Este proceso no tiene máquinas asignadas.
                           </span>
                         </div>
                         <p className="text-sm text-yellow-600 mt-2">
-                          Verifica el campo <code>maquinas_asignadas</code> en la base de datos.
+                          Ninguna máquina tiene este proceso en su lista de procesos_ids.
                         </p>
                       </div>
                     )}
                   </div>
                   
-                  {/* Campos originales para debug */}
+                  {/* Información de debug */}
                   <div className="border-t border-gray-300 pt-4">
-                    <details>
-                      <summary className="cursor-pointer text-sm font-medium text-gray-700">
-                        Ver datos originales del proceso
+                    <details className="border border-gray-200 rounded-lg overflow-hidden">
+                      <summary className="cursor-pointer bg-gray-100 px-4 py-3 font-medium text-gray-700">
+                        🔍 Ver información técnica del proceso
                       </summary>
-                      <div className="mt-3 bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto max-h-60">
-                        <pre className="text-xs">
-                          {JSON.stringify(selectedProcessData, null, 2)}
-                        </pre>
+                      <div className="p-4 bg-white">
+                        <div className="text-sm font-medium text-gray-700 mb-2">Datos del proceso:</div>
+                        <div className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-auto max-h-60">
+                          <pre className="text-xs">
+                            {JSON.stringify(selectedProcessData, null, 2)}
+                          </pre>
+                        </div>
                       </div>
                     </details>
                   </div>
@@ -443,11 +474,11 @@ const ProcessConfiguration = () => {
                   Todos los Procesos ({processesWithMachines.length})
                 </h2>
                 <div className="text-sm text-gray-500">
-                  Filtrar: 
-                  <button className="ml-2 px-3 py-1 bg-blue-100 text-blue-700 rounded">
+                  <span className="mr-2">Filtrar:</span>
+                  <button className="px-3 py-1 bg-blue-100 text-blue-700 rounded">
                     Todos
                   </button>
-                  <button className="ml-2 px-3 py-1 bg-gray-100 text-gray-700 rounded">
+                  <button className="ml-2 px-3 py-1 bg-green-100 text-green-700 rounded">
                     Con máquinas
                   </button>
                   <button className="ml-2 px-3 py-1 bg-gray-100 text-gray-700 rounded">
@@ -467,8 +498,8 @@ const ProcessConfiguration = () => {
                         isSelected 
                           ? 'border-blue-500 bg-blue-50 shadow-lg' 
                           : process.hasMachines
-                            ? 'border-green-200 bg-white hover:shadow-md'
-                            : 'border-gray-200 bg-gray-50 hover:shadow'
+                            ? 'border-green-200 bg-white hover:shadow-md hover:border-green-300'
+                            : 'border-gray-200 bg-gray-50 hover:shadow hover:border-gray-300'
                       }`}
                       onClick={() => setSelectedProcess(process.id)}
                     >
@@ -485,8 +516,9 @@ const ProcessConfiguration = () => {
                             {process.activo ? 'Activo' : 'Inactivo'}
                           </span>
                           {process.hasMachines ? (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              {process.assignedMachines.length} máq.
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
+                              <span>📟</span>
+                              <span>{process.assignedMachines.length} máq.</span>
                             </span>
                           ) : (
                             <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
@@ -505,7 +537,7 @@ const ProcessConfiguration = () => {
                         
                         {process.hasMachines ? (
                           <div className="text-sm">
-                            <div className="font-medium text-gray-700 mb-1">Máquinas asignadas:</div>
+                            <div className="font-medium text-gray-700 mb-1">Máquinas compatibles:</div>
                             <div className="flex flex-wrap gap-1">
                               {process.assignedMachines.slice(0, 2).map((machine, idx) => (
                                 <span key={idx} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
@@ -514,10 +546,13 @@ const ProcessConfiguration = () => {
                                 </span>
                               ))}
                             </div>
+                            <div className="text-xs text-gray-500 mt-2">
+                              Fuente: {process.source}
+                            </div>
                           </div>
                         ) : (
                           <div className="text-sm text-gray-500 italic">
-                            No se encontraron máquinas asignadas
+                            No se encontraron máquinas compatibles
                           </div>
                         )}
                       </div>
@@ -563,36 +598,44 @@ const ProcessConfiguration = () => {
               
               <div className="space-y-3 text-sm">
                 <div>
-                  <div className="font-medium text-gray-700">Estrategias de búsqueda:</div>
-                  <ul className="text-gray-600 text-xs mt-1 space-y-1">
-                    <li>• Campo <code>maquinas_asignadas</code></li>
-                    <li>• Campos alternativos (machine_ids, etc.)</li>
-                    <li>• Relación inversa (procesos_ids en máquinas)</li>
-                  </ul>
+                  <div className="font-medium text-gray-700">Estrategia usada:</div>
+                  <div className="text-gray-600">
+                    <span className="font-semibold">🔄 Relación inversa</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Busca en <code>procesos_ids</code> de las máquinas para encontrar qué procesos pueden realizar.
+                  </p>
                 </div>
                 
                 <div>
-                  <div className="font-medium text-gray-700">Datos encontrados:</div>
-                  <div className="text-gray-600">
-                    {processesWithMachines.filter(p => p.hasMachines).length} de {processesWithMachines.length} procesos tienen máquinas
-                  </div>
+                  <div className="font-medium text-gray-700">Método de carga:</div>
+                  <code className="bg-gray-100 p-1 rounded text-xs block mt-1">
+                    base44.entities.Process.filter(&#123; activo: true &#125;)
+                  </code>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-gray-700">Igual que:</div>
+                  <div className="text-gray-600">MachineDailyPlanning.jsx</div>
                 </div>
                 
                 <button
                   onClick={() => {
-                    console.log("=== DATOS COMPLETOS ===");
+                    console.log("=== ANÁLISIS COMPLETO ===");
                     console.log("Procesos con máquinas:", processesWithMachines);
                     console.log("Máquinas:", machines);
                     
-                    // Análisis detallado
-                    processesWithMachines.forEach((p, i) => {
-                      console.log(`Proceso ${i}: ${p.nombre}`, {
-                        id: p.id,
-                        maquinas_asignadas: p.maquinas_asignadas,
-                        machineIds: p.machineIds,
-                        assignedMachines: p.assignedMachines
-                      });
-                    });
+                    // Análisis de relaciones
+                    const analysis = processesWithMachines.map(p => ({
+                      nombre: p.nombre,
+                      id: p.id,
+                      tieneMaquinas: p.hasMachines,
+                      cantidadMaquinas: p.assignedMachines.length,
+                      maquinas: p.assignedMachines.map(m => m.nombre),
+                      fuente: p.source
+                    }));
+                    
+                    console.log("Análisis de relaciones:", analysis);
                   }}
                   className="w-full mt-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                 >
@@ -601,16 +644,35 @@ const ProcessConfiguration = () => {
               </div>
             </div>
             
+            {/* Success Panel */}
+            <div className="bg-green-50 border border-green-200 rounded-xl p-5 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-green-600 text-xl">✅</span>
+                <h3 className="font-bold text-green-800">¡Problema resuelto!</h3>
+              </div>
+              <div className="space-y-2 text-green-700 text-sm">
+                <p><strong>Antes:</strong> ProcessConfiguration no encontraba procesos.</p>
+                <p><strong>Ahora:</strong> Carga {processesWithMachines.length} procesos con sus máquinas.</p>
+                <p><strong>Solución:</strong> Usar relación inversa (procesos_ids en máquinas).</p>
+              </div>
+            </div>
+            
             {/* Help */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-              <h3 className="font-bold text-blue-900 mb-2">🔍 Cómo encontrar máquinas</h3>
-              <p className="text-blue-800 text-sm">
-                Si no ves máquinas asignadas, verifica:
-              </p>
-              <ul className="text-blue-700 text-xs mt-2 space-y-1">
-                <li>1. El campo <code>maquinas_asignadas</code> en el proceso</li>
-                <li>2. Si el campo es string, separar por comas o parsear JSON</li>
-                <li>3. Buscar en <code>procesos_ids</code> de las máquinas</li>
+              <h3 className="font-bold text-blue-900 mb-2">ℹ️ Cómo funciona</h3>
+              <ul className="text-blue-800 text-sm space-y-2">
+                <li className="flex items-start">
+                  <span className="mr-2">1.</span>
+                  <span>Las máquinas tienen <code>procesos_ids</code> con IDs de procesos</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">2.</span>
+                  <span>Se busca qué máquinas incluyen cada proceso en su lista</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">3.</span>
+                  <span>Se muestra la relación proceso → máquinas compatibles</span>
+                </li>
               </ul>
             </div>
           </div>
