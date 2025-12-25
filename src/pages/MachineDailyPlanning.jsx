@@ -23,7 +23,22 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import PermissionCheck from "../components/roles/PermissionCheck";
+// EN MachineDailyPlanning.jsx:
+
+// COMENTA o ELIMINA la línea 26:
+// import PermissionCheck from "../components/roles/PermissionCheck";
+
+// CAMBIA las líneas 35-37:
+export default function MachineDailyPlanningPage() {
+  // return (
+  //   <PermissionCheck module="planning" action="create">
+  //     <MachineDailyPlanningContent />
+  //   </PermissionCheck>
+  // );
+  
+  // En su lugar:
+  return <MachineDailyPlanningContent />;
+}
 import Breadcrumbs from "../components/common/Breadcrumbs";
 import EmployeeAvailabilityPanel from "../components/availability/EmployeeAvailabilityPanel";
 import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
