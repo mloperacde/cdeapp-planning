@@ -931,4 +931,4 @@ export default function ProcessConfigurationPage() {
                     }}
                     placeholder="ej: Ensamblaje"
                     required
-                    className={formErrors.nombre ? "border-red-500" : ""|
+                    className={formErrors.nombre ? "border-red-500" : ""}
