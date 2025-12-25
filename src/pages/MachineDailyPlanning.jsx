@@ -171,7 +171,24 @@ function MachineDailyPlanningContent() {
     });
 
     // FILTRAR POR EQUIPO Y DEPARTAMENTO
-    const fabricacionEmployees = employees.filter(emp => {
+  const fabricacionEmployees = employees.filter(emp => {
+  // Condiciones básicas
+  if (emp.estado_empleado !== "Alta") return false;
+  if (emp.departamento !== "FABRICACION") return false;
+  if (emp.incluir_en_planning === false) return false;
+  
+  // Si no hay equipo seleccionado, incluir todos
+  if (!selectedTeam || selectedTeam === "all") return true;
+  
+  // Buscar el equipo correspondiente
+  const employeeTeamName = emp.equipo;
+  if (!employeeTeamName) return false;
+  
+  const teamConfig = teams.find(t => t.team_name === employeeTeamName);
+  if (!teamConfig) return false;
+  
+  return teamConfig.team_key === selectedTeam;
+});  const fabricacionEmployees = employees.filter(emp => {
   const isActive = emp.estado_empleado === "Alta";
   const isFabricacion = emp.departamento === "FABRICACION";
   const incluir = emp.incluir_en_planning !== false;
@@ -191,7 +208,12 @@ function MachineDailyPlanningContent() {
     isFabricacion,
     incluir
   });
-  
+ console.log('✅ Empleados filtrados:', {
+  totalEmployees: employees.length,
+  fabricacionEmployees: fabricacionEmployees.length,
+  equipoSeleccionado: selectedTeam,
+  equiposDisponibles: teams.map(t => t.team_name)
+}); 
   return isActive && isFabricacion && incluir && matchesTeam;
 });
     console.log('👷 Empleados FABRICACION del equipo seleccionado:', fabricacionEmployees.length);
