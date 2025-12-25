@@ -115,7 +115,7 @@ const ProcessConfiguration = () => {
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
           <h2 className="mt-4 text-xl font-semibold text-gray-700">Cargando procesos...</h2>
-          <p className="mt-2 text-gray-500">Usando base44.entities.Process.filter({`{ activo: true }`})</p>
+          <p className="mt-2 text-gray-500">Usando base44.entities.Process.filter(activ0: true)</p>
           
           <div className="mt-6 max-w-md mx-auto bg-white p-4 rounded-lg shadow border">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Últimos logs:</h3>
@@ -447,7 +447,7 @@ const ProcessConfiguration = () => {
                 <div>
                   <div className="font-medium text-gray-700">Método usado:</div>
                   <code className="bg-gray-100 p-1 rounded text-xs block mt-1">
-                    base44.entities.Process.filter(`{ activo: true }`)
+                    base44.entities.Process.filter(&#123; activo: true &#125;)
                   </code>
                 </div>
                 
