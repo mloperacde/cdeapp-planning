@@ -175,7 +175,7 @@ function MachineDailyPlanningContent() {
       const isActive = emp.estado_empleado === "Alta";
       const isFabricacion = emp.departamento === "FABRICACION";
       const incluir = emp.incluir_en_planning !== false;
-      constconst matchesTeam = !selectedTeam || 
+      const matchesTeam = !selectedTeam || 
   (emp.equipo && teams.find(t => t.team_name === emp.equipo)?.team_key === selectedTeam);
     });
 console.log('🔍 DEBUG Equipos:', {
