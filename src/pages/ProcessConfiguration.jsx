@@ -921,4 +921,194 @@ const ProcessConfigurationPage = () => {
           {/* Columna derecha: Lista de máquinas */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h2 className="text-xl font-semibold
+                            <h2 className="text-xl font-semibold text-gray-800">Máquinas Asignadas</h2>
+              
+              {/* Buscador y filtros */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <IconSearch />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar por código, nombre, modelo o proceso..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">Todos los estados</option>
+                    <option value="activa">Activas</option>
+                    <option value="inactiva">Inactivas</option>
+                    <option value="mantenimiento">Mantenimiento</option>
+                  </select>
+                  
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="orden">Orden de proceso</option>
+                    <option value="nombre">Nombre (A-Z)</option>
+                    <option value="codigo">Código</option>
+                    <option value="estado">Estado</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Agregar nueva máquina al proceso */}
+            <div className="flex gap-2 mb-6">
+              <input
+                type="text"
+                placeholder="Agregar máquina manualmente (nombre)..."
+                value={newMachineName}
+                onChange={(e) => setNewMachineName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addMachine()}
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button
+                onClick={addMachine}
+                disabled={!newMachineName.trim()}
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  newMachineName.trim()
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <IconPlus /> Agregar
+              </button>
+            </div>
+
+            {/* Instrucciones */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700 flex items-center gap-2">
+                <IconAlert />
+                <span>
+                  <strong>Nota:</strong> Cada máquina muestra los procesos específicos que puede realizar. 
+                  Seleccione el proceso adecuado para cada máquina en el orden deseado.
+                </span>
+              </p>
+            </div>
+
+            {/* Lista de máquinas */}
+            <div className="mb-4">
+              {filteredAndSortedMachines.length > 0 ? (
+                <>
+                  <MachineList
+                    machines={filteredAndSortedMachines}
+                    onEdit={setEditingMachine}
+                    onDelete={deleteMachine}
+                    onUpdate={updateMachine}
+                    editingMachine={editingMachine}
+                    onMoveUp={moveMachineUp}
+                    onMoveDown={moveMachineDown}
+                  />
+                  
+                  <div className="mt-4 text-sm text-gray-500">
+                    <p className="flex items-center gap-2">
+                      <span>💡</span>
+                      <span>
+                        <strong>Total:</strong> {filteredAndSortedMachines.length} máquina(s) en el proceso
+                      </span>
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="mx-auto w-16 h-16 mb-4">
+                    <IconFilter />
+                  </div>
+                  <p className="text-gray-500 mb-2">No se encontraron máquinas</p>
+                  <p className="text-sm text-gray-400">
+                    {searchTerm || statusFilter !== 'all' 
+                      ? 'Pruebe con otros términos de búsqueda o filtros'
+                      : 'Agregue máquinas al proceso usando el campo de arriba'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Información del proceso asignado */}
+            {filteredAndSortedMachines.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Flujo del Proceso</h3>
+                <div className="space-y-2">
+                  {filteredAndSortedMachines.map((machine, index) => (
+                    <div key={`flow-${machine.id}`} className="flex items-center gap-3 text-sm">
+                      <span className="font-medium text-gray-700 w-6">{index + 1}.</span>
+                      <span className="font-medium">{machine.codigo}</span>
+                      <span className="text-gray-600">- {machine.nombre}</span>
+                      <span className="ml-auto px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                        {machine.procesoActual || machine.procesos?.[0] || 'Sin proceso asignado'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Acciones finales */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-gray-500">
+              <p>
+                <span className="font-medium">Proceso configurado:</span> {formData.nombre || 'Sin nombre'} | 
+                <span className="ml-2">Máquinas: {machines.length}</span> | 
+                <span className="ml-2">Estado: {isSubmitting ? 'Guardando...' : 'Listo'}</span>
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || machines.length === 0}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  isSubmitting || machines.length === 0
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <IconLoading />
+                    Guardando...
+                  </span>
+                ) : (
+                  'Guardar Configuración Completa'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Nota final */}
+        <div className="mt-6 text-xs text-gray-400">
+          <p>
+            ℹ️ Esta configuración será utilizada para planificar la producción. 
+            Los procesos asignados a cada máquina deben coincidir con sus capacidades técnicas.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProcessConfigurationPage;
