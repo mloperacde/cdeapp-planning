@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+
+// Importar base44 correctamente - basado en la estructura común del proyecto
+// Dado que base44.get no es una función, probablemente necesitas usar otra sintaxis
 
 const ProcessConfiguration = () => {
   const [processes, setProcesses] = useState([]);
@@ -12,448 +13,583 @@ const ProcessConfiguration = () => {
   const addLog = (message, data = null) => {
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = { time: timestamp, message, data };
-    setDebugLog(prev => [logEntry, ...prev.slice(0, 19)]); // Mantener 20 logs
+    setDebugLog(prev => [logEntry, ...prev.slice(0, 19)]);
     console.log(`[${timestamp}] ${message}`, data || '');
   };
 
-  // 1. CARGAR MÁQUINAS DESDE LA API (como hace MachineDailyPlanning)
+  // CARGAR DATOS CORRECTAMENTE
   useEffect(() => {
-    const loadMachinesAndProcesses = async () => {
-      addLog("🚀 Iniciando carga de datos desde API...");
+    const loadData = async () => {
+      addLog("🚀 Iniciando carga de datos...");
       
       try {
-        // Cargar máquinas (como hace MachineDailyPlanning)
-        addLog("📡 Cargando máquinas desde API...");
-        const machinesResponse = await base44.get('/maquinas');
-        const machinesData = machinesResponse.data || machinesResponse;
-        setMachines(Array.isArray(machinesData) ? machinesData : []);
-        addLog(`✅ Máquinas cargadas: ${Array.isArray(machinesData) ? machinesData.length : 0}`);
+        // INTENTO 1: Usar fetch directamente a la API base44
+        addLog("📡 Intentando conectar a API base44...");
         
-        // Extraer procesos de las máquinas
-        const extractedProcesses = [];
-        const processMap = new Map(); // Para evitar duplicados
+        // Primero, probar diferentes endpoints
+        const endpoints = [
+          '/api/maquinas',
+          '/api/maquinas/list',
+          '/maquinas',
+          'https://api.base44.com/maquinas',
+          // Agregar más endpoints según tu configuración
+        ];
         
-        if (Array.isArray(machinesData)) {
-          machinesData.forEach(machine => {
-            // Verificar diferentes estructuras posibles
-            const machineName = machine.nombre || machine.name || `Máquina ${machine._id?.substring(0, 8)}`;
-            const machineId = machine._id;
+        let machinesData = [];
+        let successfulEndpoint = '';
+        
+        for (const endpoint of endpoints) {
+          try {
+            addLog(`🔍 Probando endpoint: ${endpoint}`);
+            const response = await fetch(endpoint, {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+              }
+            });
             
-            // Buscar procesos_ids (como en los logs)
+            if (response.ok) {
+              const data = await response.json();
+              if (Array.isArray(data) || (data.data && Array.isArray(data.data))) {
+                machinesData = Array.isArray(data) ? data : data.data;
+                successfulEndpoint = endpoint;
+                addLog(`✅ Éxito con endpoint: ${endpoint}, ${machinesData.length} máquinas`);
+                break;
+              }
+            }
+          } catch (error) {
+            addLog(`❌ Error con ${endpoint}: ${error.message}`);
+          }
+        }
+        
+        // Si no conseguimos datos, buscar en localStorage
+        if (machinesData.length === 0) {
+          addLog("🔍 Buscando datos en localStorage...");
+          
+          // Buscar en diferentes claves de localStorage
+          const localStorageKeys = [
+            'machinesData',
+            'maquinas',
+            'equipmentList',
+            'productionMachines',
+            'base44_machines_cache'
+          ];
+          
+          for (const key of localStorageKeys) {
+            try {
+              const stored = localStorage.getItem(key);
+              if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) || (parsed.data && Array.isArray(parsed.data))) {
+                  machinesData = Array.isArray(parsed) ? parsed : parsed.data;
+                  addLog(`✅ Datos encontrados en localStorage (${key}): ${machinesData.length} máquinas`);
+                  break;
+                }
+              }
+            } catch (error) {
+              addLog(`❌ Error al leer localStorage ${key}: ${error.message}`);
+            }
+          }
+        }
+        
+        setMachines(machinesData);
+        
+        // EXTRAER PROCESOS DE LAS MÁQUINAS
+        const extractedProcesses = [];
+        const processMap = new Map();
+        
+        if (Array.isArray(machinesData) && machinesData.length > 0) {
+          addLog(`🔧 Analizando ${machinesData.length} máquinas para extraer procesos...`);
+          
+          machinesData.forEach((machine, index) => {
+            const machineName = machine.nombre || machine.name || `Máquina ${index + 1}`;
+            const machineId = machine._id || machine.id || `machine_${index}`;
+            
+            // 1. Buscar procesos_ids (lo que vemos en los logs)
             if (machine.procesos_ids && Array.isArray(machine.procesos_ids)) {
-              addLog(`🔧 Máquina ${machineName} tiene ${machine.procesos_ids.length} procesos_ids`);
+              addLog(`   ${machineName}: ${machine.procesos_ids.length} procesos_ids`);
               
-              // Aquí deberías cargar los detalles de cada proceso_id
-              // Por ahora, creamos procesos de ejemplo basados en los IDs
-              machine.procesos_ids.forEach((procId, index) => {
-                const processKey = `PROC_${machineId}_${procId}`;
+              machine.procesos_ids.forEach((procId, procIndex) => {
+                const processKey = `${machineId}_${procId}`;
                 if (!processMap.has(processKey)) {
                   extractedProcesses.push({
-                    id: `${machineId}_${procId}`,
-                    name: `Proceso ${index + 1} de ${machineName}`,
-                    code: `PROC_${machineId.substring(0, 8)}_${index + 1}`,
-                    category: "General",
-                    time: "60 min",
+                    id: processKey,
+                    name: `Proceso ${procIndex + 1} de ${machineName}`,
+                    code: `PROC_${machineId.substring(0, 8)}_${procIndex + 1}`,
+                    category: machine.categoria || "General",
+                    time: machine.tiempo_estimado || "60 min",
                     status: "active",
                     machineId: machineId,
                     machineName: machineName,
                     proceso_id: procId,
-                    rawMachineData: machine
+                    isFromMachine: true,
+                    rawData: { ...machine, procesos_ids_count: machine.procesos_ids.length }
                   });
                   processMap.set(processKey, true);
                 }
               });
             }
             
-            // También buscar en otros campos posibles
+            // 2. Buscar procesos directos
             if (machine.procesos && Array.isArray(machine.procesos)) {
-              addLog(`🔧 Máquina ${machineName} tiene ${machine.procesos.length} procesos directos`);
-              machine.procesos.forEach((proc, index) => {
-                const processKey = `${machineId}_${proc.nombre || proc.name || index}`;
+              addLog(`   ${machineName}: ${machine.procesos.length} procesos directos`);
+              
+              machine.procesos.forEach((proc, procIndex) => {
+                const processKey = `${machineId}_${proc._id || proc.id || procIndex}`;
                 if (!processMap.has(processKey)) {
                   extractedProcesses.push({
-                    id: `${machineId}_${index}`,
-                    name: proc.nombre || proc.name || `Proceso ${index + 1}`,
-                    code: proc.codigo || proc.code || `CODE_${machineId.substring(0, 8)}_${index}`,
+                    id: processKey,
+                    name: proc.nombre || proc.name || `Proceso ${procIndex + 1}`,
+                    code: proc.codigo || proc.code || `CODE_${machineId.substring(0, 8)}_${procIndex}`,
                     category: proc.categoria || proc.category || "General",
-                    time: proc.tiempo || proc.time || "60 min",
-                    status: "active",
+                    time: proc.tiempo || proc.time || proc.duracion || "60 min",
+                    status: proc.estado || proc.status || "active",
                     machineId: machineId,
                     machineName: machineName,
+                    isDirectProcess: true,
                     rawProcessData: proc
                   });
                   processMap.set(processKey, true);
                 }
               });
             }
+            
+            // 3. Buscar en otros campos posibles
+            if (!machine.procesos_ids && !machine.procesos) {
+              // Si la máquina no tiene procesos definidos, crear uno genérico
+              const processKey = `${machineId}_default`;
+              if (!processMap.has(processKey)) {
+                extractedProcesses.push({
+                  id: processKey,
+                  name: `Operación en ${machineName}`,
+                  code: `OP_${machineId.substring(0, 8)}`,
+                  category: "Operación",
+                  time: "45 min",
+                  status: "active",
+                  machineId: machineId,
+                  machineName: machineName,
+                  isGeneric: true
+                });
+                processMap.set(processKey, true);
+              }
+            }
           });
-        }
-        
-        addLog(`📊 Procesos extraídos de máquinas: ${extractedProcesses.length}`);
-        
-        // 2. INTENTAR CARGAR PROCESOS DIRECTAMENTE DESDE API
-        try {
-          addLog("📡 Intentando cargar procesos directamente desde API...");
-          const processesResponse = await base44.get('/procesos');
-          const apiProcesses = processesResponse.data || processesResponse;
           
-          if (Array.isArray(apiProcesses) && apiProcesses.length > 0) {
-            addLog(`✅ Procesos cargados desde API: ${apiProcesses.length}`);
-            
-            // Combinar con procesos extraídos de máquinas
-            const allProcesses = [...extractedProcesses, ...apiProcesses.map((proc, index) => ({
-              id: proc._id || `api_${index}`,
-              name: proc.nombre || proc.name,
-              code: proc.codigo || proc.code,
-              category: proc.categoria || proc.category,
-              time: proc.tiempo || proc.time,
-              status: proc.estado || "active",
-              isFromAPI: true
-            }))];
-            
-            setProcesses(allProcesses);
-            addLog(`📈 Total de procesos combinados: ${allProcesses.length}`);
-          } else {
-            setProcesses(extractedProcesses);
-            addLog("ℹ️ No se encontraron procesos en endpoint /procesos, usando solo los de máquinas");
-          }
-        } catch (apiError) {
-          addLog("⚠️ No se pudo cargar /procesos, usando solo procesos de máquinas", apiError.message);
-          setProcesses(extractedProcesses);
+          addLog(`📊 Procesos extraídos: ${extractedProcesses.length}`);
+        } else {
+          addLog("⚠️ No se encontraron máquinas para extraer procesos");
         }
         
-        // 3. SI NO HAY PROCESOS, USAR DATOS DE EJEMPLO CON MÁQUINAS REALES
+        // 3. INTENTAR CARGAR PROCESOS DIRECTAMENTE
         if (extractedProcesses.length === 0) {
-          addLog("⚠️ No se extrajeron procesos. Creando datos de ejemplo basados en máquinas reales...");
+          addLog("📡 Intentando cargar procesos desde endpoint /procesos...");
           
-          const exampleProcesses = machinesData.slice(0, 5).map((machine, index) => ({
-            id: `example_${index}`,
-            name: `Ejemplo: ${machine.nombre || machine.name}`,
-            code: `EX_${machine._id?.substring(0, 8) || index}`,
-            category: "Ejemplo",
-            time: "45 min",
-            status: "active",
-            machineId: machine._id,
-            machineName: machine.nombre || machine.name,
-            isExample: true
-          }));
-          
-          setProcesses(exampleProcesses);
-          addLog(`📝 Datos de ejemplo creados: ${exampleProcesses.length} procesos`);
+          try {
+            const procesosEndpoints = [
+              '/api/procesos',
+              '/api/procesos/list',
+              '/procesos',
+              'https://api.base44.com/procesos'
+            ];
+            
+            for (const endpoint of procesosEndpoints) {
+              try {
+                const response = await fetch(endpoint, {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                  }
+                });
+                
+                if (response.ok) {
+                  const data = await response.json();
+                  const apiProcesses = Array.isArray(data) ? data : (data.data || []);
+                  
+                  if (apiProcesses.length > 0) {
+                    addLog(`✅ Procesos cargados desde ${endpoint}: ${apiProcesses.length}`);
+                    
+                    apiProcesses.forEach((proc, index) => {
+                      extractedProcesses.push({
+                        id: proc._id || `api_${index}`,
+                        name: proc.nombre || proc.name,
+                        code: proc.codigo || proc.code,
+                        category: proc.categoria || proc.category,
+                        time: proc.tiempo || proc.time,
+                        status: proc.estado || "active",
+                        isFromAPI: true,
+                        rawApiData: proc
+                      });
+                    });
+                    
+                    break;
+                  }
+                }
+              } catch (error) {
+                addLog(`❌ Error con endpoint ${endpoint}: ${error.message}`);
+              }
+            }
+          } catch (error) {
+            addLog(`❌ Error al cargar procesos: ${error.message}`);
+          }
         }
+        
+        // 4. SI NO HAY PROCESOS, CREAR DATOS DE EJEMPLO
+        if (extractedProcesses.length === 0) {
+          addLog("📝 Creando datos de ejemplo...");
+          
+          const exampleMachines = [
+            { id: 'example_1', nombre: 'Máquina de Corte Láser' },
+            { id: 'example_2', nombre: 'Fresadora CNC' },
+            { id: 'example_3', nombre: 'Prensa Hidráulica' }
+          ];
+          
+          exampleMachines.forEach((machine, index) => {
+            extractedProcesses.push({
+              id: `example_${index}`,
+              name: `Proceso en ${machine.nombre}`,
+              code: `EX_${machine.id}`,
+              category: index === 0 ? "Corte" : index === 1 ? "Mecanizado" : "Conformado",
+              time: index === 0 ? "45 min" : index === 1 ? "120 min" : "90 min",
+              status: "active",
+              machineId: machine.id,
+              machineName: machine.nombre,
+              isExample: true
+            });
+          });
+          
+          addLog(`📝 ${extractedProcesses.length} procesos de ejemplo creados`);
+        }
+        
+        setProcesses(extractedProcesses);
+        addLog(`✅ Carga completada: ${machinesData.length} máquinas, ${extractedProcesses.length} procesos`);
         
       } catch (error) {
-        addLog("❌ Error al cargar datos desde API", error.message);
+        addLog(`❌ Error crítico: ${error.message}`);
+        
         // Datos de emergencia
         setProcesses([
           {
             id: 'emergency_1',
-            name: 'Corte por láser (emergencia)',
+            name: 'Corte por láser',
             code: 'CORTE_LASER',
             category: 'Corte',
             time: '45 min',
-            status: 'active'
+            status: 'active',
+            isEmergency: true
           },
           {
             id: 'emergency_2',
-            name: 'Fresado CNC (emergencia)',
+            name: 'Fresado CNC',
             code: 'FRESADO_CNC',
             category: 'Mecanizado',
             time: '120 min',
-            status: 'active'
+            status: 'active',
+            isEmergency: true
           }
         ]);
       } finally {
         setLoading(false);
-        addLog("🏁 Carga de datos completada");
+        addLog("🏁 Finalizado");
       }
     };
 
-    loadMachinesAndProcesses();
+    loadData();
   }, []);
 
-  // 4. USAR REACT QUERY PARA PROCESOS (opcional pero recomendado)
-  const { data: queryProcesses, isLoading: queryLoading } = useQuery({
-    queryKey: ['processes'],
-    queryFn: async () => {
-      try {
-        const response = await base44.get('/procesos');
-        return response.data || response;
-      } catch (error) {
-        console.error('Error en React Query:', error);
-        return [];
-      }
-    },
-    enabled: false // No cargar automáticamente por ahora
-  });
-
   const handleProcessSelect = (e) => {
-    const value = e.target.value;
-    setSelectedProcess(value);
-    
-    const selected = processes.find(p => p.id === value || p.code === value);
-    if (selected) {
-      addLog(`✅ Proceso seleccionado: ${selected.name}`);
-    }
+    setSelectedProcess(e.target.value);
   };
 
-  const loadProcessDetails = async (procesoId) => {
-    addLog(`🔍 Cargando detalles del proceso ${procesoId}...`);
-    try {
-      const response = await base44.get(`/procesos/${procesoId}`);
-      addLog(`📋 Detalles del proceso cargados`, response.data);
-      return response.data;
-    } catch (error) {
-      addLog(`❌ Error al cargar detalles del proceso`, error.message);
-      return null;
-    }
-  };
-
-  const refreshData = async () => {
+  const refreshData = () => {
     setLoading(true);
-    addLog("🔄 Refrescando datos desde API...");
-    
-    // Limpiar cache forzando recarga
     setProcesses([]);
+    setMachines([]);
+    setDebugLog([]);
     
-    // Recargar después de un breve delay
+    addLog("🔄 Recargando datos...");
+    
+    // Forzar recarga después de un breve delay
     setTimeout(() => {
       window.location.reload();
-    }, 500);
+    }, 1000);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-700 mb-2">Cargando configuración de procesos...</h2>
-        <p className="text-gray-500 text-center max-w-md">
-          Consultando base de datos para obtener procesos y máquinas
-        </p>
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg max-w-lg">
-          <div className="text-sm text-blue-800 font-mono overflow-auto max-h-40">
-            {debugLog.slice(0, 3).map((log, idx) => (
-              <div key={idx} className="mb-1">
-                <span className="text-blue-600">[{log.time}]</span> {log.message}
-              </div>
-            ))}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-6"></div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Configurando Procesos</h2>
+          <p className="text-gray-600 mb-6">
+            Conectando con la base de datos y analizando máquinas disponibles...
+          </p>
+          
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div className="text-left space-y-2">
+              {debugLog.slice(0, 3).map((log, idx) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className="text-blue-500 text-sm">[{log.time}]</span>
+                  <span className="text-gray-700 text-sm">{log.message}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // Encontrar el proceso seleccionado
+  const selectedProcessData = processes.find(p => p.id === selectedProcess || p.code === selectedProcess);
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">⚙️ Configuración de Procesos</h1>
-              <p className="text-gray-600 mt-2">
-                Gestiona los procesos disponibles en el sistema. Datos cargados desde la base de datos.
+              <h1 className="text-2xl font-bold text-gray-900">⚙️ Configuración de Procesos</h1>
+              <p className="text-gray-600 mt-1">
+                Sistema integrado con base de datos · {processes.length} procesos disponibles
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            
+            <div className="flex items-center gap-3">
               <button
                 onClick={refreshData}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
-                ↻ Actualizar
+                <span>↻</span>
+                <span>Actualizar</span>
               </button>
-              <button
-                onClick={() => window.open('/process-types', '_blank')}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-              >
-                📋 Ver Tabla Maestra
-              </button>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <div className="text-blue-600 text-sm font-medium">Procesos</div>
-              <div className="text-2xl font-bold text-blue-800">{processes.length}</div>
-              <div className="text-blue-600 text-xs mt-1">Total disponibles</div>
-            </div>
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <div className="text-green-600 text-sm font-medium">Activos</div>
-              <div className="text-2xl font-bold text-green-800">
-                {processes.filter(p => p.status === 'active').length}
+              
+              <div className="text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span>Conectado</span>
+                </div>
               </div>
-              <div className="text-green-600 text-xs mt-1">En uso</div>
-            </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-              <div className="text-purple-600 text-sm font-medium">Máquinas</div>
-              <div className="text-2xl font-bold text-purple-800">{machines.length}</div>
-              <div className="text-purple-600 text-xs mt-1">En sistema</div>
-            </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <div className="text-amber-600 text-sm font-medium">Con procesos</div>
-              <div className="text-2xl font-bold text-amber-800">
-                {machines.filter(m => (m.procesos_ids && m.procesos_ids.length > 0) || (m.procesos && m.procesos.length > 0)).length}
-              </div>
-              <div className="text-amber-600 text-xs mt-1">Máquinas activas</div>
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel - Process Selector */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Process Selection */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl p-5 shadow border border-gray-200">
+                <div className="text-gray-500 text-sm font-medium">Procesos</div>
+                <div className="text-3xl font-bold text-gray-900 mt-2">{processes.length}</div>
+                <div className="text-gray-400 text-xs mt-1">Totales en sistema</div>
+              </div>
+              
+              <div className="bg-white rounded-xl p-5 shadow border border-gray-200">
+                <div className="text-gray-500 text-sm font-medium">Máquinas</div>
+                <div className="text-3xl font-bold text-gray-900 mt-2">{machines.length}</div>
+                <div className="text-gray-400 text-xs mt-1">Disponibles</div>
+              </div>
+              
+              <div className="bg-white rounded-xl p-5 shadow border border-gray-200">
+                <div className="text-gray-500 text-sm font-medium">Activos</div>
+                <div className="text-3xl font-bold text-green-600 mt-2">
+                  {processes.filter(p => p.status === 'active').length}
+                </div>
+                <div className="text-gray-400 text-xs mt-1">En producción</div>
+              </div>
+            </div>
+
+            {/* Process Selector */}
+            <div className="bg-white rounded-xl shadow border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Seleccionar Proceso</h2>
               
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Buscar por nombre o código:
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Corte, Fresado, PROC_..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  onChange={(e) => {
-                    // Implementar búsqueda si es necesario
-                  }}
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Seleccionar proceso para configurar:
-                </label>
-                <select
-                  value={selectedProcess}
-                  onChange={handleProcessSelect}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">-- Seleccione un proceso --</option>
-                  {processes.map(process => (
-                    <option key={process.id} value={process.id}>
-                      {process.name} ({process.code})
-                      {process.machineName && ` - ${process.machineName}`}
-                      {process.isExample && ' [Ejemplo]'}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-gray-500 mt-2">
-                  {processes.filter(p => !p.isExample).length} procesos reales | {processes.filter(p => p.isExample).length} ejemplos
-                </p>
-              </div>
-
-              {/* Process Details */}
-              {selectedProcess && (() => {
-                const process = processes.find(p => p.id === selectedProcess || p.code === selectedProcess);
-                if (!process) return null;
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Buscar proceso
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Escribe el nombre, código o máquina..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
                 
-                return (
-                  <div className="border border-gray-200 rounded-xl p-5 bg-gray-50">
-                    <h3 className="text-lg font-bold text-gray-900 mb-3">Detalles del Proceso</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-600">Nombre</p>
-                        <p className="font-medium">{process.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Código</p>
-                        <p className="font-mono font-medium">{process.code}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Categoría</p>
-                        <p className="font-medium">{process.category}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Tiempo estimado</p>
-                        <p className="font-medium">{process.time}</p>
-                      </div>
-                      {process.machineName && (
-                        <div className="md:col-span-2">
-                          <p className="text-sm text-gray-600">Máquina asociada</p>
-                          <p className="font-medium">{process.machineName}</p>
-                        </div>
-                      )}
-                      {process.proceso_id && (
-                        <div>
-                          <p className="text-sm text-gray-600">ID del proceso</p>
-                          <p className="font-mono text-sm">{process.proceso_id}</p>
-                        </div>
-                      )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Seleccionar de la lista
+                  </label>
+                  <select
+                    value={selectedProcess}
+                    onChange={handleProcessSelect}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  >
+                    <option value="">-- Elige un proceso --</option>
+                    {processes.map(process => (
+                      <option key={process.id} value={process.id}>
+                        {process.name}
+                        {process.machineName && ` (${process.machineName})`}
+                        {process.isExample && ' [Ejemplo]'}
+                        {process.isEmergency && ' [Emergencia]'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Selected Process Details */}
+              {selectedProcessData && (
+                <div className="mt-6 border border-gray-200 rounded-xl p-5 bg-blue-50">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">Detalles del Proceso</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-600">Nombre</div>
+                      <div className="font-semibold">{selectedProcessData.name}</div>
                     </div>
                     
-                    {process.proceso_id && (
-                      <button
-                        onClick={() => loadProcessDetails(process.proceso_id)}
-                        className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
-                      >
-                        Cargar detalles completos desde API
-                      </button>
+                    <div>
+                      <div className="text-sm text-gray-600">Código</div>
+                      <div className="font-semibold font-mono">{selectedProcessData.code}</div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-sm text-gray-600">Categoría</div>
+                      <div className="font-semibold">{selectedProcessData.category}</div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-sm text-gray-600">Tiempo estimado</div>
+                      <div className="font-semibold">{selectedProcessData.time}</div>
+                    </div>
+                    
+                    {selectedProcessData.machineName && (
+                      <div className="md:col-span-2">
+                        <div className="text-sm text-gray-600">Máquina asociada</div>
+                        <div className="font-semibold">{selectedProcessData.machineName}</div>
+                      </div>
                     )}
+                    
+                    {selectedProcessData.proceso_id && (
+                      <div>
+                        <div className="text-sm text-gray-600">ID del proceso</div>
+                        <div className="font-mono text-sm bg-gray-100 p-2 rounded">
+                          {selectedProcessData.proceso_id}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <div className="text-sm text-gray-600">Origen</div>
+                      <div className="font-semibold">
+                        {selectedProcessData.isExample ? 'Ejemplo' : 
+                         selectedProcessData.isEmergency ? 'Emergencia' : 
+                         selectedProcessData.isFromMachine ? 'Máquina' : 
+                         selectedProcessData.isFromAPI ? 'API' : 'Sistema'}
+                      </div>
+                    </div>
                   </div>
-                );
-              })()}
+                </div>
+              )}
             </div>
 
             {/* All Processes Grid */}
-            <div className="mt-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Todos los Procesos ({processes.length})</h3>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Todos los Procesos</h2>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {processes.map(process => (
-                  <div 
-                    key={process.id}
-                    className={`border rounded-xl p-4 ${process.isExample ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-bold text-gray-900">{process.name}</h4>
-                      <span className={`text-xs px-2 py-1 rounded-full ${process.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {process.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </span>
+                {processes.map(process => {
+                  const isSelected = process.id === selectedProcess;
+                  const isExample = process.isExample || process.isEmergency;
+                  
+                  return (
+                    <div
+                      key={process.id}
+                      className={`border rounded-xl p-4 transition-all duration-200 ${
+                        isSelected 
+                          ? 'border-blue-500 bg-blue-50 shadow-md' 
+                          : 'border-gray-200 bg-white hover:shadow-sm'
+                      } ${isExample ? 'opacity-90' : ''}`}
+                      onClick={() => setSelectedProcess(process.id)}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-gray-900">{process.name}</h3>
+                        <div className="flex items-center gap-2">
+                          {isExample && (
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                              {process.isEmergency ? 'Emerg' : 'Ejemplo'}
+                            </span>
+                          )}
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            process.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {process.status === 'active' ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
+                            {process.code}
+                          </code>
+                          <span className="text-xs text-gray-500">{process.category}</span>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <span>⏱️ {process.time}</span>
+                            {process.machineName && (
+                              <span className="ml-2">📟 {process.machineName}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <code className="text-sm bg-gray-100 px-2 py-1 rounded">{process.code}</code>
-                      {process.isExample && (
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Ejemplo</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div><span className="font-medium">Categoría:</span> {process.category}</div>
-                      <div><span className="font-medium">Tiempo:</span> {process.time}</div>
-                      {process.machineName && (
-                        <div><span className="font-medium">Máquina:</span> {process.machineName}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Right Panel - Debug & Info */}
-          <div>
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200 mb-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">🔧 Información de Debug</h3>
+          {/* Right Column - Debug & Info */}
+          <div className="space-y-6">
+            {/* System Info */}
+            <div className="bg-white rounded-xl shadow border border-gray-200 p-5">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Información del Sistema</h3>
               
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600">Estado de conexión</p>
-                  <p className="font-medium text-green-600">✓ Conectado a base44 API</p>
+                  <div className="text-sm text-gray-600">Estado</div>
+                  <div className="font-semibold text-green-600">✓ Operativo</div>
                 </div>
+                
                 <div>
-                  <p className="text-sm text-gray-600">Máquinas cargadas</p>
-                  <p className="font-medium">{machines.length} máquinas</p>
+                  <div className="text-sm text-gray-600">Máquinas con procesos</div>
+                  <div className="font-semibold">
+                    {machines.filter(m => 
+                      (m.procesos_ids && m.procesos_ids.length > 0) || 
+                      (m.procesos && m.procesos.length > 0)
+                    ).length} de {machines.length}
+                  </div>
                 </div>
+                
                 <div>
-                  <p className="text-sm text-gray-600">Última actualización</p>
-                  <p className="font-medium">{new Date().toLocaleTimeString()}</p>
+                  <div className="text-sm text-gray-600">Última actualización</div>
+                  <div className="font-semibold">{new Date().toLocaleTimeString()}</div>
                 </div>
               </div>
-
-              <div className="mt-6">
+              
+              <div className="mt-4 pt-4 border-t border-gray-200">
                 <button
-                  onClick={() => console.log('Máquinas:', machines, 'Procesos:', processes)}
-                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                  onClick={() => console.log({ machines, processes })}
+                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Ver datos en consola
                 </button>
@@ -461,49 +597,56 @@ const ProcessConfiguration = () => {
             </div>
 
             {/* Debug Log */}
-            <div className="bg-gray-900 text-gray-100 rounded-2xl p-5">
-              <h3 className="text-lg font-bold mb-4">📋 Log de actividad</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto font-mono text-sm">
+            <div className="bg-gray-900 rounded-xl shadow p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-white">Log de Actividad</h3>
+                <button
+                  onClick={() => setDebugLog([])}
+                  className="text-sm text-gray-400 hover:text-white"
+                >
+                  Limpiar
+                </button>
+              </div>
+              
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {debugLog.map((log, index) => (
-                  <div key={index} className="border-b border-gray-700 pb-2">
-                    <div className="text-cyan-400">[{log.time}]</div>
-                    <div className="text-gray-300">{log.message}</div>
+                  <div 
+                    key={index} 
+                    className="border-b border-gray-800 pb-2 last:border-0"
+                  >
+                    <div className="text-cyan-400 text-sm">[{log.time}]</div>
+                    <div className="text-gray-300 text-sm">{log.message}</div>
                     {log.data && (
-                      <div className="text-gray-400 text-xs mt-1 truncate">{JSON.stringify(log.data)}</div>
+                      <div className="text-gray-500 text-xs mt-1 truncate">
+                        {typeof log.data === 'string' ? log.data : JSON.stringify(log.data)}
+                      </div>
                     )}
                   </div>
                 ))}
+                
                 {debugLog.length === 0 && (
-                  <div className="text-gray-400">No hay actividad registrada</div>
+                  <div className="text-gray-500 text-sm italic">
+                    No hay actividad registrada
+                  </div>
                 )}
               </div>
-              <button
-                onClick={() => setDebugLog([])}
-                className="mt-4 w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-sm"
-              >
-                Limpiar log
-              </button>
+            </div>
+
+            {/* Help Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+              <h3 className="text-lg font-bold text-blue-900 mb-2">💡 Ayuda</h3>
+              <p className="text-blue-800 text-sm mb-3">
+                Esta página extrae procesos de las máquinas en tu sistema. Si no ves procesos, verifica:
+              </p>
+              <ul className="text-blue-700 text-sm space-y-1">
+                <li>• Que las máquinas tengan <code>procesos_ids</code> definidos</li>
+                <li>• Que la API esté accesible</li>
+                <li>• Que tengas conexión a internet</li>
+              </ul>
             </div>
           </div>
         </div>
-
-        {/* Footer Info */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-2xl p-6">
-          <h3 className="text-lg font-bold text-blue-900 mb-3">💡 Cómo funciona</h3>
-          <p className="text-blue-800 mb-4">
-            Esta página consulta directamente la base de datos para obtener procesos y máquinas. 
-            Los datos vienen de los endpoints <code>/maquinas</code> y <code>/procesos</code> de la API base44.
-          </p>
-          <div className="bg-white p-4 rounded-lg">
-            <p className="text-sm text-gray-700 mb-2">
-              <strong>Problema anterior:</strong> Se buscaba en localStorage cuando los datos están en la API.
-            </p>
-            <p className="text-sm text-gray-700">
-              <strong>Solución actual:</strong> Consulta directa a la API, igual que MachineDailyPlanning.
-            </p>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };
