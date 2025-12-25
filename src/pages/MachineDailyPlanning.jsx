@@ -145,22 +145,22 @@ function MachineDailyPlanningContent() {
   React.useEffect(() => {
     if (processes.length > 0 && machines.length > 0) {
       console.log('=== DEBUG PROCESOS Y MÁQUINAS ===', {
-  procesos: processes.map(p => ({
-    id: p.id,
-    nombre: p.proceso_nombre,
-    activo: p.activo,
-    maquinas_asignadas: p.maquinas_asignadas,
-    tipo: typeof p.maquinas_asignadas,
-    esArray: Array.isArray(p.maquinas_asignadas),
-    longitud: Array.isArray(p.maquinas_asignadas) ? p.maquinas_asignadas.length : 'N/A'
-  })),
-  maquinas: machines.map(m => ({
-    id: m.id,
-    nombre: m.machine_nombre,
-    procesos_asignados: m.procesos_asignados,
-    tipo: typeof m.procesos_asignados
-  }))
-});
+        procesos: processes.map(p => ({
+          id: p.id,
+          nombre: p.proceso_nombre,
+          activo: p.activo,
+          maquinas_asignadas: p.maquinas_asignadas,
+          tipo: typeof p.maquinas_asignadas,
+          esArray: Array.isArray(p.maquinas_asignadas),
+          longitud: Array.isArray(p.maquinas_asignadas) ? p.maquinas_asignadas.length : 'N/A'
+        })),
+        maquinas: machines.map(m => ({
+          id: m.id,
+          nombre: m.machine_nombre,
+          procesos_asignados: m.procesos_asignados,
+          tipo: typeof m.procesos_asignados
+        }))
+      });
       // Verificar un proceso de ejemplo
       const procesoEjemplo = processes[0];
       if (procesoEjemplo) {
@@ -217,18 +217,18 @@ function MachineDailyPlanningContent() {
     });
 
     console.log('✅ Empleados filtrados:', {
-  totalEmployees: employees.length,
-  fabricacionEmployees: fabricacionEmployees.length,
-  equipoSeleccionado: selectedTeam,
-  nombreEquipo: teams.find(t => t.team_key === selectedTeam)?.team_name,
-  muestraEmpleados: fabricacionEmployees.slice(0, 5).map(e => ({
-    id: e.id,
-    nombre: e.nombre,
-    equipo: e.equipo,
-    departamento: e.departamento,
-    estado: e.estado_empleado
-  }))
-});
+      totalEmployees: employees.length,
+      fabricacionEmployees: fabricacionEmployees.length,
+      equipoSeleccionado: selectedTeam,
+      nombreEquipo: teams.find(t => t.team_key === selectedTeam)?.team_name,
+      muestraEmpleados: fabricacionEmployees.slice(0, 5).map(e => ({
+        id: e.id,
+        nombre: e.nombre,
+        equipo: e.equipo,
+        departamento: e.departamento,
+        estado: e.estado_empleado
+      }))
+    });
 
     const selectedDateObj = new Date(selectedDate + 'T00:00:00');
     const ausenciasConfirmadas = absences.filter(abs => {
@@ -335,8 +335,148 @@ function MachineDailyPlanningContent() {
     savePlanningMutation.mutate(planningToSave);
   };
 
+  // ============ FUNCIÓN DE NORMALIZACIÓN ============
+  // (Añadir esta función después de todos los hooks y antes del return)
+  
+  const normalizeData = (machines, processes) => {
+    // Validar que sean arrays
+    const safeMachines = Array.isArray(machines) ? machines : [];
+    const safeProcesses = Array.isArray(processes) ? processes : [];
+
+    console.log('🔄 Normalizando datos:', {
+      máquinas: safeMachines.length,
+      procesos: safeProcesses.length
+    });
+
+    const normalizedMachines = safeMachines.map(machine => {
+      // Debug: ver campos originales
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Máquina original:', {
+          id: machine.id,
+          campos: Object.keys(machine).filter(k => 
+            k.includes('proceso') || k.includes('process') || 
+            k.includes('nombre') || k.includes('name')
+          ),
+          tieneProcesosIds: !!machine.procesos_ids,
+          tieneProcesosAsignados: !!machine.procesos_asignados
+        });
+      }
+
+      return {
+        ...machine,
+        // Asegurar nombre consistente
+        nombre: machine.nombre || machine.machine_nombre || `Máquina ${machine.id}`,
+        // Normalizar procesos asignados con múltiples estrategias
+        procesos_ids: (() => {
+          // Estrategia 1: Buscar en campos conocidos
+          const possibleFields = [
+            'procesos_asignados', 
+            'procesos_ids', 
+            'process_ids',
+            'assigned_processes',
+            'procesos'
+          ];
+          
+          for (const field of possibleFields) {
+            if (machine[field]) {
+              console.log(`✅ Campo encontrado en máquina ${machine.id}: ${field} =`, machine[field]);
+              
+              // Si es array, devolverlo
+              if (Array.isArray(machine[field])) {
+                return machine[field].filter(id => id && typeof id === 'string');
+              }
+              
+              // Si es string, intentar parsear
+              if (typeof machine[field] === 'string') {
+                try {
+                  const parsed = JSON.parse(machine[field]);
+                  if (Array.isArray(parsed)) {
+                    return parsed.filter(id => id && typeof id === 'string');
+                  }
+                } catch {
+                  // Si no es JSON, separar por comas
+                  return machine[field]
+                    .split(',')
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                }
+              }
+            }
+          }
+          
+          console.log(`⚠️ No se encontraron procesos para máquina ${machine.id}`);
+          return [];
+        })()
+      };
+    });
+
+    const normalizedProcesses = safeProcesses.map(process => {
+      return {
+        ...process,
+        // Asegurar nombre consistente
+        nombre: process.nombre || process.proceso_nombre || `Proceso ${process.id}`,
+        // Normalizar máquinas asignadas
+        maquinas_asignadas: (() => {
+          const possibleFields = [
+            'maquinas_asignadas', 
+            'machine_ids',
+            'assigned_machines',
+            'maquinas'
+          ];
+          
+          for (const field of possibleFields) {
+            if (process[field]) {
+              console.log(`✅ Campo encontrado en proceso ${process.id}: ${field} =`, process[field]);
+              
+              if (Array.isArray(process[field])) {
+                return process[field].filter(id => id && typeof id === 'string');
+              }
+              
+              if (typeof process[field] === 'string') {
+                try {
+                  const parsed = JSON.parse(process[field]);
+                  if (Array.isArray(parsed)) {
+                    return parsed.filter(id => id && typeof id === 'string');
+                  }
+                } catch {
+                  return process[field]
+                    .split(',')
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                }
+              }
+            }
+          }
+          
+          return [];
+        })()
+      };
+    });
+
+    // Log resumen
+    console.log('📊 Resumen normalización:', {
+      máquinasConProcesos: normalizedMachines.filter(m => m.procesos_ids.length > 0).length,
+      procesosConMáquinas: normalizedProcesses.filter(p => p.maquinas_asignadas.length > 0).length,
+      muestraMáquinas: normalizedMachines.slice(0, 2).map(m => ({
+        nombre: m.nombre,
+        procesos: m.procesos_ids.length
+      })),
+      muestraProcesos: normalizedProcesses.slice(0, 2).map(p => ({
+        nombre: p.nombre,
+        máquinas: p.maquinas_asignadas.length
+      }))
+    });
+
+    return { normalizedMachines, normalizedProcesses };
+  };
+
+  // Llamar la función de normalización
+  const { normalizedMachines, normalizedProcesses } = normalizeData(machines, processes);
+
+  // IDs ya seleccionados
   const alreadySelectedIds = planningData.maquinas_planificadas.map(m => m.machine_id);
 
+  // ============ RETURN ============
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -467,9 +607,10 @@ function MachineDailyPlanningContent() {
         </div>
 
         <div className="mb-6">
+          {/* IMPORTANTE: Cambiar 'machines' y 'processes' por las versiones normalizadas */}
           <MachinePlanningSelector
-            machines={machines}
-            processes={processes}
+            machines={normalizedMachines}
+            processes={normalizedProcesses}
             onAddMachine={handleAddMachine}
             alreadySelectedIds={alreadySelectedIds}
           />
