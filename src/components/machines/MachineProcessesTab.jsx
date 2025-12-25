@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +13,31 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from "sonner";
 
 export default function MachineProcessesTab({ machine }) {
+  // Validar que machine existe
+  if (!machine || !machine.id) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="text-slate-400">
+            <p className="text-sm">No se ha seleccionado una máquina</p>
+            <p className="text-xs mt-1">Selecciona una máquina para configurar sus procesos</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const [showConfig, setShowConfig] = useState(false);
   const [machineAssignments, setMachineAssignments] = useState({});
   const [editingOperators, setEditingOperators] = useState(null);
   const queryClient = useQueryClient();
+
+  // DEBUG
+  useEffect(() => {
+    console.log("=== DEBUG MachineProcessesTab ===");
+    console.log("Máquina recibida:", machine);
+    console.log("procesos_ids:", machine.procesos_ids);
+  }, [machine]);
 
   const { data: processes = [] } = useQuery({
     queryKey: ['processes'],
@@ -29,72 +50,155 @@ export default function MachineProcessesTab({ machine }) {
       machine_id: machine.id,
       activo: true 
     }),
-    enabled: !!machine.id,
+    enabled: !!machine && !!machine.id,
   });
+
+  // DEBUG: Comparar ambas fuentes
+  useEffect(() => {
+    if (machineProcesses.length > 0) {
+      console.log("MachineProcesses para esta máquina:", machineProcesses);
+      const processIdsFromMP = machineProcesses.map(mp => mp.process_id);
+      console.log("IDs de procesos desde MachineProcess:", processIdsFromMP);
+      console.log("IDs de procesos desde procesos_ids:", machine.procesos_ids);
+      
+      // Detectar inconsistencias
+      const inconsistencies = processIdsFromMP.filter(id => 
+        !machine.procesos_ids?.includes(id)
+      );
+      if (inconsistencies.length > 0) {
+        console.warn("INCONSISTENCIAS DETECTADAS:", inconsistencies);
+      }
+    }
+  }, [machineProcesses, machine.procesos_ids]);
+
+  const getMachineProcesses = () => {
+    // Validar que machine existe
+    if (!machine) return [];
+    
+    // PRIMERO intentar desde MachineProcess
+    if (machineProcesses.length > 0) {
+      return machineProcesses
+        .map(mp => {
+          const process = processes.find(p => p.id === mp.process_id);
+          if (!process || !process.activo) return null;
+          
+          return {
+            id: mp.id, // ID de MachineProcess
+            process_id: process.id,
+            processName: process.nombre,
+            processCode: process.codigo,
+            operadores_requeridos: mp.operadores_requeridos || 1,
+            orden: mp.orden || 0,
+            activo: mp.activo
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    }
+    
+    // SEGUNDO intentar desde procesos_ids (fallback)
+    if (machine.procesos_ids && Array.isArray(machine.procesos_ids)) {
+      return machine.procesos_ids
+        .map(processId => {
+          const process = processes.find(p => p.id === processId);
+          if (!process) return null;
+          
+          return {
+            id: `temp-${processId}`, // ID temporal
+            process_id: processId,
+            processName: process.nombre,
+            processCode: process.codigo,
+            operadores_requeridos: 1, // Default
+            orden: 0, // Default
+            activo: true
+          };
+        })
+        .filter(Boolean);
+    }
+    
+    return [];
+  };
 
   const saveMachineAssignmentsMutation = useMutation({
     mutationFn: async (assignments) => {
-      const existing = machineProcesses.filter(mp => mp.machine_id === machine.id);
-      
-      // Eliminar asignaciones existentes
-      if (existing.length > 0) {
-        await Promise.all(existing.map(mp => base44.entities.MachineProcess.delete(mp.id)));
+      // Validar que machine existe
+      if (!machine || !machine.id) {
+        throw new Error("Máquina no válida");
       }
       
-      // Crear nuevas asignaciones
-      const newAssignments = Object.entries(assignments)
+      // 1. Obtener procesos seleccionados
+      const selectedProcessIds = Object.entries(assignments)
         .filter(([_, assigned]) => assigned.checked)
         .map(([processId, assigned]) => ({
+          processId,
+          operadores: assigned.operadores || 1
+        }));
+      
+      // 2. Eliminar asignaciones existentes en MachineProcess
+      const existingMPs = machineProcesses.filter(mp => mp.machine_id === machine.id);
+      if (existingMPs.length > 0) {
+        await Promise.all(
+          existingMPs.map(mp => base44.entities.MachineProcess.delete(mp.id))
+        );
+      }
+      
+      // 3. Crear nuevas asignaciones en MachineProcess
+      if (selectedProcessIds.length > 0) {
+        const newMPs = selectedProcessIds.map((item, index) => ({
           machine_id: machine.id,
-          process_id: processId,
-          operadores_requeridos: assigned.operadores || 1,
+          process_id: item.processId,
+          operadores_requeridos: item.operadores,
+          orden: index,
           activo: true
         }));
-
-      if (newAssignments.length > 0) {
-        await base44.entities.MachineProcess.bulkCreate(newAssignments);
+        
+        await base44.entities.MachineProcess.bulkCreate(newMPs);
       }
+      
+      // 4. Sincronizar con procesos_ids en la máquina
+      const processIdsArray = selectedProcessIds.map(item => item.processId);
+      await base44.entities.Machine.update(machine.id, {
+        procesos_ids: processIdsArray
+      });
     },
     onSuccess: () => {
+      // Invalidar todas las queries relevantes
       queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+      queryClient.invalidateQueries({ queryKey: ['machineProcesses', machine.id] });
+      queryClient.invalidateQueries({ queryKey: ['machines'] });
+      queryClient.invalidateQueries({ queryKey: ['machine', machine.id] });
+      
       setShowConfig(false);
       setMachineAssignments({});
-      toast.success("Configuración guardada correctamente");
+      toast.success("Procesos asignados y sincronizados correctamente");
     },
     onError: (error) => {
-      toast.error(`Error al guardar: ${error.message}`);
+      toast.error(`Error: ${error.message}`);
+      console.error("Error al guardar asignaciones:", error);
     }
   });
 
-  const getMachineProcesses = () => {
-    return machineProcesses.map(mp => {
-      const process = processes.find(p => p.id === mp.process_id);
-      if (!process || !process.activo) return null;
-      
-      return {
-        ...mp,
-        processName: process.nombre,
-        processCode: process.codigo,
-        processActive: process.activo
-      };
-    }).filter(Boolean).sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  };
-
   const handleDragEnd = async (result) => {
-    if (!result.destination) return;
+    if (!result.destination || !machine) return;
 
-    const machineProcs = getMachineProcesses();
-    const items = Array.from(machineProcs);
+    const currentProcs = getMachineProcesses();
+    const items = Array.from(currentProcs);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    const updates = items.map((item, index) => 
-      base44.entities.MachineProcess.update(item.id, { orden: index })
-    );
+    // Actualizar orden en MachineProcess
+    const updates = items.map((item, index) => {
+      // Solo actualizar si tiene ID real (no temporal)
+      if (item.id.startsWith('temp-')) {
+        return Promise.resolve(); // Skip temporales
+      }
+      return base44.entities.MachineProcess.update(item.id, { orden: index });
+    });
 
     try {
       await Promise.all(updates);
       queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+      queryClient.invalidateQueries({ queryKey: ['machineProcesses', machine.id] });
       toast.success("Orden actualizado");
     } catch (error) {
       toast.error("Error al actualizar orden");
@@ -115,13 +219,25 @@ export default function MachineProcessesTab({ machine }) {
   });
 
   const handleOpenConfig = () => {
+    if (!machine) {
+      toast.error("No hay máquina seleccionada");
+      return;
+    }
+    
     const assignments = {};
     
     processes.forEach(process => {
-      const assignment = machineProcesses.find(mp => mp.process_id === process.id);
+      // Buscar en MachineProcess primero
+      const mpAssignment = machineProcesses.find(mp => 
+        mp.process_id === process.id && mp.machine_id === machine.id
+      );
+      
+      // Si no está en MachineProcess, verificar en procesos_ids
+      const isInProcesosIds = machine.procesos_ids?.includes(process.id) || false;
+      
       assignments[process.id] = {
-        checked: !!assignment,
-        operadores: assignment?.operadores_requeridos || process.operadores_requeridos || 1
+        checked: !!mpAssignment || isInProcesosIds,
+        operadores: mpAssignment?.operadores_requeridos || 1
       };
     });
     
@@ -135,8 +251,7 @@ export default function MachineProcessesTab({ machine }) {
       ...machineAssignments,
       [processId]: {
         checked: !machineAssignments[processId]?.checked,
-        operadores: machineAssignments[processId]?.operadores || 
-                   process?.operadores_requeridos || 1
+        operadores: machineAssignments[processId]?.operadores || 1
       }
     });
   };
@@ -152,6 +267,10 @@ export default function MachineProcessesTab({ machine }) {
   };
 
   const handleSaveConfig = () => {
+    if (!machine) {
+      toast.error("No hay máquina seleccionada");
+      return;
+    }
     saveMachineAssignmentsMutation.mutate(machineAssignments);
   };
 
@@ -178,6 +297,10 @@ export default function MachineProcessesTab({ machine }) {
           {machineProcs.length === 0 ? (
             <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-lg border-2 border-dashed">
               <p className="text-sm">No hay procesos configurados para esta máquina</p>
+              <div className="text-xs text-slate-500 mt-2 space-y-1">
+                <div>MachineProcess: {machineProcesses.length} registros</div>
+                <div>procesos_ids: {machine.procesos_ids?.length || 0} IDs</div>
+              </div>
               <Button
                 variant="link"
                 size="sm"
@@ -267,8 +390,8 @@ export default function MachineProcessesTab({ machine }) {
                               ) : (
                                 <Badge 
                                   className="ml-2 bg-purple-100 text-purple-800 shrink-0 cursor-pointer hover:bg-purple-200 transition-colors"
-                                  onClick={() => setEditingOperators(mp.id)}
-                                  title="Click para editar operadores"
+                                  onClick={() => !mp.id.startsWith('temp-') && setEditingOperators(mp.id)}
+                                  title={mp.id.startsWith('temp-') ? "Crear asignación primero" : "Click para editar operadores"}
                                 >
                                   {mp.operadores_requeridos} op.
                                   <Edit className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -292,7 +415,7 @@ export default function MachineProcessesTab({ machine }) {
         <Dialog open={true} onOpenChange={() => setShowConfig(false)}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Configurar Procesos: {machine.nombre}</DialogTitle>
+              <DialogTitle>Configurar Procesos: {machine?.nombre || 'Máquina no encontrada'}</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -301,14 +424,18 @@ export default function MachineProcessesTab({ machine }) {
                   <div className="flex items-center gap-4 text-sm">
                     <div>
                       <span className="text-slate-700">Código:</span>
-                      <span className="font-semibold ml-2">{machine.codigo}</span>
+                      <span className="font-semibold ml-2">{machine?.codigo || 'N/A'}</span>
                     </div>
-                    {machine.ubicacion && (
+                    {machine?.ubicacion && (
                       <div>
                         <span className="text-slate-700">Ubicación:</span>
                         <span className="font-semibold ml-2">{machine.ubicacion}</span>
                       </div>
                     )}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-2">
+                    <div>Fuente actual: {machineProcesses.length > 0 ? 'MachineProcess' : 'procesos_ids'}</div>
+                    <div>Procesos detectados: {machineProcs.length}</div>
                   </div>
                 </CardContent>
               </Card>
