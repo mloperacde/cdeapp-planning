@@ -23,7 +23,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import ProtectedPage from "../components/roles/ProtectedPage";
+import PermissionCheck from "../components/roles/PermissionCheck";
 import Breadcrumbs from "../components/common/Breadcrumbs";
 import EmployeeAvailabilityPanel from "../components/availability/EmployeeAvailabilityPanel";
 import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
@@ -32,9 +32,9 @@ import AvailabilityDebugPanel from "../components/planning/AvailabilityDebugPane
 
 export default function MachineDailyPlanningPage() {
   return (
-    <ProtectedPage module="planning" action="create">
+    <PermissionCheck module="planning" action="create">
       <MachineDailyPlanningContent />
-    </ProtectedPage>
+    </PermissionCheck>
   );
 }
 
