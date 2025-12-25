@@ -19,32 +19,37 @@ export default function MachineProcessesTab({ machine }) {
   const queryClient = useQueryClient();
 
   const { data: processes = [] } = useQuery({
-  queryKey: ['processes'],
-  queryFn: () => base44.entities.Process.filter({ activo: true }),
-});
+    queryKey: ['processes'],
+    queryFn: () => base44.entities.Process.filter({ activo: true }),
+  });
 
-const { data: machineProcesses = [] } = useQuery({
-  queryKey: ['machineProcesses', machine.id],
-  queryFn: () => base44.entities.MachineProcess.filter({ 
-    machine_id: machine.id,
-    activo: true 
-  }),
-  enabled: !!machine.id,
-});
+  const { data: machineProcesses = [] } = useQuery({
+    queryKey: ['machineProcesses', machine.id],
+    queryFn: () => base44.entities.MachineProcess.filter({ 
+      machine_id: machine.id,
+      activo: true 
+    }),
+    enabled: !!machine.id,
+  });
 
-  const getMachineProcesses = () => {
-  return machineProcesses.map(mp => {
-    const process = processes.find(p => p.id === mp.process_id);
-    if (!process || !process.activo) return null;
-    
-    return {
-      ...mp,
-      processName: process.nombre,
-      processCode: process.codigo,
-      processActive: process.activo
-    };
-  }).filter(Boolean).sort((a, b) => (a.orden || 0) - (b.orden || 0));
-};
+  const saveMachineAssignmentsMutation = useMutation({
+    mutationFn: async (assignments) => {
+      const existing = machineProcesses.filter(mp => mp.machine_id === machine.id);
+      
+      // Eliminar asignaciones existentes
+      if (existing.length > 0) {
+        await Promise.all(existing.map(mp => base44.entities.MachineProcess.delete(mp.id)));
+      }
+      
+      // Crear nuevas asignaciones
+      const newAssignments = Object.entries(assignments)
+        .filter(([_, assigned]) => assigned.checked)
+        .map(([processId, assigned]) => ({
+          machine_id: machine.id,
+          process_id: processId,
+          operadores_requeridos: assigned.operadores || 1,
+          activo: true
+        }));
 
       if (newAssignments.length > 0) {
         await base44.entities.MachineProcess.bulkCreate(newAssignments);
@@ -56,19 +61,23 @@ const { data: machineProcesses = [] } = useQuery({
       setMachineAssignments({});
       toast.success("Configuración guardada correctamente");
     },
+    onError: (error) => {
+      toast.error(`Error al guardar: ${error.message}`);
+    }
   });
 
   const getMachineProcesses = () => {
-    const machineProcs = machineProcesses.filter(mp => mp.machine_id === machine.id && mp.activo);
-    return machineProcs.map(mp => {
+    return machineProcesses.map(mp => {
       const process = processes.find(p => p.id === mp.process_id);
+      if (!process || !process.activo) return null;
+      
       return {
         ...mp,
-        processName: process?.nombre,
-        processCode: process?.codigo,
-        processActive: process?.activo
+        processName: process.nombre,
+        processCode: process.codigo,
+        processActive: process.activo
       };
-    }).filter(mp => mp.processName).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    }).filter(Boolean).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   };
 
   const handleDragEnd = async (result) => {
@@ -93,8 +102,8 @@ const { data: machineProcesses = [] } = useQuery({
   };
 
   const updateOperatorsMutation = useMutation({
-    mutationFn: ({ machineProcessId, operadores }) => {
-      return base44.entities.MachineProcess.update(machineProcessId, {
+    mutationFn: async ({ machineProcessId, operadores }) => {
+      return await base44.entities.MachineProcess.update(machineProcessId, {
         operadores_requeridos: operadores
       });
     },
@@ -106,11 +115,10 @@ const { data: machineProcesses = [] } = useQuery({
   });
 
   const handleOpenConfig = () => {
-    const existing = machineProcesses.filter(mp => mp.machine_id === machine.id);
     const assignments = {};
     
     processes.forEach(process => {
-      const assignment = existing.find(mp => mp.process_id === process.id);
+      const assignment = machineProcesses.find(mp => mp.process_id === process.id);
       assignments[process.id] = {
         checked: !!assignment,
         operadores: assignment?.operadores_requeridos || process.operadores_requeridos || 1
