@@ -946,3 +946,5 @@ export default function ProcessConfigurationPage() {
                 Complete los datos del proceso. Los campos con * son obligatorios.
               </DialogDescription>
             </DialogHeader>
+
+            <form onSubmit={handleSubmit} className="
