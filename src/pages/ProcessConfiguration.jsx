@@ -524,7 +524,7 @@ export default function ProcessConfiguration() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => router.push('/admin/machinemaster')}
+                            onClick={() => navigate('/MachineMaster')}
                           >
                             Ir a Máquinas
                           </Button>
