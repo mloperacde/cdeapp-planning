@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from 'next/router';
+import { useRouter } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -55,7 +55,7 @@ import { toast } from "sonner";
 // import MachineProcessesTab from "@/components/machines/MachineProcessesTab";
 
 export default function ProcessConfiguration() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
