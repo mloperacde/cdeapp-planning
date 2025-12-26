@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
