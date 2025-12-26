@@ -94,11 +94,11 @@ export default function ProcessConfiguration() {
       try {
         console.log("🔄 Cargando máquinas...");
         // Primero prueba list() para ver todas
-        const allMachines = await base44.entities.Machine.list();
+        const allMachines = await base44.entities.MachineMaster.list();
         console.log("✅ Máquinas cargadas (list):", allMachines);
         
         // Luego prueba con filtro activo
-        const activeMachines = await base44.entities.Machine.filter({ activo: true });
+        const activeMachines = await base44.entities.MachineMaster.filter({ activo: true });
         console.log("✅ Máquinas activas (filter):", activeMachines);
         
         return activeMachines;
