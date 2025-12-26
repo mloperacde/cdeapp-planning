@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from 'next/navigation'; // AGREGADO
 import { 
   Card, 
   CardContent, 
@@ -52,6 +53,7 @@ import { toast } from "sonner";
 import MachineProcessesTab from "@/components/machines/MachineProcessesTab";
 
 export default function ProcessConfiguration() {
+  const router = useRouter(); // AGREGADO
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
@@ -300,7 +302,7 @@ export default function ProcessConfiguration() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => window.location.href = "/admin/machinemaster"}
+            onClick={() => refetchMachines()} // CORREGIDO
             title="Recargar máquinas"
             className="flex items-center gap-2"
           >
@@ -490,7 +492,7 @@ export default function ProcessConfiguration() {
                         <Package className="w-10 h-10 mx-auto text-slate-300" />
                         <p className="text-sm text-slate-500 mt-2">No hay máquinas disponibles</p>
                         <p className="text-xs text-slate-400 mt-1">
-                          Verifica que la entidad "Machine" exista y tenga datos
+                          Verifica que la entidad "MachineMaster" exista y tenga datos
                         </p>
                         <div className="flex gap-2 justify-center mt-4">
                           <Button 
@@ -504,7 +506,7 @@ export default function ProcessConfiguration() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => window.location.href = "/machines"}
+                            onClick={() => router.push('/admin/machinemaster')} // CORREGIDO
                           >
                             Ir a Máquinas
                           </Button>
