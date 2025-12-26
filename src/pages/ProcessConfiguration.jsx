@@ -300,7 +300,7 @@ export default function ProcessConfiguration() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => refetchMachines()}
+            onClick={() => window.location.href = "/admin/machinemaster"}
             title="Recargar máquinas"
             className="flex items-center gap-2"
           >
