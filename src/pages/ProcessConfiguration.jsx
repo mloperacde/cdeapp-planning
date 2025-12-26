@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from 'next/navigation'; // AGREGADO
+import { useRouter } from 'next/router'; // CORREGIDO: Cambiado de next/navigation a next/router
 import { 
   Card, 
   CardContent, 
@@ -53,7 +53,7 @@ import { toast } from "sonner";
 import MachineProcessesTab from "@/components/machines/MachineProcessesTab";
 
 export default function ProcessConfiguration() {
-  const router = useRouter(); // AGREGADO
+  const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
@@ -302,7 +302,7 @@ export default function ProcessConfiguration() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => refetchMachines()} // CORREGIDO
+            onClick={() => refetchMachines()}
             title="Recargar máquinas"
             className="flex items-center gap-2"
           >
@@ -506,7 +506,7 @@ export default function ProcessConfiguration() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => router.push('/admin/machinemaster')} // CORREGIDO
+                            onClick={() => router.push('/admin/machinemaster')}
                           >
                             Ir a Máquinas
                           </Button>
