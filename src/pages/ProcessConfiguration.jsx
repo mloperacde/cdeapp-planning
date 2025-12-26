@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from 'next/router';
@@ -50,7 +50,9 @@ import {
   Search
 } from "lucide-react";
 import { toast } from "sonner";
-import MachineProcessesTab from "@/components/machines/MachineProcessesTab";
+
+// COMENTAR temporalmente para eliminar errores
+// import MachineProcessesTab from "@/components/machines/MachineProcessesTab";
 
 export default function ProcessConfiguration() {
   const router = useRouter();
@@ -59,7 +61,7 @@ export default function ProcessConfiguration() {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const queryClient = useQueryClient();
 
-  // Form state - CORREGIDO: falta el signo = en useState
+  // Form state
   const [formData, setFormData] = useState({
     codigo: "",
     nombre: "",
@@ -70,26 +72,17 @@ export default function ProcessConfiguration() {
     activo: true
   });
 
-  // Debug: Ver entidades disponibles
-  useEffect(() => {
-    console.log("🔍 Entidades disponibles en base44:", Object.keys(base44.entities || {}));
-    console.log("🔍 ¿Existe Machine?", base44.entities?.Machine ? "Sí" : "No");
-    console.log("🔍 ¿Existe Process?", base44.entities?.Process ? "Sí" : "No");
-    console.log("🔍 ¿Existe MachineProcess?", base44.entities?.MachineProcess ? "Sí" : "No");
-  }, []);
-
   // Fetch processes
   const { data: processes = [], isLoading } = useQuery({
     queryKey: ['processes'],
     queryFn: () => base44.entities.Process.list(),
     onError: (error) => {
-      console.error("❌ Error cargando procesos:", error);
+      console.error("Error cargando procesos:", error);
       toast.error("Error al cargar procesos");
     }
   });
 
-  // ✅✅✅ CORRECCIÓN: Usar la entidad correcta "Machine" en lugar de "MachineMaster"
-  // Fetch machines for selector
+  // ✅✅✅ SOLUCIÓN: Usar un enfoque simple para cargar máquinas
   const { 
     data: machines = [], 
     isLoading: isLoadingMachines,
@@ -98,42 +91,53 @@ export default function ProcessConfiguration() {
     queryKey: ['machines'],
     queryFn: async () => {
       try {
-        console.log("🔄 Cargando máquinas desde entidad Machine...");
+        console.log("Intentando cargar máquinas...");
         
-        // Verificar si la entidad Machine existe
-        if (!base44.entities?.Machine) {
-          console.error("❌ La entidad 'Machine' no existe en base44.entities");
-          console.log("Entidades disponibles:", Object.keys(base44.entities || {}));
-          toast.error("Entidad 'Machine' no encontrada. Verifica la configuración del backend.");
-          return [];
+        // PRIMERO: Verificar qué entidades existen
+        console.log("Entidades disponibles:", Object.keys(base44.entities || {}));
+        
+        // INTENTO 1: Probar con 'Machine'
+        if (base44.entities.Machine) {
+          console.log("Usando entidad 'Machine'");
+          const result = await base44.entities.Machine.list();
+          console.log("Máquinas cargadas:", result);
+          return result;
         }
         
-        // Usar la entidad correcta: Machine (no MachineMaster)
-        const allMachines = await base44.entities.Machine.list();
-        console.log("✅ Máquinas cargadas (list):", allMachines);
+        // INTENTO 2: Probar con 'machine' (minúscula)
+        if (base44.entities.machine) {
+          console.log("Usando entidad 'machine' (minúscula)");
+          const result = await base44.entities.machine.list();
+          console.log("Máquinas cargadas:", result);
+          return result;
+        }
         
-        // Filtrar máquinas activas (si es necesario)
-        const activeMachines = allMachines.filter(machine => machine.activo !== false);
-        console.log("✅ Máquinas activas (filter):", activeMachines);
+        // INTENTO 3: Probar con 'Machines' (plural)
+        if (base44.entities.Machines) {
+          console.log("Usando entidad 'Machines' (plural)");
+          const result = await base44.entities.Machines.list();
+          console.log("Máquinas cargadas:", result);
+          return result;
+        }
         
-        return activeMachines;
+        // INTENTO 4: Probar con 'machines' (plural minúscula)
+        if (base44.entities.machines) {
+          console.log("Usando entidad 'machines' (plural minúscula)");
+          const result = await base44.entities.machines.list();
+          console.log("Máquinas cargadas:", result);
+          return result;
+        }
+        
+        // SI NADA FUNCIONA
+        console.error("No se encontró ninguna entidad de máquinas");
+        toast.error("No se encontró la entidad de máquinas. Verifica la configuración.");
+        return [];
+        
       } catch (error) {
-        console.error("❌ Error en query de máquinas:", error);
-        toast.error("Error al cargar máquinas. Verifica permisos o conexión.");
+        console.error("Error cargando máquinas:", error);
+        toast.error("Error al cargar máquinas");
         return [];
       }
-    },
-    onSuccess: (data) => {
-      console.log(`✅ ${data.length} máquinas cargadas exitosamente`);
-      if (data.length > 0 && !selectedMachine) {
-        // Auto-seleccionar primera máquina
-        setSelectedMachine(data[0]);
-        console.log("📌 Máquina auto-seleccionada:", data[0].nombre);
-      }
-    },
-    onError: (error) => {
-      console.error("❌ Error crítico cargando máquinas:", error);
-      toast.error("No se pudieron cargar las máquinas. Verifica que la entidad 'Machine' exista.");
     },
     retry: 1
   });
@@ -287,7 +291,7 @@ export default function ProcessConfiguration() {
 
   // Handle machine selection for process assignment
   const handleSelectMachine = (machine) => {
-    console.log("🖱️ Máquina seleccionada:", machine);
+    console.log("Máquina seleccionada:", machine);
     setSelectedMachine(machine);
   };
 
@@ -506,7 +510,7 @@ export default function ProcessConfiguration() {
                         <Package className="w-10 h-10 mx-auto text-slate-300" />
                         <p className="text-sm text-slate-500 mt-2">No hay máquinas disponibles</p>
                         <p className="text-xs text-slate-400 mt-1">
-                          Verifica que la entidad "Machine" exista y tenga datos
+                          Revisa la consola para ver qué entidades están disponibles
                         </p>
                         <div className="flex gap-2 justify-center mt-4">
                           <Button 
@@ -585,29 +589,21 @@ export default function ProcessConfiguration() {
                             Código: {selectedMachine.codigo} • Ubicación: {selectedMachine.ubicacion || "N/A"}
                           </p>
                           <div className="text-xs text-slate-400 mt-1">
-                            ID: {selectedMachine.id} • Procesos asignados: {selectedMachine.procesos_ids?.length || 0}
+                            ID: {selectedMachine.id}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">
                             {selectedMachine.activo ? "Activa" : "Inactiva"}
                           </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              console.log("📊 Debug máquina:", selectedMachine);
-                              toast.info("Máquina enviada a consola para debug");
-                            }}
-                            title="Debug"
-                            className="h-7 w-7 p-0"
-                          >
-                            🔍
-                          </Button>
                         </div>
                       </div>
                       
-                      <MachineProcessesTab machine={selectedMachine} />
+                      {/* Componente temporalmente deshabilitado */}
+                      <div className="text-center py-4 text-slate-400">
+                        <p>Funcionalidad de asignación de procesos pendiente</p>
+                        <p className="text-sm mt-1">El componente MachineProcessesTab está temporalmente deshabilitado</p>
+                      </div>
                     </div>
                   ) : machines.length > 0 ? (
                     <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-lg">
