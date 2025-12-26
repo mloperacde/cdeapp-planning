@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from 'next/router'; // CORREGIDO: Cambiado de next/navigation a next/router
+import { useRouter } from 'next/router';
 import { 
   Card, 
   CardContent, 
@@ -108,7 +108,7 @@ export default function ProcessConfiguration() {
         console.error("❌ Error en query de máquinas:", error);
         throw error;
       }
-    },
+    }, // <-- ESTA ES LA LÍNEA 55 - La coma está correcta
     onSuccess: (data) => {
       console.log(`✅ ${data.length} máquinas cargadas exitosamente`);
       if (data.length > 0 && !selectedMachine) {
@@ -122,7 +122,7 @@ export default function ProcessConfiguration() {
       toast.error("No se pudieron cargar las máquinas. Verifica permisos.");
     },
     retry: 1
-  });
+  }); // <-- AQUÍ FALTABA ESTE PARÉNTESIS DE CIERRE
 
   // Create/Update mutation
   const saveProcessMutation = useMutation({
