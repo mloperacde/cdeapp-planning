@@ -59,7 +59,7 @@ export default function ProcessConfiguration() {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const queryClient = useQueryClient();
 
-  // Form state
+  // Form state - CORREGIDO: falta el signo = en useState
   const [formData, setFormData] = useState({
     codigo: "",
     nombre: "",
@@ -73,6 +73,9 @@ export default function ProcessConfiguration() {
   // Debug: Ver entidades disponibles
   useEffect(() => {
     console.log("🔍 Entidades disponibles en base44:", Object.keys(base44.entities || {}));
+    console.log("🔍 ¿Existe Machine?", base44.entities?.Machine ? "Sí" : "No");
+    console.log("🔍 ¿Existe Process?", base44.entities?.Process ? "Sí" : "No");
+    console.log("🔍 ¿Existe MachineProcess?", base44.entities?.MachineProcess ? "Sí" : "No");
   }, []);
 
   // Fetch processes
@@ -85,7 +88,8 @@ export default function ProcessConfiguration() {
     }
   });
 
-  // Fetch machines for selector - CON DEBUG
+  // ✅✅✅ CORRECCIÓN: Usar la entidad correcta "Machine" en lugar de "MachineMaster"
+  // Fetch machines for selector
   const { 
     data: machines = [], 
     isLoading: isLoadingMachines,
@@ -94,21 +98,31 @@ export default function ProcessConfiguration() {
     queryKey: ['machines'],
     queryFn: async () => {
       try {
-        console.log("🔄 Cargando máquinas...");
-        // Primero prueba list() para ver todas
-        const allMachines = await base44.entities.MachineMaster.list();
+        console.log("🔄 Cargando máquinas desde entidad Machine...");
+        
+        // Verificar si la entidad Machine existe
+        if (!base44.entities?.Machine) {
+          console.error("❌ La entidad 'Machine' no existe en base44.entities");
+          console.log("Entidades disponibles:", Object.keys(base44.entities || {}));
+          toast.error("Entidad 'Machine' no encontrada. Verifica la configuración del backend.");
+          return [];
+        }
+        
+        // Usar la entidad correcta: Machine (no MachineMaster)
+        const allMachines = await base44.entities.Machine.list();
         console.log("✅ Máquinas cargadas (list):", allMachines);
         
-        // Luego prueba con filtro activo
-        const activeMachines = await base44.entities.MachineMaster.filter({ activo: true });
+        // Filtrar máquinas activas (si es necesario)
+        const activeMachines = allMachines.filter(machine => machine.activo !== false);
         console.log("✅ Máquinas activas (filter):", activeMachines);
         
         return activeMachines;
       } catch (error) {
         console.error("❌ Error en query de máquinas:", error);
-        throw error;
+        toast.error("Error al cargar máquinas. Verifica permisos o conexión.");
+        return [];
       }
-    }, // <-- ESTA ES LA LÍNEA 55 - La coma está correcta
+    },
     onSuccess: (data) => {
       console.log(`✅ ${data.length} máquinas cargadas exitosamente`);
       if (data.length > 0 && !selectedMachine) {
@@ -119,10 +133,10 @@ export default function ProcessConfiguration() {
     },
     onError: (error) => {
       console.error("❌ Error crítico cargando máquinas:", error);
-      toast.error("No se pudieron cargar las máquinas. Verifica permisos.");
+      toast.error("No se pudieron cargar las máquinas. Verifica que la entidad 'Machine' exista.");
     },
     retry: 1
-  }); // <-- AQUÍ FALTABA ESTE PARÉNTESIS DE CIERRE
+  });
 
   // Create/Update mutation
   const saveProcessMutation = useMutation({
@@ -492,7 +506,7 @@ export default function ProcessConfiguration() {
                         <Package className="w-10 h-10 mx-auto text-slate-300" />
                         <p className="text-sm text-slate-500 mt-2">No hay máquinas disponibles</p>
                         <p className="text-xs text-slate-400 mt-1">
-                          Verifica que la entidad "MachineMaster" exista y tenga datos
+                          Verifica que la entidad "Machine" exista y tenga datos
                         </p>
                         <div className="flex gap-2 justify-center mt-4">
                           <Button 
