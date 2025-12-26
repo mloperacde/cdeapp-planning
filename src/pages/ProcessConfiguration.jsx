@@ -59,6 +59,8 @@ export default function ProcessConfiguration() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProcess, setEditingProcess] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
+  const [assignments, setAssignments] = useState({});
+  const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
   const queryClient = useQueryClient();
 
   // Form state
@@ -294,85 +296,84 @@ export default function ProcessConfiguration() {
     console.log("Máquina seleccionada:", machine);
     setSelectedMachine(machine);
   };
-// Después de la función handleSelectMachine, añade:
 
-// Función para cargar asignaciones (simulada por ahora)
-const loadAssignmentsForMachine = async (machineId) => {
-  setIsLoadingAssignments(true);
-  try {
-    // En una implementación real, aquí llamarías a la API
-    console.log(`Cargando asignaciones para máquina ${machineId}`);
-    
-    // Simulamos una respuesta después de 500ms
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Simulación: algunas asignaciones aleatorias
-    const mockAssignments = {
-      [machineId]: processes
-        .filter(p => Math.random() > 0.7 && p.activo)
-        .map(p => p.id)
-    };
-    
-    setAssignments(prev => ({
-      ...prev,
-      ...mockAssignments
-    }));
-    
-  } catch (error) {
-    console.error("Error cargando asignaciones:", error);
-    toast.error("Error al cargar asignaciones");
-  } finally {
-    setIsLoadingAssignments(false);
-  }
-};
-
-// Función para alternar asignación
-const toggleAssignment = (machineId, processId, isCurrentlyAssigned) => {
-  setAssignments(prev => {
-    const currentAssignments = prev[machineId] || [];
-    
-    let newAssignments;
-    if (isCurrentlyAssigned) {
-      // Quitar asignación
-      newAssignments = currentAssignments.filter(id => id !== processId);
-      toast.success("Proceso desasignado de la máquina");
-    } else {
-      // Agregar asignación
-      newAssignments = [...currentAssignments, processId];
-      toast.success("Proceso asignado a la máquina");
+  // Función para cargar asignaciones (simulada por ahora)
+  const loadAssignmentsForMachine = async (machineId) => {
+    setIsLoadingAssignments(true);
+    try {
+      // En una implementación real, aquí llamarías a la API
+      console.log(`Cargando asignaciones para máquina ${machineId}`);
+      
+      // Simulamos una respuesta después de 500ms
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Simulación: algunas asignaciones aleatorias
+      const mockAssignments = {
+        [machineId]: processes
+          .filter(p => Math.random() > 0.7 && p.activo)
+          .map(p => p.id)
+      };
+      
+      setAssignments(prev => ({
+        ...prev,
+        ...mockAssignments
+      }));
+      
+    } catch (error) {
+      console.error("Error cargando asignaciones:", error);
+      toast.error("Error al cargar asignaciones");
+    } finally {
+      setIsLoadingAssignments(false);
     }
-    
-    return {
-      ...prev,
-      [machineId]: newAssignments
-    };
-  });
-  
-  // En una implementación real, aquí guardarías en la API
-  console.log(`Máquina ${machineId} - Proceso ${processId}: ${isCurrentlyAssigned ? 'desasignado' : 'asignado'}`);
-};
+  };
 
-// Función para guardar todas las asignaciones (opcional)
-const saveAllAssignments = async () => {
-  setIsLoadingAssignments(true);
-  try {
-    // Simulación de guardado en API
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  // Función para alternar asignación
+  const toggleAssignment = (machineId, processId, isCurrentlyAssigned) => {
+    setAssignments(prev => {
+      const currentAssignments = prev[machineId] || [];
+      
+      let newAssignments;
+      if (isCurrentlyAssigned) {
+        // Quitar asignación
+        newAssignments = currentAssignments.filter(id => id !== processId);
+        toast.success("Proceso desasignado de la máquina");
+      } else {
+        // Agregar asignación
+        newAssignments = [...currentAssignments, processId];
+        toast.success("Proceso asignado a la máquina");
+      }
+      
+      return {
+        ...prev,
+        [machineId]: newAssignments
+      };
+    });
     
-    console.log("Asignaciones a guardar:", assignments);
-    toast.success("Asignaciones guardadas correctamente");
-    
-    // Aquí podrías llamar a una API real:
-    // await base44.entities.MachineProcessAssignment.saveAll(assignments);
-    
-  } catch (error) {
-    console.error("Error guardando asignaciones:", error);
-    toast.error("Error al guardar asignaciones");
-  } finally {
-    setIsLoadingAssignments(false);
-  }
-};
-  
+    // En una implementación real, aquí guardarías en la API
+    console.log(`Máquina ${machineId} - Proceso ${processId}: ${isCurrentlyAssigned ? 'desasignado' : 'asignado'}`);
+  };
+
+  // Función para guardar todas las asignaciones (opcional)
+  const saveAllAssignments = async () => {
+    setIsLoadingAssignments(true);
+    try {
+      // Simulación de guardado en API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log("Asignaciones a guardar:", assignments);
+      toast.success("Asignaciones guardadas correctamente");
+      
+      // Aquí podrías llamar a una API real:
+      // await base44.entities.MachineProcessAssignment.saveAll(assignments);
+      
+    } catch (error) {
+      console.error("Error guardando asignaciones:", error);
+      toast.error("Error al guardar asignaciones");
+    } finally {
+      setIsLoadingAssignments(false);
+    }
+  };
+
   // Process types for select
   const processTypes = [
     { value: "produccion", label: "Producción" },
@@ -384,10 +385,7 @@ const saveAllAssignments = async () => {
     { value: "limpieza", label: "Limpieza" },
     { value: "control", label: "Control" }
   ];
-// Después de los otros estados, añade:
-const [assignments, setAssignments] = useState({}); // { machineId: [processIds] }
-const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
-  
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -562,273 +560,272 @@ const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
           </Card>
         </TabsContent>
 
-<TabsContent value="assignments">
-  <Card>
-    <CardHeader>
-      <CardTitle>Asignación de Procesos a Máquinas</CardTitle>
-      <CardDescription>
-        Selecciona una máquina y asigna los procesos disponibles
-      </CardDescription>
-          </div>
-    {Object.keys(assignments).length > 0 && (
-      <Button 
-        onClick={saveAllAssignments}
-        disabled={isLoadingAssignments}
-        className="bg-green-600 hover:bg-green-700"
-      >
-        {isLoadingAssignments ? (
-          <>
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-            Guardando...
-          </>
-        ) : (
-          <>
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Guardar asignaciones
-          </>
-        )}
-      </Button>
-    )}
-  </div>
-</CardHeader>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-6">
-        {/* Selección de Máquina */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="machine-select" className="text-base">
-              Máquina para asignar procesos
-            </Label>
-            <Badge variant="outline">
-              {machines.length} máquinas disponibles
-            </Badge>
-          </div>
-          
-          {isLoadingMachines ? (
-            <div className="flex items-center justify-center p-8 border rounded-lg">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-sm text-slate-500">Cargando máquinas...</p>
+        <TabsContent value="assignments">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Asignación de Procesos a Máquinas</CardTitle>
+                  <CardDescription>
+                    Selecciona una máquina y asigna los procesos disponibles
+                  </CardDescription>
+                </div>
+                {Object.keys(assignments).length > 0 && (
+                  <Button 
+                    onClick={saveAllAssignments}
+                    disabled={isLoadingAssignments}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {isLoadingAssignments ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Guardar asignaciones
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
-            </div>
-          ) : machines.length === 0 ? (
-            <div className="p-6 border-2 border-dashed rounded-lg text-center">
-              <Package className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500 mb-2">No hay máquinas disponibles</p>
-              <p className="text-sm text-slate-400 mb-4">
-                Verifica que las máquinas estén configuradas en el sistema
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => refetchMachines()}
-                  className="flex items-center gap-2"
-                >
-                  <Search className="w-3 h-3" />
-                  Reintentar
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate('/MachineManagement')}
-                >
-                  Gestionar Máquinas
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {machines.map((machine) => (
-                <Card 
-                  key={machine.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedMachine?.id === machine.id 
-                      ? 'ring-2 ring-blue-500 bg-blue-50' 
-                      : ''
-                  }`}
-                  onClick={() => {
-                    setSelectedMachine(machine);
-                    // Cargar asignaciones existentes para esta máquina
-                    loadAssignmentsForMachine(machine.id);
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={machine.activo ? "default" : "outline"}
-                            className={
-                              machine.activo 
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                : 'text-slate-500'
-                            }
-                          >
-                            {machine.activo ? 'Activa' : 'Inactiva'}
-                          </Badge>
-                          <span className="text-xs text-slate-500 font-mono">
-                            {machine.codigo}
-                          </span>
-                        </div>
-                        <h4 className="font-semibold text-base">{machine.nombre}</h4>
-                        {machine.ubicacion && (
-                          <p className="text-sm text-slate-600">
-                            📍 {machine.ubicacion}
-                          </p>
-                        )}
-                        
-                        {/* Contador de procesos asignados */}
-                        <div className="pt-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-500">Procesos asignados:</span>
-                            <Badge variant="secondary">
-                              {assignments[machine.id]?.length || 0}
-                            </Badge>
-                          </div>
-                        </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Selección de Máquina */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="machine-select" className="text-base">
+                      Máquina para asignar procesos
+                    </Label>
+                    <Badge variant="outline">
+                      {machines.length} máquinas disponibles
+                    </Badge>
+                  </div>
+                  
+                  {isLoadingMachines ? (
+                    <div className="flex items-center justify-center p-8 border rounded-lg">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-sm text-slate-500">Cargando máquinas...</p>
                       </div>
-                      
-                      {selectedMachine?.id === machine.id && (
-                        <CheckCircle className="w-5 h-5 text-blue-500 flex-shrink-0 ml-2" />
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                  ) : machines.length === 0 ? (
+                    <div className="p-6 border-2 border-dashed rounded-lg text-center">
+                      <Package className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                      <p className="text-slate-500 mb-2">No hay máquinas disponibles</p>
+                      <p className="text-sm text-slate-400 mb-4">
+                        Verifica que las máquinas estén configuradas en el sistema
+                      </p>
+                      <div className="flex gap-2 justify-center">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => refetchMachines()}
+                          className="flex items-center gap-2"
+                        >
+                          <Search className="w-3 h-3" />
+                          Reintentar
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate('/MachineManagement')}
+                        >
+                          Gestionar Máquinas
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {machines.map((machine) => (
+                        <Card 
+                          key={machine.id}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            selectedMachine?.id === machine.id 
+                              ? 'ring-2 ring-blue-500 bg-blue-50' 
+                              : ''
+                          }`}
+                          onClick={() => {
+                            setSelectedMachine(machine);
+                            loadAssignmentsForMachine(machine.id);
+                          }}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-2 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    variant={machine.activo ? "default" : "outline"}
+                                    className={
+                                      machine.activo 
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                        : 'text-slate-500'
+                                    }
+                                  >
+                                    {machine.activo ? 'Activa' : 'Inactiva'}
+                                  </Badge>
+                                  <span className="text-xs text-slate-500 font-mono">
+                                    {machine.codigo}
+                                  </span>
+                                </div>
+                                <h4 className="font-semibold text-base">{machine.nombre}</h4>
+                                {machine.ubicacion && (
+                                  <p className="text-sm text-slate-600">
+                                    📍 {machine.ubicacion}
+                                  </p>
+                                )}
+                                
+                                <div className="pt-2">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-500">Procesos asignados:</span>
+                                    <Badge variant="secondary">
+                                      {assignments[machine.id]?.length || 0}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {selectedMachine?.id === machine.id && (
+                                <CheckCircle className="w-5 h-5 text-blue-500 flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-        {/* Asignación de Procesos */}
-        {selectedMachine && (
-          <div className="mt-8 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">
-                  Procesos para {selectedMachine.nombre}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Selecciona los procesos que se pueden realizar en esta máquina
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">
-                  {processes.length} procesos disponibles
-                </Badge>
-              </div>
-            </div>
-            
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-slate-500">Cargando procesos...</p>
-              </div>
-            ) : processes.length === 0 ? (
-              <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                <p className="text-slate-500">No hay procesos configurados</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => navigate('/ProcessConfiguration')}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Crear primer proceso
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {processes.map((process) => {
-                  const isAssigned = assignments[selectedMachine.id]?.includes(process.id);
-                  return (
-                    <div 
-                      key={process.id}
-                      className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
-                        isAssigned 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded ${
-                          isAssigned ? 'bg-green-100' : 'bg-slate-100'
-                        }`}>
-                          <Package className={`w-5 h-5 ${
-                            isAssigned ? 'text-green-600' : 'text-slate-400'
-                          }`} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{process.nombre}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {processTypes.find(t => t.value === process.tipo)?.label || process.tipo}
-                            </Badge>
-                            <span className="text-xs font-mono text-slate-500">
-                              {process.codigo}
-                            </span>
-                          </div>
-                          {process.descripcion && (
-                            <p className="text-sm text-slate-600 mt-1 line-clamp-2">
-                              {process.descripcion}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                            <span className="flex items-center gap-1">
-                              👥 {process.operadores_requeridos || 1} operadores
-                            </span>
-                            <span className="flex items-center gap-1">
-                              ⏱️ {process.tiempo_estimado || 60} min
-                            </span>
-                            <span className={`flex items-center gap-1 ${
-                              process.activo ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {process.activo ? '✅ Activo' : '❌ Inactivo'}
-                            </span>
-                          </div>
-                        </div>
+                {/* Asignación de Procesos */}
+                {selectedMachine && (
+                  <div className="mt-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          Procesos para {selectedMachine.nombre}
+                        </h3>
+                        <p className="text-sm text-slate-500">
+                          Selecciona los procesos que se pueden realizar en esta máquina
+                        </p>
                       </div>
-                      
-                      <Button
-                        variant={isAssigned ? "destructive" : "default"}
-                        size="sm"
-                        onClick={() => toggleAssignment(selectedMachine.id, process.id, isAssigned)}
-                        disabled={!process.activo}
-                      >
-                        {isAssigned ? (
-                          <>
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Quitar
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Asignar
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {processes.length} procesos disponibles
+                        </Badge>
+                      </div>
                     </div>
-                  );
-                })}
+                    
+                    {isLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-2 text-slate-500">Cargando procesos...</p>
+                      </div>
+                    ) : processes.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                        <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                        <p className="text-slate-500">No hay procesos configurados</p>
+                        <Button 
+                          variant="outline" 
+                          className="mt-4"
+                          onClick={() => navigate('/ProcessConfiguration')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Crear primer proceso
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {processes.map((process) => {
+                          const isAssigned = assignments[selectedMachine.id]?.includes(process.id);
+                          return (
+                            <div 
+                              key={process.id}
+                              className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
+                                isAssigned 
+                                  ? 'bg-green-50 border-green-200' 
+                                  : 'hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`p-2 rounded ${
+                                  isAssigned ? 'bg-green-100' : 'bg-slate-100'
+                                }`}>
+                                  <Package className={`w-5 h-5 ${
+                                    isAssigned ? 'text-green-600' : 'text-slate-400'
+                                  }`} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{process.nombre}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {processTypes.find(t => t.value === process.tipo)?.label || process.tipo}
+                                    </Badge>
+                                    <span className="text-xs font-mono text-slate-500">
+                                      {process.codigo}
+                                    </span>
+                                  </div>
+                                  {process.descripcion && (
+                                    <p className="text-sm text-slate-600 mt-1 line-clamp-2">
+                                      {process.descripcion}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                      👥 {process.operadores_requeridos || 1} operadores
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      ⏱️ {process.tiempo_estimado || 60} min
+                                    </span>
+                                    <span className={`flex items-center gap-1 ${
+                                      process.activo ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {process.activo ? '✅ Activo' : '❌ Inactivo'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <Button
+                                variant={isAssigned ? "destructive" : "default"}
+                                size="sm"
+                                onClick={() => toggleAssignment(selectedMachine.id, process.id, isAssigned)}
+                                disabled={!process.activo}
+                              >
+                                {isAssigned ? (
+                                  <>
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Quitar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Asignar
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {!selectedMachine && machines.length > 0 && (
+                  <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                    <Settings className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                    <p className="text-slate-500">Selecciona una máquina para asignar procesos</p>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Haz clic en una máquina de la lista para comenzar
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
-        
-        {!selectedMachine && machines.length > 0 && (
-          <div className="text-center py-8 border-2 border-dashed rounded-lg">
-            <Settings className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500">Selecciona una máquina para asignar procesos</p>
-            <p className="text-sm text-slate-400 mt-1">
-              Haz clic en una máquina de la lista para comenzar
-            </p>
-          </div>
-        )}
-      </div>
-    </CardContent>
-  </Card>
-</TabsContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Dialog for creating/editing processes */}
