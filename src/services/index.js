@@ -1,9 +1,14 @@
 // src/services/index.js
 // 📦 Exportaciones unificadas de servicios
 
-export * from './machineService';
-export * from './processService';
-export * from './assignmentService';
+// Exporta cada servicio individualmente
+export { machineService } from './machineService';
+export { processService } from './processService';
+export { assignmentService } from './assignmentService';
+
+// Exporta utilidades y constantes
+export { serviceUtils } from './serviceUtils'; // Si tienes este archivo
+export { SERVICE_CONSTANTS } from './constants'; // Si tienes este archivo
 
 // Utilidades de servicio
 export const serviceUtils = {
