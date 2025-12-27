@@ -1,6 +1,3 @@
-// Temporalmente, actualizar pages.config.js para probar
-// Cambiar solo la importación de MachineMaster a la versión migrada
-import MachineMaster from './pages/machines/MachineMasterMigrated'; // Temporal
 import AbsenceManagement from './pages/AbsenceManagement';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
