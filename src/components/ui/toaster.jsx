@@ -1,44 +1,110 @@
-// src/components/ui/toaster.jsx - VERSIÓN COMPLETA AUTÓNOMA
+// src/components/ui/toaster.jsx - VERSIÓN MEJORADA
+import { useEffect, useState } from 'react';
+
 export function Toaster() {
+  const [toasts, setToasts] = useState([]);
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  // Ejemplo: auto-agregar un toast de demostración (opcional)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      // Solo para demostración - elimina esto en producción
+      toast({
+        title: "Sistema listo",
+        description: "La aplicación se ha cargado correctamente",
+        variant: "success"
+      });
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
   return (
     <div className="fixed bottom-0 right-0 z-50 p-4 w-full max-w-sm">
-      {/* Contenedor para toasts */}
-      <div className="space-y-2" id="toast-container">
-        {/* Los toasts se agregarán aquí dinámicamente */}
+      <div className="space-y-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`p-4 rounded-lg shadow-lg border animate-in slide-in-from-right ${
+              toast.variant === 'destructive' 
+                ? 'bg-red-50 border-red-200 text-red-800' 
+                : toast.variant === 'success'
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : 'bg-white border-gray-200'
+            }`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                {toast.title && <h4 className="font-semibold">{toast.title}</h4>}
+                {toast.description && <p className="text-sm mt-1">{toast.description}</p>}
+              </div>
+              <button 
+                className="text-gray-400 hover:text-gray-600 text-lg"
+                onClick={() => removeToast(toast.id)}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// Función helper para mostrar toasts (opcional)
+// Sistema global de toasts
+let toastId = 0;
+const toastCallbacks = [];
+
 export function toast({ title, description, variant = "default" }) {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  const id = ++toastId;
   
-  const colors = {
-    default: 'bg-white border',
-    destructive: 'bg-red-50 border-red-200 text-red-800',
-    success: 'bg-green-50 border-green-200 text-green-800',
-  };
-  
-  const toastEl = document.createElement('div');
-  toastEl.className = `p-4 rounded-lg shadow-lg border ${colors[variant]} animate-in slide-in-from-right`;
-  toastEl.innerHTML = `
-    <div class="flex justify-between items-start">
-      <div>
-        ${title ? `<h4 class="font-semibold">${title}</h4>` : ''}
-        ${description ? `<p class="text-sm mt-1">${description}</p>` : ''}
-      </div>
-      <button class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.parentElement.remove()">×</button>
-    </div>
-  `;
-  
-  container.appendChild(toastEl);
-  
-  // Auto-remove after 5 seconds
+  // Notificar a todos los componentes Toaster
+  toastCallbacks.forEach(callback => {
+    callback({
+      id,
+      title,
+      description,
+      variant,
+      timestamp: Date.now()
+    });
+  });
+
+  // Auto-remover después de 5 segundos
   setTimeout(() => {
-    if (toastEl.parentElement) {
-      toastEl.remove();
-    }
+    toastCallbacks.forEach(callback => {
+      callback({ id, remove: true });
+    });
   }, 5000);
+
+  return id;
+}
+
+// Para usar dentro del componente Toaster
+export function useToaster() {
+  const [toasts, setToasts] = useState([]);
+
+  useEffect(() => {
+    const handleNewToast = (newToast) => {
+      if (newToast.remove) {
+        setToasts(prev => prev.filter(t => t.id !== newToast.id));
+      } else {
+        setToasts(prev => [...prev, newToast]);
+      }
+    };
+
+    toastCallbacks.push(handleNewToast);
+
+    return () => {
+      const index = toastCallbacks.indexOf(handleNewToast);
+      if (index > -1) {
+        toastCallbacks.splice(index, 1);
+      }
+    };
+  }, []);
+
+  return toasts;
 }
