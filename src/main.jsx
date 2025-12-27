@@ -1,44 +1,53 @@
-// src/main.jsx - Solo esto, nada más
-console.log('📦 main.jsx cargado por Base44');
+// src/main.jsx - Punto de entrada mínimo
+console.log('🎬 main.jsx iniciando en Base44...');
 
-// Importar la aplicación principal
-import('./App.jsx').then(module => {
-    console.log('✅ App.jsx cargado exitosamente');
-}).catch(error => {
-    console.error('❌ Error cargando App.jsx:', error);
-    
-    // Mostrar error en pantalla si es posible
-    if (window.React && window.ReactDOM) {
-        const root = document.getElementById('app') || document.getElementById('root');
-        if (root) {
-            const errorElement = window.React.createElement('div', {
-                style: {
-                    padding: '40px',
-                    textAlign: 'center',
-                    color: '#dc2626'
-                }
-            },
-                window.React.createElement('h1', null, '❌ Error cargando la aplicación'),
-                window.React.createElement('p', null, error.message),
-                window.React.createElement('button', {
-                    onClick: () => window.location.reload(),
-                    style: {
-                        padding: '12px 24px',
-                        background: '#dc2626',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                    }
-                }, 'Recargar')
-            );
-            
-            window.ReactDOM.render(errorElement, root);
-        }
+// Solo importar React y renderizar
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+import './index.css';
+
+// Función segura para renderizar
+function renderApp() {
+  try {
+    const rootElement = document.getElementById('root');
+    if (!rootElement) {
+      throw new Error('Elemento #root no encontrado');
     }
-});
+    
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+    
+    console.log('✅ Aplicación renderizada');
+  } catch (error) {
+    console.error('💥 Error renderizando:', error);
+    document.body.innerHTML = `
+      <div style="padding: 20px; color: red;">
+        <h1>Error al cargar la aplicación</h1>
+        <p>${error.message}</p>
+        <button onclick="window.location.reload()">Recargar</button>
+      </div>
+    `;
+  }
+}
+
+// Iniciar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderApp);
+} else {
+  setTimeout(renderApp, 0);
+}
 
 // HMR para Vite
 if (import.meta.hot) {
-    import.meta.hot.accept();
+  import.meta.hot.on('vite:beforeUpdate', () => {
+    window.parent?.postMessage({ type: 'sandbox:beforeUpdate' }, '*');
+  });
+  import.meta.hot.on('vite:afterUpdate', () => {
+    window.parent?.postMessage({ type: 'sandbox:afterUpdate' }, '*');
+  });
 }
