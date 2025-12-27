@@ -1,26 +1,14 @@
-// src/main.jsx - Punto de entrada mínimo
-console.log('🎬 main.jsx iniciando en Base44...');
+// src/main.jsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css' // ✅ Importa Tailwind aquí
 
-// Solo importar React y renderizar
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import './index.css';
-
-// Función segura para renderizar
-function renderApp() {
-  try {
-    const rootElement = document.getElementById('root');
-    if (!rootElement) {
-      throw new Error('Elemento #root no encontrado');
-    }
-    
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)
     
     console.log('✅ Aplicación renderizada');
   } catch (error) {
