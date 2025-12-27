@@ -1,23 +1,2 @@
-// src/components/ui/sidebar/index.js
-export { SidebarProvider, useSidebar } from "./sidebar";
-export { default as Sidebar } from "./sidebar";
-export { default as SidebarContent } from "./sidebar";
-export { default as SidebarGroup } from "./sidebar";
-export { default as SidebarGroupContent } from "./sidebar";
-export { default as SidebarGroupLabel } from "./sidebar";
-export { default as SidebarMenu } from "./sidebar";
-export { default as SidebarMenuButton } from "./sidebar";
-export { default as SidebarMenuItem } from "./sidebar";
-export { default as SidebarHeader } from "./sidebar";
-export { default as SidebarTrigger } from "./sidebar";
-export { default as SidebarFooter } from "./sidebar";
-export { default as SidebarSeparator } from "./sidebar";
-export { default as SidebarInput } from "./sidebar";
-export { default as SidebarInset } from "./sidebar";
-export { default as SidebarRail } from "./sidebar";
-export { default as SidebarMenuAction } from "./sidebar";
-export { default as SidebarMenuBadge } from "./sidebar";
-export { default as SidebarMenuSkeleton } from "./sidebar";
-export { default as SidebarMenuSub } from "./sidebar";
-export { default as SidebarMenuSubButton } from "./sidebar";
-export { default as SidebarMenuSubItem } from "./sidebar";
+// Re-exporta todas las exportaciones nombradas del archivo sidebar.jsx
+export * from "./sidebar";
