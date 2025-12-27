@@ -1,10 +1,13 @@
-// vite.config.js - VERSIÓN CORREGIDA
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import base44 from '@base44/vite-plugin'  // ← AÑADE ESTA LÍNEA
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    base44(),  // ← AÑADE ESTA LÍNEA
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -13,7 +16,7 @@ export default defineConfig({
   server: {
     allowedHosts: true,
     hmr: {
-      overlay: false,  // Desactiva overlay temporalmente
+      overlay: false,
     },
   },
 })
