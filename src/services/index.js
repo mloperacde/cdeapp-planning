@@ -6,11 +6,7 @@ export { machineService } from './machineService';
 export { processService } from './processService';
 export { assignmentService } from './assignmentService';
 
-// Exporta utilidades y constantes
-export { serviceUtils } from './serviceUtils'; // Si tienes este archivo
-export { SERVICE_CONSTANTS } from './constants'; // Si tienes este archivo
-
-// Utilidades de servicio
+// Utilidades de servicio (definidas localmente, sin importar desde archivos inexistentes)
 export const serviceUtils = {
   /**
    * Maneja errores de servicios de forma consistente
@@ -56,7 +52,7 @@ export const serviceUtils = {
   }
 };
 
-// Constantes de servicio
+// Constantes de servicio (definidas localmente)
 export const SERVICE_CONSTANTS = {
   MAX_RETRIES: 3,
   TIMEOUT: 30000, // 30 segundos
