@@ -1,41 +1,63 @@
-import './initBase44'; // ¡PRIMERA LÍNEA!
-import React from 'react';
-// ... resto del código
-// src/main.jsx - Versión mínima y robusta
-console.log('🚀 Punto de entrada de la aplicación');
+// src/main.jsx - CARGAR initBase44 PRIMERO
+console.log('🚀 Iniciando aplicación Base44...');
 
-// Verificación crítica antes de cargar React
+// ========== CARGA NUCLEAR DE BASE44 ==========
+// ESTO DEBE SER LO PRIMERO QUE SE EJECUTE
+import './initBase44';
+
+// Verificar que base44 esté disponible
 if (!window.base44) {
-  console.error('❌ CRÍTICO: base44 no disponible en window');
-  
-  // Crear una versión mínima de emergencia
-  window.base44 = {
-    auth: {
-      me: () => Promise.resolve({ 
-        email: 'emergency@demo.com', 
-        full_name: 'Usuario Emergencia' 
-      }),
-      logout: () => Promise.resolve()
-    },
-    entities: {}
-  };
-  
-  console.warn('⚠️ base44 de emergencia creado');
+  console.error('💥 CRÍTICO: base44 no disponible incluso después de initBase44');
+  document.body.innerHTML = `
+    <div style="
+      padding: 40px;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #dc2626;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    ">
+      <h1 style="font-size: 2.5rem;">💥 ERROR CRÍTICO</h1>
+      <p style="font-size: 1.2rem; margin: 20px 0;">
+        No se pudo cargar base44. La aplicación no puede iniciar.
+      </p>
+      <button onclick="window.location.reload()" style="
+        padding: 15px 30px;
+        background: white;
+        color: #dc2626;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 10px;
+      ">
+        🔄 RECARGAR APLICACIÓN
+      </button>
+    </div>
+  `;
+  throw new Error('base44 no disponible');
 }
 
-// Ahora cargar React
+console.log('✅ base44 verificado, cargando React...');
+
+// ========== IMPORTS NORMALES ==========
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
-// Función de renderizado seguro
-function renderApp() {
+// ========== RENDERIZADO ==========
+function renderApplication() {
   try {
     const rootElement = document.getElementById('root');
     
     if (!rootElement) {
-      throw new Error('No se encontró el elemento #root');
+      throw new Error('Elemento #root no encontrado en el DOM');
     }
     
     const root = ReactDOM.createRoot(rootElement);
@@ -46,18 +68,25 @@ function renderApp() {
       </React.StrictMode>
     );
     
-    console.log('✅ Aplicación renderizada');
+    console.log('🎉 Aplicación renderizada exitosamente');
+    
+    // Verificar que todo funciona
+    setTimeout(() => {
+      if (window.base44 && window.base44.__debug) {
+        console.log('🔧 Debug nuclear disponible');
+      }
+    }, 2000);
     
   } catch (error) {
-    console.error('💥 Error fatal al renderizar:', error);
+    console.error('💥 Error al renderizar:', error);
     
-    // Pantalla de error amigable
+    // Mostrar error amigable
     document.body.innerHTML = `
       <div style="
-        font-family: system-ui, -apple-system, sans-serif;
         padding: 40px;
+        font-family: system-ui, -apple-system, sans-serif;
         text-align: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
         color: white;
         min-height: 100vh;
         display: flex;
@@ -66,50 +95,52 @@ function renderApp() {
         align-items: center;
       ">
         <h1 style="font-size: 2.5rem; margin-bottom: 20px;">
-          ⚠️ Error en la aplicación
+          ⚠️ Error al renderizar
         </h1>
         
         <div style="
-          background: rgba(255,255,255,0.1);
+          background: rgba(255,255,255,0.15);
           backdrop-filter: blur(10px);
           border-radius: 16px;
           padding: 30px;
-          max-width: 600px;
+          max-width: 700px;
           margin: 20px 0;
+          text-align: left;
         ">
-          <p style="font-size: 1.2rem; margin-bottom: 20px;">
-            ${error.message}
-          </p>
+          <h2 style="margin-top: 0;">Detalles del error:</h2>
+          <p><strong>Mensaje:</strong> ${error.message}</p>
+          <p><strong>Archivo:</strong> ${error.fileName || 'Desconocido'}</p>
+          <p><strong>Línea:</strong> ${error.lineNumber || 'Desconocida'}</p>
           
           <div style="
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
             padding: 15px;
             border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: left;
-            font-family: monospace;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
             font-size: 0.9rem;
             overflow: auto;
-            max-height: 200px;
+            max-height: 300px;
           ">
-            ${error.stack || 'No hay stack trace disponible'}
+            <pre style="margin: 0;">${error.stack || 'No hay stack trace'}</pre>
           </div>
           
-          <div style="display: flex; gap: 15px; justify-content: center;">
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
             <button onclick="window.location.reload()" style="
               padding: 12px 24px;
               background: white;
-              color: #667eea;
+              color: #dc2626;
               border: none;
               border-radius: 8px;
               font-weight: bold;
               cursor: pointer;
               font-size: 1rem;
+              min-width: 200px;
             ">
-              🔄 Recargar
+              🔄 Recargar aplicación
             </button>
             
-            <button onclick="console.log('base44:', window.base44)" style="
+            <button onclick="console.clear(); console.log('base44:', window.base44); window.base44?.__debug?.status()" style="
               padding: 12px 24px;
               background: transparent;
               color: white;
@@ -118,8 +149,23 @@ function renderApp() {
               font-weight: bold;
               cursor: pointer;
               font-size: 1rem;
+              min-width: 200px;
             ">
-              🐛 Debug
+              🐛 Ver estado base44
+            </button>
+            
+            <button onclick="window.base44?.__debug?.testAll()" style="
+              padding: 12px 24px;
+              background: #3b82f6;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              font-weight: bold;
+              cursor: pointer;
+              font-size: 1rem;
+              min-width: 200px;
+            ">
+              🧪 Probar servicios
             </button>
           </div>
         </div>
@@ -132,14 +178,15 @@ function renderApp() {
   }
 }
 
-// Iniciar cuando el DOM esté listo
+// ========== INICIAR CUANDO EL DOM ESTÉ LISTO ==========
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderApp);
+  document.addEventListener('DOMContentLoaded', renderApplication);
 } else {
-  setTimeout(renderApp, 0);
+  // El DOM ya está listo
+  setTimeout(renderApplication, 100);
 }
 
-// HMR para Vite
+// ========== HMR PARA VITE ==========
 if (import.meta.hot) {
   import.meta.hot.on('vite:beforeUpdate', () => {
     window.parent?.postMessage({ type: 'sandbox:beforeUpdate' }, '*');
