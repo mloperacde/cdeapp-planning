@@ -4,20 +4,15 @@ const base44 = window.base44;
 export const processRecoveryService = {
   recoverProcesses: async () => {
     try {
-      // 1. Obtener todos los procesos de la tabla Process
       const allProcesses = await base44.entities.Process.list();
-      
-      // 2. Obtener todas las relaciones máquina-proceso
       const allMachineProcesses = await base44.entities.MachineProcess.list();
       
-      // 3. Extraer información útil para regenerar processtypes
       const processData = allProcesses.map(process => {
         const machineRelations = allMachineProcesses.filter(
           mp => mp.process_id === process.id
         );
         
         const machineCount = new Set(machineRelations.map(mp => mp.machine_id)).size;
-        
         const maxOperators = machineRelations.reduce((max, mp) => 
           Math.max(max, mp.operadores_requeridos || 1), 1
         );
@@ -36,7 +31,7 @@ export const processRecoveryService = {
         };
       });
       
-      // 4. Opcional: Guardar en processtypes si existe
+      // Migrar a Processtype si existe
       let migrationResult = null;
       if (base44.entities.Processtype) {
         const promises = processData.map(process => 
@@ -49,7 +44,6 @@ export const processRecoveryService = {
             descripcion: process.descripcion
           })
         );
-        
         migrationResult = await Promise.all(promises);
       }
       
