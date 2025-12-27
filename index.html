@@ -5,6 +5,45 @@
     <link rel="icon" type="image/svg+xml" href="https://base44.com/logo_v2.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Base44 APP</title>
+    
+    <!-- === BLOQUEO INMEDIATO DE CDN (ejecuta ANTES que Base44) === -->
+    <script>
+      (function() {
+        console.log('🚫 Bloqueando CDN de Tailwind antes de que Base44 lo inyecte');
+        
+        // 1. INTERCEPTAR document.createElement INMEDIATAMENTE
+        const originalCreateElement = document.createElement;
+        document.createElement = function(tagName) {
+          const element = originalCreateElement.call(this, tagName);
+          
+          if (tagName.toLowerCase() === 'script') {
+            // Interceptar .src
+            Object.defineProperty(element, 'src', {
+              set(value) {
+                if (value && value.includes('tailwindcss.com')) {
+                  console.warn('❌ CDN de Tailwind BLOQUEADO por inyección temprana');
+                  return; // NO establecer
+                }
+                element.setAttribute('src', value);
+              },
+              get() {
+                return element.getAttribute('src');
+              }
+            });
+          }
+          return element;
+        };
+        
+        // 2. Eliminar cualquier CDN que ya exista
+        setInterval(() => {
+          document.querySelectorAll('script[src*="tailwindcss.com"]').forEach(s => {
+            s.remove();
+            console.log('✅ CDN eliminado (verificación periódica)');
+          });
+        }, 500);
+      })();
+    </script>
+    
   </head>
   <body>
     <div id="root"></div>
