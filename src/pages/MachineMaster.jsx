@@ -11,7 +11,6 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import ProtectedPage from "../components/roles/ProtectedPage";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
 import MachineOrderManager from "../components/machines/MachineOrderManager";
 import AdvancedSearch from "../components/common/AdvancedSearch";
@@ -20,14 +19,6 @@ import { usePagination } from "../components/utils/usePagination";
 const EMPTY_ARRAY = [];
 
 export default function MachineMasterPage() {
-  return (
-    <ProtectedPage module="machines" action="edit">
-      <MachineMasterContent />
-    </ProtectedPage>
-  );
-}
-
-function MachineMasterContent() {
   const [filters, setFilters] = useState({});
   const [editingMachine, setEditingMachine] = useState(null);
   const [showOrderManager, setShowOrderManager] = useState(false);
