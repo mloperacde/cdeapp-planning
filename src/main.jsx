@@ -1,77 +1,48 @@
-// === BASE44 CLIENT FALLBACK ===
-// Esto debe ir ANTES de cualquier import que use base44
-console.log('🔧 Configurando base44 fallback...');
+// src/main.jsx - Punto de entrada mínimo
+console.log('🎬 main.jsx iniciando en Base44...');
 
-// Función para crear base44 mock
-function createBase44Mock() {
-  console.warn('⚠️ Usando base44 mock (cliente real no disponible)');
-  
-  return {
-    auth: {
-      me: () => Promise.resolve({ 
-        email: 'demo@example.com', 
-        full_name: 'Usuario Demo',
-        role: 'admin'
-      }),
-      logout: () => {
-        console.log('Mock: logout');
-        return Promise.resolve();
-      },
-      updateMe: (data) => {
-        console.log('Mock: updateMe', data);
-        return Promise.resolve({ success: true });
-      }
-    },
-    entities: {
-      AppConfig: {
-        filter: () => Promise.resolve([{
-          config_key: 'branding',
-          app_name: 'CdeApp Planning',
-          app_subtitle: 'Demo Mode'
-        }])
-      },
-      EmployeeMasterDatabase: {
-        list: () => Promise.resolve([])
-      },
-      MachineMaster: {
-        list: () => Promise.resolve([]),
-        create: (data) => Promise.resolve({ ...data, id: Date.now() }),
-        update: (id, data) => Promise.resolve({ ...data, id })
-      },
-      Process: {
-        list: () => Promise.resolve([])
-      },
-      Assignment: {
-        list: () => Promise.resolve([])
-      }
+// Solo importar React y renderizar
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+import './index.css';
+
+// Función segura para renderizar
+function renderApp() {
+  try {
+    const rootElement = document.getElementById('root');
+    if (!rootElement) {
+      throw new Error('Elemento #root no encontrado');
     }
-  };
-}
-
-// Inyectar base44 si no existe
-if (typeof window !== 'undefined') {
-  if (!window.base44) {
-    window.base44 = createBase44Mock();
-    window.__usingBase44Mock = true;
-    console.log('✅ base44 mock inyectado');
-  } else {
-    console.log('✅ base44 real disponible');
-    window.__usingBase44Mock = false;
+    
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+    
+    console.log('✅ Aplicación renderizada');
+  } catch (error) {
+    console.error('💥 Error renderizando:', error);
+    document.body.innerHTML = `
+      <div style="padding: 20px; color: red;">
+        <h1>Error al cargar la aplicación</h1>
+        <p>${error.message}</p>
+        <button onclick="window.location.reload()">Recargar</button>
+      </div>
+    `;
   }
 }
 
-// Ahora los imports pueden usar base44 de forma segura
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from '@/App.jsx'
-import '@/index.css'
+// Iniciar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderApp);
+} else {
+  setTimeout(renderApp, 0);
+}
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  // <React.StrictMode>
-    <App />
-  // </React.StrictMode>,
-)
-
+// HMR para Vite
 if (import.meta.hot) {
   import.meta.hot.on('vite:beforeUpdate', () => {
     window.parent?.postMessage({ type: 'sandbox:beforeUpdate' }, '*');
