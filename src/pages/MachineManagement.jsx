@@ -1,3 +1,50 @@
+// En cualquier componente hijo, por ejemplo MachineManagement.jsx
+import React from 'react';
+import { useMachineService, useServiceUtils } from '@/contexts/ServicesContext';
+
+function MachineManagement() {
+  const machineService = useMachineService();
+  const serviceUtils = useServiceUtils();
+  const [machines, setMachines] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+
+  const loadMachines = async () => {
+    setLoading(true);
+    try {
+      const result = await machineService?.getMachines();
+      if (result?.success) {
+        setMachines(result.data);
+      } else {
+        console.error('Error:', result?.error);
+      }
+    } catch (error) {
+      console.error('Error cargando máquinas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadMachines();
+  }, []);
+
+  return (
+    <div>
+      <h1>Gestión de Máquinas</h1>
+      {loading ? (
+        <p>Cargando...</p>
+      ) : (
+        <ul>
+          {machines.map(machine => (
+            <li key={machine.id}>{machine.name}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export default MachineManagement;
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
