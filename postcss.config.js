@@ -1,6 +1,7 @@
-module.exports = {
+// postcss.config.js - VERSIÓN ES MODULE
+export default {
   plugins: {
-    tailwindcss: {}, // Procesa Tailwind
-    autoprefixer: {}, // Añade prefijos para compatibilidad
+    tailwindcss: {},
+    autoprefixer: {},
   },
-};
+}
