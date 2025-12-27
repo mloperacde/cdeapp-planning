@@ -598,32 +598,7 @@ const SidebarMenuSubButton = React.forwardRef(
 )
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
 
-export default{
- Sidebar,
-  SidebarProvider,
-  useSidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarTrigger,
-  SidebarFooter,
-  SidebarSeparator,
-  SidebarInput,
-  SidebarInset,
-  SidebarRail,
-  SidebarMenuAction,
-  SidebarMenuBadge,
-  SidebarMenuSkeleton,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem, 
-};
-// Exportaciones individuales nombradas
+// ✅ SOLO exportaciones nombradas (sin export default)
 export {
   Sidebar,
   SidebarProvider,
