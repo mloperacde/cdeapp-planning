@@ -1,11 +1,11 @@
-// src/services/machineService.js - VERSIÓN CORREGIDA
+// src/services/machineService.js
 const base44 = window.base44;
 
 export const machineService = {
-  // CRUD básico - CORREGIDO: Usa base44.entities.Machine
+  // CRUD básico - CORREGIDO: Usa base44.entities.Machine (NO MachineMaster)
   list: async (params = {}) => {
     try {
-      // Maneja tanto objeto como string (para compatibilidad)
+      // Maneja el formato actual: string 'orden' o objeto
       if (typeof params === 'string') {
         params = { order: params };
       }
@@ -48,27 +48,6 @@ export const machineService = {
       return await base44.entities.Machine.delete(id);
     } catch (error) {
       console.error(`Error deleting machine ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Métodos específicos del negocio
-  listWithOrder: async () => {
-    try {
-      return await base44.entities.Machine.list('orden');
-    } catch (error) {
-      console.error('Error listing machines with order:', error);
-      throw error;
-    }
-  },
-  
-  search: async (query) => {
-    try {
-      return await base44.entities.Machine.list({
-        search: query
-      });
-    } catch (error) {
-      console.error(`Error searching machines with query "${query}":`, error);
       throw error;
     }
   }
