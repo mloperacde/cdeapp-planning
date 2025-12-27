@@ -60,10 +60,10 @@ import {
 } from "@/components/ui/collapsible";
 import { ThemeProvider } from "@/components/common/ThemeProvider";  // Con alias @
 import ThemeToggle from "@/components/common/ThemeToggle";
-import ChatbotButton from "../components/chatbot/ChatbotButton";
+import ChatbotButton from "@/components/chatbot/ChatbotButton";
 import { Button } from "@/components/ui/button";
-import NotificationBell from "../components/notifications/NotificationBell";
-import ErrorBoundary from "../components/common/ErrorBoundary";
+import NotificationBell from "@/components/notifications/NotificationBell";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 
 
 export default function Layout({ children, currentPageName }) {
