@@ -64,11 +64,10 @@ import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 
-export default function Layout({ children, currentPageName }) {
+export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // ✅ CORREGIDO: Añadir estado openSections
   const [openSections, setOpenSections] = useState({});
 
   // Consultas a la API
@@ -110,7 +109,6 @@ export default function Layout({ children, currentPageName }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // ✅ CORREGIDO: Usar navigate en lugar de window.location
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isMobilePage = location.pathname.includes('Mobile');
@@ -140,7 +138,6 @@ export default function Layout({ children, currentPageName }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // ✅ CORREGIDO: Función toggleSection
   const toggleSection = (section) => {
     setOpenSections(prev => ({ 
       ...prev, 
@@ -150,7 +147,7 @@ export default function Layout({ children, currentPageName }) {
 
   const isActive = (url) => location.pathname === url;
 
-  // ✅ CORREGIDO: Manejo de estados de carga
+  // Manejo de estados de carga
   if (userLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
@@ -277,7 +274,110 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </SidebarHeader>
 
-              {/* ... resto del código del sidebar sin cambios ... */}
+              {/* 🚨 AQUÍ FALTA TODO EL CONTENIDO DEL SIDEBAR 🚨 */}
+              {/* Necesitas añadir SidebarContent con los grupos de menú */}
+              
+              <SidebarContent className="p-2">
+                {/* MÓDULO RRHH */}
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase tracking-wider px-3 py-2">
+                    👥 Recursos Humanos
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                            isActive(createPageUrl("AdvancedHRDashboard")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                          }`}
+                        >
+                          <Link to={createPageUrl("AdvancedHRDashboard")} className="flex items-center gap-3 px-3 py-2">
+                            <LayoutDashboard className="w-4 h-4" />
+                            Dashboard RRHH
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 rounded-lg mb-1 ${
+                            isActive(createPageUrl("MasterEmployeeDatabase")) ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold' : ''
+                          }`}
+                        >
+                          <Link to={createPageUrl("MasterEmployeeDatabase")} className="flex items-center gap-3 px-3 py-2">
+                            <Users className="w-4 h-4" />
+                            Base de Empleados
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* MÓDULO PLANIFICACIÓN */}
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider px-3 py-2 mt-2">
+                    📅 Planificación
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200 rounded-lg mb-1 ${
+                            isActive(createPageUrl("Timeline")) ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold' : ''
+                          }`}
+                        >
+                          <Link to={createPageUrl("Timeline")} className="flex items-center gap-3 px-3 py-2">
+                            <Activity className="w-4 h-4" />
+                            Timeline Recursos
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200 rounded-lg mb-1 ${
+                            isActive(createPageUrl("DailyPlanning")) ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold' : ''
+                          }`}
+                        >
+                          <Link to={createPageUrl("DailyPlanning")} className="flex items-center gap-3 px-3 py-2">
+                            <CalendarIcon className="w-4 h-4" />
+                            Planning Diario
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* CONFIGURACIÓN */}
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wider px-3 py-2 mt-2">
+                    ⚙️ Configuración
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200 rounded-lg mb-1 ${
+                            isActive(createPageUrl("Configuration")) ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold' : ''
+                          }`}
+                        >
+                          <Link to={createPageUrl("Configuration")} className="flex items-center gap-3 px-3 py-2">
+                            <Settings className="w-4 h-4" />
+                            General
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
             </Sidebar>
 
             <main className="flex-1 flex flex-col">
