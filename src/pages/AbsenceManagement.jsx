@@ -41,21 +41,21 @@ import { toast } from 'sonner';
 import { debounce } from "lodash";
 
 // Components
-import AbsenceDashboard from "../components/employees/AbsenceDashboard";
-import AbsenceNotifications from "../components/employees/AbsenceNotifications";
-import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
-import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
-import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
-import AbsenceCalendar from "../components/absences/AbsenceCalendar";
-import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
-import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
-import ResidualDaysManager from "../components/absences/ResidualDaysManager";
-import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
-import AbsenceForm from "../components/absences/AbsenceForm";
-import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
-import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
-import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
-import Breadcrumbs from "../components/common/Breadcrumbs";
+import AbsenceDashboard from "@/components/employees/AbsenceDashboard";
+import AbsenceNotifications from "@/components/employees/AbsenceNotifications";
+import UnifiedAbsenceManager from "@/components/absences/UnifiedAbsenceManager";
+import LongAbsenceAlert from "@/components/absences/LongAbsenceAlert";
+import AbsenceTypeManager from "@/components/absences/AbsenceTypeManager";
+import AbsenceCalendar from "@/components/absences/AbsenceCalendar";
+import AbsenceApprovalPanel from "@/components/absences/AbsenceApprovalPanel";
+import VacationPendingBalancePanel from "@/components/absences/VacationPendingBalancePanel";
+import ResidualDaysManager from "@/components/absences/ResidualDaysManager";
+import AdvancedReportGenerator from "@/components/reports/AdvancedReportGenerator";
+import AbsenceForm from "@/components/absences/AbsenceForm";
+import AttendanceAnalyzer from "@/components/attendance/AttendanceAnalyzer";
+import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "@/components/absences/VacationPendingCalculator";
+import { notifyAbsenceRequestRealtime } from "@/components/notifications/AdvancedNotificationService";
+import Breadcrumbs from "@/components/common/Breadcrumbs";
 
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
