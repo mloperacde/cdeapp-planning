@@ -6,7 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Cog, Plus, Edit2, Trash2, Eye, ArrowLeft, ArrowUpDown, Save, X } from "lucide-react";
+import { 
+  Cog, 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Eye, 
+  ArrowLeft, 
+  ArrowUpDown, 
+  Save, 
+  X,
+  RefreshCw  // <-- Añade RefreshCw aquí
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -59,6 +70,97 @@ export default function MachineMasterPage() {
       toast.success("Máquina eliminada correctamente");
     },
   });
+
+  // Función para recuperar procesos
+  const handleRecoverProcesses = async () => {
+    try {
+      toast.loading("Recuperando procesos...");
+      
+      // 1. Obtener todos los procesos de la tabla Process
+      const allProcesses = await base44.entities.Process.list();
+      
+      // 2. Obtener todas las relaciones máquina-proceso
+      const allMachineProcesses = await base44.entities.MachineProcess.list();
+      
+      // 3. Extraer información útil para regenerar processtypes
+      const processData = allProcesses.map(process => {
+        // Encontrar máquinas que usan este proceso
+        const machineRelations = allMachineProcesses.filter(
+          mp => mp.process_id === process.id
+        );
+        
+        // Calcular cuántas máquinas usan este proceso
+        const machineCount = new Set(machineRelations.map(mp => mp.machine_id)).size;
+        
+        // Obtener el número máximo de operadores requeridos
+        const maxOperators = machineRelations.reduce((max, mp) => 
+          Math.max(max, mp.operadores_requeridos || 1), 1
+        );
+        
+        return {
+          id: process.id,
+          nombre: process.nombre,
+          codigo: process.codigo,
+          descripcion: process.descripcion,
+          activo: process.activo,
+          operadores_requeridos: maxOperators,
+          maquinas_asignadas: machineCount,
+          pasos: 1, // Valor por defecto, ajusta según necesites
+          proceso_largo: false, // Valor por defecto
+          proceso_id: process.id // Para referencia
+        };
+      });
+      
+      console.log("Procesos recuperados:", processData);
+      
+      // 4. Mostrar resumen
+      toast.dismiss();
+      toast.success(`
+        Recuperados ${processData.length} procesos.
+        ${processData.filter(p => p.maquinas_asignadas > 0).length} están asignados a máquinas.
+      `);
+      
+      // 5. Opcional: Guardar en processtypes si existe esa tabla
+      try {
+        const existingProcessTypes = await base44.entities.Processtype?.list?.();
+        
+        // Si la tabla existe, puedes migrar los datos
+        if (base44.entities.Processtype) {
+          const promises = processData.map(process => 
+            base44.entities.Processtype.upsert({
+              id: process.id,
+              nombre: process.nombre,
+              pasos: process.pasos,
+              operadores_requeridos: process.operadores_requeridos,
+              codigo: process.codigo,
+              descripcion: process.descripcion
+            })
+          );
+          
+          await Promise.all(promises);
+          toast.success("Datos migrados a processtypes");
+        }
+      } catch (error) {
+        console.log("Tabla processtypes no existe o error:", error);
+      }
+      
+      // 6. Mostrar datos en consola para verificación
+      alert(`
+        PROCESOS RECUPERADOS (${processData.length})
+        =============================
+        ${processData.map(p => `
+          • ${p.nombre} (${p.codigo})
+            Operadores: ${p.operadores_requeridos}
+            Máquinas: ${p.maquinas_asignadas}
+            Activo: ${p.activo ? 'Sí' : 'No'}
+        `).join('')}
+      `);
+      
+    } catch (error) {
+      console.error("Error recuperando procesos:", error);
+      toast.error("Error al recuperar procesos: " + error.message);
+    }
+  };
 
   const filteredMachines = useMemo(() => {
     let result = machines.filter(m => {
@@ -134,6 +236,14 @@ export default function MachineMasterPage() {
             >
               <ArrowUpDown className="w-4 h-4" />
               Ordenar Máquinas
+            </Button>
+            <Button
+              onClick={handleRecoverProcesses}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Recuperar Procesos
             </Button>
             <Button
               onClick={() => setEditingMachine({ 

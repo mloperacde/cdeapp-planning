@@ -14,17 +14,8 @@ import NotificationTemplateManager from "../components/notifications/Notificatio
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function NotificationCenter() {
-  return (
-    <ProtectedPage module="configuration" action="view">
-      <NotificationCenterContent />
-    </ProtectedPage>
-  );
-}
-
-function NotificationCenterContent() {
   const [activeTab, setActiveTab] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const queryClient = useQueryClient();
