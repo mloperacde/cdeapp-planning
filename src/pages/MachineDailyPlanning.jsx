@@ -23,11 +23,11 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import Breadcrumbs from "../components/common/Breadcrumbs";
-import EmployeeAvailabilityPanel from "../components/availability/EmployeeAvailabilityPanel";
-import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
-import ViabilityTrafficLight from "../components/planning/ViabilityTrafficLight";
-import AvailabilityDebugPanel from "../components/planning/AvailabilityDebugPanel";
+import Breadcrumbs from "@/components/common/Breadcrumbs";
+import EmployeeAvailabilityPanel from "@/components/availability/EmployeeAvailabilityPanel";
+import MachinePlanningSelector from "@/components/planning/MachinePlanningSelector";
+import ViabilityTrafficLight from "@/components/planning/ViabilityTrafficLight";
+import AvailabilityDebugPanel from "@/components/planning/AvailabilityDebugPanel";
 
 export default function MachineDailyPlanningPage() {
   return <MachineDailyPlanningContent />;
