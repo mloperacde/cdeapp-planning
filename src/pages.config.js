@@ -1,4 +1,3 @@
-import TestServices from './pages/TestServices';
 import AbsenceManagement from './pages/AbsenceManagement';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
@@ -173,7 +172,6 @@ export const PAGES = {
     "UserInvitations": UserInvitations,
     "UserManual": UserManual,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "TestServices": TestServices,
 }
 
 export const pagesConfig = {

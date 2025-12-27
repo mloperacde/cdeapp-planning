@@ -14,27 +14,23 @@ export default function Breadcrumbs({ items = [] }) {
         <span>Inicio</span>
       </Link>
       
-      {items.map((item, index) => {
-        const Content = () => (
-          <>
-            <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-600" />
-            {item.url && index < items.length - 1 ? (
-              <Link 
-                to={item.url} 
-                className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              >
-                {item.label}
-              </Link>
-            ) : (
-              <span className="font-medium text-slate-900 dark:text-slate-100">
-                {item.label}
-              </span>
-            )}
-          </>
-        );
-        
-        return <Content key={index} />;
-      })}
+      {items.map((item, index) => (
+        <React.Fragment key={index}>
+          <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-600" />
+          {item.url && index < items.length - 1 ? (
+            <Link 
+              to={item.url} 
+              className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              {item.label}
+            </Link>
+          ) : (
+            <span className="font-medium text-slate-900 dark:text-slate-100">
+              {item.label}
+            </span>
+          )}
+        </React.Fragment>
+      ))}
     </nav>
   );
 }
