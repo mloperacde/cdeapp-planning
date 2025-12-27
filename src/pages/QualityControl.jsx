@@ -14,8 +14,8 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import EmployeeSelect from "../components/common/EmployeeSelect";
-import Breadcrumbs from "../components/common/Breadcrumbs";
+import EmployeeSelect from "@/components/common/EmployeeSelect";
+import Breadcrumbs from "@/components/common/Breadcrumbs";
 import { createPageUrl } from "@/utils";
 
 export default function QualityControlPage() {
