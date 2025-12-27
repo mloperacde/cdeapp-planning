@@ -622,4 +622,30 @@ export default{
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem, 
-}
+};
+// Exportaciones individuales nombradas
+export {
+  Sidebar,
+  SidebarProvider,
+  useSidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarTrigger,
+  SidebarFooter,
+  SidebarSeparator,
+  SidebarInput,
+  SidebarInset,
+  SidebarRail,
+  SidebarMenuAction,
+  SidebarMenuBadge,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+};
