@@ -1,3 +1,6 @@
+import './initBase44'; // ¡PRIMERA LÍNEA!
+import React from 'react';
+// ... resto del código
 // src/main.jsx - Versión mínima y robusta
 console.log('🚀 Punto de entrada de la aplicación');
 
