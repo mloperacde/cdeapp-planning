@@ -59,7 +59,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ThemeProvider } from "@/components/common/ThemeProvider";  // Con alias @
-import ThemeToggle from "../components/common/ThemeToggle";
+import ThemeToggle from "@/components/common/ThemeToggle";
 import ChatbotButton from "../components/chatbot/ChatbotButton";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "../components/notifications/NotificationBell";
