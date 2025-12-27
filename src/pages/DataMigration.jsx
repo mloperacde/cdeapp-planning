@@ -7,8 +7,17 @@ import { Database, Play, CheckCircle2, AlertCircle, Loader2, ArrowLeft } from "l
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function DataMigrationPage() {
+  return (
+    <ProtectedPage module="configuration" action="manage_users">
+      <DataMigrationContent />
+    </ProtectedPage>
+  );
+}
+
+function DataMigrationContent() {
   const [migrating, setMigrating] = useState(false);
   const [report, setReport] = useState(null);
 

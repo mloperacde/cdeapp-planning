@@ -27,8 +27,17 @@ import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import AIReportGenerator from "../components/reports/AIReportGenerator";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function ReportsPage() {
+  return (
+    <ProtectedPage module="reports" action="view">
+      <ReportsContent />
+    </ProtectedPage>
+  );
+}
+
+function ReportsContent() {
   const [reportType, setReportType] = useState("employees");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");

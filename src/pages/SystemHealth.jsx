@@ -20,8 +20,17 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import ProtectedPage from "../components/roles/ProtectedPage";
 
 export default function SystemHealthPage() {
+  return (
+    <ProtectedPage module="configuration" action="manage_users">
+      <SystemHealthContent />
+    </ProtectedPage>
+  );
+}
+
+function SystemHealthContent() {
   const [syncingEmployees, setSyncingEmployees] = useState(false);
   const [syncReport, setSyncReport] = useState(null);
   const [cleaningData, setCleaningData] = useState(false);
