@@ -1,3 +1,21 @@
+// src/main.jsx - Con fallback integrado
+import { initializeFallback } from './fallback';
+
+// Verificar base44 antes de cargar React
+if (!initializeFallback()) {
+  // Si se activó el fallback, detener aquí
+  console.error('🚫 Aplicación detenida - Modo fallback activado');
+} else {
+  // base44 está disponible, cargar la app normal
+  console.log('✅ base44 disponible, cargando aplicación...');
+  
+  import('./bootstrap').then(({ bootstrap }) => {
+    bootstrap();
+  }).catch(error => {
+    console.error('💥 Error cargando la aplicación:', error);
+    initializeFallback();
+  });
+}
 // src/main.jsx - CARGAR initBase44 PRIMERO
 console.log('🚀 Iniciando aplicación Base44...');
 
