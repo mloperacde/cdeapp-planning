@@ -2,52 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="https://base44.com/logo_v2.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Base44 APP</title>
-    
-    <!-- === BLOQUEO INMEDIATO DE CDN (ejecuta ANTES que Base44) === -->
-    <script>
-  (function() {
-    console.log('🚨 BLOQUEO HIPER-AGRESIVO ACTIVADO');
-    
-    // 1. Interceptar document.createElement INMEDIATAMENTE
-    const originalCreateElement = document.createElement;
-    document.createElement = function(tagName) {
-      const element = originalCreateElement.call(this, tagName);
-      
-      if (tagName.toLowerCase() === 'script') {
-        // Interceptar .src
-        Object.defineProperty(element, 'src', {
-          set(value) {
-            if (value && value.includes('tailwindcss.com')) {
-              console.warn('💥 CDN DESTRUIDO ANTES DE NACER');
-              return; // NO establecer
-            }
-            element.setAttribute('src', value);
-          },
-          get() {
-            return element.getAttribute('src');
-          }
-        });
-      }
-      return element;
-    };
-    
-    // 2. Eliminar CADA 50ms (muy agresivo)
-    const killInterval = setInterval(() => {
-      const scripts = document.querySelectorAll('script');
-      scripts.forEach(script => {
-        if (script.src && script.src.includes('tailwindcss.com')) {
-          script.remove();
-          console.log('💀 CDN ASESINADO');
-        }
-      });
-    }, 50);
-    
-    // 3. Parar después de 10 segundos (para no sobrecargar)
-    setTimeout(() => clearInterval(killInterval), 10000);
-    
-    console.log('✅ Bloqueo hiper-agresivo configurado');
-  })();
-</script>
+    <title>CdeApp Planning</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
