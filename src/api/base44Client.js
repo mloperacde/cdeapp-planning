@@ -1,8 +1,22 @@
-import { createClient } from '@base44/sdk';
-// import { getAccessToken } from '@base44/sdk/utils/auth-utils';
-
-// Create a client with authentication required
-export const base44 = createClient({
-  appId: "690cdd4205782920ba2297c8", 
-  requiresAuth: true // Ensure authentication is required for all operations
-});
+// Versión simple del cliente Base44
+export const base44 = {
+  auth: {
+    me: async () => ({ 
+      email: 'usuario@ejemplo.com', 
+      full_name: 'Usuario Demo',
+      role: 'admin'
+    }),
+    logout: () => { 
+      console.log('Cerrando sesión');
+      window.location.reload();
+    }
+  },
+  entities: {
+    AppConfig: {
+      filter: async () => []
+    },
+    EmployeeMasterDatabase: {
+      list: async () => []
+    }
+  }
+};
