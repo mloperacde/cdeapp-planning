@@ -128,8 +128,6 @@ import PredictiveMaintenance from "./PredictiveMaintenance";
 
 import ProcessConfiguration from "./ProcessConfiguration";
 
-import ProcessTypes from "./ProcessTypes";
-
 import ProductionDashboard from "./ProductionDashboard";
 
 import ProductionPlanning from "./ProductionPlanning";
@@ -303,8 +301,6 @@ const PAGES = {
     PredictiveMaintenance: PredictiveMaintenance,
     
     ProcessConfiguration: ProcessConfiguration,
-    
-    ProcessTypes: ProcessTypes,
     
     ProductionDashboard: ProductionDashboard,
     
@@ -502,8 +498,6 @@ function PagesContent() {
                 <Route path="/PredictiveMaintenance" element={<PredictiveMaintenance />} />
                 
                 <Route path="/ProcessConfiguration" element={<ProcessConfiguration />} />
-                
-                <Route path="/ProcessTypes" element={<ProcessTypes />} />
                 
                 <Route path="/ProductionDashboard" element={<ProductionDashboard />} />
                 

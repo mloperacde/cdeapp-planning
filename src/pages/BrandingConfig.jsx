@@ -3,8 +3,8 @@ import { ArrowLeft, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import Breadcrumbs from "@/components/common/Breadcrumbs";
-import BrandingConfig from "@/components/config/BrandingConfig";
+import Breadcrumbs from "../components/common/Breadcrumbs";
+import BrandingConfig from "../components/config/BrandingConfig";
 
 export default function BrandingConfigPage() {
   return (
