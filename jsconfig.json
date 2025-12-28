@@ -2,34 +2,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
-    "jsx": "react-jsx",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "lib": ["esnext", "dom"],
-    "target": "esnext",
-    "checkJs": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "types": [],
-    "forceConsistentCasingInFileNames": true,
-    "strict": false,
-    "noImplicitAny": false
+    "jsx": "react-jsx"
   },
-  "include": [
-    "src/**/*.js",
-    "src/**/*.jsx",
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    ".next",
-    "out"
-  ]
-}
+  "include": ["src/**/*.js", "src/**/*.jsx"]
+} 
