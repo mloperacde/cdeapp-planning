@@ -1,13 +1,8 @@
-// Contenido mínimo
-console.log('✅ base44Client cargado');
-export const base44 = {
-  auth: {
-    me: () => Promise.resolve({ email: 'test@test.com', full_name: 'Usuario Test' }),
-    logout: () => { console.log('logout'); window.location.reload(); }
-  },
-  entities: {
-    AppConfig: {
-      filter: () => Promise.resolve([])
-    }
-  }
-};
+import { createClient } from '@base44/sdk';
+// import { getAccessToken } from '@base44/sdk/utils/auth-utils';
+
+// Create a client with authentication required
+export const base44 = createClient({
+  appId: "690cdd4205782920ba2297c8", 
+  requiresAuth: true // Ensure authentication is required for all operations
+});

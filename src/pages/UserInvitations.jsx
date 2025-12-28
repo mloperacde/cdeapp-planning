@@ -29,7 +29,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import Breadcrumbs from "@/components/common/Breadcrumbs";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function UserInvitationsPage() {
   const [showForm, setShowForm] = useState(false);

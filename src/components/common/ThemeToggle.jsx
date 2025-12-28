@@ -1,8 +1,7 @@
-// src/components/common/ThemeToggle.jsx
-import React from 'react';
-import { Moon, Sun } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useTheme } from './ThemeProvider';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "./ThemeProvider";
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
@@ -10,14 +9,15 @@ export default function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="sm"
       onClick={toggleTheme}
-      className="h-9 w-9"
+      className="w-9 h-9 p-0"
+      title={theme === "light" ? "Activar modo oscuro" : "Activar modo claro"}
     >
-      {theme === 'light' ? (
-        <Moon className="h-4 w-4" />
+      {theme === "light" ? (
+        <Moon className="w-4 h-4" />
       ) : (
-        <Sun className="h-4 w-4" />
+        <Sun className="w-4 h-4" />
       )}
     </Button>
   );

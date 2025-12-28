@@ -1,24 +1,33 @@
-// VERSIÓN SIMPLIFICADA Y FUNCIONAL
-import { Toaster as Sonner } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Toast,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "@/components/ui/toast";
 
 export function Toaster() {
-  return (
-    <Sonner
-      position="bottom-right"
-      expand={false}
-      richColors
-      closeButton
-      toastOptions={{
-        style: {
-          background: 'var(--background)',
-          color: 'var(--foreground)',
-          border: '1px solid var(--border)',
-          fontSize: '14px',
-        },
-      }}
-    />
-  );
-}
+  const { toasts } = useToast();
 
-// Si necesitas usar toast en otros componentes, exporta la función
-export { toast } from "sonner";
+  return (
+    <ToastProvider>
+      {toasts.map(function ({ id, title, description, action, ...props }) {
+        return (
+          <Toast key={id} {...props}>
+            <div className="grid gap-1">
+              {title && <ToastTitle>{title}</ToastTitle>}
+              {description && (
+                <ToastDescription>{description}</ToastDescription>
+              )}
+            </div>
+            {action}
+            <ToastClose />
+          </Toast>
+        );
+      })}
+      <ToastViewport />
+    </ToastProvider>
+  );
+} 

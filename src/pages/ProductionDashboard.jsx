@@ -19,7 +19,7 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { format, subDays, startOfDay, endOfDay, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import Breadcrumbs from "@/components/common/Breadcrumbs";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 import { createPageUrl } from "@/utils";
 
 export default function ProductionDashboardPage() {
