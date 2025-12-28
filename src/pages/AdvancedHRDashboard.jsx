@@ -6,11 +6,11 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Settings, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import AbsenceTrendsWidget from "../components/dashboard/AbsenceTrendsWidget";
-import ApprovalTimesWidget from "../components/dashboard/ApprovalTimesWidget";
-import AbsenceDistributionWidget from "../components/dashboard/AbsenceDistributionWidget";
-import DashboardCustomizer from "../components/dashboard/DashboardCustomizer";
-import HRReportExporter from "../components/reports/HRReportExporter";
+import AbsenceTrendsWidget from "@/components/dashboard/AbsenceTrendsWidget";
+import ApprovalTimesWidget from "@/components/dashboard/ApprovalTimesWidget";
+import AbsenceDistributionWidget from "@/components/dashboard/AbsenceDistributionWidget";
+import DashboardCustomizer from "@/components/dashboard/DashboardCustomizer";
+import HRReportExporter from "@/components/reports/HRReportExporter";
 
 export default function AdvancedHRDashboard() {
   const [showCustomizer, setShowCustomizer] = useState(false);
