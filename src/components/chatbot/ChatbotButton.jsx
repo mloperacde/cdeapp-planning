@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { MessageSquare } from "lucide-react";
-import HRChatbot from "./HRChatbot";
+// src/components/chatbot/ChatbotButton.jsx
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { MessageSquare, X } from 'lucide-react';
 
 export default function ChatbotButton({ employeeId }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,17 +10,29 @@ export default function ChatbotButton({ employeeId }) {
     <>
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-40 rounded-full w-14 h-14 shadow-2xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-        title="Asistente RRHH"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg"
+        size="icon"
       >
-        <MessageSquare className="w-6 h-6" />
+        <MessageSquare className="h-6 w-6" />
       </Button>
-
-      <HRChatbot 
-        isOpen={isOpen} 
-        onClose={() => setIsOpen(false)}
-        employeeId={employeeId}
-      />
+      
+      {isOpen && (
+        <div className="fixed bottom-24 right-6 w-80 h-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border">
+          <div className="p-4 border-b">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">Asistente Virtual</h3>
+              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="p-4">
+            <p className="text-gray-600 dark:text-gray-300">
+              Hola, ¿en qué puedo ayudarte?
+            </p>
+          </div>
+        </div>
+      )}
     </>
   );
 }
