@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Cog, CheckCircle2, Package, ArrowLeft, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { usePagination } from "../components/utils/usePagination";
-import AdvancedSearch from "../components/common/AdvancedSearch";
-import MachineDetailCard from "../components/machines/MachineDetailCard";
+import { usePagination } from "@/components/utils/usePagination";
+import AdvancedSearch from "@/components/common/AdvancedSearch";
+import MachineDetailCard from "@/components/machines/MachineDetailCard";
 const EMPTY_ARRAY = [];
 
 export default function MachineManagement() {
