@@ -1,14 +1,18 @@
-import './App.css'
-import Pages from "@/pages/index.jsx"
-import { Toaster } from "@/components/ui/toaster"
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './Layout';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
-    <>
-      <Pages />
-      <Toaster />
-    </>
-  )
+    <Router>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
 }
 
-export default App 
+export default App;
