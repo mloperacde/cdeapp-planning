@@ -39,10 +39,8 @@ import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
 import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import MachineMaintenance from './pages/MachineMaintenance';
-import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
 import MaintenanceTracking from './pages/MaintenanceTracking';
-import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import Messaging from './pages/Messaging';
 import MessagingConfig from './pages/MessagingConfig';
 import Mobile from './pages/Mobile';
@@ -78,7 +76,6 @@ import SystemAudit from './pages/SystemAudit';
 import SystemHealth from './pages/SystemHealth';
 import SystemReset from './pages/SystemReset';
 import TeamConfiguration from './pages/TeamConfiguration';
-import Timeline from './pages/Timeline';
 import UserInvitations from './pages/UserInvitations';
 import UserManual from './pages/UserManual';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
@@ -90,7 +87,11 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import __Layout from './Layout.jsx';
+import Timeline from './pages/Timeline';
+import Layout from './pages/Layout';
+import MachineManagement from './pages/MachineManagement';
+import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
+import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 
 
 export const PAGES = {
@@ -135,10 +136,8 @@ export const PAGES = {
     "MachineAssignments": MachineAssignments,
     "MachineDailyPlanning": MachineDailyPlanning,
     "MachineMaintenance": MachineMaintenance,
-    "MachineManagement": MachineManagement,
     "MachineMaster": MachineMaster,
     "MaintenanceTracking": MaintenanceTracking,
-    "MasterEmployeeDatabase": MasterEmployeeDatabase,
     "Messaging": Messaging,
     "MessagingConfig": MessagingConfig,
     "Mobile": Mobile,
@@ -174,7 +173,6 @@ export const PAGES = {
     "SystemHealth": SystemHealth,
     "SystemReset": SystemReset,
     "TeamConfiguration": TeamConfiguration,
-    "Timeline": Timeline,
     "UserInvitations": UserInvitations,
     "UserManual": UserManual,
     "WorkCalendarConfig": WorkCalendarConfig,
@@ -186,10 +184,14 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
+    "Timeline": Timeline,
+    "Layout": Layout,
+    "MachineManagement": MachineManagement,
+    "MasterEmployeeDatabase": MasterEmployeeDatabase,
+    "AdvancedHRDashboard": AdvancedHRDashboard,
 }
 
 export const pagesConfig = {
     mainPage: "Timeline",
     Pages: PAGES,
-    Layout: __Layout,
 };

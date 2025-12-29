@@ -451,23 +451,6 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        <Card className="mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border-indigo-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mb-1">Hoy es</p>
-                <h2 className="text-3xl font-bold text-indigo-900 dark:text-indigo-100">
-                  {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
-                </h2>
-                <p className="text-lg text-indigo-700 dark:text-indigo-300 mt-1">
-                  {format(new Date(), "HH:mm", { locale: es })}
-                </p>
-              </div>
-              <Calendar className="w-16 h-16 text-indigo-400" />
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {enabledWidgets.map(widget => renderWidget(widget))}
         </div>
