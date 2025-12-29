@@ -57,13 +57,13 @@ export default function TimelineView({
       }
     }).filter(Boolean);
 
-    // Filtrar empleados por equipo, departamento y que estén incluidos en planning
+    // Filtrar empleados por equipo, departamento y que estén en estado Alta
     const getTeamName = (teamKey) => {
       const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === teamKey) : null;
       return team?.team_name || '';
     };
 
-    let filteredEmployees = Array.isArray(employees) ? employees.filter((emp) => emp?.incluir_en_planning !== false) : [];
+    let filteredEmployees = Array.isArray(employees) ? employees.filter((emp) => emp?.estado_empleado === 'Alta') : [];
 
     // Filtro por departamento
     if (selectedDepartment !== 'all') {
@@ -101,15 +101,13 @@ export default function TimelineView({
     
     filteredEmployees.forEach(emp => {
       const teamKey = getEmployeeTeamKey(emp);
-      const absStart = emp.ausencia_inicio ? new Date(emp.ausencia_inicio) : null;
-      const absEnd = emp.ausencia_fin ? new Date(emp.ausencia_fin) : null;
       
       employeeAvailabilityMap.set(emp.id, {
         employee: emp,
         teamKey,
         isAbsent: emp.disponibilidad === "Ausente",
-        absStart,
-        absEnd
+        absStart: null,
+        absEnd: null
       });
     });
 
