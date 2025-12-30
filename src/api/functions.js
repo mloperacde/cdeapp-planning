@@ -37,5 +37,5 @@ export const migrateEmployeeToMaster = base44.functions.migrateEmployeeToMaster;
 
 export const syncEmployeeData = base44.functions.syncEmployeeData;
 
-export const sendInvitation = base44.functions.sendInvitation;
+
 
