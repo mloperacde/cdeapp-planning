@@ -80,8 +80,6 @@ import MaintenanceTracking from "./MaintenanceTracking";
 
 import MasterEmployeeDatabase from "./MasterEmployeeDatabase";
 
-import MasterMachineView from "./MasterMachineView";
-
 import Messaging from "./Messaging";
 
 import MessagingConfig from "./MessagingConfig";
@@ -221,8 +219,6 @@ const PAGES = {
     MaintenanceTracking: MaintenanceTracking,
     
     MasterEmployeeDatabase: MasterEmployeeDatabase,
-    
-    MasterMachineView: MasterMachineView,
     
     Messaging: Messaging,
     
@@ -386,8 +382,6 @@ function PagesContent() {
                 <Route path="/MaintenanceTracking" element={<MaintenanceTracking />} />
                 
                 <Route path="/MasterEmployeeDatabase" element={<MasterEmployeeDatabase />} />
-                
-                <Route path="/MasterMachineView" element={<MasterMachineView />} />
                 
                 <Route path="/Messaging" element={<Messaging />} />
                 
