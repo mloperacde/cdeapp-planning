@@ -15,7 +15,6 @@ import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
 import DailyPlanning from './pages/DailyPlanning';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
-import Dashboard from './pages/Dashboard';
 import DataImport from './pages/DataImport';
 import DataMigration from './pages/DataMigration';
 import DepartmentManagement from './pages/DepartmentManagement';
@@ -113,7 +112,6 @@ export const PAGES = {
     "Configuration": Configuration,
     "DailyPlanning": DailyPlanning,
     "DailyShiftPlanning": DailyShiftPlanning,
-    "Dashboard": Dashboard,
     "DataImport": DataImport,
     "DataMigration": DataMigration,
     "DepartmentManagement": DepartmentManagement,
@@ -193,7 +191,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
+    mainPage: "AbsenceManagement",
     Pages: PAGES,
     Layout: __Layout,
 };
