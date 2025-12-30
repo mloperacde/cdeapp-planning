@@ -73,6 +73,8 @@ export default function Layout({ children, currentPageName }) {
     produccion: false,
   });
 
+  const brandingConfig = null; // TODO: Load from config
+
   const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
