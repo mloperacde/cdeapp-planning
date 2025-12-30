@@ -28,7 +28,7 @@ import DailyPlanning from "./DailyPlanning";
 
 import DailyShiftPlanning from "./DailyShiftPlanning";
 
-import Dashboard from "./Dashboard";
+import Dashboard from "./Dashboard.js";
 
 import DataImport from "./DataImport";
 
