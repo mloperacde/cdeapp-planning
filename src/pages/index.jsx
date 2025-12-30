@@ -60,6 +60,8 @@ import EmployeesShiftManager from "./EmployeesShiftManager";
 
 import IncentiveManagement from "./IncentiveManagement";
 
+import Layout from "./Layout";
+
 import LockerDataCleanup from "./LockerDataCleanup";
 
 import LockerDuplicateCleanup from "./LockerDuplicateCleanup";
@@ -73,6 +75,8 @@ import MachineAssignments from "./MachineAssignments";
 import MachineMaintenance from "./MachineMaintenance";
 
 import MachineManagement from "./MachineManagement";
+
+import MachineMaster from "./MachineMaster";
 
 import MaintenanceTracking from "./MaintenanceTracking";
 
