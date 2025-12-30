@@ -56,8 +56,6 @@ import EmployeeOnboarding from "./EmployeeOnboarding";
 
 import EmployeeVacations from "./EmployeeVacations";
 
-import Employees from "./Employees";
-
 import EmployeesShiftManager from "./EmployeesShiftManager";
 
 import HRDashboard from "./HRDashboard";
@@ -203,8 +201,6 @@ const PAGES = {
     EmployeeOnboarding: EmployeeOnboarding,
     
     EmployeeVacations: EmployeeVacations,
-    
-    Employees: Employees,
     
     EmployeesShiftManager: EmployeesShiftManager,
     
@@ -374,8 +370,6 @@ function PagesContent() {
                 <Route path="/EmployeeOnboarding" element={<EmployeeOnboarding />} />
                 
                 <Route path="/EmployeeVacations" element={<EmployeeVacations />} />
-                
-                <Route path="/Employees" element={<Employees />} />
                 
                 <Route path="/EmployeesShiftManager" element={<EmployeesShiftManager />} />
                 
