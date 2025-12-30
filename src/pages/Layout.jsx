@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -62,6 +60,8 @@ import {
 import { ThemeProvider } from "../components/common/ThemeProvider";
 import ThemeToggle from "../components/common/ThemeToggle";
 import ChatbotButton from "../components/chatbot/ChatbotButton";
+import NotificationBell from "../components/notifications/NotificationBell";
+import { Button } from "@/components/ui/button";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
