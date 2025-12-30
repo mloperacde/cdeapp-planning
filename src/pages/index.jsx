@@ -135,6 +135,9 @@ import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 const PAGES = {
     
