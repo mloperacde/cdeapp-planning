@@ -3,14 +3,13 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"; // Cambiado a versión estable
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { GripVertical, Save, RefreshCw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function MachineOrderManager() {
   const queryClient = useQueryClient();
   
-  // Query con mejor manejo de errores
   const { 
     data: machines = [], 
     isLoading, 
@@ -21,7 +20,6 @@ export default function MachineOrderManager() {
     queryFn: async () => {
       try {
         const response = await base44.entities.Machine.list();
-        // Ajustar según la respuesta real de base44
         return response?.data || response || [];
       } catch (error) {
         console.error('Error fetching machines:', error);
@@ -32,7 +30,6 @@ export default function MachineOrderManager() {
     refetchOnWindowFocus: false
   });
 
-  // Estado inicial ordenado
   const initialOrderedMachines = useMemo(() => {
     if (!machines || machines.length === 0) return [];
     return [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
@@ -40,7 +37,6 @@ export default function MachineOrderManager() {
 
   const [orderedMachines, setOrderedMachines] = useState(initialOrderedMachines);
 
-  // Sincronizar cuando machines cambie
   useEffect(() => {
     if (machines && machines.length > 0) {
       const sorted = [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
@@ -48,19 +44,16 @@ export default function MachineOrderManager() {
     }
   }, [machines]);
 
-  // Mutación mejorada
   const updateOrderMutation = useMutation({
     mutationFn: async (machinesWithOrder) => {
       const updates = machinesWithOrder.map((machine, index) => ({
         id: machine.id,
         data: { 
           orden: index + 1,
-          // Preservar otros campos si es necesario
           ...machine
         }
       }));
       
-      // Ejecutar secuencialmente para evitar sobrecarga
       const results = [];
       for (const update of updates) {
         try {
@@ -68,7 +61,7 @@ export default function MachineOrderManager() {
           results.push(result);
         } catch (error) {
           console.error(`Error updating machine ${update.id}:`, error);
-          throw error; // Detener si hay error crítico
+          throw error;
         }
       }
       return results;
@@ -99,7 +92,6 @@ export default function MachineOrderManager() {
       return;
     }
 
-    // Verificar cambios
     const originalOrder = [...machines].sort((a, b) => (a.orden || 0) - (b.orden || 0));
     const hasChanges = JSON.stringify(orderedMachines.map(m => m.id)) 
       !== JSON.stringify(originalOrder.map(m => m.id));
@@ -118,7 +110,6 @@ export default function MachineOrderManager() {
     toast.info("Orden restablecido al original");
   };
 
-  // Estados de carga
   if (isLoading) {
     return (
       <Card>
@@ -260,7 +251,6 @@ export default function MachineOrderManager() {
           </Droppable>
         </DragDropContext>
         
-        {/* Información adicional */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
