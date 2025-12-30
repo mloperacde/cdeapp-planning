@@ -443,8 +443,10 @@ function PagesContent() {
 
 export default function Pages() {
     return (
-        <Router>
-            <PagesContent />
-        </Router>
+        <QueryClientProvider client={queryClient}>
+            <Router>
+                <PagesContent />
+            </Router>
+        </QueryClientProvider>
     );
 }
