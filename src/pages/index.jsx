@@ -52,11 +52,7 @@ import EmployeeDataCompletion from "./EmployeeDataCompletion";
 
 import EmployeeDataCorrection from "./EmployeeDataCorrection";
 
-import EmployeeList from "./EmployeeList";
-
 import EmployeeOnboarding from "./EmployeeOnboarding";
-
-import EmployeePlanning from "./EmployeePlanning";
 
 import EmployeeVacations from "./EmployeeVacations";
 
@@ -204,11 +200,7 @@ const PAGES = {
     
     EmployeeDataCorrection: EmployeeDataCorrection,
     
-    EmployeeList: EmployeeList,
-    
     EmployeeOnboarding: EmployeeOnboarding,
-    
-    EmployeePlanning: EmployeePlanning,
     
     EmployeeVacations: EmployeeVacations,
     
@@ -379,11 +371,7 @@ function PagesContent() {
                 
                 <Route path="/EmployeeDataCorrection" element={<EmployeeDataCorrection />} />
                 
-                <Route path="/EmployeeList" element={<EmployeeList />} />
-                
                 <Route path="/EmployeeOnboarding" element={<EmployeeOnboarding />} />
-                
-                <Route path="/EmployeePlanning" element={<EmployeePlanning />} />
                 
                 <Route path="/EmployeeVacations" element={<EmployeeVacations />} />
                 
