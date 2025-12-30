@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
 import MachineOrderManager from "../components/machines/MachineOrderManager";
-import AdvancedSearch from ../components/common/AdvancedSearch";
+import AdvancedSearch from "../components/common/AdvancedSearch";
 import { usePagination } from "../components/utils/usePagination";
 
 const EMPTY_ARRAY = [];
