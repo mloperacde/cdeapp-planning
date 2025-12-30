@@ -74,8 +74,6 @@ import MachineMaintenance from "./MachineMaintenance";
 
 import MachineManagement from "./MachineManagement";
 
-import Machines from "./Machines";
-
 import MaintenanceTracking from "./MaintenanceTracking";
 
 import MasterEmployeeDatabase from "./MasterEmployeeDatabase";
@@ -213,8 +211,6 @@ const PAGES = {
     MachineMaintenance: MachineMaintenance,
     
     MachineManagement: MachineManagement,
-    
-    Machines: Machines,
     
     MaintenanceTracking: MaintenanceTracking,
     
@@ -376,8 +372,6 @@ function PagesContent() {
                 <Route path="/MachineMaintenance" element={<MachineMaintenance />} />
                 
                 <Route path="/MachineManagement" element={<MachineManagement />} />
-                
-                <Route path="/Machines" element={<Machines />} />
                 
                 <Route path="/MaintenanceTracking" element={<MaintenanceTracking />} />
                 
