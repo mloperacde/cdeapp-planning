@@ -62,22 +62,15 @@ import {
 import { ThemeProvider } from "../components/common/ThemeProvider";
 import ThemeToggle from "../components/common/ThemeToggle";
 import ChatbotButton from "../components/chatbot/ChatbotButton";
-import { Button } from "@/components/ui/button";
-import NotificationBell from "../components/notifications/NotificationBell";
-import ErrorBoundary from "../components/common/ErrorBoundary";
-
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
-
-
-  const { data: brandingConfig } = useQuery({
-    queryKey: ['appConfig', 'branding'],
-    queryFn: async () => {
-      const configs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
-      return configs[0] || null;
-    },
-    staleTime: 10 * 60 * 1000,
+  const [openSections, setOpenSections] = useState({
+    empleados: false,
+    informes: false,
+    maquinas: false,
+    planning: false,
+    produccion: false,
   });
 
   const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
@@ -86,6 +79,7 @@ export default function Layout({ children, currentPageName }) {
     retry: 1,
     staleTime: 5 * 60 * 1000, // Cache por 5 minutos
   });
+  
 
   // Detect mobile and redirect to MobileHome
   React.useEffect(() => {
@@ -117,7 +111,6 @@ export default function Layout({ children, currentPageName }) {
   const isParentActive = (urls) => urls.some(url => location.pathname === url);
 
   return (
-    <ErrorBoundary>
       <ThemeProvider>
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:to-background dark:bg-background">
@@ -740,6 +733,5 @@ export default function Layout({ children, currentPageName }) {
         </div>
         </SidebarProvider>
         </ThemeProvider>
-        </ErrorBoundary>
         );
         }
