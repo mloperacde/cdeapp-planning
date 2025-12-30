@@ -11,10 +11,10 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import MachineDetailCard from "../components/machines/MachineDetailCard";
-import MachineOrderManager from "../components/machines/MachineOrderManager";
-import AdvancedSearch from "../components/common/AdvancedSearch";
-import { usePagination } from "../components/utils/usePagination";
+import MachineDetailCard from "@/components/machines/MachineDetailCard";
+import MachineOrderManager from "@/components/machines/MachineOrderManager";
+import AdvancedSearch from "@/components/common/AdvancedSearch";
+import { usePagination } from "@/components/utils/usePagination";
 
 const EMPTY_ARRAY = [];
 
