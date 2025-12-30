@@ -58,10 +58,6 @@ import EmployeeVacations from "./EmployeeVacations";
 
 import EmployeesShiftManager from "./EmployeesShiftManager";
 
-import HRDashboard from "./HRDashboard";
-
-import Home from "./Home";
-
 import IncentiveManagement from "./IncentiveManagement";
 
 import LockerDataCleanup from "./LockerDataCleanup";
@@ -203,10 +199,6 @@ const PAGES = {
     EmployeeVacations: EmployeeVacations,
     
     EmployeesShiftManager: EmployeesShiftManager,
-    
-    HRDashboard: HRDashboard,
-    
-    Home: Home,
     
     IncentiveManagement: IncentiveManagement,
     
@@ -372,10 +364,6 @@ function PagesContent() {
                 <Route path="/EmployeeVacations" element={<EmployeeVacations />} />
                 
                 <Route path="/EmployeesShiftManager" element={<EmployeesShiftManager />} />
-                
-                <Route path="/HRDashboard" element={<HRDashboard />} />
-                
-                <Route path="/Home" element={<Home />} />
                 
                 <Route path="/IncentiveManagement" element={<IncentiveManagement />} />
                 
