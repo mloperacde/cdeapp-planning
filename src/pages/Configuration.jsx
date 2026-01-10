@@ -135,6 +135,13 @@ export default function ConfigurationPage() {
         },
 
         {
+          title: "Auditoría del Sistema",
+          description: "Análisis de entidades, seguridad y optimización",
+          icon: Shield,
+          url: createPageUrl("SystemAudit"),
+          color: "red"
+        },
+        {
           title: "Configuración Avanzada",
           description: "Estructura organizativa, puestos y sincronización",
           icon: Settings,
