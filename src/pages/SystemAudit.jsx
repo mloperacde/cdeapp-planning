@@ -46,7 +46,7 @@ export default function SystemAudit() {
     
     try {
       // FASE 2: Backup
-      toast.info("Ejecutando Fase 2: Backup y Preparación...");
+      toast.info("📦 Ejecutando Fase 2: Backup y Preparación...");
       const backupResponse = await base44.functions.invoke("auditBackup", {});
       results.backup = backupResponse.data;
       
@@ -63,30 +63,48 @@ export default function SystemAudit() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        toast.success(`✅ Fase 2 completada: ${results.backup.summary.totalRecords} registros respaldados`);
+        toast.success(`✅ Fase 2: ${results.backup.summary.totalRecords} registros respaldados`);
       }
 
-      // FASE 3: Seguridad
-      toast.info("Ejecutando Fase 3: Consolidación de Seguridad...");
-      const securityResponse = await base44.functions.invoke("consolidateSecurity", {});
-      results.security = securityResponse.data;
-      toast.success("✅ Fase 3 completada: Análisis de seguridad realizado");
+      // FASE 3: Renombrar Duplicadas
+      toast.info("🏷️ Ejecutando Fase 3: Renombrar Entidades Duplicadas...");
+      const renameResponse = await base44.functions.invoke("renameDuplicateEntities", {});
+      results.rename = renameResponse.data;
+      toast.success(`✅ Fase 3: ${results.rename.results.renamedEntities.length} entidades marcadas`);
 
-      // FASE 4: Entidades Obsoletas
-      toast.info("Ejecutando Fase 4: Identificación de Entidades Obsoletas...");
+      // FASE 4: Consolidación
+      toast.info("🔄 Ejecutando Fase 4: Consolidación de Datos...");
+      const consolidateResponse = await base44.functions.invoke("consolidateData", {});
+      results.consolidate = consolidateResponse.data;
+      toast.success(`✅ Fase 4: ${results.consolidate.results.consolidations.length} consolidaciones analizadas`);
+
+      // FASE 5: Seguridad
+      toast.info("🔒 Ejecutando Fase 5: Configuración de Seguridad...");
+      const securityResponse = await base44.functions.invoke("configureSecurityPermissions", {});
+      results.security = securityResponse.data;
+      toast.success(`✅ Fase 5: ${results.security.results.recommendations.length} recomendaciones generadas`);
+
+      // Identificar Obsoletas
+      toast.info("🔍 Identificando entidades obsoletas...");
       const obsoleteResponse = await base44.functions.invoke("markObsoleteEntities", {});
       results.obsolete = obsoleteResponse.data;
-      toast.success(`✅ Fase 4 completada: ${results.obsolete.results.obsoleteCount} entidades sin uso identificadas`);
+      toast.success(`✅ Identificadas: ${results.obsolete.results.obsoleteCount} entidades sin uso`);
+
+      // FASE 7: Limpieza Final (solo análisis)
+      toast.info("🧹 Ejecutando Fase 7: Análisis de Limpieza Final...");
+      const cleanupResponse = await base44.functions.invoke("executeFinalCleanup", {});
+      results.cleanup = cleanupResponse.data;
+      toast.success(`✅ Fase 7: ${results.cleanup.results.summary.totalCandidatesForDeletion} candidatas para eliminación`);
 
       setExecutionResults(results);
       
-      toast.success("🎉 Fases 2-4 ejecutadas exitosamente", {
-        duration: 5000,
+      toast.success("🎉 Plan de auditoría completado - Revisa resultados detallados", {
+        duration: 6000,
       });
 
     } catch (error) {
-      toast.error(`Error ejecutando fases: ${error.message}`);
-      console.error("Error en ejecución de fases:", error);
+      toast.error(`Error ejecutando plan: ${error.message}`);
+      console.error("Error en ejecución:", error);
     } finally {
       setExecuting(false);
     }
