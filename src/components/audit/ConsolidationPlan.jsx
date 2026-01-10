@@ -10,9 +10,11 @@ import {
   FileText,
   Download,
   ClipboardCheck,
+  PlayCircle,
+  Loader2,
 } from "lucide-react";
 
-export default function ConsolidationPlan({ auditData, onRefresh }) {
+export default function ConsolidationPlan({ auditData, onRefresh, onExecutePhase, executing, executionResults }) {
   const [selectedActions, setSelectedActions] = useState([]);
 
   const planSteps = [
@@ -365,6 +367,53 @@ sin aprobación previa y respaldo completo de datos.
                       </li>
                     ))}
                   </ul>
+                  
+                  {step.id === "backup" && (
+                    <Button 
+                      onClick={() => onExecutePhase("backup")}
+                      disabled={executing}
+                      className="mt-4"
+                      size="sm"
+                    >
+                      {executing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                      Ejecutar Backup
+                    </Button>
+                  )}
+                  
+                  {step.id === "security" && (
+                    <Button 
+                      onClick={() => onExecutePhase("security")}
+                      disabled={executing}
+                      className="mt-4"
+                      size="sm"
+                      variant="outline"
+                    >
+                      {executing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                      Analizar Seguridad
+                    </Button>
+                  )}
+                  
+                  {step.id === "cleanup" && (
+                    <Button 
+                      onClick={() => onExecutePhase("obsolete")}
+                      disabled={executing}
+                      className="mt-4"
+                      size="sm"
+                      variant="outline"
+                    >
+                      {executing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                      Identificar Obsoletas
+                    </Button>
+                  )}
+                  
+                  {executionResults?.[step.id] && (
+                    <Alert className="mt-4 border-green-200 bg-green-50">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      <AlertDescription className="text-green-900 text-xs">
+                        Fase ejecutada correctamente
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </div>
             </div>

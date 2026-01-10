@@ -16,9 +16,12 @@ import {
   ArrowLeft,
   Filter,
   Search,
+  PlayCircle,
+  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { toast } from "sonner";
 import EntityAuditTab from "../components/audit/EntityAuditTab";
 import SecurityAuditTab from "../components/audit/SecurityAuditTab";
 import DuplicatesTab from "../components/audit/DuplicatesTab";
@@ -28,6 +31,8 @@ export default function SystemAudit() {
   const [auditData, setAuditData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [executing, setExecuting] = useState(false);
+  const [executionResults, setExecutionResults] = useState(null);
 
   useEffect(() => {
     performAudit();
@@ -361,6 +366,56 @@ export default function SystemAudit() {
     };
   };
 
+  const executePhase = async (phaseId) => {
+    setExecuting(true);
+    try {
+      let result;
+      
+      if (phaseId === "backup") {
+        toast.info("Generando backup completo...");
+        const response = await base44.functions.invoke("auditBackup", {});
+        result = response.data;
+        
+        // Descargar backup automáticamente
+        if (result.success) {
+          const blob = new Blob([JSON.stringify(result.backup, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `backup-${new Date().toISOString().split("T")[0]}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          toast.success(`Backup completado: ${result.summary.totalRecords} registros exportados`);
+        }
+      } else if (phaseId === "security") {
+        toast.info("Consolidando seguridad...");
+        const response = await base44.functions.invoke("consolidateSecurity", {});
+        result = response.data;
+        toast.success("Análisis de seguridad completado");
+      } else if (phaseId === "obsolete") {
+        toast.info("Identificando entidades obsoletas...");
+        const response = await base44.functions.invoke("markObsoleteEntities", {});
+        result = response.data;
+        toast.success(`Identificadas ${result.results.obsoleteCount} entidades sin uso`);
+      }
+      
+      setExecutionResults(prev => ({
+        ...prev,
+        [phaseId]: result
+      }));
+      
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setExecuting(false);
+    }
+  };
+
   const exportReport = () => {
     if (!auditData) return;
 
@@ -375,6 +430,7 @@ export default function SystemAudit() {
       entities: auditData.entities,
       duplicates: auditData.duplicates,
       security: auditData.securityAnalysis,
+      executionResults: executionResults || null,
     };
 
     const blob = new Blob([JSON.stringify(report, null, 2)], {
@@ -607,6 +663,9 @@ export default function SystemAudit() {
             <ConsolidationPlan
               auditData={auditData}
               onRefresh={performAudit}
+              onExecutePhase={executePhase}
+              executing={executing}
+              executionResults={executionResults}
             />
           </TabsContent>
         </Tabs>
