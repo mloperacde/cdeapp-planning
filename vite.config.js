@@ -6,12 +6,15 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
   server: {
     allowedHosts: [
-      'ta-01kefkyhbqvw1720cj1wvg74z8-5173.wo-hjnvra6nj7a427e42226w9k84.w.modal.host'
-    ]
-  }
+      '.modal.host',
+      '.wo-rt0d7kbu8q0xfzdf9zkcaikal.w.modal.host',
+      'localhost',
+      '127.0.0.1',
+    ],
+  },
 })
