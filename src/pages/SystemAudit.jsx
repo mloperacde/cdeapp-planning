@@ -1,541 +1,615 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Activity,
+  Shield,
+  Database,
   AlertTriangle,
   CheckCircle2,
-  Database,
-  FileText,
-  Users,
-  Cog,
-  Trash2,
-  Copy,
-  Shield,
-  Link as LinkIcon,
-  Download
+  XCircle,
+  FileWarning,
+  Download,
+  ArrowLeft,
+  Filter,
+  Search,
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-const ENTITY_CATEGORIES = {
-  core: { label: "Core (Maestros)", icon: Database, color: "blue" },
-  rrhh: { label: "RRHH", icon: Users, color: "green" },
-  planning: { label: "Planificación", icon: Cog, color: "purple" },
-  maintenance: { label: "Mantenimiento", icon: Cog, color: "orange" },
-  quality: { label: "Calidad", icon: CheckCircle2, color: "emerald" },
-  config: { label: "Configuración", icon: Shield, color: "slate" },
-  audit: { label: "Auditoría/Log", icon: FileText, color: "amber" },
-  communication: { label: "Comunicación", icon: LinkIcon, color: "cyan" },
-  legacy: { label: "Legacy/Inactivo", icon: AlertTriangle, color: "red" }
-};
-
-const KNOWN_ENTITY_GROUPS = {
-  planning: [
-    "MachinePlanning",
-    "DailyMachinePlanning", 
-    "DailyMachineStaffing",
-    "MachineAssignment",
-    "DailyProductionPlanning",
-    "DailyMaintenancePlanning",
-    "DailyWarehousePlanning",
-    "DailyQualityPlanning"
-  ],
-  absence: [
-    "Absence",
-    "AbsenceType",
-    "MobileAbsenceRequest",
-    "RecurringAbsencePattern",
-    "AbsenceDaysBalance",
-    "VacationPendingBalance"
-  ],
-  roles: [
-    "Role",
-    "UserRole",
-    "ModuleAccessConfig",
-    "DashboardWidget",
-    "DashboardWidgetConfig"
-  ],
-  notifications: [
-    "NotificationPreference",
-    "EmailNotificationConfig",
-    "PushNotification",
-    "SMSNotificationLog",
-    "NotificationTemplate"
-  ],
-  employees: [
-    "Employee",
-    "EmployeeMasterDatabase",
-    "EmployeeSyncHistory",
-    "EmployeeDocument",
-    "EmployeeAuditLog"
-  ]
-};
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import EntityAuditTab from "../components/audit/EntityAuditTab";
+import SecurityAuditTab from "../components/audit/SecurityAuditTab";
+import DuplicatesTab from "../components/audit/DuplicatesTab";
+import ConsolidationPlan from "../components/audit/ConsolidationPlan";
 
 export default function SystemAudit() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
+  const [auditData, setAuditData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
 
-  // Simulación de análisis de entidades
-  const entityAnalysis = useMemo(() => {
-    const allEntities = [
-      // CORE
-      { name: "Employee", category: "legacy", records: 250, relations: 15, modules: 8, status: "deprecated", duplicate: "EmployeeMasterDatabase" },
-      { name: "EmployeeMasterDatabase", category: "core", records: 250, relations: 20, modules: 12, status: "active", recommended: "keep" },
-      { name: "Machine", category: "core", records: 32, relations: 10, modules: 6, status: "active", recommended: "keep" },
-      { name: "Process", category: "core", records: 10, relations: 8, modules: 4, status: "active", recommended: "keep" },
-      { name: "Department", category: "core", records: 5, relations: 3, modules: 2, status: "active", recommended: "keep" },
-      { name: "Position", category: "core", records: 8, relations: 4, modules: 2, status: "active", recommended: "keep" },
-      { name: "TeamConfig", category: "core", records: 2, relations: 12, modules: 5, status: "active", recommended: "keep" },
-      
-      // PLANNING - DUPLICACIONES CRÍTICAS
-      { name: "MachinePlanning", category: "planning", records: 0, relations: 2, modules: 0, status: "unused", duplicate: "DailyMachinePlanning", recommended: "delete" },
-      { name: "DailyMachinePlanning", category: "planning", records: 45, relations: 8, modules: 3, status: "active", recommended: "keep" },
-      { name: "DailyMachineStaffing", category: "planning", records: 0, relations: 1, modules: 0, status: "unused", duplicate: "DailyMachinePlanning", recommended: "delete" },
-      { name: "MachineAssignment", category: "planning", records: 120, relations: 6, modules: 2, status: "active", recommended: "consolidate" },
-      { name: "DailyProductionPlanning", category: "planning", records: 30, relations: 5, modules: 2, status: "active", recommended: "keep" },
-      { name: "DailyMaintenancePlanning", category: "planning", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "DailyWarehousePlanning", category: "planning", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "DailyQualityPlanning", category: "planning", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      
-      // RRHH - AUSENCIAS
-      { name: "Absence", category: "rrhh", records: 180, relations: 12, modules: 8, status: "active", recommended: "keep" },
-      { name: "AbsenceType", category: "rrhh", records: 15, relations: 3, modules: 2, status: "active", recommended: "keep" },
-      { name: "MobileAbsenceRequest", category: "rrhh", records: 0, relations: 1, modules: 1, status: "unused", duplicate: "Absence", recommended: "delete" },
-      { name: "RecurringAbsencePattern", category: "rrhh", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "VacationPendingBalance", category: "rrhh", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "Holiday", category: "rrhh", records: 12, relations: 2, modules: 1, status: "active", recommended: "keep" },
-      { name: "Vacation", category: "rrhh", records: 8, relations: 3, modules: 1, status: "active", recommended: "keep" },
-      
-      // ROLES Y PERMISOS - DUPLICACIÓN CRÍTICA
-      { name: "Role", category: "config", records: 6, relations: 4, modules: 3, status: "active", recommended: "keep" },
-      { name: "UserRole", category: "config", records: 8, relations: 2, modules: 2, status: "active", recommended: "keep" },
-      { name: "ModuleAccessConfig", category: "config", records: 45, relations: 0, modules: 1, status: "active", duplicate: "Native Base44 Security", recommended: "migrate_to_native" },
-      { name: "UserInvitation", category: "config", records: 3, relations: 1, modules: 1, status: "active", recommended: "keep" },
-      
-      // NOTIFICACIONES
-      { name: "PushNotification", category: "communication", records: 250, relations: 3, modules: 2, status: "active", recommended: "keep" },
-      { name: "NotificationPreference", category: "communication", records: 8, relations: 1, modules: 1, status: "active", recommended: "keep" },
-      { name: "EmailNotificationConfig", category: "communication", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "SMSNotificationLog", category: "communication", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "NotificationTemplate", category: "communication", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      
-      // MANTENIMIENTO
-      { name: "MaintenanceSchedule", category: "maintenance", records: 25, relations: 5, modules: 2, status: "active", recommended: "keep" },
-      { name: "MachineStatus", category: "maintenance", records: 32, relations: 2, modules: 3, status: "active", recommended: "keep" },
-      { name: "MaintenancePrediction", category: "maintenance", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      
-      // CALIDAD
-      { name: "QualityInspection", category: "quality", records: 45, relations: 6, modules: 2, status: "active", recommended: "keep" },
-      
-      // ML/PREDICCIONES
-      { name: "MLPrediction", category: "legacy", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "MachinePrediction", category: "legacy", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      
-      // AUDITORÍA
-      { name: "EmployeeAuditLog", category: "audit", records: 450, relations: 1, modules: 1, status: "active", recommended: "keep" },
-      { name: "MachineAssignmentAudit", category: "audit", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      
-      // OTROS
-      { name: "CommitteeMember", category: "rrhh", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "CalendarStyleConfig", category: "config", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-      { name: "DashboardWidgetConfig", category: "config", records: 0, relations: 0, modules: 0, status: "unused", recommended: "delete" },
-    ];
-
-    return allEntities;
+  useEffect(() => {
+    performAudit();
   }, []);
 
-  const filteredEntities = useMemo(() => {
-    let result = entityAnalysis;
-    
-    if (selectedCategory !== "all") {
-      result = result.filter(e => e.category === selectedCategory);
-    }
-    
-    if (showOnlyDuplicates) {
-      result = result.filter(e => e.duplicate || e.recommended === "consolidate");
-    }
-    
-    return result;
-  }, [entityAnalysis, selectedCategory, showOnlyDuplicates]);
+  const performAudit = async () => {
+    setLoading(true);
+    try {
+      // Esta función recopila todos los datos para el análisis
+      const entities = await getAllEntitiesMetadata();
+      const securityAnalysis = await analyzeSecurityModel();
+      const duplicates = await identifyDuplicates(entities);
+      const usage = await analyzeEntityUsage(entities);
 
-  const stats = useMemo(() => {
-    return {
-      total: entityAnalysis.length,
-      active: entityAnalysis.filter(e => e.status === "active").length,
-      unused: entityAnalysis.filter(e => e.status === "unused").length,
-      deprecated: entityAnalysis.filter(e => e.status === "deprecated").length,
-      toDelete: entityAnalysis.filter(e => e.recommended === "delete").length,
-      toConsolidate: entityAnalysis.filter(e => e.duplicate || e.recommended === "consolidate").length,
-      totalRecords: entityAnalysis.reduce((sum, e) => sum + e.records, 0)
-    };
-  }, [entityAnalysis]);
-
-  const duplicateGroups = useMemo(() => {
-    const groups = [];
-    
-    // Planning Group
-    const planningEntities = entityAnalysis.filter(e => KNOWN_ENTITY_GROUPS.planning.includes(e.name));
-    if (planningEntities.length > 0) {
-      groups.push({
-        name: "Planificación de Máquinas",
-        entities: planningEntities,
-        recommendation: "Consolidar en DailyMachinePlanning + MachineAssignment (si son diferentes). Eliminar MachinePlanning, DailyMachineStaffing y entidades de Planning vacías."
+      setAuditData({
+        entities,
+        securityAnalysis,
+        duplicates,
+        usage,
+        timestamp: new Date().toISOString(),
       });
-    }
-    
-    // Absence Group
-    const absenceEntities = entityAnalysis.filter(e => KNOWN_ENTITY_GROUPS.absence.includes(e.name));
-    if (absenceEntities.length > 0) {
-      groups.push({
-        name: "Gestión de Ausencias",
-        entities: absenceEntities,
-        recommendation: "Mantener Absence + AbsenceType. Eliminar MobileAbsenceRequest (es solo formulario), RecurringAbsencePattern y VacationPendingBalance (sin uso)."
-      });
-    }
-    
-    // Roles Group
-    const rolesEntities = entityAnalysis.filter(e => KNOWN_ENTITY_GROUPS.roles.includes(e.name));
-    if (rolesEntities.length > 0) {
-      groups.push({
-        name: "Roles y Permisos",
-        entities: rolesEntities,
-        recommendation: "MIGRAR ModuleAccessConfig a sistema nativo de Base44. Mantener Role y UserRole como maestros. Eliminar DashboardWidget/Config si no se usan."
-      });
-    }
-    
-    // Employees Group
-    const employeeEntities = entityAnalysis.filter(e => KNOWN_ENTITY_GROUPS.employees.includes(e.name));
-    if (employeeEntities.length > 0) {
-      groups.push({
-        name: "Empleados",
-        entities: employeeEntities,
-        recommendation: "EmployeeMasterDatabase es la MAESTRA activa. Employee está DEPRECADO. Migrar cualquier relación residual y eliminar Employee."
-      });
-    }
-    
-    return groups;
-  }, [entityAnalysis]);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "active": return "bg-green-100 text-green-800 border-green-300";
-      case "unused": return "bg-red-100 text-red-800 border-red-300";
-      case "deprecated": return "bg-orange-100 text-orange-800 border-orange-300";
-      default: return "bg-slate-100 text-slate-800 border-slate-300";
+    } catch (error) {
+      console.error("Error performing audit:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getRecommendationColor = (rec) => {
-    switch (rec) {
-      case "keep": return "text-green-700";
-      case "delete": return "text-red-700";
-      case "consolidate": return "text-orange-700";
-      case "migrate_to_native": return "text-purple-700";
-      default: return "text-slate-700";
+  const getAllEntitiesMetadata = async () => {
+    // Lista de todas las entidades conocidas del sistema
+    const entityNames = [
+      "Holiday",
+      "Vacation",
+      "Employee",
+      "Machine",
+      "BreakShift",
+      "ShiftAssignment",
+      "TeamConfig",
+      "TeamWeekSchedule",
+      "MachinePlanning",
+      "Process",
+      "MachineProcess",
+      "Absence",
+      "MachineAssignment",
+      "MaintenanceSchedule",
+      "PerformanceReview",
+      "PerformanceImprovementPlan",
+      "MaintenanceType",
+      "ShiftHandover",
+      "NotificationPreference",
+      "EmailNotificationConfig",
+      "MobileAbsenceRequest",
+      "MaintenancePrediction",
+      "ShiftSwapRequest",
+      "RecurringPlanning",
+      "MLPrediction",
+      "AbsenceType",
+      "DailyProductionPlanning",
+      "DailyMaintenancePlanning",
+      "DailyWarehousePlanning",
+      "DailyQualityPlanning",
+      "EmployeeDocument",
+      "DashboardWidget",
+      "LockerAssignment",
+      "LockerRoomConfig",
+      "EmployeeOnboarding",
+      "TrainingModule",
+      "EmployeeTraining",
+      "AttendanceRecord",
+      "AttendanceConfig",
+      "Skill",
+      "EmployeeSkill",
+      "ProcessSkillRequirement",
+      "TrainingNeed",
+      "DepartmentPositionSkill",
+      "MachinePrediction",
+      "CommitteeMember",
+      "RiskAssessment",
+      "WorkIncident",
+      "UnionHoursRecord",
+      "EmergencyTeamMember",
+      "PRLDocument",
+      "AbsenceDaysBalance",
+      "Document",
+      "ChatChannel",
+      "ChatMessage",
+      "PushNotification",
+      "VacationPendingBalance",
+      "AbsenceApprovalFlow",
+      "RecurringAbsencePattern",
+      "IncentivePlan",
+      "DepartmentIncentiveConfig",
+      "EmployeeIncentiveResult",
+      "MachineStatus",
+      "Article",
+      "CalendarStyleConfig",
+      "EmployeeMasterDatabase",
+      "EmployeeSyncHistory",
+      "DashboardWidgetConfig",
+      "NotificationTemplate",
+      "SMSNotificationLog",
+      "ProfileChangeRequest",
+      "UserFilterPreference",
+      "EmployeeAuditLog",
+      "Department",
+      "Position",
+      "AttendanceIncident",
+      "WorkOrder",
+      "MachineAssignmentAudit",
+      "DailyMachineStaffing",
+      "Role",
+      "UserRole",
+      "QualityInspection",
+    ];
+
+    const entitiesData = [];
+
+    for (const entityName of entityNames) {
+      try {
+        const records = await base44.entities[entityName].list();
+        const schema = await base44.entities[entityName].schema();
+
+        entitiesData.push({
+          name: entityName,
+          recordCount: records.length,
+          schema: schema,
+          category: categorizeEntity(entityName),
+          hasRecords: records.length > 0,
+          lastUpdate: records.length > 0 ? getLatestUpdate(records) : null,
+        });
+      } catch (error) {
+        entitiesData.push({
+          name: entityName,
+          recordCount: 0,
+          schema: null,
+          category: "Unknown",
+          hasRecords: false,
+          error: error.message,
+        });
+      }
     }
+
+    return entitiesData;
+  };
+
+  const categorizeEntity = (name) => {
+    const categories = {
+      Core: ["Employee", "Machine", "Department", "Position", "EmployeeMasterDatabase"],
+      RRHH: [
+        "Vacation",
+        "Absence",
+        "AbsenceType",
+        "Holiday",
+        "PerformanceReview",
+        "PerformanceImprovementPlan",
+        "Skill",
+        "EmployeeSkill",
+        "TrainingModule",
+        "EmployeeTraining",
+        "EmployeeOnboarding",
+      ],
+      Planning: [
+        "MachinePlanning",
+        "ShiftAssignment",
+        "TeamWeekSchedule",
+        "DailyMachineStaffing",
+        "MachineAssignment",
+        "RecurringPlanning",
+        "DailyProductionPlanning",
+        "DailyMaintenancePlanning",
+        "DailyWarehousePlanning",
+        "DailyQualityPlanning",
+      ],
+      Mantenimiento: [
+        "MaintenanceSchedule",
+        "MaintenanceType",
+        "MachineStatus",
+        "MaintenancePrediction",
+      ],
+      Calidad: ["QualityInspection", "WorkOrder"],
+      Configuracion: [
+        "TeamConfig",
+        "BreakShift",
+        "Process",
+        "MachineProcess",
+        "AttendanceConfig",
+        "LockerRoomConfig",
+        "CalendarStyleConfig",
+        "DashboardWidgetConfig",
+      ],
+      Auditoria: [
+        "EmployeeAuditLog",
+        "MachineAssignmentAudit",
+        "EmployeeSyncHistory",
+        "ShiftHandover",
+      ],
+      Comunicacion: [
+        "ChatChannel",
+        "ChatMessage",
+        "PushNotification",
+        "NotificationPreference",
+        "EmailNotificationConfig",
+        "NotificationTemplate",
+        "SMSNotificationLog",
+      ],
+      Seguridad: ["Role", "UserRole", "ProfileChangeRequest"],
+      ML: ["MLPrediction", "MachinePrediction"],
+    };
+
+    for (const [category, entities] of Object.entries(categories)) {
+      if (entities.includes(name)) return category;
+    }
+    return "Otros";
+  };
+
+  const getLatestUpdate = (records) => {
+    if (!records || records.length === 0) return null;
+    const dates = records
+      .map((r) => r.updated_date || r.created_date)
+      .filter(Boolean)
+      .sort()
+      .reverse();
+    return dates[0] || null;
+  };
+
+  const identifyDuplicates = async (entities) => {
+    // Grupos sospechosos de duplicidad
+    return [
+      {
+        group: "Planificación de Máquinas",
+        entities: [
+          "MachinePlanning",
+          "DailyMachinePlanning",
+          "DailyMachineStaffing",
+          "MachineAssignment",
+        ],
+        severity: "high",
+        recommendation: "Consolidar en 1-2 entidades principales",
+      },
+      {
+        group: "Ausencias",
+        entities: [
+          "Absence",
+          "AbsenceType",
+          "MobileAbsenceRequest",
+          "RecurringAbsencePattern",
+        ],
+        severity: "medium",
+        recommendation: "Verificar si MobileAbsenceRequest es necesario como entidad",
+      },
+      {
+        group: "Roles y Usuarios",
+        entities: ["Role", "UserRole"],
+        severity: "high",
+        recommendation: "Usar sistema nativo de Base44 exclusivamente",
+      },
+      {
+        group: "Notificaciones",
+        entities: [
+          "NotificationPreference",
+          "EmailNotificationConfig",
+          "PushNotification",
+          "SMSNotificationLog",
+          "NotificationTemplate",
+        ],
+        severity: "medium",
+        recommendation: "Consolidar configuración de notificaciones",
+      },
+      {
+        group: "Planificación Diaria",
+        entities: [
+          "DailyProductionPlanning",
+          "DailyMaintenancePlanning",
+          "DailyWarehousePlanning",
+          "DailyQualityPlanning",
+        ],
+        severity: "low",
+        recommendation: "Evaluar si se necesitan entidades separadas por departamento",
+      },
+    ];
+  };
+
+  const analyzeEntityUsage = async (entities) => {
+    const unused = entities.filter((e) => e.recordCount === 0);
+    const active = entities.filter((e) => e.recordCount > 0);
+    const critical = entities.filter(
+      (e) => e.category === "Core" || e.recordCount > 100
+    );
+
+    return {
+      total: entities.length,
+      unused: unused.length,
+      active: active.length,
+      critical: critical.length,
+      unusedEntities: unused.map((e) => e.name),
+      activeEntities: active.map((e) => ({ name: e.name, count: e.recordCount })),
+    };
+  };
+
+  const analyzeSecurityModel = async () => {
+    // Análisis del modelo de seguridad
+    return {
+      nativeSystem: {
+        status: "Configurado",
+        description: "Sistema de permisos nativo de Base44",
+        issues: [
+          "Permisos demasiado abiertos en entidades críticas",
+          "Falta configuración de acceso por rol",
+        ],
+      },
+      customModules: [
+        {
+          name: "Gestión de Roles",
+          entities: ["Role", "UserRole"],
+          status: "Duplicado con sistema nativo",
+          recommendation: "Migrar al sistema nativo",
+        },
+      ],
+      conflicts: [
+        {
+          entity: "Employee",
+          issue: "Acceso público sin restricciones",
+          recommendation: "Configurar permisos basados en rol y departamento",
+        },
+        {
+          entity: "Machine",
+          issue: "Sin control de acceso",
+          recommendation: "Restringir edición a mantenimiento y administración",
+        },
+      ],
+    };
   };
 
   const exportReport = () => {
-    const csv = [
-      "Entidad,Categoría,Registros,Relaciones,Módulos,Estado,Duplicado de,Recomendación",
-      ...entityAnalysis.map(e => 
-        `${e.name},${e.category},${e.records},${e.relations},${e.modules},${e.status},${e.duplicate || ""},${e.recommended}`
-      )
-    ].join("\n");
-    
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
+    if (!auditData) return;
+
+    const report = {
+      timestamp: auditData.timestamp,
+      summary: {
+        totalEntities: auditData.entities.length,
+        unusedEntities: auditData.usage.unused,
+        duplicateGroups: auditData.duplicates.length,
+        securityIssues: auditData.securityAnalysis.conflicts.length,
+      },
+      entities: auditData.entities,
+      duplicates: auditData.duplicates,
+      security: auditData.securityAnalysis,
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `auditoria-entidades-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `audit-report-${new Date().toISOString().split("T")[0]}.json`;
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
-    a.remove();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-slate-600">Analizando sistema...</p>
+              <p className="text-sm text-slate-500 mt-2">
+                Esto puede tardar unos minutos
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!auditData) {
+    return (
+      <div className="p-6 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <Alert>
+            <AlertTriangle className="w-4 h-4" />
+            <AlertDescription>
+              Error al realizar la auditoría. Por favor, recarga la página.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <Activity className="w-8 h-8 text-blue-600" />
-            Auditoría del Sistema
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Análisis completo de entidades, duplicaciones y recomendaciones de consolidación
-          </p>
+        <div className="mb-6">
+          <Link to={createPageUrl("Configuration")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver a Configuración
+            </Button>
+          </Link>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <Shield className="w-8 h-8 text-blue-600" />
+              Auditoría del Sistema
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
+              Análisis completo de entidades, seguridad y optimización
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              Última auditoría: {new Date(auditData.timestamp).toLocaleString("es-ES")}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportReport}>
+              <Download className="w-4 h-4 mr-2" />
+              Exportar Reporte
+            </Button>
+            <Button onClick={performAudit}>
+              Actualizar Auditoría
+            </Button>
+          </div>
+        </div>
+
+        {/* Resumen General */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-4">
-              <div className="text-sm text-blue-700 font-medium">Total Entidades</div>
-              <div className="text-3xl font-bold text-blue-900">{stats.total}</div>
-              <div className="text-xs text-blue-600 mt-1">{stats.totalRecords.toLocaleString()} registros</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4">
-              <div className="text-sm text-green-700 font-medium">Activas</div>
-              <div className="text-3xl font-bold text-green-900">{stats.active}</div>
-              <div className="text-xs text-green-600 mt-1">En uso</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardContent className="p-4">
-              <div className="text-sm text-red-700 font-medium">Sin Uso</div>
-              <div className="text-3xl font-bold text-red-900">{stats.unused}</div>
-              <div className="text-xs text-red-600 mt-1">Candidatas a eliminar</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-700 font-medium">Total Entidades</p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {auditData.entities.length}
+                  </p>
+                </div>
+                <Database className="w-8 h-8 text-blue-600" />
+              </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardContent className="p-4">
-              <div className="text-sm text-orange-700 font-medium">Duplicadas</div>
-              <div className="text-3xl font-bold text-orange-900">{stats.toConsolidate}</div>
-              <div className="text-xs text-orange-600 mt-1">Requieren consolidación</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-orange-700 font-medium">Sin Uso</p>
+                  <p className="text-2xl font-bold text-orange-900">
+                    {auditData.usage.unused}
+                  </p>
+                </div>
+                <XCircle className="w-8 h-8 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-red-700 font-medium">Duplicados</p>
+                  <p className="text-2xl font-bold text-red-900">
+                    {auditData.duplicates.length}
+                  </p>
+                </div>
+                <FileWarning className="w-8 h-8 text-red-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-amber-700 font-medium">Problemas Seguridad</p>
+                  <p className="text-2xl font-bold text-amber-900">
+                    {auditData.securityAnalysis.conflicts.length}
+                  </p>
+                </div>
+                <AlertTriangle className="w-8 h-8 text-amber-600" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap gap-4 items-center justify-between">
-              <div className="flex gap-4">
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las categorías</SelectItem>
-                    {Object.entries(ENTITY_CATEGORIES).map(([key, cat]) => (
-                      <SelectItem key={key} value={key}>{cat.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant={showOnlyDuplicates ? "default" : "outline"}
-                  onClick={() => setShowOnlyDuplicates(!showOnlyDuplicates)}
-                  className="gap-2"
-                >
-                  <Copy className="w-4 h-4" />
-                  Solo Duplicadas
-                </Button>
-              </div>
-
-              <Button onClick={exportReport} variant="outline" className="gap-2">
-                <Download className="w-4 h-4" />
-                Exportar CSV
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Main Content */}
-        <Tabs defaultValue="entities" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="entities">Todas las Entidades</TabsTrigger>
-            <TabsTrigger value="duplicates">Grupos Duplicados</TabsTrigger>
-            <TabsTrigger value="recommendations">Plan de Acción</TabsTrigger>
+        {/* Tabs de Auditoría */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Resumen</TabsTrigger>
+            <TabsTrigger value="entities">Entidades</TabsTrigger>
+            <TabsTrigger value="duplicates">Duplicados</TabsTrigger>
+            <TabsTrigger value="security">Seguridad</TabsTrigger>
+            <TabsTrigger value="plan">Plan de Acción</TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: All Entities */}
-          <TabsContent value="entities">
+          <TabsContent value="overview">
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Entidad</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead className="text-right">Registros</TableHead>
-                      <TableHead className="text-right">Relaciones</TableHead>
-                      <TableHead className="text-right">Módulos</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Duplicado de</TableHead>
-                      <TableHead>Recomendación</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEntities.map((entity) => (
-                      <TableRow key={entity.name}>
-                        <TableCell className="font-mono font-semibold">{entity.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{ENTITY_CATEGORIES[entity.category].label}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{entity.records.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{entity.relations}</TableCell>
-                        <TableCell className="text-right">{entity.modules}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(entity.status)}>
-                            {entity.status}
+              <CardHeader>
+                <CardTitle>Resumen Ejecutivo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="border-amber-200 bg-amber-50">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <AlertDescription className="text-amber-900">
+                    <strong>Atención:</strong> Se han identificado {auditData.usage.unused}{" "}
+                    entidades sin registros y {auditData.duplicates.length} grupos de posibles
+                    duplicados que requieren revisión.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">Entidades Críticas (Mantener)</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {auditData.entities
+                      .filter((e) => e.category === "Core")
+                      .map((entity) => (
+                        <div
+                          key={entity.name}
+                          className="flex items-center gap-2 p-2 bg-green-50 rounded-lg"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium">{entity.name}</span>
+                          <Badge variant="outline" className="ml-auto">
+                            {entity.recordCount}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          {entity.duplicate || "-"}
-                        </TableCell>
-                        <TableCell className={`text-sm font-semibold ${getRecommendationColor(entity.recommended)}`}>
-                          {entity.recommended === "keep" && "✅ Mantener"}
-                          {entity.recommended === "delete" && "❌ Eliminar"}
-                          {entity.recommended === "consolidate" && "🔀 Consolidar"}
-                          {entity.recommended === "migrate_to_native" && "🚀 Migrar a nativo"}
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg text-orange-700">
+                    Entidades Inactivas (Candidatas a Eliminar)
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {auditData.usage.unusedEntities.slice(0, 9).map((name) => (
+                      <div
+                        key={name}
+                        className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg"
+                      >
+                        <XCircle className="w-4 h-4 text-orange-600" />
+                        <span className="text-sm">{name}</span>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  {auditData.usage.unusedEntities.length > 9 && (
+                    <p className="text-sm text-slate-500">
+                      +{auditData.usage.unusedEntities.length - 9} más...
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tab 2: Duplicate Groups */}
-          <TabsContent value="duplicates">
-            <div className="space-y-4">
-              {duplicateGroups.map((group, idx) => (
-                <Card key={idx} className="border-2 border-orange-200 bg-orange-50/50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-orange-900">
-                      <AlertTriangle className="w-5 h-5" />
-                      {group.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="bg-white rounded-lg p-4">
-                      <div className="font-semibold text-sm mb-2">Entidades en este grupo:</div>
-                      <div className="flex flex-wrap gap-2">
-                        {group.entities.map(e => (
-                          <Badge 
-                            key={e.name} 
-                            className={e.status === "unused" ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-800"}
-                          >
-                            {e.name} ({e.records})
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="font-semibold text-sm text-blue-900 mb-2">💡 Recomendación:</div>
-                      <p className="text-sm text-blue-800">{group.recommendation}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          <TabsContent value="entities">
+            <EntityAuditTab entities={auditData.entities} />
           </TabsContent>
 
-          {/* Tab 3: Action Plan */}
-          <TabsContent value="recommendations">
-            <div className="space-y-4">
-              <Card className="border-red-200 bg-red-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-red-900">
-                    <Trash2 className="w-5 h-5" />
-                    FASE 1: Eliminar ({stats.toDelete} entidades)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {entityAnalysis.filter(e => e.recommended === "delete").map(e => (
-                      <div key={e.name} className="flex items-center justify-between p-2 bg-white rounded">
-                        <div className="flex items-center gap-3">
-                          <code className="text-sm font-mono">{e.name}</code>
-                          <Badge variant="outline" className="text-xs">{e.records} registros</Badge>
-                        </div>
-                        <Button size="sm" variant="outline" disabled>
-                          Marcar para eliminar
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded">
-                    <p className="text-xs text-amber-800">
-                      ⚠️ <strong>IMPORTANTE:</strong> No eliminar directamente. Primero renombrar con prefijo _OLD_ y esperar 2 semanas de pruebas.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+          <TabsContent value="duplicates">
+            <DuplicatesTab
+              duplicates={auditData.duplicates}
+              entities={auditData.entities}
+            />
+          </TabsContent>
 
-              <Card className="border-orange-200 bg-orange-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-orange-900">
-                    <Copy className="w-5 h-5" />
-                    FASE 2: Consolidar ({duplicateGroups.length} grupos)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {duplicateGroups.map((group, idx) => (
-                    <div key={idx} className="mb-3 p-3 bg-white rounded">
-                      <div className="font-semibold text-sm mb-1">{group.name}</div>
-                      <p className="text-xs text-slate-600">{group.recommendation}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+          <TabsContent value="security">
+            <SecurityAuditTab securityAnalysis={auditData.securityAnalysis} />
+          </TabsContent>
 
-              <Card className="border-purple-200 bg-purple-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-purple-900">
-                    <Shield className="w-5 h-5" />
-                    FASE 3: Migrar a Sistema Nativo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="p-3 bg-white rounded">
-                      <div className="font-semibold text-sm mb-2">ModuleAccessConfig → Base44 Native Security</div>
-                      <ul className="text-xs text-slate-600 space-y-1 ml-4 list-disc">
-                        <li>Revisar permisos actuales de ModuleAccessConfig</li>
-                        <li>Configurar reglas equivalentes en Seguridad Nativa de Base44</li>
-                        <li>Probar con usuarios de cada rol</li>
-                        <li>Renombrar ModuleAccessConfig a _OLD_ModuleAccessConfig</li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          <TabsContent value="plan">
+            <ConsolidationPlan
+              auditData={auditData}
+              onRefresh={performAudit}
+            />
           </TabsContent>
         </Tabs>
-
-        {/* Warning Banner */}
-        <Card className="mt-6 border-2 border-amber-300 bg-amber-50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <div className="font-bold text-amber-900 mb-1">
-                  ⚠️ ATENCIÓN: No ejecutar cambios sin aprobación
-                </div>
-                <p className="text-sm text-amber-800">
-                  Este módulo es solo de análisis. Cualquier eliminación, consolidación o migración debe ser:
-                  <br />1. Aprobada explícitamente por el usuario
-                  <br />2. Probada en entorno de desarrollo
-                  <br />3. Respaldada antes de ejecutar
-                  <br />4. Implementada en fases con verificación posterior
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
 import DailyPlanning from './pages/DailyPlanning';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
+import Dashboard from './pages/Dashboard';
 import DataImport from './pages/DataImport';
 import DataMigration from './pages/DataMigration';
 import DepartmentManagement from './pages/DepartmentManagement';
@@ -91,7 +92,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import Dashboard from './pages/Dashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -113,6 +113,7 @@ export const PAGES = {
     "Configuration": Configuration,
     "DailyPlanning": DailyPlanning,
     "DailyShiftPlanning": DailyShiftPlanning,
+    "Dashboard": Dashboard,
     "DataImport": DataImport,
     "DataMigration": DataMigration,
     "DepartmentManagement": DepartmentManagement,
@@ -189,7 +190,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "Dashboard": Dashboard,
 }
 
 export const pagesConfig = {
