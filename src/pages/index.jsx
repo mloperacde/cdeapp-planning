@@ -126,6 +126,8 @@ import SkillMatrix from "./SkillMatrix";
 
 import SupportManagement1415 from "./SupportManagement1415";
 
+import SystemAudit from "./SystemAudit";
+
 import SystemReset from "./SystemReset";
 
 import TeamConfiguration from "./TeamConfiguration";
@@ -266,6 +268,8 @@ const PAGES = {
     SkillMatrix: SkillMatrix,
     
     SupportManagement1415: SupportManagement1415,
+    
+    SystemAudit: SystemAudit,
     
     SystemReset: SystemReset,
     
@@ -425,9 +429,11 @@ function PagesContent() {
                 <Route path="/ShiftManagers" element={<ShiftManagers />} />
                 
                 <Route path="/SkillMatrix" element={<SkillMatrix />} />
-                
+
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
-                
+
+                <Route path="/SystemAudit" element={<SystemAudit />} />
+
                 <Route path="/SystemReset" element={<SystemReset />} />
                 
                 <Route path="/TeamConfiguration" element={<TeamConfiguration />} />
