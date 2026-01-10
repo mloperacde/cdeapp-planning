@@ -26,6 +26,7 @@ import EntityAuditTab from "../components/audit/EntityAuditTab";
 import SecurityAuditTab from "../components/audit/SecurityAuditTab";
 import DuplicatesTab from "../components/audit/DuplicatesTab";
 import ConsolidationPlan from "../components/audit/ConsolidationPlan";
+import ExecutionResults from "../components/audit/ExecutionResults";
 
 export default function SystemAudit() {
   const [auditData, setAuditData] = useState(null);
@@ -36,7 +37,60 @@ export default function SystemAudit() {
 
   useEffect(() => {
     performAudit();
+    executeAllApprovedPhases();
   }, []);
+
+  const executeAllApprovedPhases = async () => {
+    setExecuting(true);
+    const results = {};
+    
+    try {
+      // FASE 2: Backup
+      toast.info("Ejecutando Fase 2: Backup y Preparación...");
+      const backupResponse = await base44.functions.invoke("auditBackup", {});
+      results.backup = backupResponse.data;
+      
+      if (results.backup.success) {
+        const blob = new Blob([JSON.stringify(results.backup.backup, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `backup-fase2-${new Date().toISOString().split("T")[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast.success(`✅ Fase 2 completada: ${results.backup.summary.totalRecords} registros respaldados`);
+      }
+
+      // FASE 3: Seguridad
+      toast.info("Ejecutando Fase 3: Consolidación de Seguridad...");
+      const securityResponse = await base44.functions.invoke("consolidateSecurity", {});
+      results.security = securityResponse.data;
+      toast.success("✅ Fase 3 completada: Análisis de seguridad realizado");
+
+      // FASE 4: Entidades Obsoletas
+      toast.info("Ejecutando Fase 4: Identificación de Entidades Obsoletas...");
+      const obsoleteResponse = await base44.functions.invoke("markObsoleteEntities", {});
+      results.obsolete = obsoleteResponse.data;
+      toast.success(`✅ Fase 4 completada: ${results.obsolete.results.obsoleteCount} entidades sin uso identificadas`);
+
+      setExecutionResults(results);
+      
+      toast.success("🎉 Fases 2-4 ejecutadas exitosamente", {
+        duration: 5000,
+      });
+
+    } catch (error) {
+      toast.error(`Error ejecutando fases: ${error.message}`);
+      console.error("Error en ejecución de fases:", error);
+    } finally {
+      setExecuting(false);
+    }
+  };
 
   const performAudit = async () => {
     setLoading(true);
@@ -660,13 +714,16 @@ export default function SystemAudit() {
           </TabsContent>
 
           <TabsContent value="plan">
-            <ConsolidationPlan
-              auditData={auditData}
-              onRefresh={performAudit}
-              onExecutePhase={executePhase}
-              executing={executing}
-              executionResults={executionResults}
-            />
+            <div className="space-y-6">
+              {executionResults && <ExecutionResults results={executionResults} />}
+              <ConsolidationPlan
+                auditData={auditData}
+                onRefresh={performAudit}
+                onExecutePhase={executePhase}
+                executing={executing}
+                executionResults={executionResults}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
