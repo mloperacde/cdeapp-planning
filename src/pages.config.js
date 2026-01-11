@@ -94,6 +94,7 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
+import MachineProcessAudit from './pages/MachineProcessAudit';
 import __Layout from './Layout.jsx';
 
 
@@ -194,6 +195,7 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
+    "MachineProcessAudit": MachineProcessAudit,
 }
 
 export const pagesConfig = {
