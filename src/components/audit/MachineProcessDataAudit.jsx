@@ -458,7 +458,7 @@ export default function MachineProcessDataAudit() {
 
       <TabsContent value="overview" className="space-y-6">
         {/* Estadísticas Generales */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-blue-50 border-blue-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-blue-900">Total Registros</CardTitle>
@@ -468,12 +468,23 @@ export default function MachineProcessDataAudit() {
             </CardContent>
           </Card>
           
-          <Card className="bg-green-50 border-green-300">
+          <Card className="bg-amber-50 border-amber-300">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-green-900">Máquinas Activas</CardTitle>
+              <CardTitle className="text-sm text-amber-900">Máquinas Legacy</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-green-700">{results.entities.Machine?.count || 0}</p>
+              <p className="text-3xl font-bold text-amber-700">{results.entities.Machine?.count || 0}</p>
+              <p className="text-xs text-amber-600 mt-1">A consolidar</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-green-50 border-green-300">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm text-green-900">Máquinas Master</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-green-700">{results.entities.MachineMasterDatabase?.count || 0}</p>
+              <p className="text-xs text-green-600 mt-1">Fuente única</p>
             </CardContent>
           </Card>
 
@@ -486,6 +497,22 @@ export default function MachineProcessDataAudit() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Estado de Consolidación */}
+        <Alert className="border-blue-300 bg-blue-50">
+          <Database className="w-4 h-4 text-blue-600" />
+          <AlertDescription className="text-blue-900">
+            <p className="font-semibold mb-2">Plan de Consolidación de Máquinas:</p>
+            <ul className="text-sm space-y-1 ml-4">
+              <li>✅ MachineMasterDatabase creada con estructura completa</li>
+              <li>✅ Incluye procesos_configurados integrados en la máquina</li>
+              <li>✅ Campos para histórico de producción y métricas</li>
+              <li>⚠️ Pendiente: Migrar {results.entities.Machine?.count || 0} máquinas de Machine a MachineMasterDatabase</li>
+              <li>⚠️ Pendiente: Integrar {results.entities.Process?.count || 0} procesos en procesos_configurados</li>
+              <li>⚠️ Pendiente: Actualizar referencias en {Object.keys(results.relatedEntities || {}).length} entidades relacionadas</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
 
         {/* Recomendaciones Críticas */}
         {results.recommendations.length > 0 && (
@@ -604,11 +631,45 @@ export default function MachineProcessDataAudit() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
-              Análisis de Calidad de Datos
+              Análisis Exhaustivo de Calidad de Datos
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Integridad de Datos */}
+              {results.dataQuality.dataIntegrity.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-red-900 mb-2">
+                    🔴 Problemas de Integridad de Datos ({results.dataQuality.dataIntegrity.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {results.dataQuality.dataIntegrity.map((issue, idx) => (
+                      <div key={idx} className="p-3 bg-red-50 rounded border border-red-200">
+                        <p className="text-sm font-medium text-red-900">{issue.message}</p>
+                        <p className="text-xs text-slate-600 mt-1">Acción: {issue.action}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Códigos de Máquina Duplicados */}
+              {results.dataQuality.duplicateMachineCodes.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-red-900 mb-2">
+                    🔴 Códigos de Máquina Duplicados ({results.dataQuality.duplicateMachineCodes.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {results.dataQuality.duplicateMachineCodes.map((dup, idx) => (
+                      <div key={idx} className="p-3 bg-red-50 rounded border border-red-200">
+                        <p className="text-sm font-medium">{dup.codigo}</p>
+                        <p className="text-xs text-slate-600">{dup.count} máquinas con este código</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Nombres Duplicados */}
               {results.dataQuality.duplicateMachineNames.length > 0 && (
                 <div>
@@ -626,7 +687,7 @@ export default function MachineProcessDataAudit() {
                 </div>
               )}
 
-              {/* Códigos Duplicados */}
+              {/* Códigos de Proceso Duplicados */}
               {results.dataQuality.duplicateProcessCodes.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-amber-900 mb-2">
@@ -665,22 +726,60 @@ export default function MachineProcessDataAudit() {
               )}
 
               {/* Referencias Huérfanas */}
-              {results.dataQuality.orphanedProcesses.length > 0 && (
+              {results.dataQuality.orphanedReferences.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-red-900 mb-2">
-                    🔴 Referencias Rotas en MachineProcess ({results.dataQuality.orphanedProcesses.length})
+                    🔴 Referencias Rotas ({results.dataQuality.orphanedReferences.length})
                   </h3>
                   <div className="space-y-2">
-                    {results.dataQuality.orphanedProcesses.slice(0, 5).map((orphan, idx) => (
+                    {results.dataQuality.orphanedReferences.slice(0, 10).map((orphan, idx) => (
                       <div key={idx} className="p-3 bg-red-50 rounded border border-red-200">
-                        <p className="text-sm font-medium">ID: {orphan.id}</p>
+                        <p className="text-sm font-medium">{orphan.entity} (ID: {orphan.id})</p>
                         <p className="text-xs text-slate-600">Razón: {orphan.reason}</p>
                       </div>
                     ))}
                   </div>
-                  {results.dataQuality.orphanedProcesses.length > 5 && (
+                  {results.dataQuality.orphanedReferences.length > 10 && (
                     <p className="text-xs text-slate-500 mt-2">
-                      ... y {results.dataQuality.orphanedProcesses.length - 5} más
+                      ... y {results.dataQuality.orphanedReferences.length - 10} más
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Asignaciones Huérfanas */}
+              {results.dataQuality.orphanedAssignments.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-amber-900 mb-2">
+                    ⚠️ Asignaciones con Referencias Rotas ({results.dataQuality.orphanedAssignments.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {results.dataQuality.orphanedAssignments.slice(0, 5).map((orphan, idx) => (
+                      <div key={idx} className="p-3 bg-amber-50 rounded border border-amber-200">
+                        <p className="text-sm font-medium">{orphan.entity} - Team: {orphan.team_key}</p>
+                        <p className="text-xs text-slate-600">{orphan.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Máquinas Sin Mantenimiento */}
+              {results.dataQuality.machinesWithoutMaintenance.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-blue-900 mb-2">
+                    ℹ️ Máquinas Sin Mantenimiento Programado ({results.dataQuality.machinesWithoutMaintenance.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {results.dataQuality.machinesWithoutMaintenance.slice(0, 10).map((machine, idx) => (
+                      <div key={idx} className="p-2 bg-blue-50 rounded border border-blue-200 text-sm">
+                        {machine.nombre} ({machine.codigo})
+                      </div>
+                    ))}
+                  </div>
+                  {results.dataQuality.machinesWithoutMaintenance.length > 10 && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      ... y {results.dataQuality.machinesWithoutMaintenance.length - 10} más
                     </p>
                   )}
                 </div>
@@ -688,13 +787,16 @@ export default function MachineProcessDataAudit() {
 
               {/* Todo Correcto */}
               {results.dataQuality.duplicateMachineNames.length === 0 &&
+               results.dataQuality.duplicateMachineCodes.length === 0 &&
                results.dataQuality.duplicateProcessCodes.length === 0 &&
                results.dataQuality.machinesWithoutProcesses.length === 0 &&
-               results.dataQuality.orphanedProcesses.length === 0 && (
+               results.dataQuality.orphanedReferences.length === 0 &&
+               results.dataQuality.orphanedAssignments.length === 0 &&
+               results.dataQuality.dataIntegrity.length === 0 && (
                 <Alert className="border-green-300 bg-green-50">
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
                   <AlertDescription className="text-green-900">
-                    ✅ No se detectaron problemas de calidad de datos. Todas las relaciones están correctas.
+                    ✅ No se detectaron problemas de calidad de datos. Sistema listo para consolidación.
                   </AlertDescription>
                 </Alert>
               )}
