@@ -53,22 +53,40 @@ export default function Layout({ children, currentPageName }) {
           </button>
         </div>
         <nav className="mt-8">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                to={item.path}
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors ${
-                  currentPageName === item.name ? 'bg-blue-600' : ''
-                }`}
-              >
-                <Icon size={20} />
-                <span className={`${!menuOpen && 'hidden'} md:inline`}>{item.name}</span>
-              </Link>
-            );
-          })}
+          {menuItems.reduce((grouped, item) => {
+            const category = item.category || 'Otros';
+            if (!grouped[category]) grouped[category] = [];
+            grouped[category].push(item);
+            return grouped;
+          }, {}) && 
+          Object.entries(
+            menuItems.reduce((grouped, item) => {
+              const category = item.category || 'Otros';
+              if (!grouped[category]) grouped[category] = [];
+              grouped[category].push(item);
+              return grouped;
+            }, {})
+          ).map(([category, items]) => (
+            <div key={category}>
+              {menuOpen && <div className="px-4 py-2 text-xs font-semibold text-slate-400 mt-4">{category}</div>}
+              {items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => setMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-sm ${
+                      currentPageName === item.name ? 'bg-blue-600' : ''
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span className={`${!menuOpen && 'hidden'} md:inline text-xs`}>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </div>
 
