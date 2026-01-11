@@ -17,6 +17,7 @@ import {
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
+import EmployeeConsolidationReport from "./EmployeeConsolidationReport";
 
 export default function EmployeeDataAudit() {
   const [auditResults, setAuditResults] = useState(null);
@@ -180,14 +181,14 @@ export default function EmployeeDataAudit() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Database className="w-6 h-6 text-blue-600" />
-            Auditoría de Datos de Empleados
+            Auditoría y Consolidación de Datos de Empleados
           </h2>
           <p className="text-sm text-slate-600 mt-1">
-            Análisis completo del modelo de datos de empleados
+            Análisis completo, integridad referencial y plan de consolidación
           </p>
         </div>
         <Button onClick={exportReport} variant="outline">
@@ -195,6 +196,9 @@ export default function EmployeeDataAudit() {
           Exportar Reporte
         </Button>
       </div>
+
+      {/* Reporte de Arquitectura Completo */}
+      <EmployeeConsolidationReport />
 
       {/* Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -371,82 +375,105 @@ export default function EmployeeDataAudit() {
         </CardContent>
       </Card>
 
-      {/* Plan de Consolidación con Tabs */}
-      <Tabs defaultValue="plan" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="plan">Plan de Consolidación</TabsTrigger>
-          <TabsTrigger value="integrity">Integridad Referencial</TabsTrigger>
-        </TabsList>
+      {/* Análisis Detallado */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Análisis de Datos Actual</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="stats" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="stats">Estadísticas</TabsTrigger>
+              <TabsTrigger value="entities">Entidades</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="plan">
-          <Card className="bg-blue-50 border-2 border-blue-300">
-            <CardHeader>
-              <CardTitle className="text-blue-900">Plan de Consolidación de Datos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    1
+            <TabsContent value="stats">
+              <Card className="bg-blue-50 border-2 border-blue-300">
+                <CardHeader>
+                  <CardTitle className="text-blue-900">Calidad de Datos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-blue-700">Con Email:</span>
+                        <span className="font-semibold">{auditResults.dataQuality.masterEmployeesWithEmail}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-blue-700">Con DNI:</span>
+                        <span className="font-semibold">{auditResults.dataQuality.masterEmployeesWithDNI}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-blue-700">Datos Completos:</span>
+                        <span className="font-semibold text-green-600">
+                          {auditResults.dataQuality.masterEmployeesComplete}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-blue-700">Ausencias Huérfanas:</span>
+                        <span className={`font-semibold ${
+                          auditResults.dataQuality.orphanedAbsences > 0 ? 'text-red-600' : 'text-green-600'
+                        }`}>
+                          {auditResults.dataQuality.orphanedAbsences}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900">Migrar Employee → EmployeeMasterDatabase</h4>
-                    <p className="text-sm text-blue-800">
-                      Consolidar todos los registros de Employee en EmployeeMasterDatabase
-                    </p>
-                    <Badge className="mt-2 bg-green-600">✅ Función disponible: consolidate_employees</Badge>
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    2
+            <TabsContent value="entities">
+              <div className="space-y-3">
+                {Object.entries(auditResults.entities).map(([name, info]) => (
+                  <div
+                    key={name}
+                    className={`p-4 rounded-lg border-2 ${
+                      info.status === "Principal" ? "bg-green-50 border-green-300" :
+                      info.status === "Deprecated" ? "bg-red-50 border-red-300" :
+                      info.hasData ? "bg-blue-50 border-blue-200" :
+                      "bg-slate-50 border-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{name}</h3>
+                          <Badge className={
+                            info.status === "Principal" ? "bg-green-600" :
+                            info.status === "Deprecated" ? "bg-red-600" :
+                            info.hasData ? "bg-blue-600" :
+                            "bg-slate-600"
+                          }>
+                            {info.status}
+                          </Badge>
+                          {info.relation && (
+                            <Badge variant="outline" className="text-xs">
+                              {info.relation}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-700 mb-2">{info.role}</p>
+                        <div className="flex items-center gap-4 text-xs text-slate-600">
+                          <span className="flex items-center gap-1">
+                            <Database className="w-3 h-3" />
+                            {info.count} registros
+                          </span>
+                          {info.warning && (
+                            <span className="text-orange-600 font-medium">{info.warning}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900">Actualizar Referencias</h4>
-                    <p className="text-sm text-blue-800">
-                      Todas las entidades relacionadas deben apuntar a EmployeeMasterDatabase.id
-                    </p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      Verificar: Absence, ShiftAssignment, LockerAssignment, etc.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
-                    ✓
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-green-900">Migrar Páginas al DataProvider</h4>
-                    <p className="text-sm text-green-800">
-                      Asegurar que todas las páginas usen useAppData() hook
-                    </p>
-                    <Badge className="mt-2 bg-green-600">✅ Completado: ETTTemporaryEmployees, EmployeeDataCompletion migradas</Badge>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    4
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900">Eliminar Employee Entity</h4>
-                    <p className="text-sm text-blue-800">
-                      Una vez migrado todo, eliminar la entidad deprecated Employee
-                    </p>
-                    <Badge className="mt-2 bg-red-600">⛔ Solo después de consolidación completa</Badge>
-                  </div>
-                </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="integrity">
-          <EmployeeDataIntegrity />
-        </TabsContent>
-      </Tabs>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
