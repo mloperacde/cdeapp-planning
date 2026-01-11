@@ -71,14 +71,12 @@ export default function AbsenceManagementPage() {
     user: currentUser,
     absences = [], 
     absencesLoading: isLoading,
-    employees: masterEmployees = [],
+    employees = [],
     teams = [],
     absenceTypes = [],
     vacations = [],
     holidays = []
   } = useAppData();
-
-  const employees = masterEmployees;
 
   const isShiftManager = useMemo(() => {
     // Simplified check - real app would check specific permissions/roles
@@ -136,7 +134,7 @@ export default function AbsenceManagementPage() {
   const handleClose = () => { setShowForm(false); setEditingAbsence(null); };
   // ... keeping necessary parts if any ...
   const getEmployeeName = (id) => {
-    const emp = employees.find(e => e.id === id) || masterEmployees.find(e => e.id === id);
+    const emp = employees.find(e => e.id === id);
     return emp?.nombre || "Desconocido";
   };
   
@@ -225,10 +223,10 @@ export default function AbsenceManagementPage() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AbsenceDashboard absences={filteredAbsences} employees={employees} masterEmployees={masterEmployees} />
+              <AbsenceDashboard absences={filteredAbsences} employees={employees} />
               <div className="space-y-6">
-                <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} masterEmployees={masterEmployees} />
-                <LongAbsenceAlert employees={employees} absences={filteredAbsences} masterEmployees={masterEmployees} />
+                <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
+                <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
               </div>
             </div>
           </TabsContent>
@@ -238,7 +236,6 @@ export default function AbsenceManagementPage() {
               sourceContext="absence_page" 
               initialAbsences={absences} 
               initialEmployees={employees}
-              initialMasterEmployees={masterEmployees}
             />
           </TabsContent>
 
@@ -246,7 +243,6 @@ export default function AbsenceManagementPage() {
             <AbsenceApprovalPanel 
               absences={absences} 
               employees={employees} 
-              masterEmployees={masterEmployees}
               absenceTypes={absenceTypes} 
               currentUser={currentUser} 
             />
@@ -256,7 +252,6 @@ export default function AbsenceManagementPage() {
             <AbsenceCalendar 
               absences={absences} 
               employees={employees} 
-              masterEmployees={masterEmployees}
               absenceTypes={absenceTypes} 
             />
           </TabsContent>

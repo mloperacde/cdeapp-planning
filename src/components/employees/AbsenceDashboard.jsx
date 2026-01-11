@@ -11,13 +11,13 @@ import { toast } from "sonner";
 import AIDashboardSummary from "../reports/AIDashboardSummary";
 import { useAppData } from "../data/DataProvider";
 
-export default function AbsenceDashboard({ absences: propsAbsences, employees: propsEmployees, masterEmployees: propsMasterEmployees = [] }) {
+export default function AbsenceDashboard({ absences: propsAbsences, employees: propsEmployees }) {
   // Usar datos del provider como fuente primaria
   const appData = useAppData();
   
   // Fallback a props si no hay provider (compatibilidad)
   const absences = propsAbsences || appData?.absences || [];
-  const employees = propsEmployees || propsMasterEmployees || appData?.employees || [];
+  const employees = propsEmployees || appData?.employees || [];
   const vacations = appData?.vacations || [];
   const holidays = appData?.holidays || [];
 
@@ -52,7 +52,7 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
   const byEmployee = useMemo(() => {
     const empCount = {};
     absences.forEach(abs => {
-      const emp = employees.find(e => e.id === abs.employee_id) || masterEmployees.find(e => e.id === abs.employee_id);
+      const emp = employees.find(e => e.id === abs.employee_id);
       const name = emp?.nombre || "Desconocido";
       empCount[name] = (empCount[name] || 0) + 1;
     });

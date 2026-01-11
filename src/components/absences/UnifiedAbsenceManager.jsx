@@ -46,20 +46,13 @@ export default function UnifiedAbsenceManager(props) {
   });
 
   const { data: fetchedEmployees = EMPTY_ARRAY } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre', 1000),
-    enabled: !props.initialEmployees,
-  });
-
-  const { data: fetchedMasterEmployees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
-    enabled: !props.initialMasterEmployees,
+    enabled: !props.initialEmployees,
   });
 
   const absences = props.initialAbsences || fetchedAbsences;
   const employees = props.initialEmployees || fetchedEmployees;
-  const masterEmployees = props.initialMasterEmployees || fetchedMasterEmployees;
 
   const { data: absenceTypes = EMPTY_ARRAY } = useQuery({
     queryKey: ['absenceTypes'],
@@ -107,13 +100,7 @@ export default function UnifiedAbsenceManager(props) {
 
   // Consolidado de empleados disponibles vs ausentes
   const availabilityStats = useMemo(() => {
-    // Merge lists to ensure we have all employees
-    const uniqueEmployeesMap = new Map();
-    [...masterEmployees, ...employees].forEach(emp => {
-      uniqueEmployeesMap.set(emp.id, emp);
-    });
-    
-    let targetList = Array.from(uniqueEmployeesMap.values());
+    let targetList = employees;
     
     // Filter by context
     if (sourceContext === 'shift_manager') {
@@ -139,7 +126,7 @@ export default function UnifiedAbsenceManager(props) {
     const disponibles = Math.max(0, total - ausentes);
     
     return { disponibles, ausentes, total };
-  }, [employees, masterEmployees, activeAbsencesConsolidated, sourceContext]);
+  }, [employees, activeAbsencesConsolidated, sourceContext]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -153,11 +140,10 @@ export default function UnifiedAbsenceManager(props) {
           holidays
         );
       } else {
-        const allEmployees = [...employees, ...masterEmployees];
         return await createAbsence(
           data, 
           currentUser, 
-          allEmployees, 
+          employees, 
           absenceTypes, 
           vacations, 
           holidays
@@ -190,8 +176,7 @@ export default function UnifiedAbsenceManager(props) {
     mutationFn: async (id) => {
       const absence = absences.find(a => a.id === id);
       if (absence) {
-        const allEmployees = [...employees, ...masterEmployees];
-        await deleteAbsence(absence, allEmployees);
+        await deleteAbsence(absence, employees);
       }
     },
     onSuccess: async () => {
@@ -211,8 +196,7 @@ export default function UnifiedAbsenceManager(props) {
   });
 
   const handleEdit = (absence) => {
-    const emp = employees.find(e => e.id === absence.employee_id) || 
-                masterEmployees.find(e => e.id === absence.employee_id);
+    const emp = employees.find(e => e.id === absence.employee_id);
     setEditingAbsence({ ...absence, employee_name: emp?.nombre || "Desconocido" });
     setShowForm(true);
   };
@@ -227,15 +211,13 @@ export default function UnifiedAbsenceManager(props) {
   };
 
   const getEmployeeName = (employeeId) => {
-    const emp = employees.find(e => e.id === employeeId) || 
-                masterEmployees.find(e => e.id === employeeId);
+    const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Desconocido";
   };
 
   const filteredAbsences = useMemo(() => {
     return activeAbsencesConsolidated.filter(abs => {
-      const employee = employees.find(e => e.id === abs.employee_id) ||
-                      masterEmployees.find(e => e.id === abs.employee_id);
+      const employee = employees.find(e => e.id === abs.employee_id);
       
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
@@ -247,7 +229,7 @@ export default function UnifiedAbsenceManager(props) {
 
       return matchesSearch;
     });
-  }, [activeAbsencesConsolidated, filters, employees, masterEmployees, sourceContext]);
+  }, [activeAbsencesConsolidated, filters, employees, sourceContext]);
 
   const handleSummarizeNotes = async (absenceId, notes) => {
     if (!notes || notes.length < 10) return;
@@ -358,8 +340,7 @@ export default function UnifiedAbsenceManager(props) {
               </TableHeader>
               <TableBody>
                 {filteredAbsences.map(abs => {
-                  const emp = employees.find(e => e.id === abs.employee_id) ||
-                            masterEmployees.find(e => e.id === abs.employee_id);
+                  const emp = employees.find(e => e.id === abs.employee_id);
                   return (
                     <TableRow key={abs.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                       <TableCell className="font-semibold">{getEmployeeName(abs.employee_id)}</TableCell>
@@ -428,9 +409,7 @@ export default function UnifiedAbsenceManager(props) {
 
             <AbsenceForm
               initialData={editingAbsence}
-              employees={[...employees, ...masterEmployees].filter((emp, idx, self) => 
-                self.findIndex(e => e.id === emp.id) === idx
-              )}
+              employees={employees}
               absenceTypes={absenceTypes}
               onSubmit={handleFormSubmit}
               onCancel={handleClose}
