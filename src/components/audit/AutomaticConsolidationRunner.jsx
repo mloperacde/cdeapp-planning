@@ -104,6 +104,7 @@ export default function AutomaticConsolidationRunner() {
       }
 
     } catch (err) {
+      console.error('Error en consolidación:', err);
       addLog(`❌ ERROR: ${err.message}`, 'error');
       setError(err.message);
       setPhase('complete');
