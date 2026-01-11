@@ -15,6 +15,8 @@ import {
   Shield
 } from "lucide-react";
 import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
 
 export default function EmployeeDataAudit() {
   const [auditResults, setAuditResults] = useState(null);
@@ -369,69 +371,82 @@ export default function EmployeeDataAudit() {
         </CardContent>
       </Card>
 
-      {/* Plan de Consolidación */}
-      <Card className="bg-blue-50 border-2 border-blue-300">
-        <CardHeader>
-          <CardTitle className="text-blue-900">Plan de Consolidación de Datos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                1
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-blue-900">Migrar Employee → EmployeeMasterDatabase</h4>
-                <p className="text-sm text-blue-800">
-                  Consolidar todos los registros de Employee en EmployeeMasterDatabase
-                </p>
-                <Badge className="mt-2 bg-green-600">✅ Función disponible: consolidate_employees</Badge>
-              </div>
-            </div>
+      {/* Plan de Consolidación con Tabs */}
+      <Tabs defaultValue="plan" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="plan">Plan de Consolidación</TabsTrigger>
+          <TabsTrigger value="integrity">Integridad Referencial</TabsTrigger>
+        </TabsList>
 
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                2
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-blue-900">Actualizar Referencias</h4>
-                <p className="text-sm text-blue-800">
-                  Todas las entidades relacionadas deben apuntar a EmployeeMasterDatabase.id
-                </p>
-                <p className="text-xs text-blue-700 mt-1">
-                  Verificar: Absence, ShiftAssignment, LockerAssignment, etc.
-                </p>
-              </div>
-            </div>
+        <TabsContent value="plan">
+          <Card className="bg-blue-50 border-2 border-blue-300">
+            <CardHeader>
+              <CardTitle className="text-blue-900">Plan de Consolidación de Datos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900">Migrar Employee → EmployeeMasterDatabase</h4>
+                    <p className="text-sm text-blue-800">
+                      Consolidar todos los registros de Employee en EmployeeMasterDatabase
+                    </p>
+                    <Badge className="mt-2 bg-green-600">✅ Función disponible: consolidate_employees</Badge>
+                  </div>
+                </div>
 
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                3
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-blue-900">Migrar Páginas al DataProvider</h4>
-                <p className="text-sm text-blue-800">
-                  Asegurar que todas las páginas usen useAppData() hook
-                </p>
-                <Badge className="mt-2 bg-amber-600">⚠️ Pendiente: ETTTemporaryEmployees, EmployeeDataCompletion</Badge>
-              </div>
-            </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900">Actualizar Referencias</h4>
+                    <p className="text-sm text-blue-800">
+                      Todas las entidades relacionadas deben apuntar a EmployeeMasterDatabase.id
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Verificar: Absence, ShiftAssignment, LockerAssignment, etc.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                4
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                    ✓
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-900">Migrar Páginas al DataProvider</h4>
+                    <p className="text-sm text-green-800">
+                      Asegurar que todas las páginas usen useAppData() hook
+                    </p>
+                    <Badge className="mt-2 bg-green-600">✅ Completado: ETTTemporaryEmployees, EmployeeDataCompletion migradas</Badge>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    4
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900">Eliminar Employee Entity</h4>
+                    <p className="text-sm text-blue-800">
+                      Una vez migrado todo, eliminar la entidad deprecated Employee
+                    </p>
+                    <Badge className="mt-2 bg-red-600">⛔ Solo después de consolidación completa</Badge>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-blue-900">Eliminar Employee Entity</h4>
-                <p className="text-sm text-blue-800">
-                  Una vez migrado todo, eliminar la entidad deprecated Employee
-                </p>
-                <Badge className="mt-2 bg-red-600">⛔ Solo después de consolidación completa</Badge>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="integrity">
+          <EmployeeDataIntegrity />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
