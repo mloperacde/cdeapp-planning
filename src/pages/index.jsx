@@ -295,12 +295,14 @@ function PagesContent() {
 export default function Pages() {
     return (
         <QueryClientProvider client={queryClient}>
-            <RateLimitMonitor />
-            <DataProvider>
-                <Router>
-                    <PagesContent />
-                </Router>
-            </DataProvider>
+            <ThemeProvider>
+                <RateLimitMonitor />
+                <DataProvider>
+                    <Router>
+                        <PagesContent />
+                    </Router>
+                </DataProvider>
+            </ThemeProvider>
         </QueryClientProvider>
     );
 }
