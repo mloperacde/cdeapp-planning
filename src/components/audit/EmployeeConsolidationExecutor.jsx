@@ -31,7 +31,7 @@ export default function EmployeeConsolidationExecutor() {
       // PASO 1: Consolidar Employee → EmployeeMasterDatabase
       toast.info("🔄 Paso 1: Consolidando datos...");
       const consolidateResponse = await base44.functions.invoke('consolidateEmployees', {});
-      const consolidateData = consolidateResponse.data;
+      const consolidateData = consolidateResponse?.data || consolidateResponse;
       
       if (!consolidateData.success) {
         throw new Error("Error en consolidación: " + JSON.stringify(consolidateData.errors));
@@ -46,7 +46,7 @@ export default function EmployeeConsolidationExecutor() {
       const updateResponse = await base44.functions.invoke('updateEmployeeReferences', {
         mappings: consolidateData.mappings
       });
-      const updateData = updateResponse.data;
+      const updateData = updateResponse?.data || updateResponse;
       
       if (!updateData.success) {
         toast.warning(`⚠️ Algunas referencias no se actualizaron: ${updateData.errors.length} errores`);
