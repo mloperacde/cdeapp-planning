@@ -136,6 +136,8 @@ import Timeline from "./Timeline";
 
 import WorkCalendarConfig from "./WorkCalendarConfig";
 
+import RoleMigrationGuide from "./RoleMigrationGuide";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RateLimitMonitor from '../components/utils/RateLimitMonitor';
