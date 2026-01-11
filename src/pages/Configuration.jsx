@@ -105,6 +105,13 @@ export default function ConfigurationPage() {
           icon: Wrench,
           url: createPageUrl("MaintenanceTracking"),
           color: "slate"
+        },
+        {
+          title: "Auditoría de Máquinas y Procesos",
+          description: "Análisis de integridad y relaciones",
+          icon: Database,
+          url: createPageUrl("MachineProcessAudit"),
+          color: "purple"
         }
       ]
     },
