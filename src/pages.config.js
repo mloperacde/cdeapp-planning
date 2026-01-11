@@ -27,6 +27,7 @@ import EmailNotifications from './pages/EmailNotifications';
 import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
 import EmployeeAbsences from './pages/EmployeeAbsences';
 import EmployeeChat from './pages/EmployeeChat';
+import EmployeeDataAudit from './pages/EmployeeDataAudit';
 import EmployeeDataCompletion from './pages/EmployeeDataCompletion';
 import EmployeeDataCorrection from './pages/EmployeeDataCorrection';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
@@ -93,7 +94,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import EmployeeDataAudit from './pages/EmployeeDataAudit';
 import __Layout from './Layout.jsx';
 
 
@@ -127,6 +127,7 @@ export const PAGES = {
     "EmployeeAbsenceInfo": EmployeeAbsenceInfo,
     "EmployeeAbsences": EmployeeAbsences,
     "EmployeeChat": EmployeeChat,
+    "EmployeeDataAudit": EmployeeDataAudit,
     "EmployeeDataCompletion": EmployeeDataCompletion,
     "EmployeeDataCorrection": EmployeeDataCorrection,
     "EmployeeOnboarding": EmployeeOnboarding,
@@ -193,7 +194,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "EmployeeDataAudit": EmployeeDataAudit,
 }
 
 export const pagesConfig = {

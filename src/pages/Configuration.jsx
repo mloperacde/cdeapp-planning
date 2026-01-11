@@ -58,7 +58,6 @@ export default function ConfigurationPage() {
           url: createPageUrl("EmployeeDataAudit"),
           color: "indigo"
         },
-
         {
           title: "Reiniciar Sistema",
           description: "Borrar todo y empezar de cero con archivo maestro",
