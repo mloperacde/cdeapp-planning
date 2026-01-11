@@ -1,3 +1,4 @@
+import AbsenceConfigurationTab from './pages/AbsenceConfigurationTab';
 import AbsenceManagement from './pages/AbsenceManagement';
 import AcceptInvitation from './pages/AcceptInvitation';
 import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
@@ -49,7 +50,6 @@ import SystemHealth from './pages/SystemHealth';
 import SystemReset from './pages/SystemReset';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
-import index from './pages/index';
 import mobileAbsences from './pages/mobileAbsences';
 import mobileAppConfig from './pages/mobileAppConfig';
 import mobileChat from './pages/mobileChat';
@@ -57,11 +57,12 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import AbsenceConfigurationTab from './pages/AbsenceConfigurationTab';
+import index from './pages/index';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AbsenceConfigurationTab": AbsenceConfigurationTab,
     "AbsenceManagement": AbsenceManagement,
     "AcceptInvitation": AcceptInvitation,
     "AdminDeploymentGuide": AdminDeploymentGuide,
@@ -113,7 +114,6 @@ export const PAGES = {
     "SystemReset": SystemReset,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
-    "index": index,
     "mobileAbsences": mobileAbsences,
     "mobileAppConfig": mobileAppConfig,
     "mobileChat": mobileChat,
@@ -121,7 +121,7 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "AbsenceConfigurationTab": AbsenceConfigurationTab,
+    "index": index,
 }
 
 export const pagesConfig = {

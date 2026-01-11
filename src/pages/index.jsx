@@ -38,6 +38,8 @@ import MachineAssignments from "./MachineAssignments";
 
 import MachineMaintenance from "./MachineMaintenance";
 
+import MachineMaster from "./MachineMaster";
+
 import MachineManagement from "./MachineManagement";
 
 import MaintenanceTracking from "./MaintenanceTracking";
@@ -132,6 +134,8 @@ const PAGES = {
     MachineMaintenance: MachineMaintenance,
     
     MachineManagement: MachineManagement,
+    
+    MachineMaster: MachineMaster,
     
     MaintenanceTracking: MaintenanceTracking,
     
@@ -245,6 +249,8 @@ function PagesContent() {
                 <Route path="/MachineMaintenance" element={<MachineMaintenance />} />
                 
                 <Route path="/MachineManagement" element={<MachineManagement />} />
+                
+                <Route path="/MachineMaster" element={<MachineMaster />} />
                 
                 <Route path="/MaintenanceTracking" element={<MaintenanceTracking />} />
                 

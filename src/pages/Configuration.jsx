@@ -114,10 +114,10 @@ export default function ConfigurationPage() {
           color: "purple"
         },
         {
-           title: "Consolidación de Máquinas",
-           description: "Ejecutar migración a MachineMasterDatabase",
+           title: "Archivo Maestro de Máquinas",
+           description: "Gestión centralizada del catálogo de máquinas",
            icon: Database,
-           url: createPageUrl("MachineConsolidationStatus"),
+           url: createPageUrl("MachineMaster"),
            color: "blue",
            hidden: false
          }
@@ -155,13 +155,7 @@ export default function ConfigurationPage() {
           url: createPageUrl("SystemAudit"),
           color: "red"
         },
-        {
-          title: "Sistema de Roles",
-          description: "Migración completada - Sistema nativo activo",
-          icon: Shield,
-          url: createPageUrl("RoleMigrationGuide"),
-          color: "green"
-        },
+
         {
           title: "Configuración Avanzada",
           description: "Estructura organizativa, puestos y sincronización",
