@@ -15,7 +15,7 @@ export default function SimpleConsolidationRunner() {
     setResult(null);
 
     try {
-      const response = await base44.asServiceRole.functions.invoke('executeFullConsolidation', {});
+      const response = await base44.functions.invoke('executeFullConsolidation', {});
       
       if (response?.data?.success) {
         setResult({
