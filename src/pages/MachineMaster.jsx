@@ -39,7 +39,8 @@ export default function MachineMasterPage() {
       }
     },
     staleTime: 0,
-    initialData: EMPTY_ARRAY,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
     retry: 3,
   });
 
