@@ -40,24 +40,26 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   return (
-    <div className="flex h-screen w-screen bg-slate-50">
-      {/* Sidebar - Desktop fijo, móvil flotante */}
-      <div className={`
-        transition-all duration-300
-        ${menuOpen ? 'w-64' : 'w-20'}
-        hidden md:flex md:flex-col
-        bg-slate-900 text-white
-        fixed md:relative
-        h-screen md:h-screen
-        z-40
-        overflow-y-auto
-      `}>
-        <div className="p-3 flex items-center justify-center">
-          <h1 className="font-bold text-lg text-white">B44</h1>
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
+      <div className={`${menuOpen ? 'w-64' : 'w-0 md:w-20'} bg-slate-900 text-white transition-all duration-300 overflow-hidden md:overflow-visible fixed md:relative z-40 h-full md:h-auto`}>
+        <div className="p-4 flex items-center justify-between">
+          <h1 className={`font-bold text-xl ${!menuOpen && 'hidden md:block text-center w-full'}`}>Base44</h1>
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden text-white"
+          >
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
-        
-        <nav className="flex-1 flex flex-col">
-          {Object.entries(
+        <nav className="mt-8">
+          {menuItems.reduce((grouped, item) => {
+            const category = item.category || 'Otros';
+            if (!grouped[category]) grouped[category] = [];
+            grouped[category].push(item);
+            return grouped;
+          }, {}) && 
+          Object.entries(
             menuItems.reduce((grouped, item) => {
               const category = item.category || 'Otros';
               if (!grouped[category]) grouped[category] = [];
@@ -73,12 +75,13 @@ export default function Layout({ children, currentPageName }) {
                   <Link
                     key={item.name}
                     to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-sm whitespace-nowrap ${
+                    onClick={() => setMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-sm ${
                       currentPageName === item.name ? 'bg-blue-600' : ''
                     }`}
                   >
-                    <Icon size={18} className="flex-shrink-0" />
-                    {menuOpen && <span className="text-xs">{item.name}</span>}
+                    <Icon size={18} />
+                    <span className={`${!menuOpen && 'hidden'} md:inline text-xs`}>{item.name}</span>
                   </Link>
                 );
               })}
@@ -87,18 +90,7 @@ export default function Layout({ children, currentPageName }) {
         </nav>
       </div>
 
-      {/* Mobile Menu Button */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 z-50 flex items-center px-4">
-        <button 
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="text-white"
-        >
-          {menuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-        <h1 className="ml-4 font-bold text-white">Base44</h1>
-      </div>
-
-      {/* Mobile Overlay */}
+      {/* Overlay para móvil */}
       {menuOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 md:hidden z-30"
@@ -106,44 +98,8 @@ export default function Layout({ children, currentPageName }) {
         />
       )}
 
-      {/* Mobile Menu - Slideout */}
-      {menuOpen && (
-        <div className="md:hidden fixed top-16 left-0 w-64 h-screen bg-slate-900 text-white z-40 overflow-y-auto">
-          <nav className="flex flex-col">
-            {Object.entries(
-              menuItems.reduce((grouped, item) => {
-                const category = item.category || 'Otros';
-                if (!grouped[category]) grouped[category] = [];
-                grouped[category].push(item);
-                return grouped;
-              }, {})
-            ).map(([category, items]) => (
-              <div key={category}>
-                <div className="px-4 py-2 text-xs font-semibold text-slate-400 mt-4">{category}</div>
-                {items.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.path}
-                      onClick={() => setMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-sm ${
-                        currentPageName === item.name ? 'bg-blue-600' : ''
-                      }`}
-                    >
-                      <Icon size={18} />
-                      <span>{item.name}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-        </div>
-      )}
-
       {/* Main Content */}
-      <div className="flex-1 overflow-auto md:mt-0 mt-16 bg-slate-50">
+      <div className="flex-1 overflow-auto">
         {children}
       </div>
     </div>

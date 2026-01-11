@@ -1,4 +1,4 @@
-import Layout from "../Layout";
+import Layout from "../layout";
 
 import AbsenceManagement from "./AbsenceManagement";
 
@@ -78,7 +78,6 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RateLimitMonitor from '../components/utils/RateLimitMonitor';
 import { DataProvider } from '../components/data/DataProvider';
-import { ThemeProvider } from '../components/common/ThemeProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -295,14 +294,12 @@ function PagesContent() {
 export default function Pages() {
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider>
-                <RateLimitMonitor />
-                <DataProvider>
-                    <Router>
-                        <PagesContent />
-                    </Router>
-                </DataProvider>
-            </ThemeProvider>
+            <RateLimitMonitor />
+            <DataProvider>
+                <Router>
+                    <PagesContent />
+                </Router>
+            </DataProvider>
         </QueryClientProvider>
     );
 }
