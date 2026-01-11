@@ -114,13 +114,12 @@ export default function ConfigurationPage() {
           color: "purple"
         },
         {
-           title: "Archivo Maestro de Máquinas",
-           description: "Gestión centralizada del catálogo de máquinas",
-           icon: Database,
-           url: createPageUrl("MachineMaster"),
-           color: "blue",
-           hidden: false
-         }
+          title: "Archivo Maestro de Máquinas",
+          description: "Gestión centralizada del catálogo de máquinas",
+          icon: Database,
+          url: createPageUrl("MachineMaster"),
+          color: "blue"
+        }
       ]
     },
     sistema: {

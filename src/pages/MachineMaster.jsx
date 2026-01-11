@@ -108,7 +108,7 @@ export default function MachineMasterPage() {
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Machines")}>
+          <Link to={createPageUrl("MachineManagement")}>
             <Button variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver a Máquinas
