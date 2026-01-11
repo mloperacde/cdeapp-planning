@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useAppData } from "../components/data/DataProvider";
+import AutoCleanup from "../components/audit/AutoCleanup";
 
 export default function Dashboard() {
   const { user, employees, absences, maintenance: maintenanceSchedules } = useAppData();
@@ -81,6 +82,8 @@ export default function Dashboard() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <AutoCleanup />
+        
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">
             Bienvenido{user?.full_name ? `, ${user.full_name}` : ''}
