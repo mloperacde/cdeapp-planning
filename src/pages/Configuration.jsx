@@ -112,6 +112,13 @@ export default function ConfigurationPage() {
           icon: Database,
           url: createPageUrl("MachineProcessAudit"),
           color: "purple"
+        },
+        {
+          title: "Consolidación de Máquinas",
+          description: "Ejecutar migración a MachineMasterDatabase",
+          icon: Database,
+          url: createPageUrl("MachineConsolidationStatus"),
+          color: "blue"
         }
       ]
     },
