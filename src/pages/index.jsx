@@ -142,6 +142,8 @@ import EmployeeDataAudit from "./EmployeeDataAudit";
 
 import MachineProcessAudit from "./MachineProcessAudit";
 
+import MachineConsolidationStatus from "./MachineConsolidationStatus";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RateLimitMonitor from '../components/utils/RateLimitMonitor';
@@ -168,6 +170,8 @@ const PAGES = {
           EmployeeDataAudit: EmployeeDataAudit,
           
           MachineProcessAudit: MachineProcessAudit,
+          
+          MachineConsolidationStatus: MachineConsolidationStatus,
     
     AbsenceTypeConfig: AbsenceTypeConfig,
     
@@ -471,6 +475,8 @@ function PagesContent() {
                 <Route path="/EmployeeDataAudit" element={<EmployeeDataAudit />} />
                 
                 <Route path="/MachineProcessAudit" element={<MachineProcessAudit />} />
+                
+                <Route path="/MachineConsolidationStatus" element={<MachineConsolidationStatus />} />
                 
             </Routes>
         </Layout>

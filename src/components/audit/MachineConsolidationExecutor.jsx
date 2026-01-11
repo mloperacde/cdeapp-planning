@@ -27,10 +27,10 @@ export default function MachineConsolidationExecutor() {
       setCurrentStep(1);
       toast.info("Iniciando consolidación de máquinas...");
       
-      const consolidationResponse = await base44.functions.invoke('consolidateMachines');
+      const consolidationResponse = await base44.functions.invoke('consolidateMachines', {});
       
-      if (!consolidationResponse.data.success) {
-        throw new Error(consolidationResponse.data.error || 'Error en consolidación');
+      if (!consolidationResponse?.data?.success) {
+        throw new Error(consolidationResponse?.data?.error || 'Error en consolidación');
       }
 
       const consolidationResults = consolidationResponse.data;
@@ -40,10 +40,10 @@ export default function MachineConsolidationExecutor() {
       setCurrentStep(2);
       toast.info("Actualizando referencias en entidades relacionadas...");
       
-      const referencesResponse = await base44.functions.invoke('updateMachineReferences');
+      const referencesResponse = await base44.functions.invoke('updateMachineReferences', {});
       
-      if (!referencesResponse.data.success) {
-        throw new Error(referencesResponse.data.error || 'Error actualizando referencias');
+      if (!referencesResponse?.data?.success) {
+        throw new Error(referencesResponse?.data?.error || 'Error actualizando referencias');
       }
 
       const referencesResults = referencesResponse.data;
