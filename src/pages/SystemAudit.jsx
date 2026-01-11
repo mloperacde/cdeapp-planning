@@ -215,8 +215,6 @@ export default function SystemAudit() {
       "WorkOrder",
       "MachineAssignmentAudit",
       "DailyMachineStaffing",
-      "Role",
-      "UserRole",
       "QualityInspection",
     ];
 
@@ -310,7 +308,7 @@ export default function SystemAudit() {
         "NotificationTemplate",
         "SMSNotificationLog",
       ],
-      Seguridad: ["Role", "UserRole", "ProfileChangeRequest"],
+      Seguridad: ["ProfileChangeRequest"],
       ML: ["MLPrediction", "MachinePrediction"],
     };
 
@@ -355,12 +353,7 @@ export default function SystemAudit() {
         severity: "medium",
         recommendation: "Verificar si MobileAbsenceRequest es necesario como entidad",
       },
-      {
-        group: "Roles y Usuarios",
-        entities: ["Role", "UserRole"],
-        severity: "high",
-        recommendation: "Usar sistema nativo de Base44 exclusivamente",
-      },
+
       {
         group: "Notificaciones",
         entities: [
@@ -415,14 +408,7 @@ export default function SystemAudit() {
           "Falta configuración de acceso por rol",
         ],
       },
-      customModules: [
-        {
-          name: "Gestión de Roles",
-          entities: ["Role", "UserRole"],
-          status: "Duplicado con sistema nativo",
-          recommendation: "Migrar al sistema nativo",
-        },
-      ],
+      customModules: [],
       conflicts: [
         {
           entity: "Employee",
