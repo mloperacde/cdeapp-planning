@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +26,6 @@ import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import EmployeeSelect from "../components/common/EmployeeSelect";
 
-const EMPTY_ARRAY = [];
-
 export default function ShiftPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState("Mañana");
@@ -34,27 +33,8 @@ export default function ShiftPlanningPage() {
   
   const queryClient = useQueryClient();
 
-  const { data: machines = EMPTY_ARRAY } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-  });
-
-  const { data: employees = EMPTY_ARRAY } = useQuery({
-    queryKey: ['employees'],
-    queryFn: async () => {
-      try {
-        await base44.functions.invoke('syncEmployeeData');
-      } catch (e) {
-        console.error("Sync failed", e);
-      }
-      return base44.entities.EmployeeMasterDatabase.list('nombre');
-    },
-  });
-
-  const { data: teams = EMPTY_ARRAY } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-  });
+  // Usar DataProvider para datos compartidos
+  const { employees = [], teams = [], machines = [] } = useAppData();
 
   const { data: machineAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['machineAssignments'],

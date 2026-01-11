@@ -2,8 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { useAppData } from "../components/data/DataProvider";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
@@ -11,19 +10,21 @@ import { Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import WorkCalendar from "../components/absences/WorkCalendar";
-
-const EMPTY_ARRAY = [];
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 
 export default function Timeline() {
   const now = new Date();
   const [viewMode, setViewMode] = useState('day');
   const [selectedDate, setSelectedDate] = useState(now);
   const [selectedTeam, setSelectedTeam] = useState('all');
-  const [selectedDepartment, setSelectedDepartment] = useState('all'); // New state for selected department
-  const [isCalling, setIsCalling] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+
+  // Usar DataProvider para datos compartidos
+  const { employees = [], teams = [], holidays = [], vacations = [] } = useAppData();
 
   const { start: startDate, end: endDate } = useMemo(() => {
-    const dateCopy = new Date(selectedDate); // Create a copy to avoid mutating the state date
+    const dateCopy = new Date(selectedDate);
     switch (viewMode) {
       case 'day':
         return {
@@ -50,53 +51,19 @@ export default function Timeline() {
     }
   }, [viewMode, selectedDate]);
 
-  const { data: holidays = EMPTY_ARRAY } = useQuery({
-    queryKey: ['holidays'],
-    queryFn: () => base44.entities.Holiday.list(),
-    initialData: EMPTY_ARRAY,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: vacations = EMPTY_ARRAY } = useQuery({
-    queryKey: ['vacations'],
-    queryFn: () => base44.entities.Vacation.list(),
-    initialData: EMPTY_ARRAY,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: employees = EMPTY_ARRAY } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    initialData: EMPTY_ARRAY,
-    staleTime: 2 * 60 * 1000,
-  });
-
-  const { data: teams = EMPTY_ARRAY } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: EMPTY_ARRAY,
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const { data: teamSchedules = EMPTY_ARRAY } = useQuery({
+  const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
-    initialData: EMPTY_ARRAY,
-    staleTime: 5 * 60 * 1000,
+    initialData: [],
   });
 
-  // Get unique departments
   const departments = useMemo(() => {
     const depts = new Set();
-    if (Array.isArray(employees)) { // Ensure employees data is available and is an array
-      employees.forEach(emp => {
-        if (emp?.departamento) depts.add(emp.departamento); // Safely access departamento
-      });
-    }
+    employees.forEach(emp => {
+      if (emp?.departamento) depts.add(emp.departamento);
+    });
     return Array.from(depts).sort();
   }, [employees]);
-
-  // Removed handleCallSchedulingAssistant as per instructions
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:via-background dark:to-background">

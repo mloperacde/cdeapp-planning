@@ -1,6 +1,7 @@
 import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, CheckCircle2, Clock, AlertCircle, TrendingUp } from "lucide-react";
@@ -8,18 +9,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function EmployeeVacationsPage() {
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
-  const { data: employee } = useQuery({
-    queryKey: ['currentEmployee', currentUser?.email],
-    queryFn: () => currentUser?.email 
-      ? base44.entities.Employee.filter({ email: currentUser.email }).then(r => r[0])
-      : null,
-    enabled: !!currentUser?.email,
-  });
+  // Usar DataProvider
+  const { user: currentUser, currentEmployee: employee } = useAppData();
 
   const { data: balances = [] } = useQuery({
     queryKey: ['absenceDaysBalance', employee?.id],

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,24 +28,8 @@ export default function EmployeeAbsencesPage() {
 
   const queryClient = useQueryClient();
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
-  const { data: employee } = useQuery({
-    queryKey: ['currentEmployee', currentUser?.email],
-    queryFn: () => currentUser?.email 
-      ? base44.entities.Employee.filter({ email: currentUser.email }).then(r => r[0])
-      : null,
-    enabled: !!currentUser?.email,
-  });
-
-  const { data: absenceTypes = [] } = useQuery({
-    queryKey: ['absenceTypes'],
-    queryFn: () => base44.entities.AbsenceType.filter({ activo: true, visible_empleados: true }),
-    initialData: [],
-  });
+  // Usar DataProvider
+  const { user: currentUser, currentEmployee: employee, absenceTypes = [] } = useAppData();
 
   const { data: absences = [] } = useQuery({
     queryKey: ['myAbsences', employee?.id],
