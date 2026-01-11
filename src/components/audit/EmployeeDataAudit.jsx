@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
 import EmployeeConsolidationReport from "./EmployeeConsolidationReport";
 import DirectConsolidation from "./DirectConsolidation";
+import FinalConsolidationStep from "./FinalConsolidationStep";
 
 export default function EmployeeDataAudit() {
   const [auditResults, setAuditResults] = useState(null);
@@ -198,7 +199,13 @@ export default function EmployeeDataAudit() {
         </Button>
       </div>
 
-      {/* Ejecutor de Consolidación Directa */}
+      {/* Paso Final - Eliminar Employee.json */}
+      <FinalConsolidationStep 
+        employeeCount={auditResults?.entities?.Employee?.count || 0}
+        masterCount={auditResults?.entities?.EmployeeMasterDatabase?.count || 0}
+      />
+
+      {/* Ejecutor de Consolidación Directa (por si acaso) */}
       <DirectConsolidation />
 
       {/* Reporte de Arquitectura Completo */}
