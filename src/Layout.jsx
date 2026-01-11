@@ -16,24 +16,24 @@ export default function Layout({ children, currentPageName }) {
     { name: 'ETT y Temporales', icon: Users, path: createPageUrl('ETTTemporaryEmployees'), category: 'RRHH' },
     { name: 'Onboarding', icon: Users, path: createPageUrl('EmployeeOnboarding'), category: 'RRHH' },
     { name: 'Control Presencia', icon: Calendar, path: createPageUrl('AttendanceManagement'), category: 'RRHH' },
-    { name: 'Comités y PRL', icon: Settings, path: createPageUrl('CommitteeManagement'), category: 'RRHH' },
-    { name: 'Plan Incentivos', icon: Settings, path: createPageUrl('IncentiveManagement'), category: 'RRHH' },
+    { name: 'Comités y PRL', icon: Shield, path: createPageUrl('CommitteeManagement'), category: 'RRHH' },
+    { name: 'Plan Incentivos', icon: DollarSign, path: createPageUrl('IncentiveManagement'), category: 'RRHH' },
     
     // 📅 PLANIFICACIÓN
     { name: 'Planning Diario', icon: Calendar, path: createPageUrl('DailyPlanning'), category: 'Planificación' },
-    { name: 'Planning Turnos', icon: Calendar, path: createPageUrl('ShiftManagement'), category: 'Planificación' },
-    { name: 'Planning Máquinas', icon: Wrench, path: createPageUrl('DailyPlanning'), category: 'Planificación' },
+    { name: 'Planning Turnos', icon: Users, path: createPageUrl('ShiftManagement'), category: 'Planificación' },
+    { name: 'Jefes de Turno', icon: Users, path: createPageUrl('ShiftManagers'), category: 'Planificación' },
     
     // 🏭 PRODUCCIÓN
     { name: 'Consulta Máquinas', icon: Wrench, path: createPageUrl('MachineManagement'), category: 'Producción' },
-    { name: 'Config. Procesos', icon: Wrench, path: createPageUrl('ProcessConfiguration'), category: 'Producción' },
+    { name: 'Config. Procesos', icon: Cog, path: createPageUrl('ProcessConfiguration'), category: 'Producción' },
+    { name: 'Artículos', icon: Package, path: createPageUrl('ArticleManagement'), category: 'Producción' },
     
     // 🔧 MANTENIMIENTO
     { name: 'Seguimiento', icon: Wrench, path: createPageUrl('MaintenanceTracking'), category: 'Mantenimiento' },
     
     // 📈 ANÁLISIS
     { name: 'Informes', icon: FileText, path: createPageUrl('Reports'), category: 'Análisis' },
-    { name: 'Análisis Predictivo', icon: FileText, path: createPageUrl('MLInsights'), category: 'Análisis' },
     
     // ⚙️ CONFIGURACIÓN
     { name: 'Configuración', icon: Settings, path: createPageUrl('Configuration'), category: 'Configuración' },
