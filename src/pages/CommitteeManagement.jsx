@@ -31,7 +31,14 @@ export default function CommitteeManagementPage() {
 
   const { data: committeeMembers = [] } = useQuery({
     queryKey: ['committeeMembers'],
-    queryFn: () => base44.entities.CommitteeMember.list(),
+    queryFn: async () => {
+      try {
+        return await base44.entities.CommitteeMember.list(undefined, 500);
+      } catch (err) {
+        console.warn('Error loading committee members:', err);
+        return [];
+      }
+    },
     initialData: [],
     staleTime: 10 * 60 * 1000,
     retry: 1,
