@@ -50,46 +50,29 @@ export default function EmployeeDataAudit() {
       };
       results.totalRecords += masterEmployees.length;
 
-      // 2. Employee (DEPRECATED)
-      try {
-        const employees = await base44.entities.Employee.list('nombre', 1000);
-        results.entities.Employee = {
-          count: employees.length,
-          status: "Deprecated",
-          role: "Migrar a EmployeeMasterDatabase",
-          fields: Object.keys(employees[0] || {}),
-          hasData: employees.length > 0,
-          warning: "⚠️ Entidad marcada como DEPRECATED"
-        };
-        results.totalRecords += employees.length;
-        
-        if (employees.length > 0) {
-          results.recommendations.push({
-            priority: "CRITICAL",
-            action: "Migrar datos de Employee a EmployeeMasterDatabase",
-            impact: `${employees.length} registros en riesgo`,
-            solution: "Ejecutar función consolidate_employees"
-          });
-        }
-      } catch (e) {
-        results.entities.Employee = { count: 0, status: "Error", error: e.message };
-      }
+      // 2. Employee (ELIMINADA)
+      results.entities.Employee = {
+        count: 0,
+        status: "Eliminada ✅",
+        role: "Entidad eliminada - Datos consolidados en EmployeeMasterDatabase",
+        hasData: false
+      };
 
-      // 3. Entidades relacionadas con empleados
+      // 3. Entidades relacionadas con EmployeeMasterDatabase
       const relatedEntities = [
-        { name: "EmployeeSkill", relation: "employee_id", description: "Habilidades y competencias" },
-        { name: "EmployeeTraining", relation: "employee_id", description: "Formación asignada" },
-        { name: "EmployeeOnboarding", relation: "employee_id", description: "Procesos de onboarding" },
-        { name: "EmployeeDocument", relation: "employee_id", description: "Documentos personales" },
-        { name: "LockerAssignment", relation: "employee_id", description: "Asignaciones de taquillas" },
-        { name: "AttendanceRecord", relation: "employee_id", description: "Registros de fichaje" },
-        { name: "EmployeeAuditLog", relation: "target_employee_id", description: "Auditoría de acciones" },
-        { name: "EmployeeSyncHistory", relation: "employee_id", description: "Historial de sincronización" },
-        { name: "Absence", relation: "employee_id", description: "Ausencias registradas" },
-        { name: "ShiftAssignment", relation: "employee_id", description: "Asignaciones de turno" },
-        { name: "PerformanceReview", relation: "employee_id", description: "Evaluaciones de desempeño" },
-        { name: "PerformanceImprovementPlan", relation: "employee_id", description: "Planes de mejora" },
-        { name: "EmployeeIncentiveResult", relation: "employee_id", description: "Resultados de incentivos" }
+        { name: "EmployeeSkill", relation: "employee_id → EmployeeMasterDatabase", description: "Habilidades y competencias" },
+        { name: "EmployeeTraining", relation: "employee_id → EmployeeMasterDatabase", description: "Formación asignada" },
+        { name: "EmployeeOnboarding", relation: "employee_id → EmployeeMasterDatabase", description: "Procesos de onboarding" },
+        { name: "EmployeeDocument", relation: "employee_id → EmployeeMasterDatabase", description: "Documentos personales" },
+        { name: "LockerAssignment", relation: "employee_id → EmployeeMasterDatabase", description: "Asignaciones de taquillas" },
+        { name: "AttendanceRecord", relation: "employee_id → EmployeeMasterDatabase", description: "Registros de fichaje" },
+        { name: "EmployeeAuditLog", relation: "target_employee_id → EmployeeMasterDatabase", description: "Auditoría de acciones" },
+        { name: "EmployeeSyncHistory", relation: "employee_id → EmployeeMasterDatabase", description: "Historial de sincronización" },
+        { name: "Absence", relation: "employee_id → EmployeeMasterDatabase", description: "Ausencias registradas" },
+        { name: "ShiftAssignment", relation: "employee_id → EmployeeMasterDatabase", description: "Asignaciones de turno" },
+        { name: "PerformanceReview", relation: "employee_id → EmployeeMasterDatabase", description: "Evaluaciones de desempeño" },
+        { name: "PerformanceImprovementPlan", relation: "employee_id → EmployeeMasterDatabase", description: "Planes de mejora" },
+        { name: "EmployeeIncentiveResult", relation: "employee_id → EmployeeMasterDatabase", description: "Resultados de incentivos" }
       ];
 
       for (const entity of relatedEntities) {
