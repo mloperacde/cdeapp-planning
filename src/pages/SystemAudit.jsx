@@ -446,7 +446,7 @@ export default function SystemAudit() {
       if (phaseId === "backup") {
         toast.info("Generando backup completo...");
         const response = await base44.functions.invoke("auditBackup", {});
-        result = response.data;
+            result = response.data || {};
         
         // Descargar backup automáticamente
         if (result.success) {

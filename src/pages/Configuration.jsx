@@ -135,8 +135,8 @@ export default function ConfigurationPage() {
           color: "red"
         },
         {
-          title: "Migración de Roles",
-          description: "Guía de migración al sistema nativo de Base44",
+          title: "Sistema de Roles",
+          description: "Migración completada - Sistema nativo activo",
           icon: Shield,
           url: createPageUrl("RoleMigrationGuide"),
           color: "green"

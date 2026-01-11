@@ -154,10 +154,10 @@ const queryClient = new QueryClient({
 });
 
 const PAGES = {
-
-          RoleMigrationGuide: RoleMigrationGuide,
-
+          
           AbsenceManagement: AbsenceManagement,
+          
+          RoleMigrationGuide: RoleMigrationGuide,
     
     AbsenceTypeConfig: AbsenceTypeConfig,
     
