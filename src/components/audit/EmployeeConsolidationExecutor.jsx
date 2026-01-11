@@ -47,47 +47,58 @@ export default function EmployeeConsolidationExecutor() {
   }, []);
 
   const executeConsolidation = async () => {
+    console.log("🚀 INICIANDO CONSOLIDACIÓN");
     setExecuting(true);
     setStep(1);
-    setResults({ steps: [], summary: null, errors: [] });
+    setResults(null);
     
     try {
-      // Verificación final del SDK antes de ejecutar
+      // Verificación final del SDK
       if (!base44?.functions?.invoke) {
-        throw new Error("El SDK no está disponible. Por favor, recarga la página.");
+        throw new Error("SDK no disponible");
       }
 
       // PASO 1: Consolidar Employee → EmployeeMasterDatabase
-      toast.info("🔄 Paso 1: Consolidando datos de Employee...");
-      console.log("Iniciando consolidación...");
+      console.log("📊 PASO 1: Llamando consolidateEmployees...");
+      toast.info("🔄 Consolidando datos de Employee...");
       
       const consolidateResponse = await base44.functions.invoke('consolidateEmployees', {});
-      console.log("Respuesta de consolidación:", consolidateResponse);
+      console.log("✅ Respuesta consolidateEmployees:", consolidateResponse);
       
       const consolidateData = consolidateResponse?.data || consolidateResponse;
       
-      if (!consolidateData.success) {
-        throw new Error("Error en consolidación: " + JSON.stringify(consolidateData.errors));
+      if (!consolidateData || !consolidateData.success) {
+        console.error("❌ Error en consolidación:", consolidateData);
+        throw new Error("Error en consolidación: " + JSON.stringify(consolidateData?.errors || "unknown"));
       }
 
-      toast.success(`✅ ${consolidateData.employeesMigrated} empleados migrados, ${consolidateData.employeesSkipped} ya existían`);
+      console.log(`✅ PASO 1 COMPLETADO: ${consolidateData.employeesMigrated} migrados, ${consolidateData.employeesSkipped} saltados`);
+      toast.success(`✅ ${consolidateData.employeesMigrated} migrados`);
       
       setStep(2);
       
       // PASO 2: Actualizar referencias
-      toast.info("🔄 Paso 2: Actualizando referencias en entidades relacionadas...");
+      console.log("📊 PASO 2: Llamando updateEmployeeReferences...");
+      console.log("Mappings a enviar:", consolidateData.mappings?.length || 0);
+      toast.info("🔄 Actualizando referencias...");
+      
       const updateResponse = await base44.functions.invoke('updateEmployeeReferences', {
-        mappings: consolidateData.mappings
+        mappings: consolidateData.mappings || []
       });
+      console.log("✅ Respuesta updateEmployeeReferences:", updateResponse);
+      
       const updateData = updateResponse?.data || updateResponse;
       
-      if (!updateData.success) {
-        toast.warning(`⚠️ Algunas referencias no se actualizaron: ${updateData.errors.length} errores`);
+      if (!updateData || !updateData.success) {
+        console.error("⚠️ Error parcial en referencias:", updateData);
+        toast.warning(`⚠️ Algunas referencias no se actualizaron`);
       } else {
+        console.log(`✅ PASO 2 COMPLETADO: ${updateData.totalUpdated} referencias actualizadas`);
         toast.success(`✅ ${updateData.totalUpdated} referencias actualizadas`);
       }
 
       setStep(3);
+      console.log("✅ CONSOLIDACIÓN COMPLETA");
       
       setResults({
         consolidation: consolidateData,
@@ -95,16 +106,20 @@ export default function EmployeeConsolidationExecutor() {
         success: true
       });
       
-      toast.success("🎉 Consolidación completada - Revisa el reporte");
+      toast.success("🎉 Consolidación completada");
 
     } catch (error) {
+      console.error("❌ ERROR EN CONSOLIDACIÓN:", error);
+      console.error("Stack:", error.stack);
       toast.error(`Error: ${error.message}`);
       setResults({
         error: error.message,
         success: false
       });
     } finally {
+      console.log("🏁 Finalizando consolidación");
       setExecuting(false);
+      setStep(0);
     }
   };
 
