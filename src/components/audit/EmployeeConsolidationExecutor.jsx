@@ -30,6 +30,12 @@ export default function EmployeeConsolidationExecutor() {
     try {
       // PASO 1: Consolidar Employee → EmployeeMasterDatabase
       toast.info("🔄 Paso 1: Consolidando datos...");
+      
+      // Verificar que base44.functions existe
+      if (!base44?.functions?.invoke) {
+        throw new Error("SDK no inicializado correctamente. Por favor, recarga la página.");
+      }
+      
       const consolidateResponse = await base44.functions.invoke('consolidateEmployees', {});
       const consolidateData = consolidateResponse?.data || consolidateResponse;
       
