@@ -117,16 +117,19 @@ export function DataProvider({ children }) {
     currentEmployee: employeeQuery.data,
     currentEmployeeLoading: employeeQuery.isLoading,
     
-    // Datos maestros
+    // Datos maestros - EMPLEADOS
     employees: employeesQuery.data || [],
+    masterEmployees: employeesQuery.data || [], // Alias para compatibilidad
     employeesLoading: employeesQuery.isLoading,
     
+    // Datos maestros - AUSENCIAS
     absences: absencesQuery.data || [],
     absencesLoading: absencesQuery.isLoading,
     
     absenceTypes: absenceTypesQuery.data || [],
     absenceTypesLoading: absenceTypesQuery.isLoading,
     
+    // Datos maestros - EQUIPOS Y CALENDARIO
     teams: teamsQuery.data || [],
     teamsLoading: teamsQuery.isLoading,
     
@@ -136,6 +139,7 @@ export function DataProvider({ children }) {
     holidays: holidaysQuery.data || [],
     holidaysLoading: holidaysQuery.isLoading,
     
+    // Datos maestros - MÁQUINAS Y MANTENIMIENTO
     machines: machinesQuery.data || [],
     machinesLoading: machinesQuery.isLoading,
     
