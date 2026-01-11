@@ -1,7 +1,8 @@
-
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
+import { usePermissions } from "../components/permissions/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,16 +39,20 @@ export default function AppUserManagementPage() {
   const [selectedEmployees, setSelectedEmployees] = useState(new Set());
   const queryClient = useQueryClient();
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
-    initialData: [],
-  });
+  // Usar datos del DataProvider
+  const { employees: masterEmployees } = useAppData();
+  const permissions = usePermissions();
+  const employees = masterEmployees;
 
-  const { data: systemUsers } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
-    initialData: [],
+  const { data: systemUsers = [] } = useQuery({
+    queryKey: ['systemUsers'],
+    queryFn: async () => {
+      // Solo admin puede listar usuarios
+      if (!permissions.isAdmin) return [];
+      return await base44.entities.User.list();
+    },
+    enabled: permissions.isAdmin,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: committeeMembers } = useQuery({
@@ -477,6 +482,12 @@ export default function AppUserManagementPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
+                            {/* Mostrar rol nativo de Base44 si tiene usuario */}
+                            {employee.hasUser && (
+                              <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                {systemUsers.find(u => u.email === employee.email)?.role === 'admin' ? 'Admin' : 'User'}
+                              </Badge>
+                            )}
                             {employee.inCommittee && (
                               <Badge className="bg-purple-100 text-purple-700 text-xs">
                                 <Shield className="w-3 h-3 mr-1" />
@@ -515,16 +526,17 @@ export default function AppUserManagementPage() {
 
           <Card className="bg-amber-50 border-2 border-amber-300">
             <CardContent className="p-4">
-              <h3 className="font-semibold text-amber-900 mb-2">⚠️ Importante</h3>
-              <p className="text-sm text-amber-800">
-                Los usuarios creados tendrán acceso basado en sus roles dentro de la organización:
+              <h3 className="font-semibold text-amber-900 mb-2">⚠️ Sistema de Roles Nativo Base44</h3>
+              <p className="text-sm text-amber-800 mb-3">
+                Los usuarios son gestionados por el sistema nativo de Base44:
               </p>
-              <ul className="text-sm text-amber-800 space-y-1 mt-2 list-disc list-inside ml-4">
-                <li><strong>Miembros de Comités:</strong> Acceso a módulos de PRL, Comités y Documentación</li>
-                <li><strong>Técnicos de Mantenimiento:</strong> Acceso a módulos de Máquinas y Mantenimiento</li>
-                <li><strong>Jefes de Turno:</strong> Acceso a Planning y Gestión de Turnos</li>
-                <li><strong>Empleados:</strong> Acceso limitado a su información personal y ausencias</li>
+              <ul className="text-sm text-amber-800 space-y-2 list-disc list-inside ml-4">
+                <li><strong>Admin:</strong> Acceso completo a todos los módulos, configuración y gestión</li>
+                <li><strong>User:</strong> Acceso limitado según permisos configurados en Base44 Dashboard</li>
               </ul>
+              <p className="text-sm text-amber-800 mt-3 pt-3 border-t border-amber-200">
+                📌 <strong>Nota:</strong> Los roles se asignan en el Dashboard de Base44 → Seguridad → Usuarios
+              </p>
             </CardContent>
           </Card>
         </div>

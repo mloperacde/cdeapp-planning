@@ -135,6 +135,13 @@ export default function ConfigurationPage() {
           color: "red"
         },
         {
+          title: "Migración de Roles",
+          description: "Guía de migración al sistema nativo de Base44",
+          icon: Shield,
+          url: createPageUrl("RoleMigrationGuide"),
+          color: "green"
+        },
+        {
           title: "Configuración Avanzada",
           description: "Estructura organizativa, puestos y sincronización",
           icon: Settings,

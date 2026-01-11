@@ -92,6 +92,7 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
+import RoleMigrationGuide from './pages/RoleMigrationGuide';
 import __Layout from './Layout.jsx';
 
 
@@ -190,6 +191,7 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
+    "RoleMigrationGuide": RoleMigrationGuide,
 }
 
 export const pagesConfig = {

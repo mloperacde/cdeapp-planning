@@ -154,8 +154,10 @@ const queryClient = new QueryClient({
 });
 
 const PAGES = {
-    
-    AbsenceManagement: AbsenceManagement,
+
+          RoleMigrationGuide: RoleMigrationGuide,
+
+          AbsenceManagement: AbsenceManagement,
     
     AbsenceTypeConfig: AbsenceTypeConfig,
     
@@ -445,6 +447,8 @@ function PagesContent() {
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
 
                 <Route path="/SystemAudit" element={<SystemAudit />} />
+
+                <Route path="/RoleMigrationGuide" element={<RoleMigrationGuide />} />
 
                 <Route path="/SystemReset" element={<SystemReset />} />
                 

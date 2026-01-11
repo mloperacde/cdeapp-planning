@@ -139,22 +139,16 @@ export default function MasterEmployeeDatabasePage() {
     return currentUser.role === 'admin';
   }, [currentUser]);
 
+  // Usar permisos del sistema nativo
   const userPermissions = useMemo(() => {
     if (!currentUser) return null;
-    if (currentUser.role === 'admin') return { 
-      isAdmin: true,
-      ver_salario: true,
-      ver_dni: true,
-      ver_contacto: true,
-      ver_direccion: true,
-      ver_bancarios: true
-    };
     return {
-      ver_salario: false,
-      ver_dni: false,
-      ver_contacto: false,
-      ver_direccion: false,
-      ver_bancarios: false
+      isAdmin: currentUser.role === 'admin',
+      ver_salario: currentUser.role === 'admin',
+      ver_dni: currentUser.role === 'admin',
+      ver_contacto: currentUser.role === 'admin',
+      ver_direccion: currentUser.role === 'admin',
+      ver_bancarios: currentUser.role === 'admin'
     };
   }, [currentUser]);
 
