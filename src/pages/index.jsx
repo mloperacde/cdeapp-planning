@@ -303,7 +303,7 @@ function PagesContent() {
         <Layout currentPageName={currentPage}>
             <Routes>            
                 
-                    <Route path="/" element={<AbsenceManagement />} />
+                    <Route path="/" element={<Dashboard />} />
                 
                 
                 <Route path="/AbsenceManagement" element={<AbsenceManagement />} />

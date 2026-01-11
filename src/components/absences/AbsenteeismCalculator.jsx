@@ -4,26 +4,32 @@ import { differenceInHours, eachDayOfInterval, isWeekend, startOfYear, endOfYear
 /**
  * Calcula la tasa de absentismo para un empleado
  * Fórmula: (Total horas no trabajadas / Total horas que se deberían haber trabajado) × 100
+ * OPTIMIZADO: Recibe datos precargados para evitar llamadas repetidas
  */
-export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDate) {
-  const employee = await base44.entities.Employee.filter({ id: employeeId });
-  if (!employee || employee.length === 0) return null;
-
-  const emp = employee[0];
+export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDate, preloadedData = {}) {
+  const { employees, absences, vacations, holidays } = preloadedData;
   
-  // Obtener ausencias del empleado en el rango de fechas
-  const absences = await base44.entities.Absence.filter({ employee_id: employeeId });
+  // Usar datos precargados si existen, sino cargar (fallback)
+  const emp = employees 
+    ? employees.find(e => e.id === employeeId)
+    : (await base44.entities.EmployeeMasterDatabase.filter({ id: employeeId }))[0];
+    
+  if (!emp) return null;
+  
+  // Usar ausencias precargadas si existen
+  const allAbsences = absences || await base44.entities.Absence.filter({ employee_id: employeeId });
   
   // Filtrar ausencias que caen en el rango y excluir vacaciones/festivos
-  const relevantAbsences = absences.filter(abs => {
+  const relevantAbsences = allAbsences.filter(abs => {
+    if (abs.employee_id !== employeeId) return false;
     const absStart = new Date(abs.fecha_inicio);
     const absEnd = abs.fecha_fin_desconocida ? endDate : new Date(abs.fecha_fin);
     return absEnd >= startDate && absStart <= endDate;
   });
 
-  // Obtener vacaciones y festivos para excluir
-  const vacations = await base44.entities.Vacation.list();
-  const holidays = await base44.entities.Holiday.list();
+  // Usar datos precargados de vacaciones y festivos
+  const allVacations = vacations || await base44.entities.Vacation.list();
+  const allHolidays = holidays || await base44.entities.Holiday.list();
 
   // Calcular horas no trabajadas (excluyendo vacaciones y festivos)
   let horasNoTrabajadas = 0;
@@ -39,21 +45,21 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
       if (isWeekend(day)) continue;
       
       // Check if day is in vacation period
-      const isVacationDay = vacations.some(vac => {
+      const isVacationDay = allVacations.some(vac => {
         const vacStart = new Date(vac.start_date);
         const vacEnd = new Date(vac.end_date);
         return day >= vacStart && day <= vacEnd;
       });
       
       // Check if day is holiday
-      const isHoliday = holidays.some(hol => {
+      const isHoliday = allHolidays.some(hol => {
         const holDate = new Date(hol.date);
         return day.toDateString() === holDate.toDateString();
       });
       
       // Only count if not vacation or holiday
       if (!isVacationDay && !isHoliday) {
-        horasNoTrabajadas += emp.num_horas_jornada / 5; // Dividir horas semanales entre 5 días laborables
+        horasNoTrabajadas += (emp.num_horas_jornada || 40) / 5; // Dividir horas semanales entre 5 días laborables
       }
     }
   }
@@ -65,19 +71,19 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
   for (const day of totalDays) {
     if (isWeekend(day)) continue;
     
-    const isVacationDay = vacations.some(vac => {
+    const isVacationDay = allVacations.some(vac => {
       const vacStart = new Date(vac.start_date);
       const vacEnd = new Date(vac.end_date);
       return day >= vacStart && day <= vacEnd;
     });
     
-    const isHoliday = holidays.some(hol => {
+    const isHoliday = allHolidays.some(hol => {
       const holDate = new Date(hol.date);
       return day.toDateString() === holDate.toDateString();
     });
     
     if (!isVacationDay && !isHoliday) {
-      horasDeberianTrabajarse += emp.num_horas_jornada / 5;
+      horasDeberianTrabajarse += (emp.num_horas_jornada || 40) / 5;
     }
   }
 
@@ -95,15 +101,23 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
 
 /**
  * Calcula la tasa de absentismo global de todos los empleados
+ * OPTIMIZADO: Carga datos una sola vez y los reutiliza
  */
-export async function calculateGlobalAbsenteeism(startDate, endDate) {
-  const employees = await base44.entities.Employee.list();
+export async function calculateGlobalAbsenteeism(startDate, endDate, preloadedData = {}) {
+  // Cargar TODOS los datos una sola vez
+  const employees = preloadedData.employees || await base44.entities.EmployeeMasterDatabase.list();
+  const absences = preloadedData.absences || await base44.entities.Absence.list();
+  const vacations = preloadedData.vacations || await base44.entities.Vacation.list();
+  const holidays = preloadedData.holidays || await base44.entities.Holiday.list();
   
   let totalHorasNoTrabajadas = 0;
   let totalHorasDeberianTrabajarse = 0;
 
+  // Pasar datos precargados a cada cálculo individual
+  const sharedData = { employees, absences, vacations, holidays };
+
   for (const emp of employees) {
-    const result = await calculateEmployeeAbsenteeism(emp.id, startDate, endDate);
+    const result = await calculateEmployeeAbsenteeism(emp.id, startDate, endDate, sharedData);
     if (result) {
       totalHorasNoTrabajadas += result.horasNoTrabajadas;
       totalHorasDeberianTrabajarse += result.horasDeberianTrabajarse;
@@ -123,16 +137,17 @@ export async function calculateGlobalAbsenteeism(startDate, endDate) {
 
 /**
  * Actualiza diariamente el absentismo de un empleado
+ * OPTIMIZADO: Usa datos precargados si están disponibles
  */
-export async function updateEmployeeAbsenteeismDaily(employeeId) {
+export async function updateEmployeeAbsenteeismDaily(employeeId, preloadedData = {}) {
   const now = new Date();
   const yearStart = startOfYear(now);
   const yearEnd = endOfYear(now);
 
-  const result = await calculateEmployeeAbsenteeism(employeeId, yearStart, now);
+  const result = await calculateEmployeeAbsenteeism(employeeId, yearStart, now, preloadedData);
   
   if (result) {
-    await base44.entities.Employee.update(employeeId, {
+    await base44.entities.EmployeeMasterDatabase.update(employeeId, {
       tasa_absentismo: result.tasaAbsentismo,
       horas_no_trabajadas: result.horasNoTrabajadas,
       horas_deberian_trabajarse: result.horasDeberianTrabajarse,
