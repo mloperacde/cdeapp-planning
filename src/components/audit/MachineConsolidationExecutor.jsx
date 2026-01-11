@@ -34,7 +34,7 @@ export default function MachineConsolidationExecutor() {
       }
 
       const consolidationResults = consolidationResponse.data;
-      toast.success(`Migradas ${consolidationResults.results.migrated} máquinas`);
+      toast.success(`Migradas ${consolidationResults.summary?.migrated || consolidationResults.results?.migrated || 0} máquinas`);
 
       // Paso 2: Actualizar referencias
       setCurrentStep(2);
@@ -162,36 +162,36 @@ export default function MachineConsolidationExecutor() {
               <div className="p-3 bg-white rounded border border-green-200">
                 <p className="text-slate-600">Máquinas Migradas</p>
                 <p className="text-2xl font-bold text-green-700">
-                  {results.consolidation.results.migrated}
+                  {results.consolidation?.summary?.migrated || results.consolidation?.results?.migrated || 0}
                 </p>
               </div>
               
               <div className="p-3 bg-white rounded border border-green-200">
                 <p className="text-slate-600">Duplicados Corregidos</p>
                 <p className="text-2xl font-bold text-blue-700">
-                  {results.consolidation.results.duplicatesFixed}
+                  {results.consolidation?.summary?.duplicates_fixed || results.consolidation?.results?.duplicatesFixed || 0}
                 </p>
               </div>
               
               <div className="p-3 bg-white rounded border border-green-200">
                 <p className="text-slate-600">Procesos Integrados</p>
                 <p className="text-2xl font-bold text-purple-700">
-                  {results.consolidation.results.processesIntegrated}
+                  {results.consolidation?.summary?.processes_integrated || results.consolidation?.results?.processesIntegrated || 0}
                 </p>
               </div>
               
               <div className="p-3 bg-white rounded border border-green-200">
                 <p className="text-slate-600">Referencias Actualizadas</p>
                 <p className="text-2xl font-bold text-indigo-700">
-                  {results.references.summary.total_updated}
+                  {results.references?.summary?.total_updated || 0}
                 </p>
               </div>
             </div>
 
-            {results.references.results.orphanedRemoved > 0 && (
+            {(results.references?.results?.orphanedRemoved > 0 || results.references?.summary?.orphaned_removed > 0) && (
               <Alert className="border-amber-300 bg-amber-50">
                 <AlertDescription className="text-amber-900 text-sm">
-                  Se eliminaron {results.references.results.orphanedRemoved} asignaciones huérfanas irrecuperables
+                  Se eliminaron {results.references?.results?.orphanedRemoved || results.references?.summary?.orphaned_removed || 0} asignaciones huérfanas irrecuperables
                 </AlertDescription>
               </Alert>
             )}
