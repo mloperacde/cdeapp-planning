@@ -230,7 +230,6 @@ export default function MachineProcessDataAudit() {
       });
 
       // Máquinas sin procesos configurados
-      const machineProcesses = machineRelatedData.MachineProcess || [];
       const machinesWithProcesses = new Set(machineProcesses.map(mp => mp.machine_id));
       machines.forEach(m => {
         if (!machinesWithProcesses.has(m.id) && !m.procesos_ids?.length) {
