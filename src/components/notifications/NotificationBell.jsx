@@ -23,6 +23,7 @@ export default function NotificationBell() {
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 5 * 60 * 1000, // Reutilizar del Layout
   });
 
   const { data: employee } = useQuery({
@@ -33,6 +34,7 @@ export default function NotificationBell() {
       return emps.find(e => e.email === user.email) || null;
     },
     enabled: !!user?.email,
+    staleTime: 5 * 60 * 1000, // Cache compartida con Layout
   });
 
   const { data: notifications = [] } = useQuery({
@@ -46,7 +48,9 @@ export default function NotificationBell() {
       );
     },
     enabled: !!employee?.id,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    staleTime: 2 * 60 * 1000, // Cache 2 minutos
+    refetchInterval: false, // Desactivar polling automático
+    refetchOnWindowFocus: true, // Solo refetch al volver a la ventana
   });
 
   const markAsReadMutation = useMutation({

@@ -18,6 +18,7 @@ export default function AdvancedHRDashboard() {
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: dashboardConfig } = useQuery({
@@ -27,7 +28,9 @@ export default function AdvancedHRDashboard() {
       const configs = await base44.entities.DashboardWidgetConfig.filter({ user_id: user.id });
       return configs[0] || null;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    staleTime: 15 * 60 * 1000, // Config muy estable
+    gcTime: 30 * 60 * 1000,
   });
 
   const widgets = dashboardConfig?.widgets || [

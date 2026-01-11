@@ -19,21 +19,24 @@ export default function Dashboard() {
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ['employeeMasterDatabase'], // Misma key que otros componentes
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
+    staleTime: 10 * 60 * 1000, // Cache 10 minutos
+    gcTime: 15 * 60 * 1000,
   });
 
   const { data: absences = [] } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-created_date'),
-    staleTime: 2 * 60 * 1000,
+    queryFn: () => base44.entities.Absence.list('-created_date', 200),
+    staleTime: 5 * 60 * 1000, // Cache 5 minutos
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: maintenanceSchedules = [] } = useQuery({
     queryKey: ['maintenanceSchedules'],
-    queryFn: () => base44.entities.MaintenanceSchedule.list('-fecha_programada'),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => base44.entities.MaintenanceSchedule.list('-fecha_programada', 100),
+    staleTime: 10 * 60 * 1000, // Cache 10 minutos
+    gcTime: 15 * 60 * 1000,
   });
 
   const stats = useMemo(() => {

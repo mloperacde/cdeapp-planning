@@ -101,7 +101,9 @@ export default function Layout({ children, currentPageName }) {
     },
     enabled: !!currentUser?.email,
     retry: 1,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // Cache 10 min
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false, // No recargar al cambiar de ventana
   });
 
   const toggleSection = (section) => {
