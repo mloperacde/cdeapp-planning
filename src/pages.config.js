@@ -68,6 +68,7 @@ import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
 import QuickStartGuide from './pages/QuickStartGuide';
 import Reports from './pages/Reports';
+import RoleMigrationGuide from './pages/RoleMigrationGuide';
 import ShiftAbsenceReport from './pages/ShiftAbsenceReport';
 import ShiftAssignments from './pages/ShiftAssignments';
 import ShiftHandover from './pages/ShiftHandover';
@@ -92,7 +93,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import RoleMigrationGuide from './pages/RoleMigrationGuide';
 import __Layout from './Layout.jsx';
 
 
@@ -167,6 +167,7 @@ export const PAGES = {
     "QualityControl": QualityControl,
     "QuickStartGuide": QuickStartGuide,
     "Reports": Reports,
+    "RoleMigrationGuide": RoleMigrationGuide,
     "ShiftAbsenceReport": ShiftAbsenceReport,
     "ShiftAssignments": ShiftAssignments,
     "ShiftHandover": ShiftHandover,
@@ -191,7 +192,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "RoleMigrationGuide": RoleMigrationGuide,
 }
 
 export const pagesConfig = {
