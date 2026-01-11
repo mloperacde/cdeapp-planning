@@ -67,6 +67,10 @@ export default function EmployeeConsolidationReport() {
       migrated: [
         { name: "Dashboard", status: "✅ Optimizado", source: "useAppData()" },
         { name: "AbsenceManagement", status: "✅ Optimizado", source: "useAppData()" },
+        { name: "Timeline", status: "✅ Migrado", source: "useAppData()" },
+        { name: "ShiftPlanning", status: "✅ Migrado", source: "useAppData()" },
+        { name: "EmployeeAbsences", status: "✅ Migrado", source: "useAppData()" },
+        { name: "EmployeeVacations", status: "✅ Migrado", source: "useAppData()" },
         { name: "MasterEmployeeDatabase", status: "✅ Optimizado", source: "useAppData()" },
         { name: "AdvancedHRDashboard", status: "✅ Optimizado", source: "useAppData()" },
         { name: "AppUserManagement", status: "✅ Optimizado", source: "useAppData()" },
@@ -74,9 +78,7 @@ export default function EmployeeConsolidationReport() {
         { name: "EmployeeDataCompletion", status: "✅ Migrado", source: "useAppData()" },
         { name: "EmployeeDataCorrection", status: "✅ Migrado", source: "useAppData()" }
       ],
-      pending: [
-        "Timeline", "ShiftPlanning", "MachinePlanning", "EmployeeAbsences", "EmployeeVacations"
-      ]
+      pending: []
     },
     dataProvider: {
       title: "🎯 DATAPROVIDER - FUENTE ÚNICA",
