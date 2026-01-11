@@ -173,6 +173,7 @@ const PAGES = {
           MachineProcessAudit: MachineProcessAudit,
           
           MachineConsolidationStatus: MachineConsolidationStatus,
+          MachineDeduplication: MachineDeduplication,
     
     AbsenceTypeConfig: AbsenceTypeConfig,
     
@@ -478,8 +479,10 @@ function PagesContent() {
                 <Route path="/MachineProcessAudit" element={<MachineProcessAudit />} />
                 
                 <Route path="/MachineConsolidationStatus" element={<MachineConsolidationStatus />} />
-                
-            </Routes>
+
+                <Route path="/MachineDeduplication" element={<MachineDeduplication />} />
+
+                </Routes>
         </Layout>
     );
 }
