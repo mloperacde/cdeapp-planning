@@ -40,11 +40,18 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className={`${menuOpen ? 'w-64' : 'w-0 md:w-20'} bg-slate-900 text-white transition-all duration-300 overflow-hidden md:overflow-visible fixed md:relative z-40 h-full md:h-auto`}>
+    <div className="flex h-screen bg-gray-100 dark:bg-slate-950">
+      {/* Sidebar - Mobile */}
+      {menuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 md:hidden z-30"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+      
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-20 bg-slate-900 text-white transition-all duration-300 overflow-hidden md:overflow-visible fixed md:relative z-40 h-full`}>
         <div className="p-4 flex items-center justify-between">
-          <h1 className={`font-bold text-xl ${!menuOpen && 'hidden md:block text-center w-full'}`}>Base44</h1>
+          <h1 className="font-bold text-xl hidden md:block text-center w-full">Base44</h1>
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden text-white"
@@ -52,14 +59,8 @@ export default function Layout({ children, currentPageName }) {
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
-        <nav className="mt-8">
-          {menuItems.reduce((grouped, item) => {
-            const category = item.category || 'Otros';
-            if (!grouped[category]) grouped[category] = [];
-            grouped[category].push(item);
-            return grouped;
-          }, {}) && 
-          Object.entries(
+        <nav className="mt-8 space-y-1">
+          {Object.entries(
             menuItems.reduce((grouped, item) => {
               const category = item.category || 'Otros';
               if (!grouped[category]) grouped[category] = [];
@@ -79,9 +80,10 @@ export default function Layout({ children, currentPageName }) {
                     className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-sm ${
                       currentPageName === item.name ? 'bg-blue-600' : ''
                     }`}
+                    title={!menuOpen ? item.name : ''}
                   >
-                    <Icon size={18} />
-                    <span className={`${!menuOpen && 'hidden'} md:inline text-xs`}>{item.name}</span>
+                    <Icon size={18} className="flex-shrink-0" />
+                    <span className="hidden md:inline text-xs">{item.name}</span>
                   </Link>
                 );
               })}
@@ -90,16 +92,8 @@ export default function Layout({ children, currentPageName }) {
         </nav>
       </div>
 
-      {/* Overlay para móvil */}
-      {menuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 md:hidden z-30"
-          onClick={() => setMenuOpen(false)}
-        />
-      )}
-
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto w-full bg-white dark:bg-slate-900">
         {children}
       </div>
     </div>
