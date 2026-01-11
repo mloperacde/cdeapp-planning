@@ -19,93 +19,76 @@ Deno.serve(async (req) => {
 
     log('=== INICIANDO CONSOLIDACIÓN COMPLETA DE MÁQUINAS ===');
 
-    // PASO 1: Verificar estado inicial
-    log('PASO 1: Verificando estado inicial...');
-    const initialMachines = await base44.asServiceRole.entities.Machine.list('', 500);
-    const initialMaster = await base44.asServiceRole.entities.MachineMasterDatabase.list('', 100);
-    const initialMachineProcesses = await base44.asServiceRole.entities.MachineProcess.list('', 500);
-    
-    log('Estado inicial', {
-      machines: initialMachines.length,
-      masterDatabase: initialMaster.filter(m => !m.is_deleted).length,
-      machineProcesses: initialMachineProcesses.length
-    });
-
-    // PASO 2: Ejecutar consolidación de máquinas
-    log('PASO 2: Ejecutando consolidación de máquinas...');
+    // PASO 1: Ejecutar consolidateMachines
+    log('PASO 1: Ejecutando consolidateMachines...');
     const consolidationResult = await base44.asServiceRole.functions.invoke('consolidateMachines', {});
     
     if (!consolidationResult?.data?.success) {
-      throw new Error(`Consolidación falló: ${consolidationResult?.data?.error || 'Error desconocido'}`);
+      throw new Error(`consolidateMachines falló: ${consolidationResult?.data?.error || 'Error desconocido'}`);
     }
 
-    log('Consolidación completada', consolidationResult.data.summary);
+    log('consolidateMachines completado', consolidationResult.data.summary);
 
-    // PASO 3: Verificar datos migrados
-    log('PASO 3: Verificando datos migrados...');
-    const afterConsolidation = await base44.asServiceRole.entities.MachineMasterDatabase.list('', 500);
-    const activeMaster = afterConsolidation.filter(m => !m.is_deleted);
-    
-    log('Verificación post-consolidación', {
-      totalRecords: afterConsolidation.length,
-      activeRecords: activeMaster.length,
-      withProcesses: activeMaster.filter(m => m.procesos_configurados?.length > 0).length
-    });
-
-    // PASO 4: Actualizar referencias
-    log('PASO 4: Actualizando referencias en entidades relacionadas...');
+    // PASO 2: Ejecutar updateMachineReferences
+    log('PASO 2: Ejecutando updateMachineReferences...');
     const referencesResult = await base44.asServiceRole.functions.invoke('updateMachineReferences', {});
     
     if (!referencesResult?.data?.success) {
-      throw new Error(`Actualización de referencias falló: ${referencesResult?.data?.error || 'Error desconocido'}`);
+      throw new Error(`updateMachineReferences falló: ${referencesResult?.data?.error || 'Error desconocido'}`);
     }
 
-    log('Referencias actualizadas', referencesResult.data.summary);
+    log('updateMachineReferences completado', referencesResult.data.summary);
 
-    // PASO 5: Verificación final
-    log('PASO 5: Verificación final de integridad...');
+    // PASO 3: Verificación final
+    log('PASO 3: Realizando verificación final...');
     
-    // Verificar que todas las referencias están correctas
     const finalMaster = await base44.asServiceRole.entities.MachineMasterDatabase.list('', 500);
+    const finalLegacy = await base44.asServiceRole.entities.Machine.list('', 500);
     const masterIds = new Set(finalMaster.filter(m => !m.is_deleted).map(m => m.id));
     
-    const maintenance = await base44.asServiceRole.entities.MaintenanceSchedule.list('', 100);
-    const assignments = await base44.asServiceRole.entities.MachineAssignment.list('', 100);
+    const [maintenance, assignments, planning, status] = await Promise.all([
+      base44.asServiceRole.entities.MaintenanceSchedule.list('', 500),
+      base44.asServiceRole.entities.MachineAssignment.list('', 500),
+      base44.asServiceRole.entities.MachinePlanning.list('', 500),
+      base44.asServiceRole.entities.MachineStatus?.list('', 500).catch(() => [])
+    ]);
     
-    const brokenMaintenanceRefs = maintenance.filter(m => m.machine_id && !masterIds.has(m.machine_id)).length;
-    const brokenAssignmentRefs = assignments.filter(a => a.machine_id && !masterIds.has(a.machine_id)).length;
+    const brokenMaintenance = maintenance.filter(m => m.machine_id && !masterIds.has(m.machine_id)).length;
+    const brokenAssignments = assignments.filter(a => a.machine_id && !masterIds.has(a.machine_id)).length;
+    const brokenPlanning = planning.filter(p => p.machine_id && !masterIds.has(p.machine_id)).length;
     
-    log('Verificación de integridad', {
+    log('Verificación final de integridad', {
       totalMasterMachines: masterIds.size,
-      maintenanceRecords: maintenance.length,
-      assignmentRecords: assignments.length,
-      brokenMaintenanceRefs,
-      brokenAssignmentRefs
+      totalLegacyMachines: finalLegacy.length,
+      maintenanceTotal: maintenance.length,
+      brokenMaintenance,
+      assignmentsTotal: assignments.length,
+      brokenAssignments,
+      planningTotal: planning.length,
+      brokenPlanning
     });
 
-    // Resumen final
     const finalSummary = {
-      consolidation: {
-        machinesMigrated: consolidationResult.data.summary.migrated,
-        duplicatesFixed: consolidationResult.data.summary.duplicates_fixed,
-        processesIntegrated: consolidationResult.data.summary.processes_integrated,
-        errors: consolidationResult.data.summary.errors
+      machines: {
+        master: finalMaster.filter(m => !m.is_deleted).length,
+        legacy: finalLegacy.length,
+        duplicatesCorrected: consolidationResult.data.summary.duplicates_fixed
+      },
+      processes: {
+        total: consolidationResult.data.summary.processes_integrated
       },
       references: {
-        maintenanceUpdated: referencesResult.data.results.maintenanceUpdated,
-        assignmentsUpdated: referencesResult.data.results.assignmentsUpdated,
-        planningUpdated: referencesResult.data.results.planningUpdated,
-        statusUpdated: referencesResult.data.results.statusUpdated,
+        maintenance: { total: maintenance.length, broken: brokenMaintenance, updated: referencesResult.data.results.maintenanceUpdated },
+        assignments: { total: assignments.length, broken: brokenAssignments, updated: referencesResult.data.results.assignmentsUpdated },
+        planning: { total: planning.length, broken: brokenPlanning, updated: referencesResult.data.results.planningUpdated },
         orphanedRemoved: referencesResult.data.results.orphanedRemoved
       },
       integrity: {
-        totalMasterMachines: masterIds.size,
-        brokenReferences: brokenMaintenanceRefs + brokenAssignmentRefs,
-        status: (brokenMaintenanceRefs + brokenAssignmentRefs === 0) ? 'LIMPIO' : 'REQUIERE ATENCIÓN'
+        status: (brokenMaintenance + brokenAssignments + brokenPlanning === 0) ? 'OK' : 'REQUIERE_ATENCIÓN'
       }
     };
 
-    log('=== CONSOLIDACIÓN COMPLETADA CON ÉXITO ===', finalSummary);
+    log('=== CONSOLIDACIÓN COMPLETADA EXITOSAMENTE ===', finalSummary);
 
     return Response.json({
       success: true,
