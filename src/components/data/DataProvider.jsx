@@ -89,10 +89,18 @@ export function DataProvider({ children }) {
     refetchOnWindowFocus: false,
   });
 
-  // 9. MÁQUINAS - Cache 15 min
+  // 9. MÁQUINAS - Cache 15 min (MAESTRO ÚNICO)
   const machinesQuery = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden', 500),
+    queryKey: ['machines', 'masterDatabase'],
+    queryFn: async () => {
+      try {
+        // Intenta obtener de la base de datos maestra primero
+        return await base44.entities.MachineMasterDatabase.list('orden_visualizacion', 500);
+      } catch (err) {
+        console.warn('MachineMasterDatabase no disponible, intentando Machine fallback', err);
+        return await base44.entities.Machine.list('orden', 500);
+      }
+    },
     staleTime: 15 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
