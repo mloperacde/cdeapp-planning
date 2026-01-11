@@ -223,12 +223,11 @@ export default function SystemAudit() {
     for (const entityName of entityNames) {
       try {
         const records = await base44.entities[entityName].list();
-        const schema = await base44.entities[entityName].schema();
-
+        
         entitiesData.push({
           name: entityName,
           recordCount: records.length,
-          schema: schema,
+          schema: null,
           category: categorizeEntity(entityName),
           hasRecords: records.length > 0,
           lastUpdate: records.length > 0 ? getLatestUpdate(records) : null,
