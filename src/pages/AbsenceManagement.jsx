@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,11 +66,19 @@ export default function AbsenceManagementPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const queryClient = useQueryClient();
 
-  // Load User & Context
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
+  // Usar datos compartidos del DataProvider
+  const { 
+    user: currentUser,
+    absences = [], 
+    absencesLoading: isLoading,
+    employees: masterEmployees = [],
+    teams = [],
+    absenceTypes = [],
+    vacations = [],
+    holidays = []
+  } = useAppData();
+
+  const employees = masterEmployees;
 
   const isShiftManager = useMemo(() => {
     // Simplified check - real app would check specific permissions/roles
@@ -98,19 +107,6 @@ export default function AbsenceManagementPage() {
     url.searchParams.set('tab', value);
     window.history.pushState({}, '', url);
   };
-
-  // Usar datos compartidos del DataProvider
-  const { 
-    absences = [], 
-    absencesLoading: isLoading,
-    employees: masterEmployees = [],
-    teams = [],
-    absenceTypes = [],
-    vacations = [],
-    holidays = []
-  } = useAppData();
-
-  const employees = masterEmployees;
 
   // Derived Data
   const departments = useMemo(() => {
