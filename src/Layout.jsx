@@ -40,7 +40,7 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-slate-950">
+    <div className="flex h-screen bg-gray-100 dark:bg-slate-950 w-screen">
       {/* Sidebar - Mobile */}
       {menuOpen && (
         <div 
@@ -49,12 +49,12 @@ export default function Layout({ children, currentPageName }) {
         />
       )}
       
-      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-20 bg-slate-900 text-white transition-all duration-300 overflow-hidden md:overflow-visible fixed md:relative z-40 h-full`}>
-        <div className="p-4 flex items-center justify-between">
-          <h1 className="font-bold text-xl hidden md:block text-center w-full">Base44</h1>
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 text-white transition-all duration-300 overflow-y-auto md:overflow-y-auto fixed md:relative z-40 h-full flex-shrink-0`}>
+        <div className="p-4 flex items-center justify-between md:justify-center">
+          <h1 className="font-bold text-lg md:text-xl">Base44</h1>
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden text-white"
+            className="md:hidden text-white ml-auto"
           >
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -77,13 +77,12 @@ export default function Layout({ children, currentPageName }) {
                     key={item.name}
                     to={item.path}
                     onClick={() => setMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-sm ${
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-sm whitespace-nowrap ${
                       currentPageName === item.name ? 'bg-blue-600' : ''
                     }`}
-                    title={!menuOpen ? item.name : ''}
                   >
                     <Icon size={18} className="flex-shrink-0" />
-                    <span className="hidden md:inline text-xs">{item.name}</span>
+                    <span className="text-xs">{item.name}</span>
                   </Link>
                 );
               })}
@@ -93,7 +92,7 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto w-full bg-white dark:bg-slate-900">
+      <div className="flex-1 overflow-auto bg-white dark:bg-slate-900">
         {children}
       </div>
     </div>
