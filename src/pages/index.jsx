@@ -2,12 +2,6 @@ import Layout from "./Layout.jsx";
 
 import AbsenceManagement from "./AbsenceManagement";
 
-import AbsenceTypeConfig from "./AbsenceTypeConfig";
-
-import AbsenceTypeInfo from "./AbsenceTypeInfo";
-
-import AdvancedAbsenceConfig from "./AdvancedAbsenceConfig";
-
 import AdvancedConfiguration from "./AdvancedConfiguration";
 
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
@@ -18,51 +12,23 @@ import ArticleManagement from "./ArticleManagement";
 
 import AttendanceManagement from "./AttendanceManagement";
 
-import Breaks from "./Breaks";
-
 import CommitteeManagement from "./CommitteeManagement";
 
 import Configuration from "./Configuration";
 
 import DailyPlanning from "./DailyPlanning";
 
-import DailyShiftPlanning from "./DailyShiftPlanning";
-
 import Dashboard from "./Dashboard";
-
-import DataImport from "./DataImport";
-
-import DepartmentManagement from "./DepartmentManagement";
-
-import DirectDataEntry from "./DirectDataEntry";
 
 import DocumentManagement from "./DocumentManagement";
 
 import ETTTemporaryEmployees from "./ETTTemporaryEmployees";
 
-import EmailNotifications from "./EmailNotifications";
-
-import EmployeeAbsenceInfo from "./EmployeeAbsenceInfo";
-
-import EmployeeAbsences from "./EmployeeAbsences";
-
-import EmployeeChat from "./EmployeeChat";
-
-import EmployeeDataCompletion from "./EmployeeDataCompletion";
-
-import EmployeeDataCorrection from "./EmployeeDataCorrection";
-
 import EmployeeOnboarding from "./EmployeeOnboarding";
-
-import EmployeeVacations from "./EmployeeVacations";
 
 import EmployeesShiftManager from "./EmployeesShiftManager";
 
 import IncentiveManagement from "./IncentiveManagement";
-
-import LockerDataCleanup from "./LockerDataCleanup";
-
-import LockerDuplicateCleanup from "./LockerDuplicateCleanup";
 
 import LockerManagement from "./LockerManagement";
 
@@ -78,43 +44,17 @@ import MaintenanceTracking from "./MaintenanceTracking";
 
 import MasterEmployeeDatabase from "./MasterEmployeeDatabase";
 
-import Messaging from "./Messaging";
 
-import MessagingConfig from "./MessagingConfig";
-
-import MobileAbsences from "./MobileAbsences";
-
-import MobileAppConfig from "./MobileAppConfig";
-
-import MobileChat from "./MobileChat";
-
-import MobileNotifications from "./MobileNotifications";
-
-import MobilePlanning from "./MobilePlanning";
-
-import MobileProfile from "./MobileProfile";
-
-import MobileVacations from "./MobileVacations";
-
-import MyProfile from "./MyProfile";
-
-import NotificationCenter from "./NotificationCenter";
-
-import Notifications from "./Notifications";
 
 import PerformanceManagement from "./PerformanceManagement";
 
-import PredictiveMaintenance from "./PredictiveMaintenance";
+
 
 import ProcessConfiguration from "./ProcessConfiguration";
 
 import ProductionPlanning from "./ProductionPlanning";
 
 import Reports from "./Reports";
-
-import ShiftAbsenceReport from "./ShiftAbsenceReport";
-
-import ShiftAssignments from "./ShiftAssignments";
 
 import ShiftHandover from "./ShiftHandover";
 
@@ -126,26 +66,13 @@ import SkillMatrix from "./SkillMatrix";
 
 import SupportManagement1415 from "./SupportManagement1415";
 
-import SystemAudit from "./SystemAudit";
-
 import SystemReset from "./SystemReset";
-
-import TeamConfiguration from "./TeamConfiguration";
 
 import Timeline from "./Timeline";
 
 import WorkCalendarConfig from "./WorkCalendarConfig";
 
-import RoleMigrationGuide from "./RoleMigrationGuide";
 
-import EmployeeDataAudit from "./EmployeeDataAudit";
-
-import MachineProcessAudit from "./MachineProcessAudit";
-
-import MachineConsolidationStatus from "./MachineConsolidationStatus";
-import MachineDeduplication from "./MachineDeduplication";
-import PlanningConsolidation from "./PlanningConsolidation";
-import CleanOrphanedReferences from "./CleanOrphanedReferences";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
