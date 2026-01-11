@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,19 +22,38 @@ export default function EmployeeConsolidationExecutor() {
   const [executing, setExecuting] = useState(false);
   const [step, setStep] = useState(0);
   const [results, setResults] = useState(null);
+  const [sdkReady, setSdkReady] = useState(false);
+
+  useEffect(() => {
+    // Verificar que el SDK está listo
+    const checkSDK = async () => {
+      try {
+        if (base44?.functions?.invoke) {
+          setSdkReady(true);
+        } else {
+          console.error("SDK no inicializado:", { base44, functions: base44?.functions });
+          setTimeout(checkSDK, 500);
+        }
+      } catch (error) {
+        console.error("Error verificando SDK:", error);
+        setTimeout(checkSDK, 500);
+      }
+    };
+    checkSDK();
+  }, []);
 
   const executeConsolidation = async () => {
+    if (!sdkReady) {
+      toast.error("⚠️ SDK aún no está listo. Espera un momento e intenta de nuevo.");
+      return;
+    }
+
     setExecuting(true);
     setStep(1);
     
     try {
       // PASO 1: Consolidar Employee → EmployeeMasterDatabase
       toast.info("🔄 Paso 1: Consolidando datos...");
-      
-      // Verificar que base44.functions existe
-      if (!base44?.functions?.invoke) {
-        throw new Error("SDK no inicializado correctamente. Por favor, recarga la página.");
-      }
       
       const consolidateResponse = await base44.functions.invoke('consolidateEmployees', {});
       const consolidateData = consolidateResponse?.data || consolidateResponse;
@@ -152,10 +171,15 @@ export default function EmployeeConsolidationExecutor() {
 
             <Button 
               onClick={executeConsolidation} 
-              disabled={executing}
+              disabled={executing || !sdkReady}
               className="w-full bg-purple-600 hover:bg-purple-700"
             >
-              {executing ? (
+              {!sdkReady ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Iniciando SDK...
+                </>
+              ) : executing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Ejecutando...
