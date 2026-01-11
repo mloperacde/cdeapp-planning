@@ -46,7 +46,6 @@ import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDia
 import SyncComparisonDialog from "../components/master/SyncComparisonDialog";
 import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 import AdvancedSearch from "../components/common/AdvancedSearch";
-import ThemeToggle from "../components/common/ThemeToggle";
 
 // Definición completa de columnas disponibles (Moved outside component to avoid recreation)
 const ALL_COLUMNS = {
@@ -485,17 +484,14 @@ export default function MasterEmployeeDatabasePage() {
           </Link>
         </div>
 
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              Base de Datos Maestra de Empleados
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
-              Archivo maestro centralizado de empleados - Fuente única de verdad
-            </p>
-          </div>
-          <ThemeToggle />
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            Base de Datos Maestra de Empleados
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Archivo maestro centralizado de empleados - Fuente única de verdad
+          </p>
         </div>
 
         {/* Stats */}

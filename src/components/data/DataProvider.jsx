@@ -40,16 +40,21 @@ export function DataProvider({ children }) {
     queryKey: ['employeeMasterDatabase'],
     queryFn: async () => {
       try {
-        return await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
+        const data = await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
+        if (!Array.isArray(data)) {
+          console.warn('EmployeeMasterDatabase no retornó array:', data);
+          return [];
+        }
+        return data;
       } catch (err) {
-        console.warn('EmployeeMasterDatabase error, retornando array vacío', err);
+        console.error('EmployeeMasterDatabase error:', err);
         return [];
       }
     },
-    staleTime: 10 * 60 * 1000,
-    gcTime: 20 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: 2,
   });
 
   // 4. AUSENCIAS - Cache 5 min
