@@ -42,10 +42,10 @@ export default function ReportsPage() {
     initialData: [],
   });
 
-  const { data: machines } = useQuery({
+  const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => base44.entities.MachineMasterDatabase.list('nombre', 200),
+    staleTime: 15 * 60 * 1000,
     initialData: [],
   });
 

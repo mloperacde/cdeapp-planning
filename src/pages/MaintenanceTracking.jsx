@@ -44,8 +44,8 @@ export default function MaintenanceTrackingPage() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => base44.entities.MachineMasterDatabase.list('nombre', 200),
+    staleTime: 15 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
 
@@ -260,10 +260,10 @@ export default function MaintenanceTrackingPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Machines")}>
+          <Link to={createPageUrl("Configuration")}>
             <Button variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Máquinas
+              Volver a Configuración
             </Button>
           </Link>
         </div>
