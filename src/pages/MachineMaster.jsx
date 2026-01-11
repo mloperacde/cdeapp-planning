@@ -26,11 +26,15 @@ export default function MachineMasterPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: machines = EMPTY_ARRAY, isLoading } = useQuery({
+  const { data: machines = EMPTY_ARRAY, isLoading, error } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: async () => {
+      const data = await base44.entities.Machine.list('orden', 500);
+      return data || [];
+    },
     staleTime: 5 * 60 * 1000,
     initialData: EMPTY_ARRAY,
+    retry: 2,
   });
 
   const createMutation = useMutation({
@@ -191,7 +195,9 @@ export default function MachineMasterPage() {
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-12 text-center text-slate-500">Cargando...</div>
+              <div className="p-12 text-center text-slate-500">Cargando máquinas...</div>
+            ) : error ? (
+              <div className="p-12 text-center text-red-500">Error: {error.message}</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
