@@ -96,6 +96,7 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
+import MachineDeduplication from './pages/MachineDeduplication';
 import __Layout from './Layout.jsx';
 
 
@@ -198,6 +199,7 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
+    "MachineDeduplication": MachineDeduplication,
 }
 
 export const pagesConfig = {

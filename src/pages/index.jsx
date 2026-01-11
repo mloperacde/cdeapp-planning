@@ -143,6 +143,7 @@ import EmployeeDataAudit from "./EmployeeDataAudit";
 import MachineProcessAudit from "./MachineProcessAudit";
 
 import MachineConsolidationStatus from "./MachineConsolidationStatus";
+import MachineDeduplication from "./MachineDeduplication";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
