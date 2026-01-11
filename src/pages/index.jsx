@@ -202,11 +202,7 @@ function PagesContent() {
                 
                 <Route path="/AbsenceManagement" element={<AbsenceManagement />} />
                 
-                <Route path="/AbsenceTypeConfig" element={<AbsenceTypeConfig />} />
-                
-                <Route path="/AbsenceTypeInfo" element={<AbsenceTypeInfo />} />
-                
-                <Route path="/AdvancedAbsenceConfig" element={<AdvancedAbsenceConfig />} />
+
                 
                 <Route path="/AdvancedConfiguration" element={<AdvancedConfiguration />} />
                 
@@ -218,51 +214,29 @@ function PagesContent() {
                 
                 <Route path="/AttendanceManagement" element={<AttendanceManagement />} />
                 
-                <Route path="/Breaks" element={<Breaks />} />
-                
                 <Route path="/CommitteeManagement" element={<CommitteeManagement />} />
-                
+
                 <Route path="/Configuration" element={<Configuration />} />
-                
+
                 <Route path="/DailyPlanning" element={<DailyPlanning />} />
-                
-                <Route path="/DailyShiftPlanning" element={<DailyShiftPlanning />} />
                 
                 <Route path="/Dashboard" element={<Dashboard />} />
                 
-                <Route path="/DataImport" element={<DataImport />} />
-                
-                <Route path="/DepartmentManagement" element={<DepartmentManagement />} />
-                
-                <Route path="/DirectDataEntry" element={<DirectDataEntry />} />
+
                 
                 <Route path="/DocumentManagement" element={<DocumentManagement />} />
                 
                 <Route path="/ETTTemporaryEmployees" element={<ETTTemporaryEmployees />} />
                 
-                <Route path="/EmailNotifications" element={<EmailNotifications />} />
-                
-                <Route path="/EmployeeAbsenceInfo" element={<EmployeeAbsenceInfo />} />
-                
-                <Route path="/EmployeeAbsences" element={<EmployeeAbsences />} />
-                
-                <Route path="/EmployeeChat" element={<EmployeeChat />} />
-                
-                <Route path="/EmployeeDataCompletion" element={<EmployeeDataCompletion />} />
-                
-                <Route path="/EmployeeDataCorrection" element={<EmployeeDataCorrection />} />
-                
                 <Route path="/EmployeeOnboarding" element={<EmployeeOnboarding />} />
                 
-                <Route path="/EmployeeVacations" element={<EmployeeVacations />} />
+
                 
                 <Route path="/EmployeesShiftManager" element={<EmployeesShiftManager />} />
                 
                 <Route path="/IncentiveManagement" element={<IncentiveManagement />} />
                 
-                <Route path="/LockerDataCleanup" element={<LockerDataCleanup />} />
-                
-                <Route path="/LockerDuplicateCleanup" element={<LockerDuplicateCleanup />} />
+
                 
                 <Route path="/LockerManagement" element={<LockerManagement />} />
                 
@@ -278,33 +252,11 @@ function PagesContent() {
                 
                 <Route path="/MasterEmployeeDatabase" element={<MasterEmployeeDatabase />} />
                 
-                <Route path="/Messaging" element={<Messaging />} />
-                
-                <Route path="/MessagingConfig" element={<MessagingConfig />} />
-                
-                <Route path="/MobileAbsences" element={<MobileAbsences />} />
-                
-                <Route path="/MobileAppConfig" element={<MobileAppConfig />} />
-                
-                <Route path="/MobileChat" element={<MobileChat />} />
-                
-                <Route path="/MobileNotifications" element={<MobileNotifications />} />
-                
-                <Route path="/MobilePlanning" element={<MobilePlanning />} />
-                
-                <Route path="/MobileProfile" element={<MobileProfile />} />
-                
-                <Route path="/MobileVacations" element={<MobileVacations />} />
-                
-                <Route path="/MyProfile" element={<MyProfile />} />
-                
-                <Route path="/NotificationCenter" element={<NotificationCenter />} />
-                
-                <Route path="/Notifications" element={<Notifications />} />
+
                 
                 <Route path="/PerformanceManagement" element={<PerformanceManagement />} />
                 
-                <Route path="/PredictiveMaintenance" element={<PredictiveMaintenance />} />
+
                 
                 <Route path="/ProcessConfiguration" element={<ProcessConfiguration />} />
                 
@@ -312,9 +264,7 @@ function PagesContent() {
                 
                 <Route path="/Reports" element={<Reports />} />
                 
-                <Route path="/ShiftAbsenceReport" element={<ShiftAbsenceReport />} />
-                
-                <Route path="/ShiftAssignments" element={<ShiftAssignments />} />
+
                 
                 <Route path="/ShiftHandover" element={<ShiftHandover />} />
                 
@@ -326,29 +276,17 @@ function PagesContent() {
 
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
 
-                <Route path="/SystemAudit" element={<SystemAudit />} />
 
-                <Route path="/RoleMigrationGuide" element={<RoleMigrationGuide />} />
 
                 <Route path="/SystemReset" element={<SystemReset />} />
                 
-                <Route path="/TeamConfiguration" element={<TeamConfiguration />} />
+
                 
                 <Route path="/Timeline" element={<Timeline />} />
                 
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 
-                <Route path="/EmployeeDataAudit" element={<EmployeeDataAudit />} />
-                
-                <Route path="/MachineProcessAudit" element={<MachineProcessAudit />} />
-                
-                <Route path="/MachineConsolidationStatus" element={<MachineConsolidationStatus />} />
 
-                <Route path="/MachineDeduplication" element={<MachineDeduplication />} />
-
-                <Route path="/PlanningConsolidation" element={<PlanningConsolidation />} />
-
-                <Route path="/CleanOrphanedReferences" element={<CleanOrphanedReferences />} />
 
                 </Routes>
         </Layout>
