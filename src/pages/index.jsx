@@ -1,4 +1,4 @@
-import Layout from "./Layout.jsx";
+import Layout from "../layout";
 
 import AbsenceManagement from "./AbsenceManagement";
 
@@ -112,8 +112,6 @@ const PAGES = {
     Configuration: Configuration,
     
     DailyPlanning: DailyPlanning,
-    
-    Dashboard: Dashboard,
     
     DocumentManagement: DocumentManagement,
     
