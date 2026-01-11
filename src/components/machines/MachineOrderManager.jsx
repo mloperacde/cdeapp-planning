@@ -12,13 +12,14 @@ export default function MachineOrderManager() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.entities.Machine.list('orden')
+    base44.entities.Machine.list('orden', 500)
       .then(data => {
-        setMachines(data || []);
+        setMachines(Array.isArray(data) ? data : []);
         setIsLoading(false);
       })
       .catch(err => {
         console.error('Error loading machines:', err);
+        toast.error('Error al cargar máquinas');
         setIsLoading(false);
       });
   }, []);
