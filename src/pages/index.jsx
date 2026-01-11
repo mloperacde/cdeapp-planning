@@ -165,6 +165,8 @@ const queryClient = new QueryClient({
 });
 
 const PAGES = {
+           
+          Dashboard: Dashboard,
           
           AbsenceManagement: AbsenceManagement,
           
@@ -324,8 +326,13 @@ function _getCurrentPage(url) {
         urlLastPart = urlLastPart.split('?')[0];
     }
 
+    // Si está vacío o es la raíz, retorna Dashboard
+    if (!urlLastPart || urlLastPart === '') {
+        return 'Dashboard';
+    }
+
     const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
-    return pageName || Object.keys(PAGES)[0];
+    return pageName || 'Dashboard'; // Default to Dashboard if not found
 }
 
 // Create a wrapper component that uses useLocation inside the Router context
