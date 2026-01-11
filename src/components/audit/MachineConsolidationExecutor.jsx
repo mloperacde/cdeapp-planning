@@ -4,13 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, AlertTriangle, Database, RefreshCw, Download } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { useConsolidation } from "../hooks/useConsolidation";
 import { toast } from "sonner";
 
 export default function MachineConsolidationExecutor() {
-  const [executing, setExecuting] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [results, setResults] = useState(null);
+  const { executing, currentStep, results, error, executeConsolidation } = useConsolidation();
 
   const steps = [
     { name: "Consolidar Máquinas", status: "pending" },
@@ -18,55 +16,16 @@ export default function MachineConsolidationExecutor() {
     { name: "Verificación Final", status: "pending" }
   ];
 
-  const executeConsolidation = async () => {
-    setExecuting(true);
-    setCurrentStep(0);
-    
+  const handleExecute = async () => {
     try {
-      // Paso 1: Consolidar máquinas
-      setCurrentStep(1);
-      toast.info("Iniciando consolidación de máquinas...");
-      
-      const consolidationResponse = await base44.functions.invoke('consolidateMachines', {});
-      
-      if (!consolidationResponse?.data?.success) {
-        throw new Error(consolidationResponse?.data?.error || 'Error en consolidación');
+      await executeConsolidation();
+      if (!error) {
+        toast.success("¡Consolidación completada exitosamente!");
+      } else {
+        toast.error(`Error: ${error}`);
       }
-
-      const consolidationResults = consolidationResponse.data;
-      toast.success(`Migradas ${consolidationResults.summary?.migrated || consolidationResults.results?.migrated || 0} máquinas`);
-
-      // Paso 2: Actualizar referencias
-      setCurrentStep(2);
-      toast.info("Actualizando referencias en entidades relacionadas...");
-      
-      const referencesResponse = await base44.functions.invoke('updateMachineReferences', {});
-      
-      if (!referencesResponse?.data?.success) {
-        throw new Error(referencesResponse?.data?.error || 'Error actualizando referencias');
-      }
-
-      const referencesResults = referencesResponse.data;
-      toast.success(`Referencias actualizadas correctamente`);
-
-      // Paso 3: Verificación final
-      setCurrentStep(3);
-      
-      const finalResults = {
-        consolidation: consolidationResults,
-        references: referencesResults,
-        timestamp: new Date().toISOString()
-      };
-
-      setResults(finalResults);
-      toast.success("¡Consolidación completada exitosamente!");
-
-    } catch (error) {
-      console.error('Error en consolidación:', error);
-      toast.error(`Error: ${error.message}`);
-      setResults({ error: error.message });
-    } finally {
-      setExecuting(false);
+    } catch (err) {
+      toast.error(`Error: ${err.message}`);
     }
   };
 
@@ -199,11 +158,11 @@ export default function MachineConsolidationExecutor() {
         )}
 
         {/* Error */}
-        {results?.error && (
+        {(results?.error || error) && (
           <Alert className="border-red-300 bg-red-50">
             <AlertDescription className="text-red-900">
               <p className="font-semibold">Error en la consolidación:</p>
-              <p className="text-sm mt-1">{results.error}</p>
+              <p className="text-sm mt-1">{results?.error || error}</p>
             </AlertDescription>
           </Alert>
         )}
@@ -211,7 +170,7 @@ export default function MachineConsolidationExecutor() {
         {/* Botones de acción */}
         <div className="flex gap-3">
           <Button
-            onClick={executeConsolidation}
+            onClick={handleExecute}
             disabled={executing}
             className="flex-1 bg-blue-600 hover:bg-blue-700"
           >
