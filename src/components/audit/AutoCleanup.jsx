@@ -22,9 +22,9 @@ export default function AutoCleanup() {
     setIsExecuting(true);
     try {
       const response = await base44.functions.invoke('executeAutoCleanup');
-      setResults(response.data.results);
+      setResults(response.data?.results || response.data);
       
-      if (response.data.success) {
+      if (response.data?.success !== false) {
         toast.success('✅ Limpieza automática completada');
       }
     } catch (error) {
