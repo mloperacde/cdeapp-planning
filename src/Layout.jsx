@@ -40,7 +40,7 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-slate-950 w-screen">
+    <div className="flex h-screen bg-white dark:bg-slate-900 w-screen overflow-hidden">
       {/* Sidebar - Mobile */}
       {menuOpen && (
         <div 
