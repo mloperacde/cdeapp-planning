@@ -15,6 +15,7 @@ import {
   Wrench,
   FileText
 } from "lucide-react";
+import MachineConsolidationExecutor from "./MachineConsolidationExecutor";
 
 /**
  * AUDITORÍA Y CONSOLIDACIÓN DE DATOS DE MÁQUINAS Y PROCESOS
@@ -444,8 +445,9 @@ export default function MachineProcessDataAudit() {
   return (
     <Tabs defaultValue="overview" className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
+          <TabsTrigger value="executor">Consolidación</TabsTrigger>
           <TabsTrigger value="entities">Entidades</TabsTrigger>
           <TabsTrigger value="quality">Calidad</TabsTrigger>
         </TabsList>
