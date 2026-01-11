@@ -119,7 +119,7 @@ export function DataProvider({ children }) {
   // 12. TIPOS DE MANTENIMIENTO - Cache 30 min
   const maintenanceTypesQuery = useQuery({
     queryKey: ['maintenanceTypes'],
-    queryFn: () => base44.entities.MaintenanceType.list('nombre', 100),
+    queryFn: () => base44.entities.MaintenanceType.list('nombre', 100).catch(() => []),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
