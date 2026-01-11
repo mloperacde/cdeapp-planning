@@ -557,6 +557,31 @@ export default function MachineProcessDataAudit() {
         )}
       </TabsContent>
 
+      <TabsContent value="executor" className="space-y-6">
+        <MachineConsolidationExecutor />
+        
+        <Alert className="border-blue-300 bg-blue-50">
+          <Database className="w-4 h-4 text-blue-600" />
+          <AlertDescription className="text-blue-900">
+            <p className="font-semibold mb-2">Proceso de Consolidación:</p>
+            <ol className="text-sm space-y-1 ml-4 list-decimal">
+              <li>Se migrarán todas las máquinas de Machine a MachineMasterDatabase</li>
+              <li>Los códigos duplicados se resolverán automáticamente con sufijos (_1, _2, etc.)</li>
+              <li>Los procesos se integrarán en procesos_configurados dentro de cada máquina</li>
+              <li>Todas las referencias se actualizarán automáticamente en:
+                <ul className="ml-4 mt-1 list-disc">
+                  <li>MaintenanceSchedule</li>
+                  <li>MachineAssignment</li>
+                  <li>MachinePlanning</li>
+                  <li>MachineStatus</li>
+                </ul>
+              </li>
+              <li>Las asignaciones huérfanas que no se puedan resolver se eliminarán</li>
+            </ol>
+          </AlertDescription>
+        </Alert>
+      </TabsContent>
+
       <TabsContent value="entities" className="space-y-6">
         {/* Entidades Principales */}
         <Card>
