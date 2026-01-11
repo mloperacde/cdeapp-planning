@@ -49,6 +49,7 @@ export default function EmployeeConsolidationExecutor() {
   const executeConsolidation = async () => {
     setExecuting(true);
     setStep(1);
+    setResults({ steps: [], summary: null, errors: [] });
     
     try {
       // Verificación final del SDK antes de ejecutar
@@ -57,9 +58,12 @@ export default function EmployeeConsolidationExecutor() {
       }
 
       // PASO 1: Consolidar Employee → EmployeeMasterDatabase
-      toast.info("🔄 Paso 1: Consolidando datos...");
+      toast.info("🔄 Paso 1: Consolidando datos de Employee...");
+      console.log("Iniciando consolidación...");
       
       const consolidateResponse = await base44.functions.invoke('consolidateEmployees', {});
+      console.log("Respuesta de consolidación:", consolidateResponse);
+      
       const consolidateData = consolidateResponse?.data || consolidateResponse;
       
       if (!consolidateData.success) {
