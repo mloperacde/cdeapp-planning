@@ -92,7 +92,7 @@ export function DataProvider({ children }) {
   // 9. MÁQUINAS - Cache 15 min
   const machinesQuery = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: () => base44.entities.Machine.list('orden', 500),
     staleTime: 15 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -101,9 +101,27 @@ export function DataProvider({ children }) {
   // 10. MANTENIMIENTO - Cache 10 min
   const maintenanceQuery = useQuery({
     queryKey: ['maintenanceSchedules'],
-    queryFn: () => base44.entities.MaintenanceSchedule.list('fecha_programada', 200),
+    queryFn: () => base44.entities.MaintenanceSchedule.list('fecha_programada', 500),
     staleTime: 10 * 60 * 1000,
     gcTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // 11. PROCESOS - Cache 15 min
+  const processesQuery = useQuery({
+    queryKey: ['processes'],
+    queryFn: () => base44.entities.Process.list('codigo', 200),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // 12. TIPOS DE MANTENIMIENTO - Cache 30 min
+  const maintenanceTypesQuery = useQuery({
+    queryKey: ['maintenanceTypes'],
+    queryFn: () => base44.entities.MaintenanceType.list('nombre', 100),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -145,6 +163,12 @@ export function DataProvider({ children }) {
     
     maintenance: maintenanceQuery.data || [],
     maintenanceLoading: maintenanceQuery.isLoading,
+    
+    processes: processesQuery.data || [],
+    processesLoading: processesQuery.isLoading,
+    
+    maintenanceTypes: maintenanceTypesQuery.data || [],
+    maintenanceTypesLoading: maintenanceTypesQuery.isLoading,
     
     // Helper computed
     isAdmin: userQuery.data?.role === 'admin',
