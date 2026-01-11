@@ -20,7 +20,8 @@ export default function HRChatbot({ isOpen, onClose, employeeId }) {
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
-    enabled: isOpen
+    enabled: isOpen,
+    staleTime: 5 * 60 * 1000,
   });
 
   const createConversation = async () => {

@@ -7,18 +7,47 @@ import { TrendingUp, Users, Calendar, AlertCircle, RefreshCw } from "lucide-reac
 import { startOfYear, endOfYear } from "date-fns";
 import { calculateGlobalAbsenteeism } from "../absences/AbsenteeismCalculator";
 import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import AIDashboardSummary from "../reports/AIDashboardSummary";
 
 export default function AbsenceDashboard({ absences, employees, masterEmployees = [] }) {
+  // Cargar datos necesarios para el cálculo con caché
+  const { data: sharedAbsences = [] } = useQuery({
+    queryKey: ['absences'],
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 500),
+    staleTime: 5 * 60 * 1000,
+    enabled: false, // Solo para caché compartida
+  });
+
+  const { data: vacations = [] } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list(),
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const { data: holidays = [] } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list(),
+    staleTime: 60 * 60 * 1000,
+  });
+
   const { data: globalAbsenteeism, refetch: refetchAbsenteeism, isLoading: calculatingAbsenteeism } = useQuery({
-    queryKey: ['globalAbsenteeism'],
+    queryKey: ['globalAbsenteeism', employees.length, absences.length],
     queryFn: async () => {
       const now = new Date();
       const yearStart = startOfYear(now);
-      return calculateGlobalAbsenteeism(yearStart, now);
+      // Pasar datos precargados para evitar llamadas masivas
+      return calculateGlobalAbsenteeism(yearStart, now, {
+        employees: employees.length > 0 ? employees : masterEmployees,
+        absences: absences,
+        vacations: vacations,
+        holidays: holidays
+      });
     },
-    staleTime: 1000 * 60 * 60, // 1 hour
+    enabled: employees.length > 0 && vacations.length >= 0 && holidays.length >= 0,
+    staleTime: 60 * 60 * 1000, // 1 hora
+    gcTime: 2 * 60 * 60 * 1000,
   });
 
   const byType = useMemo(() => {

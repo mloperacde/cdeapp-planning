@@ -138,8 +138,19 @@ import WorkCalendarConfig from "./WorkCalendarConfig";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import RateLimitMonitor from '../components/utils/RateLimitMonitor';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 min por defecto
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false, // Evitar refetches innecesarios
+      retry: 1,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+  },
+});
 
 const PAGES = {
     
@@ -450,6 +461,7 @@ function PagesContent() {
 export default function Pages() {
     return (
         <QueryClientProvider client={queryClient}>
+            <RateLimitMonitor />
             <Router>
                 <PagesContent />
             </Router>
