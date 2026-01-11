@@ -1,3 +1,4 @@
+import AbsenceConfigurationTab from './pages/AbsenceConfigurationTab';
 import AbsenceManagement from './pages/AbsenceManagement';
 import AcceptInvitation from './pages/AcceptInvitation';
 import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
@@ -57,11 +58,11 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import AbsenceConfigurationTab from './pages/AbsenceConfigurationTab';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AbsenceConfigurationTab": AbsenceConfigurationTab,
     "AbsenceManagement": AbsenceManagement,
     "AcceptInvitation": AcceptInvitation,
     "AdminDeploymentGuide": AdminDeploymentGuide,
@@ -121,7 +122,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "AbsenceConfigurationTab": AbsenceConfigurationTab,
 }
 
 export const pagesConfig = {
