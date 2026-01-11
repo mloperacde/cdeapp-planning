@@ -46,9 +46,17 @@ export default function CommitteeManagementPage() {
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+    queryFn: async () => {
+      try {
+        return await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
+      } catch (err) {
+        console.warn('Error loading employees:', err);
+        return [];
+      }
+    },
     initialData: [],
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
   const { data: riskAssessments = [] } = useQuery({
