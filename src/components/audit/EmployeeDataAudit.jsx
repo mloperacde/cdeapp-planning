@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
 import EmployeeConsolidationReport from "./EmployeeConsolidationReport";
-import SimpleConsolidation from "./SimpleConsolidation";
+import DirectConsolidation from "./DirectConsolidation";
 
 export default function EmployeeDataAudit() {
   const [auditResults, setAuditResults] = useState(null);
@@ -198,8 +198,8 @@ export default function EmployeeDataAudit() {
         </Button>
       </div>
 
-      {/* Ejecutor de Consolidación Simplificado */}
-      <SimpleConsolidation />
+      {/* Ejecutor de Consolidación Directa */}
+      <DirectConsolidation />
 
       {/* Reporte de Arquitectura Completo */}
       <EmployeeConsolidationReport />
