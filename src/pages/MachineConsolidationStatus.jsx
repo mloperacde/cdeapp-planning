@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import SimpleConsolidationRunner from "../components/audit/SimpleConsolidationRunner";
+import DirectMachineConsolidation from "../components/audit/DirectMachineConsolidation";
 
 export default function MachineConsolidationStatus() {
   const [loading, setLoading] = useState(true);
@@ -218,7 +218,7 @@ export default function MachineConsolidationStatus() {
           </TabsList>
 
           <TabsContent value="simple" className="space-y-6">
-            <SimpleConsolidationRunner />
+            <DirectMachineConsolidation />
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">
