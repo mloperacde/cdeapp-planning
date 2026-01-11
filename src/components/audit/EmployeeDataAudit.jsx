@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
 import EmployeeConsolidationReport from "./EmployeeConsolidationReport";
 import EmployeeConsolidationExecutor from "./EmployeeConsolidationExecutor";
+import AutoConsolidationConfig from "./AutoConsolidationConfig";
 
 export default function EmployeeDataAudit() {
   const [auditResults, setAuditResults] = useState(null);
@@ -198,7 +199,10 @@ export default function EmployeeDataAudit() {
         </Button>
       </div>
 
-      {/* Ejecutor de Consolidación */}
+      {/* Configuración de Consolidación Automática */}
+      <AutoConsolidationConfig />
+
+      {/* Ejecutor Manual de Consolidación */}
       <EmployeeConsolidationExecutor />
 
       {/* Reporte de Arquitectura Completo */}
