@@ -11,15 +11,12 @@ import ApprovalTimesWidget from "../components/dashboard/ApprovalTimesWidget";
 import AbsenceDistributionWidget from "../components/dashboard/AbsenceDistributionWidget";
 import DashboardCustomizer from "../components/dashboard/DashboardCustomizer";
 import HRReportExporter from "../components/reports/HRReportExporter";
+import { useAppData } from "../components/data/DataProvider";
 
 export default function AdvancedHRDashboard() {
   const [showCustomizer, setShowCustomizer] = useState(false);
   
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { user } = useAppData();
 
   const { data: dashboardConfig } = useQuery({
     queryKey: ['dashboardConfig', user?.id],
@@ -31,6 +28,7 @@ export default function AdvancedHRDashboard() {
     enabled: !!user?.id,
     staleTime: 15 * 60 * 1000, // Config muy estable
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const widgets = dashboardConfig?.widgets || [

@@ -1,6 +1,4 @@
 import React, { useMemo } from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Users, 
@@ -11,33 +9,10 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useAppData } from "../components/data/DataProvider";
 
 export default function Dashboard() {
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me().catch(() => null),
-  });
-
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employeeMasterDatabase'], // Misma key que otros componentes
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
-    staleTime: 10 * 60 * 1000, // Cache 10 minutos
-    gcTime: 15 * 60 * 1000,
-  });
-
-  const { data: absences = [] } = useQuery({
-    queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-created_date', 200),
-    staleTime: 5 * 60 * 1000, // Cache 5 minutos
-    gcTime: 10 * 60 * 1000,
-  });
-
-  const { data: maintenanceSchedules = [] } = useQuery({
-    queryKey: ['maintenanceSchedules'],
-    queryFn: () => base44.entities.MaintenanceSchedule.list('-fecha_programada', 100),
-    staleTime: 10 * 60 * 1000, // Cache 10 minutos
-    gcTime: 15 * 60 * 1000,
-  });
+  const { user, employees, absences, maintenance: maintenanceSchedules } = useAppData();
 
   const stats = useMemo(() => {
     const today = new Date();

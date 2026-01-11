@@ -99,51 +99,18 @@ export default function AbsenceManagementPage() {
     window.history.pushState({}, '', url);
   };
 
-  // Load Data con caché optimizada
-  const { data: absences = [], isLoading } = useQuery({
-    queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 500),
-    staleTime: 5 * 60 * 1000, // 5 min cache
-    gcTime: 10 * 60 * 1000,
-  });
+  // Usar datos compartidos del DataProvider
+  const { 
+    absences = [], 
+    absencesLoading: isLoading,
+    employees: masterEmployees = [],
+    teams = [],
+    absenceTypes = [],
+    vacations = [],
+    holidays = []
+  } = useAppData();
 
-  const { data: masterEmployees = [] } = useQuery({
-    queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
-    staleTime: 10 * 60 * 1000, // 10 min cache - compartida
-    gcTime: 15 * 60 * 1000,
-  });
-
-  // Usar misma fuente de datos
   const employees = masterEmployees;
-
-  const { data: teams = [] } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-    staleTime: 15 * 60 * 1000, // Raramente cambian
-    gcTime: 30 * 60 * 1000,
-  });
-
-  const { data: absenceTypes = [] } = useQuery({
-    queryKey: ['absenceTypes'],
-    queryFn: () => base44.entities.AbsenceType.filter({ activo: true }, 'orden', 100),
-    staleTime: 15 * 60 * 1000, // Config raramente cambia
-    gcTime: 30 * 60 * 1000,
-  });
-
-  const { data: vacations = [] } = useQuery({
-    queryKey: ['vacations'],
-    queryFn: () => base44.entities.Vacation.list(),
-    staleTime: 30 * 60 * 1000, // 30 min - muy estable
-    gcTime: 60 * 60 * 1000,
-  });
-
-  const { data: holidays = [] } = useQuery({
-    queryKey: ['holidays'],
-    queryFn: () => base44.entities.Holiday.list(),
-    staleTime: 30 * 60 * 1000, // 30 min - muy estable
-    gcTime: 60 * 60 * 1000,
-  });
 
   // Derived Data
   const departments = useMemo(() => {

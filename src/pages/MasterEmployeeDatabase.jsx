@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -126,21 +127,17 @@ export default function MasterEmployeeDatabasePage() {
 
   const queryClient = useQueryClient();
 
-  // Fetch current user and permissions
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
+  // Usar datos compartidos del DataProvider
+  const { 
+    user: currentUser, 
+    employees: masterEmployees = EMPTY_ARRAY, 
+    employeesLoading: isLoading 
+  } = useAppData();
 
   const canCreateEmployee = useMemo(() => {
     if (!currentUser) return false;
     return currentUser.role === 'admin';
   }, [currentUser]);
-
-  const { data: masterEmployees = EMPTY_ARRAY, isLoading } = useQuery({
-    queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('-created_date', 10000),
-  });
 
   const userPermissions = useMemo(() => {
     if (!currentUser) return null;

@@ -9,6 +9,7 @@ import { MessageSquare, Send, X, Bot, User as UserIcon, Loader2, FileText } from
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import ReactMarkdown from "react-markdown";
+import { useAppData } from "../data/DataProvider";
 
 export default function HRChatbot({ isOpen, onClose, employeeId }) {
   const [messages, setMessages] = useState([]);
@@ -17,12 +18,7 @@ export default function HRChatbot({ isOpen, onClose, employeeId }) {
   const messagesEndRef = useRef(null);
   const queryClient = useQueryClient();
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    enabled: isOpen,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { user: currentUser } = useAppData();
 
   const createConversation = async () => {
     try {

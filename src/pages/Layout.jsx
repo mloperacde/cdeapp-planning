@@ -62,6 +62,7 @@ import ThemeToggle from "../components/common/ThemeToggle";
 import ChatbotButton from "../components/chatbot/ChatbotButton";
 import NotificationBell from "../components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
+import { useAppData } from "../components/data/DataProvider";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -75,13 +76,8 @@ export default function Layout({ children, currentPageName }) {
 
   const brandingConfig = null; // TODO: Load from config
 
-  const { data: currentUser,isLoading: userLoading, isError: userError } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    retry: 1,
-    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
-  });
-  
+  // Usar datos compartidos del DataProvider
+  const { user: currentUser, currentEmployee: employee, employeesLoading } = useAppData();
 
   // Detect mobile and redirect to MobileHome
   React.useEffect(() => {
@@ -92,19 +88,6 @@ export default function Layout({ children, currentPageName }) {
       window.location.href = createPageUrl('MobileHome');
     }
   }, [location.pathname, currentUser]);
-
-  const { data: employee, isLoading: employeeLoading } = useQuery({
-    queryKey: ['currentEmployee', currentUser?.email],
-    queryFn: async () => {
-      const emps = await base44.entities.EmployeeMasterDatabase.list();
-      return emps.find(e => e.email === currentUser?.email) || null;
-    },
-    enabled: !!currentUser?.email,
-    retry: 1,
-    staleTime: 10 * 60 * 1000, // Cache 10 min
-    gcTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false, // No recargar al cambiar de ventana
-  });
 
   const toggleSection = (section) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));

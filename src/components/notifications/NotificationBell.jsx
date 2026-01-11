@@ -15,27 +15,14 @@ import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
+import { useAppData } from "../data/DataProvider";
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    staleTime: 5 * 60 * 1000, // Reutilizar del Layout
-  });
-
-  const { data: employee } = useQuery({
-    queryKey: ['currentEmployee', user?.email],
-    queryFn: async () => {
-      if (!user?.email) return null;
-      const emps = await base44.entities.EmployeeMasterDatabase.list();
-      return emps.find(e => e.email === user.email) || null;
-    },
-    enabled: !!user?.email,
-    staleTime: 5 * 60 * 1000, // Cache compartida con Layout
-  });
+  // Usar datos compartidos del provider
+  const { user, currentEmployee: employee } = useAppData();
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['pushNotifications', employee?.id],
