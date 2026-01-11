@@ -25,29 +25,37 @@ export default function AutomaticConsolidationRunner() {
     try {
       // PASO 1: Consolidar máquinas
       addLog('🔄 Iniciando consolidación de máquinas...', 'info');
-      const consolidateRes = await base44.functions.invoke('consolidateMachines', {});
+      const consolidateRes = await fetch('/api/functions/consolidateMachines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).then(r => r.json());
       
-      if (!consolidateRes?.data?.success) {
-        throw new Error(consolidateRes?.data?.error || 'Error en consolidateMachines');
+      if (!consolidateRes?.success) {
+        throw new Error(consolidateRes?.error || 'Error en consolidateMachines');
       }
 
-      addLog(`✅ Consolidación completada: ${consolidateRes.data.summary?.migrated || 0} máquinas migradas`, 'success');
-      addLog(`   Duplicados corregidos: ${consolidateRes.data.summary?.duplicates_fixed || 0}`, 'success');
-      addLog(`   Procesos integrados: ${consolidateRes.data.summary?.processes_integrated || 0}`, 'success');
+      addLog(`✅ Consolidación completada: ${consolidateRes.summary?.migrated || 0} máquinas migradas`, 'success');
+      addLog(`   Duplicados corregidos: ${consolidateRes.summary?.duplicates_fixed || 0}`, 'success');
+      addLog(`   Procesos integrados: ${consolidateRes.summary?.processes_integrated || 0}`, 'success');
 
       // PASO 2: Actualizar referencias
       addLog('🔄 Actualizando referencias en entidades relacionadas...', 'info');
-      const referencesRes = await base44.functions.invoke('updateMachineReferences', {});
+      const referencesRes = await fetch('/api/functions/updateMachineReferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).then(r => r.json());
       
-      if (!referencesRes?.data?.success) {
-        throw new Error(referencesRes?.data?.error || 'Error en updateMachineReferences');
+      if (!referencesRes?.success) {
+        throw new Error(referencesRes?.error || 'Error en updateMachineReferences');
       }
 
       addLog(`✅ Referencias actualizadas:`, 'success');
-      addLog(`   MaintenanceSchedule: ${referencesRes.data.results?.maintenanceUpdated || 0} actualizadas`, 'success');
-      addLog(`   MachineAssignment: ${referencesRes.data.results?.assignmentsUpdated || 0} actualizadas`, 'success');
-      addLog(`   MachinePlanning: ${referencesRes.data.results?.planningUpdated || 0} actualizadas`, 'success');
-      addLog(`   Asignaciones huérfanas eliminadas: ${referencesRes.data.results?.orphanedRemoved || 0}`, 'success');
+      addLog(`   MaintenanceSchedule: ${referencesRes.results?.maintenanceUpdated || 0} actualizadas`, 'success');
+      addLog(`   MachineAssignment: ${referencesRes.results?.assignmentsUpdated || 0} actualizadas`, 'success');
+      addLog(`   MachinePlanning: ${referencesRes.results?.planningUpdated || 0} actualizadas`, 'success');
+      addLog(`   Asignaciones huérfanas eliminadas: ${referencesRes.results?.orphanedRemoved || 0}`, 'success');
 
       // PASO 3: Verificación final
       setPhase('verifying');
@@ -74,8 +82,8 @@ export default function AutomaticConsolidationRunner() {
       addLog(`   Referencias rotas en Maintenance: ${brokenMaintenance}`, brokenMaintenance > 0 ? 'warning' : 'success');
 
       const finalResults = {
-        consolidation: consolidateRes.data.summary,
-        references: referencesRes.data.results,
+        consolidation: consolidateRes.summary,
+        references: referencesRes.results,
         verification: {
           legacyMachines: machines.length,
           masterMachines: masterMachines.filter(m => !m.is_deleted).length,
