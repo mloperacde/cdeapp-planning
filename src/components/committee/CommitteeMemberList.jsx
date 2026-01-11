@@ -28,8 +28,9 @@ export default function CommitteeMemberList({ members = [], employees = [], onEd
 
   const getEmployeeName = (employeeId) => {
     if (!employees || !Array.isArray(employees)) return "Desconocido";
-    const emp = employees.find(e => e.id === employeeId);
-    return emp?.nombre || "Desconocido";
+    // Intenta búsqueda por ID primero, luego por email
+    const emp = employees.find(e => e.id === employeeId || e.email === employeeId || e.codigo_empleado === employeeId);
+    return emp?.nombre || emp?.full_name || "Desconocido";
   };
 
   if (!members || members.length === 0) {

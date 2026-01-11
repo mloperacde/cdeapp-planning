@@ -30,8 +30,19 @@ export default function MachineMasterPage() {
     queryKey: ['machines'],
     queryFn: async () => {
       try {
+        // Primero intenta MachineMasterDatabase, si está vacío usa Machine
+        const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500).catch(() => []);
+        if (Array.isArray(masterData) && masterData.length > 0) {
+          console.log('Cargando máquinas desde MachineMasterDatabase:', masterData.length);
+          return masterData.sort((a, b) => (a.orden || 999) - (b.orden || 999));
+        }
+        
         const data = await base44.entities.Machine.list(undefined, 500);
-        if (!Array.isArray(data)) return [];
+        if (!Array.isArray(data)) {
+          console.warn('Machine.list no retornó array:', data);
+          return [];
+        }
+        console.log('Cargando máquinas desde Machine:', data.length);
         return data.sort((a, b) => (a.orden || 999) - (b.orden || 999));
       } catch (err) {
         console.error('Error fetching machines:', err);
@@ -41,7 +52,7 @@ export default function MachineMasterPage() {
     staleTime: 0,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 3,
+    retry: 2,
   });
 
   const createMutation = useMutation({
