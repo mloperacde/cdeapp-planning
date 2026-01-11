@@ -38,10 +38,18 @@ export function DataProvider({ children }) {
   // 3. EMPLEADOS - Cache 10 min (FUENTE ÚNICA)
   const employeesQuery = useQuery({
     queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
+    queryFn: async () => {
+      try {
+        return await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
+      } catch (err) {
+        console.warn('EmployeeMasterDatabase error, retornando array vacío', err);
+        return [];
+      }
+    },
     staleTime: 10 * 60 * 1000,
     gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   // 4. AUSENCIAS - Cache 5 min
@@ -92,10 +100,20 @@ export function DataProvider({ children }) {
   // 9. MÁQUINAS - Cache 15 min
   const machinesQuery = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden', 500),
-    staleTime: 15 * 60 * 1000,
+    queryFn: async () => {
+      try {
+        const data = await base44.entities.Machine.list(undefined, 500);
+        if (!Array.isArray(data)) return [];
+        return data.sort((a, b) => (a.orden || 999) - (b.orden || 999));
+      } catch (err) {
+        console.error('Error fetching machines:', err);
+        return [];
+      }
+    },
+    staleTime: 0,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 2,
   });
 
   // 10. MANTENIMIENTO - Cache 10 min
