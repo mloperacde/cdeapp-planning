@@ -29,12 +29,18 @@ export default function MachineMasterPage() {
   const { data: machines = EMPTY_ARRAY, isLoading, error } = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
-      const data = await base44.entities.Machine.list('orden', 500);
-      return data || [];
+      try {
+        const data = await base44.entities.Machine.list(undefined, 500);
+        if (!Array.isArray(data)) return [];
+        return data.sort((a, b) => (a.orden || 999) - (b.orden || 999));
+      } catch (err) {
+        console.error('Error fetching machines:', err);
+        return [];
+      }
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     initialData: EMPTY_ARRAY,
-    retry: 2,
+    retry: 3,
   });
 
   const createMutation = useMutation({
