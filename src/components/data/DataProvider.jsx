@@ -124,10 +124,18 @@ export function DataProvider({ children }) {
   // 10. MANTENIMIENTO - Cache 10 min
   const maintenanceQuery = useQuery({
     queryKey: ['maintenanceSchedules'],
-    queryFn: () => base44.entities.MaintenanceSchedule.list('fecha_programada', 500),
+    queryFn: async () => {
+      try {
+        return await base44.entities.MaintenanceSchedule.list('fecha_programada', 500);
+      } catch (err) {
+        console.warn('MaintenanceSchedule error:', err);
+        return [];
+      }
+    },
     staleTime: 10 * 60 * 1000,
     gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   // 11. PROCESOS - Cache 15 min
