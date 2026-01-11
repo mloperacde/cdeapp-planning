@@ -15,8 +15,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import MachineConsolidationExecutor from "../components/audit/MachineConsolidationExecutor";
-import AutomaticConsolidationRunner from "../components/audit/AutomaticConsolidationRunner";
+import SimpleConsolidationRunner from "../components/audit/SimpleConsolidationRunner";
 
 export default function MachineConsolidationStatus() {
   const [loading, setLoading] = useState(true);
@@ -211,20 +210,15 @@ export default function MachineConsolidationStatus() {
         )}
 
         {/* Tabs con Detalles */}
-        <Tabs defaultValue="automatic" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="automatic">⚡ Automática</TabsTrigger>
-            <TabsTrigger value="executor">Manual</TabsTrigger>
+        <Tabs defaultValue="simple" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="simple">⚡ Ejecutar</TabsTrigger>
             <TabsTrigger value="details">Detalles</TabsTrigger>
             <TabsTrigger value="references">Referencias</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="automatic" className="space-y-6">
-            <AutomaticConsolidationRunner />
-          </TabsContent>
-
-          <TabsContent value="executor" className="space-y-6">
-            <MachineConsolidationExecutor />
+          <TabsContent value="simple" className="space-y-6">
+            <SimpleConsolidationRunner />
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">
