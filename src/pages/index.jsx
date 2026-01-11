@@ -140,6 +140,8 @@ import RoleMigrationGuide from "./RoleMigrationGuide";
 
 import EmployeeDataAudit from "./EmployeeDataAudit";
 
+import MachineProcessAudit from "./MachineProcessAudit";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RateLimitMonitor from '../components/utils/RateLimitMonitor';
@@ -164,6 +166,8 @@ const PAGES = {
           RoleMigrationGuide: RoleMigrationGuide,
           
           EmployeeDataAudit: EmployeeDataAudit,
+          
+          MachineProcessAudit: MachineProcessAudit,
     
     AbsenceTypeConfig: AbsenceTypeConfig,
     
@@ -465,6 +469,8 @@ function PagesContent() {
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 
                 <Route path="/EmployeeDataAudit" element={<EmployeeDataAudit />} />
+                
+                <Route path="/MachineProcessAudit" element={<MachineProcessAudit />} />
                 
             </Routes>
         </Layout>

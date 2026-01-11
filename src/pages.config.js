@@ -44,6 +44,7 @@ import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
+import MachineProcessAudit from './pages/MachineProcessAudit';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import Messaging from './pages/Messaging';
@@ -94,7 +95,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import MachineProcessAudit from './pages/MachineProcessAudit';
 import __Layout from './Layout.jsx';
 
 
@@ -145,6 +145,7 @@ export const PAGES = {
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
     "MachineMaster": MachineMaster,
+    "MachineProcessAudit": MachineProcessAudit,
     "MaintenanceTracking": MaintenanceTracking,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
     "Messaging": Messaging,
@@ -195,7 +196,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "MachineProcessAudit": MachineProcessAudit,
 }
 
 export const pagesConfig = {
