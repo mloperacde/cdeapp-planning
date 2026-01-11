@@ -28,30 +28,34 @@ export default function EmployeeConsolidationExecutor() {
     // Verificar que el SDK está listo
     const checkSDK = async () => {
       try {
-        if (base44?.functions?.invoke) {
+        // Verificar que base44 existe y tiene el método de autenticación
+        if (base44 && typeof base44.functions?.invoke === 'function') {
           setSdkReady(true);
         } else {
-          console.error("SDK no inicializado:", { base44, functions: base44?.functions });
-          setTimeout(checkSDK, 500);
+          // El SDK aún no está listo, reintentar
+          setTimeout(checkSDK, 200);
         }
       } catch (error) {
         console.error("Error verificando SDK:", error);
         setTimeout(checkSDK, 500);
       }
     };
-    checkSDK();
+    
+    // Pequeño delay inicial para dar tiempo al SDK a inicializarse
+    const timer = setTimeout(checkSDK, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const executeConsolidation = async () => {
-    if (!sdkReady) {
-      toast.error("⚠️ SDK aún no está listo. Espera un momento e intenta de nuevo.");
-      return;
-    }
-
     setExecuting(true);
     setStep(1);
     
     try {
+      // Verificación final del SDK antes de ejecutar
+      if (!base44?.functions?.invoke) {
+        throw new Error("El SDK no está disponible. Por favor, recarga la página.");
+      }
+
       // PASO 1: Consolidar Employee → EmployeeMasterDatabase
       toast.info("🔄 Paso 1: Consolidando datos...");
       
