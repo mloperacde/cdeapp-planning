@@ -51,6 +51,13 @@ export default function ConfigurationPage() {
           url: createPageUrl("MasterEmployeeDatabase"),
           color: "blue"
         },
+        {
+          title: "Auditoría de Datos",
+          description: "Análisis y consolidación de datos de empleados",
+          icon: Database,
+          url: createPageUrl("EmployeeDataAudit"),
+          color: "indigo"
+        },
 
         {
           title: "Reiniciar Sistema",
