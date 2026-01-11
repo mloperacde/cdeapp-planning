@@ -18,7 +18,7 @@ import {
 
 /**
  * AUDITORÍA Y CONSOLIDACIÓN DE DATOS DE MÁQUINAS Y PROCESOS
- * Análisis de integridad y relaciones entre entidades
+ * Análisis completo de integridad, referencias y dependencias
  */
 export default function MachineProcessDataAudit() {
   const [loading, setLoading] = useState(false);
@@ -29,35 +29,74 @@ export default function MachineProcessDataAudit() {
     const auditResults = {
       entities: {},
       relatedEntities: {},
+      pagesUsage: {},
       totalRecords: 0,
       recommendations: [],
       dataQuality: {
-        orphanedProcesses: [],
+        orphanedReferences: [],
         machinesWithoutProcesses: [],
-        processesWithoutMachines: [],
         duplicateMachineNames: [],
-        duplicateProcessCodes: []
+        duplicateMachineCodes: [],
+        duplicateProcessCodes: [],
+        machinesWithoutMaintenance: [],
+        orphanedAssignments: [],
+        dataIntegrity: []
       }
     };
 
     try {
-      // 1. MÁQUINAS
+      // 1. MÁQUINAS LEGACY
       const machines = await base44.entities.Machine.list('orden', 500);
       auditResults.entities.Machine = {
         count: machines.length,
-        status: "Activa",
-        role: "Entidad principal de máquinas",
+        status: "Legacy - Consolidar",
+        role: "Entidad original de máquinas (migrar a MachineMasterDatabase)",
         fields: Object.keys(machines[0] || {}),
-        hasData: machines.length > 0
+        hasData: machines.length > 0,
+        warning: "⚠️ Se recomienda consolidar en MachineMasterDatabase"
       };
       auditResults.totalRecords += machines.length;
 
-      // 2. PROCESOS
+      // 2. MÁQUINAS MASTER DATABASE
+      try {
+        const masterMachines = await base44.entities.MachineMasterDatabase.list('codigo_maquina', 500);
+        auditResults.entities.MachineMasterDatabase = {
+          count: masterMachines.length,
+          status: "Nueva - Fuente Única",
+          role: "Base de datos maestra consolidada",
+          fields: Object.keys(masterMachines[0] || {}),
+          hasData: masterMachines.length > 0
+        };
+        auditResults.totalRecords += masterMachines.length;
+
+        // Detectar duplicados entre Machine y MachineMasterDatabase
+        const machineCodesSet = new Set(machines.map(m => m.codigo?.toLowerCase()));
+        const masterCodesSet = new Set(masterMachines.map(m => m.codigo_maquina?.toLowerCase()));
+        const commonCodes = [...machineCodesSet].filter(code => masterCodesSet.has(code));
+        
+        if (commonCodes.length > 0) {
+          auditResults.dataQuality.dataIntegrity.push({
+            type: "duplicate_data",
+            message: `${commonCodes.length} máquinas duplicadas entre Machine y MachineMasterDatabase`,
+            codes: commonCodes,
+            action: "Consolidar datos en MachineMasterDatabase y eliminar Machine"
+          });
+        }
+      } catch (e) {
+        auditResults.entities.MachineMasterDatabase = {
+          count: 0,
+          status: "No existe",
+          error: "Entidad no creada aún",
+          recommendation: "Crear MachineMasterDatabase para consolidar datos"
+        };
+      }
+
+      // 3. PROCESOS
       const processes = await base44.entities.Process.list('codigo', 200);
       auditResults.entities.Process = {
         count: processes.length,
         status: "Activa",
-        role: "Entidad principal de procesos",
+        role: "Entidad de procesos (se integrarán en MachineMasterDatabase)",
         fields: Object.keys(processes[0] || {}),
         hasData: processes.length > 0
       };
@@ -74,26 +113,31 @@ export default function MachineProcessDataAudit() {
       };
       auditResults.totalRecords += machineProcesses.length;
 
-      // 4. OTRAS ENTIDADES RELACIONADAS
+      // 4. ENTIDADES RELACIONADAS CON MÁQUINAS
       const relatedEntities = [
-        { name: "MaintenanceSchedule", relation: "machine_id", description: "Mantenimientos programados" },
-        { name: "MachineAssignment", relation: "machine_id", description: "Asignación de operarios" },
-        { name: "MachinePlanning", relation: "machine_id + process_id", description: "Planificación diaria" },
-        { name: "ProcessSkillRequirement", relation: "process_id", description: "Habilidades requeridas" },
-        { name: "MachineStatus", relation: "machine_id", description: "Estado de máquinas" }
+        { name: "MachineProcess", relation: "machine_id + process_id", description: "Relación máquina-proceso", critical: true },
+        { name: "MaintenanceSchedule", relation: "machine_id", description: "Mantenimientos programados", critical: true },
+        { name: "MachineAssignment", relation: "machine_id", description: "Asignación de operarios", critical: true },
+        { name: "MachinePlanning", relation: "machine_id + process_id", description: "Planificación diaria", critical: true },
+        { name: "MachineStatus", relation: "machine_id", description: "Estado de máquinas", critical: false },
+        { name: "ProcessSkillRequirement", relation: "process_id", description: "Habilidades requeridas por proceso", critical: false },
+        { name: "ShiftAssignment", relation: "maquinas_asignadas[]", description: "Turnos con máquinas asignadas", critical: false },
+        { name: "EmployeeSkill", relation: "machine_id (opcional)", description: "Habilidades en máquinas específicas", critical: false }
       ];
 
+      const machineRelatedData = {};
       for (const entity of relatedEntities) {
         try {
-          const records = await base44.entities[entity.name].list('', 200);
+          const records = await base44.entities[entity.name].list('', 300);
           auditResults.relatedEntities[entity.name] = {
             count: records.length,
             status: "Activa",
             relation: entity.relation,
             description: entity.description,
-            critical: entity.critical || false
+            critical: entity.critical
           };
           auditResults.totalRecords += records.length;
+          machineRelatedData[entity.name] = records;
         } catch (e) {
           auditResults.relatedEntities[entity.name] = {
             count: 0,
@@ -105,7 +149,28 @@ export default function MachineProcessDataAudit() {
         }
       }
 
-      // ANÁLISIS DE CALIDAD DE DATOS
+      // 5. ANÁLISIS DE PÁGINAS QUE USAN MÁQUINAS
+      auditResults.pagesUsage = {
+        usingMachine: [
+          "MachineManagement",
+          "MaintenanceTracking", 
+          "MachineMaintenance",
+          "MachineAssignments",
+          "ProductionPlanning",
+          "DailyPlanning",
+          "Timeline",
+          "ShiftPlanning"
+        ],
+        usingProcess: [
+          "ProcessConfiguration",
+          "MachinePlanning",
+          "ShiftPlanning",
+          "SkillMatrix"
+        ],
+        pendingMigration: []
+      };
+
+      // 6. ANÁLISIS EXHAUSTIVO DE CALIDAD DE DATOS
 
       // Máquinas con nombres duplicados
       const machineNames = {};
@@ -122,6 +187,25 @@ export default function MachineProcessDataAudit() {
             nombre: name,
             count: machineNames[name].length,
             ids: machineNames[name].map(m => m.id)
+          });
+        }
+      });
+
+      // Máquinas con códigos duplicados
+      const machineCodes = {};
+      machines.forEach(m => {
+        const code = m.codigo?.toLowerCase();
+        if (code) {
+          if (!machineCodes[code]) machineCodes[code] = [];
+          machineCodes[code].push(m);
+        }
+      });
+      Object.keys(machineCodes).forEach(code => {
+        if (machineCodes[code].length > 1) {
+          auditResults.dataQuality.duplicateMachineCodes.push({
+            codigo: code,
+            count: machineCodes[code].length,
+            ids: machineCodes[code].map(m => m.id)
           });
         }
       });
@@ -146,6 +230,7 @@ export default function MachineProcessDataAudit() {
       });
 
       // Máquinas sin procesos configurados
+      const machineProcesses = machineRelatedData.MachineProcess || [];
       const machinesWithProcesses = new Set(machineProcesses.map(mp => mp.machine_id));
       machines.forEach(m => {
         if (!machinesWithProcesses.has(m.id) && !m.procesos_ids?.length) {
@@ -157,12 +242,15 @@ export default function MachineProcessDataAudit() {
         }
       });
 
-      // Procesos huérfanos en MachineProcess
-      const validProcessIds = new Set(processes.map(p => p.id));
+      // Referencias huérfanas en todas las entidades
       const validMachineIds = new Set(machines.map(m => m.id));
+      const validProcessIds = new Set(processes.map(p => p.id));
+
+      // MachineProcess
       machineProcesses.forEach(mp => {
         if (!validProcessIds.has(mp.process_id) || !validMachineIds.has(mp.machine_id)) {
-          auditResults.dataQuality.orphanedProcesses.push({
+          auditResults.dataQuality.orphanedReferences.push({
+            entity: "MachineProcess",
             id: mp.id,
             machine_id: mp.machine_id,
             process_id: mp.process_id,
@@ -171,7 +259,106 @@ export default function MachineProcessDataAudit() {
         }
       });
 
-      // RECOMENDACIONES
+      // MaintenanceSchedule
+      const maintenanceSchedules = machineRelatedData.MaintenanceSchedule || [];
+      maintenanceSchedules.forEach(ms => {
+        if (!validMachineIds.has(ms.machine_id)) {
+          auditResults.dataQuality.orphanedReferences.push({
+            entity: "MaintenanceSchedule",
+            id: ms.id,
+            machine_id: ms.machine_id,
+            reason: "Máquina no existe"
+          });
+        }
+      });
+
+      // MachineAssignment
+      const assignments = machineRelatedData.MachineAssignment || [];
+      assignments.forEach(ma => {
+        if (!validMachineIds.has(ma.machine_id)) {
+          auditResults.dataQuality.orphanedAssignments.push({
+            entity: "MachineAssignment",
+            id: ma.id,
+            machine_id: ma.machine_id,
+            team_key: ma.team_key,
+            reason: "Máquina no existe"
+          });
+        }
+      });
+
+      // MachinePlanning
+      const plannings = machineRelatedData.MachinePlanning || [];
+      plannings.forEach(mp => {
+        if (!validMachineIds.has(mp.machine_id)) {
+          auditResults.dataQuality.orphanedReferences.push({
+            entity: "MachinePlanning",
+            id: mp.id,
+            machine_id: mp.machine_id,
+            reason: "Máquina no existe"
+          });
+        }
+        if (mp.process_id && !validProcessIds.has(mp.process_id)) {
+          auditResults.dataQuality.orphanedReferences.push({
+            entity: "MachinePlanning",
+            id: mp.id,
+            process_id: mp.process_id,
+            reason: "Proceso no existe"
+          });
+        }
+      });
+
+      // Máquinas sin mantenimiento programado
+      const machinesWithMaintenance = new Set(maintenanceSchedules.map(ms => ms.machine_id));
+      machines.forEach(m => {
+        if (!machinesWithMaintenance.has(m.id) && m.estado !== "Fuera de servicio") {
+          auditResults.dataQuality.machinesWithoutMaintenance.push({
+            id: m.id,
+            nombre: m.nombre,
+            codigo: m.codigo,
+            warning: "No tiene mantenimiento programado"
+          });
+        }
+      });
+
+      // 7. RECOMENDACIONES CRÍTICAS
+      
+      // Consolidación de datos
+      if (machines.length > 0 && auditResults.entities.MachineMasterDatabase?.count === 0) {
+        auditResults.recommendations.push({
+          priority: "CRITICAL",
+          action: "Crear y poblar MachineMasterDatabase",
+          impact: `${machines.length} máquinas requieren consolidación`,
+          solution: "Migrar datos de Machine a MachineMasterDatabase incluyendo procesos configurados"
+        });
+      }
+
+      if (auditResults.dataQuality.dataIntegrity.length > 0) {
+        auditResults.recommendations.push({
+          priority: "CRITICAL",
+          action: "Consolidar datos duplicados entre Machine y MachineMasterDatabase",
+          impact: `Datos duplicados detectados`,
+          solution: "Consolidar en MachineMasterDatabase y eliminar Machine legacy"
+        });
+      }
+
+      if (auditResults.dataQuality.orphanedReferences.length > 0) {
+        auditResults.recommendations.push({
+          priority: "HIGH",
+          action: "Eliminar referencias huérfanas",
+          impact: `${auditResults.dataQuality.orphanedReferences.length} referencias rotas detectadas`,
+          solution: "Limpiar registros con machine_id o process_id inválidos"
+        });
+      }
+
+      if (auditResults.dataQuality.duplicateMachineCodes.length > 0) {
+        auditResults.recommendations.push({
+          priority: "HIGH",
+          action: "Resolver códigos de máquinas duplicados",
+          impact: `${auditResults.dataQuality.duplicateMachineCodes.length} códigos duplicados`,
+          solution: "Asignar códigos únicos a cada máquina"
+        });
+      }
+
       if (auditResults.dataQuality.duplicateMachineNames.length > 0) {
         auditResults.recommendations.push({
           priority: "MEDIUM",
@@ -183,19 +370,28 @@ export default function MachineProcessDataAudit() {
 
       if (auditResults.dataQuality.machinesWithoutProcesses.length > 0) {
         auditResults.recommendations.push({
-          priority: "LOW",
-          action: "Configurar procesos para máquinas sin procesos",
+          priority: "MEDIUM",
+          action: "Configurar procesos para máquinas",
           impact: `${auditResults.dataQuality.machinesWithoutProcesses.length} máquinas sin procesos`,
-          solution: "Asignar procesos a través de la página de Gestión de Máquinas"
+          solution: "Asignar procesos en MachineMasterDatabase.procesos_configurados"
         });
       }
 
-      if (auditResults.dataQuality.orphanedProcesses.length > 0) {
+      if (auditResults.dataQuality.machinesWithoutMaintenance.length > 0) {
         auditResults.recommendations.push({
-          priority: "HIGH",
-          action: "Eliminar referencias huérfanas en MachineProcess",
-          impact: `${auditResults.dataQuality.orphanedProcesses.length} registros con referencias rotas`,
-          solution: "Limpiar registros de MachineProcess con referencias inválidas"
+          priority: "MEDIUM",
+          action: "Programar mantenimiento para máquinas",
+          impact: `${auditResults.dataQuality.machinesWithoutMaintenance.length} máquinas sin mantenimiento`,
+          solution: "Crear programas de mantenimiento preventivo"
+        });
+      }
+
+      if (auditResults.dataQuality.orphanedAssignments.length > 0) {
+        auditResults.recommendations.push({
+          priority: "MEDIUM",
+          action: "Limpiar asignaciones huérfanas",
+          impact: `${auditResults.dataQuality.orphanedAssignments.length} asignaciones con referencias rotas`,
+          solution: "Eliminar registros de MachineAssignment inválidos"
         });
       }
 
