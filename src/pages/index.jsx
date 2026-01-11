@@ -96,23 +96,6 @@ const PAGES = {
           Dashboard: Dashboard,
           
           AbsenceManagement: AbsenceManagement,
-          
-          RoleMigrationGuide: RoleMigrationGuide,
-          
-          EmployeeDataAudit: EmployeeDataAudit,
-          
-          MachineProcessAudit: MachineProcessAudit,
-          
-          MachineConsolidationStatus: MachineConsolidationStatus,
-          MachineDeduplication: MachineDeduplication,
-          PlanningConsolidation: PlanningConsolidation,
-          CleanOrphanedReferences: CleanOrphanedReferences,
-    
-    AbsenceTypeConfig: AbsenceTypeConfig,
-    
-    AbsenceTypeInfo: AbsenceTypeInfo,
-    
-    AdvancedAbsenceConfig: AdvancedAbsenceConfig,
     
     AdvancedConfiguration: AdvancedConfiguration,
     
@@ -124,51 +107,23 @@ const PAGES = {
     
     AttendanceManagement: AttendanceManagement,
     
-    Breaks: Breaks,
-    
     CommitteeManagement: CommitteeManagement,
     
     Configuration: Configuration,
     
     DailyPlanning: DailyPlanning,
     
-    DailyShiftPlanning: DailyShiftPlanning,
-    
     Dashboard: Dashboard,
-    
-    DataImport: DataImport,
-    
-    DepartmentManagement: DepartmentManagement,
-    
-    DirectDataEntry: DirectDataEntry,
     
     DocumentManagement: DocumentManagement,
     
     ETTTemporaryEmployees: ETTTemporaryEmployees,
     
-    EmailNotifications: EmailNotifications,
-    
-    EmployeeAbsenceInfo: EmployeeAbsenceInfo,
-    
-    EmployeeAbsences: EmployeeAbsences,
-    
-    EmployeeChat: EmployeeChat,
-    
-    EmployeeDataCompletion: EmployeeDataCompletion,
-    
-    EmployeeDataCorrection: EmployeeDataCorrection,
-    
     EmployeeOnboarding: EmployeeOnboarding,
-    
-    EmployeeVacations: EmployeeVacations,
     
     EmployeesShiftManager: EmployeesShiftManager,
     
     IncentiveManagement: IncentiveManagement,
-    
-    LockerDataCleanup: LockerDataCleanup,
-    
-    LockerDuplicateCleanup: LockerDuplicateCleanup,
     
     LockerManagement: LockerManagement,
     
@@ -184,43 +139,17 @@ const PAGES = {
     
     MasterEmployeeDatabase: MasterEmployeeDatabase,
     
-    Messaging: Messaging,
-    
-    MessagingConfig: MessagingConfig,
-    
-    MobileAbsences: MobileAbsences,
-    
-    MobileAppConfig: MobileAppConfig,
-    
-    MobileChat: MobileChat,
-    
-    MobileNotifications: MobileNotifications,
-    
-    MobilePlanning: MobilePlanning,
-    
-    MobileProfile: MobileProfile,
-    
-    MobileVacations: MobileVacations,
-    
-    MyProfile: MyProfile,
-    
-    NotificationCenter: NotificationCenter,
-    
-    Notifications: Notifications,
+
     
     PerformanceManagement: PerformanceManagement,
     
-    PredictiveMaintenance: PredictiveMaintenance,
+
     
     ProcessConfiguration: ProcessConfiguration,
     
     ProductionPlanning: ProductionPlanning,
     
     Reports: Reports,
-    
-    ShiftAbsenceReport: ShiftAbsenceReport,
-    
-    ShiftAssignments: ShiftAssignments,
     
     ShiftHandover: ShiftHandover,
     
@@ -232,11 +161,7 @@ const PAGES = {
     
     SupportManagement1415: SupportManagement1415,
     
-    SystemAudit: SystemAudit,
-    
     SystemReset: SystemReset,
-    
-    TeamConfiguration: TeamConfiguration,
     
     Timeline: Timeline,
     
