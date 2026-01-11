@@ -114,12 +114,13 @@ export default function ConfigurationPage() {
           color: "purple"
         },
         {
-          title: "Consolidación de Máquinas",
-          description: "Ejecutar migración a MachineMasterDatabase",
-          icon: Database,
-          url: createPageUrl("MachineConsolidationStatus"),
-          color: "blue"
-        }
+           title: "Consolidación de Máquinas",
+           description: "Ejecutar migración a MachineMasterDatabase",
+           icon: Database,
+           url: createPageUrl("MachineConsolidationStatus"),
+           color: "blue",
+           hidden: false
+         }
       ]
     },
     sistema: {

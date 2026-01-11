@@ -40,6 +40,7 @@ import LockerDuplicateCleanup from './pages/LockerDuplicateCleanup';
 import LockerManagement from './pages/LockerManagement';
 import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
+import MachineConsolidationStatus from './pages/MachineConsolidationStatus';
 import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
@@ -95,7 +96,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import MachineConsolidationStatus from './pages/MachineConsolidationStatus';
 import __Layout from './Layout.jsx';
 
 
@@ -142,6 +142,7 @@ export const PAGES = {
     "LockerManagement": LockerManagement,
     "MLInsights": MLInsights,
     "MachineAssignments": MachineAssignments,
+    "MachineConsolidationStatus": MachineConsolidationStatus,
     "MachineDailyPlanning": MachineDailyPlanning,
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
@@ -197,7 +198,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "MachineConsolidationStatus": MachineConsolidationStatus,
 }
 
 export const pagesConfig = {
