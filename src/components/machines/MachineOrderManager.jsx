@@ -1,76 +1,60 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Save, X } from "lucide-react";
+import { GripVertical, Save } from "lucide-react";
 import { toast } from "sonner";
 
 export default function MachineOrderManager() {
   const [machines, setMachines] = useState([]);
   const [draggedItem, setDraggedItem] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  const { isLoading } = useQuery({
-    queryKey: ['machines'],
-    queryFn: async () => {
-      const data = await base44.entities.Machine.list('orden');
-      setMachines(data);
-      return data;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  useEffect(() => {
+    base44.entities.Machine.list('orden')
+      .then(data => {
+        setMachines(data || []);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error loading machines:', err);
+        setIsLoading(false);
+      });
+  }, []);
 
   const updateOrderMutation = useMutation({
     mutationFn: async (orderedMachines) => {
-      const updates = orderedMachines.map((machine, index) => ({
-        id: machine.id,
-        data: { orden: index + 1 }
-      }));
-      
-      for (const update of updates) {
-        await base44.entities.Machine.update(update.id, update.data);
+      for (let i = 0; i < orderedMachines.length; i++) {
+        await base44.entities.Machine.update(orderedMachines[i].id, { orden: i + 1 });
       }
-      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machines'] });
-      toast.success("Orden de máquinas actualizado");
+      toast.success("Orden actualizado");
     },
     onError: () => {
-      toast.error("Error al actualizar orden");
+      toast.error("Error al actualizar");
     }
   });
 
-  const handleDragStart = (index) => {
-    setDraggedItem(index);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  const handleDragStart = (index) => setDraggedItem(index);
+  const handleDragOver = (e) => e.preventDefault();
 
   const handleDrop = (targetIndex) => {
     if (draggedItem === null || draggedItem === targetIndex) return;
-    
     const newMachines = [...machines];
-    const [draggedMachine] = newMachines.splice(draggedItem, 1);
-    newMachines.splice(targetIndex, 0, draggedMachine);
+    const [item] = newMachines.splice(draggedItem, 1);
+    newMachines.splice(targetIndex, 0, item);
     setMachines(newMachines);
     setDraggedItem(null);
   };
 
-  const handleSave = () => {
-    updateOrderMutation.mutate(machines);
-  };
-
-  if (isLoading) return <div className="p-4 text-center">Cargando...</div>;
+  if (isLoading) return <div className="p-4 text-center text-slate-500">Cargando...</div>;
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-slate-600">
-        Arrastra las máquinas para reordenarlas
-      </div>
-      
+      <div className="text-sm text-slate-600">Arrastra para reordenar</div>
       <div className="space-y-2 max-h-[60vh] overflow-y-auto">
         {machines.map((machine, index) => (
           <div
@@ -79,32 +63,23 @@ export default function MachineOrderManager() {
             onDragStart={() => handleDragStart(index)}
             onDragOver={handleDragOver}
             onDrop={() => handleDrop(index)}
-            className={`flex items-center gap-3 p-3 bg-slate-50 rounded-lg border transition-all ${
-              draggedItem === index ? 'opacity-50 bg-slate-200' : 'hover:bg-slate-100'
+            className={`flex items-center gap-3 p-3 bg-slate-50 rounded-lg border ${
+              draggedItem === index ? 'opacity-50' : 'hover:bg-slate-100'
             } cursor-move`}
           >
-            <GripVertical className="w-5 h-5 text-slate-400 flex-shrink-0" />
+            <GripVertical className="w-5 h-5 text-slate-400" />
             <div className="flex-1">
-              <div className="font-medium text-slate-900">{machine.nombre}</div>
+              <div className="font-medium">{machine.nombre}</div>
               <div className="text-xs text-slate-500">{machine.codigo}</div>
             </div>
-            <div className="text-sm font-semibold text-slate-600 bg-white px-2 py-1 rounded">
-              {index + 1}
-            </div>
+            <div className="text-sm font-semibold text-slate-600 bg-white px-2 py-1 rounded">{index + 1}</div>
           </div>
         ))}
       </div>
-
-      <div className="flex gap-2 pt-4 border-t">
-        <Button
-          onClick={handleSave}
-          disabled={updateOrderMutation.isPending}
-          className="flex-1 bg-blue-600 hover:bg-blue-700"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {updateOrderMutation.isPending ? "Guardando..." : "Guardar Orden"}
-        </Button>
-      </div>
+      <Button onClick={() => updateOrderMutation.mutate(machines)} disabled={updateOrderMutation.isPending} className="w-full bg-blue-600">
+        <Save className="w-4 h-4 mr-2" />
+        Guardar
+      </Button>
     </div>
   );
 }
