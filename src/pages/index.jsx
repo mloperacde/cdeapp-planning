@@ -145,6 +145,7 @@ import MachineProcessAudit from "./MachineProcessAudit";
 import MachineConsolidationStatus from "./MachineConsolidationStatus";
 import MachineDeduplication from "./MachineDeduplication";
 import PlanningConsolidation from "./PlanningConsolidation";
+import CleanOrphanedReferences from "./CleanOrphanedReferences";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -176,6 +177,7 @@ const PAGES = {
           MachineConsolidationStatus: MachineConsolidationStatus,
           MachineDeduplication: MachineDeduplication,
           PlanningConsolidation: PlanningConsolidation,
+          CleanOrphanedReferences: CleanOrphanedReferences,
     
     AbsenceTypeConfig: AbsenceTypeConfig,
     
@@ -485,6 +487,8 @@ function PagesContent() {
                 <Route path="/MachineDeduplication" element={<MachineDeduplication />} />
 
                 <Route path="/PlanningConsolidation" element={<PlanningConsolidation />} />
+
+                <Route path="/CleanOrphanedReferences" element={<CleanOrphanedReferences />} />
 
                 </Routes>
         </Layout>

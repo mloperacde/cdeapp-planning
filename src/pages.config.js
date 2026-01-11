@@ -98,6 +98,7 @@ import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
 import PlanningConsolidation from './pages/PlanningConsolidation';
+import CleanOrphanedReferences from './pages/CleanOrphanedReferences';
 import __Layout from './Layout.jsx';
 
 
@@ -202,6 +203,7 @@ export const PAGES = {
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
     "PlanningConsolidation": PlanningConsolidation,
+    "CleanOrphanedReferences": CleanOrphanedReferences,
 }
 
 export const pagesConfig = {
