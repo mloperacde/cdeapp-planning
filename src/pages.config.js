@@ -11,6 +11,7 @@ import ArticleManagement from './pages/ArticleManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
 import BrandingConfig from './pages/BrandingConfig';
 import Breaks from './pages/Breaks';
+import CleanOrphanedReferences from './pages/CleanOrphanedReferences';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
 import DailyPlanning from './pages/DailyPlanning';
@@ -65,6 +66,7 @@ import NotificationCenter from './pages/NotificationCenter';
 import NotificationSettings from './pages/NotificationSettings';
 import Notifications from './pages/Notifications';
 import PerformanceManagement from './pages/PerformanceManagement';
+import PlanningConsolidation from './pages/PlanningConsolidation';
 import PredictiveMaintenance from './pages/PredictiveMaintenance';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionDashboard from './pages/ProductionDashboard';
@@ -97,8 +99,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import PlanningConsolidation from './pages/PlanningConsolidation';
-import CleanOrphanedReferences from './pages/CleanOrphanedReferences';
 import __Layout from './Layout.jsx';
 
 
@@ -116,6 +116,7 @@ export const PAGES = {
     "AttendanceManagement": AttendanceManagement,
     "BrandingConfig": BrandingConfig,
     "Breaks": Breaks,
+    "CleanOrphanedReferences": CleanOrphanedReferences,
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
     "DailyPlanning": DailyPlanning,
@@ -170,6 +171,7 @@ export const PAGES = {
     "NotificationSettings": NotificationSettings,
     "Notifications": Notifications,
     "PerformanceManagement": PerformanceManagement,
+    "PlanningConsolidation": PlanningConsolidation,
     "PredictiveMaintenance": PredictiveMaintenance,
     "ProcessConfiguration": ProcessConfiguration,
     "ProductionDashboard": ProductionDashboard,
@@ -202,8 +204,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "PlanningConsolidation": PlanningConsolidation,
-    "CleanOrphanedReferences": CleanOrphanedReferences,
 }
 
 export const pagesConfig = {

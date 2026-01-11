@@ -19,8 +19,8 @@ export default function MachineManagement() {
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-    staleTime: 10 * 60 * 1000,
+    queryFn: () => base44.entities.MachineMasterDatabase.list('nombre', 200),
+    staleTime: 15 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
 
