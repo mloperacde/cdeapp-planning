@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,12 +26,8 @@ export default function EmployeeDataCorrectionPage() {
   const [activeTab, setActiveTab] = useState("duplicates");
   const queryClient = useQueryClient();
 
-  // Fetch employees
-  const { data: employees = [], isLoading } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre', 1000),
-    initialData: [],
-  });
+  // Fetch employees from DataProvider
+  const { employees, employeesLoading: isLoading } = useAppData();
 
   // Detect duplicates (by DNI, Email, or Name similarity)
   const duplicateIssues = useMemo(() => {
@@ -104,20 +101,20 @@ export default function EmployeeDataCorrectionPage() {
     return issues;
   }, [employees]);
 
-  // Merge handler (simplified - just deactivate duplicate?)
+  // Merge handler - USAR SOLO MASTER DATABASE
   const deactivateMutation = useMutation({
-    mutationFn: (id) => base44.entities.Employee.update(id, { estado_empleado: 'Baja', motivo_baja: 'Duplicado (Corrección de Datos)' }),
+    mutationFn: (id) => base44.entities.EmployeeMasterDatabase.update(id, { estado_empleado: 'Baja', motivo_baja: 'Duplicado (Corrección de Datos)' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       toast.success("Empleado marcado como baja");
     }
   });
 
-  // Fix format handler
+  // Fix format handler - USAR SOLO MASTER DATABASE
   const updateFieldMutation = useMutation({
-    mutationFn: ({ id, field, value }) => base44.entities.Employee.update(id, { [field]: value }),
+    mutationFn: ({ id, field, value }) => base44.entities.EmployeeMasterDatabase.update(id, { [field]: value }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       toast.success("Campo corregido");
     }
   });

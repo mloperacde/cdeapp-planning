@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,17 +37,7 @@ export default function ETTTemporaryEmployeesPage() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
-    initialData: [],
-  });
-
-  const { data: machines = [] } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
-    initialData: [],
-  });
+  const { employees, machines } = useAppData();
 
   // Filtrar empleados ETT y temporales
   const ettAndTemporaryEmployees = useMemo(() => {

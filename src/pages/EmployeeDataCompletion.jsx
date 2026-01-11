@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,18 +32,8 @@ export default function EmployeeDataCompletionPage() {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const queryClient = useQueryClient();
 
-  // Fetch employees
-  const { data: employees = [], isLoading } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre', 1000),
-    initialData: [],
-  });
-
-  const { data: masterEmployees = [] } = useQuery({
-    queryKey: ['employeeMasterDatabase'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
-    initialData: [],
-  });
+  // Fetch employees from DataProvider
+  const { employees, masterEmployees, employeesLoading: isLoading } = useAppData();
 
   // Fields to check for completion
   const requiredFields = [
@@ -82,17 +73,11 @@ export default function EmployeeDataCompletionPage() {
       .sort((a, b) => a.completeness - b.completeness);
   }, [employeeData, searchTerm]);
 
-  // Update mutation
+  // Update mutation - USAR SOLO MASTER DATABASE
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Employee.update(id, data),
-    onSuccess: (updatedEmp) => {
-      // Also update master if exists
-      const masterRecord = masterEmployees.find(m => m.codigo_empleado === updatedEmp.codigo_empleado);
-      if (masterRecord) {
-         // Sync back to master (simplified)
-         base44.entities.EmployeeMasterDatabase.update(masterRecord.id, updatedEmp).catch(console.error);
-      }
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    mutationFn: ({ id, data }) => base44.entities.EmployeeMasterDatabase.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       toast.success("Datos actualizados correctamente");
       setEditingEmployee(null);
     },
