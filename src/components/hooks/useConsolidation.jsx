@@ -14,16 +14,12 @@ export function useConsolidation() {
     setResults(null);
 
     try {
-      // Validar que base44.functions existe
-      if (!base44 || !base44.functions || typeof base44.functions.invoke !== 'function') {
-        throw new Error('API no inicializada correctamente. Por favor, recarga la página.');
-      }
-
       // Paso 1: Consolidar máquinas
       setCurrentStep(1);
       console.log('Iniciando consolidación de máquinas...');
       
       const consolidationResponse = await base44.functions.invoke('consolidateMachines', {});
+      console.log('consolidateMachines response:', consolidationResponse);
       
       if (!consolidationResponse?.data?.success) {
         throw new Error(consolidationResponse?.data?.error || 'Error en consolidación de máquinas');
@@ -37,6 +33,7 @@ export function useConsolidation() {
       console.log('Actualizando referencias...');
       
       const referencesResponse = await base44.functions.invoke('updateMachineReferences', {});
+      console.log('updateMachineReferences response:', referencesResponse);
       
       if (!referencesResponse?.data?.success) {
         throw new Error(referencesResponse?.data?.error || 'Error actualizando referencias');
@@ -59,7 +56,7 @@ export function useConsolidation() {
 
     } catch (err) {
       console.error('Error en consolidación:', err);
-      setError(err.message);
+      setError(err.message || 'Error desconocido en consolidación');
     } finally {
       setExecuting(false);
     }
