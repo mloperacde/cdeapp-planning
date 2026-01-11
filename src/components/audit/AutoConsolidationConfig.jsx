@@ -50,9 +50,16 @@ export default function AutoConsolidationConfig() {
     console.log("🚀 Ejecutando consolidación manual...");
     
     try {
+      // Verificar SDK
+      if (!base44?.functions?.invoke) {
+        throw new Error("SDK no inicializado. Recarga la página.");
+      }
+      
       toast.info("🔄 Iniciando consolidación automática...");
       
       const response = await base44.functions.invoke('autoConsolidateEmployees', {});
+      console.log("📦 Respuesta completa:", response);
+      
       const result = response?.data || response;
       
       console.log("Resultado consolidación:", result);
