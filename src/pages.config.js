@@ -1,9 +1,6 @@
 import AbsenceManagement from './pages/AbsenceManagement';
-import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
-import AbsenceTypeInfo from './pages/AbsenceTypeInfo';
 import AcceptInvitation from './pages/AcceptInvitation';
 import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
-import AdvancedAbsenceConfig from './pages/AdvancedAbsenceConfig';
 import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import AppUserManagement from './pages/AppUserManagement';
@@ -66,11 +63,8 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
     "AbsenceManagement": AbsenceManagement,
-    "AbsenceTypeConfig": AbsenceTypeConfig,
-    "AbsenceTypeInfo": AbsenceTypeInfo,
     "AcceptInvitation": AcceptInvitation,
     "AdminDeploymentGuide": AdminDeploymentGuide,
-    "AdvancedAbsenceConfig": AdvancedAbsenceConfig,
     "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedHRDashboard": AdvancedHRDashboard,
     "AppUserManagement": AppUserManagement,
