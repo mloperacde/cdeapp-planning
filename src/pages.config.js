@@ -16,6 +16,7 @@ import DailyPlanning from './pages/DailyPlanning';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
 import DataMigration from './pages/DataMigration';
+import DataRecoveryDashboard from './pages/DataRecoveryDashboard';
 import DeploymentGuide from './pages/DeploymentGuide';
 import DocumentManagement from './pages/DocumentManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
@@ -59,7 +60,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import DataRecoveryDashboard from './pages/DataRecoveryDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -82,6 +82,7 @@ export const PAGES = {
     "DailyShiftPlanning": DailyShiftPlanning,
     "Dashboard": Dashboard,
     "DataMigration": DataMigration,
+    "DataRecoveryDashboard": DataRecoveryDashboard,
     "DeploymentGuide": DeploymentGuide,
     "DocumentManagement": DocumentManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
@@ -125,7 +126,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "DataRecoveryDashboard": DataRecoveryDashboard,
 }
 
 export const pagesConfig = {
