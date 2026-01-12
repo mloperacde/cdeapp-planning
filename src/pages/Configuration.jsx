@@ -13,70 +13,70 @@ export default function ConfigurationPage() {
           title: "Tipos de Ausencias",
           description: "Configura tipos de ausencias y permisos",
           icon: Calendar,
-          url: createPageUrl("AbsenceTypeConfig"),
+          url: "/AbsenceConfigurationTab",
           color: "red"
         },
         {
           title: "Ausencias Avanzado",
           description: "Flujos de aprobación, notificaciones y acumulación",
           icon: FileText,
-          url: createPageUrl("AdvancedAbsenceConfig"),
+          url: "/AdvancedConfiguration?tab=absences",
           color: "purple"
         },
         {
           title: "Configuración de Equipos",
           description: "Gestiona equipos y turnos rotativos",
           icon: Users,
-          url: createPageUrl("TeamConfiguration"),
+          url: "/AdvancedConfiguration?tab=teams",
           color: "green"
         },
         {
           title: "Calendario Laboral",
           description: "Configuración de festivos y vacaciones",
           icon: Calendar,
-          url: createPageUrl("WorkCalendarConfig"),
+          url: "/WorkCalendarConfig",
           color: "green"
         },
         {
           title: "Taquillas",
           description: "Gestión de taquillas y vestuarios",
           icon: FileText,
-          url: createPageUrl("LockerManagement"),
+          url: "/LockerManagement",
           color: "indigo"
         },
         {
           title: "Base de Datos Maestra",
           description: "Importar, sincronizar y gestionar archivo maestro",
           icon: Users,
-          url: createPageUrl("MasterEmployeeDatabase"),
+          url: "/MasterEmployeeDatabase",
           color: "blue"
         },
         {
           title: "Auditoría de Datos",
           description: "Análisis y consolidación de datos de empleados",
           icon: Database,
-          url: createPageUrl("EmployeeDataAudit"),
+          url: "/AdvancedConfiguration?tab=audit",
           color: "indigo"
         },
         {
           title: "Reiniciar Sistema",
           description: "Borrar todo y empezar de cero con archivo maestro",
           icon: Settings,
-          url: createPageUrl("SystemReset"),
+          url: "/SystemReset",
           color: "red"
         },
         {
           title: "Matriz de Habilidades",
           description: "Gestión de competencias y formación",
           icon: Award,
-          url: createPageUrl("SkillMatrix"),
+          url: "/SkillMatrix",
           color: "amber"
         },
         {
           title: "Plan de Incentivos",
           description: "Configura objetivos y bonificaciones",
           icon: DollarSign,
-          url: createPageUrl("IncentiveManagement"),
+          url: "/IncentiveManagement",
           color: "emerald"
         }
       ]
@@ -89,35 +89,35 @@ export default function ConfigurationPage() {
           title: "Configuración de Procesos",
           description: "Define procesos y requisitos por máquina",
           icon: Settings,
-          url: createPageUrl("ProcessConfiguration"),
+          url: "/ProcessConfiguration",
           color: "purple"
         },
         {
           title: "Catálogo de Artículos",
           description: "Gestión de artículos/productos fabricables",
           icon: Package,
-          url: createPageUrl("ArticleManagement"),
+          url: "/ArticleManagement",
           color: "teal"
         },
         {
           title: "Mantenimiento",
           description: "Tipos de mantenimiento y configuración",
           icon: Wrench,
-          url: createPageUrl("MaintenanceTracking"),
+          url: "/MaintenanceTracking",
           color: "slate"
         },
         {
           title: "Auditoría de Máquinas y Procesos",
           description: "Análisis de integridad y relaciones",
           icon: Database,
-          url: createPageUrl("MachineProcessAudit"),
+          url: "/AdvancedConfiguration?tab=machine-audit",
           color: "purple"
         },
         {
           title: "Archivo Maestro de Máquinas",
           description: "Gestión centralizada del catálogo de máquinas",
           icon: Database,
-          url: createPageUrl("MachineMaster"),
+          url: "/MachineMaster",
           color: "blue"
         }
       ]
@@ -129,21 +129,21 @@ export default function ConfigurationPage() {
           title: "Apariencia y Marca",
           description: "Personaliza logotipo, nombre y colores",
           icon: Palette,
-          url: createPageUrl("BrandingConfig"),
+          url: "/BrandingConfig",
           color: "purple"
         },
         {
           title: "Gestión de Usuarios",
           description: "Invita usuarios y gestiona roles (Admin/User)",
           icon: UserCog,
-          url: createPageUrl("AppUserManagement"),
+          url: "/AppUserManagement",
           color: "blue"
         },
         {
           title: "Gestión Documental",
           description: "Repositorio y gestión de documentos",
           icon: FolderOpen,
-          url: createPageUrl("DocumentManagement"),
+          url: "/DocumentManagement",
           color: "orange"
         },
 
@@ -151,7 +151,7 @@ export default function ConfigurationPage() {
           title: "Auditoría del Sistema",
           description: "Análisis de entidades, seguridad y optimización",
           icon: Shield,
-          url: createPageUrl("SystemAudit"),
+          url: "/AdvancedConfiguration?tab=system-audit",
           color: "red"
         },
 
@@ -159,35 +159,35 @@ export default function ConfigurationPage() {
           title: "Configuración Avanzada",
           description: "Estructura organizativa, puestos y sincronización",
           icon: Settings,
-          url: createPageUrl("AdvancedConfiguration"),
+          url: "/AdvancedConfiguration",
           color: "emerald"
         },
         {
           title: "Notificaciones",
           description: "Configura preferencias de notificaciones",
           icon: Bell,
-          url: createPageUrl("Notifications"),
+          url: "/AdvancedConfiguration?tab=notifications",
           color: "purple"
         },
         {
           title: "Mensajería",
           description: "Configura tipos de mensajes y permisos de envío",
           icon: MessageSquare,
-          url: createPageUrl("MessagingConfig"),
+          url: "/AdvancedConfiguration?tab=messaging",
           color: "indigo"
         },
         {
           title: "Migración de Datos",
           description: "Migra datos legacy a base maestra",
           icon: Database,
-          url: createPageUrl("DataMigration"),
+          url: "/AdvancedConfiguration?tab=migration",
           color: "blue"
         },
         {
           title: "Salud del Sistema",
           description: "Monitoreo y sincronización de datos",
           icon: Activity,
-          url: createPageUrl("SystemHealth"),
+          url: "/AdvancedConfiguration?tab=health",
           color: "green"
         }
       ]
@@ -211,7 +211,7 @@ export default function ConfigurationPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Dashboard")}>
+          <Link to="/Dashboard">
             <Button type="button" variant="ghost" className="mb-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver al Dashboard
