@@ -129,7 +129,7 @@ export default function ConfigurationPage() {
           title: "Apariencia y Marca",
           description: "Personaliza logotipo, nombre y colores",
           icon: Palette,
-          url: "/BrandingConfig",
+          url: "/AdvancedConfiguration?tab=branding",
           color: "purple"
         },
         {
@@ -180,7 +180,7 @@ export default function ConfigurationPage() {
           title: "Migración de Datos",
           description: "Migra datos legacy a base maestra",
           icon: Database,
-          url: "/AdvancedConfiguration?tab=migration",
+          url: "/DataRecoveryDashboard",
           color: "blue"
         },
         {
