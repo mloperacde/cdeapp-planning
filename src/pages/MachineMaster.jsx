@@ -30,11 +30,30 @@ export default function MachineMasterPage() {
     queryKey: ['machines'],
     queryFn: async () => {
       try {
-        // Primero intenta MachineMasterDatabase, si está vacío usa Machine
+        // Primero intenta MachineMasterDatabase
         const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500).catch(() => []);
         if (Array.isArray(masterData) && masterData.length > 0) {
           console.log('Cargando máquinas desde MachineMasterDatabase:', masterData.length);
-          return masterData.sort((a, b) => (a.orden || 999) - (b.orden || 999));
+          // Transforma datos de MachineMasterDatabase a formato esperado
+          return masterData.map(m => ({
+            id: m.id,
+            nombre: m.codigo_maquina ? `${m.codigo_maquina} - ${m.nombre}` : m.nombre,
+            codigo: m.codigo_maquina || m.codigo || '',
+            marca: m.marca || '',
+            modelo: m.modelo || '',
+            numero_serie: m.numero_serie || '',
+            fecha_compra: m.fecha_compra || '',
+            tipo: m.tipo || '',
+            ubicacion: m.ubicacion || '',
+            descripcion: m.descripcion || '',
+            orden: m.orden_visualizacion || m.orden || 999,
+            estado: m.estado_operativo || 'Disponible',
+            programa_mantenimiento: m.programa_mantenimiento || '',
+            imagenes: m.imagenes || [],
+            archivos_adjuntos: m.archivos_adjuntos || [],
+            procesos_ids: (m.procesos_configurados || []).map(p => p.process_id),
+            articulos_ids: m.articulos_fabricables || []
+          })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
         }
         
         const data = await base44.entities.Machine.list(undefined, 500);
