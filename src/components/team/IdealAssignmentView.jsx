@@ -63,6 +63,11 @@ export default function IdealAssignmentView() {
     queryFn: () => base44.auth.me(),
   });
 
+  const { data: employeeSkills = EMPTY_ARRAY } = useQuery({
+    queryKey: ['employeeSkills'],
+    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+  });
+
   // 2. Initial Team Selection
   useEffect(() => {
     if (teams.length > 0 && !currentTeam) {
@@ -82,6 +87,13 @@ export default function IdealAssignmentView() {
 
   // 3. Pre-selection / Heuristics Helpers
   const getExperienceSlot = (emp, machineId) => {
+    // Check EmployeeMachineSkill first
+    const skill = employeeSkills.find(s => 
+        s.employee_id === emp.id && s.machine_id === machineId
+    );
+    if (skill?.orden_preferencia) return skill.orden_preferencia;
+    
+    // Fallback to legacy fields
     for (let i = 1; i <= 10; i++) {
         if (emp[`maquina_${i}`] === machineId) return i;
     }
@@ -112,24 +124,33 @@ export default function IdealAssignmentView() {
         
         if (roleType === "RESPONSABLE") {
             if (!puesto.includes("RESPONSABLE DE LINEA") && !puesto.includes("RESPONSABLE DE LÍNEA")) return false;
-            // Strict experience: maquina_1 must be machineId
-            if (emp.maquina_1 !== machineId) return false;
+            // Strict experience: orden_preferencia 1 in EmployeeMachineSkill or maquina_1
+            const skill = employeeSkills.find(s => 
+                s.employee_id === emp.id && s.machine_id === machineId && s.orden_preferencia === 1
+            );
+            if (!skill && emp.maquina_1 !== machineId) return false;
             return true;
         }
 
         if (roleType === "SEGUNDA") {
             if (!puesto.includes("SEGUNDA") && !puesto.includes("2ª")) return false;
-            // Strict experience: ANY maquina_X must be machineId
-            const hasExp = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
-            if (!hasExp) return false;
+            // Strict experience: ANY orden_preferencia or legacy field
+            const hasSkill = employeeSkills.some(s => 
+                s.employee_id === emp.id && s.machine_id === machineId
+            );
+            const hasExpLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
+            if (!hasSkill && !hasExpLegacy) return false;
             return true;
         }
 
         if (roleType === "OPERARIO") {
             if (!puesto.includes("OPERARI") && !puesto.includes("OPERARIO") && !puesto.includes("OPERARIA")) return false;
-            // Strict experience check as per latest requirement
-            const hasExp = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
-            if (!hasExp) return false;
+            // Strict experience check
+            const hasSkill = employeeSkills.some(s => 
+                s.employee_id === emp.id && s.machine_id === machineId
+            );
+            const hasExpLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
+            if (!hasSkill && !hasExpLegacy) return false;
             return true; 
         }
 
@@ -364,21 +385,23 @@ export default function IdealAssignmentView() {
         a => a.machine_id === machineId && a.team_key === currentTeam
       );
 
-      // Update employee machine assignments (maquina_1 to maquina_10)
+      // Update employee machine assignments in EmployeeMachineSkill
       const assignedEmployeeIds = ids;
       
       for (const empId of assignedEmployeeIds) {
           const employee = employees.find(e => e.id === empId);
           if (!employee) continue;
           
-          // Check if machine already assigned
-          const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => employee[`maquina_${i}`] === machineId);
+          // Check if machine already assigned in EmployeeMachineSkill
+          const currentSkills = employeeSkills.filter(s => s.employee_id === empId);
+          const hasSkill = currentSkills.some(s => s.machine_id === machineId);
           
-          if (!hasMachine) {
+          if (!hasSkill) {
               // Find first empty slot
+              const usedSlots = currentSkills.map(s => s.orden_preferencia).filter(Boolean);
               let emptySlot = null;
               for (let i = 1; i <= 10; i++) {
-                  if (!employee[`maquina_${i}`]) {
+                  if (!usedSlots.includes(i)) {
                       emptySlot = i;
                       break;
                   }
@@ -386,6 +409,15 @@ export default function IdealAssignmentView() {
               
               if (emptySlot) {
                   try {
+                      // Create EmployeeMachineSkill record
+                      await base44.entities.EmployeeMachineSkill.create({
+                          employee_id: empId,
+                          machine_id: machineId,
+                          orden_preferencia: emptySlot,
+                          nivel_competencia: 'Avanzado'
+                      });
+                      
+                      // Update legacy field for backwards compatibility
                       await base44.entities.EmployeeMasterDatabase.update(empId, {
                           [`maquina_${emptySlot}`]: machineId
                       });
@@ -422,6 +454,7 @@ export default function IdealAssignmentView() {
       toast.success("Asignaciones guardadas exitosamente");
       queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
     },
     onError: (err) => {
       toast.error(err.message || "Error al guardar asignaciones");

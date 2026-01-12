@@ -49,19 +49,41 @@ export default function EmployeeSkillsView() {
         queryFn: () => base44.entities.MachineAssignment.list(),
     });
 
+    const { data: employeeSkills = [] } = useQuery({
+        queryKey: ['employeeSkills'],
+        queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+    });
+
     // Update Mutation
     const updateMutation = useMutation({
         mutationFn: async ({ employeeId, data }) => {
             const employee = employees.find(e => e.id === employeeId);
             if (!employee) throw new Error("Empleado no encontrado");
 
-            // Check which machines were removed
+            const currentSkills = employeeSkills.filter(s => s.employee_id === employeeId);
             const removedMachines = [];
+
+            // Check which machines were removed in EmployeeMachineSkill
             for (let i = 1; i <= 10; i++) {
-                const oldMachine = employee[`maquina_${i}`];
+                const oldSkill = currentSkills.find(s => s.orden_preferencia === i);
                 const newMachine = data[`maquina_${i}`];
-                if (oldMachine && newMachine === null) {
-                    removedMachines.push(oldMachine);
+                if (oldSkill && newMachine === null) {
+                    removedMachines.push(oldSkill.machine_id);
+                    // Delete the skill record
+                    await base44.entities.EmployeeMachineSkill.delete(oldSkill.id);
+                } else if (!oldSkill && newMachine) {
+                    // Create new skill record
+                    await base44.entities.EmployeeMachineSkill.create({
+                        employee_id: employeeId,
+                        machine_id: newMachine,
+                        orden_preferencia: i,
+                        nivel_competencia: 'Intermedio'
+                    });
+                } else if (oldSkill && newMachine && oldSkill.machine_id !== newMachine) {
+                    // Update skill record
+                    await base44.entities.EmployeeMachineSkill.update(oldSkill.id, {
+                        machine_id: newMachine
+                    });
                 }
             }
 
@@ -92,12 +114,14 @@ export default function EmployeeSkillsView() {
                 }
             }
 
+            // Also update legacy fields for backwards compatibility
             return base44.entities.EmployeeMasterDatabase.update(employeeId, data);
         },
         onSuccess: () => {
             toast.success("Perfil actualizado");
             queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
             queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+            queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
             setEditingState({});
         },
         onError: () => toast.error("Error al actualizar")
@@ -125,6 +149,12 @@ export default function EmployeeSkillsView() {
         
         if (filters.maquina && filters.maquina !== "all") {
             result = result.filter(e => {
+                // Check in EmployeeMachineSkill
+                const hasSkill = employeeSkills.some(s => 
+                    s.employee_id === e.id && s.machine_id === filters.maquina
+                );
+                if (hasSkill) return true;
+                // Fallback to legacy fields
                 for(let i=1; i<=10; i++) {
                     if (e[`maquina_${i}`] === filters.maquina) return true;
                 }
@@ -292,25 +322,31 @@ export default function EmployeeSkillsView() {
                                             <Badge variant="outline" className="font-normal text-[10px]">{emp.puesto}</Badge>
                                         </TableCell>
                                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => {
-                                            const currentVal = editingState[emp.id]?.[`maquina_${i}`] ?? emp[`maquina_${i}`];
-                                            return (
-                                                <TableCell key={i} className="p-1">
-                                                    <Select 
-                                                        value={currentVal || "none"} 
-                                                        onValueChange={(v) => handleMachineChange(emp.id, i, v === "none" ? null : v)}
-                                                    >
-                                                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-slate-100 focus:ring-0">
-                                                            <SelectValue placeholder="-" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="none">- Sin asignar -</SelectItem>
-                                                            {machines.map(m => (
-                                                                <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </TableCell>
-                                            );
+                                           // Get from EmployeeMachineSkill first, fallback to legacy
+                                           const skill = employeeSkills.find(s => 
+                                               s.employee_id === emp.id && s.orden_preferencia === i
+                                           );
+                                           const currentVal = editingState[emp.id]?.[`maquina_${i}`] 
+                                               ?? skill?.machine_id 
+                                               ?? emp[`maquina_${i}`];
+                                           return (
+                                               <TableCell key={i} className="p-1">
+                                                   <Select 
+                                                       value={currentVal || "none"} 
+                                                       onValueChange={(v) => handleMachineChange(emp.id, i, v === "none" ? null : v)}
+                                                   >
+                                                       <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-slate-100 focus:ring-0">
+                                                           <SelectValue placeholder="-" />
+                                                       </SelectTrigger>
+                                                       <SelectContent>
+                                                           <SelectItem value="none">- Sin asignar -</SelectItem>
+                                                           {machines.map(m => (
+                                                               <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                                                           ))}
+                                                       </SelectContent>
+                                                   </Select>
+                                               </TableCell>
+                                           );
                                         })}
                                         <TableCell className="text-right sticky right-0 bg-white group-hover:bg-slate-50">
                                             {isEdited && (

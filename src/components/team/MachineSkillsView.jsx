@@ -45,6 +45,11 @@ export default function MachineSkillsView() {
         queryFn: () => base44.entities.TeamConfig.list(),
     });
 
+    const { data: employeeSkills = [] } = useQuery({
+        queryKey: ['employeeSkills'],
+        queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+    });
+
     // Helper to get employees for a machine grouped by role and ordered by preference
     const getMachineStaff = (machineId, roleType) => {
         const candidates = employees.filter(e => {
@@ -53,8 +58,13 @@ export default function MachineSkillsView() {
             // Filter by Team
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
 
-            const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
-            if (!hasMachine) return false;
+            // Check EmployeeMachineSkill first, fallback to legacy
+            const hasSkillRecord = employeeSkills.some(s => 
+                s.employee_id === e.id && s.machine_id === machineId
+            );
+            const hasMachineLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
+            
+            if (!hasSkillRecord && !hasMachineLegacy) return false;
 
             const puesto = (e.puesto || "").toUpperCase();
             if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) return true;
@@ -63,9 +73,14 @@ export default function MachineSkillsView() {
             return false;
         });
 
-        // Sort by preference (which slot is the machine in)
+        // Sort by preference (orden_preferencia from EmployeeMachineSkill or legacy slot)
         candidates.sort((a, b) => {
             const getSlot = (emp) => {
+                const skill = employeeSkills.find(s => 
+                    s.employee_id === emp.id && s.machine_id === machineId
+                );
+                if (skill?.orden_preferencia) return skill.orden_preferencia;
+                // Fallback to legacy
                 for(let i=1; i<=10; i++) if(emp[`maquina_${i}`] === machineId) return i;
                 return 99;
             };
@@ -84,9 +99,13 @@ export default function MachineSkillsView() {
             // Filter by Team
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
 
-            // Check if they ALREADY have the machine (we want those who DON'T)
-            const hasMachine = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
-            if (hasMachine) return false;
+            // Check if they ALREADY have the machine (check both EmployeeMachineSkill and legacy)
+            const hasSkillRecord = employeeSkills.some(s => 
+                s.employee_id === e.id && s.machine_id === machineId
+            );
+            const hasMachineLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
+            
+            if (hasSkillRecord || hasMachineLegacy) return false;
 
             return true;
         }).map(e => {
@@ -114,25 +133,43 @@ export default function MachineSkillsView() {
             const employee = employees.find(e => e.id === employeeId);
             if (!employee) throw new Error("Empleado no encontrado");
 
+            const currentSkills = employeeSkills.filter(s => s.employee_id === employeeId);
             const payload = {};
             
             if (action === 'add') {
-                // Find first empty slot
+                // Find first empty slot in EmployeeMachineSkill
+                const usedSlots = currentSkills.map(s => s.orden_preferencia).filter(Boolean);
                 let slot = -1;
                 for(let i=1; i<=10; i++) {
-                    if (!employee[`maquina_${i}`]) {
+                    if (!usedSlots.includes(i)) {
                         slot = i;
                         break;
                     }
                 }
                 if (slot === -1) throw new Error("El empleado ya tiene 10 máquinas asignadas");
+                
+                // Create EmployeeMachineSkill record
+                await base44.entities.EmployeeMachineSkill.create({
+                    employee_id: employeeId,
+                    machine_id: machineId,
+                    orden_preferencia: slot,
+                    nivel_competencia: 'Intermedio'
+                });
+                
+                // Update legacy field for backwards compatibility
                 payload[`maquina_${slot}`] = machineId;
             } 
             else if (action === 'remove') {
-                // Find slot with machine and remove from MachineAssignments too
-                for(let i=1; i<=10; i++) {
-                    if (employee[`maquina_${i}`] === machineId) {
-                        payload[`maquina_${i}`] = null;
+                // Delete EmployeeMachineSkill records for this machine
+                const skillsToDelete = employeeSkills.filter(s => 
+                    s.employee_id === employeeId && s.machine_id === machineId
+                );
+                
+                for (const skill of skillsToDelete) {
+                    await base44.entities.EmployeeMachineSkill.delete(skill.id);
+                    // Clear legacy field too
+                    if (skill.orden_preferencia) {
+                        payload[`maquina_${skill.orden_preferencia}`] = null;
                     }
                 }
 
@@ -167,6 +204,7 @@ export default function MachineSkillsView() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
             queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+            queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
             toast.success("Habilidad actualizada correctamente");
         },
         onError: (err) => {
