@@ -28,8 +28,59 @@ export default function DataRecoveryDashboard() {
   const runDiagnostic = async () => {
     setDiagLoading(true);
     try {
-      const response = await base44.functions.invoke('diagnosticMachineMigration', {});
-      setDiagnostic(response.data);
+      // DIAGNÓSTICO DIRECTO - sin invocar funciones
+      const [machines, employees, existingSkills] = await Promise.all([
+        base44.entities.MachineMasterDatabase.list(undefined, 500),
+        base44.entities.EmployeeMasterDatabase.list(undefined, 500),
+        base44.entities.EmployeeMachineSkill.list(undefined, 500)
+      ]);
+
+      const machineMap = {};
+      machines.forEach(m => {
+        if (m.machine_id_legacy) machineMap[m.machine_id_legacy] = m.id;
+      });
+
+      let totalAssignments = 0;
+      let mappable = 0;
+      let unmappable = 0;
+      const employeeSample = [];
+
+      employees.forEach(emp => {
+        const machineFields = [];
+        for (let i = 1; i <= 10; i++) {
+          const legacyId = emp[`maquina_${i}`];
+          if (legacyId) {
+            totalAssignments++;
+            const mapped = !!machineMap[legacyId];
+            if (mapped) mappable++;
+            else unmappable++;
+            machineFields.push({ slot: i, legacyId, mapped });
+          }
+        }
+        if (machineFields.length > 0 && employeeSample.length < 5) {
+          employeeSample.push({
+            nombre: emp.nombre,
+            puesto: emp.puesto,
+            departamento: emp.departamento,
+            machineFields
+          });
+        }
+      });
+
+      setDiagnostic({
+        diagnostico: {
+          totalMachinesInMaster: machines.length,
+          machinesWithLegacyId: Object.keys(machineMap).length,
+          employeesWithMachines: employees.filter(e => 
+            [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`])
+          ).length,
+          totalAssignments,
+          mappableAssignments: mappable,
+          unmappableAssignments: unmappable,
+          existingMigratedSkills: existingSkills.length
+        },
+        employeeSample
+      });
       toast.success("Diagnóstico completado");
     } catch (error) {
       console.error(error);
@@ -42,8 +93,49 @@ export default function DataRecoveryDashboard() {
   const runIntegrityCheck = async () => {
     setIntegrityLoading(true);
     try {
-      const response = await base44.functions.invoke('verifyDataIntegrity', {});
-      setIntegrityReport(response.data);
+      // VERIFICACIÓN DIRECTA - sin invocar funciones
+      const [committeeMembers, employees, incentivePlans, machineSkills] = await Promise.all([
+        base44.entities.CommitteeMember.list(undefined, 500),
+        base44.entities.EmployeeMasterDatabase.list(undefined, 500),
+        base44.entities.IncentivePlan.list(undefined, 100),
+        base44.entities.EmployeeMachineSkill.list(undefined, 500)
+      ]);
+
+      const employeeIds = new Set(employees.map(e => e.id));
+      const committeeOrphaned = committeeMembers.filter(cm => !employeeIds.has(cm.employee_id));
+      const machineOrphaned = machineSkills.filter(ms => !employeeIds.has(ms.employee_id));
+
+      setIntegrityReport({
+        summary: {
+          allGood: committeeOrphaned.length === 0 && machineOrphaned.length === 0,
+          totalIssues: committeeOrphaned.length + machineOrphaned.length,
+          criticalIssues: [
+            committeeOrphaned.length > 0 ? `${committeeOrphaned.length} CommitteeMember huérfanos` : null,
+            machineOrphaned.length > 0 ? `${machineOrphaned.length} EmployeeMachineSkill huérfanos` : null
+          ].filter(Boolean)
+        },
+        report: {
+          committeeMembers: {
+            total: committeeMembers.length,
+            valid: committeeMembers.length - committeeOrphaned.length,
+            orphaned: committeeOrphaned.length,
+            samples: committeeOrphaned.slice(0, 3).map(cm => ({
+              employeeId: cm.employee_id,
+              employeeName: "ID no encontrado",
+              tipos: cm.tipos_comite
+            }))
+          },
+          incentivePlans: {
+            total: incentivePlans.length,
+            active: incentivePlans.filter(ip => ip.activo).length
+          },
+          employeeMachineLinks: {
+            total: machineSkills.length,
+            valid: machineSkills.length - machineOrphaned.length,
+            orphaned: machineOrphaned.length
+          }
+        }
+      });
       toast.success("Verificación de integridad completada");
     } catch (error) {
       console.error(error);
@@ -69,16 +161,71 @@ export default function DataRecoveryDashboard() {
 
     setLoading(true);
     try {
-      const response = await base44.functions.invoke('recoverEmployeeMachineAssignments', {});
-      setRecoveryResult(response.data);
-      
-      if (response.data.status === 'success') {
-        toast.success(`Migración completada: ${response.data.summary.skillsCreated} habilidades creadas`);
-      } else {
-        toast.error("La migración falló: " + response.data.error);
+      // MIGRACIÓN DIRECTA - sin invocar funciones
+      const [machines, employees] = await Promise.all([
+        base44.entities.MachineMasterDatabase.list(undefined, 500),
+        base44.entities.EmployeeMasterDatabase.list(undefined, 500)
+      ]);
+
+      const machineMap = {};
+      machines.forEach(m => {
+        if (m.machine_id_legacy) machineMap[m.machine_id_legacy] = m.id;
+      });
+
+      let created = 0;
+      const errors = [];
+      const skillsToCreate = [];
+
+      for (const emp of employees) {
+        for (let i = 1; i <= 10; i++) {
+          const legacyId = emp[`maquina_${i}`];
+          if (!legacyId) continue;
+
+          const newMachineId = machineMap[legacyId];
+          if (!newMachineId) {
+            errors.push({ type: 'unmapped', employee: emp.nombre, legacyId });
+            continue;
+          }
+
+          const nivelMap = { 1: "Experto", 2: "Experto", 3: "Avanzado", 4: "Avanzado", 5: "Intermedio", 6: "Intermedio", 7: "Intermedio", 8: "Principiante", 9: "Principiante", 10: "Principiante" };
+          const nivel = nivelMap[i] || "Intermedio";
+
+          skillsToCreate.push({
+            employee_id: emp.id,
+            machine_id: newMachineId,
+            nivel_habilidad: nivel,
+            orden_preferencia: i,
+            experiencia_anos: Math.max(1, 11 - i),
+            certificado: i <= 3
+          });
+        }
       }
+
+      // Crear en lotes de 50
+      for (let i = 0; i < skillsToCreate.length; i += 50) {
+        const batch = skillsToCreate.slice(i, i + 50);
+        try {
+          await base44.entities.EmployeeMachineSkill.bulkCreate(batch);
+          created += batch.length;
+        } catch (batchErr) {
+          errors.push({ type: 'batch_error', message: batchErr.message });
+        }
+      }
+
+      setRecoveryResult({
+        status: 'success',
+        summary: {
+          employeesWithMachines: employees.filter(e => [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`])).length,
+          skillsCreated: created,
+          errors: errors.length
+        },
+        errors
+      });
+      
+      toast.success(`Migración completada: ${created} habilidades creadas`);
     } catch (error) {
       console.error(error);
+      setRecoveryResult({ status: 'error', error: error.message });
       toast.error("Error al ejecutar recuperación: " + (error.message || "Error desconocido"));
     } finally {
       setLoading(false);
