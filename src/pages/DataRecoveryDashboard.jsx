@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Database, 
   CheckCircle, 
@@ -11,15 +12,18 @@ import {
   RefreshCw,
   Play,
   Search,
-  FileText
+  FileText,
+  Shield
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function DataRecoveryDashboard() {
   const [diagnostic, setDiagnostic] = useState(null);
+  const [integrityReport, setIntegrityReport] = useState(null);
   const [recoveryResult, setRecoveryResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [diagLoading, setDiagLoading] = useState(false);
+  const [integrityLoading, setIntegrityLoading] = useState(false);
 
   const runDiagnostic = async () => {
     setDiagLoading(true);
@@ -32,6 +36,20 @@ export default function DataRecoveryDashboard() {
       toast.error("Error al ejecutar diagnóstico: " + (error.message || "Error desconocido"));
     } finally {
       setDiagLoading(false);
+    }
+  };
+
+  const runIntegrityCheck = async () => {
+    setIntegrityLoading(true);
+    try {
+      const response = await base44.functions.invoke('verifyDataIntegrity', {});
+      setIntegrityReport(response.data);
+      toast.success("Verificación de integridad completada");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al verificar integridad: " + (error.message || "Error desconocido"));
+    } finally {
+      setIntegrityLoading(false);
     }
   };
 
@@ -310,7 +328,115 @@ EmployeeMachineSkill.create(employee_id, machine_id, nivel, orden)`}
               </div>
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
+
+        <TabsContent value="integrity" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Verificación de Integridad de Datos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-slate-600">
+                Verifica que todas las relaciones entre entidades sean válidas y no haya referencias huérfanas.
+              </p>
+              <Button 
+                onClick={runIntegrityCheck}
+                disabled={integrityLoading}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {integrityLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    Verificar Integridad
+                  </>
+                )}
+              </Button>
+
+              {integrityReport && (
+                <div className="mt-4 space-y-4">
+                  {integrityReport.summary.allGood ? (
+                    <Alert className="bg-green-50 border-green-200">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-800">
+                        ✓ Todos los datos tienen integridad correcta
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert className="bg-amber-50 border-amber-200">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-800">
+                        <strong>Problemas detectados ({integrityReport.summary.totalIssues}):</strong>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          {integrityReport.summary.criticalIssues.map((issue, idx) => (
+                            <li key={idx}>• {issue}</li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">CommitteeMember</h4>
+                      <div className="space-y-1 text-xs">
+                        <div>Total: {integrityReport.report.committeeMembers.total}</div>
+                        <div className="text-green-700">✓ Válidos: {integrityReport.report.committeeMembers.valid}</div>
+                        {integrityReport.report.committeeMembers.orphaned > 0 && (
+                          <div className="text-red-700">✗ Huérfanos: {integrityReport.report.committeeMembers.orphaned}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                      <h4 className="text-sm font-semibold text-purple-900 mb-2">IncentivePlan</h4>
+                      <div className="space-y-1 text-xs">
+                        <div>Total: {integrityReport.report.incentivePlans.total}</div>
+                        <div className="text-green-700">✓ Activos: {integrityReport.report.incentivePlans.active}</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                      <h4 className="text-sm font-semibold text-amber-900 mb-2">Asignaciones Máquinas</h4>
+                      <div className="space-y-1 text-xs">
+                        <div>Total: {integrityReport.report.employeeMachineLinks.total}</div>
+                        <div className="text-green-700">✓ Válidos: {integrityReport.report.employeeMachineLinks.valid}</div>
+                        {integrityReport.report.employeeMachineLinks.orphaned > 0 && (
+                          <div className="text-red-700">✗ Huérfanos: {integrityReport.report.employeeMachineLinks.orphaned}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {integrityReport.report.committeeMembers.samples?.length > 0 && (
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                      <h4 className="text-sm font-semibold text-red-900 mb-2">
+                        Ejemplos de CommitteeMember con referencias rotas:
+                      </h4>
+                      <div className="space-y-2 text-xs">
+                        {integrityReport.report.committeeMembers.samples.map((sample, idx) => (
+                          <div key={idx} className="bg-white p-2 rounded border">
+                            <div>Empleado: {sample.employeeName}</div>
+                            <div className="text-slate-600">Employee ID: {sample.employeeId}</div>
+                            <div className="text-slate-600">Comités: {sample.tipos?.join(', ')}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
       </div>
     </div>
   );
