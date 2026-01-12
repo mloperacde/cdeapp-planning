@@ -26,66 +26,63 @@ export default function DataRecoveryDashboard() {
   const [integrityLoading, setIntegrityLoading] = useState(false);
 
   const runDiagnostic = async () => {
-    console.log('Función desactivada temporalmente');
-    toast.info("Función temporalmente desactivada para mantenimiento");
-    // setDiagLoading(true);
-    // try {
-    //   const response = await base44.functions.invoke('diagnosticMachineMigration', {});
-    //   setDiagnostic(response.data);
-    //   toast.success("Diagnóstico completado");
-    // } catch (error) {
-    //   console.error(error);
-    //   toast.error("Error al ejecutar diagnóstico: " + (error.message || "Error desconocido"));
-    // } finally {
-    //   setDiagLoading(false);
-    // }
+    setDiagLoading(true);
+    try {
+      const response = await base44.functions.invoke('diagnosticMachineMigration', {});
+      setDiagnostic(response.data);
+      toast.success("Diagnóstico completado");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al ejecutar diagnóstico: " + (error.message || "Error desconocido"));
+    } finally {
+      setDiagLoading(false);
+    }
   };
 
   const runIntegrityCheck = async () => {
-    console.log('Función desactivada temporalmente');
-    toast.info("Función temporalmente desactivada para mantenimiento");
-    // setIntegrityLoading(true);
-    // try {
-    //   const response = await base44.functions.invoke('verifyDataIntegrity', {});
-    //   setIntegrityReport(response.data);
-    //   toast.success("Verificación de integridad completada");
-    // } catch (error) {
-    //   console.error(error);
-    //   toast.error("Error al verificar integridad: " + (error.message || "Error desconocido"));
-    // } finally {
-    //   setIntegrityLoading(false);
-    // }
+    setIntegrityLoading(true);
+    try {
+      const response = await base44.functions.invoke('verifyDataIntegrity', {});
+      setIntegrityReport(response.data);
+      toast.success("Verificación de integridad completada");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al verificar integridad: " + (error.message || "Error desconocido"));
+    } finally {
+      setIntegrityLoading(false);
+    }
   };
 
   const runRecovery = async () => {
-    console.log('Función desactivada temporalmente');
-    toast.info("Función temporalmente desactivada para mantenimiento");
-    // if (!diagnostic) {
-    //   toast.error("Ejecuta el diagnóstico primero");
-    //   return;
-    // }
-    // if (diagnostic.diagnostico.unmappableAssignments > 0) {
-    //   if (!window.confirm(
-    //     `Hay ${diagnostic.diagnostico.unmappableAssignments} asignaciones que no se pueden mapear. ¿Continuar de todas formas?`
-    //   )) {
-    //     return;
-    //   }
-    // }
-    // setLoading(true);
-    // try {
-    //   const response = await base44.functions.invoke('recoverEmployeeMachineAssignments', {});
-    //   setRecoveryResult(response.data);
-    //   if (response.data.status === 'success') {
-    //     toast.success(`Migración completada: ${response.data.summary.skillsCreated} habilidades creadas`);
-    //   } else {
-    //     toast.error("La migración falló: " + response.data.error);
-    //   }
-    // } catch (error) {
-    //   console.error(error);
-    //   toast.error("Error al ejecutar recuperación: " + (error.message || "Error desconocido"));
-    // } finally {
-    //   setLoading(false);
-    // }
+    if (!diagnostic) {
+      toast.error("Ejecuta el diagnóstico primero");
+      return;
+    }
+
+    if (diagnostic.diagnostico.unmappableAssignments > 0) {
+      if (!window.confirm(
+        `Hay ${diagnostic.diagnostico.unmappableAssignments} asignaciones que no se pueden mapear. ¿Continuar de todas formas?`
+      )) {
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const response = await base44.functions.invoke('recoverEmployeeMachineAssignments', {});
+      setRecoveryResult(response.data);
+      
+      if (response.data.status === 'success') {
+        toast.success(`Migración completada: ${response.data.summary.skillsCreated} habilidades creadas`);
+      } else {
+        toast.error("La migración falló: " + response.data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al ejecutar recuperación: " + (error.message || "Error desconocido"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
