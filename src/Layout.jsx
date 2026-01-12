@@ -5,7 +5,7 @@ import { useAppData } from '@/components/data/DataProvider';
 import { 
   Menu, X, Home, Users, Calendar, Wrench, Settings, FileText, Shield, 
   DollarSign, Cog, Package, ChevronDown, ChevronRight, LogOut, 
-  User as UserIcon, Moon, Sun, Key
+  User as UserIcon, Moon, Sun, Key, Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,6 +82,7 @@ export default function Layout({ children, currentPageName }) {
     
     // Configuración
     { name: 'Configuración', icon: Settings, path: '/Configuration', category: 'Configuración' },
+    { name: 'Auditoría de Datos', icon: Database, path: '/AuditDataDashboard', category: 'Configuración' },
   ];
 
   // Agrupar items por categoría

@@ -74,7 +74,7 @@ import Timeline from "./Timeline";
 
 import WorkCalendarConfig from "./WorkCalendarConfig";
 
-
+import AuditDataDashboard from "./AuditDataDashboard";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -169,6 +169,7 @@ const PAGES = {
     
     WorkCalendarConfig: WorkCalendarConfig,
     
+    AuditDataDashboard: AuditDataDashboard,
 }
 
 function _getCurrentPage(url) {
@@ -290,7 +291,7 @@ function PagesContent() {
                 
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 
-
+                <Route path="/AuditDataDashboard" element={<AuditDataDashboard />} />
 
                 </Routes>
         </Layout>
