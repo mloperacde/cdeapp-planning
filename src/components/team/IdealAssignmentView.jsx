@@ -44,12 +44,6 @@ export default function IdealAssignmentView() {
   const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
-        // Sync availability before loading - DESACTIVADO TEMPORALMENTE
-        // try {
-        //     await base44.functions.invoke('sync_employee_availability_bulk');
-        // } catch (e) {
-        //     console.error("Sync failed", e);
-        // }
         return base44.entities.EmployeeMasterDatabase.list('nombre');
     },
   });
@@ -304,27 +298,8 @@ export default function IdealAssignmentView() {
 
   // AI Optimization
   const handleOptimize = async () => {
-    console.log('Función desactivada temporalmente');
     toast.info("Función de optimización IA temporalmente desactivada");
-    // if (!currentTeam) return;
-    // setIsOptimizing(true);
-    // try {
-    //     const response = await base44.functions.invoke('optimize_staff_allocation', {
-    //         team_key: currentTeam,
-    //         department: "FABRICACION",
-    //         current_assignments: assignments
-    //     });
-    //     if (response.data && response.data.suggestions) {
-    //         setOptimizationResult(response.data.suggestions);
-    //     } else {
-    //         toast.info("La IA no generó sugerencias nuevas.");
-    //     }
-    // } catch (error) {
-    //     console.error(error);
-    //     toast.error("Error al optimizar con IA");
-    // } finally {
-    //     setIsOptimizing(false);
-    // }
+    return;
   };
 
   const applyOptimization = () => {
