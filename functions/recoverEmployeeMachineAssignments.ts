@@ -55,15 +55,19 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Determinar orden de preferencia basado en slot
+        const slotIndex = machineFields.indexOf(legacyMachineId) + 1;
+        
         // Crear skill entry
         skillsToCreate.push({
           employee_id: emp.id,
           machine_id: newMachineId,
-          nivel_habilidad: 'Experto', // Asumimos experto por asignación histórica
+          nivel_habilidad: slotIndex <= 3 ? 'Experto' : 'Avanzado',
           certificado: true,
           fecha_certificacion: emp.fecha_alta || new Date().toISOString().split('T')[0],
-          experiencia_anos: 1,
-          observaciones: `Migrado desde maquina_X el ${new Date().toISOString().split('T')[0]}`
+          experiencia_anos: slotIndex <= 5 ? 2 : 1,
+          observaciones: `Migrado desde maquina_${slotIndex} el ${new Date().toISOString().split('T')[0]}`,
+          orden_preferencia: slotIndex
         });
         totalSkills++;
       }
@@ -77,7 +81,7 @@ Deno.serve(async (req) => {
         for (let i = 0; i < skillsToCreate.length; i += 50) {
           const batch = skillsToCreate.slice(i, i + 50);
           for (const skill of batch) {
-            await base44.asServiceRole.entities.EmployeeSkill.create(skill);
+            await base44.asServiceRole.entities.EmployeeMachineSkill.create(skill);
             createdCount++;
           }
         }
