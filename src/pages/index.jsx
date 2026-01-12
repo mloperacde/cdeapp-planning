@@ -302,6 +302,10 @@ function PagesContent() {
                 
                 <Route path="/AuditDataDashboard" element={<AuditDataDashboard />} />
         <Route path="/DataRecoveryDashboard" element={<DataRecoveryDashboard />} />
+                
+                {/* Rutas faltantes - redirecciones */}
+                <Route path="/Employees" element={<MasterEmployeeDatabase />} />
+                <Route path="/BrandingConfig" element={<AdvancedConfiguration />} />
 
                 </Routes>
         </Layout>
