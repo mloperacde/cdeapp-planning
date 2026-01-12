@@ -29,7 +29,7 @@ export default function CommitteeManagementPage() {
   const [selectedCommittee, setSelectedCommittee] = useState(null);
   const [currentTab, setCurrentTab] = useState("company");
 
-  const { data: committeeMembers = [] } = useQuery({
+  const { data: committeeMembers = [], refetch: refetchCommitteeMembers } = useQuery({
     queryKey: ['committeeMembers'],
     queryFn: async () => {
       try {
@@ -40,11 +40,12 @@ export default function CommitteeManagementPage() {
       }
     },
     initialData: [],
-    staleTime: 10 * 60 * 1000,
+    staleTime: 0,
+    gcTime: 0,
     retry: 1,
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [], refetch: refetchEmployees } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
       try {
@@ -55,7 +56,8 @@ export default function CommitteeManagementPage() {
       }
     },
     initialData: [],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    gcTime: 0,
     retry: 2,
   });
 
