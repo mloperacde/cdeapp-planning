@@ -43,7 +43,15 @@ export default function IdealAssignmentView() {
 
   const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+    queryFn: async () => {
+        // Sync availability before loading
+        try {
+            await base44.functions.invoke('sync_employee_availability_bulk');
+        } catch (e) {
+            console.error("Sync failed", e);
+        }
+        return base44.entities.EmployeeMasterDatabase.list('nombre');
+    },
   });
 
   const { data: machineAssignments = EMPTY_ARRAY } = useQuery({
