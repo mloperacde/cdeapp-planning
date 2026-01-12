@@ -6,25 +6,40 @@ import { Menu, X, Home, Users, Calendar, Wrench, Settings, FileText, Shield, Dol
 export default function Layout({ children, currentPageName }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Menú estático - NUNCA debe cambiar dinámicamente
+  // ✅ MENÚ SINCRONIZADO CON RUTAS (pages/index.jsx)
   const MENU_STRUCTURE = React.useMemo(() => [
-    { name: 'Dashboard', icon: Home, path: createPageUrl('Dashboard'), category: 'Principal' },
-    { name: 'Base de Empleados', icon: Users, path: createPageUrl('MasterEmployeeDatabase'), category: 'Recursos Humanos' },
-    { name: 'Gestión Ausencias', icon: Calendar, path: createPageUrl('AbsenceManagement'), category: 'Recursos Humanos' },
-    { name: 'ETT y Temporales', icon: Users, path: createPageUrl('ETTTemporaryEmployees'), category: 'Recursos Humanos' },
-    { name: 'Onboarding', icon: Users, path: createPageUrl('EmployeeOnboarding'), category: 'Recursos Humanos' },
-    { name: 'Control Presencia', icon: Calendar, path: createPageUrl('AttendanceManagement'), category: 'Recursos Humanos' },
-    { name: 'Comités y PRL', icon: Shield, path: createPageUrl('CommitteeManagement'), category: 'Recursos Humanos' },
-    { name: 'Plan Incentivos', icon: DollarSign, path: createPageUrl('IncentiveManagement'), category: 'Recursos Humanos' },
-    { name: 'Planning Diario', icon: Calendar, path: createPageUrl('DailyPlanning'), category: 'Planificación' },
-    { name: 'Planning Turnos', icon: Users, path: createPageUrl('ShiftManagement'), category: 'Planificación' },
-    { name: 'Planning Máquinas', icon: Calendar, path: createPageUrl('DailyPlanning'), category: 'Planificación' },
-    { name: 'Consulta Máquinas', icon: Wrench, path: createPageUrl('MachineManagement'), category: 'Producción' },
-    { name: 'Config. Procesos', icon: Cog, path: createPageUrl('ProcessConfiguration'), category: 'Producción' },
-    { name: 'Seguimiento', icon: Wrench, path: createPageUrl('MaintenanceTracking'), category: 'Mantenimiento' },
-    { name: 'Informes', icon: FileText, path: createPageUrl('Reports'), category: 'Análisis' },
-    { name: 'Análisis Predictivo', icon: FileText, path: createPageUrl('MLInsights'), category: 'Análisis' },
-    { name: 'Configuración', icon: Settings, path: createPageUrl('Configuration'), category: 'Configuración' },
+    // Principal
+    { name: 'Dashboard', icon: Home, path: '/Dashboard', category: 'Principal' },
+    
+    // Recursos Humanos
+    { name: 'Base de Empleados', icon: Users, path: '/MasterEmployeeDatabase', category: 'Recursos Humanos' },
+    { name: 'Gestión Ausencias', icon: Calendar, path: '/AbsenceManagement', category: 'Recursos Humanos' },
+    { name: 'ETT y Temporales', icon: Users, path: '/ETTTemporaryEmployees', category: 'Recursos Humanos' },
+    { name: 'Onboarding', icon: Users, path: '/EmployeeOnboarding', category: 'Recursos Humanos' },
+    { name: 'Control Presencia', icon: Calendar, path: '/AttendanceManagement', category: 'Recursos Humanos' },
+    { name: 'Comités y PRL', icon: Shield, path: '/CommitteeManagement', category: 'Recursos Humanos' },
+    { name: 'Plan Incentivos', icon: DollarSign, path: '/IncentiveManagement', category: 'Recursos Humanos' },
+    
+    // Planificación
+    { name: 'Planning Diario', icon: Calendar, path: '/DailyPlanning', category: 'Planificación' },
+    { name: 'Planning Turnos', icon: Users, path: '/ShiftManagement', category: 'Planificación' },
+    { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Planificación' },
+    { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
+    
+    // Producción
+    { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Producción' },
+    { name: 'Config. Procesos', icon: Cog, path: '/ProcessConfiguration', category: 'Producción' },
+    
+    // Mantenimiento
+    { name: 'Seguimiento', icon: Wrench, path: '/MaintenanceTracking', category: 'Mantenimiento' },
+    
+    // Análisis
+    { name: 'Informes', icon: FileText, path: '/Reports', category: 'Análisis' },
+    { name: 'Análisis Predictivo', icon: FileText, path: '/MLInsights', category: 'Análisis' },
+    { name: 'Dashboard RRHH', icon: Users, path: '/AdvancedHRDashboard', category: 'Análisis' },
+    
+    // Configuración
+    { name: 'Configuración', icon: Settings, path: '/Configuration', category: 'Configuración' },
   ], []);
 
   const menuItems = MENU_STRUCTURE;

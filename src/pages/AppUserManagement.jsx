@@ -26,7 +26,7 @@ import {
 import { UserPlus, Search, Filter, Shield, Users, AlertCircle, CheckCircle2, Mail, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+
 
 export default function AppUserManagementPage() {
   const [filters, setFilters] = useState({
@@ -199,7 +199,7 @@ export default function AppUserManagementPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Configuration")}>
+          <Link to="/Configuration">
             <Button variant="ghost">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver a Configuración
