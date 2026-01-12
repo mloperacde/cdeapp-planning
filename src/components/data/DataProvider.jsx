@@ -107,18 +107,17 @@ export function DataProvider({ children }) {
     queryKey: ['machines'],
     queryFn: async () => {
       try {
-        // Intenta primero MachineMasterDatabase
-        const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500).catch(() => []);
+        const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500);
         if (Array.isArray(masterData) && masterData.length > 0) {
           return masterData.map(m => ({
             id: m.id,
-            nombre: m.codigo_maquina ? `${m.codigo_maquina} - ${m.nombre}` : m.nombre,
-            codigo: m.codigo_maquina || m.codigo || '',
+            nombre: m.nombre || '',
+            codigo: m.codigo_maquina || '',
             marca: m.marca || '',
             modelo: m.modelo || '',
             tipo: m.tipo || '',
             ubicacion: m.ubicacion || '',
-            orden: m.orden_visualizacion || m.orden || 999,
+            orden: m.orden_visualizacion || 999,
             estado: m.estado_operativo || 'Disponible',
             procesos_ids: (m.procesos_configurados || []).map(p => p.process_id)
           })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
@@ -132,7 +131,7 @@ export function DataProvider({ children }) {
         return [];
       }
     },
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 2,
