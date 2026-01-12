@@ -29,7 +29,16 @@ export default function IdealAssignmentView() {
   // 1. Data Loading
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: async () => {
+        const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+        return data.map(m => ({
+            id: m.id,
+            nombre: m.nombre,
+            codigo: m.codigo_maquina,
+            ubicacion: m.ubicacion,
+            orden: m.orden_visualizacion || 999
+        })).sort((a, b) => a.orden - b.orden);
+    },
   });
 
   const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({

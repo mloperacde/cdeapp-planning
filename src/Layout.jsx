@@ -83,6 +83,7 @@ export default function Layout({ children, currentPageName }) {
     // Configuración
     { name: 'Configuración', icon: Settings, path: '/Configuration', category: 'Configuración' },
     { name: 'Auditoría de Datos', icon: Database, path: '/AuditDataDashboard', category: 'Configuración' },
+    { name: 'Recuperación Datos', icon: Database, path: '/DataRecoveryDashboard', category: 'Configuración' },
   ];
 
   // Agrupar items por categoría

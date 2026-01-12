@@ -292,6 +292,7 @@ function PagesContent() {
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 
                 <Route path="/AuditDataDashboard" element={<AuditDataDashboard />} />
+        <Route path="/DataRecoveryDashboard" element={<DataRecoveryDashboard />} />
 
                 </Routes>
         </Layout>

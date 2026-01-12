@@ -7,6 +7,7 @@ import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import AppUserManagement from './pages/AppUserManagement';
 import ArticleManagement from './pages/ArticleManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
+import AuditDataDashboard from './pages/AuditDataDashboard';
 import BrandingConfig from './pages/BrandingConfig';
 import Breaks from './pages/Breaks';
 import CommitteeManagement from './pages/CommitteeManagement';
@@ -58,7 +59,7 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import AuditDataDashboard from './pages/AuditDataDashboard';
+import DataRecoveryDashboard from './pages/DataRecoveryDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -72,6 +73,7 @@ export const PAGES = {
     "AppUserManagement": AppUserManagement,
     "ArticleManagement": ArticleManagement,
     "AttendanceManagement": AttendanceManagement,
+    "AuditDataDashboard": AuditDataDashboard,
     "BrandingConfig": BrandingConfig,
     "Breaks": Breaks,
     "CommitteeManagement": CommitteeManagement,
@@ -123,7 +125,7 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "AuditDataDashboard": AuditDataDashboard,
+    "DataRecoveryDashboard": DataRecoveryDashboard,
 }
 
 export const pagesConfig = {
