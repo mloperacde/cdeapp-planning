@@ -183,13 +183,20 @@ function _getCurrentPage(url) {
         urlLastPart = urlLastPart.split('?')[0];
     }
 
-    // Si está vacío o es la raíz, retorna Dashboard
-    if (!urlLastPart || urlLastPart === '') {
+    // CRITICAL FIX: Si está vacío o es la raíz, retorna Dashboard
+    if (!urlLastPart || urlLastPart === '' || urlLastPart === 'index.html') {
         return 'Dashboard';
     }
 
     const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
-    return pageName || 'Dashboard'; // Default to Dashboard if not found
+    
+    // CRITICAL: Solo retornar pageName si existe en PAGES
+    if (pageName && PAGES[pageName]) {
+        return pageName;
+    }
+    
+    // Default to Dashboard for unknown routes
+    return 'Dashboard';
 }
 
 // Create a wrapper component that uses useLocation inside the Router context
@@ -199,10 +206,10 @@ function PagesContent() {
     
     return (
         <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="" element={<Dashboard />} />
+            <Routes>
+                {/* CRITICAL: Root routes MUST be first */}
+                <Route path="/" element={<Dashboard />} />
+                <Route index element={<Dashboard />} />
                 
                 
                 <Route path="/AbsenceManagement" element={<AbsenceManagement />} />
