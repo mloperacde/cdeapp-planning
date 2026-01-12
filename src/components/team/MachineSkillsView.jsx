@@ -22,15 +22,7 @@ export default function MachineSkillsView() {
     // Fetch Data
     const { data: employees = [] } = useQuery({
         queryKey: ['employeesMaster'],
-        queryFn: async () => {
-            // Sync availability before loading
-            try {
-                await base44.functions.invoke('sync_employee_availability_bulk');
-            } catch (e) {
-                console.error("Sync failed", e);
-            }
-            return base44.entities.EmployeeMasterDatabase.list('nombre', 1000);
-        },
+        queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
     });
 
     const { data: machines = [] } = useQuery({
