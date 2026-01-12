@@ -55,6 +55,24 @@ export default function MachineProcessesTab({ machine }) {
   });
 
   const getMachineProcesses = () => {
+    // Si la máquina tiene procesos_configurados (desde MachineMasterDatabase)
+    if (machine.procesos_configurados && Array.isArray(machine.procesos_configurados)) {
+      return machine.procesos_configurados
+        .filter(pc => pc.activo !== false)
+        .map(pc => ({
+          id: `${machine.id}_${pc.process_id}`,
+          machine_id: machine.id,
+          process_id: pc.process_id,
+          processName: pc.nombre_proceso,
+          processCode: pc.codigo_proceso,
+          operadores_requeridos: pc.operadores_requeridos || 1,
+          orden: pc.orden || 0,
+          activo: pc.activo !== false
+        }))
+        .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    }
+
+    // Fallback a MachineProcess legacy
     const machineProcs = machineProcesses.filter(mp => mp.machine_id === machine.id && mp.activo);
     return machineProcs.map(mp => {
       const process = processes.find(p => p.id === mp.process_id);

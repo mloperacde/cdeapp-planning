@@ -44,8 +44,20 @@ export default function MachineDetailCard({ machine, onClose }) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Machine.update(machine.id, data),
+    mutationFn: (data) => {
+      // Actualizar en MachineMasterDatabase si existe _raw
+      if (machine._raw) {
+        return base44.entities.MachineMasterDatabase.update(machine.id, {
+          ...machine._raw,
+          ...data,
+          codigo_maquina: data.codigo || machine._raw.codigo_maquina,
+          estado_operativo: data.estado || machine._raw.estado_operativo
+        });
+      }
+      return base44.entities.Machine.update(machine.id, data);
+    },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['machines'] });
       setEditMode(false);
       toast.success("Máquina actualizada correctamente");

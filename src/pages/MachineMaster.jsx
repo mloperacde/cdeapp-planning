@@ -26,53 +26,48 @@ export default function MachineMasterPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: machines = EMPTY_ARRAY, isLoading, error } = useQuery({
-    queryKey: ['machines'],
+  const { data: rawMachines = EMPTY_ARRAY, isLoading, error } = useQuery({
+    queryKey: ['machineMasterDatabase'],
     queryFn: async () => {
       try {
-        // Primero intenta MachineMasterDatabase
-        const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500).catch(() => []);
-        if (Array.isArray(masterData) && masterData.length > 0) {
-          console.log('Cargando máquinas desde MachineMasterDatabase:', masterData.length);
-          // Transforma datos de MachineMasterDatabase a formato esperado
-          return masterData.map(m => ({
-            id: m.id,
-            nombre: m.codigo_maquina ? `${m.codigo_maquina} - ${m.nombre}` : m.nombre,
-            codigo: m.codigo_maquina || m.codigo || '',
-            marca: m.marca || '',
-            modelo: m.modelo || '',
-            numero_serie: m.numero_serie || '',
-            fecha_compra: m.fecha_compra || '',
-            tipo: m.tipo || '',
-            ubicacion: m.ubicacion || '',
-            descripcion: m.descripcion || '',
-            orden: m.orden_visualizacion || m.orden || 999,
-            estado: m.estado_operativo || 'Disponible',
-            programa_mantenimiento: m.programa_mantenimiento || '',
-            imagenes: m.imagenes || [],
-            archivos_adjuntos: m.archivos_adjuntos || [],
-            procesos_ids: (m.procesos_configurados || []).map(p => p.process_id),
-            articulos_ids: m.articulos_fabricables || []
-          })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
-        }
-        
-        const data = await base44.entities.Machine.list(undefined, 500);
-        if (!Array.isArray(data)) {
-          console.warn('Machine.list no retornó array:', data);
+        const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500);
+        if (!Array.isArray(masterData)) {
+          console.warn('MachineMasterDatabase no retornó array');
           return [];
         }
-        console.log('Cargando máquinas desde Machine:', data.length);
-        return data.sort((a, b) => (a.orden || 999) - (b.orden || 999));
+        console.log('✅ Cargadas', masterData.length, 'máquinas desde MachineMasterDatabase');
+        return masterData.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
       } catch (err) {
-        console.error('Error fetching machines:', err);
+        console.error('❌ Error cargando máquinas:', err);
         return [];
       }
     },
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 2,
   });
+
+  // Transformar datos para vista
+  const machines = rawMachines.map(m => ({
+    id: m.id,
+    nombre: m.nombre || '',
+    codigo: m.codigo_maquina || '',
+    marca: m.marca || '',
+    modelo: m.modelo || '',
+    numero_serie: m.numero_serie || '',
+    fecha_compra: m.fecha_compra || '',
+    tipo: m.tipo || '',
+    ubicacion: m.ubicacion || '',
+    descripcion: m.descripcion || '',
+    orden: m.orden_visualizacion || 999,
+    estado: m.estado_operativo || 'Disponible',
+    programa_mantenimiento: m.programa_mantenimiento || '',
+    imagenes: m.imagenes || [],
+    archivos_adjuntos: m.archivos_adjuntos || [],
+    procesos_configurados: m.procesos_configurados || [],
+    _raw: m
+  }));
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Machine.create(data),

@@ -6,11 +6,9 @@ import { Menu, X, Home, Users, Calendar, Wrench, Settings, FileText, Shield, Dol
 export default function Layout({ children, currentPageName }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const menuItems = [
-    // 📊 PRINCIPAL
+  // Menú estático - NUNCA debe cambiar dinámicamente
+  const MENU_STRUCTURE = React.useMemo(() => [
     { name: 'Dashboard', icon: Home, path: createPageUrl('Dashboard'), category: 'Principal' },
-    
-    // 👥 RECURSOS HUMANOS
     { name: 'Base de Empleados', icon: Users, path: createPageUrl('MasterEmployeeDatabase'), category: 'Recursos Humanos' },
     { name: 'Gestión Ausencias', icon: Calendar, path: createPageUrl('AbsenceManagement'), category: 'Recursos Humanos' },
     { name: 'ETT y Temporales', icon: Users, path: createPageUrl('ETTTemporaryEmployees'), category: 'Recursos Humanos' },
@@ -18,26 +16,18 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Control Presencia', icon: Calendar, path: createPageUrl('AttendanceManagement'), category: 'Recursos Humanos' },
     { name: 'Comités y PRL', icon: Shield, path: createPageUrl('CommitteeManagement'), category: 'Recursos Humanos' },
     { name: 'Plan Incentivos', icon: DollarSign, path: createPageUrl('IncentiveManagement'), category: 'Recursos Humanos' },
-    
-    // 📅 PLANIFICACIÓN
     { name: 'Planning Diario', icon: Calendar, path: createPageUrl('DailyPlanning'), category: 'Planificación' },
     { name: 'Planning Turnos', icon: Users, path: createPageUrl('ShiftManagement'), category: 'Planificación' },
-    { name: 'Planning Máquinas', icon: Wrench, path: createPageUrl('DailyPlanning'), category: 'Planificación' },
-    
-    // 🏭 PRODUCCIÓN
     { name: 'Consulta Máquinas', icon: Wrench, path: createPageUrl('MachineManagement'), category: 'Producción' },
+    { name: 'Archivo Maestro', icon: Cog, path: createPageUrl('MachineMaster'), category: 'Producción' },
     { name: 'Config. Procesos', icon: Cog, path: createPageUrl('ProcessConfiguration'), category: 'Producción' },
-    
-    // 🔧 MANTENIMIENTO
     { name: 'Seguimiento', icon: Wrench, path: createPageUrl('MaintenanceTracking'), category: 'Mantenimiento' },
-    
-    // 📈 ANÁLISIS
     { name: 'Informes', icon: FileText, path: createPageUrl('Reports'), category: 'Análisis' },
     { name: 'Análisis Predictivo', icon: FileText, path: createPageUrl('MLInsights'), category: 'Análisis' },
-    
-    // ⚙️ CONFIGURACIÓN
     { name: 'Configuración', icon: Settings, path: createPageUrl('Configuration'), category: 'Configuración' },
-  ];
+  ], []);
+
+  const menuItems = MENU_STRUCTURE;
 
   return (
     <div className="flex h-screen bg-white dark:bg-slate-900 w-screen overflow-hidden">
@@ -93,6 +83,14 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto bg-white dark:bg-slate-900">
+        <div className="md:hidden p-4 border-b border-slate-200 dark:border-slate-800">
+          <button 
+            onClick={() => setMenuOpen(true)}
+            className="text-slate-900 dark:text-slate-100"
+          >
+            <Menu size={24} />
+          </button>
+        </div>
         {children}
       </div>
     </div>
