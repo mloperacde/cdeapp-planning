@@ -94,7 +94,7 @@ export default function DataRecoveryDashboard() {
             Panel de Recuperación de Datos
           </h1>
           <p className="text-slate-600 mt-1">
-            Diagnóstico y migración de relaciones empleado-máquina
+            Diagnóstico completo y migración de datos
           </p>
         </div>
 
