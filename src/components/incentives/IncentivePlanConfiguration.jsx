@@ -20,11 +20,12 @@ export default function IncentivePlanConfiguration() {
   const [editingPlan, setEditingPlan] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: plans = [] } = useQuery({
+  const { data: plans = [], refetch } = useQuery({
     queryKey: ['incentivePlans'],
     queryFn: () => base44.entities.IncentivePlan.list('-anio'),
     initialData: [],
-    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
+    staleTime: 0,
+    gcTime: 0,
     retry: 1,
   });
 
