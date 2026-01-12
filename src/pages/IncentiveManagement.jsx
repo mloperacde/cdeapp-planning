@@ -6,6 +6,8 @@ import IncentivePlanConfiguration from "../components/incentives/IncentivePlanCo
 import DepartmentObjectiveConfig from "../components/incentives/DepartmentObjectiveConfig";
 import EmployeeResultsManager from "../components/incentives/EmployeeResultsManager";
 import IncentiveEvaluation from "../components/incentives/IncentiveEvaluation";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 export default function IncentiveManagementPage() {
   return (
     <div className="p-6 md:p-8">
