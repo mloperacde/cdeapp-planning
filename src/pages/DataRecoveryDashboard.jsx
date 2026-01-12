@@ -98,7 +98,19 @@ export default function DataRecoveryDashboard() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
+        <Tabs defaultValue="migration" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="migration">
+              <Database className="w-4 h-4 mr-2" />
+              Migración Empleado-Máquina
+            </TabsTrigger>
+            <TabsTrigger value="integrity">
+              <Shield className="w-4 h-4 mr-2" />
+              Verificación de Integridad
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="migration" className="space-y-6">
           {/* Paso 1: Diagnóstico */}
           <Card>
             <CardHeader>
