@@ -75,6 +75,7 @@ import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 
 import AuditDataDashboard from "./AuditDataDashboard";
+import DataRecoveryDashboard from "./DataRecoveryDashboard";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -170,6 +171,7 @@ const PAGES = {
     WorkCalendarConfig: WorkCalendarConfig,
     
     AuditDataDashboard: AuditDataDashboard,
+    DataRecoveryDashboard: DataRecoveryDashboard,
 }
 
 function _getCurrentPage(url) {
