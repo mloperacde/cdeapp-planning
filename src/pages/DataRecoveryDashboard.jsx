@@ -1,45 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { base44 } from '@/api/base44Client';
 import { Database, PlayCircle, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
-
-let base44Instance = null;
-
-// Inicializar base44 dinámicamente
-const getBase44 = async () => {
-  if (!base44Instance) {
-    const module = await import('@/api/base44Client');
-    base44Instance = module.base44;
-  }
-  return base44Instance;
-};
 
 export default function DataRecoveryDashboard() {
   const [isRecovering, setIsRecovering] = useState(false);
   const [recoveryResult, setRecoveryResult] = useState(null);
-  const [hasBase44, setHasBase44] = useState(false);
-
-  useEffect(() => {
-    getBase44().then(() => setHasBase44(true));
-  }, []);
 
   const handleRecover = async () => {
-    if (!hasBase44) {
-      toast.error('Base44 aún no está inicializado');
-      return;
-    }
-    
     setIsRecovering(true);
     setRecoveryResult(null);
     
     try {
-      const base44 = await getBase44();
-      const response = await base44.functions.invoke('recoverEmployeeMachineAssignments');
-      const data = response.data || response;
+      const response = await base44.functions.invoke('recoverEmployeeMachineAssignments', {});
+      const data = response?.data || response;
       
       if (data.status === 'success') {
         setRecoveryResult(data);
@@ -95,10 +73,10 @@ export default function DataRecoveryDashboard() {
                 onClick={handleRecover}
                 className="bg-blue-600 hover:bg-blue-700"
                 size="lg"
-                disabled={!hasBase44}
+                disabled={isRecovering}
               >
                 <PlayCircle className="w-5 h-5 mr-2" />
-                {hasBase44 ? 'Ejecutar Recuperación' : 'Inicializando...'}
+                Ejecutar Recuperación
               </Button>
             </div>
           )}
