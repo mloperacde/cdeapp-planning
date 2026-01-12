@@ -52,7 +52,7 @@ export default function DataRecoveryDashboard() {
           <ul className="mt-2 space-y-1 text-sm">
             <li>• Lee campos maquina_1 a maquina_10 de EmployeeMasterDatabase</li>
             <li>• Mapea IDs legacy de Machine → IDs nuevos de MachineMasterDatabase</li>
-            <li>• Crea registros en EmployeeSkill con nivel "Experto"</li>
+            <li>• Crea registros en EmployeeMachineSkill con nivel según preferencia</li>
             <li>• No borra datos antiguos, solo crea nuevos registros</li>
           </ul>
         </AlertDescription>
@@ -198,7 +198,7 @@ export default function DataRecoveryDashboard() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">EmployeeMasterDatabase</Badge>
               <Badge variant="outline">MachineMasterDatabase</Badge>
-              <Badge variant="outline">EmployeeSkill</Badge>
+              <Badge variant="outline">EmployeeMachineSkill</Badge>
             </div>
           </div>
 
@@ -207,7 +207,7 @@ export default function DataRecoveryDashboard() {
             <div className="bg-slate-50 p-3 rounded text-xs font-mono space-y-1">
               <div>employee.maquina_1...10 → legacy_machine_id</div>
               <div>machine.machine_id_legacy → mapeo a nuevo ID</div>
-              <div>EmployeeSkill.create(employee_id, machine_id, nivel: Experto)</div>
+              <div>EmployeeMachineSkill.create(employee_id, machine_id, nivel, orden)</div>
             </div>
           </div>
         </CardContent>
