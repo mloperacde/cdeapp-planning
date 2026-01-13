@@ -153,9 +153,9 @@ export default function UnifiedAbsenceManager(props) {
     onSuccess: async () => {
       // Sync availability status
       try {
-          await base44.functions.invoke('sync_employee_availability_bulk');
+          await base44.functions.invoke('syncEmployeeAvailability');
       } catch (e) {
-          console.error("Sync availability failed", e);
+          console.warn("Sync availability failed", e);
       }
       
       queryClient.invalidateQueries({ queryKey: ['absences'] });
@@ -181,9 +181,9 @@ export default function UnifiedAbsenceManager(props) {
     },
     onSuccess: async () => {
       try {
-          await base44.functions.invoke('sync_employee_availability_bulk');
+          await base44.functions.invoke('syncEmployeeAvailability');
       } catch (e) {
-          console.error("Sync availability failed", e);
+          console.warn("Sync availability failed", e);
       }
       
       queryClient.invalidateQueries({ queryKey: ['absences'] });
