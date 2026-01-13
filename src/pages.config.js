@@ -50,6 +50,7 @@ import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import SystemHealth from './pages/SystemHealth';
 import SystemReset from './pages/SystemReset';
+import TestMigration from './pages/TestMigration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
@@ -60,7 +61,6 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
-import TestMigration from './pages/TestMigration';
 import __Layout from './Layout.jsx';
 
 
@@ -117,6 +117,7 @@ export const PAGES = {
     "SupportManagement1415": SupportManagement1415,
     "SystemHealth": SystemHealth,
     "SystemReset": SystemReset,
+    "TestMigration": TestMigration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
@@ -127,7 +128,6 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
-    "TestMigration": TestMigration,
 }
 
 export const pagesConfig = {

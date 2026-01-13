@@ -76,6 +76,7 @@ import WorkCalendarConfig from "./WorkCalendarConfig";
 
 import AuditDataDashboard from "./AuditDataDashboard";
 import DataRecoveryDashboard from "./DataRecoveryDashboard";
+import TestMigration from "./TestMigration";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -172,6 +173,7 @@ const PAGES = {
     
     AuditDataDashboard: AuditDataDashboard,
     DataRecoveryDashboard: DataRecoveryDashboard,
+    TestMigration: TestMigration,
 }
 
 function _getCurrentPage(url) {
@@ -302,6 +304,7 @@ function PagesContent() {
                 
                 <Route path="/AuditDataDashboard" element={<AuditDataDashboard />} />
         <Route path="/DataRecoveryDashboard" element={<DataRecoveryDashboard />} />
+        <Route path="/TestMigration" element={<TestMigration />} />
                 
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
