@@ -164,7 +164,7 @@ export default function UnifiedAbsenceManager(props) {
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
       queryClient.invalidateQueries({ queryKey: ['globalAbsenteeism'] });
-      toast.success("Ausencia registrada correctamente");
+      toast.success("Ausencia registrada. Cambios aplicados en todos los módulos.");
       handleClose();
     },
     onError: (error) => {
@@ -191,7 +191,7 @@ export default function UnifiedAbsenceManager(props) {
       queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
-      toast.success("Ausencia eliminada");
+      toast.success("Ausencia eliminada. Cambios aplicados en todos los módulos.");
     }
   });
 

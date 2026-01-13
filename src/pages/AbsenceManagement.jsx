@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import {
   Select,
   SelectContent,
@@ -65,6 +66,7 @@ export default function AbsenceManagementPage() {
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const queryClient = useQueryClient();
+  const { goBack } = useNavigationHistory();
 
   // Usar datos compartidos del DataProvider
   const { 
@@ -162,10 +164,12 @@ export default function AbsenceManagementPage() {
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <Breadcrumbs items={[
-          { label: "RRHH", url: createPageUrl("AdvancedHRDashboard") },
-          { label: "Gestión de Ausencias" }
-        ]} />
+        <div className="mb-6">
+          <Button variant="ghost" onClick={goBack} className="mb-2">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
+        </div>
 
         <div className="flex justify-between items-center mb-8">
           <div>

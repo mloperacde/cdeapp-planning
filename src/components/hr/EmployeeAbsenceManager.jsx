@@ -73,16 +73,7 @@ export default function EmployeeAbsenceManager({ employee }) {
       incluir_en_planning: disponibilidad === "Disponible"
     });
 
-    // También actualizar en Employee si está sincronizado
-    if (employee.employee_id) {
-      await base44.entities.Employee.update(employee.employee_id, {
-        disponibilidad,
-        ausencia_inicio: ausenciaData.ausencia_inicio || null,
-        ausencia_fin: ausenciaData.ausencia_fin || null,
-        ausencia_motivo: ausenciaData.ausencia_motivo || null,
-        incluir_en_planning: disponibilidad === "Disponible"
-      });
-    }
+    // Employee entity ha sido deprecada - todos los datos están en EmployeeMasterDatabase
   };
 
   const saveMutation = useMutation({
@@ -106,9 +97,10 @@ export default function EmployeeAbsenceManager({ employee }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       handleClose();
-      toast.success("Ausencia registrada correctamente");
+      toast.success("Ausencia registrada. Cambios aplicados en todos los módulos.");
     },
   });
 
@@ -124,8 +116,9 @@ export default function EmployeeAbsenceManager({ employee }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast.success("Ausencia eliminada");
+      toast.success("Ausencia eliminada. Cambios aplicados en todos los módulos.");
     },
   });
 
