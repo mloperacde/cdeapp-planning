@@ -19,8 +19,8 @@ export default function SkillMatrixPage() {
   const [activeTab, setActiveTab] = useState('matrix');
 
   const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryKey: ['employeesMaster'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
     initialData: [],
     staleTime: 5 * 60 * 1000, // Cache por 5 minutos
   });

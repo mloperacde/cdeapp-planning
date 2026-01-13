@@ -218,35 +218,9 @@ export default function MasterEmployeeDatabasePage() {
   };
 
   const openSyncDialog = async (masterEmployee) => {
-    let existingEmployee = null;
-    
-    if (masterEmployee.employee_id) {
-      try {
-        const result = await base44.entities.Employee.filter({ id: masterEmployee.employee_id });
-        existingEmployee = result[0] || null;
-      } catch (e) {
-        existingEmployee = null;
-      }
-    }
-    
-    // Si no hay employee_id, buscar por código
-    if (!existingEmployee && masterEmployee.codigo_empleado) {
-      const existing = await base44.entities.Employee.filter({ 
-        codigo_empleado: masterEmployee.codigo_empleado 
-      });
-      existingEmployee = existing[0] || null;
-    }
-    
-    // Si no hay código, buscar por nombre exacto
-    if (!existingEmployee && masterEmployee.nombre) {
-      const existing = await base44.entities.Employee.filter({ 
-        nombre: masterEmployee.nombre 
-      });
-      existingEmployee = existing[0] || null;
-    }
-    
-    setSelectedEmployee({ master: masterEmployee, existing: existingEmployee });
-    setSyncDialogOpen(true);
+    // La sincronización ya no es necesaria - todos los datos están en EmployeeMasterDatabase
+    toast.info("La sincronización ha sido deprecada. Todos los datos están en la Base Maestra.");
+    return;
   };
 
   const handleSyncAll = async () => {
@@ -267,13 +241,9 @@ export default function MasterEmployeeDatabasePage() {
     let errorCount = 0;
 
     try {
-      // Obtener todos los empleados existentes de una vez
-      const existingEmployees = await base44.entities.Employee.list();
-
-      // Crear mapas para búsqueda rápida O(1)
-      const existingByCode = new Map(existingEmployees.filter(e => e.codigo_empleado).map(e => [e.codigo_empleado, e]));
-      const existingByName = new Map(existingEmployees.filter(e => e.nombre).map(e => [e.nombre.toLowerCase().trim(), e]));
-      const existingById = new Map(existingEmployees.map(e => [e.id, e]));
+      // La sincronización masiva ha sido deprecada
+      toast.info("La sincronización masiva ha sido deprecada. Todos los empleados están en Base Maestra.");
+      return;
 
       for (const masterEmployee of pending) {
         try {
