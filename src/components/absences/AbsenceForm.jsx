@@ -290,7 +290,7 @@ export default function AbsenceForm({
     toast.info("Documento eliminado.");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     let finalData = { ...formData };
@@ -309,6 +309,27 @@ export default function AbsenceForm({
         
         finalData.fecha_inicio = startDate.toISOString();
         finalData.fecha_fin = endDate.toISOString();
+      }
+    }
+
+    // Actualizar disponibilidad del empleado
+    if (formData.employee_id) {
+      try {
+        const now = new Date();
+        const startDate = new Date(finalData.fecha_inicio);
+        const endDate = new Date(finalData.fecha_fin);
+        
+        // Si la ausencia está activa ahora (inicio <= now <= fin)
+        if (startDate <= now && now <= endDate) {
+          await base44.entities.EmployeeMasterDatabase.update(formData.employee_id, {
+            disponibilidad: "Ausente",
+            ausencia_inicio: finalData.fecha_inicio,
+            ausencia_fin: finalData.fecha_fin,
+            ausencia_motivo: finalData.motivo
+          });
+        }
+      } catch (error) {
+        console.warn("Error actualizando disponibilidad del empleado:", error);
       }
     }
 

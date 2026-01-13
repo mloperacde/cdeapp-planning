@@ -12,9 +12,14 @@ export default function MachineOrderManager() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.entities.Machine.list('orden', 500)
+    base44.entities.MachineMasterDatabase.list(undefined, 500)
       .then(data => {
-        setMachines(Array.isArray(data) ? data : []);
+        if (Array.isArray(data)) {
+          const sorted = data.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
+          setMachines(sorted);
+        } else {
+          setMachines([]);
+        }
         setIsLoading(false);
       })
       .catch(err => {
@@ -27,15 +32,19 @@ export default function MachineOrderManager() {
   const updateOrderMutation = useMutation({
     mutationFn: async (orderedMachines) => {
       for (let i = 0; i < orderedMachines.length; i++) {
-        await base44.entities.Machine.update(orderedMachines[i].id, { orden: i + 1 });
+        await base44.entities.MachineMasterDatabase.update(orderedMachines[i].id, { 
+          orden_visualizacion: i + 1 
+        });
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['machines'] });
-      toast.success("Orden actualizado");
+      queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
+      toast.success("Orden actualizado correctamente");
     },
-    onError: () => {
-      toast.error("Error al actualizar");
+    onError: (error) => {
+      toast.error(`Error al actualizar: ${error.message}`);
     }
   });
 
@@ -71,7 +80,7 @@ export default function MachineOrderManager() {
             <GripVertical className="w-5 h-5 text-slate-400" />
             <div className="flex-1">
               <div className="font-medium">{machine.nombre}</div>
-              <div className="text-xs text-slate-500">{machine.codigo}</div>
+              <div className="text-xs text-slate-500">{machine.codigo_maquina || machine.codigo}</div>
             </div>
             <div className="text-sm font-semibold text-slate-600 bg-white px-2 py-1 rounded">{index + 1}</div>
           </div>

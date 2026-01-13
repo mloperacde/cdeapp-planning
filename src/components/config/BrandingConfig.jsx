@@ -20,12 +20,14 @@ export default function BrandingConfig() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: brandingConfig } = useQuery({
+  const { data: brandingConfig, isLoading } = useQuery({
     queryKey: ['appConfig', 'branding'],
     queryFn: async () => {
       const configs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
       return configs[0] || null;
     },
+    staleTime: 0,
+    gcTime: 0
   });
 
   const [formData, setFormData] = useState({
@@ -46,16 +48,19 @@ export default function BrandingConfig() {
 
   const saveBrandingMutation = useMutation({
     mutationFn: async (data) => {
-      if (brandingConfig) {
+      if (brandingConfig?.id) {
         return await base44.entities.AppConfig.update(brandingConfig.id, data);
       } else {
         return await base44.entities.AppConfig.create({ ...data, config_key: 'branding' });
       }
     },
     onSuccess: () => {
-      toast.success("Configuración de marca guardada");
+      toast.success("Configuración de marca guardada correctamente");
       queryClient.invalidateQueries({ queryKey: ['appConfig'] });
     },
+    onError: (error) => {
+      toast.error(`Error al guardar: ${error.message}`);
+    }
   });
 
   const handleLogoChange = (e) => {
@@ -112,6 +117,14 @@ export default function BrandingConfig() {
       updated_by_name: currentUser?.full_name
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-12 text-center text-slate-500">
+        Cargando configuración...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

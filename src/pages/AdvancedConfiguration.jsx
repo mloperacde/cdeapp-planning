@@ -11,9 +11,13 @@ import SyncParametersConfig from "../components/config/SyncParametersConfig";
 import CSVFieldMapper from "../components/config/CSVFieldMapper";
 import BusinessRulesConfig from "../components/config/BusinessRulesConfig";
 import CustomFieldTemplates from "../components/config/CustomFieldTemplates";
+import BrandingConfig from "../components/config/BrandingConfig";
 
 export default function AdvancedConfigurationPage() {
-  const [activeTab, setActiveTab] = useState("departments");
+  // Get tab from URL if provided
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabFromUrl = urlParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "departments");
 
   return (
     <div className="p-6 md:p-8">
@@ -38,7 +42,7 @@ export default function AdvancedConfigurationPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
             <TabsTrigger value="departments">
               <Building2 className="w-4 h-4 mr-2" />
               Departamentos
@@ -62,6 +66,9 @@ export default function AdvancedConfigurationPage() {
             <TabsTrigger value="templates">
               <FileCode className="w-4 h-4 mr-2" />
               Plantillas
+            </TabsTrigger>
+            <TabsTrigger value="branding">
+              Marca
             </TabsTrigger>
           </TabsList>
 
@@ -165,6 +172,10 @@ export default function AdvancedConfigurationPage() {
                 <CustomFieldTemplates />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="branding">
+            <BrandingConfig />
           </TabsContent>
         </Tabs>
       </div>

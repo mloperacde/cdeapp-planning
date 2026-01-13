@@ -70,27 +70,33 @@ export default function MachineMasterPage() {
   }));
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Machine.create(data),
+    mutationFn: (data) => base44.entities.MachineMasterDatabase.create(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['machines'] });
+      queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
       setEditingMachine(null);
       toast.success("Máquina creada correctamente");
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Machine.update(id, data),
+    mutationFn: ({ id, data }) => base44.entities.MachineMasterDatabase.update(id, data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['machines'] });
+      queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
       setEditingMachine(null);
       toast.success("Máquina actualizada correctamente");
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Machine.delete(id),
+    mutationFn: (id) => base44.entities.MachineMasterDatabase.delete(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['machines'] });
+      queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
       setShowDeleteConfirm(null);
       toast.success("Máquina eliminada correctamente");
     },
@@ -131,10 +137,22 @@ export default function MachineMasterPage() {
       return;
     }
 
+    const dataToSave = {
+      nombre: editingMachine.nombre,
+      codigo_maquina: editingMachine.codigo,
+      marca: editingMachine.marca || "",
+      modelo: editingMachine.modelo || "",
+      numero_serie: editingMachine.numero_serie || "",
+      fecha_compra: editingMachine.fecha_compra || "",
+      tipo: editingMachine.tipo || "",
+      ubicacion: editingMachine.ubicacion || "",
+      orden_visualizacion: editingMachine.orden || 999
+    };
+
     if (editingMachine.id) {
-      updateMutation.mutate({ id: editingMachine.id, data: editingMachine });
+      updateMutation.mutate({ id: editingMachine.id, data: dataToSave });
     } else {
-      createMutation.mutate(editingMachine);
+      createMutation.mutate(dataToSave);
     }
   };
 
