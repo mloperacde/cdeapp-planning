@@ -49,7 +49,11 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   const { data: employeeSkills = [] } = useQuery({
     queryKey: ['employeeSkills', employee?.id],
-    queryFn: () => base44.entities.EmployeeMachineSkill.filter({ employee_id: employee.id }),
+    queryFn: async () => {
+      if (!employee?.id) return [];
+      const allSkills = await base44.entities.EmployeeMachineSkill.list(undefined, 1000);
+      return allSkills.filter(s => s.employee_id === employee.id);
+    },
     enabled: !!employee?.id,
     initialData: [],
   });

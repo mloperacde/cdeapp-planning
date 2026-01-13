@@ -24,6 +24,8 @@ export default function EmployeeSkillsView() {
     const { data: employees = [] } = useQuery({
         queryKey: ['employeesMaster'],
         queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
+        staleTime: 0,
+        gcTime: 0
     });
 
     const { data: machines = [] } = useQuery({
