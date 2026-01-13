@@ -38,7 +38,20 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
     if (employee) {
-      setFormData(employee);
+      // Combinar datos legacy con EmployeeMachineSkill
+      const updatedFormData = { ...employee };
+      
+      // Priorizar EmployeeMachineSkill sobre campos legacy
+      if (employeeSkills.length > 0) {
+        employeeSkills.forEach((skill) => {
+          const prioridad = skill.orden_preferencia;
+          if (prioridad >= 1 && prioridad <= 10) {
+            updatedFormData[`maquina_${prioridad}`] = skill.machine_id;
+          }
+        });
+      }
+      
+      setFormData(updatedFormData);
     } else {
       setFormData({
         nombre: "",
@@ -48,7 +61,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         incluir_en_planning: true,
       });
     }
-  }, [employee, open]);
+  }, [employee, employeeSkills, open]);
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
@@ -59,6 +72,13 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const { data: allMachines } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list(),
+    initialData: [],
+  });
+
+  const { data: employeeSkills = [] } = useQuery({
+    queryKey: ['employeeSkills', employee?.id],
+    queryFn: () => base44.entities.EmployeeMachineSkill.filter({ employee_id: employee.id }),
+    enabled: !!employee?.id,
     initialData: [],
   });
 
@@ -132,16 +152,53 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         console.warn("Audit log failed, proceeding with save:", auditError);
       }
 
+      let savedEmployee;
       if (employee?.id) {
-        return base44.entities.EmployeeMasterDatabase.update(employee.id, cleanData);
+        savedEmployee = await base44.entities.EmployeeMasterDatabase.update(employee.id, cleanData);
       } else {
-        return base44.entities.EmployeeMasterDatabase.create(cleanData);
+        savedEmployee = await base44.entities.EmployeeMasterDatabase.create(cleanData);
       }
+
+      // Sincronizar EmployeeMachineSkill con campos legacy maquina_1...maquina_10
+      if (savedEmployee?.id || employee?.id) {
+        const empId = savedEmployee?.id || employee?.id;
+        
+        // Obtener skills existentes
+        const existingSkills = employeeSkills || [];
+        
+        // Procesar cada prioridad (1-10)
+        for (let i = 1; i <= 10; i++) {
+          const machineId = cleanData[`maquina_${i}`];
+          const existingSkill = existingSkills.find(s => s.orden_preferencia === i);
+          
+          if (machineId && !existingSkill) {
+            // Crear nuevo skill
+            await base44.entities.EmployeeMachineSkill.create({
+              employee_id: empId,
+              machine_id: machineId,
+              orden_preferencia: i,
+              nivel_habilidad: 'Intermedio'
+            });
+          } else if (!machineId && existingSkill) {
+            // Eliminar skill
+            await base44.entities.EmployeeMachineSkill.delete(existingSkill.id);
+          } else if (machineId && existingSkill && existingSkill.machine_id !== machineId) {
+            // Actualizar skill
+            await base44.entities.EmployeeMachineSkill.update(existingSkill.id, {
+              machine_id: machineId
+            });
+          }
+        }
+      }
+
+      return savedEmployee;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['allEmployeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
       toast.success("Empleado guardado y consolidado correctamente");
       onClose();
     },
