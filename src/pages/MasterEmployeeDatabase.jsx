@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import {
   Table,
   TableBody,
@@ -105,6 +106,7 @@ export default function MasterEmployeeDatabasePage() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
+  const { goBack } = useNavigationHistory();
 
   
   const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -446,12 +448,10 @@ export default function MasterEmployeeDatabasePage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver
-            </Button>
-          </Link>
+          <Button variant="ghost" onClick={goBack} className="mb-2">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
         </div>
 
         <div className="mb-8">

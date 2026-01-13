@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import SkillManagement from "../components/skillmatrix/SkillManagement";
 import EmployeeSkillsMatrix from "../components/skillmatrix/EmployeeSkillsMatrix";
 import ProcessSkillRequirements from "../components/skillmatrix/ProcessSkillRequirements";
@@ -19,6 +20,7 @@ import EmployeeSkillsView from "../components/team/EmployeeSkillsView";
 
 export default function SkillMatrixPage() {
   const [activeTab, setActiveTab] = useState('matrix');
+  const { goBack } = useNavigationHistory();
 
   const { data: employees } = useQuery({
     queryKey: ['employeesMaster'],
@@ -60,12 +62,10 @@ export default function SkillMatrixPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver
-            </Button>
-          </Link>
+          <Button variant="ghost" onClick={goBack} className="mb-2">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
         </div>
         
         <div className="mb-8">
