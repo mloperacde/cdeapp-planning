@@ -19,8 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown } from "lucide-react";
+import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigationHistory } from "../utils/useNavigationHistory";
+import { useEntityMutation } from "../utils/useEntityMutation";
 
 const EMPTY_ARRAY = [];
 
@@ -34,6 +36,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     incluir_en_planning: true,
   });
   const queryClient = useQueryClient();
+  const { goBack } = useNavigationHistory();
+  const employeeMutation = useEntityMutation('EmployeeMasterDatabase');
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
@@ -204,12 +208,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       return savedEmployee;
     },
     onSuccess: () => {
+      // Invalidación automática mediante el hook
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['allEmployeesMaster'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
-      toast.success("Empleado guardado y consolidado correctamente");
+      queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftAssignments'] });
+      toast.success("Empleado guardado correctamente. Cambios aplicados en todos los módulos.");
       onClose();
     },
     onError: (error) => {
@@ -1134,13 +1143,19 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
             )}
           </Tabs>
 
-          <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
+          <div className="flex justify-between items-center mt-6 pt-6 border-t">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver sin guardar
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "Guardando..." : (employee?.id ? "Guardar Cambios" : "Crear Empleado")}
-            </Button>
+            <div className="flex gap-3">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? "Guardando..." : (employee?.id ? "Guardar Cambios" : "Crear Empleado")}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
