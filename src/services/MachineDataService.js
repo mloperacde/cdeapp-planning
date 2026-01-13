@@ -1,282 +1,302 @@
-// src/services/MachineDataService.js
+// src/services/Base44DataService.js
 /**
- * SERVICIO CENTRALIZADO DE DATOS DE MÁQUINAS
- * Singleton con cache en memoria que evita peticiones duplicadas
- * y sincroniza datos entre componentes.
+ * SERVICIO CENTRALIZADO PARA SDK BASE44
+ * Gestiona autenticación, caché y sincronización de datos
  */
-class MachineDataService {
+class Base44DataService {
   constructor() {
-    // Cache principal de todas las máquinas del sistema
-    this.machinesCache = null;
-    this.lastFetchTime = null;
-    this.cacheDuration = 5 * 60 * 1000; // 5 minutos
+    if (!window.base44GlobalClient) {
+      console.log('🔄 Inicializando cliente Base44 SDK...');
+      // Importación dinámica para evitar problemas de carga
+      import('@base44/sdk').then(({ createClient }) => {
+        window.base44GlobalClient = createClient({
+          appId: "690cdd4205782920ba2297c8",
+          requiresAuth: true
+        });
+        console.log('✅ Cliente Base44 SDK inicializado');
+        this.notifyReady();
+      }).catch(error => {
+        console.error('❌ Error cargando SDK Base44:', error);
+        this.sdkError = error;
+      });
+    }
     
-    // Cache de máquinas por empleado
-    this.employeeMachinesCache = new Map();
+    this.client = null;
+    this.sdkError = null;
+    this.isInitialized = false;
+    this.initPromise = null;
     
-    // Listeners para notificar cambios (patrón observer)
+    // Caché de datos
+    this.cache = {
+      machines: null,
+      employees: null,
+      assignments: new Map(), // employeeId -> assignments
+      machineAssignments: new Map() // machineId -> assignments
+    };
+    
+    // Listeners
     this.listeners = new Set();
+    this.dataSubscriptions = new Map();
     
-    // Control para evitar peticiones duplicadas simultáneas
-    this.isFetching = false;
-    this.fetchQueue = [];
-    
-    console.log('🔄 MachineDataService inicializado');
+    // Estadísticas
+    this.stats = {
+      calls: 0,
+      cacheHits: 0,
+      errors: 0
+    };
   }
   
-  // --- MÉTODOS PÚBLICOS PRINCIPALES ---
+  // --- INICIALIZACIÓN ---
   
   /**
-   * Obtiene TODAS las máquinas del sistema
-   * @param {boolean} forceRefresh - Ignorar cache y forzar recarga
-   * @returns {Promise<Array>} Lista de máquinas
+   * Inicializa y retorna el cliente SDK
+   */
+  async getClient() {
+    if (this.client) return this.client;
+    
+    if (!this.initPromise) {
+      this.initPromise = new Promise((resolve, reject) => {
+        const checkInterval = setInterval(() => {
+          if (window.base44GlobalClient) {
+            clearInterval(checkInterval);
+            this.client = window.base44GlobalClient;
+            this.isInitialized = true;
+            resolve(this.client);
+          } else if (this.sdkError) {
+            clearInterval(checkInterval);
+            reject(this.sdkError);
+          }
+        }, 100);
+      });
+    }
+    
+    return this.initPromise;
+  }
+  
+  notifyReady() {
+    this.listeners.forEach(listener => {
+      if (listener.event === 'sdk-ready') {
+        listener.callback();
+      }
+    });
+  }
+  
+  // --- MÉTODOS PRINCIPALES PARA MÁQUINAS ---
+  
+  /**
+   * Obtiene todas las máquinas usando SDK Base44
    */
   async getAllMachines(forceRefresh = false) {
-    // 1. Verificar cache primero
-    if (!forceRefresh && this.isCacheValid()) {
-      console.log('📦 [MachineService] Sirviendo máquinas desde cache');
-      return this.machinesCache;
-    }
-    
-    // 2. Si ya hay una petición en curso, encolar esta
-    if (this.isFetching) {
-      console.log('⏳ [MachineService] Ya hay una petición en curso, encolando...');
-      return new Promise((resolve) => {
-        this.fetchQueue.push(resolve);
-      });
-    }
-    
-    // 3. Realizar petición
-    this.isFetching = true;
-    
     try {
-      console.log('🌐 [MachineService] Fetching máquinas desde API...');
+      this.stats.calls++;
       
-      // NOTA: Reemplaza esta URL con tu endpoint real
-      const apiUrl = '/api/machines/all'; // <-- ENDPOINT A CONFIRMAR
-      const timestamp = Date.now();
-      const url = `${apiUrl}?_cache=${timestamp}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'X-Request-Source': 'MachineDataService'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      // Verificar caché
+      if (!forceRefresh && this.cache.machines) {
+        this.stats.cacheHits++;
+        console.log('📦 [Base44Service] Máquinas desde caché');
+        return this.cache.machines;
       }
       
-      const machines = await response.json();
+      const client = await this.getClient();
+      console.log('🔍 [Base44Service] Buscando máquinas via SDK...');
       
-      // 4. Validar y almacenar en cache
-      this.machinesCache = this.validateAndNormalizeMachines(machines);
-      this.lastFetchTime = Date.now();
+      // NOTA CRÍTICA: Necesito saber la estructura exacta de tu data model
+      // ¿Cómo se llaman las colecciones/tablas en Base44?
+      // Ejemplo 1: Si usas "machines" como nombre de colección
+      const result = await client.query('machines').findMany();
       
-      console.log(`✅ [MachineService] ${this.machinesCache.length} máquinas cacheadas`);
+      // Ejemplo 2: Si usas una tabla específica
+      // const result = await client.query('maquinas').findMany();
       
-      // 5. Notificar a todos los listeners
-      this.notifyListeners('machines-updated', this.machinesCache);
+      // Ejemplo 3: Si usas un modelo específico
+      // const result = await client.models.Machine.findMany();
       
-      // 6. Resolver peticiones encoladas
-      this.resolveQueuedRequests(this.machinesCache);
+      // Normalizar datos
+      const machines = this.normalizeMachines(result);
       
-      return this.machinesCache;
+      // Actualizar caché
+      this.cache.machines = machines;
+      this.notifyListeners('machines-updated', machines);
+      
+      console.log(`✅ [Base44Service] ${machines.length} máquinas cargadas`);
+      return machines;
       
     } catch (error) {
-      console.error('❌ [MachineService] Error cargando máquinas:', error);
+      console.error('❌ [Base44Service] Error cargando máquinas:', error);
+      this.stats.errors++;
       
-      // Si hay cache viejo, devolverlo como fallback
-      if (this.machinesCache) {
-        console.warn('⚠️ [MachineService] Devolviendo cache viejo como fallback');
-        return this.machinesCache;
+      // Retornar caché viejo si hay error
+      if (this.cache.machines) {
+        console.warn('⚠️ Usando caché de máquinas por error');
+        return this.cache.machines;
       }
       
-      throw error;
-      
-    } finally {
-      this.isFetching = false;
+      throw this.handleSDKError(error);
     }
   }
   
   /**
-   * Obtiene máquinas asignadas a un empleado específico
-   * @param {number} employeeId - ID del empleado
-   * @param {boolean} forceRefresh - Ignorar cache
-   * @returns {Promise<Array>} Lista de asignaciones
+   * Obtiene máquinas asignadas a un empleado
    */
   async getEmployeeMachines(employeeId, forceRefresh = false) {
-    const cacheKey = `emp_${employeeId}`;
-    
-    // 1. Verificar cache local
-    if (!forceRefresh && this.employeeMachinesCache.has(cacheKey)) {
-      const cached = this.employeeMachinesCache.get(cacheKey);
-      const cacheAge = Date.now() - cached.timestamp;
-      
-      if (cacheAge < this.cacheDuration) {
-        console.log(`📦 [MachineService] Máquinas del empleado ${employeeId} desde cache`);
-        return cached.data;
-      }
-    }
-    
     try {
-      console.log(`👤 [MachineService] Cargando máquinas para empleado ${employeeId}...`);
-      
-      // NOTA: Reemplaza esta URL con tu endpoint real
-      const apiUrl = `/api/employees/${employeeId}/machine-assignments`;
-      const timestamp = Date.now();
-      const url = `${apiUrl}?_cache=${timestamp}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} para empleado ${employeeId}`);
+      // Verificar caché
+      if (!forceRefresh && this.cache.assignments.has(employeeId)) {
+        this.stats.cacheHits++;
+        return this.cache.assignments.get(employeeId);
       }
       
-      const assignments = await response.json();
+      const client = await this.getClient();
+      console.log(`👤 [Base44Service] Buscando máquinas para empleado ${employeeId}...`);
       
-      // 2. Normalizar y enriquecer datos
-      const enrichedAssignments = await this.enrichAssignments(assignments);
+      // NOTA: Necesito saber cómo se relacionan empleados y máquinas
+      // Opción A: Si hay una colección "employee_machines"
+      const assignments = await client.query('employee_machines')
+        .where('employee_id', '==', employeeId)
+        .findMany();
       
-      // 3. Guardar en cache
-      this.employeeMachinesCache.set(cacheKey, {
-        data: enrichedAssignments,
-        timestamp: Date.now()
-      });
+      // Opción B: Si las máquinas tienen campo employee_id
+      // const assignments = await client.query('machines')
+      //   .where('employee_id', '==', employeeId)
+      //   .findMany();
       
-      console.log(`✅ [MachineService] ${enrichedAssignments.length} máquinas cargadas para empleado ${employeeId}`);
+      // Opción C: Si usas relaciones del SDK
+      // const employee = await client.models.Employee.findUnique({
+      //   where: { id: employeeId },
+      //   include: { machines: true }
+      // });
       
-      // 4. Notificar
-      this.notifyListeners(`employee-machines-updated-${employeeId}`, enrichedAssignments);
+      // Enriquecer con datos de máquinas
+      const allMachines = await this.getAllMachines();
+      const enrichedAssignments = this.enrichAssignments(assignments, allMachines);
+      
+      // Actualizar caché
+      this.cache.assignments.set(employeeId, enrichedAssignments);
+      this.notifyListeners(`employee-machines-${employeeId}`, enrichedAssignments);
       
       return enrichedAssignments;
       
     } catch (error) {
-      console.error(`❌ [MachineService] Error cargando máquinas de empleado ${employeeId}:`, error);
+      console.error(`❌ Error máquinas empleado ${employeeId}:`, error);
       
-      // Intentar cache local como fallback
-      if (this.employeeMachinesCache.has(cacheKey)) {
-        console.warn(`⚠️ [MachineService] Usando cache viejo para empleado ${employeeId}`);
-        return this.employeeMachinesCache.get(cacheKey).data;
+      // Cache fallback
+      if (this.cache.assignments.has(employeeId)) {
+        return this.cache.assignments.get(employeeId);
       }
       
-      throw error;
+      throw this.handleSDKError(error);
     }
   }
   
   // --- MÉTODOS AUXILIARES ---
   
-  /**
-   * Valida y normaliza la estructura de máquinas
-   */
-  validateAndNormalizeMachines(machines) {
-    if (!Array.isArray(machines)) {
-      console.warn('⚠️ [MachineService] API no devolvió array, convirtiendo...', machines);
-      machines = machines.data || machines.results || [];
+  normalizeMachines(sdkData) {
+    // El SDK puede devolver datos en diferentes formatos
+    if (!sdkData) return [];
+    
+    // Si es un array, procesar directamente
+    if (Array.isArray(sdkData)) {
+      return sdkData.map(item => ({
+        id: item.id || item._id,
+        name: item.name || item.nombre || `Máquina ${item.id}`,
+        code: item.code || item.codigo,
+        type: item.type || item.tipo,
+        status: item.status || item.estado || 'active',
+        department: item.department || item.departamento,
+        // Campos específicos Base44
+        ...item
+      }));
     }
     
-    // Asegurar que cada máquina tenga estructura consistente
-    return machines.map(machine => ({
-      id: machine.id || machine.machine_id,
-      name: machine.name || machine.nombre || `Máquina ${machine.id}`,
-      code: machine.code || machine.codigo,
-      type: machine.type || machine.tipo,
-      status: machine.status || 'active',
-      department: machine.department || machine.departamento,
-      lastMaintenance: machine.last_maintenance || machine.ultimo_mantenimiento,
-      // Campos adicionales para consistencia
-      _normalized: true,
-      _cachedAt: Date.now()
-    }));
+    // Si el SDK devuelve un objeto con data/results
+    if (sdkData.data && Array.isArray(sdkData.data)) {
+      return this.normalizeMachines(sdkData.data);
+    }
+    
+    console.warn('⚠️ Formato de datos inesperado:', sdkData);
+    return [];
   }
   
-  /**
-   * Enriquece las asignaciones con datos de máquinas
-   */
-  async enrichAssignments(assignments) {
-    if (!Array.isArray(assignments)) {
-      return [];
-    }
-    
-    // Asegurar tener la lista completa de máquinas
-    const allMachines = await this.getAllMachines();
+  enrichAssignments(assignments, allMachines) {
+    if (!Array.isArray(assignments)) return [];
     
     return assignments.map(assignment => {
-      const machine = allMachines.find(m => m.id === assignment.machine_id);
+      const machineId = assignment.machine_id || assignment.machineId;
+      const machine = allMachines.find(m => m.id === machineId);
       
       return {
         ...assignment,
-        priority: assignment.priority || assignment.prioridad,
+        machine_id: machineId,
         machine_name: machine ? machine.name : 'Desconocida',
-        machine_details: machine || null,
-        // Campos normalizados
-        employee_id: assignment.employee_id,
-        machine_id: assignment.machine_id,
-        assigned_at: assignment.assigned_at || assignment.created_at,
+        machine_details: machine,
+        priority: assignment.priority || assignment.prioridad || 1,
         _enriched: true
       };
     });
   }
   
-  /**
-   * Verifica si el cache es válido
-   */
-  isCacheValid() {
-    return this.machinesCache && 
-           this.lastFetchTime && 
-           (Date.now() - this.lastFetchTime < this.cacheDuration);
+  handleSDKError(error) {
+    // Manejar errores específicos del SDK
+    if (error.message?.includes('auth') || error.message?.includes('Auth')) {
+      return new Error('Error de autenticación con Base44. Verifica tu sesión.');
+    }
+    if (error.message?.includes('permission') || error.message?.includes('Permission')) {
+      return new Error('No tienes permisos para acceder a estos datos.');
+    }
+    if (error.message?.includes('not found') || error.message?.includes('Not found')) {
+      return new Error('Recurso no encontrado. La colección/tabla puede no existir.');
+    }
+    return error;
   }
   
-  /**
-   * Resuelve peticiones encoladas
-   */
-  resolveQueuedRequests(data) {
-    while (this.fetchQueue.length > 0) {
-      const resolve = this.fetchQueue.shift();
-      if (typeof resolve === 'function') {
-        resolve(data);
-      }
+  // --- SUSCRIPCIONES EN TIEMPO REAL (si el SDK lo soporta) ---
+  
+  async subscribeToMachines(callback) {
+    try {
+      const client = await this.getClient();
+      
+      // Ejemplo de suscripción (depende de las capacidades del SDK)
+      // const unsubscribe = client.query('machines').subscribe((data) => {
+      //   this.cache.machines = this.normalizeMachines(data);
+      //   callback(this.cache.machines);
+      // });
+      
+      // this.dataSubscriptions.set('machines', unsubscribe);
+      // return unsubscribe;
+      
+      console.warn('⚠️ Suscripciones en tiempo real no implementadas');
+      return () => {}; // No-op por ahora
+      
+    } catch (error) {
+      console.error('Error en suscripción:', error);
+      return () => {};
     }
   }
   
-  // --- SISTEMA DE EVENTOS (OBSERVER) ---
+  // --- LISTENERS Y EVENTOS ---
   
-  /**
-   * Agrega un listener para cambios
-   */
-  addListener(eventType, callback) {
-    const listenerKey = `${eventType}_${Date.now()}`;
-    this.listeners.add({ eventType, callback, key: listenerKey });
-    console.log(`👂 [MachineService] Listener añadido para ${eventType}`);
-    return listenerKey; // Para poder removerlo después
+  addListener(event, callback) {
+    const listener = { event, callback, id: Date.now() };
+    this.listeners.add(listener);
+    return listener.id;
   }
   
-  /**
-   * Remueve un listener
-   */
-  removeListener(listenerKey) {
+  removeListener(listenerId) {
     for (const listener of this.listeners) {
-      if (listener.key === listenerKey) {
+      if (listener.id === listenerId) {
         this.listeners.delete(listener);
-        console.log(`🗑️ [MachineService] Listener ${listenerKey} removido`);
         break;
       }
     }
   }
   
-  /**
-   * Notifica a todos los listeners de un evento
-   */
-  notifyListeners(eventType, data) {
-    console.log(`📢 [MachineService] Notificando evento: ${eventType}`);
-    
+  notifyListeners(event, data) {
     this.listeners.forEach(listener => {
-      if (listener.eventType === eventType || listener.eventType === 'all') {
+      if (listener.event === event || listener.event === 'all') {
         try {
           listener.callback(data);
         } catch (error) {
-          console.error(`❌ Error en listener ${listener.key}:`, error);
+          console.error('Error en listener:', error);
         }
       }
     });
@@ -284,73 +304,35 @@ class MachineDataService {
   
   // --- UTILIDADES ---
   
-  /**
-   * Busca máquina por ID
-   */
-  findMachineById(id) {
-    if (!this.machinesCache) return null;
-    return this.machinesCache.find(m => m.id == id); // == para compatibilidad
-  }
-  
-  /**
-   * Busca máquina por nombre
-   */
-  findMachineByName(name) {
-    if (!this.machinesCache) return null;
-    const lowerName = name.toLowerCase();
-    return this.machinesCache.find(m => 
-      m.name && m.name.toLowerCase().includes(lowerName)
-    );
-  }
-  
-  /**
-   * Obtiene máquinas por estado
-   */
-  getMachinesByStatus(status) {
-    if (!this.machinesCache) return [];
-    return this.machinesCache.filter(m => m.status === status);
-  }
-  
-  /**
-   * Limpia todo el cache
-   */
   clearCache() {
-    this.machinesCache = null;
-    this.lastFetchTime = null;
-    this.employeeMachinesCache.clear();
-    console.log('🗑️ [MachineService] Cache limpiado');
-    this.notifyListeners('cache-cleared', null);
+    this.cache = {
+      machines: null,
+      employees: null,
+      assignments: new Map(),
+      machineAssignments: new Map()
+    };
+    console.log('🗑️ [Base44Service] Cache limpiado');
   }
   
-  /**
-   * Forza actualización del cache
-   */
-  async refreshCache() {
-    console.log('🔄 [MachineService] Refrescando cache...');
-    await this.getAllMachines(true);
-  }
-  
-  /**
-   * Obtiene estadísticas del servicio
-   */
   getStats() {
     return {
-      totalMachines: this.machinesCache ? this.machinesCache.length : 0,
-      cachedEmployees: this.employeeMachinesCache.size,
-      totalListeners: this.listeners.size,
-      lastFetch: this.lastFetchTime ? new Date(this.lastFetchTime).toLocaleTimeString() : 'Nunca',
-      cacheAge: this.lastFetchTime ? Date.now() - this.lastFetchTime : null
+      ...this.stats,
+      cacheSize: {
+        machines: this.cache.machines?.length || 0,
+        employees: this.cache.employees?.length || 0,
+        assignments: this.cache.assignments.size
+      },
+      isInitialized: this.isInitialized
     };
   }
 }
 
-// --- SINGLETON GLOBAL ---
-// Exporta una única instancia para toda la aplicación
-const machineDataService = new MachineDataService();
+// Singleton global
+const base44DataService = new Base44DataService();
 
-// Hacer disponible globalmente para debugging (solo desarrollo)
+// Exportar para uso global (solo desarrollo)
 if (process.env.NODE_ENV === 'development') {
-  window.MachineDataService = machineDataService;
+  window.Base44DataService = base44DataService;
 }
 
-export default machineDataService;
+export default base44DataService;
