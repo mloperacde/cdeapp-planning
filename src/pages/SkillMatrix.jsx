@@ -13,6 +13,7 @@ import SkillGapAnalysis from "../components/skillmatrix/SkillGapAnalysis";
 import TrainingNeedsView from "../components/skillmatrix/TrainingNeedsView";
 import DepartmentPositionSkillConfig from "../components/skillmatrix/DepartmentPositionSkillConfig";
 import MachineExperienceManager from "../components/skillmatrix/MachineExperienceManager";
+import EmployeeSkillsView from "../components/team/EmployeeSkillsView";
 
 export default function SkillMatrixPage() {
   const [activeTab, setActiveTab] = useState('matrix');
@@ -155,7 +156,7 @@ export default function SkillMatrixPage() {
           </TabsContent>
 
           <TabsContent value="machines">
-            <MachineExperienceManager />
+            <EmployeeSkillsView />
           </TabsContent>
 
           <TabsContent value="dept-positions">

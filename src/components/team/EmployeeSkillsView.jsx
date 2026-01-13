@@ -135,7 +135,7 @@ export default function EmployeeSkillsView() {
 
     // Filter Logic
     const filteredEmployees = useMemo(() => {
-        let result = employees.filter(e => e.departamento === "FABRICACION");
+        let result = employees.filter(e => e.departamento === "FABRICACION" && e.estado_empleado === "Alta");
 
         if (filters.searchTerm) {
             const lower = filters.searchTerm.toLowerCase();

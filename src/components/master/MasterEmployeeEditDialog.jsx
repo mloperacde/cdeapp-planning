@@ -1025,27 +1025,33 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
-                  <div key={num} className="space-y-2">
-                    <Label>Máquina Prioridad {num}</Label>
-                    <Select
-                      value={formData[`maquina_${num}`] || ""}
-                      onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sin asignar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={null}>Sin asignar</SelectItem>
-                        {allMachines.map((machine) => (
-                          <SelectItem key={machine.id} value={machine.id}>
-                            {machine.nombre} ({machine.codigo})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+               {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
+                 // Obtener valor actual de EmployeeMachineSkill o legacy
+                 const skillForSlot = employeeSkills.find(s => s.orden_preferencia === num);
+                 const currentValue = formData[`maquina_${num}`] || skillForSlot?.machine_id || "";
+
+                 return (
+                   <div key={num} className="space-y-2">
+                     <Label>Máquina Prioridad {num}</Label>
+                     <Select
+                       value={currentValue || "none"}
+                       onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? null : value })}
+                     >
+                       <SelectTrigger>
+                         <SelectValue placeholder="Sin asignar" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="none">Sin asignar</SelectItem>
+                         {allMachines.map((machine) => (
+                           <SelectItem key={machine.id} value={machine.id}>
+                             {machine.nombre} ({machine.codigo})
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   </div>
+                 );
+               })}
               </div>
             </TabsContent>
             )}
