@@ -10,25 +10,14 @@ import { es } from "date-fns/locale";
  */
 export const updateEmployeeAvailability = async (employeeId, disponibilidad, absenceData = {}) => {
   try {
-    await base44.entities.Employee.update(employeeId, {
+    // Employee entity deprecada - solo usar EmployeeMasterDatabase
+    await base44.entities.EmployeeMasterDatabase.update(employeeId, {
       disponibilidad,
       ausencia_inicio: absenceData.ausencia_inicio || null,
       ausencia_fin: absenceData.ausencia_fin || null,
       ausencia_motivo: absenceData.ausencia_motivo || null,
+      incluir_en_planning: disponibilidad === "Disponible"
     });
-    
-    // Also update Master DB to keep sync
-    // Try to find if exists in master first (it should)
-    const masterRecords = await base44.entities.EmployeeMasterDatabase.filter({ id: employeeId });
-    if (masterRecords.length > 0) {
-       await base44.entities.EmployeeMasterDatabase.update(employeeId, {
-        disponibilidad,
-        ausencia_inicio: absenceData.ausencia_inicio || null,
-        ausencia_fin: absenceData.ausencia_fin || null,
-        ausencia_motivo: absenceData.ausencia_motivo || null,
-      }); 
-    }
-    
   } catch (error) {
     console.error("Error updating employee availability:", error);
     // Don't throw here to avoid blocking the main flow if sync fails, but log it
