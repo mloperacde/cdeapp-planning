@@ -60,22 +60,28 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
-    if (employee) {
+    if (employee && open) {
+      console.log('Loading employee data:', employee.nombre);
+      console.log('Employee skills loaded:', employeeSkills.length);
+      
       // Combinar datos legacy con EmployeeMachineSkill
       const updatedFormData = { ...employee };
       
       // Priorizar EmployeeMachineSkill sobre campos legacy
-      if (employeeSkills.length > 0) {
+      if (employeeSkills && employeeSkills.length > 0) {
+        console.log('Applying skills to form:', employeeSkills);
         employeeSkills.forEach((skill) => {
           const prioridad = skill.orden_preferencia;
           if (prioridad >= 1 && prioridad <= 10) {
             updatedFormData[`maquina_${prioridad}`] = skill.machine_id;
+            console.log(`Setting maquina_${prioridad} to`, skill.machine_id);
           }
         });
       }
       
+      console.log('Final formData:', updatedFormData);
       setFormData(updatedFormData);
-    } else {
+    } else if (!employee) {
       setFormData({
         nombre: "",
         codigo_empleado: "",
@@ -1024,11 +1030,19 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </p>
               </div>
 
+              <div className="space-y-2 mb-4 p-3 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-600">
+                  📊 Cargados: {employeeSkills.length} registros de máquinas | {allMachines.length} máquinas disponibles
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
                  // Obtener valor actual de EmployeeMachineSkill o legacy
                  const skillForSlot = employeeSkills.find(s => s.orden_preferencia === num);
                  const currentValue = formData[`maquina_${num}`] || skillForSlot?.machine_id || "";
+
+                 const selectedMachine = allMachines.find(m => m.id === currentValue);
 
                  return (
                    <div key={num} className="space-y-2">
@@ -1038,7 +1052,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                        onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? "" : value })}
                      >
                        <SelectTrigger>
-                         <SelectValue placeholder="Sin asignar" />
+                         <SelectValue>
+                           {selectedMachine ? `${selectedMachine.nombre} (${selectedMachine.codigo})` : "Sin asignar"}
+                         </SelectValue>
                        </SelectTrigger>
                        <SelectContent>
                          <SelectItem value="none">Sin asignar</SelectItem>
