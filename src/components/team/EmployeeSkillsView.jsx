@@ -20,13 +20,15 @@ export default function EmployeeSkillsView() {
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 20;
 
-    // Fetch Data
-    const { data: employees = [] } = useQuery({
+    // Fetch Data with forced refresh
+    const { data: employees = [], isLoading: loadingEmployees, refetch: refetchEmployees } = useQuery({
         queryKey: ['employeesMaster'],
         queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
+        staleTime: 0,
+        gcTime: 0
     });
 
-    const { data: machines = [] } = useQuery({
+    const { data: machines = [], isLoading: loadingMachines, refetch: refetchMachines } = useQuery({
         queryKey: ['machines'],
         queryFn: async () => {
             const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
@@ -37,6 +39,8 @@ export default function EmployeeSkillsView() {
                 orden: m.orden_visualizacion || 999
             })).sort((a, b) => a.orden - b.orden);
         },
+        staleTime: 0,
+        gcTime: 0
     });
 
     const { data: teams = [] } = useQuery({
@@ -47,11 +51,15 @@ export default function EmployeeSkillsView() {
     const { data: machineAssignments = [] } = useQuery({
         queryKey: ['machineAssignments'],
         queryFn: () => base44.entities.MachineAssignment.list(),
+        staleTime: 0,
+        gcTime: 0
     });
 
-    const { data: employeeSkills = [] } = useQuery({
+    const { data: employeeSkills = [], isLoading: loadingSkills, refetch: refetchSkills } = useQuery({
         queryKey: ['employeeSkills'],
         queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+        staleTime: 0,
+        gcTime: 0
     });
 
     // Update Mutation
@@ -213,12 +221,35 @@ export default function EmployeeSkillsView() {
         return Array.from(positions);
     };
 
+    const handleForceRefresh = async () => {
+        await Promise.all([
+            refetchEmployees(),
+            refetchMachines(),
+            refetchSkills()
+        ]);
+        toast.success("Datos recargados");
+    };
+
+    const isLoading = loadingEmployees || loadingMachines || loadingSkills;
+
     return (
         <div className="h-full flex flex-col md:flex-row gap-4">
             {/* Sidebar Filters */}
             <Card className="w-full md:w-64 shrink-0 bg-slate-50 h-fit">
                 <CardContent className="p-4 flex flex-col gap-4">
-                    <div className="font-semibold text-lg border-b pb-2 mb-2">Filtros</div>
+                    <div className="flex justify-between items-center border-b pb-2 mb-2">
+                        <div className="font-semibold text-lg">Filtros</div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleForceRefresh}
+                            disabled={isLoading}
+                            className="h-7 px-2"
+                        >
+                            <Filter className="w-4 h-4 mr-1" />
+                            {isLoading ? "..." : "Recargar"}
+                        </Button>
+                    </div>
                     
                     <div className="space-y-2">
                         <Label>Buscar Empleado</Label>
