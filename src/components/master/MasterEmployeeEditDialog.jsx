@@ -35,6 +35,25 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   });
   const queryClient = useQueryClient();
 
+  const { data: teams } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
+  });
+
+  const { data: allMachines } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.Machine.list(),
+    initialData: [],
+  });
+
+  const { data: employeeSkills = [] } = useQuery({
+    queryKey: ['employeeSkills', employee?.id],
+    queryFn: () => base44.entities.EmployeeMachineSkill.filter({ employee_id: employee.id }),
+    enabled: !!employee?.id,
+    initialData: [],
+  });
+
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
     if (employee) {
@@ -62,25 +81,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       });
     }
   }, [employee, employeeSkills, open]);
-
-  const { data: teams } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
-  });
-
-  const { data: allMachines } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
-    initialData: [],
-  });
-
-  const { data: employeeSkills = [] } = useQuery({
-    queryKey: ['employeeSkills', employee?.id],
-    queryFn: () => base44.entities.EmployeeMachineSkill.filter({ employee_id: employee.id }),
-    enabled: !!employee?.id,
-    initialData: [],
-  });
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
