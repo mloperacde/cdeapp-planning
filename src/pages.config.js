@@ -38,7 +38,6 @@ import MobileHome from './pages/MobileHome';
 import PerformanceManagement from './pages/PerformanceManagement';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionDashboard from './pages/ProductionDashboard';
-import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
 import QuickStartGuide from './pages/QuickStartGuide';
 import Reports from './pages/Reports';
@@ -60,6 +59,7 @@ import mobileNotifications from './pages/mobileNotifications';
 import mobilePlanning from './pages/mobilePlanning';
 import mobileProfile from './pages/mobileProfile';
 import mobileVacations from './pages/mobileVacations';
+import ProductionPlanning from './pages/ProductionPlanning';
 import __Layout from './Layout.jsx';
 
 
@@ -104,7 +104,6 @@ export const PAGES = {
     "PerformanceManagement": PerformanceManagement,
     "ProcessConfiguration": ProcessConfiguration,
     "ProductionDashboard": ProductionDashboard,
-    "ProductionPlanning": ProductionPlanning,
     "QualityControl": QualityControl,
     "QuickStartGuide": QuickStartGuide,
     "Reports": Reports,
@@ -126,6 +125,7 @@ export const PAGES = {
     "mobilePlanning": mobilePlanning,
     "mobileProfile": mobileProfile,
     "mobileVacations": mobileVacations,
+    "ProductionPlanning": ProductionPlanning,
 }
 
 export const pagesConfig = {

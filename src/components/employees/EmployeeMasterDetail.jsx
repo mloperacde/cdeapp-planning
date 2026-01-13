@@ -85,12 +85,13 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     gcTime: 0
   });
 
-  const { data: employeeMachineSkills } = useQuery({
-    queryKey: ['employeeMachineSkills'],
+  const { data: employeeMachineSkills, refetch: refetchMachineSkills } = useQuery({
+    queryKey: ['employeeMachineSkills', employee?.id],
     queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
     initialData: [],
     staleTime: 0,
-    gcTime: 0
+    gcTime: 0,
+    refetchOnMount: 'always'
   });
 
   const { data: machines } = useQuery({
@@ -98,8 +99,16 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
     initialData: [],
     staleTime: 0,
-    gcTime: 0
+    gcTime: 0,
+    refetchOnMount: 'always'
   });
+  
+  // Refetch when employee changes
+  React.useEffect(() => {
+    if (employee?.id) {
+      refetchMachineSkills();
+    }
+  }, [employee?.id, refetchMachineSkills]);
 
   const { data: trainingRecords } = useQuery({
     queryKey: ['employeeTraining'],

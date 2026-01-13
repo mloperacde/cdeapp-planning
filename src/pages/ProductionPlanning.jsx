@@ -38,8 +38,19 @@ export default function ProductionPlanningPage() {
   // Data Fetching
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      return data.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+        codigo: m.codigo_maquina || m.codigo,
+        orden: m.orden_visualizacion || 999,
+        tipo: m.tipo,
+        ubicacion: m.ubicacion
+      })).sort((a, b) => a.orden - b.orden);
+    },
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: workOrders = [] } = useQuery({

@@ -37,6 +37,8 @@ export default function EmployeeSkillsView() {
                 orden: m.orden_visualizacion || 999
             })).sort((a, b) => a.orden - b.orden);
         },
+        staleTime: 0,
+        gcTime: 0
     });
 
     const { data: teams = [] } = useQuery({
@@ -52,6 +54,8 @@ export default function EmployeeSkillsView() {
     const { data: employeeSkills = [] } = useQuery({
         queryKey: ['employeeSkills'],
         queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+        staleTime: 0,
+        gcTime: 0
     });
 
     // Update Mutation
@@ -329,6 +333,9 @@ export default function EmployeeSkillsView() {
                                            const currentVal = editingState[emp.id]?.[`maquina_${i}`] 
                                                ?? skill?.machine_id 
                                                ?? emp[`maquina_${i}`];
+                                           
+                                           const selectedMachine = machines.find(m => m.id === currentVal);
+                                           
                                            return (
                                                <TableCell key={i} className="p-1">
                                                    <Select 
@@ -336,7 +343,9 @@ export default function EmployeeSkillsView() {
                                                        onValueChange={(v) => handleMachineChange(emp.id, i, v === "none" ? null : v)}
                                                    >
                                                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-slate-100 focus:ring-0">
-                                                           <SelectValue placeholder="-" />
+                                                           <SelectValue>
+                                                               {selectedMachine ? selectedMachine.nombre : "-"}
+                                                           </SelectValue>
                                                        </SelectTrigger>
                                                        <SelectContent>
                                                            <SelectItem value="none">- Sin asignar -</SelectItem>

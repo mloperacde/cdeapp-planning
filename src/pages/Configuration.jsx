@@ -129,7 +129,7 @@ export default function ConfigurationPage() {
           title: "Apariencia y Marca",
           description: "Personaliza logotipo, nombre y colores",
           icon: Palette,
-          url: "/AdvancedConfiguration?tab=branding",
+          url: "/BrandingConfig",
           color: "purple"
         },
         {
