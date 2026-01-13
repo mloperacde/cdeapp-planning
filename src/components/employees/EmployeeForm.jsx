@@ -102,22 +102,11 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
     if (employee) {
-      // Load employee data and populate machine fields from EmployeeMachineSkill
-      const skills = employeeMachineSkills.filter(s => s.employee_id === employee.id);
-      const enrichedData = { ...employee };
-      
-      // Populate maquina_1 to maquina_10 from EmployeeMachineSkill
-      skills.forEach(skill => {
-        if (skill.orden_preferencia >= 1 && skill.orden_preferencia <= 10) {
-          enrichedData[`maquina_${skill.orden_preferencia}`] = skill.machine_id;
-        }
-      });
-      
-      setFormData(enrichedData);
+      setFormData(employee);
     } else {
       setFormData(initialNewEmployeeFormData);
     }
-  }, [employee, employeeMachineSkills]);
+  }, [employee]);
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
@@ -127,13 +116,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
   const { data: allMachines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
-    initialData: [],
-  });
-
-  const { data: employeeMachineSkills } = useQuery({
-    queryKey: ['employeeMachineSkills'],
-    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+    queryFn: () => base44.entities.Machine.list(),
     initialData: [],
   });
 
@@ -233,56 +216,15 @@ export default function EmployeeForm({ employee, machines, onClose }) {
         finalData.equipo = "";
       }
       
-      let employeeId = employee?.id;
-      
-      // Save employee data
-      if (employeeId) {
-        await base44.entities.EmployeeMasterDatabase.update(employeeId, finalData);
-      } else {
-        const created = await base44.entities.EmployeeMasterDatabase.create(finalData);
-        employeeId = created.id;
+      if (employee?.id) {
+        return base44.entities.Employee.update(employee.id, finalData);
       }
-      
-      // Sync machine assignments to EmployeeMachineSkill
-      if (employeeId && finalData.departamento === "FABRICACION") {
-        const currentSkills = employeeMachineSkills.filter(s => s.employee_id === employeeId);
-        
-        for (let i = 1; i <= 10; i++) {
-          const machineId = finalData[`maquina_${i}`];
-          const existingSkill = currentSkills.find(s => s.orden_preferencia === i);
-          
-          if (machineId && !existingSkill) {
-            // Create new skill
-            await base44.entities.EmployeeMachineSkill.create({
-              employee_id: employeeId,
-              machine_id: machineId,
-              orden_preferencia: i,
-              nivel_competencia: 'Intermedio'
-            });
-          } else if (!machineId && existingSkill) {
-            // Delete skill
-            await base44.entities.EmployeeMachineSkill.delete(existingSkill.id);
-          } else if (machineId && existingSkill && existingSkill.machine_id !== machineId) {
-            // Update skill
-            await base44.entities.EmployeeMachineSkill.update(existingSkill.id, {
-              machine_id: machineId
-            });
-          }
-        }
-      }
-      
-      return { id: employeeId };
+      return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
-      queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
-      toast.success("Empleado guardado correctamente");
       onClose();
     },
-    onError: (error) => {
-      toast.error(`Error al guardar: ${error.message}`);
-    }
   });
 
   const handleSubmit = (e) => {
@@ -909,30 +851,27 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {machineFields.map((num) => {
-                      const currentValue = formData[`maquina_${num}`] || "";
-                      return (
-                        <div key={num} className="space-y-2">
-                          <Label htmlFor={`maquina_${num}`}>Máquina Prioridad {num}</Label>
-                          <Select
-                            value={currentValue}
-                            onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value || null })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sin asignar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={null}>Sin asignar</SelectItem>
-                              {allMachines.map((machine) => (
-                                <SelectItem key={machine.id} value={machine.id}>
-                                  {machine.nombre} ({machine.codigo_maquina})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      );
-                    })}
+                    {machineFields.map((num) => (
+                      <div key={num} className="space-y-2">
+                        <Label htmlFor={`maquina_${num}`}>Máquina {num}</Label>
+                        <Select
+                          value={formData[`maquina_${num}`] || ""}
+                          onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sin asignar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={null}>Sin asignar</SelectItem>
+                            {allMachines.filter(m => m.estado === "Disponible").map((machine) => (
+                              <SelectItem key={machine.id} value={machine.id}>
+                                {machine.nombre} ({machine.codigo})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}

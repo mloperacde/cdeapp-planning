@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,21 +66,9 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     initialData: [],
   });
 
-  const { data: employeeMachineSkills } = useQuery({
-    queryKey: ['employeeMachineSkills'],
-    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
-    initialData: [],
-  });
-
-  const { data: machines } = useQuery({
-    queryKey: ['machines'],
-    queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
-    initialData: [],
-  });
-
-  const { data: absences, refetch: refetchAbsences } = useQuery({
+  const { data: absences } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list(undefined, 1000),
+    queryFn: () => base44.entities.Absence.list(),
     initialData: [],
   });
 
@@ -94,13 +83,8 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const committee = (committeeMembers || []).filter(cm => cm.employee_id === employee.id && cm.activo);
   const emergency = (emergencyMembers || []).filter(em => em.employee_id === employee.id && em.activo);
   const employeeSkillsList = (employeeSkills || []).filter(es => es.employee_id === employee.id);
-  const employeeMachineSkillsList = (employeeMachineSkills || [])
-    .filter(ems => ems.employee_id === employee.id)
-    .sort((a, b) => (a.orden_preferencia || 999) - (b.orden_preferencia || 999));
-  const employeeAbsences = (absences || [])
-    .filter(a => a.employee_id === employee.id)
-    .sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio));
-  const employeeTraining = (trainingRecords || []).filter(tr => tr.employee_id === employee.id);
+  const employeeAbsences = (absences || []).filter(a => a.employee_id === employee.id);
+  const employeeTraining = (trainingRecords || []).filter(tr => tr.employee_id === employee.id); // Also apply here for consistency
 
   // Changed to React.useEffect as per outline
   React.useEffect(() => {
@@ -210,7 +194,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
 
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="general">
                 <User className="w-4 h-4 mr-2" />
                 General
@@ -222,10 +206,6 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
               <TabsTrigger value="locker">
                 <KeyRound className="w-4 h-4 mr-2" />
                 Taquilla
-              </TabsTrigger>
-              <TabsTrigger value="machines">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Máquinas
               </TabsTrigger>
               <TabsTrigger value="skills">
                 <Award className="w-4 h-4 mr-2" />
@@ -503,76 +483,6 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
               </Card>
             </TabsContent>
 
-            <TabsContent value="machines" className="space-y-4 mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg text-slate-900">
-                  Máquinas Asignadas ({employeeMachineSkillsList.length})
-                </h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
-                    refetchAbsences();
-                  }}
-                >
-                  🔄 Recargar
-                </Button>
-              </div>
-
-              {employeeMachineSkillsList.length === 0 ? (
-                <Card className="bg-slate-50">
-                  <CardContent className="p-8 text-center">
-                    <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                    <p className="text-slate-500">No hay máquinas asignadas</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {employeeMachineSkillsList.map((ems) => {
-                    const machine = (machines || []).find(m => m.id === ems.machine_id);
-                    return (
-                      <Card key={ems.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <Badge className="bg-blue-600 text-white">
-                                Prioridad {ems.orden_preferencia || '-'}
-                              </Badge>
-                              <div>
-                                <h4 className="font-semibold text-slate-900">
-                                  {machine?.nombre || "Máquina no encontrada"}
-                                </h4>
-                                {machine?.codigo_maquina && (
-                                  <p className="text-xs text-slate-500 font-mono">{machine.codigo_maquina}</p>
-                                )}
-                                <Badge className={`mt-2 ${
-                                  ems.nivel_competencia === "Experto" ? "bg-purple-600" :
-                                  ems.nivel_competencia === "Avanzado" ? "bg-blue-600" :
-                                  ems.nivel_competencia === "Intermedio" ? "bg-green-600" :
-                                  "bg-slate-600"
-                                }`}>
-                                  {ems.nivel_competencia || "Nivel no definido"}
-                                </Badge>
-                                {ems.certificado && (
-                                  <Badge className="bg-green-100 text-green-800 ml-2">Certificado</Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {ems.experiencia_meses && (
-                            <p className="text-xs text-slate-500 mt-2">
-                              Experiencia: {ems.experiencia_meses} meses
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </TabsContent>
-
             <TabsContent value="skills" className="space-y-4 mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-lg text-slate-900">
@@ -590,7 +500,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {employeeSkillsList.map((es) => {
-                    const skill = (skills || []).find(s => s.id === es.skill_id);
+                    const skill = (skills || []).find(s => s.id === es.skill_id); // Added optional chaining for skills
                     return (
                       <Card key={es.id}>
                         <CardContent className="p-4">
@@ -716,64 +626,34 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
             </TabsContent>
 
             <TabsContent value="absences" className="space-y-4 mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg text-slate-900">
-                  Historial de Ausencias ({employeeAbsences.length})
-                </h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => refetchAbsences()}
-                >
-                  🔄 Recargar
-                </Button>
-              </div>
+              <h3 className="font-semibold text-lg text-slate-900">
+                Historial de Ausencias ({employeeAbsences.length})
+              </h3>
 
               {employeeAbsences.length === 0 ? (
                 <Card className="bg-slate-50">
                   <CardContent className="p-8 text-center">
                     <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-2" />
                     <p className="text-slate-500">No hay ausencias registradas</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-3"
-                      onClick={() => refetchAbsences()}
-                    >
-                      Verificar de nuevo
-                    </Button>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {employeeAbsences.map((absence) => (
+                  {employeeAbsences
+                    .sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio))
+                    .map((absence) => (
                       <Card key={absence.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline">{absence.tipo || absence.motivo}</Badge>
-                                {absence.estado_aprobacion && (
-                                  <Badge className={
-                                    absence.estado_aprobacion === "Aprobada" ? "bg-green-100 text-green-800" :
-                                    absence.estado_aprobacion === "Rechazada" ? "bg-red-100 text-red-800" :
-                                    absence.estado_aprobacion === "Pendiente" ? "bg-yellow-100 text-yellow-800" :
-                                    "bg-slate-100 text-slate-800"
-                                  }>
-                                    {absence.estado_aprobacion}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium mt-2">
+                            <div>
+                              <Badge>{absence.tipo || absence.motivo}</Badge>
+                              <p className="text-sm mt-2">
                                 {format(new Date(absence.fecha_inicio), "dd/MM/yyyy", { locale: es })}
                                 {" → "}
                                 {absence.fecha_fin ? format(new Date(absence.fecha_fin), "dd/MM/yyyy", { locale: es }) : "Indefinida"}
                               </p>
                               {absence.motivo && (
                                 <p className="text-xs text-slate-600 mt-1">{absence.motivo}</p>
-                              )}
-                              {absence.notas && (
-                                <p className="text-xs text-slate-500 mt-1 italic">{absence.notas}</p>
                               )}
                             </div>
                             <Badge className={absence.remunerada ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
