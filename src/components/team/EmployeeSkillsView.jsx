@@ -124,10 +124,13 @@ export default function EmployeeSkillsView() {
             return base44.entities.EmployeeMasterDatabase.update(employeeId, data);
         },
         onSuccess: () => {
-            toast.success("Perfil actualizado");
+            toast.success("Perfil actualizado. Cambios aplicados en todos los módulos.");
             queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+            queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
             queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
             queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
+            queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
             setEditingState({});
         },
         onError: () => toast.error("Error al actualizar")

@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase } from "lucide-react";
+import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import SkillManagement from "../components/skillmatrix/SkillManagement";
 import EmployeeSkillsMatrix from "../components/skillmatrix/EmployeeSkillsMatrix";
 import ProcessSkillRequirements from "../components/skillmatrix/ProcessSkillRequirements";
@@ -57,6 +59,15 @@ export default function SkillMatrixPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Link to={createPageUrl("Dashboard")}>
+            <Button variant="ghost" className="mb-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Button>
+          </Link>
+        </div>
+        
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Award className="w-8 h-8 text-blue-600" />

@@ -203,9 +203,12 @@ export default function MachineSkillsView() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+            queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
             queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
             queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
-            toast.success("Habilidad actualizada correctamente");
+            queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
+            toast.success("Habilidad actualizada. Cambios aplicados en todos los módulos.");
         },
         onError: (err) => {
             toast.error(err.message || "Error al actualizar");

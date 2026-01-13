@@ -42,9 +42,9 @@ export default function IdealAssignmentView() {
   });
 
   const { data: employees = EMPTY_ARRAY, isLoading: loadingEmployees } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['employeesMaster'],
     queryFn: async () => {
-        return base44.entities.EmployeeMasterDatabase.list('nombre');
+        return base44.entities.EmployeeMasterDatabase.list('nombre', 1000);
     },
   });
 
@@ -451,10 +451,13 @@ export default function IdealAssignmentView() {
       }
     },
     onSuccess: () => {
-      toast.success("Asignaciones guardadas exitosamente");
+      toast.success("Asignaciones guardadas. Cambios aplicados en todos los módulos.");
       queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
     },
     onError: (err) => {
       toast.error(err.message || "Error al guardar asignaciones");
