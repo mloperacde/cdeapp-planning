@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   User, Briefcase, Clock, KeyRound, Award, Shield,
-  Flame, FileText, ArrowLeft, Edit, Calendar, TrendingUp, Save, X, Filter, RefreshCw
+  Flame, FileText, ArrowLeft, Edit, Calendar, TrendingUp, Save
 } from "lucide-react";
 import { format, differenceInYears, differenceInMonths } from "date-fns";
 import { es } from "date-fns/locale";
@@ -214,10 +214,6 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleForceRefresh} variant="outline" size="sm">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Recargar
-              </Button>
               <Button onClick={onEdit} variant="outline">
                 <Edit className="w-4 h-4 mr-2" />
                 Editar

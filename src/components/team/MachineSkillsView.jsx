@@ -19,17 +19,15 @@ export default function MachineSkillsView() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedTeam, setSelectedTeam] = useState("all");
 
-    // Fetch Data with forced refresh
-    const { data: employees = [], isLoading: loadingEmployees, refetch: refetchEmployees } = useQuery({
+    // Fetch Data
+    const { data: employees = [] } = useQuery({
         queryKey: ['employeesMaster'],
         queryFn: async () => {
             return base44.entities.EmployeeMasterDatabase.list('nombre', 1000);
         },
-        staleTime: 0,
-        gcTime: 0
     });
 
-    const { data: machines = [], isLoading: loadingMachines, refetch: refetchMachines } = useQuery({
+    const { data: machines = [] } = useQuery({
         queryKey: ['machines'],
         queryFn: async () => {
             const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
@@ -40,8 +38,6 @@ export default function MachineSkillsView() {
                 orden: m.orden_visualizacion || 999
             })).sort((a, b) => a.orden - b.orden);
         },
-        staleTime: 0,
-        gcTime: 0
     });
 
     const { data: teams = [] } = useQuery({
@@ -49,11 +45,9 @@ export default function MachineSkillsView() {
         queryFn: () => base44.entities.TeamConfig.list(),
     });
 
-    const { data: employeeSkills = [], isLoading: loadingSkills, refetch: refetchSkills } = useQuery({
+    const { data: employeeSkills = [] } = useQuery({
         queryKey: ['employeeSkills'],
         queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
-        staleTime: 0,
-        gcTime: 0
     });
 
     // Helper to get employees for a machine grouped by role and ordered by preference
@@ -239,17 +233,6 @@ export default function MachineSkillsView() {
         return machines.filter(m => m.nombre.toLowerCase().includes(lower) || m.codigo?.toLowerCase().includes(lower));
     }, [machines, searchTerm]);
 
-    const handleForceRefresh = async () => {
-        await Promise.all([
-            refetchEmployees(),
-            refetchMachines(),
-            refetchSkills()
-        ]);
-        toast.success("Datos recargados");
-    };
-
-    const isLoading = loadingEmployees || loadingMachines || loadingSkills;
-
     return (
         <div className="space-y-4 h-full flex flex-col">
             <Card className="bg-slate-50 shrink-0">
@@ -280,15 +263,6 @@ export default function MachineSkillsView() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button
-                        variant="outline"
-                        onClick={handleForceRefresh}
-                        disabled={isLoading}
-                        className="bg-blue-50 hover:bg-blue-100"
-                    >
-                        <Filter className="w-4 h-4 mr-2" />
-                        {isLoading ? "Recargando..." : "Recargar Datos"}
-                    </Button>
                 </CardContent>
             </Card>
 

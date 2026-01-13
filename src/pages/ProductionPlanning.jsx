@@ -36,24 +36,11 @@ export default function ProductionPlanningPage() {
   const [selectedStatus, setSelectedStatus] = useState("all");
 
   // Data Fetching
-  const { data: rawMachines = [], isLoading: loadingMachines, refetch: refetchMachines } = useQuery({
+  const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
-      return data.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
-    },
-    staleTime: 0,
-    gcTime: 0
+    queryFn: () => base44.entities.Machine.list('orden'),
+    staleTime: 5 * 60 * 1000,
   });
-
-  const machines = useMemo(() => {
-    return rawMachines.map(m => ({
-      id: m.id,
-      nombre: m.nombre || '',
-      codigo: m.codigo_maquina || '',
-      orden: m.orden_visualizacion || 999
-    }));
-  }, [rawMachines]);
 
   const { data: workOrders = [] } = useQuery({
     queryKey: ['workOrders'],
@@ -158,19 +145,6 @@ export default function ProductionPlanningPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            type="button"
-            variant="outline" 
-            onClick={async () => {
-              await refetchMachines();
-              queryClient.invalidateQueries({ queryKey: ['workOrders'] });
-              toast.success("Datos recargados");
-            }}
-            disabled={loadingMachines}
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            {loadingMachines ? "Recargando..." : "Recargar"}
-          </Button>
           <WorkOrderImporter 
             machines={machines} 
             processes={processes} 
@@ -205,13 +179,13 @@ export default function ProductionPlanningPage() {
           </div>
 
           <div className="space-y-2 min-w-[150px]">
-            <Label>Máquina ({machines.length})</Label>
+            <Label>Máquina</Label>
             <Select value={selectedMachine} onValueChange={setSelectedMachine}>
               <SelectTrigger>
                 <SelectValue placeholder="Todas las máquinas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas ({machines.length})</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {machines.map(m => (
                   <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
                 ))}
