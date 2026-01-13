@@ -17,13 +17,13 @@ export default function TestMigrationPage() {
     
     try {
       toast.info("Ejecutando migración de habilidades de máquinas...");
-      const response = await base44.functions.invoke('migrateLegacyMachineSkills', {});
+      const { data: response } = await base44.functions.invoke('migrateLegacyMachineSkills', {});
       
-      if (response.data.success) {
-        setResult(response.data);
+      if (response.success) {
+        setResult(response);
         toast.success("Migración completada exitosamente");
       } else {
-        setResult({ success: false, error: response.data.error });
+        setResult({ success: false, error: response.error });
         toast.error("Error en la migración");
       }
     } catch (error) {
