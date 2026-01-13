@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,51 +30,83 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryKey: ['employeesMaster'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(undefined, 1000),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: lockerAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: committeeMembers } = useQuery({
     queryKey: ['committeeMembers'],
     queryFn: () => base44.entities.CommitteeMember.list(),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: emergencyMembers } = useQuery({
     queryKey: ['emergencyTeamMembers'],
     queryFn: () => base44.entities.EmergencyTeamMember.list(),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: employeeSkills } = useQuery({
     queryKey: ['employeeSkills'],
     queryFn: () => base44.entities.EmployeeSkill.list(),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: skills } = useQuery({
     queryKey: ['skills'],
     queryFn: () => base44.entities.Skill.list(),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: absences } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list(),
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
+  });
+
+  const { data: employeeMachineSkills } = useQuery({
+    queryKey: ['employeeMachineSkills'],
+    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+    initialData: [],
+    staleTime: 0,
+    gcTime: 0
+  });
+
+  const { data: machines } = useQuery({
+    queryKey: ['machinesMaster'],
+    queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
+    initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: trainingRecords } = useQuery({
     queryKey: ['employeeTraining'],
     queryFn: () => base44.entities.EmployeeTraining.list(),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   // Added optional chaining or default empty arrays for robustness
@@ -84,7 +115,10 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const emergency = (emergencyMembers || []).filter(em => em.employee_id === employee.id && em.activo);
   const employeeSkillsList = (employeeSkills || []).filter(es => es.employee_id === employee.id);
   const employeeAbsences = (absences || []).filter(a => a.employee_id === employee.id);
-  const employeeTraining = (trainingRecords || []).filter(tr => tr.employee_id === employee.id); // Also apply here for consistency
+  const employeeTraining = (trainingRecords || []).filter(tr => tr.employee_id === employee.id);
+  const employeeMachines = (employeeMachineSkills || [])
+    .filter(ems => ems.employee_id === employee.id)
+    .sort((a, b) => (a.orden_preferencia || 99) - (b.orden_preferencia || 99));
 
   // Changed to React.useEffect as per outline
   React.useEffect(() => {
@@ -194,7 +228,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
 
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="general">
                 <User className="w-4 h-4 mr-2" />
                 General
@@ -206,6 +240,10 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
               <TabsTrigger value="locker">
                 <KeyRound className="w-4 h-4 mr-2" />
                 Taquilla
+              </TabsTrigger>
+              <TabsTrigger value="machines">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Máquinas
               </TabsTrigger>
               <TabsTrigger value="skills">
                 <Award className="w-4 h-4 mr-2" />
@@ -481,6 +519,70 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="machines" className="space-y-4 mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg text-slate-900">
+                  Máquinas Asignadas ({employeeMachines.length})
+                </h3>
+              </div>
+
+              {employeeMachines.length === 0 ? (
+                <Card className="bg-slate-50">
+                  <CardContent className="p-8 text-center">
+                    <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                    <p className="text-slate-500">No hay máquinas asignadas</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {employeeMachines.map((ems) => {
+                    const machine = (machines || []).find(m => m.id === ems.machine_id);
+                    return (
+                      <Card key={ems.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Badge className="bg-blue-600 text-white px-3 py-1">
+                                #{ems.orden_preferencia}
+                              </Badge>
+                              <div>
+                                <h4 className="font-semibold text-slate-900">
+                                  {machine?.nombre || "Máquina no encontrada"}
+                                </h4>
+                                {machine?.codigo_maquina && (
+                                  <p className="text-xs text-slate-500 font-mono">{machine.codigo_maquina}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {ems.nivel_competencia && (
+                                <Badge className={`${
+                                  ems.nivel_competencia === "Experto" ? "bg-purple-600" :
+                                  ems.nivel_competencia === "Avanzado" ? "bg-blue-600" :
+                                  ems.nivel_competencia === "Intermedio" ? "bg-green-600" :
+                                  "bg-slate-600"
+                                }`}>
+                                  {ems.nivel_competencia}
+                                </Badge>
+                              )}
+                              {ems.certificado && (
+                                <Badge className="bg-green-100 text-green-800">Certificado</Badge>
+                              )}
+                            </div>
+                          </div>
+                          {ems.experiencia_meses > 0 && (
+                            <p className="text-xs text-slate-500 mt-2">
+                              Experiencia: {ems.experiencia_meses} meses
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="skills" className="space-y-4 mt-6">

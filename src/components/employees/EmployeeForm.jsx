@@ -102,11 +102,23 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
     if (employee) {
-      setFormData(employee);
+      const loadedData = { ...employee };
+      
+      // Cargar máquinas desde EmployeeMachineSkill
+      if (employee.id) {
+        const skills = employeeMachineSkills.filter(s => s.employee_id === employee.id);
+        skills.forEach(skill => {
+          if (skill.orden_preferencia >= 1 && skill.orden_preferencia <= 10) {
+            loadedData[`maquina_${skill.orden_preferencia}`] = skill.machine_id;
+          }
+        });
+      }
+      
+      setFormData(loadedData);
     } else {
       setFormData(initialNewEmployeeFormData);
     }
-  }, [employee]);
+  }, [employee, employeeMachineSkills]);
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
@@ -124,6 +136,24 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
     initialData: [],
+    staleTime: 0,
+    gcTime: 0
+  });
+
+  const { data: employeeMachineSkills = [] } = useQuery({
+    queryKey: ['employeeMachineSkills'],
+    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+    initialData: [],
+    staleTime: 0,
+    gcTime: 0
+  });
+
+  const { data: masterMachines = [] } = useQuery({
+    queryKey: ['machinesMaster'],
+    queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
+    initialData: [],
+    staleTime: 0,
+    gcTime: 0
   });
 
   const edad = useMemo(() => {
@@ -216,15 +246,54 @@ export default function EmployeeForm({ employee, machines, onClose }) {
         finalData.equipo = "";
       }
       
+      let savedEmployee;
       if (employee?.id) {
-        return base44.entities.Employee.update(employee.id, finalData);
+        savedEmployee = await base44.entities.EmployeeMasterDatabase.update(employee.id, finalData);
+      } else {
+        savedEmployee = await base44.entities.EmployeeMasterDatabase.create(finalData);
       }
-      return base44.entities.Employee.create(finalData);
+
+      // Sincronizar máquinas en EmployeeMachineSkill
+      const employeeId = savedEmployee?.id || employee?.id;
+      if (employeeId) {
+        const currentSkills = employeeMachineSkills.filter(s => s.employee_id === employeeId);
+        
+        for (let i = 1; i <= 10; i++) {
+          const machineId = data[`maquina_${i}`];
+          const existingSkill = currentSkills.find(s => s.orden_preferencia === i);
+          
+          if (machineId && !existingSkill) {
+            // Crear nuevo registro
+            await base44.entities.EmployeeMachineSkill.create({
+              employee_id: employeeId,
+              machine_id: machineId,
+              orden_preferencia: i,
+              nivel_competencia: 'Intermedio'
+            });
+          } else if (machineId && existingSkill && existingSkill.machine_id !== machineId) {
+            // Actualizar existente
+            await base44.entities.EmployeeMachineSkill.update(existingSkill.id, {
+              machine_id: machineId
+            });
+          } else if (!machineId && existingSkill) {
+            // Eliminar registro
+            await base44.entities.EmployeeMachineSkill.delete(existingSkill.id);
+          }
+        }
+      }
+      
+      return savedEmployee;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success("Empleado guardado correctamente");
       onClose();
     },
+    onError: (error) => {
+      toast.error(`Error al guardar: ${error.message}`);
+    }
   });
 
   const handleSubmit = (e) => {
@@ -862,12 +931,12 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                             <SelectValue placeholder="Sin asignar" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value={null}>Sin asignar</SelectItem>
-                            {allMachines.filter(m => m.estado === "Disponible").map((machine) => (
-                              <SelectItem key={machine.id} value={machine.id}>
-                                {machine.nombre} ({machine.codigo})
-                              </SelectItem>
-                            ))}
+                           <SelectItem value={null}>Sin asignar</SelectItem>
+                           {masterMachines.map((machine) => (
+                             <SelectItem key={machine.id} value={machine.id}>
+                               {machine.nombre} ({machine.codigo_maquina})
+                             </SelectItem>
+                           ))}
                           </SelectContent>
                         </Select>
                       </div>
