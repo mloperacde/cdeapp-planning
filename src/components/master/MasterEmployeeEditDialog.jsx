@@ -1034,8 +1034,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                    <div key={num} className="space-y-2">
                      <Label>Máquina Prioridad {num}</Label>
                      <Select
-                       value={currentValue || "none"}
-                       onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? null : value })}
+                       value={currentValue === "" || currentValue === null || currentValue === undefined ? "none" : currentValue}
+                       onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? "" : value })}
                      >
                        <SelectTrigger>
                          <SelectValue placeholder="Sin asignar" />

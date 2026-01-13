@@ -28,8 +28,8 @@ export default function EmployeeSkillsMatrix() {
   });
 
   const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryKey: ['employeesMaster'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
     initialData: [],
   });
 
