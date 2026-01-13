@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -69,30 +70,11 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
     initialData: [],
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const { data: trainingRecords } = useQuery({
     queryKey: ['employeeTraining'],
     queryFn: () => base44.entities.EmployeeTraining.list(),
-    initialData: [],
-  });
-
-  const { data: employeeMachineSkills } = useQuery({
-    queryKey: ['employeeMachineSkills'],
-    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
-    initialData: [],
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-  const { data: machinesData } = useQuery({
-    queryKey: ['machinesData'],
-    queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      return data;
-    },
     initialData: [],
   });
 
@@ -102,10 +84,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const emergency = (emergencyMembers || []).filter(em => em.employee_id === employee.id && em.activo);
   const employeeSkillsList = (employeeSkills || []).filter(es => es.employee_id === employee.id);
   const employeeAbsences = (absences || []).filter(a => a.employee_id === employee.id);
-  const employeeTraining = (trainingRecords || []).filter(tr => tr.employee_id === employee.id);
-  const employeeMachines = (employeeMachineSkills || [])
-    .filter(s => s.employee_id === employee.id)
-    .sort((a, b) => (a.orden_preferencia || 99) - (b.orden_preferencia || 99));
+  const employeeTraining = (trainingRecords || []).filter(tr => tr.employee_id === employee.id); // Also apply here for consistency
 
   // Changed to React.useEffect as per outline
   React.useEffect(() => {
@@ -215,7 +194,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
 
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="general">
                 <User className="w-4 h-4 mr-2" />
                 General
@@ -223,10 +202,6 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
               <TabsTrigger value="rrhh">
                 <Briefcase className="w-4 h-4 mr-2" />
                 RRHH
-              </TabsTrigger>
-              <TabsTrigger value="machines">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Máquinas
               </TabsTrigger>
               <TabsTrigger value="locker">
                 <KeyRound className="w-4 h-4 mr-2" />
@@ -412,67 +387,6 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
                   <div className="bg-slate-50 p-4 rounded">
                     <p className="text-sm">{employee.evaluacion_responsable}</p>
                   </div>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="machines" className="space-y-4 mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg text-slate-900">
-                  Máquinas Asignadas ({employeeMachines.length})
-                </h3>
-                <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] })} variant="outline" size="sm">
-                  Recargar
-                </Button>
-              </div>
-
-              {employeeMachines.length === 0 ? (
-                <Card className="bg-slate-50">
-                  <CardContent className="p-8 text-center">
-                    <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                    <p className="text-slate-500">No hay máquinas asignadas</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {employeeMachines.map((skill) => {
-                    const machine = machinesData.find(m => m.id === skill.machine_id);
-                    return (
-                      <Card key={skill.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Badge className="bg-blue-600">#{skill.orden_preferencia}</Badge>
-                              <div>
-                                <h4 className="font-semibold text-slate-900">{machine?.nombre || 'Máquina desconocida'}</h4>
-                                <p className="text-xs text-slate-500">{machine?.codigo_maquina || '-'}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {skill.nivel_competencia && (
-                                <Badge className={`${
-                                  skill.nivel_competencia === "Experto" ? "bg-purple-600" :
-                                  skill.nivel_competencia === "Avanzado" ? "bg-blue-600" :
-                                  skill.nivel_competencia === "Intermedio" ? "bg-green-600" :
-                                  "bg-slate-600"
-                                }`}>
-                                  {skill.nivel_competencia}
-                                </Badge>
-                              )}
-                              {skill.certificado && (
-                                <Badge className="bg-green-100 text-green-800">Certificado</Badge>
-                              )}
-                            </div>
-                          </div>
-                          {skill.experiencia_meses && (
-                            <p className="text-xs text-slate-500 mt-2">
-                              Experiencia: {skill.experiencia_meses} meses
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
                 </div>
               )}
             </TabsContent>

@@ -124,14 +124,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list(),
     initialData: [],
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-  const { data: employeeMachineSkills } = useQuery({
-    queryKey: ['employeeMachineSkills'],
-    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
-    initialData: [],
   });
 
   const edad = useMemo(() => {
@@ -224,46 +216,13 @@ export default function EmployeeForm({ employee, machines, onClose }) {
         finalData.equipo = "";
       }
       
-      let savedEmployee;
       if (employee?.id) {
-        savedEmployee = await base44.entities.EmployeeMasterDatabase.update(employee.id, finalData);
-        
-        // Sincronizar máquinas con EmployeeMachineSkill
-        const currentSkills = employeeMachineSkills.filter(s => s.employee_id === employee.id);
-        
-        for (let i = 1; i <= 10; i++) {
-          const newMachine = data[`maquina_${i}`];
-          const existingSkill = currentSkills.find(s => s.orden_preferencia === i);
-          
-          if (newMachine && !existingSkill) {
-            // Crear nuevo skill
-            await base44.entities.EmployeeMachineSkill.create({
-              employee_id: employee.id,
-              machine_id: newMachine,
-              orden_preferencia: i,
-              nivel_competencia: 'Intermedio'
-            });
-          } else if (newMachine && existingSkill && existingSkill.machine_id !== newMachine) {
-            // Actualizar skill existente
-            await base44.entities.EmployeeMachineSkill.update(existingSkill.id, {
-              machine_id: newMachine
-            });
-          } else if (!newMachine && existingSkill) {
-            // Eliminar skill
-            await base44.entities.EmployeeMachineSkill.delete(existingSkill.id);
-          }
-        }
-      } else {
-        savedEmployee = await base44.entities.EmployeeMasterDatabase.create(finalData);
+        return base44.entities.Employee.update(employee.id, finalData);
       }
-      
-      return savedEmployee;
+      return base44.entities.Employee.create(finalData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
-      queryClient.invalidateQueries({ queryKey: ['absences'] });
       onClose();
     },
   });
@@ -892,35 +851,27 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {machineFields.map((num) => {
-                    // Get machine from EmployeeMachineSkill or legacy field
-                    const skill = employee?.id ? employeeMachineSkills.find(s => 
-                    s.employee_id === employee.id && s.orden_preferencia === num
-                    ) : null;
-                    const currentMachine = formData[`maquina_${num}`] || skill?.machine_id || "";
-
-                    return (
-                    <div key={num} className="space-y-2">
-                    <Label htmlFor={`maquina_${num}`}>Máquina {num}</Label>
-                    <Select
-                    value={currentMachine}
-                    onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value })}
-                    >
-                    <SelectTrigger>
-                    <SelectValue placeholder="Sin asignar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value={null}>Sin asignar</SelectItem>
-                    {allMachines.map((machine) => (
-                    <SelectItem key={machine.id} value={machine.id}>
-                    {machine.nombre} ({machine.codigo})
-                    </SelectItem>
+                    {machineFields.map((num) => (
+                      <div key={num} className="space-y-2">
+                        <Label htmlFor={`maquina_${num}`}>Máquina {num}</Label>
+                        <Select
+                          value={formData[`maquina_${num}`] || ""}
+                          onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sin asignar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={null}>Sin asignar</SelectItem>
+                            {allMachines.filter(m => m.estado === "Disponible").map((machine) => (
+                              <SelectItem key={machine.id} value={machine.id}>
+                                {machine.nombre} ({machine.codigo})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     ))}
-                    </SelectContent>
-                    </Select>
-                    </div>
-                    );
-                    })}
                   </div>
                 </>
               )}
