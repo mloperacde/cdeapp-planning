@@ -59,7 +59,17 @@ export default function ProcessConfigurationPage() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
+      return data.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+        codigo: m.codigo_maquina || m.codigo,
+        tipo: m.tipo,
+        ubicacion: m.ubicacion,
+        orden: m.orden_visualizacion || 999
+      })).sort((a, b) => a.orden - b.orden);
+    },
     staleTime: 5 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
@@ -298,7 +308,7 @@ export default function ProcessConfigurationPage() {
 
     // Update orden for all machines
     const updates = items.map((item, index) => 
-      base44.entities.Machine.update(item.id, { orden: index })
+      base44.entities.MachineMasterDatabase.update(item.id, { orden_visualizacion: index })
     );
 
     try {
@@ -418,7 +428,7 @@ export default function ProcessConfigurationPage() {
   return (
     <div className="space-y-6 p-6 md:p-8 max-w-7xl mx-auto">
       <div className="mb-6">
-        <Link to={createPageUrl("Machines")}>
+        <Link to={createPageUrl("MachineManagement")}>
           <Button variant="ghost" className="mb-2">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver a Máquinas

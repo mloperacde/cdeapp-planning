@@ -247,21 +247,11 @@ export default function LockerManagementPage() {
           await base44.entities.LockerAssignment.create(dataToSave);
         }
 
-        // CRÍTICO: Sincronizar con Employee
-        await base44.entities.Employee.update(employee.id, {
+        // Sincronizar con EmployeeMasterDatabase
+        await base44.entities.EmployeeMasterDatabase.update(employeeId, {
           taquilla_vestuario: vestuario,
           taquilla_numero: numeroTaquilla
         });
-
-        // CRÍTICO: Sincronizar con EmployeeMasterDatabase
-        const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
-        const masterEmployee = masterEmployees.find(me => me.employee_id === employee.id);
-        if (masterEmployee) {
-          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
-            taquilla_vestuario: vestuario,
-            taquilla_numero: numeroTaquilla
-          });
-        }
       });
 
       await Promise.all(promises);
@@ -362,24 +352,11 @@ export default function LockerManagementPage() {
           await base44.entities.LockerAssignment.create(updatedData);
         }
 
-        // CRÍTICO: Sincronizar con Employee
-        const employee = employees.find(e => e.id === employeeId);
-        if (employee) {
-          await base44.entities.Employee.update(employeeId, {
-            taquilla_vestuario: data.requiere_taquilla ? finalVestuario : "",
-            taquilla_numero: data.requiere_taquilla ? finalNumero : ""
-          });
-        }
-
-        // CRÍTICO: Sincronizar con EmployeeMasterDatabase  
-        const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
-        const masterEmployee = masterEmployees.find(me => me.employee_id === employeeId);
-        if (masterEmployee) {
-          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
-            taquilla_vestuario: data.requiere_taquilla ? finalVestuario : "",
-            taquilla_numero: data.requiere_taquilla ? finalNumero : ""
-          });
-        }
+        // Sincronizar con EmployeeMasterDatabase
+        await base44.entities.EmployeeMasterDatabase.update(employeeId, {
+          taquilla_vestuario: data.requiere_taquilla ? finalVestuario : "",
+          taquilla_numero: data.requiere_taquilla ? finalNumero : ""
+        });
       });
 
       return Promise.all(promises);
