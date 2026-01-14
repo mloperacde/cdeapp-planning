@@ -41,7 +41,7 @@ export const createAdvancedNotification = async ({
  */
 export const notifyAbsenceDecisionAdvanced = async (absenceId, employeeId, approved, comentario, absenceType) => {
   try {
-    const employees = await base44.entities.Employee.list();
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
     const employee = employees.find(e => e.id === employeeId);
     
     if (!employee) return;
@@ -96,7 +96,7 @@ export const notifyContractExpiration = async (employeeId, daysUntilExpiration, 
       titulo: "⚠️ Vencimiento de Contrato",
       mensaje: `Tu contrato vence en ${daysUntilExpiration} días (${expirationDate}). Por favor, contacta con RRHH.`,
       prioridad,
-      referenciaTipo: "Employee",
+      referenciaTipo: "EmployeeMasterDatabase",
       referenciaId: employeeId,
       accionUrl: "/employee-profile",
       datosAdicionales: {
@@ -115,11 +115,10 @@ export const notifyContractExpiration = async (employeeId, daysUntilExpiration, 
  */
 export const notifyEmployeeMilestone = async (employeeId, employeeName, years) => {
   try {
-    const employees = await base44.entities.Employee.list();
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
     const supervisors = employees.filter(e => 
       e.puesto?.toLowerCase().includes("supervisor") || 
-      e.puesto?.toLowerCase().includes("gerente") ||
-      e.role === "admin"
+      e.puesto?.toLowerCase().includes("gerente")
     );
 
     // Notificar al empleado
@@ -129,7 +128,7 @@ export const notifyEmployeeMilestone = async (employeeId, employeeName, years) =
       titulo: "🎉 ¡Felicidades por tu Aniversario!",
       mensaje: `¡Felicidades ${employeeName}! Hoy cumples ${years} años trabajando con nosotros. ¡Gracias por tu dedicación!`,
       prioridad: "media",
-      referenciaTipo: "Employee",
+      referenciaTipo: "EmployeeMasterDatabase",
       referenciaId: employeeId,
       datosAdicionales: {
         milestone_years: years,
@@ -145,7 +144,7 @@ export const notifyEmployeeMilestone = async (employeeId, employeeName, years) =
         titulo: `🎊 Aniversario Laboral - ${employeeName}`,
         mensaje: `${employeeName} cumple hoy ${years} años en la empresa.`,
         prioridad: "baja",
-        referenciaTipo: "Employee",
+        referenciaTipo: "EmployeeMasterDatabase",
         referenciaId: employeeId,
         datosAdicionales: {
           employee_name: employeeName,
@@ -260,7 +259,7 @@ export const notifyUrgentMaintenance = async (supervisorIds, machineName, mainte
 export const notifyAbsenceRequestRealtime = async (absenceId, employeeName, absenceType, startDate) => {
   try {
     // Obtener supervisores y admins
-    const employees = await base44.entities.Employee.list();
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
     const supervisors = employees.filter(e => 
       e.puesto?.toLowerCase().includes("supervisor") ||
       e.puesto?.toLowerCase().includes("jefe") ||
@@ -296,7 +295,7 @@ export const notifyAbsenceRequestRealtime = async (absenceId, employeeName, abse
  */
 export const checkAndNotifyEvents = async () => {
   try {
-    const employees = await base44.entities.Employee.list();
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
     const today = new Date();
     
     // Verificar contratos próximos a vencer
@@ -338,9 +337,9 @@ export const checkAndNotifyEvents = async () => {
 export const notifyAttendanceDiscrepancy = async (incidentId, employeeName, issueType, severity) => {
   try {
     // Notify HR admins
-    const employees = await base44.entities.Employee.list();
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
     const hrAdmins = employees.filter(e => 
-      e.departamento === 'RRHH' || e.role === 'admin'
+      e.departamento === 'RRHH'
     );
 
     for (const admin of hrAdmins) {
