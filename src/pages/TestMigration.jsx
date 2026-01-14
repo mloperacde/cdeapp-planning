@@ -11,6 +11,8 @@ export default function TestMigrationPage() {
   const [result, setResult] = useState(null);
   const { goBack } = useNavigationHistory();
 
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  
   const runMigration = async () => {
     setMigrating(true);
     setResult(null);
@@ -28,6 +30,10 @@ export default function TestMigrationPage() {
       let updated = 0;
       let skipped = 0;
       
+      // Preparar operaciones en lote
+      const toCreate = [];
+      const toUpdate = [];
+      
       for (const emp of employees) {
         // Procesar maquina_1 a maquina_10
         for (let i = 1; i <= 10; i++) {
@@ -42,23 +48,45 @@ export default function TestMigrationPage() {
           if (existing) {
             // Actualizar si cambió el orden
             if (existing.orden_preferencia !== i) {
-              await base44.entities.EmployeeMachineSkill.update(existing.id, {
-                orden_preferencia: i
-              });
-              updated++;
+              toUpdate.push({ id: existing.id, orden_preferencia: i });
             } else {
               skipped++;
             }
           } else {
             // Crear nuevo
-            await base44.entities.EmployeeMachineSkill.create({
+            toCreate.push({
               employee_id: emp.id,
               machine_id: machineId,
               orden_preferencia: i,
               nivel_habilidad: "Intermedio"
             });
-            created++;
           }
+        }
+      }
+      
+      // Ejecutar actualizaciones en lotes de 10 con delays
+      for (let i = 0; i < toUpdate.length; i += 10) {
+        const batch = toUpdate.slice(i, i + 10);
+        await Promise.all(
+          batch.map(item => 
+            base44.entities.EmployeeMachineSkill.update(item.id, { orden_preferencia: item.orden_preferencia })
+          )
+        );
+        updated += batch.length;
+        if (i + 10 < toUpdate.length) {
+          await delay(500); // Pausa entre lotes
+        }
+      }
+      
+      // Ejecutar creaciones en lotes de 10 con delays
+      for (let i = 0; i < toCreate.length; i += 10) {
+        const batch = toCreate.slice(i, i + 10);
+        await Promise.all(
+          batch.map(item => base44.entities.EmployeeMachineSkill.create(item))
+        );
+        created += batch.length;
+        if (i + 10 < toCreate.length) {
+          await delay(500); // Pausa entre lotes
         }
       }
       
