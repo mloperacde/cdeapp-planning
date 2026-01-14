@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +8,17 @@ import { base44 } from "@/api/base44Client";
 export default function MachineRequirements() {
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      return data.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+        codigo: m.codigo_maquina,
+        tipo: m.tipo,
+        estado: m.estado_operativo || 'Disponible',
+        orden: m.orden_visualizacion || 999
+      })).sort((a, b) => a.orden - b.orden);
+    },
     initialData: [],
   });
 
@@ -20,8 +29,8 @@ export default function MachineRequirements() {
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryKey: ['employeesMaster'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
     initialData: [],
   });
 
