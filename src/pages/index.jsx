@@ -76,7 +76,9 @@ import Timeline from "./Timeline";
 
 import WorkCalendarConfig from "./WorkCalendarConfig";
 
+import Breaks from "./Breaks";
 
+import MachinePlanning from "./MachineDailyPlanning";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -174,6 +176,9 @@ const PAGES = {
     
     WorkCalendarConfig: WorkCalendarConfig,
     
+    Breaks: Breaks,
+    
+    MachinePlanning: MachinePlanning,
 
 }
 
@@ -304,6 +309,10 @@ function PagesContent() {
                 <Route path="/Timeline" element={<Timeline />} />
                 
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
+                
+                <Route path="/Breaks" element={<Breaks />} />
+                
+                <Route path="/MachinePlanning" element={<MachinePlanning />} />
                 
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
