@@ -47,6 +47,7 @@ import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDia
 import SyncComparisonDialog from "../components/master/SyncComparisonDialog";
 import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 import AdvancedSearch from "../components/common/AdvancedSearch";
+import MachineDisplayVerification from "../components/verification/MachineDisplayVerification";
 
 // Definición completa de columnas disponibles (Moved outside component to avoid recreation)
 const ALL_COLUMNS = {
@@ -106,6 +107,7 @@ export default function MasterEmployeeDatabasePage() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
+  const [verifyEmployeeId, setVerifyEmployeeId] = useState(null);
   const { goBack } = useNavigationHistory();
 
   
@@ -606,6 +608,30 @@ export default function MasterEmployeeDatabasePage() {
                             Reorganizar Datos
                           </DropdownMenuCheckboxItem>
                           <DropdownMenuCheckboxItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              if (confirm('¿Sincronizar campos legacy maquina_X con EmployeeMachineSkill?\n\nEsto creará/actualizará los registros de habilidades.')) {
+                                setSyncing(true);
+                                base44.functions.invoke('syncLegacyMachineSkills', {})
+                                  .then(response => {
+                                    if (response.data.success) {
+                                      const { stats } = response.data;
+                                      toast.success(`✅ Migración completada:\n• Creados: ${stats.skills_created}\n• Actualizados: ${stats.skills_updated}\n• Saltados: ${stats.skills_skipped}\n• Errores: ${stats.errors}`);
+                                      queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
+                                      queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
+                                    } else {
+                                      toast.error('Error: ' + response.data.error);
+                                    }
+                                  })
+                                  .catch(err => toast.error('Error: ' + err.message))
+                                  .finally(() => setSyncing(false));
+                              }
+                            }}
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2 text-green-600" />
+                            Migrar Skills de Máquinas
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
                             onSelect={handleCleanOperationalData}
                           >
                             <Trash2 className="w-4 h-4 mr-2 text-orange-600" />
@@ -956,14 +982,22 @@ export default function MasterEmployeeDatabasePage() {
       )}
 
       {editDialogOpen && (
-        <MasterEmployeeEditDialog
-          employee={employeeToEdit}
-          open={editDialogOpen}
-          onClose={() => {
-            setEditDialogOpen(false);
-            setEmployeeToEdit(null);
-          }}
-        />
+        <>
+          <MasterEmployeeEditDialog
+            employee={employeeToEdit}
+            open={editDialogOpen}
+            onClose={() => {
+              setEditDialogOpen(false);
+              setEmployeeToEdit(null);
+              setVerifyEmployeeId(null);
+            }}
+          />
+          {employeeToEdit && (
+            <div className="fixed bottom-4 right-4 max-w-md z-50">
+              <MachineDisplayVerification employeeId={employeeToEdit.id} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
