@@ -72,8 +72,6 @@ export default function EmployeeAbsenceManager({ employee }) {
       ausencia_motivo: ausenciaData.ausencia_motivo || null,
       incluir_en_planning: disponibilidad === "Disponible"
     });
-
-    // Employee entity ha sido deprecada - todos los datos están en EmployeeMasterDatabase
   };
 
   const saveMutation = useMutation({

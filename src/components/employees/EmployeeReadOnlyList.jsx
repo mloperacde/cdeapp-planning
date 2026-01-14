@@ -20,7 +20,7 @@ export default function EmployeeReadOnlyList() {
   const [sortConfig, setSortConfig] = useState({ field: "nombre", direction: "asc" });
 
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
   });

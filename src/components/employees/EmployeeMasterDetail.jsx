@@ -63,7 +63,14 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
 
   const { data: employeeSkills } = useQuery({
     queryKey: ['employeeSkills'],
-    queryFn: () => base44.entities.EmployeeSkill.list(),
+    queryFn: async () => {
+      try {
+        return await base44.entities.EmployeeSkill.list();
+      } catch (error) {
+        console.warn('EmployeeSkill no disponible:', error);
+        return [];
+      }
+    },
     initialData: [],
     staleTime: 0,
     gcTime: 0
@@ -71,7 +78,14 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
 
   const { data: skills } = useQuery({
     queryKey: ['skills'],
-    queryFn: () => base44.entities.Skill.list(),
+    queryFn: async () => {
+      try {
+        return await base44.entities.Skill.list();
+      } catch (error) {
+        console.warn('Skill no disponible:', error);
+        return [];
+      }
+    },
     initialData: [],
     staleTime: 0,
     gcTime: 0
