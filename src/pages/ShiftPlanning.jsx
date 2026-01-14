@@ -18,8 +18,12 @@ import {
   AlertCircle,
   UserCheck,
   User as UserIcon,
-  Cog
+  Cog,
+  Search,
+  Filter,
+  History
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -29,7 +33,10 @@ import EmployeeSelect from "../components/common/EmployeeSelect";
 export default function ShiftPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState("Mañana");
+  const [selectedTeam, setSelectedTeam] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [assignments, setAssignments] = useState({});
+  const [showHistory, setShowHistory] = useState(false);
   
   const queryClient = useQueryClient();
 
@@ -44,11 +51,22 @@ export default function ShiftPlanningPage() {
   });
 
   const { data: dailyStaffing = EMPTY_ARRAY } = useQuery({
-    queryKey: ['dailyStaffing', format(selectedDate, 'yyyy-MM-dd'), selectedShift],
-    queryFn: () => base44.entities.DailyMachineStaffing.filter({
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      shift: selectedShift
-    }),
+    queryKey: ['dailyStaffing', format(selectedDate, 'yyyy-MM-dd'), selectedShift, selectedTeam],
+    queryFn: () => {
+      const filters = {
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        shift: selectedShift
+      };
+      if (selectedTeam !== "all") {
+        filters.team_key = selectedTeam;
+      }
+      return base44.entities.DailyMachineStaffing.filter(filters);
+    },
+  });
+
+  const { data: savedPlannings = EMPTY_ARRAY } = useQuery({
+    queryKey: ['savedPlanningsHistory'],
+    queryFn: () => base44.entities.DailyMachineStaffing.list('-created_date', 100),
   });
 
   // Initialize assignments from dailyStaffing
@@ -123,9 +141,14 @@ export default function ShiftPlanningPage() {
 
       for (const [machineId, data] of Object.entries(assignments)) {
         const existing = dailyStaffing.find(ds => ds.machine_id === machineId);
+        
+        // Determinar team_key basado en el filtro o encontrar del empleado
+        let teamKey = selectedTeam !== "all" ? selectedTeam : "team_1";
+        
         const payload = {
           date: dateStr,
           shift: selectedShift,
+          team_key: teamKey,
           machine_id: machineId,
           ...data,
           status: 'Confirmado'
@@ -142,7 +165,8 @@ export default function ShiftPlanningPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dailyStaffing'] });
-      toast.success("Planificación guardada correctamente");
+      queryClient.invalidateQueries({ queryKey: ['savedPlanningsHistory'] });
+      toast.success(`Planificación guardada: ${format(selectedDate, 'dd/MM/yyyy')} - ${selectedShift}`);
     },
   });
 
@@ -206,32 +230,76 @@ export default function ShiftPlanningPage() {
       });
     });
 
-    return employees.filter(e => 
-      !assignedIds.has(e.id) && 
-      e.departamento === "FABRICACION" &&
-      e.disponibilidad === "Disponible"
-    );
+    return employees.filter(e => {
+      if (assignedIds.has(e.id)) return false;
+      if (e.departamento !== "FABRICACION") return false;
+      if (e.disponibilidad !== "Disponible") return false;
+      
+      // Filtro por equipo
+      if (selectedTeam !== "all") {
+        const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+        if (e.equipo !== teamName) return false;
+      }
+      
+      // Filtro por búsqueda
+      if (searchTerm) {
+        return e.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      
+      return true;
+    });
   };
 
   const availableEmployees = getAvailableEmployees();
 
   const getEmployeeById = (id) => employees.find(e => e.id === id);
 
+  const groupedHistory = useMemo(() => {
+    const grouped = {};
+    savedPlannings.forEach(plan => {
+      const key = `${plan.date}_${plan.shift}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          date: plan.date,
+          shift: plan.shift,
+          count: 0,
+          latest: plan.created_date
+        };
+      }
+      grouped[key].count++;
+    });
+    return Object.values(grouped).sort((a, b) => 
+      new Date(b.latest) - new Date(a.latest)
+    );
+  }, [savedPlannings]);
+
   return (
     <div className="space-y-6 p-6 md:p-8 max-w-[1800px] mx-auto">
       <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader className="border-b border-slate-100">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Users className="w-6 h-6 text-blue-600" />
-                Planificación de Turnos
-              </CardTitle>
-              <p className="text-sm text-slate-500 mt-1">
-                Asigna empleados a máquinas por turno utilizando drag & drop
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Users className="w-6 h-6 text-blue-600" />
+                  Planificación de Turnos
+                </CardTitle>
+                <p className="text-sm text-slate-500 mt-1">
+                  Asigna empleados a máquinas - {format(selectedDate, "dd/MM/yyyy")} - {selectedShift} - {selectedTeam === "all" ? "Todos" : teams.find(t => t.team_key === selectedTeam)?.team_name}
+                </p>
+              </div>
+
+              <Button 
+                variant="outline"
+                onClick={() => setShowHistory(!showHistory)}
+                className="gap-2"
+              >
+                <History className="w-4 h-4" />
+                {showHistory ? "Ocultar" : "Ver"} Historial
+              </Button>
             </div>
 
+            {/* Filtros y controles */}
             <div className="flex flex-wrap items-center gap-3">
               <Popover>
                 <PopoverTrigger asChild>
@@ -261,28 +329,95 @@ export default function ShiftPlanningPage() {
                 </SelectContent>
               </Select>
 
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Seleccionar equipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los Equipos</SelectItem>
+                  {teams.map(team => (
+                    <SelectItem key={team.team_key} value={team.team_key}>
+                      {team.team_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar empleado..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
               <Button 
                 onClick={() => saveMutation.mutate()}
                 className="bg-green-600 hover:bg-green-700"
                 disabled={saveMutation.isPending}
               >
                 <Save className="w-4 h-4 mr-2" />
-                {saveMutation.isPending ? "Guardando..." : "Guardar Planificación"}
+                {saveMutation.isPending ? "Guardando..." : "Guardar"}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-6">
+          {showHistory && (
+            <Card className="mb-6 bg-slate-50 border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  Historial de Planificaciones ({groupedHistory.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {groupedHistory.map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between p-3 bg-white rounded border hover:border-blue-300 cursor-pointer"
+                      onClick={() => {
+                        setSelectedDate(new Date(item.date));
+                        setSelectedShift(item.shift);
+                        setShowHistory(false);
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <CalendarIcon className="w-4 h-4 text-blue-600" />
+                        <div>
+                          <div className="font-medium text-sm">
+                            {format(new Date(item.date), "dd/MM/yyyy", { locale: es })} - {item.shift}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {item.count} asignación{item.count > 1 ? 'es' : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="outline">{format(new Date(item.latest), "dd/MM HH:mm")}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               {/* Unassigned Pool */}
               <div className="lg:col-span-1">
                 <Card className="border-2 border-dashed border-slate-300 bg-slate-50/50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Disponibles ({availableEmployees.length})
-                    </CardTitle>
+                   <CardTitle className="text-sm flex items-center gap-2">
+                     <Users className="w-4 h-4" />
+                     Disponibles ({availableEmployees.length})
+                   </CardTitle>
+                   {searchTerm && (
+                     <p className="text-xs text-slate-500 mt-1">
+                       Buscando: "{searchTerm}"
+                     </p>
+                   )}
                   </CardHeader>
                   <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
                    <Droppable droppableId="unassigned-pool" type="EMPLOYEE">
@@ -311,7 +446,14 @@ export default function ShiftPlanningPage() {
                                  }}
                                >
                                  <div className="text-sm font-medium truncate">{emp.nombre}</div>
-                                 <div className="text-xs text-slate-500">{emp.puesto}</div>
+                                 <div className="text-xs text-slate-500 flex items-center gap-1">
+                                   {emp.equipo && (
+                                     <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                       {emp.equipo}
+                                     </Badge>
+                                   )}
+                                   {emp.puesto}
+                                 </div>
                                </div>
                              )}
                            </Draggable>
