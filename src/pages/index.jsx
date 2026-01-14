@@ -64,6 +64,8 @@ import ShiftManagement from "./ShiftManagement";
 
 import ShiftManagers from "./ShiftManagers";
 
+import ShiftPlanning from "./ShiftPlanning";
+
 import SkillMatrix from "./SkillMatrix";
 
 import SupportManagement1415 from "./SupportManagement1415";
@@ -161,6 +163,8 @@ const PAGES = {
     ShiftManagement: ShiftManagement,
     
     ShiftManagers: ShiftManagers,
+    
+    ShiftPlanning: ShiftPlanning,
     
     SkillMatrix: SkillMatrix,
     
@@ -288,6 +292,8 @@ function PagesContent() {
                 <Route path="/ShiftManagement" element={<ShiftManagement />} />
                 
                 <Route path="/ShiftManagers" element={<ShiftManagers />} />
+                
+                <Route path="/ShiftPlanning" element={<ShiftPlanning />} />
                 
                 <Route path="/SkillMatrix" element={<SkillMatrix />} />
 

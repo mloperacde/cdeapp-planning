@@ -1082,21 +1082,26 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
-                 // Obtener valor actual de EmployeeMachineSkill o legacy
-                 const skillForSlot = employeeSkills.find(s => s.orden_preferencia === num);
-                 const currentValue = formData[`maquina_${num}`] || skillForSlot?.machine_id || "";
+                 // CRITICAL: Obtener valor actual del formData (ya procesado en useEffect)
+                 const currentValue = formData[`maquina_${num}`];
+                 
+                 // Buscar la máquina seleccionada en allMachines
+                 const selectedMachine = currentValue ? allMachines.find(m => m.id === currentValue) : null;
 
-                 const selectedMachine = allMachines.find(m => m.id === currentValue);
+                 console.log(`Slot ${num}: currentValue=${currentValue}, found=${!!selectedMachine}`);
 
                  return (
                    <div key={num} className="space-y-2">
                      <Label>Máquina Prioridad {num}</Label>
                      <Select
-                       value={currentValue === "" || currentValue === null || currentValue === undefined ? "none" : currentValue}
-                       onValueChange={(value) => setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? "" : value })}
+                       value={currentValue || "none"}
+                       onValueChange={(value) => {
+                         console.log(`Changing slot ${num} to`, value);
+                         setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? null : value });
+                       }}
                      >
                        <SelectTrigger>
-                         <SelectValue>
+                         <SelectValue placeholder="Sin asignar">
                            {selectedMachine ? `${selectedMachine.nombre} (${selectedMachine.codigo})` : "Sin asignar"}
                          </SelectValue>
                        </SelectTrigger>
