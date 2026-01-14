@@ -108,8 +108,8 @@ export default function LockerAssignmentPanel({ employee }) {
         await base44.entities.LockerAssignment.create(dataToSave);
       }
 
-      // Actualizar campos en Employee
-      await base44.entities.Employee.update(employee.id, {
+      // Actualizar campos en EmployeeMasterDatabase
+      await base44.entities.EmployeeMasterDatabase.update(employee.id, {
         taquilla_vestuario: vestuario,
         taquilla_numero: numeroLimpio
       });
@@ -117,6 +117,8 @@ export default function LockerAssignmentPanel({ employee }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       toast.success("✅ Taquilla actualizada correctamente");
     },
     onError: (error) => {

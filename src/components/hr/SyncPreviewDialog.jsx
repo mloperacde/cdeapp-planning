@@ -149,7 +149,7 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
       for (const change of previewChanges) {
         try {
           if (change.type === 'create') {
-            const newEmployee = await base44.entities.Employee.create(change.data);
+            const newEmployee = await base44.entities.EmployeeMasterDatabase.create(change.data);
             
             await base44.entities.EmployeeMasterDatabase.update(change.masterId, {
               employee_id: newEmployee.id,
@@ -174,7 +174,7 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
               dataToUpdate[f.field] = f.after;
             });
 
-            await base44.entities.Employee.update(change.employeeId, dataToUpdate);
+            await base44.entities.EmployeeMasterDatabase.update(change.employeeId, dataToUpdate);
 
             await base44.entities.EmployeeMasterDatabase.update(change.masterId, {
               ultimo_sincronizado: new Date().toISOString(),
@@ -230,6 +230,7 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
 
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['syncHistory'] });
 
       toast.success(`Sincronización completada: ${successCount} exitosos, ${errorCount} errores`);
