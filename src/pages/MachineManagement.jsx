@@ -19,7 +19,11 @@ export default function MachineManagement() {
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.MachineMasterDatabase.list('nombre', 200),
+    queryFn: async () => {
+      const machines = await base44.entities.MachineMasterDatabase.list('nombre', 200);
+      console.log(`✅ Cargadas ${machines.length} máquinas desde MachineMasterDatabase`);
+      return machines;
+    },
     staleTime: 15 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
@@ -46,7 +50,7 @@ export default function MachineManagement() {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
         m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+        m.codigo_maquina?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const status = getStatus(m.id);
       const matchesDisp = !filters.disponibilidad || filters.disponibilidad === 'all' || 
@@ -170,7 +174,7 @@ export default function MachineManagement() {
               <AdvancedSearch
                 data={machines}
                 onFilterChange={setFilters}
-                searchFields={['nombre', 'codigo']}
+                searchFields={['nombre', 'codigo_maquina']}
                 filterOptions={{
                   disponibilidad: {
                     label: 'Disponibilidad',
@@ -219,7 +223,7 @@ export default function MachineManagement() {
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">{machine.nombre}</h3>
-                            <p className="text-xs text-slate-600 dark:text-slate-400">{machine.codigo}</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">{machine.codigo_maquina || machine.codigo}</p>
                           </div>
                           <div className="flex gap-1">
                             <Button
