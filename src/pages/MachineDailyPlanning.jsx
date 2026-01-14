@@ -23,6 +23,10 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useAppData } from "../components/data/DataProvider";
+import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
+import ViabilityTrafficLight from "../components/planning/ViabilityTrafficLight";
+import EmployeeAvailabilityPanel from "../components/availability/EmployeeAvailabilityPanel";
 
 export default function MachineDailyPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -86,44 +90,7 @@ export default function MachineDailyPlanningPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges, planningData, selectedDate, selectedTurno, selectedTeam]);
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
-  });
-
-  const { data: absences = [] } = useQuery({
-    queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 500),
-  });
-
-  const { data: machines = [] } = useQuery({
-    queryKey: ['machinesMaster'],
-    queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
-      return data.map(m => ({
-        id: m.id,
-        nombre: m.nombre,
-        codigo: m.codigo_maquina,
-        tipo: m.tipo,
-        orden: m.orden_visualizacion || 999
-      })).sort((a, b) => a.orden - b.orden);
-    },
-  });
-
-  const { data: processes = [] } = useQuery({
-    queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.filter({ activo: true }),
-  });
-
-  const { data: teams = [] } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-  });
+  const { user: currentUser, employees = [], absences = [], machines = [], processes = [], teams = [] } = useAppData();
 
   const { data: existingPlannings = [] } = useQuery({
     queryKey: ['dailyMachinePlannings', selectedDate, selectedTurno],
@@ -283,10 +250,6 @@ export default function MachineDailyPlanningPage() {
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <Breadcrumbs items={[
-          { label: "Planificación", url: createPageUrl("DailyPlanning") },
-          { label: "Planning de Máquinas" }
-        ]} />
 
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
@@ -393,19 +356,12 @@ export default function MachineDailyPlanningPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Panel de disponibilidad */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2">
             <EmployeeAvailabilityPanel
               employees={employees}
               absences={absences}
               selectedDate={selectedDate}
             />
-            {currentUser?.role === 'admin' && (
-              <AvailabilityDebugPanel
-                employees={employees}
-                absences={absences}
-                selectedDate={selectedDate}
-              />
-            )}
           </div>
 
           {/* Semáforo */}
