@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import ThemeToggle from '@/components/common/ThemeToggle';
 
 export default function Layout({ children, currentPageName }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -28,7 +29,6 @@ export default function Layout({ children, currentPageName }) {
     'Análisis': true,
     'Configuración': true
   });
-  const [darkMode, setDarkMode] = useState(false);
   
   const { user, isAdmin } = useAppData();
 
@@ -43,10 +43,7 @@ export default function Layout({ children, currentPageName }) {
     base44.auth.logout();
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+  // Dark mode ya no se maneja aquí - lo hace ThemeProvider
 
   // Estructura del menú organizada por categorías
   const MENU_STRUCTURE = [
@@ -104,7 +101,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className={`flex h-screen bg-slate-50 dark:bg-slate-900 w-screen overflow-hidden ${darkMode ? 'dark' : ''}`}>
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 w-screen overflow-hidden">
       {/* Overlay móvil */}
       {menuOpen && (
         <div 
@@ -160,18 +157,10 @@ export default function Layout({ children, currentPageName }) {
                 <Key className="mr-2 h-4 w-4" />
                 <span>Cambiar Contraseña</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={toggleDarkMode}>
-                {darkMode ? (
-                  <>
-                    <Sun className="mr-2 h-4 w-4" />
-                    <span>Modo Claro</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="mr-2 h-4 w-4" />
-                    <span>Modo Oscuro</span>
-                  </>
-                )}
+              <DropdownMenuItem asChild>
+                <div className="flex items-center w-full">
+                  <ThemeToggle />
+                </div>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer text-red-600" onClick={handleLogout}>

@@ -35,7 +35,6 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import AdvancedSearch from "../components/common/AdvancedSearch";
-import ThemeToggle from "../components/common/ThemeToggle";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 
 const EMPTY_ARRAY = [];
@@ -225,7 +224,7 @@ export default function EmployeesShiftManagerPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
+            {/* ThemeToggle removido - disponible en Layout */}
           </div>
         </div>
 
