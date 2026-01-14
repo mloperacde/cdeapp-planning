@@ -64,30 +64,18 @@ export default function TestMigrationPage() {
         }
       }
       
-      // Ejecutar actualizaciones en lotes de 10 con delays
-      for (let i = 0; i < toUpdate.length; i += 10) {
-        const batch = toUpdate.slice(i, i + 10);
-        await Promise.all(
-          batch.map(item => 
-            base44.entities.EmployeeMachineSkill.update(item.id, { orden_preferencia: item.orden_preferencia })
-          )
-        );
-        updated += batch.length;
-        if (i + 10 < toUpdate.length) {
-          await delay(500); // Pausa entre lotes
-        }
+      // Ejecutar actualizaciones secuencialmente con delays
+      for (const item of toUpdate) {
+        await base44.entities.EmployeeMachineSkill.update(item.id, { orden_preferencia: item.orden_preferencia });
+        updated++;
+        await delay(200); // Pausa entre cada operación
       }
       
-      // Ejecutar creaciones en lotes de 10 con delays
-      for (let i = 0; i < toCreate.length; i += 10) {
-        const batch = toCreate.slice(i, i + 10);
-        await Promise.all(
-          batch.map(item => base44.entities.EmployeeMachineSkill.create(item))
-        );
-        created += batch.length;
-        if (i + 10 < toCreate.length) {
-          await delay(500); // Pausa entre lotes
-        }
+      // Ejecutar creaciones secuencialmente con delays
+      for (const item of toCreate) {
+        await base44.entities.EmployeeMachineSkill.create(item);
+        created++;
+        await delay(200); // Pausa entre cada operación
       }
       
       const stats = {
