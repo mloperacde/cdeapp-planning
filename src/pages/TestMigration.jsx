@@ -17,16 +17,67 @@ export default function TestMigrationPage() {
     
     try {
       toast.info("Ejecutando migración de habilidades de máquinas...");
-      const { data: response } = await base44.functions.invoke('migrateLegacyMachineSkills', {});
       
-      if (response.success) {
-        setResult(response);
-        toast.success("Migración completada exitosamente");
-      } else {
-        setResult({ success: false, error: response.error });
-        toast.error("Error en la migración");
+      // Obtener todos los empleados
+      const employees = await base44.entities.EmployeeMasterDatabase.list();
+      
+      // Obtener skills existentes
+      const existingSkills = await base44.entities.EmployeeMachineSkill.list();
+      
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+      
+      for (const emp of employees) {
+        // Procesar maquina_1 a maquina_10
+        for (let i = 1; i <= 10; i++) {
+          const machineId = emp[`maquina_${i}`];
+          if (!machineId) continue;
+          
+          // Buscar si ya existe
+          const existing = existingSkills.find(
+            s => s.employee_id === emp.id && s.machine_id === machineId
+          );
+          
+          if (existing) {
+            // Actualizar si cambió el orden
+            if (existing.orden_preferencia !== i) {
+              await base44.entities.EmployeeMachineSkill.update(existing.id, {
+                orden_preferencia: i
+              });
+              updated++;
+            } else {
+              skipped++;
+            }
+          } else {
+            // Crear nuevo
+            await base44.entities.EmployeeMachineSkill.create({
+              employee_id: emp.id,
+              machine_id: machineId,
+              orden_preferencia: i,
+              nivel_habilidad: "Intermedio"
+            });
+            created++;
+          }
+        }
       }
+      
+      const stats = {
+        created,
+        updated,
+        skipped,
+        totalEmployees: employees.length
+      };
+      
+      setResult({
+        success: true,
+        message: `Migración completada: ${created} creados, ${updated} actualizados, ${skipped} omitidos`,
+        stats
+      });
+      toast.success("Migración completada exitosamente");
+      
     } catch (error) {
+      console.error("Error en migración:", error);
       setResult({ success: false, error: error.message });
       toast.error("Error al ejecutar la migración");
     } finally {
