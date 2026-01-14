@@ -121,7 +121,9 @@ export function DataProvider({ children }) {
           ubicacion: m.ubicacion || '',
           orden: m.orden_visualizacion || 999,
           estado: m.estado_operativo || 'Disponible',
-          procesos_ids: (m.procesos_configurados || []).map(p => p.process_id)
+          procesos_ids: Array.isArray(m.procesos_configurados) 
+            ? m.procesos_configurados.map(p => p?.process_id).filter(Boolean) 
+            : []
         })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
       } catch (err) {
         console.error('Error fetching machines:', err);
