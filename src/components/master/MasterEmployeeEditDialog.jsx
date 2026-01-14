@@ -238,8 +238,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       // Invalidación automática mediante el hook
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['allEmployeesMaster'] });
-      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
       queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });

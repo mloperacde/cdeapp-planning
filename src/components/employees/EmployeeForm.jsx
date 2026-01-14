@@ -293,9 +293,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       return savedEmployee;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
       toast.success("Empleado guardado correctamente");
       onClose();
     },
