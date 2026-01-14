@@ -36,6 +36,8 @@ export default function ShiftPlanningPage() {
   // Usar DataProvider para datos compartidos
   const { employees = [], teams = [], machines = [] } = useAppData();
 
+  const EMPTY_ARRAY = [];
+
   const { data: machineAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['machineAssignments'],
     queryFn: () => base44.entities.MachineAssignment.list(),

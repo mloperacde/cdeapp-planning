@@ -65,35 +65,57 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     queryKey: ['employeeSkills', employee?.id],
     queryFn: async () => {
       if (!employee?.id) return [];
-      const allSkills = await base44.entities.EmployeeMachineSkill.list(undefined, 1000);
-      return allSkills.filter(s => s.employee_id === employee.id);
+      try {
+        const allSkills = await base44.entities.EmployeeMachineSkill.list(undefined, 1000);
+        const filtered = allSkills.filter(s => s.employee_id === employee.id);
+        console.log(`Skills cargados para ${employee.nombre}:`, filtered.length);
+        return filtered;
+      } catch (error) {
+        console.error('Error cargando skills:', error);
+        return [];
+      }
     },
-    enabled: !!employee?.id,
+    enabled: !!employee?.id && open,
     initialData: [],
+    staleTime: 0, // Forzar recarga cada vez
   });
 
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
     if (employee && open) {
-      console.log('Loading employee data:', employee.nombre);
-      console.log('Employee skills loaded:', employeeSkills.length);
+      console.log('📋 Loading employee data:', employee.nombre);
+      console.log('📊 Employee skills loaded:', employeeSkills.length);
       
-      // Combinar datos legacy con EmployeeMachineSkill
+      // Empezar con datos base del empleado
       const updatedFormData = { ...employee };
       
-      // Priorizar EmployeeMachineSkill sobre campos legacy
+      // PRIORIZAR EmployeeMachineSkill sobre campos legacy maquina_X
+      // Esto asegura que siempre mostramos los datos correctos de la tabla normalizada
       if (employeeSkills && employeeSkills.length > 0) {
-        console.log('Applying skills to form:', employeeSkills);
+        console.log('✅ Applying skills from EmployeeMachineSkill:', employeeSkills);
+        
+        // Primero limpiar todos los slots legacy
+        for (let i = 1; i <= 10; i++) {
+          updatedFormData[`maquina_${i}`] = null;
+        }
+        
+        // Luego aplicar skills de EmployeeMachineSkill
         employeeSkills.forEach((skill) => {
           const prioridad = skill.orden_preferencia;
           if (prioridad >= 1 && prioridad <= 10) {
             updatedFormData[`maquina_${prioridad}`] = skill.machine_id;
-            console.log(`Setting maquina_${prioridad} to`, skill.machine_id);
+            console.log(`✅ Set maquina_${prioridad} =`, skill.machine_id);
           }
         });
+      } else {
+        console.log('⚠️ No skills found in EmployeeMachineSkill, usando datos legacy de campos maquina_X');
       }
       
-      console.log('Final formData:', updatedFormData);
+      console.log('📝 Final formData con máquinas:', 
+        Object.keys(updatedFormData)
+          .filter(k => k.startsWith('maquina_'))
+          .map(k => `${k}: ${updatedFormData[k]}`)
+      );
       setFormData(updatedFormData);
     } else if (!employee) {
       setFormData({

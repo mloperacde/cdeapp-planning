@@ -64,6 +64,13 @@ export default function Dashboard() {
       url: createPageUrl("MaintenanceTracking")
     },
     {
+      title: "Timeline",
+      description: "Planificación semanal",
+      icon: CalendarDays,
+      color: "teal",
+      url: createPageUrl("Timeline")
+    },
+    {
       title: "Configuración",
       description: "Ajustes del sistema",
       icon: Settings,
@@ -76,6 +83,7 @@ export default function Dashboard() {
     blue: "from-blue-500 to-blue-600",
     green: "from-green-500 to-green-600",
     orange: "from-orange-500 to-orange-600",
+    teal: "from-teal-500 to-teal-600",
     purple: "from-purple-500 to-purple-600"
   };
 
@@ -144,7 +152,7 @@ export default function Dashboard() {
 
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-slate-900 mb-4">Accesos Rápidos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
