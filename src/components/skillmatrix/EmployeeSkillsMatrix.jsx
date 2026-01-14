@@ -47,7 +47,15 @@ export default function EmployeeSkillsMatrix() {
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('nombre'),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      return data.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+        codigo: m.codigo_maquina,
+        orden: m.orden_visualizacion || 999
+      })).sort((a, b) => a.orden - b.orden);
+    },
     initialData: [],
   });
 
