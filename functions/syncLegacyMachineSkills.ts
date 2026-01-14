@@ -19,12 +19,19 @@ Deno.serve(async (req) => {
 
     // Obtener todos los skills existentes
     const allSkills = await base44.asServiceRole.entities.EmployeeMachineSkill.list(undefined, 10000);
-    console.log(`📊 Skills existentes: ${allSkills.length}`);
+    console.log(`📊 Skills existentes ANTES: ${allSkills.length}`);
+
+    // Obtener todas las máquinas para validación
+    const allMachines = await base44.asServiceRole.entities.MachineMasterDatabase.list(undefined, 1000);
+    const machineIds = new Set(allMachines.map(m => m.id));
+    console.log(`📊 Máquinas disponibles: ${machineIds.size}`);
 
     let created = 0;
     let updated = 0;
     let skipped = 0;
+    let deleted = 0;
     let errors = 0;
+    const errorDetails = [];
 
     for (const emp of employees) {
       try {
@@ -36,6 +43,18 @@ Deno.serve(async (req) => {
           const machineId = emp[`maquina_${i}`];
           const existingSkill = empSkills.find(s => s.orden_preferencia === i);
 
+          // Validar que la máquina existe antes de crear/actualizar
+          if (machineId && !machineIds.has(machineId)) {
+            console.warn(`⚠️ Máquina ${machineId} no existe para ${emp.nombre} - slot ${i}`);
+            errorDetails.push({
+              employee: emp.nombre,
+              slot: i,
+              machineId,
+              issue: 'machine_not_found'
+            });
+            continue;
+          }
+
           if (machineId && !existingSkill) {
             // Crear nuevo skill
             await base44.asServiceRole.entities.EmployeeMachineSkill.create({
@@ -45,42 +64,50 @@ Deno.serve(async (req) => {
               nivel_habilidad: 'Intermedio'
             });
             created++;
-            console.log(`✅ Creado skill: ${emp.nombre} - Prioridad ${i}`);
+            console.log(`✅ Creado: ${emp.nombre} - Slot ${i} - Máquina ${machineId}`);
           } else if (!machineId && existingSkill) {
-            // Eliminar skill huérfano
+            // Eliminar skill huérfano (slot vacío en legacy pero existe en EmployeeMachineSkill)
             await base44.asServiceRole.entities.EmployeeMachineSkill.delete(existingSkill.id);
-            updated++;
-            console.log(`🗑️ Eliminado skill huérfano: ${emp.nombre} - Prioridad ${i}`);
+            deleted++;
+            console.log(`🗑️ Eliminado huérfano: ${emp.nombre} - Slot ${i}`);
           } else if (machineId && existingSkill && existingSkill.machine_id !== machineId) {
             // Actualizar skill con máquina diferente
             await base44.asServiceRole.entities.EmployeeMachineSkill.update(existingSkill.id, {
               machine_id: machineId
             });
             updated++;
-            console.log(`🔄 Actualizado skill: ${emp.nombre} - Prioridad ${i}`);
-          } else if (machineId && existingSkill) {
+            console.log(`🔄 Actualizado: ${emp.nombre} - Slot ${i} - Nueva máquina ${machineId}`);
+          } else if (machineId && existingSkill && existingSkill.machine_id === machineId) {
+            // Ya sincronizado
             skipped++;
           }
         }
       } catch (error) {
         console.error(`❌ Error procesando ${emp.nombre}:`, error);
         errors++;
+        errorDetails.push({
+          employee: emp.nombre,
+          error: error.message
+        });
       }
     }
 
     const results = {
-      success: true,
-      message: 'Migración de skills completada',
+      success: errors === 0,
+      message: errors === 0 ? 'Migración de skills completada exitosamente' : 'Migración completada con errores',
       stats: {
         employees_processed: employees.length,
+        machines_available: machineIds.size,
         skills_created: created,
         skills_updated: updated,
+        skills_deleted: deleted,
         skills_skipped: skipped,
         errors: errors
-      }
+      },
+      error_details: errorDetails.slice(0, 20)
     };
 
-    console.log('📈 Resultados:', results);
+    console.log('📈 Resultados finales:', results);
 
     return Response.json(results);
   } catch (error) {

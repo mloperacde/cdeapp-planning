@@ -163,11 +163,11 @@ export function TeamStatusWidget({ teamStats, absencesByTeam }) {
 export function ModulesWidget({ pendingSwaps, lockersWithoutNumber, setActiveView }) {
     const modules = [
         {
-            title: "Equipos de Turno",
+            title: "Planificación Equipos",
             icon: UsersRound,
-            url: createPageUrl("TeamConfiguration"),
+            url: createPageUrl("Timeline"),
             color: "purple",
-            description: "Configura equipos"
+            description: "Asigna turnos"
         },
         {
             title: "Empleados",
@@ -286,7 +286,7 @@ export function CommunicationWidget() {
                         </CardContent>
                     </Card>
                 </Link>
-                <Link to={createPageUrl("Breaks")}>
+                <Link to={createPageUrl("DailyPlanning")}>
                     <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
                         <CardContent className="p-5">
                             <div className="flex items-center gap-3">
@@ -294,8 +294,8 @@ export function CommunicationWidget() {
                                     <Coffee className="w-6 h-6 text-white" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">Descansos</h3>
-                                    <p className="text-xs text-slate-600 dark:text-slate-400">Gestión pausas</p>
+                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">Planning Diario</h3>
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">Gestión completa</p>
                                 </div>
                             </div>
                         </CardContent>
