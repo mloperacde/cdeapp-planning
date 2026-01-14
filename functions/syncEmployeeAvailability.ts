@@ -4,7 +4,11 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
+    // Permitir llamadas sin autenticación (desde scheduled tasks)
+    const isAuthenticated = await base44.auth.isAuthenticated();
+    
     console.log('🔄 Iniciando sincronización de disponibilidad de empleados...');
+    console.log('🔐 Authenticated:', isAuthenticated);
     
     // Obtener todas las ausencias y empleados
     const absences = await base44.asServiceRole.entities.Absence.list(undefined, 1000);

@@ -248,7 +248,7 @@ export default function LockerManagementPage() {
         }
 
         // Sincronizar con EmployeeMasterDatabase
-        await base44.entities.EmployeeMasterDatabase.update(employeeId, {
+        await base44.entities.EmployeeMasterDatabase.update(employee.id, {
           taquilla_vestuario: vestuario,
           taquilla_numero: numeroTaquilla
         });

@@ -21,6 +21,8 @@ export default function AbsenceApprovalPanel({ absences, employees, masterEmploy
 
   const approvalMutation = useMutation({
     mutationFn: async ({ absenceId, estado, comentario, employeeId, absenceTypeId }) => {
+      const absence = absences.find(a => a.id === absenceId);
+      
       const result = await base44.entities.Absence.update(absenceId, {
         estado_aprobacion: estado,
         aprobado_por: currentUser?.id,
@@ -37,6 +39,22 @@ export default function AbsenceApprovalPanel({ absences, employees, masterEmploy
         ]
       });
 
+      // Sincronizar disponibilidad si se aprueba
+      if (estado === "Aprobada" && absence) {
+        const now = new Date();
+        const start = new Date(absence.fecha_inicio);
+        const end = absence.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(absence.fecha_fin);
+        
+        if (now >= start && now <= end) {
+          await base44.entities.EmployeeMasterDatabase.update(employeeId, {
+            disponibilidad: "Ausente",
+            ausencia_inicio: absence.fecha_inicio,
+            ausencia_fin: absence.fecha_fin,
+            ausencia_motivo: absence.motivo
+          });
+        }
+      }
+
       // Notificación avanzada con tipo de ausencia
       const absenceType = absenceTypes.find(t => t.id === absenceTypeId);
       await notifyAbsenceDecisionAdvanced(
@@ -49,9 +67,19 @@ export default function AbsenceApprovalPanel({ absences, employees, masterEmploy
 
       return result;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
+      // Sincronizar todos los empleados
+      try {
+        await base44.functions.invoke('syncEmployeeAvailability');
+      } catch (e) {
+        console.warn("Sync failed", e);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['absences'] });
-      toast.success(`Ausencia ${variables.estado === "Aprobada" ? "aprobada" : "rechazada"}`);
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+      toast.success(`Ausencia ${variables.estado === "Aprobada" ? "aprobada" : "rechazada"}. Estado de disponibilidad actualizado.`);
       setExpandedId(null);
       setComentario("");
     }
