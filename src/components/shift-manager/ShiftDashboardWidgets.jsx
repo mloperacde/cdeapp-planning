@@ -165,7 +165,7 @@ export function ModulesWidget({ pendingSwaps, lockersWithoutNumber, setActiveVie
         {
             title: "Planificación Equipos",
             icon: UsersRound,
-            url: createPageUrl("Timeline"),
+            url: createPageUrl("ShiftPlanning"),
             color: "purple",
             description: "Asigna turnos"
         },
