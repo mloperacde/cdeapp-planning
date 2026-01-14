@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useAppData } from "../data/DataProvider";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, 
 import { toast } from "sonner";
 import { useNavigationHistory } from "../utils/useNavigationHistory";
 import { useEntityMutation } from "../utils/useEntityMutation";
+import { useMemo } from "react";
 
 const EMPTY_ARRAY = [];
 
@@ -39,31 +41,20 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const { goBack } = useNavigationHistory();
   const employeeMutation = useEntityMutation('EmployeeMasterDatabase');
 
-  const { data: teams } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
-  });
+  // USAR DATAPROVIDER PARA MÁQUINAS Y EQUIPOS - evita duplicación y problemas de timing
+  const { teams = [], machines: sharedMachines = [] } = useAppData();
 
-  const { data: allMachines } = useQuery({
-    queryKey: ['allMachinesMaster'],
-    queryFn: async () => {
-      const machines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      console.log('🔧 Total máquinas cargadas:', machines.length);
-      const mapped = machines.map(m => ({
-        id: m.id,
-        nombre: m.nombre || 'Sin nombre',
-        codigo: m.codigo_maquina || '',
-        tipo: m.tipo || '',
-        estado: m.estado_operativo || 'Disponible',
-        orden: m.orden_visualizacion || 999
-      })).sort((a, b) => a.orden - b.orden);
-      console.log('🔧 Máquinas mapeadas:', mapped.slice(0, 3));
-      return mapped;
-    },
-    initialData: [],
-    staleTime: 30000,
-  });
+  // Mapear máquinas del DataProvider al formato esperado
+  const allMachines = useMemo(() => {
+    return sharedMachines.map(m => ({
+      id: m.id,
+      nombre: m.nombre || 'Sin nombre',
+      codigo: m.codigo || '',
+      tipo: m.tipo || '',
+      estado: m.estado || 'Disponible',
+      orden: m.orden || 999
+    })).sort((a, b) => a.orden - b.orden);
+  }, [sharedMachines]);
 
   const { data: employeeSkills = [] } = useQuery({
     queryKey: ['employeeSkills', employee?.id],

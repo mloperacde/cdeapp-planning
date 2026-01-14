@@ -7,7 +7,6 @@ import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import AppUserManagement from './pages/AppUserManagement';
 import ArticleManagement from './pages/ArticleManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
-import AuditDataDashboard from './pages/AuditDataDashboard';
 import BrandingConfig from './pages/BrandingConfig';
 import Breaks from './pages/Breaks';
 import CommitteeManagement from './pages/CommitteeManagement';
@@ -16,7 +15,6 @@ import DailyPlanning from './pages/DailyPlanning';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
 import DataMigration from './pages/DataMigration';
-import DataRecoveryDashboard from './pages/DataRecoveryDashboard';
 import DeploymentGuide from './pages/DeploymentGuide';
 import DocumentManagement from './pages/DocumentManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
@@ -50,7 +48,6 @@ import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import SystemHealth from './pages/SystemHealth';
 import SystemReset from './pages/SystemReset';
-import TestMigration from './pages/TestMigration';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
@@ -74,7 +71,6 @@ export const PAGES = {
     "AppUserManagement": AppUserManagement,
     "ArticleManagement": ArticleManagement,
     "AttendanceManagement": AttendanceManagement,
-    "AuditDataDashboard": AuditDataDashboard,
     "BrandingConfig": BrandingConfig,
     "Breaks": Breaks,
     "CommitteeManagement": CommitteeManagement,
@@ -83,7 +79,6 @@ export const PAGES = {
     "DailyShiftPlanning": DailyShiftPlanning,
     "Dashboard": Dashboard,
     "DataMigration": DataMigration,
-    "DataRecoveryDashboard": DataRecoveryDashboard,
     "DeploymentGuide": DeploymentGuide,
     "DocumentManagement": DocumentManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
@@ -117,7 +112,6 @@ export const PAGES = {
     "SupportManagement1415": SupportManagement1415,
     "SystemHealth": SystemHealth,
     "SystemReset": SystemReset,
-    "TestMigration": TestMigration,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,

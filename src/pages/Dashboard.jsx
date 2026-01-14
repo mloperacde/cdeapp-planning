@@ -10,7 +10,11 @@ import {
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useAppData } from "../components/data/DataProvider";
-import AutoCleanup from "../components/audit/AutoCleanup";
+import TimelineControls from "../components/timeline/TimelineControls";
+import TimelineView from "../components/timeline/TimelineView";
+import { startOfWeek, endOfWeek } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 
 export default function Dashboard() {
   const { user, employees, absences, maintenance: maintenanceSchedules } = useAppData();
@@ -173,7 +177,88 @@ export default function Dashboard() {
             })}
           </div>
         </div>
+
+        <TimelineSection />
       </div>
+    </div>
+  );
+}
+
+function TimelineSection() {
+  const { employees = [], teams = [], holidays = [], vacations = [] } = useAppData();
+  const [viewMode, setViewMode] = React.useState('week');
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [selectedTeam, setSelectedTeam] = React.useState('all');
+  const [selectedDepartment, setSelectedDepartment] = React.useState('all');
+
+  const { data: teamSchedules = [] } = useQuery({
+    queryKey: ['teamWeekSchedules'],
+    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    initialData: [],
+  });
+
+  const { start: startDate, end: endDate } = useMemo(() => {
+    const dateCopy = new Date(selectedDate);
+    switch (viewMode) {
+      case 'day':
+        return {
+          start: new Date(dateCopy.setHours(7, 0, 0, 0)),
+          end: new Date(dateCopy.setHours(22, 0, 0, 0))
+        };
+      case 'week':
+        const weekStart = startOfWeek(dateCopy, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(dateCopy, { weekStartsOn: 1 });
+        weekStart.setHours(7, 0, 0, 0);
+        weekEnd.setHours(22, 0, 0, 0);
+        return { start: weekStart, end: weekEnd };
+      default:
+        return {
+          start: new Date(dateCopy.setHours(7, 0, 0, 0)),
+          end: new Date(dateCopy.setHours(22, 0, 0, 0))
+        };
+    }
+  }, [viewMode, selectedDate]);
+
+  const departments = useMemo(() => {
+    const depts = new Set();
+    employees.forEach(emp => {
+      if (emp?.departamento) depts.add(emp.departamento);
+    });
+    return Array.from(depts).sort();
+  }, [employees]);
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-xl font-semibold text-slate-900 mb-4">Planning / Línea de Tiempo</h2>
+      <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
+        <TimelineControls
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          selectedDate={selectedDate}
+          onSelectedDateChange={setSelectedDate}
+          selectedTeam={selectedTeam}
+          onSelectedTeamChange={setSelectedTeam}
+          teams={teams || []}
+          selectedDepartment={selectedDepartment}
+          onSelectedDepartmentChange={setSelectedDepartment}
+          departments={departments}
+        />
+      </Card>
+
+      <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 overflow-hidden mt-4">
+        <TimelineView 
+          startDate={startDate} 
+          endDate={endDate}
+          holidays={holidays}
+          vacations={vacations}
+          selectedTeam={selectedTeam}
+          employees={employees}
+          teams={teams}
+          teamSchedules={teamSchedules}
+          viewMode={viewMode}
+          selectedDepartment={selectedDepartment}
+        />
+      </Card>
     </div>
   );
 }
