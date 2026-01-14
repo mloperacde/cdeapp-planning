@@ -23,22 +23,8 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import PermissionCheck from "../components/roles/PermissionCheck";
-import Breadcrumbs from "../components/common/Breadcrumbs";
-import EmployeeAvailabilityPanel from "../components/availability/EmployeeAvailabilityPanel";
-import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
-import ViabilityTrafficLight from "../components/planning/ViabilityTrafficLight";
-import AvailabilityDebugPanel from "../components/planning/AvailabilityDebugPanel";
 
 export default function MachineDailyPlanningPage() {
-  return (
-    <PermissionCheck module="planning" action="create">
-      <MachineDailyPlanningContent />
-    </PermissionCheck>
-  );
-}
-
-function MachineDailyPlanningContent() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTurno, setSelectedTurno] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState("team_1");
