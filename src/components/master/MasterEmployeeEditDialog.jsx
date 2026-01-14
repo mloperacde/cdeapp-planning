@@ -49,16 +49,20 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     queryKey: ['allMachinesMaster'],
     queryFn: async () => {
       const machines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      return machines.map(m => ({
+      console.log('🔧 Total máquinas cargadas:', machines.length);
+      const mapped = machines.map(m => ({
         id: m.id,
-        nombre: m.nombre,
-        codigo: m.codigo_maquina,
-        tipo: m.tipo,
+        nombre: m.nombre || 'Sin nombre',
+        codigo: m.codigo_maquina || '',
+        tipo: m.tipo || '',
         estado: m.estado_operativo || 'Disponible',
         orden: m.orden_visualizacion || 999
       })).sort((a, b) => a.orden - b.orden);
+      console.log('🔧 Máquinas mapeadas:', mapped.slice(0, 3));
+      return mapped;
     },
     initialData: [],
+    staleTime: 30000,
   });
 
   const { data: employeeSkills = [] } = useQuery({
