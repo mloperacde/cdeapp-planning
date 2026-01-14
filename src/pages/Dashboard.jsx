@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Users, 
@@ -12,6 +12,7 @@ import { createPageUrl } from "@/utils";
 import { useAppData } from "../components/data/DataProvider";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
+import WorkCalendar from "../components/absences/WorkCalendar";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -186,10 +187,10 @@ export default function Dashboard() {
 
 function TimelineSection() {
   const { employees = [], teams = [], holidays = [], vacations = [] } = useAppData();
-  const [viewMode, setViewMode] = React.useState('week');
-  const [selectedDate, setSelectedDate] = React.useState(new Date());
-  const [selectedTeam, setSelectedTeam] = React.useState('all');
-  const [selectedDepartment, setSelectedDepartment] = React.useState('all');
+  const [viewMode, setViewMode] = useState('week');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTeam, setSelectedTeam] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
 
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
@@ -259,6 +260,11 @@ function TimelineSection() {
           selectedDepartment={selectedDepartment}
         />
       </Card>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Calendario Laboral</h2>
+        <WorkCalendar />
+      </div>
     </div>
   );
 }

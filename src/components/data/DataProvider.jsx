@@ -35,7 +35,7 @@ export function DataProvider({ children }) {
     refetchOnWindowFocus: false,
   });
 
-  // 3. EMPLEADOS - Cache 10 min (FUENTE ÚNICA)
+  // 3. EMPLEADOS - Cache 10 min (FUENTE ÚNICA) - SOLO EmployeeMasterDatabase
   const employeesQuery = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: async () => {
@@ -47,14 +47,15 @@ export function DataProvider({ children }) {
         }
         return data;
       } catch (err) {
-        console.error('EmployeeMasterDatabase error:', err);
+        console.error('Error EmployeeMasterDatabase:', err);
         return [];
       }
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchInterval: false, // NUNCA hacer polling automático
+    retry: 1, // Reducir reintentos
   });
 
   // 4. AUSENCIAS - Cache 5 min
@@ -102,30 +103,26 @@ export function DataProvider({ children }) {
     refetchOnWindowFocus: false,
   });
 
-  // 9. MÁQUINAS - Cache 15 min
+  // 9. MÁQUINAS - Cache 15 min - SOLO MachineMasterDatabase
   const machinesQuery = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
       try {
         const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500);
-        if (Array.isArray(masterData) && masterData.length > 0) {
-          return masterData.map(m => ({
-            id: m.id,
-            nombre: m.nombre || '',
-            codigo: m.codigo_maquina || '',
-            marca: m.marca || '',
-            modelo: m.modelo || '',
-            tipo: m.tipo || '',
-            ubicacion: m.ubicacion || '',
-            orden: m.orden_visualizacion || 999,
-            estado: m.estado_operativo || 'Disponible',
-            procesos_ids: (m.procesos_configurados || []).map(p => p.process_id)
-          })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
-        }
+        if (!Array.isArray(masterData)) return [];
         
-        const data = await base44.entities.Machine.list(undefined, 500);
-        if (!Array.isArray(data)) return [];
-        return data.sort((a, b) => (a.orden || 999) - (b.orden || 999));
+        return masterData.map(m => ({
+          id: m.id,
+          nombre: m.nombre || '',
+          codigo: m.codigo_maquina || '',
+          marca: m.marca || '',
+          modelo: m.modelo || '',
+          tipo: m.tipo || '',
+          ubicacion: m.ubicacion || '',
+          orden: m.orden_visualizacion || 999,
+          estado: m.estado_operativo || 'Disponible',
+          procesos_ids: (m.procesos_configurados || []).map(p => p.process_id)
+        })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
       } catch (err) {
         console.error('Error fetching machines:', err);
         return [];
@@ -134,7 +131,8 @@ export function DataProvider({ children }) {
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchInterval: false,
+    retry: 1,
   });
 
   // 10. MANTENIMIENTO - Cache 10 min
