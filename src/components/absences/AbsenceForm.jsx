@@ -227,12 +227,16 @@ export default function AbsenceForm({
       
       if (response && response.suggestions && Array.isArray(response.suggestions)) {
         setAiReasons(response.suggestions.map(s => s.reason));
-        // Optionally store notes map if needed, but for now just reasons for dropdown
         toast.success("Motivos sugeridos por IA generados");
       }
     } catch (error) {
       console.error("Error generating reasons:", error);
-      toast.error("Error al generar sugerencias");
+      // Manejo específico de rate limit
+      if (error?.message?.includes('429') || error?.message?.includes('Rate') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+        toast.warning("⏳ Límite de uso de IA alcanzado. Use los motivos predefinidos.");
+      } else {
+        toast.error("Error al generar sugerencias. Use los motivos predefinidos.");
+      }
     } finally {
       setIsGeneratingReasons(false);
     }
