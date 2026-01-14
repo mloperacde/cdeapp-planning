@@ -209,7 +209,6 @@ export default function MasterEmployeeDatabasePage() {
         );
         
         queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-        queryClient.invalidateQueries({ queryKey: ['employees'] });
         queryClient.invalidateQueries({ queryKey: ['syncHistory'] });
       } else {
         alert('❌ Error: ' + response.data.error);
@@ -338,7 +337,6 @@ export default function MasterEmployeeDatabasePage() {
 
       // Invalidación masiva de queries
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['shiftAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });

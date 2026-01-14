@@ -120,13 +120,13 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     }
   }, [employee, employeeMachineSkills]);
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
+    staleTime: 15 * 60 * 1000,
   });
 
-  const { data: allMachines } = useQuery({
+  const { data: allMachines = [] } = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
@@ -137,31 +137,25 @@ export default function EmployeeForm({ employee, machines, onClose }) {
         orden: m.orden_visualizacion || 999
       })).sort((a, b) => a.orden - b.orden);
     },
-    initialData: [],
+    staleTime: 15 * 60 * 1000,
   });
 
-  const { data: absences } = useQuery({
+  const { data: absences = [] } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list(),
-    initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 500),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: employeeMachineSkills = [] } = useQuery({
     queryKey: ['employeeMachineSkills'],
     queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
-    initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: masterMachines = [] } = useQuery({
     queryKey: ['machinesMaster'],
     queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
-    initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 5 * 60 * 1000,
   });
 
   const edad = useMemo(() => {
