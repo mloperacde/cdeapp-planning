@@ -58,6 +58,7 @@ import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
 import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
 import Breadcrumbs from "../components/common/Breadcrumbs";
+import AvailabilitySyncMonitor from "../components/hr/AvailabilitySyncMonitor";
 
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
@@ -225,6 +226,8 @@ export default function AbsenceManagementPage() {
                 </CardContent>
               </Card>
             </div>
+
+            <AvailabilitySyncMonitor employees={employees} absences={absences} />
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <AbsenceDashboard absences={filteredAbsences} employees={employees} />
