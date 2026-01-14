@@ -82,6 +82,7 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RateLimitMonitor from '../components/utils/RateLimitMonitor';
 import { DataProvider } from '../components/data/DataProvider';
+import { ThemeProvider } from '../components/common/ThemeProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -319,11 +320,13 @@ export default function Pages() {
     return (
         <QueryClientProvider client={queryClient}>
             <RateLimitMonitor />
-            <DataProvider>
-                <Router>
-                    <PagesContent />
-                </Router>
-            </DataProvider>
+            <ThemeProvider>
+                <DataProvider>
+                    <Router>
+                        <PagesContent />
+                    </Router>
+                </DataProvider>
+            </ThemeProvider>
         </QueryClientProvider>
     );
 }

@@ -247,9 +247,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby="employee-edit-description">
         <DialogHeader>
           <DialogTitle>{employee?.id ? `Editar Empleado - ${employee.nombre}` : 'Nueva Alta de Empleado en Base Maestra'}</DialogTitle>
+          <p id="employee-edit-description" className="sr-only">
+            Formulario para {employee?.id ? 'editar' : 'crear'} información de empleado
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
