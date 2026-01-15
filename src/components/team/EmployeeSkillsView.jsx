@@ -12,6 +12,7 @@ import { Search, Filter, Save, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import AdvancedSearch from "../common/AdvancedSearch";
+import { getEmployeeDefaultMachineExperience } from "@/lib/domain/planning";
 
 export default function EmployeeSkillsView() {
     const queryClient = useQueryClient();
@@ -158,16 +159,8 @@ export default function EmployeeSkillsView() {
         
         if (filters.maquina && filters.maquina !== "all") {
             result = result.filter(e => {
-                // Check in EmployeeMachineSkill
-                const hasSkill = employeeSkills.some(s => 
-                    s.employee_id === e.id && s.machine_id === filters.maquina
-                );
-                if (hasSkill) return true;
-                // Fallback to legacy fields
-                for(let i=1; i<=10; i++) {
-                    if (e[`maquina_${i}`] === filters.maquina) return true;
-                }
-                return false;
+                const defaults = getEmployeeDefaultMachineExperience(e, employeeSkills);
+                return defaults.includes(filters.maquina);
             });
         }
 

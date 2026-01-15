@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmployeeSelect from "@/components/common/EmployeeSelect";
 import { toast } from "sonner";
+import { getEmployeeDefaultMachineExperience } from "@/lib/domain/planning";
 
 export default function MachineSkillsView() {
     const queryClient = useQueryClient();
@@ -58,13 +59,8 @@ export default function MachineSkillsView() {
             // Filter by Team
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
 
-            // Check EmployeeMachineSkill first, fallback to legacy
-            const hasSkillRecord = employeeSkills.some(s => 
-                s.employee_id === e.id && s.machine_id === machineId
-            );
-            const hasMachineLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
-            
-            if (!hasSkillRecord && !hasMachineLegacy) return false;
+            const defaultMachines = getEmployeeDefaultMachineExperience(e, employeeSkills);
+            if (!defaultMachines.includes(machineId)) return false;
 
             const puesto = (e.puesto || "").toUpperCase();
             if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) return true;
@@ -99,13 +95,8 @@ export default function MachineSkillsView() {
             // Filter by Team
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
 
-            // Check if they ALREADY have the machine (check both EmployeeMachineSkill and legacy)
-            const hasSkillRecord = employeeSkills.some(s => 
-                s.employee_id === e.id && s.machine_id === machineId
-            );
-            const hasMachineLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => e[`maquina_${i}`] === machineId);
-            
-            if (hasSkillRecord || hasMachineLegacy) return false;
+            const defaultMachines = getEmployeeDefaultMachineExperience(e, employeeSkills);
+            if (defaultMachines.includes(machineId)) return false;
 
             return true;
         }).map(e => {
