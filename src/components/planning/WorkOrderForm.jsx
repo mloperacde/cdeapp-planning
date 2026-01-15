@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { getEligibleProcessesForMachine, getEligibleMachinesForProcess } from "@/lib/domain/planning";
 
 export default function WorkOrderForm({ open, onClose, orderToEdit, machines, processes, machineProcesses }) {
   const queryClient = useQueryClient();
@@ -51,21 +52,13 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
 
   // Derived state for filtered lists
   const availableProcesses = useMemo(() => {
-    // Si no hay máquina seleccionada, mostrar TODOS los procesos configurados
     if (!formData.machine_id) return processes.filter(p => p.activo);
-    // Si hay máquina, filtrar por los procesos que puede hacer esa máquina
-    const allowedProcessIds = machineProcesses
-      .filter(mp => mp.machine_id === formData.machine_id && mp.activo)
-      .map(mp => mp.process_id);
-    return processes.filter(p => allowedProcessIds.includes(p.id) && p.activo);
+    return getEligibleProcessesForMachine(formData.machine_id, machineProcesses, processes);
   }, [processes, machineProcesses, formData.machine_id]);
 
   const availableMachines = useMemo(() => {
     if (!formData.process_id) return machines;
-    const allowedMachineIds = machineProcesses
-      .filter(mp => mp.process_id === formData.process_id && mp.activo)
-      .map(mp => mp.machine_id);
-    return machines.filter(m => allowedMachineIds.includes(m.id));
+    return getEligibleMachinesForProcess(formData.process_id, machines, machineProcesses);
   }, [machines, machineProcesses, formData.process_id]);
 
   // Helper to get operators count for current selection
