@@ -27,11 +27,21 @@ export default function MachinePlanningSelector({
     if (!selectedMachineId) return [];
     
     const machine = machines.find(m => m.id === selectedMachineId);
-    if (!machine || !machine.procesos_ids || machine.procesos_ids.length === 0) {
-      return []; // Si no tiene procesos configurados, devolver array vacío
+    if (!machine) return [];
+    
+    // Obtener procesos_ids desde procesos_configurados (MachineMasterDatabase)
+    let processIds = [];
+    if (Array.isArray(machine.procesos_configurados)) {
+      processIds = machine.procesos_configurados
+        .map(p => p?.process_id)
+        .filter(Boolean);
+    } else if (Array.isArray(machine.procesos_ids)) {
+      processIds = machine.procesos_ids;
     }
     
-    return processes.filter(p => machine.procesos_ids.includes(p.id));
+    if (processIds.length === 0) return [];
+    
+    return processes.filter(p => processIds.includes(p.id));
   }, [selectedMachineId, machines, processes]);
 
   const selectedProcess = processes.find(p => p.id === selectedProcessId);

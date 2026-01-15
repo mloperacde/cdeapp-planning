@@ -112,19 +112,20 @@ export function DataProvider({ children }) {
         if (!Array.isArray(masterData)) return [];
         
         return masterData.map(m => ({
-          id: m.id,
-          nombre: m.nombre || '',
-          codigo: m.codigo_maquina || '',
-          marca: m.marca || '',
-          modelo: m.modelo || '',
-          tipo: m.tipo || '',
-          ubicacion: m.ubicacion || '',
-          orden: m.orden_visualizacion || 999,
-          estado: m.estado_operativo || 'Disponible',
-          procesos_ids: Array.isArray(m.procesos_configurados) 
-            ? m.procesos_configurados.map(p => p?.process_id).filter(Boolean) 
-            : []
-        })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
+                  id: m.id,
+                  nombre: m.nombre || '',
+                  codigo: m.codigo_maquina || '',
+                  marca: m.marca || '',
+                  modelo: m.modelo || '',
+                  tipo: m.tipo || '',
+                  ubicacion: m.ubicacion || '',
+                  orden: m.orden_visualizacion || 999,
+                  estado: m.estado_operativo || 'Disponible',
+                  procesos_configurados: m.procesos_configurados || [],
+                  procesos_ids: Array.isArray(m.procesos_configurados) 
+                    ? m.procesos_configurados.map(p => p?.process_id).filter(Boolean) 
+                    : []
+                })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
       } catch (err) {
         console.error('Error fetching machines:', err);
         return [];
