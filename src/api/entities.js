@@ -5,7 +5,7 @@ export const Holiday = base44.entities.Holiday;
 
 export const Vacation = base44.entities.Vacation;
 
-export const Employee = base44.entities.Employee;
+export const Employee = base44.entities.EmployeeMasterDatabase;
 
 export const Machine = base44.entities.Machine;
 

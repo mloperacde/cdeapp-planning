@@ -48,13 +48,20 @@ export default function MaintenancePlanningTab({ selectedDate, selectedTeam, sel
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
   });
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list('orden_visualizacion');
+      return data.map(m => ({
+        ...m,
+        codigo: m.codigo_maquina,
+        orden: m.orden_visualizacion
+      }));
+    },
     initialData: [],
   });
 

@@ -26,7 +26,15 @@ export default function DailyShiftPlanningPage() {
     // Data Queries
     const { data: machines = [] } = useQuery({
       queryKey: ['machines'],
-      queryFn: () => base44.entities.Machine.list('orden'),
+      queryFn: async () => {
+        const data = await base44.entities.MachineMasterDatabase.list('orden_visualizacion');
+        return data.map(m => ({
+          ...m,
+          codigo: m.codigo_maquina,
+          estado: m.estado_operativo,
+          orden: m.orden_visualizacion
+        }));
+      },
       staleTime: 5 * 60 * 1000,
     });
 

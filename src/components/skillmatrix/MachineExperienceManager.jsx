@@ -20,13 +20,20 @@ export default function MachineExperienceManager() {
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
   });
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list('orden_visualizacion');
+      return data.map(m => ({
+        ...m,
+        codigo: m.codigo_maquina,
+        orden: m.orden_visualizacion
+      }));
+    },
     initialData: [],
   });
 
@@ -46,7 +53,7 @@ export default function MachineExperienceManager() {
         }
       });
 
-      return base44.entities.Employee.update(employeeId, machineData);
+      return base44.entities.EmployeeMasterDatabase.update(employeeId, machineData);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });

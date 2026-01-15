@@ -41,7 +41,7 @@ export default function MobilePlanning() {
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: () => base44.entities.MachineMasterDatabase.list('orden_visualizacion'),
   });
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });

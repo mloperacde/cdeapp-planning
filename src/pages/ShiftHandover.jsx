@@ -31,7 +31,15 @@ export default function ShiftHandoverPage() {
 
   const { data: machines, isLoading } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list('orden_visualizacion');
+      return data.map(m => ({
+        ...m,
+        codigo: m.codigo_maquina,
+        estado: m.estado_operativo,
+        orden: m.orden_visualizacion
+      }));
+    },
     initialData: [],
   });
 
@@ -43,7 +51,7 @@ export default function ShiftHandoverPage() {
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
   });
 

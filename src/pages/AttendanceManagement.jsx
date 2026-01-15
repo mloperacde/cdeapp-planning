@@ -40,7 +40,7 @@ export default function AttendanceManagementPage() {
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
 

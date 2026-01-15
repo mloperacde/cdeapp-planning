@@ -48,7 +48,7 @@ export default function WarehousePlanningTab({ selectedDate, selectedTeam, selec
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list('nombre'),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
     initialData: [],
   });
 

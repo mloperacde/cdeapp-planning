@@ -51,7 +51,7 @@ export default function TrainingAssignment({
   const { data: employee } = useQuery({
     queryKey: ['employee', employeeId],
     queryFn: async () => {
-      const employees = await base44.entities.Employee.list();
+      const employees = await base44.entities.EmployeeMasterDatabase.list();
       return employees.find(e => e.id === employeeId);
     },
     enabled: !!employeeId,

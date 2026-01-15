@@ -37,13 +37,13 @@ export default function DocumentForm({ document, onClose }) {
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
+    queryFn: () => base44.entities.MachineMasterDatabase.list('orden_visualizacion'),
     initialData: [],
   });
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
 
@@ -77,7 +77,7 @@ export default function DocumentForm({ document, onClose }) {
 
           // Notify affected users about new version
           if (data.roles_acceso?.length > 0 || data.departamentos_acceso?.length > 0 || data.es_publico) {
-            const employeesData = await base44.entities.Employee.list();
+            const employeesData = await base44.entities.EmployeeMasterDatabase.list();
             const notificationPromises = employeesData
               .filter(emp => {
                 if (data.es_publico) return true; // If public, all employees are affected.
@@ -120,7 +120,7 @@ export default function DocumentForm({ document, onClose }) {
 
         // Only schedule if the notification date is in the future
         if (notifyDate.getTime() > new Date().getTime()) {
-          const employeesData = await base44.entities.Employee.list(); // Get all employees for expiry notification
+          const employeesData = await base44.entities.EmployeeMasterDatabase.list(); // Get all employees for expiry notification
           const notificationPromises = employeesData.map(emp => 
             base44.entities.PushNotification.create({
               destinatario_id: emp.id,

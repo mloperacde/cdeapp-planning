@@ -42,18 +42,9 @@ export default function EmployeeDataIntegrity() {
       const masterEmployees = await base44.entities.EmployeeMasterDatabase.list('nombre', 1000);
       const validMasterIds = new Set(masterEmployees.map(e => e.id));
       
-      // También considerar Employee deprecated (temporal)
-      let deprecatedEmployees = [];
-      try {
-        deprecatedEmployees = await base44.entities.Employee.list('nombre', 1000);
-      } catch (e) {
-        console.log("Employee entity not accessible or deleted");
-      }
-      const validDeprecatedIds = new Set(deprecatedEmployees.map(e => e.id));
-
       const results = {
         validMasterIds: validMasterIds.size,
-        validDeprecatedIds: validDeprecatedIds.size,
+        validDeprecatedIds: 0,
         entities: {},
         orphanedRecords: [],
         brokenReferences: 0,
@@ -81,7 +72,7 @@ export default function EmployeeDataIntegrity() {
           const records = await base44.entities[entity.name].list('-created_date', 500);
           const orphaned = records.filter(r => {
             const empId = r[entity.field];
-            return empId && !validMasterIds.has(empId) && !validDeprecatedIds.has(empId);
+            return empId && !validMasterIds.has(empId);
           });
 
           results.entities[entity.name] = {

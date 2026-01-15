@@ -29,7 +29,7 @@ export default function AttendanceImporter({ selectedDate, onDateChange, config 
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
 
@@ -216,7 +216,7 @@ export default function AttendanceImporter({ selectedDate, onDateChange, config 
 
           // Auto-actualizar disponibilidad
           if (config?.auto_actualizar_disponibilidad) {
-            await base44.entities.Employee.update(employee.id, {
+            await base44.entities.EmployeeMasterDatabase.update(employee.id, {
               disponibilidad: "Ausente",
               ausencia_inicio: new Date(row.fecha).toISOString(),
               ausencia_motivo: "Ausencia detectada por sistema de fichaje"

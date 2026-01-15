@@ -41,7 +41,7 @@ export default function EnhancedDocumentForm({ document, onClose }) {
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('nombre'),
+    queryFn: () => base44.entities.MachineMasterDatabase.list('orden_visualizacion'),
     initialData: []
   });
 

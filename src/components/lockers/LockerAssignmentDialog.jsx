@@ -105,21 +105,11 @@ export default function LockerAssignmentDialog({
         await base44.entities.LockerAssignment.create(dataToSave);
       }
 
-      // CRÍTICO: Sincronizar con Employee
-      await base44.entities.Employee.update(selectedEmployeeId, {
+      // Sincronizar con EmployeeMasterDatabase
+      await base44.entities.EmployeeMasterDatabase.update(selectedEmployeeId, {
         taquilla_vestuario: vestuario,
         taquilla_numero: numeroLimpio
       });
-
-      // CRÍTICO: Sincronizar con EmployeeMasterDatabase
-      const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
-      const masterEmployee = masterEmployees.find(me => me.employee_id === selectedEmployeeId);
-      if (masterEmployee) {
-        await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
-          taquilla_vestuario: vestuario,
-          taquilla_numero: numeroLimpio
-        });
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
@@ -143,24 +133,11 @@ export default function LockerAssignmentDialog({
         notificacion_enviada: false
       });
 
-      // CRÍTICO: Sincronizar con Employee
       if (locker.employee?.id) {
-        await base44.entities.Employee.update(locker.employee.id, {
+        await base44.entities.EmployeeMasterDatabase.update(locker.employee.id, {
           taquilla_vestuario: "",
           taquilla_numero: ""
         });
-      }
-
-      // CRÍTICO: Sincronizar con EmployeeMasterDatabase
-      if (locker.employee?.id) {
-        const masterEmployees = await base44.entities.EmployeeMasterDatabase.list();
-        const masterEmployee = masterEmployees.find(me => me.employee_id === locker.employee.id);
-        if (masterEmployee) {
-          await base44.entities.EmployeeMasterDatabase.update(masterEmployee.id, {
-            taquilla_vestuario: "",
-            taquilla_numero: ""
-          });
-        }
       }
     },
     onSuccess: () => {

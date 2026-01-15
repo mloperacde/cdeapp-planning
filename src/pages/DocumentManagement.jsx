@@ -34,13 +34,13 @@ export default function DocumentManagementPage() {
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
+    queryFn: () => base44.entities.MachineMasterDatabase.list('orden_visualizacion'),
     initialData: [],
   });
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
 

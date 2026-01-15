@@ -17,7 +17,7 @@ export default function TeamPositionConfig({ onClose }) {
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
 
@@ -58,7 +58,7 @@ export default function TeamPositionConfig({ onClose }) {
 
   const updateEmployeeMutation = useMutation({
     mutationFn: async ({ employeeId, equipo }) => {
-      return base44.entities.Employee.update(employeeId, { equipo });
+      return base44.entities.EmployeeMasterDatabase.update(employeeId, { equipo });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });

@@ -9,7 +9,7 @@ import { TrendingUp, AlertTriangle, Users } from "lucide-react";
 export default function SkillGapAnalysis() {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
 

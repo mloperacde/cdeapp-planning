@@ -18,7 +18,7 @@ export default function OrganizationalChart() {
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
   });
 
   // Recursive component for tree branch

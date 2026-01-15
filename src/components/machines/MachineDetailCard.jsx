@@ -45,16 +45,14 @@ export default function MachineDetailCard({ machine, onClose }) {
 
   const updateMutation = useMutation({
     mutationFn: (data) => {
-      // Actualizar en MachineMasterDatabase si existe _raw
-      if (machine._raw) {
-        return base44.entities.MachineMasterDatabase.update(machine.id, {
-          ...machine._raw,
-          ...data,
-          codigo_maquina: data.codigo || machine._raw.codigo_maquina,
-          estado_operativo: data.estado || machine._raw.estado_operativo
-        });
-      }
-      return base44.entities.Machine.update(machine.id, data);
+      // Siempre actualizar en MachineMasterDatabase
+      return base44.entities.MachineMasterDatabase.update(machine.id, {
+        ...machine._raw,
+        ...data,
+        codigo_maquina: data.codigo || machine.codigo,
+        estado_operativo: data.estado || machine.estado,
+        orden_visualizacion: data.orden || machine.orden
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
@@ -81,7 +79,8 @@ export default function MachineDetailCard({ machine, onClose }) {
       const newImagenes = [...formData.imagenes, response.file_url];
       
       setFormData({ ...formData, imagenes: newImagenes });
-      await base44.entities.Machine.update(machine.id, { imagenes: newImagenes });
+      await base44.entities.MachineMasterDatabase.update(machine.id, { imagenes: newImagenes });
+      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['machines'] });
       toast.success("Imagen subida correctamente");
     } catch (error) {

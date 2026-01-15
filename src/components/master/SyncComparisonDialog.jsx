@@ -193,6 +193,9 @@ export default function SyncComparisonDialog({ masterEmployee, existingEmployee,
     
     if (!confirm(confirmMsg)) return;
 
+    toast.error("La reversión de sincronización ha sido deshabilitada (Employee deprecated)");
+    return;
+    /*
     try {
       const dataToRestore = {};
       Object.entries(historyItem.changes_detected).forEach(([key, change]) => {
@@ -220,6 +223,7 @@ export default function SyncComparisonDialog({ masterEmployee, existingEmployee,
     } catch (error) {
       toast.error('Error al deshacer: ' + error.message);
     }
+    */
   };
 
   const toggleField = (fieldKey) => {
@@ -231,6 +235,9 @@ export default function SyncComparisonDialog({ masterEmployee, existingEmployee,
   };
 
   const handleSync = async () => {
+    toast.error("La sincronización ha sido deshabilitada (Employee deprecated)");
+    return;
+    /*
     setSyncing(true);
     try {
       const user = await base44.auth.me().catch(() => null);
@@ -305,6 +312,7 @@ export default function SyncComparisonDialog({ masterEmployee, existingEmployee,
     } finally {
       setSyncing(false);
     }
+    */
   };
 
   const selectedDifferences = useMemo(() => {
