@@ -5,6 +5,7 @@ import { Users, UserCheck, UserX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { getAvailability } from "@/lib/domain/planning";
 
 export default function EmployeeAvailabilityPanel({ 
   employees = [], 
@@ -13,58 +14,19 @@ export default function EmployeeAvailabilityPanel({
   showDetails = true 
 }) {
   const availability = useMemo(() => {
-    console.log('📊 Calculando disponibilidad:', { 
-      totalEmployees: employees.length, 
-      fecha: selectedDate 
-    });
-
-    // Filtrar empleados de FABRICACION con puestos clave
-    const fabricacionEmployees = employees.filter(emp => {
-      const cumple = emp.departamento === "FABRICACION" &&
-        emp.estado_empleado === "Alta" &&
-        emp.incluir_en_planning !== false; // Más permisivo
-      return cumple;
-    });
-
-    console.log('👷 Empleados FABRICACION:', fabricacionEmployees.length);
-
-    // Ausencias confirmadas para la fecha seleccionada
-    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-    const ausenciasConfirmadas = absences.filter(abs => {
-      if (abs.estado_aprobacion !== "Aprobada") return false;
-      
-      const inicio = new Date(abs.fecha_inicio);
-      const fin = abs.fecha_fin ? new Date(abs.fecha_fin) : null;
-      
-      if (abs.fecha_fin_desconocida) {
-        return selectedDateObj >= inicio;
-      }
-      
-      return fin && selectedDateObj >= inicio && selectedDateObj <= fin;
-    });
-
-    console.log('🚫 Ausencias confirmadas:', ausenciasConfirmadas.length);
-
-    // Empleados ausentes (únicos)
-    const empleadosAusentesIds = new Set(ausenciasConfirmadas.map(a => a.employee_id));
-    const empleadosAusentes = fabricacionEmployees.filter(emp => 
-      empleadosAusentesIds.has(emp.id)
+    const emps = employees.filter(emp => 
+      emp.departamento === "FABRICACION" && 
+      emp.estado_empleado === "Alta" && 
+      emp.incluir_en_planning !== false
     );
-
-    const total = fabricacionEmployees.length;
-    const ausentes = empleadosAusentes.length;
-    const disponibles = total - ausentes;
-    const porcentajeDisponible = total > 0 ? (disponibles / total) * 100 : 100;
-
-    console.log('✅ Resultado:', { total, ausentes, disponibles });
-
+    const r = getAvailability(emps, absences, selectedDate);
     return {
-      total,
-      ausentes,
-      disponibles,
-      porcentajeDisponible,
-      empleadosAusentes,
-      ausenciasConfirmadas
+      total: r.totalEmpleados,
+      ausentes: r.ausentes,
+      disponibles: r.disponibles,
+      porcentajeDisponible: r.porcentajeDisponible,
+      empleadosAusentes: r.empleadosAusentes,
+      ausenciasConfirmadas: absences.filter(abs => abs.estado_aprobacion === "Aprobada")
     };
   }, [employees, absences, selectedDate]);
 
