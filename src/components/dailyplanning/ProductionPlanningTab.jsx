@@ -17,28 +17,36 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     initialData: [],
   });
 
-  const { data: machines } = useQuery({
+  const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
-    initialData: [],
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
+      return data.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+        codigo: m.codigo_maquina,
+        orden: m.orden_visualizacion || 999
+      })).sort((a, b) => a.orden - b.orden);
+    },
+    staleTime: 15 * 60 * 1000,
   });
 
-  const { data: processes } = useQuery({
+  const { data: processes = [] } = useQuery({
     queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.list(),
-    initialData: [],
+    queryFn: () => base44.entities.Process.list('codigo', 200),
+    staleTime: 15 * 60 * 1000,
   });
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    initialData: [],
+    staleTime: 15 * 60 * 1000,
   });
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list(),
-    initialData: [],
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employeeMasterDatabase'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
+    staleTime: 15 * 60 * 1000,
   });
 
   const activeMachines = useMemo(() => {
