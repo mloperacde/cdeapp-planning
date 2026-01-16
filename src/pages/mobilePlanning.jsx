@@ -1,17 +1,17 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar as CalendarIcon, Clock, Users, AlertCircle } from "lucide-react";
-import { format, startOfWeek, addDays, parseISO, isSameDay } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 export default function MobilePlanning() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, _setSelectedDate] = useState(new Date());
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],

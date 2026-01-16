@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAppData } from "../components/data/DataProvider";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
-import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import WorkCalendar from "../components/absences/WorkCalendar";
@@ -26,28 +26,32 @@ export default function Timeline() {
   const { start: startDate, end: endDate } = useMemo(() => {
     const dateCopy = new Date(selectedDate);
     switch (viewMode) {
-      case 'day':
+      case 'day': {
         return {
           start: new Date(dateCopy.setHours(7, 0, 0, 0)),
           end: new Date(dateCopy.setHours(22, 0, 0, 0))
         };
-      case 'week':
+      }
+      case 'week': {
         const weekStart = startOfWeek(dateCopy, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(dateCopy, { weekStartsOn: 1 });
         weekStart.setHours(7, 0, 0, 0);
         weekEnd.setHours(22, 0, 0, 0);
         return { start: weekStart, end: weekEnd };
-      case 'month':
+      }
+      case 'month': {
         const monthStart = startOfMonth(dateCopy);
         const monthEnd = endOfMonth(dateCopy);
         monthStart.setHours(7, 0, 0, 0);
         monthEnd.setHours(22, 0, 0, 0);
         return { start: monthStart, end: monthEnd };
-      default:
+      }
+      default: {
         return {
           start: new Date(dateCopy.setHours(7, 0, 0, 0)),
           end: new Date(dateCopy.setHours(22, 0, 0, 0))
         };
+      }
     }
   }, [viewMode, selectedDate]);
 

@@ -251,9 +251,9 @@ class Base44DataService {
   
   // --- SUSCRIPCIONES EN TIEMPO REAL (si el SDK lo soporta) ---
   
-  async subscribeToMachines(callback) {
+  async subscribeToMachines(_callback) {
     try {
-      const client = await this.getClient();
+      await this.getClient();
       
       // Ejemplo de suscripción (depende de las capacidades del SDK)
       // const unsubscribe = client.query('machines').subscribe((data) => {
@@ -331,7 +331,7 @@ class Base44DataService {
 const base44DataService = new Base44DataService();
 
 // Exportar para uso global (solo desarrollo)
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.MODE === 'development') {
   window.Base44DataService = base44DataService;
 }
 

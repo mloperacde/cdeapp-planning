@@ -1,11 +1,11 @@
-import React from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Smartphone, Check, Apple, Chrome, Share2, Plus, Menu } from "lucide-react";
+import { Smartphone, Check, Apple, Chrome, Share2 } from "lucide-react";
 
 export default function MobileAppConfig() {
   const appUrl = window.location.origin;
