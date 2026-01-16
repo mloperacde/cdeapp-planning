@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Cog, Plus, Edit2, Trash2, Eye, ArrowLeft, ArrowUpDown, Save, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -64,6 +65,8 @@ export default function MachineMasterPage() {
     descripcion: m.descripcion || '',
     orden: m.orden_visualizacion || 999,
     estado: m.estado_operativo || 'Disponible',
+    estado_produccion: m.estado_produccion || 'Sin Producción',
+    estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
     programa_mantenimiento: m.programa_mantenimiento || '',
     imagenes: m.imagenes || [],
     archivos_adjuntos: m.archivos_adjuntos || [],
@@ -139,6 +142,9 @@ export default function MachineMasterPage() {
       return;
     }
 
+    const desiredOrder = Math.max(1, Math.min((rawMachines?.length || 1), Number(editingMachine.orden || 1)));
+    const prevOrder = Number(editingMachine._raw?.orden_visualizacion ?? editingMachine.orden ?? desiredOrder);
+
     const dataToSave = {
       nombre: editingMachine.nombre,
       codigo_maquina: editingMachine.codigo,
@@ -148,13 +154,44 @@ export default function MachineMasterPage() {
       fecha_compra: editingMachine.fecha_compra || "",
       tipo: editingMachine.tipo || "",
       ubicacion: editingMachine.ubicacion || "",
-      orden_visualizacion: editingMachine.orden || 999
+      estado_produccion: editingMachine.estado_produccion || "Sin Producción",
+      estado_disponibilidad: editingMachine.estado_disponibilidad || "Disponible",
+      orden_visualizacion: desiredOrder
     };
 
-    if (editingMachine.id) {
-      updateMutation.mutate({ id: editingMachine.id, data: dataToSave });
-    } else {
+    if (!editingMachine.id) {
       createMutation.mutate(dataToSave);
+      return;
+    }
+
+    // Si cambia la ordenación, reajustar todas las máquinas para mantener consistencia
+    if (desiredOrder !== prevOrder) {
+      const ordered = [...rawMachines].sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
+      const currentIndex = ordered.findIndex(m => m.id === editingMachine.id);
+      const newIndex = desiredOrder - 1;
+      if (currentIndex >= 0) {
+        const [moved] = ordered.splice(currentIndex, 1);
+        ordered.splice(newIndex, 0, moved);
+      }
+      const updates = ordered.map((m, idx) => {
+        const payload = m.id === editingMachine.id
+          ? { ...dataToSave, orden_visualizacion: idx + 1 }
+          : { orden_visualizacion: idx + 1 };
+        return base44.entities.MachineMasterDatabase.update(m.id, payload);
+      });
+      Promise.all(updates)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
+          queryClient.invalidateQueries({ queryKey: ['machines'] });
+          queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
+          setEditingMachine(null);
+          toast.success("Máquina y orden guardados correctamente");
+        })
+        .catch(err => {
+          toast.error("Error al guardar orden: " + err.message);
+        });
+    } else {
+      updateMutation.mutate({ id: editingMachine.id, data: dataToSave });
     }
   };
 
@@ -396,6 +433,69 @@ export default function MachineMasterPage() {
                     value={editingMachine.fecha_compra || ""}
                     onChange={(e) => setEditingMachine({ ...editingMachine, fecha_compra: e.target.value })}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ordenación</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, rawMachines.length)}
+                    value={editingMachine.orden || 1}
+                    onChange={(e) => {
+                      const val = Number(e.target.value || 1);
+                      setEditingMachine({ ...editingMachine, orden: val });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado de Producción</Label>
+                  <Select
+                    value={editingMachine.estado_produccion || "Sin Producción"}
+                    onValueChange={(v) => setEditingMachine({ ...editingMachine, estado_produccion: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="En cambio">En cambio</SelectItem>
+                      <SelectItem value="En producción">En producción</SelectItem>
+                      <SelectItem value="Pendiente de Inicio">Pendiente de Inicio</SelectItem>
+                      <SelectItem value="Sin Producción">Sin Producción</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Disponibilidad</Label>
+                  <Select
+                    value={editingMachine.estado_disponibilidad || "Disponible"}
+                    onValueChange={(v) => setEditingMachine({ ...editingMachine, estado_disponibilidad: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Disponible">Disponible</SelectItem>
+                      <SelectItem value="No disponible">No disponible</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Procesos asignados</Label>
+                <div className="p-3 rounded-lg border bg-slate-50">
+                  {(editingMachine.procesos_configurados || []).length === 0 ? (
+                    <div className="text-sm text-slate-500">Esta máquina no tiene procesos asignados actualmente</div>
+                  ) : (
+                    <ul className="text-sm list-disc pl-5">
+                      {editingMachine.procesos_configurados
+                        .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+                        .map((pc, idx) => (
+                          <li key={`${pc.process_id}_${idx}`}>
+                            {pc.nombre_proceso || pc.processName} ({pc.codigo_proceso || pc.processCode}) • Operadores: {pc.operadores_requeridos || 1}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </div>

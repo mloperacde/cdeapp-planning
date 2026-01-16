@@ -236,6 +236,25 @@ export default function ProcessConfigurationPage() {
 
         if (newAssignments.length > 0) {
           await base44.entities.MachineProcess.bulkCreate(newAssignments);
+          // Propagar a archivo maestro de máquinas
+          const process = processes.find(p => p.id === processId);
+          const masterList = await base44.entities.MachineMasterDatabase.list(undefined, 500);
+          await Promise.all(newAssignments.map(async (a) => {
+            const m = masterList.find(mm => mm.id === a.machine_id) || {};
+            const existing = Array.isArray(m.procesos_configurados) ? m.procesos_configurados : [];
+            const exists = existing.some(pc => pc.process_id === processId);
+            const updated = exists ? existing : [
+              ...existing,
+              {
+                process_id: processId,
+                nombre_proceso: process?.nombre,
+                codigo_proceso: process?.codigo,
+                operadores_requeridos: a.operadores_requeridos || 1,
+                activo: true
+              }
+            ];
+            await base44.entities.MachineMasterDatabase.update(a.machine_id, { procesos_configurados: updated });
+          }));
         }
       } else {
         // Configurando máquina con múltiples procesos
@@ -254,11 +273,24 @@ export default function ProcessConfigurationPage() {
 
         if (newAssignments.length > 0) {
           await base44.entities.MachineProcess.bulkCreate(newAssignments);
+          // Propagar a archivo maestro de máquinas (reemplazo completo)
+          const procesosCfg = newAssignments.map(a => {
+            const p = processes.find(pp => pp.id === a.process_id);
+            return {
+              process_id: a.process_id,
+              nombre_proceso: p?.nombre,
+              codigo_proceso: p?.codigo,
+              operadores_requeridos: a.operadores_requeridos || 1,
+              activo: true
+            };
+          });
+          await base44.entities.MachineMasterDatabase.update(machineId, { procesos_configurados: procesosCfg });
         }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
       setShowMachineAssignment(null);
       setMachineAssignments({});
       toast.success("Configuración guardada correctamente");
@@ -318,7 +350,7 @@ export default function ProcessConfigurationPage() {
 
     // Update orden for all machines
     const updates = items.map((item, index) => 
-      base44.entities.MachineMasterDatabase.update(item.id, { orden_visualizacion: index })
+      base44.entities.MachineMasterDatabase.update(item.id, { orden_visualizacion: index + 1 })
     );
 
     try {
