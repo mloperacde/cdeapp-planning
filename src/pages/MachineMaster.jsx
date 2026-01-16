@@ -15,6 +15,8 @@ import MachineDetailCard from "../components/machines/MachineDetailCard";
 import MachineOrderManager from "../components/machines/MachineOrderManager";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import { usePagination } from "../components/utils/usePagination";
+import Breadcrumbs from "../components/common/Breadcrumbs";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 
 const EMPTY_ARRAY = [];
 
@@ -157,10 +159,12 @@ export default function MachineMasterPage() {
   };
 
   const tiposUnicos = [...new Set(machines.map(m => m.tipo).filter(Boolean))];
+  const { goBack } = useNavigationHistory();
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
+        <Breadcrumbs showBack={true} onBack={goBack} />
         <div className="mb-6">
           <Link to={createPageUrl("Configuration")}>
             <Button variant="ghost" className="mb-2">

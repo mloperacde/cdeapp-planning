@@ -12,6 +12,8 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import Breadcrumbs from "../components/common/Breadcrumbs";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import DocumentForm from "../components/documents/DocumentForm";
 import DocumentViewer from "../components/documents/DocumentViewer";
 import EnhancedDocumentForm from "../components/documents/EnhancedDocumentForm";
@@ -34,7 +36,17 @@ export default function DocumentManagementPage() {
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.MachineMasterDatabase.list('orden_visualizacion'),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      return (Array.isArray(data) ? data : [])
+        .map(m => ({
+          id: m.id,
+          nombre: m.nombre || '',
+          codigo: m.codigo_maquina || m.codigo || '',
+          orden: m.orden_visualizacion || 999
+        }))
+        .sort((a, b) => (a.orden || 999) - (b.orden || 999));
+    },
     initialData: [],
   });
 
@@ -49,6 +61,8 @@ export default function DocumentManagementPage() {
     queryFn: () => base44.entities.UserRole.list(),
     initialData: [],
   });
+
+  const { goBack } = useNavigationHistory();
 
   const { data: masterEmployees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
@@ -170,6 +184,7 @@ export default function DocumentManagementPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <Breadcrumbs showBack={true} onBack={goBack} />
         <div className="mb-6">
           <Link to={createPageUrl("Configuration")}>
             <Button variant="ghost">

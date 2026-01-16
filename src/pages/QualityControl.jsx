@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import EmployeeSelect from "../components/common/EmployeeSelect";
 import Breadcrumbs from "../components/common/Breadcrumbs";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import { createPageUrl } from "@/utils";
 
 export default function QualityControlPage() {
@@ -65,6 +66,8 @@ export default function QualityControlPage() {
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
+
+  const { goBack } = useNavigationHistory();
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -148,7 +151,7 @@ export default function QualityControlPage() {
       <Breadcrumbs items={[
         { label: "Calidad", url: createPageUrl("QualityControl") },
         { label: "Control de Calidad" }
-      ]} />
+      ]} showBack={true} onBack={goBack} />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">

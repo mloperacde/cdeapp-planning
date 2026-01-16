@@ -17,11 +17,13 @@ import {
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { subDays } from "date-fns";
 import Breadcrumbs from "../components/common/Breadcrumbs";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import { createPageUrl } from "@/utils";
 
 export default function ProductionDashboardPage() {
   const [dateRange, setDateRange] = useState("7days");
   const [selectedMachine, setSelectedMachine] = useState("all");
+  const { goBack } = useNavigationHistory();
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
@@ -175,7 +177,7 @@ export default function ProductionDashboardPage() {
       <Breadcrumbs items={[
         { label: "Producción", url: createPageUrl("ProductionDashboard") },
         { label: "Dashboard" }
-      ]} />
+      ]} showBack={true} onBack={goBack} />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">

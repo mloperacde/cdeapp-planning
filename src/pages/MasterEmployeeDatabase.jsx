@@ -48,6 +48,7 @@ import SyncComparisonDialog from "../components/master/SyncComparisonDialog";
 import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineDisplayVerification from "../components/verification/MachineDisplayVerification";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 // Definición completa de columnas disponibles (Moved outside component to avoid recreation)
 const ALL_COLUMNS = {
@@ -325,10 +326,7 @@ export default function MasterEmployeeDatabasePage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Button variant="ghost" onClick={goBack} className="mb-2">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver
-          </Button>
+          <Breadcrumbs showBack={true} onBack={goBack} />
         </div>
 
         <div className="mb-8">
