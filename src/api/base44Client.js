@@ -1,8 +1,9 @@
 import { createClient } from '@base44/sdk';
-// import { getAccessToken } from '@base44/sdk/utils/auth-utils';
 
-// Create a client with authentication required
+const host = typeof window !== 'undefined' ? window.location.hostname : '';
+const isLocal = host === 'localhost' || host === '127.0.0.1';
+
 export const base44 = createClient({
-  appId: "690cdd4205782920ba2297c8", 
-  requiresAuth: true // Ensure authentication is required for all operations
+  appId: "690cdd4205782920ba2297c8",
+  requiresAuth: !isLocal
 });

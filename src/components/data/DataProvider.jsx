@@ -11,10 +11,13 @@ import { base44 } from "@/api/base44Client";
 const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
+  const host = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isLocal = host === 'localhost' || host === '127.0.0.1';
+  
   // 1. USUARIO ACTUAL - Cache 5 min
   const userQuery = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me().catch(() => null),
+    queryFn: () => isLocal ? Promise.resolve(null) : base44.auth.me().catch(() => null),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -25,7 +28,7 @@ export function DataProvider({ children }) {
   const employeeQuery = useQuery({
     queryKey: ['currentEmployee', userQuery.data?.email],
     queryFn: async () => {
-      if (!userQuery.data?.email) return null;
+      if (isLocal || !userQuery.data?.email) return null;
       const emps = await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
       return emps.find(e => e.email === userQuery.data.email) || null;
     },
@@ -39,6 +42,7 @@ export function DataProvider({ children }) {
   const employeesQuery = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: async () => {
+      if (isLocal) return [];
       try {
         const data = await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
         if (!Array.isArray(data)) {
@@ -61,7 +65,7 @@ export function DataProvider({ children }) {
   // 4. AUSENCIAS - Cache 5 min
   const absencesQuery = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 500),
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Absence.list('-fecha_inicio', 500),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -70,7 +74,7 @@ export function DataProvider({ children }) {
   // 5. TIPOS DE AUSENCIAS - Cache 15 min (config estable)
   const absenceTypesQuery = useQuery({
     queryKey: ['absenceTypes'],
-    queryFn: () => base44.entities.AbsenceType.filter({ activo: true }, 'orden', 100),
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.AbsenceType.filter({ activo: true }, 'orden', 100),
     staleTime: 15 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -79,7 +83,7 @@ export function DataProvider({ children }) {
   // 6. EQUIPOS - Cache 15 min
   const teamsQuery = useQuery({
     queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.TeamConfig.list(),
     staleTime: 15 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -88,7 +92,7 @@ export function DataProvider({ children }) {
   // 7. VACACIONES - Cache 30 min (muy estable)
   const vacationsQuery = useQuery({
     queryKey: ['vacations'],
-    queryFn: () => base44.entities.Vacation.list(),
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Vacation.list(),
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -97,7 +101,7 @@ export function DataProvider({ children }) {
   // 8. FESTIVOS - Cache 1 hora (datos anuales)
   const holidaysQuery = useQuery({
     queryKey: ['holidays'],
-    queryFn: () => base44.entities.Holiday.list(),
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Holiday.list(),
     staleTime: 60 * 60 * 1000,
     gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -107,6 +111,7 @@ export function DataProvider({ children }) {
   const machinesQuery = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
+      if (isLocal) return [];
       try {
         const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500);
         if (!Array.isArray(masterData)) return [];
@@ -142,6 +147,7 @@ export function DataProvider({ children }) {
   const maintenanceQuery = useQuery({
     queryKey: ['maintenanceSchedules'],
     queryFn: async () => {
+      if (isLocal) return [];
       try {
         return await base44.entities.MaintenanceSchedule.list('fecha_programada', 500);
       } catch (err) {
@@ -158,7 +164,7 @@ export function DataProvider({ children }) {
   // 11. PROCESOS - Cache 15 min
   const processesQuery = useQuery({
     queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.list('codigo', 200),
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Process.list('codigo', 200),
     staleTime: 15 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -168,6 +174,7 @@ export function DataProvider({ children }) {
   const maintenanceTypesQuery = useQuery({
     queryKey: ['maintenanceTypes'],
     queryFn: async () => {
+      if (isLocal) return [];
       try {
         return await base44.entities.MaintenanceType.list('nombre', 100);
       } catch (err) {
