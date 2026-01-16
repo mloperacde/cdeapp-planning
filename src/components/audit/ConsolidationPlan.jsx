@@ -246,7 +246,9 @@ sin aprobación previa y respaldo completo de datos.
     a.download = `consolidation-plan-${new Date().toISOString().split("T")[0]}.txt`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    if (a.parentNode) {
+      a.parentNode.removeChild(a);
+    }
     URL.revokeObjectURL(url);
   };
 

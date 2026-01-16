@@ -18,7 +18,9 @@ export default function ExecutionResults({ results }) {
     a.download = `execution-results-${new Date().toISOString().split("T")[0]}.json`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    if (a.parentNode) {
+      a.parentNode.removeChild(a);
+    }
     URL.revokeObjectURL(url);
   };
 

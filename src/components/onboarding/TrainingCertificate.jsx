@@ -186,7 +186,9 @@ export default function TrainingCertificate({
     link.download = `Certificado_${employeeName.replace(/\s/g, '_')}_${trainingTitle.replace(/\s/g, '_')}.html`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    if (link.parentNode) {
+      link.parentNode.removeChild(link);
+    }
     URL.revokeObjectURL(url);
   };
 

@@ -195,7 +195,10 @@ export default function PayrollExportButton({ absences = [], employees = [] }) {
       link.setAttribute("download", `nomina_ausencias_${selectedMonth}.csv`);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      if (link.parentNode) {
+        link.parentNode.removeChild(link);
+      }
+      window.URL.revokeObjectURL(url);
 
       toast.success(`Exportados ${filteredAbsences.length} registros para nómina`);
       setShowDialog(false);

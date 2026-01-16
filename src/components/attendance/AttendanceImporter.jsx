@@ -68,7 +68,10 @@ export default function AttendanceImporter({ selectedDate, onDateChange, config 
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    if (link.parentNode) {
+      link.parentNode.removeChild(link);
+    }
+    URL.revokeObjectURL(url);
   };
 
   const getExpectedShift = (employee, date) => {

@@ -147,7 +147,9 @@ export default function EmployeeDataAudit() {
     a.download = `employee-data-audit-${format(new Date(), 'yyyy-MM-dd')}.json`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    if (a.parentNode) {
+      a.parentNode.removeChild(a);
+    }
     URL.revokeObjectURL(url);
   };
 
