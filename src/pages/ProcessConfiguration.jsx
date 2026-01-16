@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ export default function ProcessConfigurationPage() {
   const [showMachineAssignment, setShowMachineAssignment] = useState(null);
   const [machineAssignments, setMachineAssignments] = useState({});
   const [filters, setFilters] = useState({});
+  const [processFilters, setProcessFilters] = useState({});
   const [editingOperators, setEditingOperators] = useState(null);
   const [sortBy, setSortBy] = useState('nombre');
   const [filterTipo, setFilterTipo] = useState('all');
@@ -133,6 +135,14 @@ export default function ProcessConfigurationPage() {
       };
     }).filter(mp => mp.processName).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   };
+  const filteredProcesses = React.useMemo(() => {
+    const searchTerm = (processFilters.searchTerm || "").toLowerCase();
+    return (processes || []).filter(p => {
+      const nameMatch = (p.nombre || "").toLowerCase().includes(searchTerm);
+      const codeMatch = (p.codigo || "").toLowerCase().includes(searchTerm);
+      return !searchTerm || nameMatch || codeMatch;
+    }).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
+  }, [processes, processFilters]);
 
   const handleDragEnd = async (result, machineId) => {
     if (!result.destination) return;
@@ -450,6 +460,79 @@ export default function ProcessConfigurationPage() {
           </div>
         </CardHeader>
         <CardContent className="p-6">
+          <Tabs defaultValue="machines" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="processes">Procesos</TabsTrigger>
+              <TabsTrigger value="machines">Máquinas</TabsTrigger>
+            </TabsList>
+            <TabsContent value="processes">
+              <div className="mb-6 space-y-4">
+                <AdvancedSearch
+                  data={processes}
+                  onFilterChange={setProcessFilters}
+                  searchFields={['nombre', 'codigo']}
+                  placeholder="Buscar proceso por nombre o código..."
+                  pageId="process_configuration_processes"
+                />
+              </div>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead className="w-32">Operadores</TableHead>
+                      <TableHead className="w-24">Activo</TableHead>
+                      <TableHead className="w-64">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProcesses.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-mono text-xs">{p.codigo}</TableCell>
+                        <TableCell className="font-medium">{p.nombre}</TableCell>
+                        <TableCell className="text-slate-600">{p.descripcion || ''}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{p.operadores_requeridos || 1}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {p.activo ? (
+                            <Badge className="bg-green-100 text-green-800">Sí</Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800">No</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(p)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Editar
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleOpenProcessConfiguration(p)}>
+                              <Settings className="w-4 h-4 mr-2" />
+                              Asignar a máquinas
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDelete(p.id)}>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Eliminar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredProcesses.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-slate-500 py-10">
+                          No hay procesos creados o no coinciden con la búsqueda
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+            <TabsContent value="machines">
           <div className="mb-6 space-y-4">
             <AdvancedSearch
               data={processes}
@@ -705,6 +788,8 @@ export default function ProcessConfigurationPage() {
           </Droppable>
         </DragDropContext>
           )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
