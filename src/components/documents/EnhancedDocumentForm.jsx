@@ -12,7 +12,6 @@ import { Upload, X, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import SearchableSelect from "../common/SearchableSelect";
 import DocumentPermissions from "./DocumentPermissions";
-import { useQuery } from "@tanstack/react-query";
 
 export default function EnhancedDocumentForm({ document, onClose }) {
   const [file, setFile] = useState(null);
