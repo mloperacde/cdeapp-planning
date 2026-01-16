@@ -80,7 +80,7 @@ import Breaks from "./Breaks";
 
 import MachinePlanning from "./MachineDailyPlanning";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RateLimitMonitor from '../components/utils/RateLimitMonitor';
 import { DataProvider } from '../components/data/DataProvider';
@@ -324,14 +324,17 @@ function PagesContent() {
 }
 
 export default function Pages() {
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isLocal = host === 'localhost' || host === '127.0.0.1';
+    const RouterComponent = isLocal ? HashRouter : BrowserRouter;
     return (
         <QueryClientProvider client={queryClient}>
             <RateLimitMonitor />
             <ThemeProvider>
                 <DataProvider>
-                    <Router>
+                    <RouterComponent>
                         <PagesContent />
-                    </Router>
+                    </RouterComponent>
                 </DataProvider>
             </ThemeProvider>
         </QueryClientProvider>
