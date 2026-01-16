@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Trash2, Infinity, Sparkles, Loader2 } from "lucide-react";
+import { Upload, Trash2, Infinity as InfinityIcon, Sparkles, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
@@ -502,7 +502,7 @@ export default function AbsenceForm({
           }}
         />
         <label htmlFor="unknownEndDate" className="text-sm font-medium text-purple-900 cursor-pointer flex items-center gap-2">
-          <Infinity className="w-4 h-4" />
+          <InfinityIcon className="w-4 h-4" />
           Fecha de fin desconocida (empleado ausente hasta finalizar manualmente)
         </label>
       </div>

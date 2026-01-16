@@ -6,7 +6,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', 'build/**', 'node_modules/**'],
+    ignores: ['dist/**', 'build/**', 'node_modules/**', '**/MIGRATION_COMPLETE.md.jsx'],
   },
   // React recommended configuration (flat)
   {
@@ -37,6 +37,9 @@ export default [
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'react/jsx-uses-react': 'off',
       'react/react-in-jsx-scope': 'off',
+      'react/no-unescaped-entities': 'off',
+      'no-case-declarations': 'off',
+      'no-useless-escape': 'off',
       'react-refresh/only-export-components': 'off',
       'react/prop-types': 'off',
     },

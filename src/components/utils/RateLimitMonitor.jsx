@@ -23,21 +23,17 @@ export default function RateLimitMonitor() {
         }
       }
       
-      try {
-        const response = await originalFetch(...args);
-        
-        if (response.status === 429) {
-          console.error('🔴 Rate limit exceeded:', url);
-          const entity = url.includes('/entities/') ? url.split('/entities/')[1]?.split('?')[0] : 'Unknown';
-          toast.error(`Rate limit: ${entity}`, {
-            description: 'Demasiadas peticiones. Espera unos segundos.',
-          });
-        }
-        
-        return response;
-      } catch (error) {
-        throw error;
+      const response = await originalFetch(...args);
+      
+      if (response.status === 429) {
+        console.error('🔴 Rate limit exceeded:', url);
+        const entity = url.includes('/entities/') ? url.split('/entities/')[1]?.split('?')[0] : 'Unknown';
+        toast.error(`Rate limit: ${entity}`, {
+          description: 'Demasiadas peticiones. Espera unos segundos.',
+        });
       }
+      
+      return response;
     };
     
     // Limpiar contador cada 10 segundos

@@ -7,6 +7,13 @@ export function useConsolidation() {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
 
+  const resetConsolidation = () => {
+    setExecuting(false);
+    setCurrentStep(0);
+    setResults(null);
+    setError(null);
+  };
+
   const executeConsolidation = async () => {
     setExecuting(true);
     setCurrentStep(0);
@@ -67,6 +74,7 @@ export function useConsolidation() {
     currentStep,
     results,
     error,
-    executeConsolidation
+    executeConsolidation,
+    resetConsolidation,
   };
 }

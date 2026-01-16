@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserX, Plus, Edit, Trash2, Calendar, Infinity, AlertCircle, CheckCircle2 } from "lucide-react";
+import { UserX, Plus, Edit, Trash2, Calendar, Infinity as InfinityIcon, AlertCircle, CheckCircle2 } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -326,7 +326,7 @@ export default function EmployeeAbsenceManager({ employee }) {
                         <TableCell className="text-xs">
                           {absence.fecha_fin_desconocida ? (
                             <Badge className="bg-purple-100 text-purple-800 text-xs">
-                              <Infinity className="w-3 h-3" />
+                              <InfinityIcon className="w-3 h-3" />
                             </Badge>
                           ) : (
                             format(new Date(absence.fecha_fin), "dd/MM/yy HH:mm", { locale: es })

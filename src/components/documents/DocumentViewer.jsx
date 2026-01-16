@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Download, Edit, History, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import DocumentVersionHistory from "./DocumentVersionHistory";
+import DocumentPermissions from "./DocumentPermissions";
 
 export default function DocumentViewer({ document, onClose, onEdit, roles = [], departments = [] }) {
   return (

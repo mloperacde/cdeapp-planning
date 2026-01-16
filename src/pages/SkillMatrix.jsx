@@ -1,13 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import SkillManagement from "../components/skillmatrix/SkillManagement";
 import EmployeeSkillsMatrix from "../components/skillmatrix/EmployeeSkillsMatrix";
@@ -15,14 +12,13 @@ import ProcessSkillRequirements from "../components/skillmatrix/ProcessSkillRequ
 import SkillGapAnalysis from "../components/skillmatrix/SkillGapAnalysis";
 import TrainingNeedsView from "../components/skillmatrix/TrainingNeedsView";
 import DepartmentPositionSkillConfig from "../components/skillmatrix/DepartmentPositionSkillConfig";
-import MachineExperienceManager from "../components/skillmatrix/MachineExperienceManager";
 import EmployeeSkillsView from "../components/team/EmployeeSkillsView";
 
 export default function SkillMatrixPage() {
   const [activeTab, setActiveTab] = useState('matrix');
   const { goBack } = useNavigationHistory();
 
-  const { data: employees } = useQuery({
+  const { data: _employees } = useQuery({
     queryKey: ['employeesMaster'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
     initialData: [],

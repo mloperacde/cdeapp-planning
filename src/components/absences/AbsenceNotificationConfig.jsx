@@ -15,6 +15,14 @@ import {
 } from "@/components/ui/select";
 import { Bell, Save, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function AbsenceNotificationConfig() {
   const [configs, setConfigs] = useState({});

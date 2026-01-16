@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
   Trash2,
   ArrowLeft,
   Loader2,
-  TrendingUp,
   Users,
   CalendarDays
 } from "lucide-react";
@@ -40,7 +39,7 @@ export default function SystemHealthPage() {
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list(),
+    queryFn: () => base44.entities.MachineMasterDatabase.list(),
     initialData: []
   });
 
@@ -71,7 +70,7 @@ export default function SystemHealthPage() {
     
     setCleaningData(true);
     try {
-      const response = await base44.functions.invoke('cleanDuplicateRoles');
+      await base44.functions.invoke('cleanDuplicateRoles');
       toast.success('Limpieza completada');
       refetchMaster();
     } catch (error) {

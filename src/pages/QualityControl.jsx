@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +43,7 @@ export default function QualityControlPage() {
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: () => base44.entities.MachineMasterDatabase.list('orden'),
   });
 
   const { data: teams = [] } = useQuery({
@@ -371,7 +371,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
 
   const [uploadingImages, setUploadingImages] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (inspection) {
       setFormData({
         ...inspection,
@@ -430,7 +430,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
         images: [...(prev.images || []), ...urls]
       }));
       toast.success(`${files.length} imagen(es) subida(s)`);
-    } catch (error) {
+    } catch {
       toast.error("Error al subir imágenes");
     } finally {
       setUploadingImages(false);
@@ -468,7 +468,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
     }));
   };
 
-  const selectedOrder = workOrders.find(wo => wo.id === formData.work_order_id);
+  // selectedOrder not required; details populated directly from workOrders on selection
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

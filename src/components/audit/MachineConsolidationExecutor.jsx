@@ -8,7 +8,7 @@ import { useConsolidation } from "../hooks/useConsolidation";
 import { toast } from "sonner";
 
 export default function MachineConsolidationExecutor() {
-  const { executing, currentStep, results, error, executeConsolidation } = useConsolidation();
+  const { executing, currentStep, results, error, executeConsolidation, resetConsolidation } = useConsolidation();
 
   const steps = [
     { name: "Consolidar Máquinas", status: "pending" },
@@ -201,8 +201,7 @@ export default function MachineConsolidationExecutor() {
           {results && (
             <Button
               onClick={() => {
-                setResults(null);
-                setCurrentStep(0);
+                resetConsolidation();
               }}
               variant="outline"
             >

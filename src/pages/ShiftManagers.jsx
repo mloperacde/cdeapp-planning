@@ -1,31 +1,17 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  LayoutDashboard,
-  ArrowLeft,
-  Filter,
-  Settings2,
-  ArrowLeftRight
-} from "lucide-react";
+import { LayoutDashboard, ArrowLeft, Filter, Settings2, ArrowLeftRight } from "lucide-react";
 import ShiftDashboardCustomizer from "../components/shift-manager/ShiftDashboardCustomizer";
-import { 
-    KPIWidget, 
-    TeamStatusWidget, 
-    ModulesWidget, 
-    CommunicationWidget, 
-    RequestsAndBirthdaysWidget, 
-    AlertsWidget 
-} from "../components/shift-manager/ShiftDashboardWidgets";
+import { KPIWidget, TeamStatusWidget, ModulesWidget, CommunicationWidget, RequestsAndBirthdaysWidget, AlertsWidget } from "../components/shift-manager/ShiftDashboardWidgets";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, isSameDay } from "date-fns";
-import { es } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
+ 
+ 
 
 const EMPTY_ARRAY = [];
 

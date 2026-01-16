@@ -12,6 +12,7 @@ import { Upload, X, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import SearchableSelect from "../common/SearchableSelect";
 import DocumentPermissions from "./DocumentPermissions";
+import { useQuery } from "@tanstack/react-query";
 
 export default function EnhancedDocumentForm({ document, onClose }) {
   const [file, setFile] = useState(null);
@@ -37,6 +38,19 @@ export default function EnhancedDocumentForm({ document, onClose }) {
     queryKey: ['userRoles'],
     queryFn: () => base44.entities.UserRole.list(),
     initialData: []
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      try {
+        return await base44.auth.me();
+      } catch {
+        return null;
+      }
+    },
+    initialData: null,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: machines = [] } = useQuery({

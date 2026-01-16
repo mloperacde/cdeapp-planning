@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,19 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Factory, 
-  TrendingUp, 
   AlertTriangle, 
   CheckCircle2, 
   Clock, 
   XCircle,
   Activity,
   Gauge,
-  BarChart3,
   Package
 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { format, subDays, startOfDay, endOfDay, parseISO, differenceInMinutes } from "date-fns";
-import { es } from "date-fns/locale";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { subDays } from "date-fns";
 import Breadcrumbs from "../components/common/Breadcrumbs";
 import { createPageUrl } from "@/utils";
 
@@ -28,7 +25,7 @@ export default function ProductionDashboardPage() {
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.Machine.list('orden'),
+    queryFn: () => base44.entities.MachineMasterDatabase.list('orden'),
   });
 
   const { data: workOrders = [] } = useQuery({

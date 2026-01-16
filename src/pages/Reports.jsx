@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,11 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { FileText, Download, Filter, Calendar, Sparkles, ArrowLeft } from "lucide-react";
+import { FileText, Download, Filter, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import AIReportGenerator from "../components/reports/AIReportGenerator";
 
 export default function ReportsPage() {

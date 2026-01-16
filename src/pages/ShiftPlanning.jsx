@@ -9,18 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Calendar as CalendarIcon, 
   Users, 
-  Sparkles, 
   Save,
-  AlertCircle,
   UserCheck,
   User as UserIcon,
   Cog,
   Search,
-  Filter,
   History
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -28,7 +24,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import EmployeeSelect from "../components/common/EmployeeSelect";
+ 
 
 export default function ShiftPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -129,7 +125,7 @@ export default function ShiftPlanningPage() {
     }
   }, [dailyStaffing, machines, machineAssignments, selectedShift]);
 
-  const getTeamForShift = (shift, teamKey) => {
+  const getTeamForShift = (_shift, _teamKey) => {
     // Match shift to team (simple logic, can be enhanced)
     return true; // For now, show all teams
   };

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import EmployeeSelect from "../common/EmployeeSelect";
+import { X } from "lucide-react";
 
 export default function CreateChannelDialog({ onClose, employees, currentEmployee }) {
   const [tipo, setTipo] = useState("Equipo");
