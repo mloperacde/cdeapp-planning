@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Cog, Plus, Edit2, Trash2, Eye, ArrowLeft, ArrowUpDown, Save, X } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -23,9 +22,9 @@ const EMPTY_ARRAY = [];
 
 export default function MachineMasterPage() {
   const [filters, setFilters] = useState({});
-  const [editingMachine, setEditingMachine] = useState(null);
   const [showOrderManager, setShowOrderManager] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState(null);
+  const [selectedMachineEditMode, setSelectedMachineEditMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const queryClient = useQueryClient();
 
@@ -74,28 +73,6 @@ export default function MachineMasterPage() {
     _raw: m
   }));
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.MachineMasterDatabase.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
-      queryClient.invalidateQueries({ queryKey: ['machines'] });
-      queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
-      setEditingMachine(null);
-      toast.success("Máquina creada correctamente");
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.MachineMasterDatabase.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
-      queryClient.invalidateQueries({ queryKey: ['machines'] });
-      queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
-      setEditingMachine(null);
-      toast.success("Máquina actualizada correctamente");
-    },
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MachineMasterDatabase.delete(id),
     onSuccess: () => {
@@ -136,65 +113,6 @@ export default function MachineMasterPage() {
 
   const { currentPage, totalPages, paginatedItems, nextPage, prevPage } = usePagination(filteredMachines, 12);
 
-  const handleSaveMachine = () => {
-    if (!editingMachine.nombre || !editingMachine.codigo) {
-      toast.error("Nombre y código son obligatorios");
-      return;
-    }
-
-    const desiredOrder = Math.max(1, Math.min((rawMachines?.length || 1), Number(editingMachine.orden || 1)));
-    const prevOrder = Number(editingMachine._raw?.orden_visualizacion ?? editingMachine.orden ?? desiredOrder);
-
-    const dataToSave = {
-      nombre: editingMachine.nombre,
-      codigo_maquina: editingMachine.codigo,
-      marca: editingMachine.marca || "",
-      modelo: editingMachine.modelo || "",
-      numero_serie: editingMachine.numero_serie || "",
-      fecha_compra: editingMachine.fecha_compra || "",
-      tipo: editingMachine.tipo || "",
-      ubicacion: editingMachine.ubicacion || "",
-      estado_produccion: editingMachine.estado_produccion || "Sin Producción",
-      estado_disponibilidad: editingMachine.estado_disponibilidad || "Disponible",
-      orden_visualizacion: desiredOrder
-    };
-
-    if (!editingMachine.id) {
-      createMutation.mutate(dataToSave);
-      return;
-    }
-
-    // Si cambia la ordenación, reajustar todas las máquinas para mantener consistencia
-    if (desiredOrder !== prevOrder) {
-      const ordered = [...rawMachines].sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
-      const currentIndex = ordered.findIndex(m => m.id === editingMachine.id);
-      const newIndex = desiredOrder - 1;
-      if (currentIndex >= 0) {
-        const [moved] = ordered.splice(currentIndex, 1);
-        ordered.splice(newIndex, 0, moved);
-      }
-      const updates = ordered.map((m, idx) => {
-        const payload = m.id === editingMachine.id
-          ? { ...dataToSave, orden_visualizacion: idx + 1 }
-          : { orden_visualizacion: idx + 1 };
-        return base44.entities.MachineMasterDatabase.update(m.id, payload);
-      });
-      Promise.all(updates)
-        .then(() => {
-          queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
-          queryClient.invalidateQueries({ queryKey: ['machines'] });
-          queryClient.invalidateQueries({ queryKey: ['machinesMaster'] });
-          setEditingMachine(null);
-          toast.success("Máquina y orden guardados correctamente");
-        })
-        .catch(err => {
-          toast.error("Error al guardar orden: " + err.message);
-        });
-    } else {
-      updateMutation.mutate({ id: editingMachine.id, data: dataToSave });
-    }
-  };
-
   const tiposUnicos = [...new Set(machines.map(m => m.tipo).filter(Boolean))];
   const { goBack } = useNavigationHistory();
 
@@ -231,15 +149,23 @@ export default function MachineMasterPage() {
               Ordenar Máquinas
             </Button>
             <Button
-              onClick={() => setEditingMachine({ 
-                nombre: "", 
-                codigo: "", 
-                marca: "",
-                modelo: "",
-                tipo: "",
-                ubicacion: "",
-                orden: machines.length + 1
-              })}
+              onClick={() => {
+                setSelectedMachine({
+                  id: undefined,
+                  nombre: "",
+                  codigo: "",
+                  marca: "",
+                  modelo: "",
+                  tipo: "",
+                  ubicacion: "",
+                  orden: machines.length + 1,
+                  estado_produccion: "Sin Producción",
+                  estado_disponibilidad: "Disponible",
+                  imagenes: [],
+                  archivos_adjuntos: []
+                });
+                setSelectedMachineEditMode(true);
+              }}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -327,7 +253,7 @@ export default function MachineMasterPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => setSelectedMachine(machine)}
+                              onClick={() => { setSelectedMachine(machine); setSelectedMachineEditMode(false); }}
                               title="Ver ficha completa"
                             >
                               <Eye className="w-4 h-4 text-blue-600" />
@@ -335,7 +261,7 @@ export default function MachineMasterPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => setEditingMachine({ ...machine })}
+                              onClick={() => { setSelectedMachine(machine); setSelectedMachineEditMode(true); }}
                               title="Editar"
                             >
                               <Edit2 className="w-4 h-4 text-green-600" />
@@ -359,163 +285,6 @@ export default function MachineMasterPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Dialog de Edición/Creación */}
-      {editingMachine && (
-        <Dialog open={true} onOpenChange={() => setEditingMachine(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingMachine.id ? "Editar Máquina" : "Nueva Máquina"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Código *</Label>
-                  <Input
-                    value={editingMachine.codigo}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, codigo: e.target.value })}
-                    placeholder="Ej: MAQ-001"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Nombre *</Label>
-                  <Input
-                    value={editingMachine.nombre}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, nombre: e.target.value })}
-                    placeholder="Ej: Envasadora Principal"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tipo</Label>
-                  <Input
-                    value={editingMachine.tipo || ""}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, tipo: e.target.value })}
-                    placeholder="Ej: Sobres, Frascos"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Ubicación</Label>
-                  <Input
-                    value={editingMachine.ubicacion || ""}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, ubicacion: e.target.value })}
-                    placeholder="Ej: Nave A - Línea 1"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Marca</Label>
-                  <Input
-                    value={editingMachine.marca || ""}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, marca: e.target.value })}
-                    placeholder="Ej: IMA"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Modelo</Label>
-                  <Input
-                    value={editingMachine.modelo || ""}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, modelo: e.target.value })}
-                    placeholder="Ej: C65"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Número de Serie</Label>
-                  <Input
-                    value={editingMachine.numero_serie || ""}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, numero_serie: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fecha de Compra</Label>
-                  <Input
-                    type="date"
-                    value={editingMachine.fecha_compra || ""}
-                    onChange={(e) => setEditingMachine({ ...editingMachine, fecha_compra: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Ordenación</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={Math.max(1, rawMachines.length)}
-                    value={editingMachine.orden || 1}
-                    onChange={(e) => {
-                      const val = Number(e.target.value || 1);
-                      setEditingMachine({ ...editingMachine, orden: val });
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Estado de Producción</Label>
-                  <Select
-                    value={editingMachine.estado_produccion || "Sin Producción"}
-                    onValueChange={(v) => setEditingMachine({ ...editingMachine, estado_produccion: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="En cambio">En cambio</SelectItem>
-                      <SelectItem value="En producción">En producción</SelectItem>
-                      <SelectItem value="Pendiente de Inicio">Pendiente de Inicio</SelectItem>
-                      <SelectItem value="Sin Producción">Sin Producción</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Disponibilidad</Label>
-                  <Select
-                    value={editingMachine.estado_disponibilidad || "Disponible"}
-                    onValueChange={(v) => setEditingMachine({ ...editingMachine, estado_disponibilidad: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Disponible">Disponible</SelectItem>
-                      <SelectItem value="No disponible">No disponible</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Procesos asignados</Label>
-                <div className="p-3 rounded-lg border bg-slate-50">
-                  {(editingMachine.procesos_configurados || []).length === 0 ? (
-                    <div className="text-sm text-slate-500">Esta máquina no tiene procesos asignados actualmente</div>
-                  ) : (
-                    <ul className="text-sm list-disc pl-5">
-                      {editingMachine.procesos_configurados
-                        .sort((a, b) => (a.orden || 0) - (b.orden || 0))
-                        .map((pc, idx) => (
-                          <li key={`${pc.process_id}_${idx}`}>
-                            {pc.nombre_proceso || pc.processName} ({pc.codigo_proceso || pc.processCode}) • Operadores: {pc.operadores_requeridos || 1}
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingMachine(null)}>
-                <X className="w-4 h-4 mr-2" />
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveMachine}
-                disabled={createMutation.isPending || updateMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : "Guardar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Dialog de Confirmación de Eliminación */}
       {showDeleteConfirm && (
@@ -560,6 +329,8 @@ export default function MachineMasterPage() {
         <MachineDetailCard 
           machine={selectedMachine} 
           onClose={() => setSelectedMachine(null)} 
+          initialEditMode={selectedMachineEditMode}
+          isNew={!selectedMachine?.id}
         />
       )}
     </div>

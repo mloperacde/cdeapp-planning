@@ -34,7 +34,9 @@ export default function ProductionDashboardPage() {
           id: m.id,
           nombre: m.nombre || '',
           codigo: m.codigo_maquina || m.codigo || '',
-          orden: m.orden_visualizacion || 999
+          orden: m.orden_visualizacion || 999,
+          estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
+          estado_produccion: m.estado_produccion || 'Sin Producción'
         }))
         .sort((a, b) => (a.orden || 999) - (b.orden || 999));
     },
@@ -43,12 +45,6 @@ export default function ProductionDashboardPage() {
   const { data: workOrders = [] } = useQuery({
     queryKey: ['workOrders'],
     queryFn: () => base44.entities.WorkOrder.list(),
-  });
-
-  const { data: machineStatuses = [] } = useQuery({
-    queryKey: ['machineStatuses'],
-    queryFn: () => base44.entities.MachineStatus.list(),
-    refetchInterval: 30000,
   });
 
   const { data: inspections = [] } = useQuery({
@@ -79,35 +75,22 @@ export default function ProductionDashboardPage() {
       return new Date(i.inspection_date) >= startDate;
     });
 
-    // OEE Calculation (Simplified)
-    const availableMachines = machineStatuses.filter(ms => ms.estado_disponibilidad === "Disponible");
+    const availableMachines = machines.filter(m => m.estado_disponibilidad === "Disponible");
     const totalMachines = machines.length || 1;
     const availability = (availableMachines.length / totalMachines) * 100;
+    const avgCycleTime = 0;
 
-    // Cycle Time Average
-    const validCycleTimes = machineStatuses.filter(ms => ms.tiempo_ciclo_actual).map(ms => ms.tiempo_ciclo_actual);
-    const avgCycleTime = validCycleTimes.length > 0 
-      ? validCycleTimes.reduce((a, b) => a + b, 0) / validCycleTimes.length 
-      : 0;
-
-    // Quality Metrics
     const approvedCount = filteredInspections.filter(i => i.result === "Aprobado").length;
     const rejectedCount = filteredInspections.filter(i => i.result === "Rechazado").length;
     const totalInspected = filteredInspections.length || 1;
     const qualityRate = (approvedCount / totalInspected) * 100;
 
-    // Order Status
     const completed = filteredOrders.filter(o => o.status === "Completada").length;
     const delayed = filteredOrders.filter(o => o.status === "Retrasada").length;
     const inProgress = filteredOrders.filter(o => o.status === "En Progreso").length;
     const pending = filteredOrders.filter(o => o.status === "Pendiente").length;
 
-    // Performance (simplified OEE)
-    const performance = validCycleTimes.length > 0 
-      ? machineStatuses.filter(ms => ms.tiempo_ciclo_actual && ms.tiempo_ciclo_estandar)
-          .map(ms => (ms.tiempo_ciclo_estandar / ms.tiempo_ciclo_actual) * 100)
-          .reduce((a, b) => a + b, 0) / validCycleTimes.length
-      : 100;
+    const performance = 100;
 
     const oee = (availability * (performance / 100) * (qualityRate / 100));
 
@@ -125,7 +108,7 @@ export default function ProductionDashboardPage() {
       rejectedCount,
       totalInspected
     };
-  }, [workOrders, machineStatuses, inspections, machines, dateRange, selectedMachine]);
+  }, [workOrders, inspections, machines, dateRange, selectedMachine]);
 
   // Production by Machine
   const productionByMachine = useMemo(() => {
@@ -471,11 +454,8 @@ export default function ProductionDashboardPage() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {machines.map(machine => {
-              const status = machineStatuses.find(ms => ms.machine_id === machine.id);
-              const isAvailable = status?.estado_disponibilidad === "Disponible";
-              const cycleDeviation = status?.tiempo_ciclo_actual && status?.tiempo_ciclo_estandar
-                ? ((status.tiempo_ciclo_actual - status.tiempo_ciclo_estandar) / status.tiempo_ciclo_estandar) * 100
-                : 0;
+              const isAvailable = machine.estado_disponibilidad === "Disponible";
+              const prodStatus = machine.estado_produccion;
               
               return (
                 <Card key={machine.id} className={`border-2 ${isAvailable ? 'border-green-300 dark:border-green-700' : 'border-red-300 dark:border-red-700'} dark:bg-card/60`}>
@@ -490,33 +470,12 @@ export default function ProductionDashboardPage() {
                       </Badge>
                     </div>
                     
-                    {status?.estado_produccion && status.estado_produccion !== "Sin orden" && (
+                    {prodStatus && prodStatus !== "Sin Producción" && (
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
                           <span className="text-slate-600">Estado:</span>
-                          <Badge variant="outline">{status.estado_produccion}</Badge>
+                          <Badge variant="outline">{prodStatus}</Badge>
                         </div>
-                        
-                        {status.lotes_producidos > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">Lotes:</span>
-                            <span className="font-semibold">{status.lotes_producidos}</span>
-                          </div>
-                        )}
-                        
-                        {status.tiempo_ciclo_actual && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Tiempo ciclo:</span>
-                            <span className={`font-semibold ${cycleDeviation > 20 ? 'text-red-600' : 'text-green-600'}`}>
-                              {status.tiempo_ciclo_actual.toFixed(1)} min
-                              {cycleDeviation !== 0 && (
-                                <span className="text-[10px] ml-1">
-                                  ({cycleDeviation > 0 ? '+' : ''}{cycleDeviation.toFixed(0)}%)
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     )}
                   </CardContent>

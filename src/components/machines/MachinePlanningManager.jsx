@@ -61,7 +61,13 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
     saveMutation.mutate({ machineId, active: !currentState });
   };
 
-  const activeMachines = machines.filter(m => {
+  const sortedMachines = Array.isArray(machines) ? [...machines].sort((a, b) => {
+    const ao = (a.orden ?? 999);
+    const bo = (b.orden ?? 999);
+    return ao - bo;
+  }) : [];
+
+  const activeMachines = sortedMachines.filter(m => {
     const planning = machinePlannings.find(mp => mp.machine_id === m.id);
     return planning?.activa_planning;
   });
@@ -109,8 +115,9 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {machines.map((machine) => {
+                {sortedMachines.map((machine) => {
                   const isActive = isActivePlanning(machine.id);
+                  const isAvailable = machine.estado_disponibilidad ? (machine.estado_disponibilidad === "Disponible") : true;
                   return (
                     <TableRow key={machine.id} className={isActive ? "bg-green-50" : ""}>
                       <TableCell>
@@ -136,19 +143,19 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge className={
-                          machine.estado === "Activa"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-slate-100 text-slate-600"
-                        }>
-                          {machine.estado}
-                        </Badge>
+                        {machine.estado_disponibilidad ? (
+                          <Badge className={isAvailable ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}>
+                            {machine.estado_disponibilidad}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-slate-100 text-slate-600">-</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <Switch
                           checked={isActive}
                           onCheckedChange={() => handleToggle(machine.id, isActive)}
-                          disabled={machine.estado !== "Activa" || saveMutation.isPending}
+                          disabled={saveMutation.isPending}
                         />
                       </TableCell>
                     </TableRow>

@@ -27,11 +27,15 @@ export default function MachineExperienceManager() {
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list('orden_visualizacion');
-      return data.map(m => ({
-        ...m,
-        codigo: m.codigo_maquina,
-        orden: m.orden_visualizacion
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      const list = Array.isArray(data) ? data : [];
+      return list.map(m => ({
+        id: m.id,
+        nombre: m.nombre || '',
+        codigo: m.codigo_maquina || m.codigo || '',
+        orden: m.orden_visualizacion || 999,
+        tipo: m.tipo || '',
+        ubicacion: m.ubicacion || ''
       })).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
     },
     initialData: [],

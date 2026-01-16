@@ -62,7 +62,6 @@ export default function Layout({ children, currentPageName }) {
     
     // Planificación
     { name: 'Planning Diario', icon: Calendar, path: '/DailyPlanning', category: 'Planificación' },
-    { name: 'Planning Turnos', icon: Users, path: '/ShiftManagement', category: 'Planificación' },
     { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Planificación' },
     { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
     

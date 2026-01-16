@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { RefreshCw, Save, Trash2, ArrowLeftRight, Mic, Square } from "lucide-react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 export default function ShiftHandoverPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -52,11 +51,6 @@ export default function ShiftHandoverPage() {
     initialData: [],
   });
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
-    initialData: [],
-  });
 
   const saveHandoverMutation = useMutation({
     mutationFn: async (data) => {

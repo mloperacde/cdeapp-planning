@@ -10,12 +10,15 @@ import { createPageUrl } from "@/utils";
 import { usePagination } from "@/components/utils/usePagination";
 import AdvancedSearch from "@/components/common/AdvancedSearch";
 import MachineDetailCard from "@/components/machines/MachineDetailCard";
+import Breadcrumbs from "../components/common/Breadcrumbs";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 const EMPTY_ARRAY = [];
 
 export default function MachineManagement() {
   const [filters, setFilters] = useState({});
   const [selectedMachine, setSelectedMachine] = useState(null);
   const queryClient = useQueryClient();
+  const { goBack } = useNavigationHistory();
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
@@ -27,7 +30,9 @@ export default function MachineManagement() {
         codigo_maquina: m.codigo_maquina || m.codigo || '',
         tipo: m.tipo || '',
         ubicacion: m.ubicacion || '',
-        orden_visualizacion: m.orden_visualizacion || 999
+        orden_visualizacion: m.orden_visualizacion || 999,
+        estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
+        estado_produccion: m.estado_produccion || 'Sin Producción'
       })) : [];
       return normalized.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
@@ -35,22 +40,7 @@ export default function MachineManagement() {
     initialData: EMPTY_ARRAY,
   });
 
-  const { data: machineStatuses = EMPTY_ARRAY } = useQuery({
-    queryKey: ['machineStatuses'],
-    queryFn: () => base44.entities.MachineStatus.list(),
-    staleTime: 1 * 60 * 1000,
-    refetchInterval: 30000,
-    initialData: EMPTY_ARRAY,
-  });
-
-
-
-  const getStatus = (machineId) => {
-    return machineStatuses.find(ms => ms.machine_id === machineId) || {
-      estado_disponibilidad: "Disponible",
-      estado_produccion: "Sin orden"
-    };
-  };
+  // Vista de solo lectura: usar exclusivamente estado desde MachineMasterDatabase
 
   const filteredMachines = useMemo(() => {
     let result = machines.filter(m => {
@@ -59,12 +49,11 @@ export default function MachineManagement() {
         m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.codigo_maquina?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const status = getStatus(m.id);
       const matchesDisp = !filters.disponibilidad || filters.disponibilidad === 'all' || 
-        status.estado_disponibilidad === filters.disponibilidad;
+        m.estado_disponibilidad === filters.disponibilidad;
         
       const matchesProd = !filters.produccion || filters.produccion === 'all' || 
-        status.estado_produccion === filters.produccion;
+        m.estado_produccion === filters.produccion;
 
       return matchesSearch && matchesDisp && matchesProd;
     });
@@ -74,10 +63,7 @@ export default function MachineManagement() {
         let aVal = a[filters.sortField];
         let bVal = b[filters.sortField];
         
-        if (filters.sortField === 'estado_disponibilidad' || filters.sortField === 'estado_produccion') {
-          aVal = getStatus(a.id)[filters.sortField];
-          bVal = getStatus(b.id)[filters.sortField];
-        }
+        // campos directos del maestro
 
         if (!aVal) return 1;
         if (!bVal) return -1;
@@ -90,22 +76,27 @@ export default function MachineManagement() {
     }
 
     return result;
-  }, [machines, filters, machineStatuses]);
+  }, [machines, filters]);
 
   const { currentPage, totalPages, paginatedItems, goToPage, nextPage, prevPage } = usePagination(filteredMachines, 24);
 
   const availableCount = filteredMachines.filter(m => 
-    getStatus(m.id).estado_disponibilidad === "Disponible"
+    m.estado_disponibilidad === "Disponible"
   ).length;
 
-  const ordenesCount = filteredMachines.filter(m => {
-    const status = getStatus(m.id);
-    return status.estado_produccion === "Orden en curso" || status.estado_produccion === "Orden nueva";
-  }).length;
+  const ordenesCount = filteredMachines.filter(m => m.estado_produccion !== "Sin Producción").length;
 
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <Breadcrumbs
+          items={[
+            { label: "Producción", url: createPageUrl("ProductionDashboard") },
+            { label: "Consulta de Máquinas" }
+          ]}
+          showBack={true}
+          onBack={goBack}
+        />
         <div className="mb-6">
           <Link to={createPageUrl("Configuration")}>
             <Button variant="ghost" className="mb-2">
@@ -195,9 +186,10 @@ export default function MachineManagement() {
                   produccion: {
                     label: 'Estado Producción',
                     options: [
-                      { value: 'Sin orden', label: 'Sin orden' },
-                      { value: 'Orden nueva', label: 'Orden nueva' },
-                      { value: 'Orden en curso', label: 'Orden en curso' }
+                      { value: 'En cambio', label: 'En cambio' },
+                      { value: 'En producción', label: 'En producción' },
+                      { value: 'Pendiente de Inicio', label: 'Pendiente de Inicio' },
+                      { value: 'Sin Producción', label: 'Sin Producción' }
                     ]
                   }
                 }}
@@ -218,9 +210,8 @@ export default function MachineManagement() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
                 {paginatedItems.map(machine => {
-                  const status = getStatus(machine.id);
-                  const isAvailable = status.estado_disponibilidad === "Disponible";
-                  const prodStatus = status.estado_produccion;
+                  const isAvailable = machine.estado_disponibilidad === "Disponible";
+                  const prodStatus = machine.estado_produccion;
 
                   return (
                     <Card 
@@ -252,15 +243,16 @@ export default function MachineManagement() {
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">Disponibilidad</span>
                             <Badge className={isAvailable ? "bg-green-600" : "bg-red-600"}>
-                              {status.estado_disponibilidad}
+                              {machine.estado_disponibilidad}
                             </Badge>
                           </div>
 
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">Producción</span>
                             <Badge variant="outline" className={
-                              prodStatus === "Orden en curso" ? "bg-blue-100 text-blue-800" :
-                              prodStatus === "Orden nueva" ? "bg-purple-100 text-purple-800" :
+                              prodStatus === "En producción" ? "bg-blue-100 text-blue-800" :
+                              prodStatus === "Pendiente de Inicio" ? "bg-purple-100 text-purple-800" :
+                              prodStatus === "En cambio" ? "bg-amber-100 text-amber-800" :
                               "bg-slate-100 text-slate-600 dark:text-slate-400"
                             }>
                               {prodStatus}
@@ -283,6 +275,7 @@ export default function MachineManagement() {
         <MachineDetailCard 
           machine={selectedMachine} 
           onClose={() => setSelectedMachine(null)} 
+          canEdit={false}
         />
       )}
     </div>

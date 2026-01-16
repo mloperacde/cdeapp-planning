@@ -9,14 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Upload, FileText, Image as ImageIcon, Wrench, TrendingUp, X, Download, Settings2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import MachineProcessesTab from "./MachineProcessesTab";
 
-export default function MachineDetailCard({ machine, onClose }) {
-  const [editMode, setEditMode] = useState(false);
+export default function MachineDetailCard({ machine, onClose, initialEditMode = false, isNew = false, canEdit = true }) {
+  const [editMode, setEditMode] = useState(canEdit ? !!initialEditMode : false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const queryClient = useQueryClient();
@@ -31,6 +32,9 @@ export default function MachineDetailCard({ machine, onClose }) {
     tipo: machine.tipo || "",
     ubicacion: machine.ubicacion || "",
     estado: machine.estado || "Disponible",
+    estado_produccion: machine.estado_produccion || "Sin Producción",
+    estado_disponibilidad: machine.estado_disponibilidad || "Disponible",
+    orden: machine.orden || 1,
     descripcion: machine.descripcion || "",
     programa_mantenimiento: machine.programa_mantenimiento || "",
     imagenes: machine.imagenes || [],
@@ -51,6 +55,8 @@ export default function MachineDetailCard({ machine, onClose }) {
         ...data,
         codigo_maquina: data.codigo || machine.codigo,
         estado_operativo: data.estado || machine.estado,
+        estado_produccion: data.estado_produccion || machine.estado_produccion,
+        estado_disponibilidad: data.estado_disponibilidad || machine.estado_disponibilidad,
         orden_visualizacion: data.orden || machine.orden
       });
     },
@@ -63,6 +69,83 @@ export default function MachineDetailCard({ machine, onClose }) {
   });
 
   const handleSave = () => {
+    const desiredOrder = Math.max(1, Number(formData.orden || 1));
+    if (!machine.id || isNew) {
+      base44.entities.MachineMasterDatabase.create({
+        nombre: formData.nombre,
+        codigo_maquina: formData.codigo,
+        marca: formData.marca || "",
+        modelo: formData.modelo || "",
+        numero_serie: formData.numero_serie || "",
+        fecha_compra: formData.fecha_compra || "",
+        tipo: formData.tipo || "",
+        ubicacion: formData.ubicacion || "",
+        estado_operativo: formData.estado || "Disponible",
+        estado_produccion: formData.estado_produccion || "Sin Producción",
+        estado_disponibilidad: formData.estado_disponibilidad || "Disponible",
+        orden_visualizacion: desiredOrder
+      }).then(async (created) => {
+        const list = await base44.entities.MachineMasterDatabase.list(undefined, 500);
+        const ordered = Array.isArray(list) ? list.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999)) : [];
+        const idx = ordered.findIndex(m => m.id === created.id);
+        const newIndex = desiredOrder - 1;
+        if (idx >= 0 && newIndex !== idx) {
+          const [moved] = ordered.splice(idx, 1);
+          ordered.splice(newIndex, 0, moved);
+        }
+        await Promise.all(ordered.map((m, i) => base44.entities.MachineMasterDatabase.update(m.id, { orden_visualizacion: i + 1 })));
+        queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
+        queryClient.invalidateQueries({ queryKey: ['machines'] });
+        setEditMode(false);
+        toast.success("Máquina creada correctamente");
+        onClose && onClose();
+      }).catch(err => toast.error("Error al crear: " + err.message));
+      return;
+    }
+    if (Number(machine.orden || 1) !== desiredOrder) {
+      base44.entities.MachineMasterDatabase.list(undefined, 500).then(async (list) => {
+        const ordered = Array.isArray(list) ? list.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999)) : [];
+        const idx = ordered.findIndex(m => m.id === machine.id);
+        const newIndex = desiredOrder - 1;
+        if (idx >= 0) {
+          const [moved] = ordered.splice(idx, 1);
+          moved.nombre = formData.nombre;
+          moved.codigo_maquina = formData.codigo;
+          moved.marca = formData.marca || "";
+          moved.modelo = formData.modelo || "";
+          moved.numero_serie = formData.numero_serie || "";
+          moved.fecha_compra = formData.fecha_compra || "";
+          moved.tipo = formData.tipo || "";
+          moved.ubicacion = formData.ubicacion || "";
+          moved.estado_operativo = formData.estado || "Disponible";
+          moved.estado_produccion = formData.estado_produccion || "Sin Producción";
+          moved.estado_disponibilidad = formData.estado_disponibilidad || "Disponible";
+          ordered.splice(newIndex, 0, moved);
+        }
+        await Promise.all(ordered.map((m, i) => base44.entities.MachineMasterDatabase.update(m.id, { 
+          orden_visualizacion: i + 1 
+        })));
+        await base44.entities.MachineMasterDatabase.update(machine.id, {
+          nombre: formData.nombre,
+          codigo_maquina: formData.codigo,
+          marca: formData.marca || "",
+          modelo: formData.modelo || "",
+          numero_serie: formData.numero_serie || "",
+          fecha_compra: formData.fecha_compra || "",
+          tipo: formData.tipo || "",
+          ubicacion: formData.ubicacion || "",
+          estado_operativo: formData.estado || "Disponible",
+          estado_produccion: formData.estado_produccion || "Sin Producción",
+          estado_disponibilidad: formData.estado_disponibilidad || "Disponible",
+        });
+        queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
+        queryClient.invalidateQueries({ queryKey: ['machines'] });
+        setEditMode(false);
+        toast.success("Máquina y orden actualizados");
+        onClose && onClose();
+      }).catch(err => toast.error("Error al actualizar orden: " + err.message));
+      return;
+    }
     updateMutation.mutate(formData);
   };
 
@@ -144,22 +227,24 @@ export default function MachineDetailCard({ machine, onClose }) {
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Ficha Completa de Máquina</span>
-            <div className="flex gap-2">
-              {!editMode ? (
-                <Button variant="outline" onClick={() => setEditMode(true)}>
-                  Editar
-                </Button>
-              ) : (
-                <>
-                  <Button variant="outline" onClick={() => setEditMode(false)}>
-                    Cancelar
+            {canEdit && (
+              <div className="flex gap-2">
+                {!editMode ? (
+                  <Button variant="outline" onClick={() => setEditMode(true)}>
+                    Editar
                   </Button>
-                  <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-                    Guardar
-                  </Button>
-                </>
-              )}
-            </div>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => setEditMode(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+                      Guardar
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -237,6 +322,47 @@ export default function MachineDetailCard({ machine, onClose }) {
                       onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Ordenación</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.orden}
+                      onChange={(e) => setFormData({ ...formData, orden: Number(e.target.value || 1) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado de Producción</Label>
+                    <Select
+                      value={formData.estado_produccion}
+                      onValueChange={(v) => setFormData({ ...formData, estado_produccion: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="En cambio">En cambio</SelectItem>
+                        <SelectItem value="En producción">En producción</SelectItem>
+                        <SelectItem value="Pendiente de Inicio">Pendiente de Inicio</SelectItem>
+                        <SelectItem value="Sin Producción">Sin Producción</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Disponibilidad</Label>
+                    <Select
+                      value={formData.estado_disponibilidad}
+                      onValueChange={(v) => setFormData({ ...formData, estado_disponibilidad: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Disponible">Disponible</SelectItem>
+                        <SelectItem value="No disponible">No disponible</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="col-span-2 space-y-2">
                     <Label>Descripción</Label>
                     <Textarea
@@ -273,6 +399,14 @@ export default function MachineDetailCard({ machine, onClose }) {
                     <Badge className={machine.estado === "Disponible" ? "bg-green-600" : "bg-red-600"}>
                       {machine.estado}
                     </Badge>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="font-semibold">Estado de Producción:</span>{" "}
+                    <Badge>{machine.estado_produccion || 'Sin Producción'}</Badge>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="font-semibold">Disponibilidad:</span>{" "}
+                    <Badge>{machine.estado_disponibilidad || 'Disponible'}</Badge>
                   </div>
                   {machine.descripcion && (
                     <div className="col-span-2">
