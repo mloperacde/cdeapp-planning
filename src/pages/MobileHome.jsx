@@ -51,9 +51,12 @@ export default function MobileHome() {
   });
 
   useEffect(() => {
-    // If not authenticated, redirect to login
     if (!isLoading && !user) {
-      base44.auth.redirectToLogin(window.location.pathname);
+      const host = window.location.hostname;
+      const isLocal = host === 'localhost' || host === '127.0.0.1';
+      if (!isLocal) {
+        base44.auth.redirectToLogin(window.location.pathname);
+      }
     }
   }, [user, isLoading]);
 
