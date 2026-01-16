@@ -1,13 +1,11 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Settings, BarChart3, Upload } from "lucide-react";
 import IncentivePlanConfiguration from "../components/incentives/IncentivePlanConfiguration";
 import DepartmentObjectiveConfig from "../components/incentives/DepartmentObjectiveConfig";
 import EmployeeResultsManager from "../components/incentives/EmployeeResultsManager";
 import IncentiveEvaluation from "../components/incentives/IncentiveEvaluation";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+ 
 export default function IncentiveManagementPage() {
   return (
     <div className="p-6 md:p-8">

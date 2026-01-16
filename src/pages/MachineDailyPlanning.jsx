@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,21 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Factory, 
-  Calendar, 
-  Save, 
-  CheckCircle2, 
-  Trash2, 
-  AlertCircle,
-  ArrowLeft,
-  Clock
-} from "lucide-react";
+import { Factory, Calendar, Save, CheckCircle2, Trash2, AlertCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { useAppData } from "../components/data/DataProvider";
 import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
 import ViabilityTrafficLight from "../components/planning/ViabilityTrafficLight";
@@ -43,12 +32,12 @@ export default function MachineDailyPlanningPage() {
   const queryClient = useQueryClient();
 
   // Cargar borrador al inicio
-  React.useEffect(() => {
+  useEffect(() => {
     const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;
     const savedDraft = localStorage.getItem(draftKey);
     if (savedDraft) {
       try {
-        const draft = JSON.parse(savedDraft);
+        JSON.parse(savedDraft);
         setShowDraftOptions(true);
         // No cargamos automáticamente, mostramos opción
       } catch (e) {
@@ -58,7 +47,7 @@ export default function MachineDailyPlanningPage() {
   }, [selectedDate, selectedTurno, selectedTeam]);
 
   // Auto-guardar borrador cada 2 minutos
-  React.useEffect(() => {
+  useEffect(() => {
     if (planningData.maquinas_planificadas.length === 0) return;
 
     const interval = setInterval(() => {
@@ -74,7 +63,7 @@ export default function MachineDailyPlanningPage() {
   }, [planningData, selectedDate, selectedTurno, selectedTeam]);
 
   // Guardar borrador al salir
-  React.useEffect(() => {
+  useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges && planningData.maquinas_planificadas.length > 0) {
         const draftKey = `planning_draft_${selectedDate}_${selectedTurno}_${selectedTeam}`;

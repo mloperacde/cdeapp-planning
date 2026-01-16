@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,6 @@ const EMPTY_ARRAY = [];
 export default function MachineManagement() {
   const [filters, setFilters] = useState({});
   const [selectedMachine, setSelectedMachine] = useState(null);
-  const queryClient = useQueryClient();
   const { goBack } = useNavigationHistory();
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
@@ -78,7 +77,7 @@ export default function MachineManagement() {
     return result;
   }, [machines, filters]);
 
-  const { currentPage, totalPages, paginatedItems, goToPage, nextPage, prevPage } = usePagination(filteredMachines, 24);
+  const { currentPage, totalPages, paginatedItems, nextPage, prevPage } = usePagination(filteredMachines, 24);
 
   const availableCount = filteredMachines.filter(m => 
     m.estado_disponibilidad === "Disponible"

@@ -1,21 +1,12 @@
-import React, { useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { 
-  Calendar, 
-  User, 
-  Bell, 
-  MessageSquare, 
-  ClipboardList,
-  LogOut,
-  Settings,
-  Lock
-} from "lucide-react";
+import { Calendar, User, Bell, MessageSquare, ClipboardList, LogOut } from "lucide-react";
 
 
 export default function MobileHome() {
@@ -26,7 +17,7 @@ export default function MobileHome() {
     queryFn: async () => {
       try {
         return await base44.auth.me();
-      } catch (error) {
+      } catch {
         return null;
       }
     },

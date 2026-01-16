@@ -1,8 +1,8 @@
-import React from "react";
+ 
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { Wrench, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import MaintenanceTrackingPage from "./MaintenanceTracking";
 
 export default function MachineMaintenancePage() {

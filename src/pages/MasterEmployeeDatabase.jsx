@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "../components/data/DataProvider";
@@ -15,30 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { 
-  Database, 
-  ArrowLeft, 
-  RefreshCw, 
-  Trash2,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Upload,
-  FileText,
-  User,
-  Columns,
-  Settings,
-  ChevronLeft,
-  ChevronRight
-} from "lucide-react";
+import { Database, RefreshCw, Trash2, CheckCircle2, AlertCircle, Clock, Upload, FileText, User, Columns, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -108,7 +91,6 @@ export default function MasterEmployeeDatabasePage() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
-  const [verifyEmployeeId, setVerifyEmployeeId] = useState(null);
   const { goBack } = useNavigationHistory();
 
   
@@ -125,7 +107,7 @@ export default function MasterEmployeeDatabasePage() {
   });
 
   // Persistir selección de columnas
-  React.useEffect(() => {
+  useEffect(() => {
     localStorage.setItem("masterEmployeeColumns", JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
@@ -221,7 +203,7 @@ export default function MasterEmployeeDatabasePage() {
     }
   };
 
-  const openSyncDialog = async (masterEmployee) => {
+  const openSyncDialog = async () => {
     // La sincronización ya no es necesaria - todos los datos están en EmployeeMasterDatabase
     toast.info("La sincronización ha sido deprecada. Todos los datos están en la Base Maestra.");
     return;
@@ -772,7 +754,7 @@ export default function MasterEmployeeDatabasePage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => openSyncDialog(emp)}
+                                    onClick={() => openSyncDialog()}
                                     className="h-8 w-8 p-0 rounded-full"
                                     title="Sincronizar"
                                   >
@@ -862,7 +844,6 @@ export default function MasterEmployeeDatabasePage() {
             onClose={() => {
               setEditDialogOpen(false);
               setEmployeeToEdit(null);
-              setVerifyEmployeeId(null);
             }}
           />
           {employeeToEdit && (

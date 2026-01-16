@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, Filter, ArrowLeft, Bell, History, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, FileSpreadsheet, ArrowUpDown, XCircle, ExternalLink, Database, UserX } from "lucide-react";
+import { KeyRound, Save, ArrowLeft, Bell, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, ArrowUpDown, Database, UserX, FileSpreadsheet, Filter, ExternalLink, XCircle, History } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -86,7 +86,7 @@ export default function LockerManagementPage() {
     return lockerAssignments.find(la => la.employee_id === employeeId);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const assignments = {};
     lockerAssignments.forEach(la => {
       const cleanActual = la.numero_taquilla_actual ? la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() : '';

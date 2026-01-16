@@ -13,11 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+ 
+import Breadcrumbs from "../components/common/Breadcrumbs";
+import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeManager";
 import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder";
@@ -35,6 +36,7 @@ export default function MaintenanceTrackingPage() {
   const [showTypeManager, setShowTypeManager] = useState(false);
   const [showWorkOrder, setShowWorkOrder] = useState(null);
   const queryClient = useQueryClient();
+  const { goBack } = useNavigationHistory();
 
   const { data: maintenances = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenances'],
@@ -44,7 +46,11 @@ export default function MaintenanceTrackingPage() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.MachineMasterDatabase.list('nombre', 200),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
+      return (Array.isArray(data) ? data : [])
+        .sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
+    },
     staleTime: 15 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
@@ -260,12 +266,7 @@ export default function MaintenanceTrackingPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Configuration")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Configuración
-            </Button>
-          </Link>
+          <Breadcrumbs showBack={true} onBack={goBack} />
         </div>
 
         <div className="flex justify-between items-center mb-8">

@@ -154,11 +154,7 @@ export default function SupportManagement1415Page() {
   }, [taskGroups]);
 
   // Empleados ya guardados en DB
-  const savedAssignedEmployeeIds = useMemo(() => {
-    return savedTasks
-      .filter(t => t.fecha === selectedDate)
-      .map(t => t.employee_id);
-  }, [savedTasks, selectedDate]);
+  
 
   // Función para obtener empleados disponibles para un grupo específico
   const getAvailableEmployeesForGroup = (groupId) => {
@@ -283,9 +279,7 @@ export default function SupportManagement1415Page() {
     return team?.color || '#3B82F6';
   };
 
-  const getEmployeeName = (empId) => {
-    return employees.find(e => e.id === empId)?.nombre || 'Desconocido';
-  };
+  
 
   const allAssignedTasks = useMemo(() => {
     return savedTasks

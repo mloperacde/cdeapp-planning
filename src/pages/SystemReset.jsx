@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,10 +38,10 @@ export default function SystemResetPage() {
       });
       setResult(data);
       setConfirmText('');
-    } catch (error) {
+    } catch {
       setResult({
         success: false,
-        error: error.message
+        error: 'Error al reiniciar'
       });
     } finally {
       setProcessing(false);

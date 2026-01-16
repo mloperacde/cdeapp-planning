@@ -1,13 +1,12 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Brain, 
-  TrendingUp, 
   Users, 
   AlertTriangle, 
   Clock, 
@@ -38,11 +37,7 @@ export default function MLInsightsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: shifts } = useQuery({
-    queryKey: ['shiftAssignments'],
-    queryFn: () => base44.entities.ShiftAssignment.list(),
-    initialData: [],
-  });
+ 
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],

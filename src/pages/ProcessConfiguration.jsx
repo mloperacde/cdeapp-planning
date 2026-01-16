@@ -161,7 +161,7 @@ export default function ProcessConfigurationPage() {
       await Promise.all(updates);
       queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
       toast.success("Orden actualizado");
-    } catch (error) {
+    } catch {
       toast.error("Error al actualizar orden");
     }
   };
@@ -357,7 +357,7 @@ export default function ProcessConfigurationPage() {
       await Promise.all(updates);
       queryClient.invalidateQueries({ queryKey: ['machines'] });
       toast.success("Orden de máquinas actualizado");
-    } catch (error) {
+    } catch {
       toast.error("Error al actualizar orden");
     }
   };
@@ -456,7 +456,6 @@ export default function ProcessConfigurationPage() {
   };
 
   const handleToggleMachine = (machineId) => {
-    const machine = machines.find(m => m.id === machineId);
     setMachineAssignments({
       ...machineAssignments,
       [machineId]: {

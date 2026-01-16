@@ -14,13 +14,10 @@ import {
 } from "@/components/ui/table";
 import { 
   Users, 
-  Search,
   Phone,
   Mail,
   ChevronLeft,
   ChevronRight,
-  Cake,
-  Award,
   Columns,
   IdCard,
   AlertTriangle
@@ -32,8 +29,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+ 
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 
@@ -63,12 +59,12 @@ export default function EmployeesShiftManagerPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
+  const pageSize = 20;
   
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem("employeesShiftManagerColumns");
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return {}; }
+      try { return JSON.parse(saved); } catch { return {}; }
     }
     const defaults = {};
     Object.keys(ALL_COLUMNS).forEach(key => {
