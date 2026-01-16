@@ -32,13 +32,16 @@ export default function ShiftHandoverPage() {
   const { data: machines, isLoading } = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list('orden_visualizacion');
-      return data.map(m => ({
-        ...m,
-        codigo: m.codigo_maquina,
-        estado: m.estado_operativo,
-        orden: m.orden_visualizacion
-      }));
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      return (Array.isArray(data) ? data : [])
+        .map(m => ({
+          id: m.id,
+          nombre: m.nombre || '',
+          codigo: m.codigo_maquina || m.codigo || '',
+          estado: m.estado_operativo || 'Disponible',
+          orden: m.orden_visualizacion || 999
+        }))
+        .sort((a, b) => (a.orden || 999) - (b.orden || 999));
     },
     initialData: [],
   });

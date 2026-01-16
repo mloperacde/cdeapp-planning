@@ -154,7 +154,12 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
   const { data: masterMachines = [] } = useQuery({
     queryKey: ['machinesMaster'],
-    queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      return (Array.isArray(data) ? data : []).sort(
+        (a, b) => (a.orden_visualizacion ?? 999) - (b.orden_visualizacion ?? 999)
+      );
+    },
     staleTime: 5 * 60 * 1000,
   });
 

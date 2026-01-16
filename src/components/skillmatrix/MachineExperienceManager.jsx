@@ -32,7 +32,7 @@ export default function MachineExperienceManager() {
         ...m,
         codigo: m.codigo_maquina,
         orden: m.orden_visualizacion
-      }));
+      })).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
     },
     initialData: [],
   });

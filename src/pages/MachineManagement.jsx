@@ -20,9 +20,16 @@ export default function MachineManagement() {
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
-      const machines = await base44.entities.MachineMasterDatabase.list('nombre', 200);
-      console.log(`✅ Cargadas ${machines.length} máquinas desde MachineMasterDatabase`);
-      return machines;
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
+      const normalized = Array.isArray(data) ? data.map(m => ({
+        id: m.id,
+        nombre: m.nombre || '',
+        codigo_maquina: m.codigo_maquina || m.codigo || '',
+        tipo: m.tipo || '',
+        ubicacion: m.ubicacion || '',
+        orden_visualizacion: m.orden_visualizacion || 999
+      })) : [];
+      return normalized.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
     staleTime: 15 * 60 * 1000,
     initialData: EMPTY_ARRAY,
@@ -78,6 +85,8 @@ export default function MachineManagement() {
         const comparison = String(aVal).localeCompare(String(bVal));
         return filters.sortDirection === 'desc' ? -comparison : comparison;
       });
+    } else {
+      result = [...result].sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     }
 
     return result;
@@ -193,8 +202,9 @@ export default function MachineManagement() {
                   }
                 }}
                 sortOptions={[
+                  { field: 'orden_visualizacion', label: 'Orden' },
                   { field: 'nombre', label: 'Nombre' },
-                  { field: 'codigo', label: 'Código' },
+                  { field: 'codigo_maquina', label: 'Código' },
                   { field: 'estado_disponibilidad', label: 'Disponibilidad' }
                 ]}
                 placeholder="Buscar por nombre o código..."

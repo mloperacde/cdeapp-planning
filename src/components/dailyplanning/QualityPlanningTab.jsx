@@ -60,7 +60,7 @@ export default function QualityPlanningTab({ selectedDate, selectedTeam, selecte
         ...m,
         codigo: m.codigo_maquina,
         orden: m.orden_visualizacion
-      }));
+      })).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
     },
     initialData: [],
   });

@@ -28,12 +28,12 @@ export default function DailyShiftPlanningPage() {
       queryKey: ['machines'],
       queryFn: async () => {
         const data = await base44.entities.MachineMasterDatabase.list('orden_visualizacion');
-        return data.map(m => ({
+      return data.map(m => ({
           ...m,
           codigo: m.codigo_maquina,
           estado: m.estado_operativo,
           orden: m.orden_visualizacion
-        }));
+      })).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
       },
       staleTime: 5 * 60 * 1000,
     });

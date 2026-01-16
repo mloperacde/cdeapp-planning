@@ -54,7 +54,17 @@ export default function EnhancedDocumentForm({ document, onClose }) {
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
-    queryFn: () => base44.entities.MachineMasterDatabase.list('orden_visualizacion'),
+    queryFn: async () => {
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      return (Array.isArray(data) ? data : [])
+        .map(m => ({
+          id: m.id,
+          nombre: m.nombre || '',
+          codigo: m.codigo_maquina || m.codigo || '',
+          orden: m.orden_visualizacion || 999
+        }))
+        .sort((a, b) => (a.orden || 999) - (b.orden || 999));
+    },
     initialData: []
   });
 
