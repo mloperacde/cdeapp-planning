@@ -1,20 +1,14 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Plus, Download, Trash2, Search, Filter, Upload, ArrowLeft, Eye, History, Shield } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { FileText, Plus, Download, Trash2, Search, Upload, Eye, History, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Breadcrumbs from "../components/common/Breadcrumbs";
 import { useNavigationHistory } from "../components/utils/useNavigationHistory";
-import DocumentForm from "../components/documents/DocumentForm";
 import DocumentViewer from "../components/documents/DocumentViewer";
 import EnhancedDocumentForm from "../components/documents/EnhancedDocumentForm";
 import AdvancedDocumentSearch from "../components/documents/AdvancedDocumentSearch";
@@ -24,7 +18,6 @@ export default function DocumentManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
-  const [filters, setFilters] = useState({});
   const [advancedFilters, setAdvancedFilters] = useState({});
   const queryClient = useQueryClient();
 
@@ -185,14 +178,7 @@ export default function DocumentManagementPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <Breadcrumbs showBack={true} onBack={goBack} />
-        <div className="mb-6">
-          <Link to={createPageUrl("Configuration")}>
-            <Button variant="ghost">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Configuración
-            </Button>
-          </Link>
-        </div>
+        
 
         <div className="flex justify-between items-center mb-8">
           <div>

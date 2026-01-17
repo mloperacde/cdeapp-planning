@@ -66,7 +66,7 @@ export default function LockerManagementPage() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
-  const { data: lockerAssignments = EMPTY_ARRAY, refetch: refetchAssignments } = useQuery({
+  const { data: lockerAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
     refetchInterval: 5000,
@@ -368,9 +368,7 @@ export default function LockerManagementPage() {
       setHasChanges(false);
       toast.success("✅ Cambios guardados y sincronizados correctamente");
     },
-    onError: (error) => {
-      // Error ya mostrado en validación
-    }
+    onError: () => {}
   });
 
   const sendNotificationMutation = useMutation({
@@ -397,13 +395,7 @@ export default function LockerManagementPage() {
     },
   });
 
-  const departments = useMemo(() => {
-    const depts = new Set();
-    employees.forEach(emp => {
-      if (emp.departamento) depts.add(emp.departamento);
-    });
-    return Array.from(depts).sort();
-  }, [employees]);
+  
 
   const filteredAndSortedEmployees = useMemo(() => {
     let filtered = employees.filter(emp => {

@@ -59,10 +59,7 @@ export default function ShiftManagementPage() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
-  const { data: teams = [] } = useQuery({
-    queryKey: ['teams'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-  });
+  
 
   const { data: swapRequests = [] } = useQuery({
     queryKey: ['shiftSwapRequests'],

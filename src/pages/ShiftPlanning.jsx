@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import Breadcrumbs from "../components/common/Breadcrumbs";
  
 
 export default function ShiftPlanningPage() {
@@ -271,6 +272,7 @@ export default function ShiftPlanningPage() {
 
   return (
     <div className="space-y-6 p-6 md:p-8 max-w-[1800px] mx-auto">
+      <Breadcrumbs />
       <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader className="border-b border-slate-100">
           <div className="flex flex-col gap-4">

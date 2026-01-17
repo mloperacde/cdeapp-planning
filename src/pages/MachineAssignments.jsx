@@ -1,4 +1,4 @@
-import React from "react";
+ 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCog, Users, Wrench, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { useState } from "react";
 import EmployeeSkillsView from "../components/team/EmployeeSkillsView";
 import MachineSkillsView from "../components/team/MachineSkillsView";
 import IdealAssignmentView from "../components/team/IdealAssignmentView";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function MachineAssignmentsPage() {
     const [isExporting, setIsExporting] = useState(false);
@@ -19,6 +20,7 @@ export default function MachineAssignmentsPage() {
     
     return (
         <div className="p-6 h-[calc(100vh-20px)] flex flex-col">
+            <Breadcrumbs />
             <div className="mb-6 flex justify-between items-start">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">

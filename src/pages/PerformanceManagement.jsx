@@ -254,21 +254,7 @@ export default function PerformanceManagementPage() {
     return emp?.nombre || "Empleado desconocido";
   };
 
-  const calculateOverallScore = (objetivos) => {
-    if (!objetivos) return 0;
-    let totalWeight = 0;
-    let weightedScore = 0;
-    
-    for (let i = 1; i <= 6; i++) {
-      const obj = objetivos[`objetivo_${i}`];
-      if (obj && obj.peso > 0) {
-        totalWeight += obj.peso;
-        weightedScore += (obj.resultado || 0) * obj.peso / 100;
-      }
-    }
-    
-    return totalWeight > 0 ? Math.round(weightedScore) : 0;
-  };
+  
 
   const filteredReviews = useMemo(() => {
     return reviews.filter(r => 
