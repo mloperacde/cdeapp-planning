@@ -412,7 +412,6 @@ export default function AdminDeploymentGuidePage() {
                             <li>Selecciona el rol apropiado (ej. <strong>admin</strong> o <strong>user</strong>)</li>
                             <li>Guarda los cambios</li>
                           </ol>
-                        </div>
                           <ol className="text-sm space-y-1 text-slate-600 list-decimal list-inside mb-3">
                             <li>Ve a <strong>Configuración → Asignación de Roles</strong></li>
                             <li>Busca al usuario en la lista</li>
