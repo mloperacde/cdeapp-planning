@@ -1,3 +1,5 @@
+import { base44 } from '@/api/base44Client';
+
 // src/services/Base44DataService.js
 /**
  * SERVICIO CENTRALIZADO PARA SDK BASE44
@@ -5,26 +7,9 @@
  */
 class Base44DataService {
   constructor() {
-    if (!window.base44GlobalClient) {
-      console.log('🔄 Inicializando cliente Base44 SDK...');
-      // Importación dinámica para evitar problemas de carga
-      import('@base44/sdk').then(({ createClient }) => {
-        window.base44GlobalClient = createClient({
-          appId: "690cdd4205782920ba2297c8",
-          requiresAuth: true
-        });
-        console.log('✅ Cliente Base44 SDK inicializado');
-        this.notifyReady();
-      }).catch(error => {
-        console.error('❌ Error cargando SDK Base44:', error);
-        this.sdkError = error;
-      });
-    }
-    
-    this.client = null;
+    this.client = base44;
     this.sdkError = null;
-    this.isInitialized = false;
-    this.initPromise = null;
+    this.isInitialized = true;
     
     // Caché de datos
     this.cache = {
@@ -52,25 +37,7 @@ class Base44DataService {
    * Inicializa y retorna el cliente SDK
    */
   async getClient() {
-    if (this.client) return this.client;
-    
-    if (!this.initPromise) {
-      this.initPromise = new Promise((resolve, reject) => {
-        const checkInterval = setInterval(() => {
-          if (window.base44GlobalClient) {
-            clearInterval(checkInterval);
-            this.client = window.base44GlobalClient;
-            this.isInitialized = true;
-            resolve(this.client);
-          } else if (this.sdkError) {
-            clearInterval(checkInterval);
-            reject(this.sdkError);
-          }
-        }, 100);
-      });
-    }
-    
-    return this.initPromise;
+    return this.client;
   }
   
   notifyReady() {
@@ -96,21 +63,12 @@ class Base44DataService {
         console.log('📦 [Base44Service] Máquinas desde caché');
         return this.cache.machines;
       }
-      
+
       const client = await this.getClient();
       console.log('🔍 [Base44Service] Buscando máquinas via SDK...');
-      
-      // NOTA CRÍTICA: Necesito saber la estructura exacta de tu data model
-      // ¿Cómo se llaman las colecciones/tablas en Base44?
-      // Ejemplo 1: Si usas "machines" como nombre de colección
-      const result = await client.query('machines').findMany();
-      
-      // Ejemplo 2: Si usas una tabla específica
-      // const result = await client.query('maquinas').findMany();
-      
-      // Ejemplo 3: Si usas un modelo específico
-      // const result = await client.models.Machine.findMany();
-      
+
+      const result = await client.entities.MachineMasterDatabase.list('orden_visualizacion', 1000);
+
       // Normalizar datos
       const machines = this.normalizeMachines(result);
       
@@ -148,24 +106,12 @@ class Base44DataService {
       
       const client = await this.getClient();
       console.log(`👤 [Base44Service] Buscando máquinas para empleado ${employeeId}...`);
-      
-      // NOTA: Necesito saber cómo se relacionan empleados y máquinas
-      // Opción A: Si hay una colección "employee_machines"
-      const assignments = await client.query('employee_machines')
-        .where('employee_id', '==', employeeId)
-        .findMany();
-      
-      // Opción B: Si las máquinas tienen campo employee_id
-      // const assignments = await client.query('machines')
-      //   .where('employee_id', '==', employeeId)
-      //   .findMany();
-      
-      // Opción C: Si usas relaciones del SDK
-      // const employee = await client.models.Employee.findUnique({
-      //   where: { id: employeeId },
-      //   include: { machines: true }
-      // });
-      
+
+      const allSkills = await client.entities.EmployeeMachineSkill.list(undefined, 1000);
+      const assignments = Array.isArray(allSkills)
+        ? allSkills.filter(s => s.employee_id === employeeId)
+        : [];
+
       // Enriquecer con datos de máquinas
       const allMachines = await this.getAllMachines();
       const enrichedAssignments = this.enrichAssignments(assignments, allMachines);
@@ -199,10 +145,10 @@ class Base44DataService {
       return sdkData.map(item => ({
         id: item.id || item._id,
         name: item.name || item.nombre || `Máquina ${item.id}`,
-        code: item.code || item.codigo,
+        code: item.code || item.codigo || item.codigo_maquina,
         type: item.type || item.tipo,
-        status: item.status || item.estado || 'active',
-        department: item.department || item.departamento,
+        status: item.status || item.estado || item.estado_operativo || 'active',
+        department: item.department || item.departamento || item.ubicacion,
         // Campos específicos Base44
         ...item
       }));

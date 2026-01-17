@@ -14,12 +14,26 @@ function createMockBase44() {
     filter: async () => [],
     create: async () => ({}),
     update: async () => ({}),
+    findMany: async () => [],
+    findUnique: async () => ({}),
+    delete: async () => ({}),
   };
   const entities = new Proxy({}, {
     get: () => entityMethods,
   });
+  const query = () => ({
+    findMany: async () => [],
+    findUnique: async () => ({}),
+    where: () => ({
+      findMany: async () => [],
+      findUnique: async () => ({}),
+      limit: () => ({
+        findMany: async () => [],
+      }),
+    }),
+  });
   const appLogs = { logUserInApp: async () => {} };
-  return { auth, entities, appLogs };
+  return { auth, entities, appLogs, query };
 }
 
 export const base44 = isLocal
