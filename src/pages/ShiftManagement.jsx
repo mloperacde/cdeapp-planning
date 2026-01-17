@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, RefreshCw, Users, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function ShiftManagementPage() {
   const [showRequestForm, setShowRequestForm] = useState(false);

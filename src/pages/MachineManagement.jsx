@@ -11,6 +11,7 @@ import { usePagination } from "@/components/utils/usePagination";
 import AdvancedSearch from "@/components/common/AdvancedSearch";
 import MachineDetailCard from "@/components/machines/MachineDetailCard";
 import { useNavigationHistory } from "../components/utils/useNavigationHistory";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 const EMPTY_ARRAY = [];
 
 export default function MachineManagement() {

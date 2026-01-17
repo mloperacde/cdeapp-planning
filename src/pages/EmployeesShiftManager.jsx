@@ -32,6 +32,7 @@ import {
  
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 const EMPTY_ARRAY = [];
 const SEARCH_FIELDS = ['nombre', 'codigo_empleado', 'puesto', 'email', 'telefono_movil'];
