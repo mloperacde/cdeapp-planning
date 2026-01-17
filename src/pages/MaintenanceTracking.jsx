@@ -474,7 +474,9 @@ export default function MaintenanceTrackingPage() {
 
       {showTypeManager && (
         <MaintenanceTypeManager
-          onClose={() => setShowTypeManager(false)}
+          open={showTypeManager}
+          onOpenChange={setShowTypeManager}
+          machines={machines}
         />
       )}
 
