@@ -1,84 +1,49 @@
 import Layout from "../Layout";
 
 import AbsenceManagement from "./AbsenceManagement";
-
+import AbsenceConfigurationTab from "./AbsenceConfigurationTab";
 import AdvancedConfiguration from "./AdvancedConfiguration";
-
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
-
 import AppUserManagement from "./AppUserManagement";
-
 import ArticleManagement from "./ArticleManagement";
-
 import AttendanceManagement from "./AttendanceManagement";
-
 import CommitteeManagement from "./CommitteeManagement";
-
 import Configuration from "./Configuration";
-
 import DailyPlanning from "./DailyPlanning";
-
 import Dashboard from "./Dashboard";
-
 import DocumentManagement from "./DocumentManagement";
-
+import DeploymentGuide from "./DeploymentGuide";
+import AdminDeploymentGuide from "./AdminDeploymentGuide";
 import ETTTemporaryEmployees from "./ETTTemporaryEmployees";
-
 import EmployeeOnboarding from "./EmployeeOnboarding";
-
 import EmployeesShiftManager from "./EmployeesShiftManager";
-
 import IncentiveManagement from "./IncentiveManagement";
-
 import LockerManagement from "./LockerManagement";
-
 import MLInsights from "./MLInsights";
-
 import MachineAssignments from "./MachineAssignments";
-
 import MachineMaintenance from "./MachineMaintenance";
-
 import MachineMaster from "./MachineMaster";
-
 import MachineManagement from "./MachineManagement";
-
 import MaintenanceTracking from "./MaintenanceTracking";
-
 import MasterEmployeeDatabase from "./MasterEmployeeDatabase";
-
-
-
+import MobileHome from "./MobileHome";
 import PerformanceManagement from "./PerformanceManagement";
-
-
-
 import ProcessConfiguration from "./ProcessConfiguration";
-
 import ProductionPlanning from "./ProductionPlanning";
-
+import QuickStartGuide from "./QuickStartGuide";
 import Reports from "./Reports";
-
 import ShiftHandover from "./ShiftHandover";
-
 import ShiftManagement from "./ShiftManagement";
-
 import ShiftManagers from "./ShiftManagers";
-
 import ShiftPlanning from "./ShiftPlanning";
-
 import SkillMatrix from "./SkillMatrix";
-
 import SupportManagement1415 from "./SupportManagement1415";
-
 import SystemReset from "./SystemReset";
-
 import Timeline from "./Timeline";
-
 import WorkCalendarConfig from "./WorkCalendarConfig";
-
 import Breaks from "./Breaks";
-
 import MachinePlanning from "./MachineDailyPlanning";
+import MobileAppConfig from "./mobileAppConfig";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -99,87 +64,50 @@ const queryClient = new QueryClient({
 });
 
 const PAGES = {
-           
-          Dashboard: Dashboard,
-          
-          AbsenceManagement: AbsenceManagement,
-    
-    AdvancedConfiguration: AdvancedConfiguration,
-    
-    AdvancedHRDashboard: AdvancedHRDashboard,
-    
-    AppUserManagement: AppUserManagement,
-    
-    ArticleManagement: ArticleManagement,
-    
-    AttendanceManagement: AttendanceManagement,
-    
-    CommitteeManagement: CommitteeManagement,
-    
-    Configuration: Configuration,
-    
-    DailyPlanning: DailyPlanning,
-    
-    DocumentManagement: DocumentManagement,
-    
-    ETTTemporaryEmployees: ETTTemporaryEmployees,
-    
-    EmployeeOnboarding: EmployeeOnboarding,
-    
-    EmployeesShiftManager: EmployeesShiftManager,
-    
-    IncentiveManagement: IncentiveManagement,
-    
-    LockerManagement: LockerManagement,
-    
-    MLInsights: MLInsights,
-    
-    MachineAssignments: MachineAssignments,
-    
-    MachineMaintenance: MachineMaintenance,
-    
-    MachineManagement: MachineManagement,
-    
-    MachineMaster: MachineMaster,
-    
-    MaintenanceTracking: MaintenanceTracking,
-    
-    MasterEmployeeDatabase: MasterEmployeeDatabase,
-    
-
-    
-    PerformanceManagement: PerformanceManagement,
-    
-
-    
-    ProcessConfiguration: ProcessConfiguration,
-    
-    ProductionPlanning: ProductionPlanning,
-    
-    Reports: Reports,
-    
-    ShiftHandover: ShiftHandover,
-    
-    ShiftManagement: ShiftManagement,
-    
-    ShiftManagers: ShiftManagers,
-    
-    ShiftPlanning: ShiftPlanning,
-    
-    SkillMatrix: SkillMatrix,
-    
-    SupportManagement1415: SupportManagement1415,
-    
-    SystemReset: SystemReset,
-    
-    Timeline: Timeline,
-    
-    WorkCalendarConfig: WorkCalendarConfig,
-    
-    Breaks: Breaks,
-    
-    MachinePlanning: MachinePlanning,
-
+  Dashboard: Dashboard,
+  AbsenceManagement: AbsenceManagement,
+  AbsenceConfigurationTab: AbsenceConfigurationTab,
+  AdvancedConfiguration: AdvancedConfiguration,
+  AdvancedHRDashboard: AdvancedHRDashboard,
+  AppUserManagement: AppUserManagement,
+  ArticleManagement: ArticleManagement,
+  AttendanceManagement: AttendanceManagement,
+  CommitteeManagement: CommitteeManagement,
+  Configuration: Configuration,
+  DailyPlanning: DailyPlanning,
+  DocumentManagement: DocumentManagement,
+  DeploymentGuide: DeploymentGuide,
+  AdminDeploymentGuide: AdminDeploymentGuide,
+  ETTTemporaryEmployees: ETTTemporaryEmployees,
+  EmployeeOnboarding: EmployeeOnboarding,
+  EmployeesShiftManager: EmployeesShiftManager,
+  IncentiveManagement: IncentiveManagement,
+  LockerManagement: LockerManagement,
+  MLInsights: MLInsights,
+  MachineAssignments: MachineAssignments,
+  MachineMaintenance: MachineMaintenance,
+  MachineManagement: MachineManagement,
+  MachineMaster: MachineMaster,
+  MaintenanceTracking: MaintenanceTracking,
+  MasterEmployeeDatabase: MasterEmployeeDatabase,
+  MobileHome: MobileHome,
+  PerformanceManagement: PerformanceManagement,
+  ProcessConfiguration: ProcessConfiguration,
+  ProductionPlanning: ProductionPlanning,
+  QuickStartGuide: QuickStartGuide,
+  Reports: Reports,
+  ShiftHandover: ShiftHandover,
+  ShiftManagement: ShiftManagement,
+  ShiftManagers: ShiftManagers,
+  ShiftPlanning: ShiftPlanning,
+  SkillMatrix: SkillMatrix,
+  SupportManagement1415: SupportManagement1415,
+  SystemReset: SystemReset,
+  Timeline: Timeline,
+  WorkCalendarConfig: WorkCalendarConfig,
+  Breaks: Breaks,
+  MachinePlanning: MachinePlanning,
+  MobileAppConfig: MobileAppConfig,
 }
 
 function _getCurrentPage(url) {
@@ -237,7 +165,7 @@ function PagesContent() {
                 <Route path="/CommitteeManagement" element={<CommitteeManagement />} />
 
                 <Route path="/Configuration" element={<Configuration />} />
-
+                <Route path="/AbsenceConfigurationTab" element={<AbsenceConfigurationTab />} />
                 <Route path="/DailyPlanning" element={<DailyPlanning />} />
                 
                 <Route path="/Dashboard" element={<Dashboard />} />
@@ -311,9 +239,12 @@ function PagesContent() {
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 
                 <Route path="/Breaks" element={<Breaks />} />
-                
                 <Route path="/MachinePlanning" element={<MachinePlanning />} />
-                
+                <Route path="/QuickStartGuide" element={<QuickStartGuide />} />
+                <Route path="/DeploymentGuide" element={<DeploymentGuide />} />
+                <Route path="/AdminDeploymentGuide" element={<AdminDeploymentGuide />} />
+                <Route path="/MobileHome" element={<MobileHome />} />
+                <Route path="/MobileAppConfig" element={<MobileAppConfig />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/BrandingConfig" element={<AdvancedConfiguration />} />
