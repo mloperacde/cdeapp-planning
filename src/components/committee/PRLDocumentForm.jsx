@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,6 +157,9 @@ export default function PRLDocumentForm({ document, onClose }) {
           <DialogTitle className="dark:text-slate-100">
             {document ? 'Editar Documento' : 'Subir Nuevo Documento PRL'}
           </DialogTitle>
+          <DialogDescription className="dark:text-slate-400">
+            Completa la información clave del documento de prevención de riesgos laborales.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

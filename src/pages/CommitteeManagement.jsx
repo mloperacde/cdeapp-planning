@@ -108,7 +108,7 @@ export default function CommitteeManagementPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/40 dark:to-slate-900/40 dark:border-blue-800">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -122,7 +122,7 @@ export default function CommitteeManagementPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:from-amber-950/40 dark:to-slate-900/40 dark:border-amber-800">
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -134,7 +134,7 @@ export default function CommitteeManagementPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-950/40 dark:to-slate-900/40 dark:border-red-800">
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -146,7 +146,7 @@ export default function CommitteeManagementPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/40 dark:to-slate-900/40 dark:border-green-800">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>

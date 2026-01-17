@@ -136,7 +136,7 @@ export default function PRLDocumentManager() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 dark:border-blue-800">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -148,7 +148,7 @@ export default function PRLDocumentManager() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/50 dark:to-green-900/50 dark:border-green-800">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -160,7 +160,7 @@ export default function PRLDocumentManager() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:from-amber-950/50 dark:to-amber-900/50 dark:border-amber-800">
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -172,7 +172,7 @@ export default function PRLDocumentManager() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-950/50 dark:to-red-900/50 dark:border-red-800">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:bg-slate-900 dark:bg-none dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -186,7 +186,7 @@ export default function PRLDocumentManager() {
       </div>
 
       {documentosProximosCaducar.length > 0 && (
-        <Card className="bg-amber-50 border-2 border-amber-300 dark:bg-amber-950/20 dark:border-amber-800">
+        <Card className="bg-amber-50 border-2 border-amber-300 dark:bg-slate-900 dark:border-slate-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 dark:text-amber-100">
               <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400" />
