@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Factory, Wrench, Package, ClipboardCheck, Eye, Sparkles, ArrowLeft } from "lucide-react";
+import { Calendar, Factory, Wrench, Package, ClipboardCheck, Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format } from "date-fns";
@@ -23,7 +23,6 @@ export default function DailyPlanningPage() {
   const [selectedTeam, setSelectedTeam] = useState('team_1');
   const [activeTab, setActiveTab] = useState('production');
   const [isCalling, setIsCalling] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],

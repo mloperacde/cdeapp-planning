@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, Users, Briefcase, Sparkles, Save, CheckCircle2, AlertTriangle, Loader2, ArrowRight } from "lucide-react";
+import { Briefcase, Sparkles, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import EmployeeSelect from "../components/common/EmployeeSelect";
 import Breadcrumbs from "../components/common/Breadcrumbs";
