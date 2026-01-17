@@ -11,7 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from 'date-fns'; // Import format for date utility
+import { format } from 'date-fns';
+
+const NATIVE_ROLES = [
+  { id: 'admin', role_name: 'Admin' },
+  { id: 'user', role_name: 'User' },
+];
 
 export default function DocumentForm({ document, onClose }) {
   const [formData, setFormData] = useState(document || {
@@ -57,13 +62,8 @@ export default function DocumentForm({ document, onClose }) {
     initialData: [],
   });
 
-  const { data: roles } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
-    initialData: [],
-  });
-
   const departments = ["FABRICACION", "MANTENIMIENTO", "ALMACEN", "CALIDAD", "RRHH", "ADMINISTRACION"];
+  const roles = NATIVE_ROLES;
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {

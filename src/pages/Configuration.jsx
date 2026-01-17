@@ -11,7 +11,7 @@ export default function ConfigurationPage() {
           title: "Tipos de Ausencias",
           description: "Configura tipos de ausencias y permisos",
           icon: Calendar,
-          url: "/AbsenceConfigurationTab",
+          url: "/AbsenceManagement?tab=config",
           color: "red"
         },
         {

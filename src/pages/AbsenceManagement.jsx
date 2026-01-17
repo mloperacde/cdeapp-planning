@@ -42,12 +42,10 @@ import { createPageUrl } from "@/utils";
 import { toast } from 'sonner';
 import { debounce } from "lodash";
 
-// Components
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
-import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
 import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
@@ -59,6 +57,7 @@ import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../co
 import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
 import Breadcrumbs from "../components/common/Breadcrumbs";
 import AvailabilitySyncMonitor from "../components/hr/AvailabilitySyncMonitor";
+import AbsenceConfigurationTab from "./AbsenceConfigurationTab";
 
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
@@ -265,11 +264,8 @@ export default function AbsenceManagementPage() {
           </TabsContent>
 
           <TabsContent value="config">
-            <div className="grid grid-cols-1 gap-6">
-              <Card>
-                <CardHeader><CardTitle>Tipos de Ausencia</CardTitle></CardHeader>
-                <CardContent><AbsenceTypeManager /></CardContent>
-              </Card>
+            <div className="space-y-6">
+              <AbsenceConfigurationTab />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <VacationPendingBalancePanel employees={employees} compact={true} />
                 <ResidualDaysManager employees={employees} />

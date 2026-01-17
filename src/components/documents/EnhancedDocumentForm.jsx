@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, X, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import SearchableSelect from "../common/SearchableSelect";
-import DocumentPermissions from "./DocumentPermissions";
 
 export default function EnhancedDocumentForm({ document, onClose }) {
   const [file, setFile] = useState(null);
@@ -31,12 +30,6 @@ export default function EnhancedDocumentForm({ document, onClose }) {
     fecha_vigencia: document?.fecha_vigencia || "",
     fecha_caducidad: document?.fecha_caducidad || "",
     cambios_recientes: "",
-  });
-
-  const { data: roles = [] } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
-    initialData: []
   });
 
   const { data: currentUser } = useQuery({

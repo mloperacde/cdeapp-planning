@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "../components/data/DataProvider";
+import { usePermissions } from "../components/permissions/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -113,30 +114,14 @@ export default function MasterEmployeeDatabasePage() {
 
   const queryClient = useQueryClient();
 
-  // Usar datos compartidos del DataProvider
   const { 
-    user: currentUser, 
     employees: masterEmployees = EMPTY_ARRAY, 
     employeesLoading: isLoading 
   } = useAppData();
 
-  const canCreateEmployee = useMemo(() => {
-    if (!currentUser) return false;
-    return currentUser.role === 'admin';
-  }, [currentUser]);
+  const permissions = usePermissions();
 
-  // Usar permisos del sistema nativo
-  const userPermissions = useMemo(() => {
-    if (!currentUser) return null;
-    return {
-      isAdmin: currentUser.role === 'admin',
-      ver_salario: currentUser.role === 'admin',
-      ver_dni: currentUser.role === 'admin',
-      ver_contacto: currentUser.role === 'admin',
-      ver_direccion: currentUser.role === 'admin',
-      ver_bancarios: currentUser.role === 'admin'
-    };
-  }, [currentUser]);
+  const canCreateEmployee = permissions.isAdmin;
 
   // const { data: employees = [] } = useQuery({
   //   queryKey: ['employees'],
@@ -623,7 +608,7 @@ export default function MasterEmployeeDatabasePage() {
                             )}
                             {visibleColumns.dni && (
                               <TableCell className="text-xs dark:text-slate-300">
-                                {userPermissions?.isAdmin || userPermissions?.ver_dni ? emp.dni || '-' : '******'}
+                                {permissions.isAdmin || permissions.canViewPersonalData ? emp.dni || '-' : '******'}
                               </TableCell>
                             )}
                             {visibleColumns.nuss && (
@@ -637,17 +622,17 @@ export default function MasterEmployeeDatabasePage() {
                             )}
                             {visibleColumns.direccion && (
                               <TableCell className="text-xs dark:text-slate-300 truncate max-w-[150px]" title={emp.direccion}>
-                                {userPermissions?.isAdmin || userPermissions?.ver_direccion ? emp.direccion || '-' : '******'}
+                                {permissions.isAdmin || permissions.canViewPersonalData ? emp.direccion || '-' : '******'}
                               </TableCell>
                             )}
                             {visibleColumns.email && (
                               <TableCell className="text-xs dark:text-slate-300">
-                                {userPermissions?.isAdmin || userPermissions?.ver_contacto ? emp.email || '-' : '******'}
+                                {permissions.isAdmin || permissions.canViewPersonalData ? emp.email || '-' : '******'}
                               </TableCell>
                             )}
                             {visibleColumns.telefono_movil && (
                               <TableCell className="text-xs dark:text-slate-300">
-                                {userPermissions?.isAdmin || userPermissions?.ver_contacto ? emp.telefono_movil || '-' : '******'}
+                                {permissions.isAdmin || permissions.canViewPersonalData ? emp.telefono_movil || '-' : '******'}
                               </TableCell>
                             )}
                             {visibleColumns.tipo_jornada && (
@@ -678,12 +663,12 @@ export default function MasterEmployeeDatabasePage() {
                             )}
                             {visibleColumns.salario_anual && (
                               <TableCell className="text-xs dark:text-slate-300">
-                                {userPermissions?.isAdmin || userPermissions?.ver_salario ? emp.salario_anual || '-' : '******'}
+                                {permissions.isAdmin || permissions.canViewSalary ? emp.salario_anual || '-' : '******'}
                               </TableCell>
                             )}
                             {visibleColumns.iban && (
                               <TableCell className="text-xs dark:text-slate-300">
-                                {userPermissions?.isAdmin || userPermissions?.ver_bancarios ? emp.iban || '-' : '******'}
+                                {permissions.isAdmin || permissions.canViewBankingData ? emp.iban || '-' : '******'}
                               </TableCell>
                             )}
                             {visibleColumns.taquilla_vestuario && (

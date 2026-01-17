@@ -14,6 +14,11 @@ import EnhancedDocumentForm from "../components/documents/EnhancedDocumentForm";
 import AdvancedDocumentSearch from "../components/documents/AdvancedDocumentSearch";
 import { toast } from "sonner";
 
+const NATIVE_ROLES = [
+  { id: 'admin', role_name: 'Administrador' },
+  { id: 'user', role_name: 'Usuario' },
+];
+
 export default function DocumentManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
@@ -46,12 +51,6 @@ export default function DocumentManagementPage() {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    initialData: [],
-  });
-
-  const { data: roles } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
     initialData: [],
   });
 
@@ -258,7 +257,7 @@ export default function DocumentManagementPage() {
               onSearchChange={setAdvancedFilters}
               categories={categories}
               departments={departments}
-              roles={roles}
+              roles={NATIVE_ROLES}
             />
           </CardContent>
         </Card>
@@ -391,6 +390,8 @@ export default function DocumentManagementPage() {
       {viewingDocument && (
         <DocumentViewer
           document={viewingDocument}
+          roles={NATIVE_ROLES}
+          departments={departments}
           onClose={() => setViewingDocument(null)}
           onEdit={() => {
             setEditingDocument(viewingDocument);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Plus, Edit, Trash2, Save, Info, Download, GitFork, Bell, Calendar } from "lucide-react";
+import { useAppData } from "../components/data/DataProvider";
 import ApprovalFlowConfig from "../components/absences/ApprovalFlowConfig";
 import AbsenceNotificationConfig from "../components/absences/AbsenceNotificationConfig";
 import VacationAccumulationConfig from "../components/absences/VacationAccumulationConfig";
@@ -408,12 +409,8 @@ export default function AbsenceConfigurationTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const queryClient = useQueryClient();
-
-  const { data: absenceTypes } = useQuery({
-    queryKey: ['absenceTypes'],
-    queryFn: () => base44.entities.AbsenceType.list('orden'),
-    initialData: [],
-  });
+  const { absenceTypesAll = [] } = useAppData();
+  const absenceTypes = absenceTypesAll;
 
   const saveTypeMutation = useMutation({
     mutationFn: (data) => {

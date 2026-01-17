@@ -71,10 +71,10 @@ export function DataProvider({ children }) {
     refetchOnWindowFocus: false,
   });
 
-  // 5. TIPOS DE AUSENCIAS - Cache 15 min (config estable)
+  // 5. TIPOS DE AUSENCIAS - Cache 15 min (config estable, fuente única)
   const absenceTypesQuery = useQuery({
     queryKey: ['absenceTypes'],
-    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.AbsenceType.filter({ activo: true }, 'orden', 100),
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.AbsenceType.list('orden', 200),
     staleTime: 15 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -188,6 +188,8 @@ export function DataProvider({ children }) {
     retry: 0,
   });
 
+  const allAbsenceTypes = absenceTypesQuery.data || [];
+
   const value = {
     // Usuario
     user: userQuery.data,
@@ -207,7 +209,8 @@ export function DataProvider({ children }) {
     absences: absencesQuery.data || [],
     absencesLoading: absencesQuery.isLoading,
     
-    absenceTypes: absenceTypesQuery.data || [],
+    absenceTypes: allAbsenceTypes.filter(t => t?.activo !== false),
+    absenceTypesAll: allAbsenceTypes,
     absenceTypesLoading: absenceTypesQuery.isLoading,
     
     // Datos maestros - EQUIPOS Y CALENDARIO

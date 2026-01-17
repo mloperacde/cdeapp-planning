@@ -12,6 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Edit, Trash2, GitBranch, Clock, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
+const NATIVE_ROLES = [
+  { id: 'admin', role_name: 'Administrador' },
+  { id: 'user', role_name: 'Usuario' },
+];
+
 export default function ApprovalFlowManager() {
   const [showForm, setShowForm] = useState(false);
   const [editingFlow, setEditingFlow] = useState(null);
@@ -20,12 +25,6 @@ export default function ApprovalFlowManager() {
   const { data: absenceTypes = [] } = useQuery({
     queryKey: ['absenceTypes'],
     queryFn: () => base44.entities.AbsenceType.list('orden'),
-    initialData: [],
-  });
-
-  const { data: roles = [] } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: () => base44.entities.UserRole.list(),
     initialData: [],
   });
 
@@ -115,7 +114,7 @@ export default function ApprovalFlowManager() {
                         <p className="text-sm font-medium text-slate-900">{nivel.descripcion}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {nivel.roles_aprobadores?.map((roleId, rIdx) => {
-                            const role = roles.find(r => r.id === roleId);
+                            const role = NATIVE_ROLES.find(r => r.id === roleId);
                             return role ? (
                               <Badge key={rIdx} variant="outline" className="text-xs">
                                 {role.role_name}
@@ -153,10 +152,10 @@ export default function ApprovalFlowManager() {
       </div>
 
       {showForm && (
-        <ApprovalFlowForm
+          <ApprovalFlowForm
           flow={editingFlow}
           absenceTypes={absenceTypes}
-          roles={roles}
+          roles={NATIVE_ROLES}
           onClose={() => {
             setShowForm(false);
             setEditingFlow(null);

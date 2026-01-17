@@ -104,24 +104,12 @@ export default function AcceptInvitation() {
     setIsSubmitting(true);
 
     try {
-      // 1. Asignar el rol al usuario (UserRole no UserRoleAssignment)
-      await base44.entities.UserRole.create({
-        user_email: invitation.email,
-        role_id: invitation.role_id,
-        assigned_by: invitation.invited_by,
-        assigned_date: new Date().toISOString(),
-        active: true,
-        notes: `Auto-asignado por invitación ${invitation.id}`
-      });
-
-      // 2. Si hay employee_id, actualizar el empleado con el email
       if (invitation.employee_id) {
         await base44.entities.EmployeeMasterDatabase.update(invitation.employee_id, {
           email: invitation.email
         });
       }
 
-      // 3. Marcar invitación como aceptada
       await base44.entities.UserInvitation.update(invitation.id, {
         estado: 'Aceptada',
         accepted_at: new Date().toISOString()
