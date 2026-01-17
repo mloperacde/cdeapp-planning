@@ -5,7 +5,7 @@ import { useAppData } from '@/components/data/DataProvider';
 import { 
   Menu, X, Home, Users, Calendar, Wrench, Settings, FileText, Shield, 
   DollarSign, Cog, Package, ChevronDown, ChevronRight, LogOut, 
-  User as UserIcon, Moon, Sun, Key, Database
+  User as UserIcon, Moon, Sun, Key, Database, Award, RefreshCw, ClipboardCheck, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
