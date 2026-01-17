@@ -61,7 +61,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Plan Incentivos', icon: DollarSign, path: '/IncentiveManagement', category: 'Recursos Humanos' },
     
     // Planificación
-    { name: 'Planning Diario', icon: Calendar, path: '/DailyPlanning', category: 'Planificación' },
     { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Planificación' },
     { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
     

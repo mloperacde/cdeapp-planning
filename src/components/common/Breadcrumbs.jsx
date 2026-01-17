@@ -24,6 +24,8 @@ export default function Breadcrumbs({ items = [], auto = true, showBack = false,
     MobileHome: "Móvil",
     MobilePlanning: "Mi Planificación"
   };
+  labelMap.ShiftManagement = "Intercambios";
+  labelMap.EmployeesShiftManager = "Personal de Fabricación";
 
   const formatLabel = (segment) => {
     if (labelMap[segment]) return labelMap[segment];

@@ -29,11 +29,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, RefreshCw, ArrowLeft, Users, Calendar } from "lucide-react";
+import { Plus, RefreshCw, Users, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function ShiftManagementPage() {
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -172,12 +171,7 @@ export default function ShiftManagementPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al Dashboard
-            </Button>
-          </Link>
+          <Breadcrumbs />
         </div>
 
         <div className="flex justify-between items-center mb-8">
