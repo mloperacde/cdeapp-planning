@@ -179,47 +179,71 @@ export default function AdminDeploymentGuidePage() {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="p-4 bg-purple-50 rounded-lg border">
-                  <h4 className="font-semibold mb-3">Roles Predefinidos y sus Permisos</h4>
+                  <h4 className="font-semibold mb-3">Matriz de Roles y Permisos</h4>
                   <div className="space-y-3">
                     {[
                       {
                         name: "Administrador",
+                        code: "admin",
                         level: 100,
                         color: "red",
-                        permissions: "Acceso completo: empleados, ausencias, planificación, máquinas, mantenimiento, informes, configuración, RRHH, incentivos, documentos"
+                        permissions: "Acceso completo a todos los módulos, configuración y seguridad"
                       },
                       {
                         name: "Responsable RRHH",
-                        level: 60,
+                        code: "hr_manager",
+                        level: 70,
                         color: "blue",
-                        permissions: "Gestión completa de empleados, ausencias, contratos, onboarding, evaluaciones, informes RRHH"
+                        permissions: "Gestión completa de empleados, ausencias, datos sensibles y evaluaciones"
                       },
                       {
-                        name: "Jefe de Turno",
-                        level: 50,
+                        name: "Jefe de Turno Producción",
+                        code: "shift_manager_production",
+                        level: 60,
                         color: "green",
-                        permissions: "Ver empleados, gestionar ausencias de su equipo, editar planificación, aprobar ausencias"
+                        permissions: "Gestionar planificación y ausencias de su equipo de producción, ver máquinas de su área"
+                      },
+                      {
+                        name: "Jefe de Turno Calidad",
+                        code: "shift_manager_quality",
+                        level: 55,
+                        color: "emerald",
+                        permissions: "Gestionar planificación y ausencias de calidad, acceso a informes de calidad"
+                      },
+                      {
+                        name: "Jefe de Turno Mantenimiento",
+                        code: "shift_manager_maintenance",
+                        level: 55,
+                        color: "orange",
+                        permissions: "Gestionar planificación y ausencias de mantenimiento, coordinar órdenes de trabajo"
                       },
                       {
                         name: "Supervisor de Producción",
-                        level: 40,
+                        code: "prod_supervisor",
+                        level: 50,
                         color: "purple",
-                        permissions: "Ver empleados, editar máquinas, gestionar mantenimiento, configurar procesos, ver informes"
+                        permissions: "Visión global de producción, informes, seguimiento de máquinas y rendimiento"
                       },
                       {
                         name: "Técnico de Mantenimiento",
-                        level: 30,
-                        color: "orange",
-                        permissions: "Gestionar mantenimiento, editar máquinas, ver planificación, subir documentos técnicos"
+                        code: "maintenance_tech",
+                        level: 40,
+                        color: "amber",
+                        permissions: "Gestionar mantenimientos, estados de máquina y órdenes de trabajo asignadas"
                       },
                       {
                         name: "Operario",
+                        code: "operator",
                         level: 10,
                         color: "slate",
-                        permissions: "Ver dashboard, solicitar ausencias, ver planificación personal, ver documentos"
+                        permissions: "Ver su planificación personal, solicitar ausencias, ver documentos asignados"
                       }
                     ].map((role) => (
-                      <Card key={role.name} className="border-l-4" style={{ borderLeftColor: `rgb(var(--${role.color}-500))` }}>
+                      <Card
+                        key={role.name}
+                        className="border-l-4"
+                        style={{ borderLeftColor: `rgb(var(--${role.color}-500))` }}
+                      >
                         <CardContent className="p-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
@@ -227,6 +251,12 @@ export default function AdminDeploymentGuidePage() {
                                 <span className="font-semibold">{role.name}</span>
                                 <Badge>Nivel {role.level}</Badge>
                               </div>
+                              <p className="text-xs text-slate-600 mb-1">
+                                Código en Base44:{" "}
+                                <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">
+                                  {role.code}
+                                </span>
+                              </p>
                               <p className="text-xs text-slate-600">{role.permissions}</p>
                             </div>
                           </div>
@@ -239,41 +269,24 @@ export default function AdminDeploymentGuidePage() {
                 <div className="p-4 bg-blue-50 rounded-lg border">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <UserPlus className="w-4 h-4" />
-                    Crear Roles Personalizados
+                    Cómo configurar estos roles en Base44
                   </h4>
                   <p className="text-sm text-slate-700 mb-3">
-                    Si los roles predefinidos no cubren tus necesidades, puedes crear roles personalizados:
+                    En el Dashboard de Base44 crea los roles usando los códigos indicados en la tabla anterior.
                   </p>
                   <ol className="text-sm space-y-2 text-slate-700 mb-4">
-                    <li>1. Ve a <strong>Configuración → Gestión de Roles</strong></li>
-                    <li>2. Haz clic en <strong>"Nuevo Rol"</strong></li>
-                    <li>3. Completa los datos del rol (nombre, código, descripción)</li>
-                    <li>4. Define el <strong>nivel jerárquico</strong> (0-100)</li>
-                    <li>5. Selecciona los <strong>permisos específicos</strong> para cada módulo</li>
-                    <li>6. Guarda el rol</li>
+                    <li>1. Ve a <strong>Dashboard de Base44 → Users / Roles</strong></li>
+                    <li>2. Crea un nuevo rol e introduce el código (por ejemplo, <span className="font-mono text-xs">hr_manager</span>)</li>
+                    <li>3. Asigna los permisos de acceso a la aplicación según su responsabilidad</li>
+                    <li>4. Guarda el rol y asígnalo a los usuarios correspondientes</li>
                   </ol>
-                  <Link to={createPageUrl("RoleManagement")}>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Gestionar Roles
-                    </Button>
-                  </Link>
-                </div>
-
-                <div className="p-4 bg-green-50 rounded-lg border">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <Copy className="w-4 h-4" />
-                    Duplicar un Rol Existente
-                  </h4>
-                  <p className="text-sm text-slate-700 mb-2">
-                    Para crear un rol similar a uno existente:
-                  </p>
-                  <ol className="text-sm space-y-1 text-slate-700">
-                    <li>1. En la lista de roles, haz clic en el icono <Copy className="w-3 h-3 inline" /> junto al rol</li>
-                    <li>2. Se creará una copia con el nombre "Rol Original (Copia)"</li>
-                    <li>3. Modifica los permisos según necesites</li>
-                    <li>4. Cambia el nombre y código</li>
-                  </ol>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => window.open("https://dashboard.base44.com", "_blank")}
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Abrir Dashboard de Base44
+                  </Button>
                 </div>
               </div>
             </CardContent>
