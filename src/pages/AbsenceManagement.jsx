@@ -32,7 +32,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, 
-  BarChart3, Infinity, CalendarDays, FileText, CheckSquare, 
+  BarChart3, Infinity as InfinityIcon, CalendarDays, FileText, CheckSquare, 
   LayoutDashboard, Settings, Activity 
 } from "lucide-react";
 import { format, isPast } from "date-fns";

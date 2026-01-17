@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar, AlertTriangle, CheckCircle2, Clock, Users, Filter, Download } from "lucide-react";
-import { format, differenceInDays, isBefore, addDays } from "date-fns";
+import { format, differenceInDays, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import EmployeeForm from "../components/employees/EmployeeForm";
 

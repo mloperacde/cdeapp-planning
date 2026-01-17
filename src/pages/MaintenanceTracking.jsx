@@ -18,7 +18,6 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
  
 
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeManager";
 import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder";
@@ -36,7 +35,6 @@ export default function MaintenanceTrackingPage() {
   const [showTypeManager, setShowTypeManager] = useState(false);
   const [showWorkOrder, setShowWorkOrder] = useState(null);
   const queryClient = useQueryClient();
-  const { goBack } = useNavigationHistory();
 
   const { data: maintenances = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenances'],

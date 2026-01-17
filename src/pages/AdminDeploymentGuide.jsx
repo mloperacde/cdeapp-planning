@@ -32,6 +32,19 @@ export default function AdminDeploymentGuidePage() {
   const [currentStep, setCurrentStep] = useState(0);
   const appUrl = window.location.origin;
 
+  const initializeRoles = async () => {
+    try {
+      const response = await base44.functions.invoke('initialize_default_roles');
+      if (response.data.success) {
+        toast.success("Roles inicializados correctamente");
+      } else {
+        toast.info(response.data.message);
+      }
+    } catch {
+      toast.error("Error al inicializar roles");
+    }
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("Copiado al portapapeles");

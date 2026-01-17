@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +13,6 @@ import {
   Clock,
   UserX,
   Users,
-  Settings,
   BarChart3,
   Brain,
   FileSearch
@@ -26,11 +25,9 @@ import AttendancePredictions from "../components/attendance/AttendancePrediction
 import AttendanceAnalysisReport from "../components/attendance/AttendanceAnalysisReport";
 import AttendanceMonitor from "../components/attendance/AttendanceMonitor";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 export default function AttendanceManagementPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const queryClient = useQueryClient();
 
   const { data: attendanceRecords } = useQuery({
     queryKey: ['attendanceRecords'],

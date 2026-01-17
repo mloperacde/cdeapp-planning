@@ -476,7 +476,7 @@ export default function EmployeeAbsenceManager({ employee }) {
                   }}
                 />
                 <label htmlFor="unknownEndDate" className="text-sm font-medium text-purple-900 cursor-pointer flex items-center gap-2">
-                  <Infinity className="w-4 h-4" />
+                  <InfinityIcon className="w-4 h-4" />
                   Fecha de fin desconocida
                 </label>
               </div>

@@ -11,7 +11,6 @@ import { Briefcase, Sparkles, CheckCircle2, Loader2, ArrowRight } from "lucide-r
 import { format } from "date-fns";
 import { toast } from "sonner";
 import EmployeeSelect from "../components/common/EmployeeSelect";
-import Breadcrumbs from "../components/common/Breadcrumbs";
 
 export default function DailyShiftPlanningPage() {
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));

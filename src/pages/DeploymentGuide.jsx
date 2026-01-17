@@ -1,4 +1,3 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,6 @@ import {
   CheckCircle, 
   ArrowRight,
   Copy,
-  ExternalLink,
   BookOpen,
   Settings,
   UserPlus
@@ -40,7 +38,7 @@ export default function DeploymentGuidePage() {
           } else {
             toast.info(response.data.message);
           }
-        } catch (error) {
+        } catch {
           toast.error("Error al inicializar roles");
         }
       },

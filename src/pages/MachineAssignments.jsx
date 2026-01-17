@@ -4,7 +4,7 @@ import { UserCog, Users, Wrench, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import EmployeeSkillsView from "../components/team/EmployeeSkillsView";
 import MachineSkillsView from "../components/team/MachineSkillsView";
 import IdealAssignmentView from "../components/team/IdealAssignmentView";

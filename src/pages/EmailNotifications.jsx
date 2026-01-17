@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Mail, Plus, Edit, Trash2, Send, Smartphone } from "lucide-react";
+import { Mail, Plus, Edit, Trash2, Smartphone } from "lucide-react";
 
 const NOTIFICATION_TYPES = [
   "Operadores Insuficientes",

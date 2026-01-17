@@ -8,7 +8,6 @@ import { FileText, Plus, Download, Trash2, Search, Upload, Eye, History, Shield 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import DocumentViewer from "../components/documents/DocumentViewer";
 import EnhancedDocumentForm from "../components/documents/EnhancedDocumentForm";
 import AdvancedDocumentSearch from "../components/documents/AdvancedDocumentSearch";
@@ -53,8 +52,6 @@ export default function DocumentManagementPage() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
     initialData: [],
   });
-
-  const { goBack } = useNavigationHistory();
 
   const { data: masterEmployees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],

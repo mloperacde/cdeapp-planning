@@ -1,20 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Users,
-  Shield,
-  AlertTriangle,
-  HeartPulse,
-  Flame,
-  Plus,
-  Clock,
-  FileText
-} from "lucide-react";
+import { Users, Shield, AlertTriangle, HeartPulse, Flame, Plus, FileText } from "lucide-react";
 import CommitteeMemberForm from "../components/committee/CommitteeMemberForm";
 import CommitteeMemberList from "../components/committee/CommitteeMemberList";
 import UnionHoursTracker from "../components/committee/UnionHoursTracker";
@@ -29,7 +19,7 @@ export default function CommitteeManagementPage() {
   const [selectedCommittee, setSelectedCommittee] = useState(null);
   const [currentTab, setCurrentTab] = useState("company");
 
-  const { data: committeeMembers = [], refetch: refetchCommitteeMembers } = useQuery({
+  const { data: committeeMembers = [], refetch: _refetchCommitteeMembers } = useQuery({
     queryKey: ['committeeMembers'],
     queryFn: async () => {
       try {
@@ -45,7 +35,7 @@ export default function CommitteeManagementPage() {
     retry: 1,
   });
 
-  const { data: employees = [], refetch: refetchEmployees } = useQuery({
+  const { data: employees = [], refetch: _refetchEmployees } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
       try {

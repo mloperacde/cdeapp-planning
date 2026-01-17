@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertCircle, ExternalLink, Search, UserX } from "lucide-react";
+import { AlertCircle, ExternalLink, Search, UserX, CheckCircle2 } from "lucide-react";
 
 export default function EmployeesWithoutLocker({ employees, lockerAssignments, onAssign }) {
   const [searchTerm, setSearchTerm] = useState("");

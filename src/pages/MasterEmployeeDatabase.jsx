@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import {
   Table,
   TableBody,
@@ -32,7 +31,6 @@ import SyncComparisonDialog from "../components/master/SyncComparisonDialog";
 import SyncHistoryPanel from "../components/master/SyncHistoryPanel";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineDisplayVerification from "../components/verification/MachineDisplayVerification";
-import Breadcrumbs from "../components/common/Breadcrumbs";
 
 // Definición completa de columnas disponibles (Moved outside component to avoid recreation)
 const ALL_COLUMNS = {
@@ -92,8 +90,6 @@ export default function MasterEmployeeDatabasePage() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
-  const { goBack } = useNavigationHistory();
-
   
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem("masterEmployeeColumns");
