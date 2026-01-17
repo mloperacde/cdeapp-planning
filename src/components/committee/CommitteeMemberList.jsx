@@ -46,21 +46,21 @@ export default function CommitteeMemberList({ members = [], employees = [], onEd
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {members.map((member) => (
-        <Card key={member.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <Card key={member.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm dark:bg-slate-800/80 dark:border dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
-                <h3 className="font-bold text-lg text-slate-900">
+                <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">
                   {getEmployeeName(member.employee_id)}
                 </h3>
                 {member.cargo && (
-                  <p className="text-sm text-slate-600">{member.cargo}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{member.cargo}</p>
                 )}
               </div>
               {member.activo ? (
-                <Badge className="bg-green-600 text-white">Activo</Badge>
+                <Badge className="bg-green-600 text-white dark:bg-green-700">Activo</Badge>
               ) : (
-                <Badge className="bg-slate-400 text-white">Inactivo</Badge>
+                <Badge className="bg-slate-400 text-white dark:bg-slate-600">Inactivo</Badge>
               )}
             </div>
 
@@ -68,7 +68,7 @@ export default function CommitteeMemberList({ members = [], employees = [], onEd
               {member.tipos_comite && Array.isArray(member.tipos_comite) && member.tipos_comite.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {member.tipos_comite.map((tipo, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
+                    <Badge key={idx} variant="outline" className="text-xs dark:border-slate-600 dark:text-slate-300">
                       {tipo}
                     </Badge>
                   ))}
@@ -79,9 +79,9 @@ export default function CommitteeMemberList({ members = [], employees = [], onEd
             <div className="space-y-2 text-sm">
               {member.fecha_inicio && (
                 <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-blue-600" />
-                  <span className="text-slate-600">Desde:</span>
-                  <span className="font-semibold">
+                  <Award className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-slate-600 dark:text-slate-400">Desde:</span>
+                  <span className="font-semibold dark:text-slate-200">
                     {format(new Date(member.fecha_inicio), "dd/MM/yyyy", { locale: es })}
                   </span>
                 </div>
@@ -89,8 +89,8 @@ export default function CommitteeMemberList({ members = [], employees = [], onEd
 
               {member.horas_sindicales_mensuales > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-600">Horas sindicales:</span>
-                  <Badge variant="outline">
+                  <span className="text-slate-600 dark:text-slate-400">Horas sindicales:</span>
+                  <Badge variant="outline" className="dark:border-slate-600 dark:text-slate-300">
                     {member.horas_sindicales_mensuales}h/mes
                   </Badge>
                 </div>

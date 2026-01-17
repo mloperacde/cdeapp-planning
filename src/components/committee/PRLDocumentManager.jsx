@@ -104,11 +104,11 @@ export default function PRLDocumentManager() {
 
   const getEstadoBadge = (estado) => {
     const config = {
-      "Vigente": { className: "bg-green-100 text-green-800" },
-      "Pendiente Revisión": { className: "bg-amber-100 text-amber-800" },
-      "Caducado": { className: "bg-red-100 text-red-800" },
-      "Archivado": { className: "bg-slate-100 text-slate-800" }
-    }[estado] || { className: "bg-slate-100 text-slate-800" };
+      "Vigente": { className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+      "Pendiente Revisión": { className: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" },
+      "Caducado": { className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
+      "Archivado": { className: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300" }
+    }[estado] || { className: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300" };
 
     return <Badge className={config.className}>{estado}</Badge>;
   };
@@ -126,70 +126,70 @@ export default function PRLDocumentManager() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Documentación PRL</h2>
-          <p className="text-slate-600 text-sm">Gestión de documentos de prevención de riesgos laborales</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Documentación PRL</h2>
+          <p className="text-slate-600 dark:text-slate-400 text-sm">Gestión de documentos de prevención de riesgos laborales</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800">
           <Plus className="w-4 h-4 mr-2" />
           Subir Documento
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-blue-700 font-medium">Total Documentos</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Total Documentos</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
               </div>
-              <FileText className="w-8 h-8 text-blue-600" />
+              <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/50 dark:to-green-900/50 dark:border-green-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-green-700 font-medium">Vigentes</p>
-                <p className="text-2xl font-bold text-green-900">{stats.vigentes}</p>
+                <p className="text-xs text-green-700 dark:text-green-300 font-medium">Vigentes</p>
+                <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.vigentes}</p>
               </div>
-              <FileText className="w-8 h-8 text-green-600" />
+              <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:from-amber-950/50 dark:to-amber-900/50 dark:border-amber-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-amber-700 font-medium">Requieren Acción</p>
-                <p className="text-2xl font-bold text-amber-900">{stats.pendientes}</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Requieren Acción</p>
+                <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.pendientes}</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-amber-600" />
+              <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-950/50 dark:to-red-900/50 dark:border-red-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-red-700 font-medium">Caducados</p>
-                <p className="text-2xl font-bold text-red-900">{stats.caducados}</p>
+                <p className="text-xs text-red-700 dark:text-red-300 font-medium">Caducados</p>
+                <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.caducados}</p>
               </div>
-              <FileText className="w-8 h-8 text-red-600" />
+              <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {documentosProximosCaducar.length > 0 && (
-        <Card className="bg-amber-50 border-2 border-amber-300">
+        <Card className="bg-amber-50 border-2 border-amber-300 dark:bg-amber-950/20 dark:border-amber-800">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-amber-600" />
+            <CardTitle className="text-base flex items-center gap-2 dark:text-amber-100">
+              <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               Recordatorios de Caducidad ({documentosProximosCaducar.length})
             </CardTitle>
           </CardHeader>
@@ -202,16 +202,16 @@ export default function PRLDocumentManager() {
                 fechaCaducidad.setHours(0,0,0,0);
                 const diasRestantes = differenceInDays(fechaCaducidad, today);
                 return (
-                  <div key={doc.id} className="p-3 bg-white rounded border border-amber-200">
+                  <div key={doc.id} className="p-3 bg-white rounded border border-amber-200 dark:bg-slate-800 dark:border-amber-900/50">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-semibold text-sm text-amber-900">{doc.titulo}</div>
-                        <div className="text-xs text-slate-600">{doc.tipo_documento}</div>
-                        <div className="text-xs text-amber-700 mt-1">
+                        <div className="font-semibold text-sm text-amber-900 dark:text-amber-100">{doc.titulo}</div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400">{doc.tipo_documento}</div>
+                        <div className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                           ⏰ Caduca en {diasRestantes} días - {format(new Date(doc.fecha_caducidad), "dd/MM/yyyy", { locale: es })}
                         </div>
                       </div>
-                      <Badge className={diasRestantes <= 7 ? "bg-red-600" : "bg-amber-600"}>
+                      <Badge className={diasRestantes <= 7 ? "bg-red-600 dark:bg-red-700" : "bg-amber-600 dark:bg-amber-700"}>
                         {diasRestantes} días
                       </Badge>
                     </div>
@@ -223,33 +223,33 @@ export default function PRLDocumentManager() {
         </Card>
       )}
 
-      <Card className="shadow-lg">
-        <CardHeader className="border-b border-slate-100">
+      <Card className="shadow-lg dark:bg-slate-900 dark:border-slate-800">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-blue-600" />
-            <CardTitle>Filtros</CardTitle>
+            <Filter className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="dark:text-slate-100">Filtros</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <Input
                   placeholder="Buscar documentos..."
                   value={filters.searchTerm}
                   onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
-                  className="pl-10"
+                  className="pl-10 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Select value={filters.tipo_documento} onValueChange={(value) => setFilters({...filters, tipo_documento: value})}>
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                   <SelectItem value="all">Todos los tipos</SelectItem>
                   <SelectItem value="Evaluación de Riesgos">Evaluación de Riesgos</SelectItem>
                   <SelectItem value="Política de Prevención">Política de Prevención</SelectItem>
@@ -265,10 +265,10 @@ export default function PRLDocumentManager() {
 
             <div className="space-y-2">
               <Select value={filters.estado} onValueChange={(value) => setFilters({...filters, estado: value})}>
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                   <SelectItem value="all">Todos los estados</SelectItem>
                   <SelectItem value="Vigente">Vigente</SelectItem>
                   <SelectItem value="Pendiente Revisión">Pendiente Revisión</SelectItem>
@@ -282,55 +282,55 @@ export default function PRLDocumentManager() {
       </Card>
 
       {Object.entries(documentsByType).map(([tipo, docs]) => (
-        <Card key={tipo} className="shadow-lg">
-          <CardHeader className="border-b border-slate-100 bg-slate-50">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
+        <Card key={tipo} className="shadow-lg dark:bg-slate-900 dark:border-slate-800">
+          <CardHeader className="border-b border-slate-100 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800">
+            <CardTitle className="flex items-center gap-2 dark:text-slate-100">
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               {tipo} ({docs.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="space-y-2">
               {docs.map((doc) => (
-                <div key={doc.id} className="border rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                <div key={doc.id} className="border rounded-lg p-4 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800/50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-slate-900">{doc.titulo}</h3>
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">{doc.titulo}</h3>
                         {getEstadoBadge(doc.estado)}
                         {doc.requiere_accion && (
-                          <Badge className="bg-amber-600 text-white">
+                          <Badge className="bg-amber-600 text-white dark:bg-amber-700">
                             <AlertTriangle className="w-3 h-3 mr-1" />
                             Acción Requerida
                           </Badge>
                         )}
                         {doc.version && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs dark:border-slate-700 dark:text-slate-400">
                             v{doc.version}
                           </Badge>
                         )}
                       </div>
                       
                       {doc.descripcion && (
-                        <p className="text-sm text-slate-600 mb-2">{doc.descripcion}</p>
+                        <p className="text-sm text-slate-600 mb-2 dark:text-slate-400">{doc.descripcion}</p>
                       )}
 
                       {(doc.puestos_afectados?.length > 0 || doc.roles_afectados?.length > 0) && (
                         <div className="flex flex-wrap gap-1 mb-2">
                           {doc.puestos_afectados?.map((puesto, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
+                            <Badge key={idx} variant="outline" className="text-xs dark:border-slate-700 dark:text-slate-300">
                               {puesto}
                             </Badge>
                           ))}
                           {doc.roles_afectados?.map((rol, idx) => (
-                            <Badge key={idx} className="bg-blue-100 text-blue-700 text-xs">
+                            <Badge key={idx} className="bg-blue-100 text-blue-700 text-xs dark:bg-blue-900/30 dark:text-blue-300">
                               {rol}
                             </Badge>
                           ))}
                         </div>
                       )}
                       
-                      <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                      <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-500">
                         <span>📅 {format(new Date(doc.fecha_documento), "dd/MM/yyyy", { locale: es })}</span>
                         {doc.fecha_caducidad && (
                           <span>⏰ Caduca: {format(new Date(doc.fecha_caducidad), "dd/MM/yyyy", { locale: es })}</span>
@@ -346,6 +346,7 @@ export default function PRLDocumentManager() {
                         size="sm"
                         variant="outline"
                         onClick={() => window.open(doc.archivo_url, '_blank')}
+                        className="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                       >
                         <Download className="w-4 h-4" />
                       </Button>
@@ -353,7 +354,7 @@ export default function PRLDocumentManager() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleDelete(doc.id)}
-                        className="hover:text-red-600"
+                        className="hover:text-red-600 dark:hover:text-red-400 dark:text-slate-400"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -367,10 +368,10 @@ export default function PRLDocumentManager() {
       ))}
 
       {filteredDocuments.length === 0 && (
-        <Card className="shadow-lg">
+        <Card className="shadow-lg dark:bg-slate-900 dark:border-slate-800">
           <CardContent className="p-12 text-center">
-            <Upload className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500">No hay documentos que coincidan con los filtros</p>
+            <Upload className="w-16 h-16 text-slate-300 mx-auto mb-4 dark:text-slate-600" />
+            <p className="text-slate-500 dark:text-slate-400">No hay documentos que coincidan con los filtros</p>
           </CardContent>
         </Card>
       )}

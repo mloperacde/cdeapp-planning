@@ -100,8 +100,8 @@ export default function IncidentReport({ incidents, employees }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-slate-900">Informe de Incidentes</h2>
-        <Button onClick={handleExportReport} variant="outline">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Informe de Incidentes</h2>
+        <Button onClick={handleExportReport} variant="outline" className="dark:text-slate-200 dark:border-slate-700">
           <Download className="w-4 h-4 mr-2" />
           Exportar CSV
         </Button>
@@ -109,50 +109,50 @@ export default function IncidentReport({ incidents, employees }) {
 
       {/* KPIs Principales */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-950/40 dark:to-red-900/40 dark:border-red-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-red-700 font-medium">Abiertos</p>
-                <p className="text-2xl font-bold text-red-900">{stats.abiertos}</p>
+                <p className="text-xs text-red-700 dark:text-red-300 font-medium">Abiertos</p>
+                <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.abiertos}</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/40 dark:to-green-900/40 dark:border-green-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-green-700 font-medium">Cerrados</p>
-                <p className="text-2xl font-bold text-green-900">{stats.cerrados}</p>
+                <p className="text-xs text-green-700 dark:text-green-300 font-medium">Cerrados</p>
+                <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.cerrados}</p>
               </div>
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:from-amber-950/40 dark:to-amber-900/40 dark:border-amber-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-amber-700 font-medium">Con Baja</p>
-                <p className="text-2xl font-bold text-amber-900">{stats.conBaja}</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Con Baja</p>
+                <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.conBaja}</p>
               </div>
-              <XCircle className="w-8 h-8 text-amber-600" />
+              <XCircle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/40 dark:to-blue-900/40 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-blue-700 font-medium">Días de Baja Total</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.totalDiasBaja}</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Días de Baja Total</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.totalDiasBaja}</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-600" />
+              <TrendingUp className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
           </CardContent>
         </Card>
@@ -160,18 +160,18 @@ export default function IncidentReport({ incidents, employees }) {
 
       {/* Distribución por Tipo y Gravedad */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle className="text-base">Distribución por Tipo</CardTitle>
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm dark:bg-slate-800/80 dark:border dark:border-slate-700">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-700">
+            <CardTitle className="text-base dark:text-slate-100">Distribución por Tipo</CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-2">
             {Object.entries(stats.porTipo).map(([tipo, count]) => (
               <div key={tipo} className="flex items-center justify-between">
-                <span className="text-sm text-slate-700">{tipo}</span>
+                <span className="text-sm text-slate-700 dark:text-slate-300">{tipo}</span>
                 <Badge className={
-                  tipo === "Accidente" ? "bg-red-600" :
-                  tipo === "Incidente" ? "bg-amber-600" :
-                  "bg-yellow-600"
+                  tipo === "Accidente" ? "bg-red-600 dark:bg-red-700" :
+                  tipo === "Incidente" ? "bg-amber-600 dark:bg-amber-700" :
+                  "bg-yellow-600 dark:bg-yellow-700"
                 }>
                   {count}
                 </Badge>
@@ -180,19 +180,19 @@ export default function IncidentReport({ incidents, employees }) {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle className="text-base">Distribución por Gravedad</CardTitle>
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm dark:bg-slate-800/80 dark:border dark:border-slate-700">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-700">
+            <CardTitle className="text-base dark:text-slate-100">Distribución por Gravedad</CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-2">
             {Object.entries(stats.porGravedad).map(([gravedad, count]) => (
               <div key={gravedad} className="flex items-center justify-between">
-                <span className="text-sm text-slate-700">{gravedad}</span>
+                <span className="text-sm text-slate-700 dark:text-slate-300">{gravedad}</span>
                 <Badge className={
-                  gravedad === "Mortal" ? "bg-red-600" :
-                  gravedad === "Muy Grave" ? "bg-red-100 text-red-800" :
-                  gravedad === "Grave" ? "bg-amber-100 text-amber-800" :
-                  "bg-green-100 text-green-800"
+                  gravedad === "Mortal" ? "bg-red-600 dark:bg-red-700" :
+                  gravedad === "Muy Grave" ? "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300" :
+                  gravedad === "Grave" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300" :
+                  "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
                 }>
                   {count}
                 </Badge>
@@ -203,37 +203,37 @@ export default function IncidentReport({ incidents, employees }) {
       </div>
 
       {/* Estado de Medidas Correctoras */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle className="text-base">Estado de Medidas Correctoras</CardTitle>
+      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm dark:bg-slate-800/80 dark:border dark:border-slate-700">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-700">
+          <CardTitle className="text-base dark:text-slate-100">Estado de Medidas Correctoras</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <div className="text-2xl font-bold text-amber-900">{stats.medidasPendientes}</div>
-              <div className="text-xs text-amber-700">Pendientes</div>
+            <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+              <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.medidasPendientes}</div>
+              <div className="text-xs text-amber-700 dark:text-amber-300">Pendientes</div>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-2xl font-bold text-blue-900">{stats.medidasEnProceso}</div>
-              <div className="text-xs text-blue-700">En Proceso</div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+              <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.medidasEnProceso}</div>
+              <div className="text-xs text-blue-700 dark:text-blue-300">En Proceso</div>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-              <div className="text-2xl font-bold text-green-900">{stats.medidasCompletadas}</div>
-              <div className="text-xs text-green-700">Completadas</div>
+            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200 dark:bg-green-950/30 dark:border-green-800">
+              <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.medidasCompletadas}</div>
+              <div className="text-xs text-green-700 dark:text-green-300">Completadas</div>
             </div>
           </div>
           
           {stats.totalMedidas > 0 && (
             <div className="mt-4">
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-slate-600">Progreso General</span>
-                <span className="font-semibold">
+                <span className="text-slate-600 dark:text-slate-400">Progreso General</span>
+                <span className="font-semibold dark:text-slate-200">
                   {Math.round((stats.medidasCompletadas / stats.totalMedidas) * 100)}%
                 </span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-3">
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
                 <div
-                  className="h-3 rounded-full bg-gradient-to-r from-green-500 to-green-600"
+                  className="h-3 rounded-full bg-gradient-to-r from-green-500 to-green-600 dark:from-green-600 dark:to-green-500"
                   style={{ width: `${(stats.medidasCompletadas / stats.totalMedidas) * 100}%` }}
                 />
               </div>

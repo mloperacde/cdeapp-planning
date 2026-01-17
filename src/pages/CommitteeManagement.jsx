@@ -90,17 +90,17 @@ export default function CommitteeManagementPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <Shield className="w-8 h-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               Gestión de Comités y PRL
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
               Comités, representantes, prevención de riesgos y gestión de incidentes
             </p>
           </div>
           <Button
             onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
           >
             <Plus className="w-4 h-4 mr-2" />
             Añadir Miembro Comité
@@ -108,52 +108,52 @@ export default function CommitteeManagementPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/40 dark:to-slate-900/40 dark:border-blue-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-blue-700 font-medium">Total Miembros</p>
-                  <p className="text-2xl font-bold text-blue-900">
+                  <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Total Miembros</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                     {committeeMembers.filter(m => m.activo).length}
                   </p>
                 </div>
-                <Users className="w-8 h-8 text-blue-600" />
+                <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:from-amber-950/40 dark:to-slate-900/40 dark:border-amber-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-amber-700 font-medium">Incidentes Activos</p>
-                  <p className="text-2xl font-bold text-amber-900">{activeIncidents}</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Incidentes Activos</p>
+                  <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{activeIncidents}</p>
                 </div>
-                <AlertTriangle className="w-8 h-8 text-amber-600" />
+                <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-950/40 dark:to-slate-900/40 dark:border-red-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-red-700 font-medium">Riesgos Pendientes</p>
-                  <p className="text-2xl font-bold text-red-900">{pendingRisks}</p>
+                  <p className="text-xs text-red-700 dark:text-red-300 font-medium">Riesgos Pendientes</p>
+                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{pendingRisks}</p>
                 </div>
-                <Shield className="w-8 h-8 text-red-600" />
+                <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/40 dark:to-slate-900/40 dark:border-green-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Evaluaciones</p>
-                  <p className="text-2xl font-bold text-green-900">{riskAssessments.length}</p>
+                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">Evaluaciones</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{riskAssessments.length}</p>
                 </div>
-                <FileText className="w-8 h-8 text-green-600" />
+                <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
             </CardContent>
           </Card>

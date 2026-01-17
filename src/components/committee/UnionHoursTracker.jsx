@@ -68,14 +68,14 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100">
+      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm dark:bg-slate-800/80 dark:border dark:border-slate-700">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-600" />
+            <CardTitle className="flex items-center gap-2 dark:text-slate-100">
+              <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Control de Horas Sindicales
             </CardTitle>
-            <Button onClick={() => setShowForm(!showForm)} className="bg-blue-600">
+            <Button onClick={() => setShowForm(!showForm)} className="bg-blue-600 dark:bg-blue-700 dark:hover:bg-blue-600">
               <Plus className="w-4 h-4 mr-2" />
               Registrar Uso
             </Button>
@@ -83,10 +83,10 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
         </CardHeader>
         <CardContent className="p-6">
           {showForm && (
-            <form onSubmit={handleSubmit} className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <form onSubmit={handleSubmit} className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Miembro del Comité *</Label>
+                  <Label className="dark:text-slate-200">Miembro del Comité *</Label>
                   <Select
                     value={formData.committee_member_id}
                     onValueChange={(value) => {

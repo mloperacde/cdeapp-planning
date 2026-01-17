@@ -75,29 +75,29 @@ export default function EmergencyTrainingManager({ employees = [] }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className={`border-2 ${
-          trainingStatus.caducadas.length > 0 ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'
+          trainingStatus.caducadas.length > 0 ? 'border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-900/10' : 'border-green-300 bg-green-50 dark:border-green-900/50 dark:bg-green-900/10'
         }`}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2 dark:text-slate-100">
               <AlertTriangle className={`w-5 h-5 ${
-                trainingStatus.caducadas.length > 0 ? 'text-red-600' : 'text-green-600'
+                trainingStatus.caducadas.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
               }`} />
               Formaciones Caducadas
             </CardTitle>
           </CardHeader>
           <CardContent>
             {trainingStatus.caducadas.length === 0 ? (
-              <p className="text-sm text-green-700">✅ No hay formaciones caducadas</p>
+              <p className="text-sm text-green-700 dark:text-green-400">✅ No hay formaciones caducadas</p>
             ) : (
               <div className="space-y-2">
                 {trainingStatus.caducadas.map((item, idx) => (
-                  <div key={idx} className="p-3 bg-white rounded border border-red-200">
-                    <div className="font-semibold text-sm text-red-900">{item.employee?.nombre || "Desconocido"}</div>
-                    <div className="text-xs text-slate-600">{item.member?.rol_emergencia || ""}</div>
-                    <div className="text-xs text-red-700 mt-1">
+                  <div key={idx} className="p-3 bg-white rounded border border-red-200 dark:bg-slate-800 dark:border-red-900/50">
+                    <div className="font-semibold text-sm text-red-900 dark:text-red-300">{item.employee?.nombre || "Desconocido"}</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">{item.member?.rol_emergencia || ""}</div>
+                    <div className="text-xs text-red-700 mt-1 dark:text-red-400">
                       <strong>{item.formacion?.nombre_curso || ""}</strong>
                     </div>
-                    <div className="text-xs text-red-600 mt-1">
+                    <div className="text-xs text-red-600 mt-1 dark:text-red-400">
                       ⚠️ Caducada hace {item.diasRestantes} días
                     </div>
                   </div>
@@ -108,29 +108,29 @@ export default function EmergencyTrainingManager({ employees = [] }) {
         </Card>
 
         <Card className={`border-2 ${
-          trainingStatus.proximasCaducar.length > 0 ? 'border-amber-300 bg-amber-50' : 'border-green-300 bg-green-50'
+          trainingStatus.proximasCaducar.length > 0 ? 'border-amber-300 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/10' : 'border-green-300 bg-green-50 dark:border-green-900/50 dark:bg-green-900/10'
         }`}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2 dark:text-slate-100">
               <Calendar className={`w-5 h-5 ${
-                trainingStatus.proximasCaducar.length > 0 ? 'text-amber-600' : 'text-green-600'
+                trainingStatus.proximasCaducar.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'
               }`} />
               Próximas a Caducar (60 días)
             </CardTitle>
           </CardHeader>
           <CardContent>
             {trainingStatus.proximasCaducar.length === 0 ? (
-              <p className="text-sm text-green-700">✅ No hay formaciones próximas a caducar</p>
+              <p className="text-sm text-green-700 dark:text-green-400">✅ No hay formaciones próximas a caducar</p>
             ) : (
               <div className="space-y-2">
                 {trainingStatus.proximasCaducar.map((item, idx) => (
-                  <div key={idx} className="p-3 bg-white rounded border border-amber-200">
-                    <div className="font-semibold text-sm text-amber-900">{item.employee?.nombre || "Desconocido"}</div>
-                    <div className="text-xs text-slate-600">{item.member?.rol_emergencia || ""}</div>
-                    <div className="text-xs text-amber-700 mt-1">
+                  <div key={idx} className="p-3 bg-white rounded border border-amber-200 dark:bg-slate-800 dark:border-amber-900/50">
+                    <div className="font-semibold text-sm text-amber-900 dark:text-amber-300">{item.employee?.nombre || "Desconocido"}</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">{item.member?.rol_emergencia || ""}</div>
+                    <div className="text-xs text-amber-700 mt-1 dark:text-amber-400">
                       <strong>{item.formacion?.nombre_curso || ""}</strong>
                     </div>
-                    <div className="text-xs text-amber-600 mt-1">
+                    <div className="text-xs text-amber-600 mt-1 dark:text-amber-400">
                       ⏰ Caduca en {item.diasRestantes} días
                     </div>
                   </div>

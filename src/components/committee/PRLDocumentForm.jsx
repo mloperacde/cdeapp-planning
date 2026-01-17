@@ -152,9 +152,9 @@ export default function PRLDocumentForm({ document, onClose }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-800">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="dark:text-slate-100">
             {document ? 'Editar Documento' : 'Subir Nuevo Documento PRL'}
           </DialogTitle>
         </DialogHeader>
@@ -162,24 +162,25 @@ export default function PRLDocumentForm({ document, onClose }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 col-span-2">
-              <Label>Título del Documento *</Label>
+              <Label className="dark:text-slate-200">Título del Documento *</Label>
               <Input
                 value={formData.titulo}
                 onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
                 placeholder="Título descriptivo del documento"
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Tipo de Documento *</Label>
+              <Label className="dark:text-slate-200">Tipo de Documento *</Label>
               <Select
                 value={formData.tipo_documento}
                 onValueChange={(value) => setFormData({ ...formData, tipo_documento: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                   <SelectItem value="Evaluación de Riesgos">Evaluación de Riesgos</SelectItem>
                   <SelectItem value="Política de Prevención">Política de Prevención</SelectItem>
                   <SelectItem value="Evaluación Solicitada">Evaluación Solicitada</SelectItem>
@@ -196,15 +197,15 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Categoría</Label>
+              <Label className="dark:text-slate-200">Categoría</Label>
               <Select
                 value={formData.categoria}
                 onValueChange={(value) => setFormData({ ...formData, categoria: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                   <SelectItem value="Seguridad en el Trabajo">Seguridad en el Trabajo</SelectItem>
                   <SelectItem value="Higiene Industrial">Higiene Industrial</SelectItem>
                   <SelectItem value="Ergonomía">Ergonomía</SelectItem>
@@ -216,49 +217,53 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Fecha del Documento *</Label>
+              <Label className="dark:text-slate-200">Fecha del Documento *</Label>
               <Input
                 type="date"
                 value={formData.fecha_documento}
                 onChange={(e) => setFormData({ ...formData, fecha_documento: e.target.value })}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Fecha de Caducidad</Label>
+              <Label className="dark:text-slate-200">Fecha de Caducidad</Label>
               <Input
                 type="date"
                 value={formData.fecha_caducidad || ""}
                 onChange={(e) => setFormData({ ...formData, fecha_caducidad: e.target.value })}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Departamento Afectado</Label>
+              <Label className="dark:text-slate-200">Departamento Afectado</Label>
               <Input
                 value={formData.departamento_afectado || ""}
                 onChange={(e) => setFormData({ ...formData, departamento_afectado: e.target.value })}
                 placeholder="Departamento"
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Días para Recordatorio</Label>
+              <Label className="dark:text-slate-200">Días para Recordatorio</Label>
               <Input
                 type="number"
                 value={formData.recordatorio_dias_antes || 30}
                 onChange={(e) => setFormData({ ...formData, recordatorio_dias_antes: parseInt(e.target.value) })}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2 col-span-2">
-              <Label>Puestos Afectados</Label>
+              <Label className="dark:text-slate-200">Puestos Afectados</Label>
               <div className="flex gap-2">
                 <Select value={puestoInput} onValueChange={setPuestoInput}>
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="flex-1 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                     <SelectValue placeholder="Seleccionar puesto" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                     {puestos.map((puesto) => (
                       <SelectItem key={puesto} value={puesto}>
                         {puesto}
@@ -266,13 +271,13 @@ export default function PRLDocumentForm({ document, onClose }) {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button type="button" onClick={addPuesto} size="sm">
+                <Button type="button" onClick={addPuesto} size="sm" className="dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100">
                   Añadir
                 </Button>
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
                 {(formData.puestos_afectados || []).map((puesto, idx) => (
-                  <Badge key={idx} variant="outline" className="cursor-pointer" onClick={() => removePuesto(puesto)}>
+                  <Badge key={idx} variant="outline" className="cursor-pointer dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" onClick={() => removePuesto(puesto)}>
                     {puesto} ×
                   </Badge>
                 ))}
@@ -280,12 +285,13 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2 col-span-2">
-              <Label>Roles/Categorías Afectados</Label>
+              <Label className="dark:text-slate-200">Roles/Categorías Afectados</Label>
               <div className="flex gap-2">
                 <Input
                   value={rolInput}
                   onChange={(e) => setRolInput(e.target.value)}
                   placeholder="Rol o categoría..."
+                  className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -293,13 +299,13 @@ export default function PRLDocumentForm({ document, onClose }) {
                     }
                   }}
                 />
-                <Button type="button" onClick={addRol} size="sm">
+                <Button type="button" onClick={addRol} size="sm" className="dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100">
                   Añadir
                 </Button>
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
                 {(formData.roles_afectados || []).map((rol, idx) => (
-                  <Badge key={idx} className="bg-blue-100 text-blue-700 cursor-pointer" onClick={() => removeRol(rol)}>
+                  <Badge key={idx} className="bg-blue-100 text-blue-700 cursor-pointer dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50" onClick={() => removeRol(rol)}>
                     {rol} ×
                   </Badge>
                 ))}
@@ -307,15 +313,15 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Estado</Label>
+              <Label className="dark:text-slate-200">Estado</Label>
               <Select
                 value={formData.estado}
                 onValueChange={(value) => setFormData({ ...formData, estado: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                   <SelectItem value="Vigente">Vigente</SelectItem>
                   <SelectItem value="Pendiente Revisión">Pendiente Revisión</SelectItem>
                   <SelectItem value="Caducado">Caducado</SelectItem>
@@ -325,54 +331,58 @@ export default function PRLDocumentForm({ document, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Versión</Label>
+              <Label className="dark:text-slate-200">Versión</Label>
               <Input
                 value={formData.version}
                 onChange={(e) => setFormData({ ...formData, version: e.target.value })}
                 placeholder="1.0"
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2 col-span-2">
-              <Label>Archivo *</Label>
+              <Label className="dark:text-slate-200">Archivo *</Label>
               <div className="flex gap-2">
                 <Input
                   type="file"
                   onChange={handleFileUpload}
                   disabled={uploading}
-                  className="flex-1"
+                  className="flex-1 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 />
                 {fileUrl && (
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => window.open(fileUrl, '_blank')}
+                    className="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     Ver Archivo
                   </Button>
                 )}
               </div>
-              {uploading && <p className="text-xs text-blue-600">Subiendo archivo...</p>}
+              {uploading && <p className="text-xs text-blue-600 dark:text-blue-400">Subiendo archivo...</p>}
             </div>
 
             <div className="space-y-2 col-span-2">
-              <Label>Descripción</Label>
+              <Label className="dark:text-slate-200">Descripción</Label>
               <Textarea
                 value={formData.descripcion}
                 onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                 rows={3}
                 placeholder="Descripción del documento"
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
             
             {document && fileUrl !== document.archivo_url && (
               <div className="space-y-2 col-span-2">
-                <Label>Descripción de Cambios (Nueva Versión)</Label>
+                <Label className="dark:text-slate-200">Descripción de Cambios (Nueva Versión)</Label>
                 <Textarea
                   value={cambiosVersion}
                   onChange={(e) => setCambiosVersion(e.target.value)}
                   placeholder="Describe los cambios realizados en esta versión..."
                   rows={2}
+                  className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 />
               </div>
             )}
@@ -381,47 +391,51 @@ export default function PRLDocumentForm({ document, onClose }) {
               <Checkbox
                 checked={formData.requiere_accion}
                 onCheckedChange={(checked) => setFormData({ ...formData, requiere_accion: checked })}
+                className="dark:border-slate-600 dark:data-[state=checked]:bg-blue-600 dark:data-[state=checked]:border-blue-600"
               />
-              <Label>Requiere Acción</Label>
+              <Label className="dark:text-slate-200">Requiere Acción</Label>
             </div>
 
             {formData.requiere_accion && (
               <>
                 <div className="space-y-2">
-                  <Label>Descripción de la Acción</Label>
+                  <Label className="dark:text-slate-200">Descripción de la Acción</Label>
                   <Input
                     value={formData.accion_requerida || ""}
                     onChange={(e) => setFormData({ ...formData, accion_requerida: e.target.value })}
                     placeholder="Descripción"
+                    className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Fecha Límite</Label>
+                  <Label className="dark:text-slate-200">Fecha Límite</Label>
                   <Input
                     type="date"
                     value={formData.fecha_limite_accion || ""}
                     onChange={(e) => setFormData({ ...formData, fecha_limite_accion: e.target.value })}
+                    className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                   />
                 </div>
               </>
             )}
 
             <div className="space-y-2 col-span-2">
-              <Label>Notas</Label>
+              <Label className="dark:text-slate-200">Notas</Label>
               <Textarea
                 value={formData.notas || ""}
                 onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
                 rows={2}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} className="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending || uploading}>
+            <Button type="submit" disabled={saveMutation.isPending || uploading} className="dark:bg-blue-700 dark:hover:bg-blue-800 dark:text-white">
               {saveMutation.isPending ? "Guardando..." : "Guardar"}
             </Button>
           </div>

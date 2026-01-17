@@ -119,11 +119,11 @@ export default function EmergencyTeamManager({ employees = [] }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 dark:bg-blue-950/20 dark:border-blue-900">
+        <h3 className="font-semibold text-blue-900 mb-2 dark:text-blue-200">
           📋 Composición Legal del Equipo de Emergencia
         </h3>
-        <p className="text-sm text-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-300">
           Para empresas de menos de 500 trabajadores según normativa vigente. 
           Se recomienda tener suplentes para cada rol crítico.
         </p>
@@ -141,7 +141,9 @@ export default function EmergencyTeamManager({ employees = [] }) {
             <Card 
               key={roleInfo.rol}
               className={`border-2 ${
-                cumpleRequisito ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                cumpleRequisito 
+                  ? 'border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-900/10' 
+                  : 'border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-900/10'
               }`}
             >
               <CardHeader className="pb-3">
@@ -153,23 +155,23 @@ export default function EmergencyTeamManager({ employees = [] }) {
                     {titulares.length}/{roleInfo.requerido}
                   </Badge>
                 </div>
-                <CardTitle className="text-base mt-2">{roleInfo.rol}</CardTitle>
-                <p className="text-xs text-slate-600">{roleInfo.descripcion}</p>
+                <CardTitle className="text-base mt-2 dark:text-slate-100">{roleInfo.rol}</CardTitle>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{roleInfo.descripcion}</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 mb-3">
                   {titulares.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-slate-700 mb-1">Titulares:</p>
+                      <p className="text-xs font-semibold text-slate-700 mb-1 dark:text-slate-300">Titulares:</p>
                       {titulares.map(member => (
-                        <div key={member.id} className="flex items-center justify-between bg-white p-2 rounded border mb-1">
-                          <span className="text-xs font-medium">{getEmployeeName(member.employee_id)}</span>
+                        <div key={member.id} className="flex items-center justify-between bg-white p-2 rounded border mb-1 dark:bg-slate-800 dark:border-slate-700">
+                          <span className="text-xs font-medium dark:text-slate-200">{getEmployeeName(member.employee_id)}</span>
                           <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleEdit(member)}
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 dark:text-slate-400 dark:hover:text-slate-200"
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
@@ -177,7 +179,7 @@ export default function EmergencyTeamManager({ employees = [] }) {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDelete(member.id)}
-                              className="h-6 w-6 p-0 hover:text-red-600"
+                              className="h-6 w-6 p-0 hover:text-red-600 dark:hover:text-red-400 dark:text-slate-400"
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -189,16 +191,16 @@ export default function EmergencyTeamManager({ employees = [] }) {
 
                   {suplentes.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-slate-700 mb-1">Suplentes:</p>
+                      <p className="text-xs font-semibold text-slate-700 mb-1 dark:text-slate-300">Suplentes:</p>
                       {suplentes.map(member => (
-                        <div key={member.id} className="flex items-center justify-between bg-slate-100 p-2 rounded border mb-1">
-                          <span className="text-xs">{getEmployeeName(member.employee_id)}</span>
+                        <div key={member.id} className="flex items-center justify-between bg-slate-100 p-2 rounded border mb-1 dark:bg-slate-800/50 dark:border-slate-700">
+                          <span className="text-xs dark:text-slate-300">{getEmployeeName(member.employee_id)}</span>
                           <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleEdit(member)}
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 dark:text-slate-400 dark:hover:text-slate-200"
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
@@ -206,7 +208,7 @@ export default function EmergencyTeamManager({ employees = [] }) {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDelete(member.id)}
-                              className="h-6 w-6 p-0 hover:text-red-600"
+                              className="h-6 w-6 p-0 hover:text-red-600 dark:hover:text-red-400 dark:text-slate-400"
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -220,7 +222,7 @@ export default function EmergencyTeamManager({ employees = [] }) {
                 <Button
                   size="sm"
                   onClick={() => handleAdd(roleInfo.rol)}
-                  className="w-full"
+                  className="w-full dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:border-slate-700"
                   variant="outline"
                 >
                   <Plus className="w-3 h-3 mr-1" />

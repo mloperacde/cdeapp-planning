@@ -86,42 +86,43 @@ export default function IncidentForm({ incident, employees, onClose }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-800">
         <DialogHeader>
-          <DialogTitle>{incident ? 'Editar Incidente' : 'Registrar Nuevo Incidente'}</DialogTitle>
+          <DialogTitle className="dark:text-slate-100">{incident ? 'Editar Incidente' : 'Registrar Nuevo Incidente'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Código de Incidente *</Label>
+              <Label className="dark:text-slate-300">Código de Incidente *</Label>
               <Input
                 value={formData.codigo_incidente}
                 onChange={(e) => setFormData({ ...formData, codigo_incidente: e.target.value })}
                 required
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Tipo *</Label>
+              <Label className="dark:text-slate-300">Tipo *</Label>
               <Select
                 value={formData.tipo}
                 onValueChange={(value) => setFormData({ ...formData, tipo: value })}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Accidente">Accidente</SelectItem>
-                  <SelectItem value="Incidente">Incidente</SelectItem>
-                  <SelectItem value="Casi Accidente">Casi Accidente</SelectItem>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                  <SelectItem value="Accidente" className="dark:text-slate-100 dark:focus:bg-slate-700">Accidente</SelectItem>
+                  <SelectItem value="Incidente" className="dark:text-slate-100 dark:focus:bg-slate-700">Incidente</SelectItem>
+                  <SelectItem value="Casi Accidente" className="dark:text-slate-100 dark:focus:bg-slate-700">Casi Accidente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Empleado Afectado *</Label>
+              <Label className="dark:text-slate-300">Empleado Afectado *</Label>
               <Select
                 value={formData.employee_id}
                 onValueChange={(value) => {
@@ -134,12 +135,12 @@ export default function IncidentForm({ incident, employees, onClose }) {
                 }}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue placeholder="Seleccionar empleado" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                   {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
+                    <SelectItem key={emp.id} value={emp.id} className="dark:text-slate-100 dark:focus:bg-slate-700">
                       {emp.nombre} - {emp.departamento}
                     </SelectItem>
                   ))}
@@ -148,96 +149,103 @@ export default function IncidentForm({ incident, employees, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Fecha y Hora *</Label>
+              <Label className="dark:text-slate-300">Fecha y Hora *</Label>
               <Input
                 type="datetime-local"
                 value={formData.fecha_hora}
                 onChange={(e) => setFormData({ ...formData, fecha_hora: e.target.value })}
                 required
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Lugar *</Label>
+              <Label className="dark:text-slate-300">Lugar *</Label>
               <Input
                 value={formData.lugar}
                 onChange={(e) => setFormData({ ...formData, lugar: e.target.value })}
                 placeholder="Área, línea, máquina..."
                 required
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Gravedad *</Label>
+              <Label className="dark:text-slate-300">Gravedad *</Label>
               <Select
                 value={formData.gravedad}
                 onValueChange={(value) => setFormData({ ...formData, gravedad: value })}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Leve">Leve</SelectItem>
-                  <SelectItem value="Grave">Grave</SelectItem>
-                  <SelectItem value="Muy Grave">Muy Grave</SelectItem>
-                  <SelectItem value="Mortal">Mortal</SelectItem>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                  <SelectItem value="Leve" className="dark:text-slate-100 dark:focus:bg-slate-700">Leve</SelectItem>
+                  <SelectItem value="Grave" className="dark:text-slate-100 dark:focus:bg-slate-700">Grave</SelectItem>
+                  <SelectItem value="Muy Grave" className="dark:text-slate-100 dark:focus:bg-slate-700">Muy Grave</SelectItem>
+                  <SelectItem value="Mortal" className="dark:text-slate-100 dark:focus:bg-slate-700">Mortal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Parte del Cuerpo Afectada</Label>
+              <Label className="dark:text-slate-300">Parte del Cuerpo Afectada</Label>
               <Input
                 value={formData.parte_cuerpo_afectada}
                 onChange={(e) => setFormData({ ...formData, parte_cuerpo_afectada: e.target.value })}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Días de Baja</Label>
+              <Label className="dark:text-slate-300">Días de Baja</Label>
               <Input
                 type="number"
                 min="0"
                 value={formData.dias_baja}
                 onChange={(e) => setFormData({ ...formData, dias_baja: parseInt(e.target.value) || 0 })}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Descripción del Incidente *</Label>
+            <Label className="dark:text-slate-300">Descripción del Incidente *</Label>
             <Textarea
               value={formData.descripcion}
               onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
               rows={3}
               required
+              className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Causas Inmediatas</Label>
+            <Label className="dark:text-slate-300">Causas Inmediatas</Label>
             <Textarea
               value={formData.causas_inmediatas}
               onChange={(e) => setFormData({ ...formData, causas_inmediatas: e.target.value })}
               rows={2}
+              className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Causas Básicas/Raíz</Label>
+            <Label className="dark:text-slate-300">Causas Básicas/Raíz</Label>
             <Textarea
               value={formData.causas_basicas}
               onChange={(e) => setFormData({ ...formData, causas_basicas: e.target.value })}
               rows={2}
+              className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
             />
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} className="dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending} className="bg-red-600 hover:bg-red-700">
+            <Button type="submit" disabled={saveMutation.isPending} className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 dark:text-white">
               {saveMutation.isPending ? "Guardando..." : "Guardar y Notificar"}
             </Button>
           </div>
