@@ -120,13 +120,13 @@ export default function AvailabilitySyncMonitor({ employees, absences }) {
             </p>
             <div className="max-h-64 overflow-y-auto space-y-2">
               {inconsistencies.slice(0, 10).map((issue, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs p-2 bg-white rounded border border-amber-200">
+                <div key={idx} className="flex items-center gap-2 text-xs p-2 bg-white dark:bg-slate-800 rounded border border-amber-200 dark:border-amber-800">
                   {issue.type === 'should_be_absent' ? (
                     <UserX className="w-4 h-4 text-red-500 flex-shrink-0" />
                   ) : (
                     <UserCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
                   )}
-                  <span className="flex-1">{issue.message}</span>
+                  <span className="flex-1 dark:text-slate-300">{issue.message}</span>
                 </div>
               ))}
               {inconsistencies.length > 10 && (
@@ -138,10 +138,10 @@ export default function AvailabilitySyncMonitor({ employees, absences }) {
           </div>
         )}
 
-        <div className="bg-white rounded p-3 border text-xs space-y-2">
-          <p className="font-semibold text-slate-700">ℹ️ Funcionamiento:</p>
-          <ul className="list-disc list-inside space-y-1 text-slate-600">
-            <li>Compara ausencias activas aprobadas con el estado de disponibilidad</li>
+        <div className="bg-white dark:bg-slate-800 rounded p-3 border dark:border-slate-700 text-xs space-y-2">
+          <p className="font-semibold text-slate-700 dark:text-slate-300">ℹ️ Funcionamiento:</p>
+          <ul className="list-disc list-inside space-y-1 text-slate-600 dark:text-slate-400">
+            <li>Sincroniza ausencias del calendario con disponibilidad de empleados.</li>
             <li>Actualiza automáticamente el campo `disponibilidad` en la ficha del empleado</li>
             <li>Se ejecuta automáticamente al crear/aprobar/eliminar ausencias</li>
             <li>Puedes ejecutar manualmente si detectas inconsistencias</li>

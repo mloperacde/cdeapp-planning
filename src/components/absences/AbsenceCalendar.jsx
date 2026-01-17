@@ -115,16 +115,16 @@ export default function AbsenceCalendar({ absences, employees, absenceTypes, sel
             return (
               <div
                 key={day.toString()}
-                className={`aspect-square border rounded-lg p-2 ${
-                  isToday ? 'ring-2 ring-blue-500' :
-                  isWeekend ? 'bg-slate-50' :
-                  'bg-white'
+                className={`aspect-square border dark:border-slate-700 rounded-lg p-2 ${
+                  isToday ? 'ring-2 ring-blue-500 dark:ring-blue-400' :
+                  isWeekend ? 'bg-slate-50 dark:bg-slate-800/50' :
+                  'bg-white dark:bg-slate-800'
                 } hover:shadow-md transition-shadow relative overflow-hidden`}
               >
                 <div className={`text-sm font-semibold mb-1 ${
-                  isToday ? 'text-blue-600' :
-                  isWeekend ? 'text-slate-400' :
-                  'text-slate-700'
+                  isToday ? 'text-blue-600 dark:text-blue-400' :
+                  isWeekend ? 'text-slate-400 dark:text-slate-500' :
+                  'text-slate-700 dark:text-slate-200'
                 }`}>
                   {format(day, 'd')}
                 </div>

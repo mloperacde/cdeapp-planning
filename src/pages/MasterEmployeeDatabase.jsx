@@ -293,7 +293,7 @@ export default function MasterEmployeeDatabasePage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Breadcrumbs showBack={true} onBack={goBack} />
+
         </div>
 
         <div className="mb-8">

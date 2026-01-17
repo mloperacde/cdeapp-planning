@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Plus, Download, Trash2, Search, Upload, Eye, History, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import Breadcrumbs from "../components/common/Breadcrumbs";
+
 import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import DocumentViewer from "../components/documents/DocumentViewer";
 import EnhancedDocumentForm from "../components/documents/EnhancedDocumentForm";
@@ -176,7 +176,7 @@ export default function DocumentManagementPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <Breadcrumbs showBack={true} onBack={goBack} />
+
         
 
         <div className="flex justify-between items-center mb-8">

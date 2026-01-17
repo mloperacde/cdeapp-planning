@@ -305,7 +305,7 @@ export default function CalendarStyleConfig() {
         </div>
 
         <div className="border-t pt-4">
-          <h3 className="font-semibold text-slate-900 mb-3">Vista Previa</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Vista Previa</h3>
           <div className="flex gap-4">
             <div
               className="w-16 h-16 rounded flex items-center justify-center font-bold text-sm border-2"

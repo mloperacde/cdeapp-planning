@@ -17,7 +17,7 @@ import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileTex
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
  
-import Breadcrumbs from "../components/common/Breadcrumbs";
+
 import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceTypeManager from "../components/maintenance/MaintenanceTypeManager";
@@ -266,7 +266,7 @@ export default function MaintenanceTrackingPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Breadcrumbs showBack={true} onBack={goBack} />
+
         </div>
 
         <div className="flex justify-between items-center mb-8">

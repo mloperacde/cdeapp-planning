@@ -50,7 +50,7 @@ export default function EmployeeAvailabilityPanel({
             </div>
           </div>
 
-          <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-red-200 dark:border-red-800">
+          <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-red-200 dark:border-red-900/50">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-red-600 dark:text-red-400">Ausentes</p>

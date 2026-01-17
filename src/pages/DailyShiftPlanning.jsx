@@ -170,7 +170,7 @@ export default function DailyShiftPlanningPage() {
 
     return (
         <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
-            <Breadcrumbs />
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">

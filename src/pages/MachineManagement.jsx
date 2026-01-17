@@ -10,7 +10,6 @@ import { createPageUrl } from "@/utils";
 import { usePagination } from "@/components/utils/usePagination";
 import AdvancedSearch from "@/components/common/AdvancedSearch";
 import MachineDetailCard from "@/components/machines/MachineDetailCard";
-import Breadcrumbs from "../components/common/Breadcrumbs";
 import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 const EMPTY_ARRAY = [];
 

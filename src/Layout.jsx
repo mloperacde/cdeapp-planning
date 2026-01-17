@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ThemeToggle from '@/components/common/ThemeToggle';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 
 export default function Layout({ children, currentPageName }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -97,7 +98,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 w-screen overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-background w-screen overflow-hidden">
       {/* Overlay móvil */}
       {menuOpen && (
         <div 
@@ -107,15 +108,15 @@ export default function Layout({ children, currentPageName }) {
       )}
       
       {/* Sidebar */}
-      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-slate-950 text-white transition-all duration-300 overflow-y-auto fixed md:relative z-40 h-full flex-shrink-0 flex flex-col`}>
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-card text-white transition-all duration-300 overflow-y-auto fixed md:relative z-40 h-full flex-shrink-0 flex flex-col border-r border-slate-800 dark:border-border`}>
         {/* Logo y título */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-800 dark:border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
               <Cog className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg">CDE PlanApp</h1>
+              <h1 className="font-bold text-lg text-white">CDE PlanApp</h1>
               <p className="text-xs text-slate-400">Sistema de Gestión</p>
             </div>
           </div>
@@ -128,10 +129,10 @@ export default function Layout({ children, currentPageName }) {
         </div>
 
         {/* Info del usuario */}
-        <div className="p-4 border-b border-slate-800">
+        <div className="p-4 border-b border-slate-800 dark:border-border">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 hover:bg-slate-800 p-2 rounded-lg transition-colors">
+              <button className="w-full flex items-center gap-3 hover:bg-slate-800 dark:hover:bg-accent/10 p-2 rounded-lg transition-colors">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-blue-600 text-white font-semibold">
                     {getUserInitials()}
@@ -173,7 +174,7 @@ export default function Layout({ children, currentPageName }) {
             <div key={category} className="mb-2">
               <button
                 onClick={() => toggleCategory(category)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 dark:hover:bg-accent/10 rounded-lg transition-colors"
               >
                 <span>{category}</span>
                 {expandedCategories[category] ? (
@@ -196,7 +197,7 @@ export default function Layout({ children, currentPageName }) {
                         className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm ${
                           isActive 
                             ? 'bg-blue-600 text-white shadow-lg' 
-                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                            : 'text-slate-300 hover:bg-slate-800 dark:hover:bg-accent/10 hover:text-white'
                         }`}
                       >
                         <Icon size={16} className="flex-shrink-0" />
@@ -212,23 +213,28 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       {/* Contenido principal */}
-      <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
+      <div className="flex-1 overflow-auto bg-slate-50 dark:bg-background">
         {/* Header móvil */}
-        <div className="md:hidden p-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div className="md:hidden p-4 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center justify-between">
           <button 
             onClick={() => setMenuOpen(true)}
-            className="text-slate-900 dark:text-slate-100"
+            className="text-slate-900 dark:text-foreground"
           >
             <Menu size={24} />
           </button>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-foreground">
             {currentPageName}
           </h2>
         </div>
         
         {/* Contenido de la página */}
-        <div className="h-full">
-          {children}
+        <div className="h-full flex flex-col">
+          <div className="px-6 pt-6 md:px-8 md:pt-8 pb-0">
+             <Breadcrumbs auto={true} />
+          </div>
+          <div className="flex-1">
+             {children}
+          </div>
         </div>
       </div>
     </div>

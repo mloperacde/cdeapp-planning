@@ -226,7 +226,7 @@ export function ModulesWidget({ pendingSwaps, lockersWithoutNumber, setActiveVie
                 {modules.map((module) => {
                     const Icon = module.icon;
                     const content = (
-                        <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
+                        <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card shadow-sm dark:shadow-none">
                             <CardContent className="p-5">
                                 <div className="flex items-center gap-3 mb-2">
                                     <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>

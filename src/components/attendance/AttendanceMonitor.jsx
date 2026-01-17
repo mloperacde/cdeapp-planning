@@ -105,38 +105,38 @@ export default function AttendanceMonitor() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-green-50 border-green-200">
+                <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-green-700">Presentes</p>
-                        <p className="text-2xl font-bold text-green-900">{analysisData.summary?.present || 0}</p>
+                        <p className="text-xs text-green-700 dark:text-green-300">Presentes</p>
+                        <p className="text-2xl font-bold text-green-900 dark:text-green-100">{analysisData.summary?.present || 0}</p>
                       </div>
-                      <UserCheck className="w-8 h-8 text-green-600" />
+                      <UserCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-red-50 border-red-200">
+                <Card className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-red-700">Ausentes</p>
-                        <p className="text-2xl font-bold text-red-900">{analysisData.summary?.absent || 0}</p>
+                        <p className="text-xs text-red-700 dark:text-red-300">Ausentes</p>
+                        <p className="text-2xl font-bold text-red-900 dark:text-red-100">{analysisData.summary?.absent || 0}</p>
                       </div>
-                      <UserX className="w-8 h-8 text-red-600" />
+                      <UserX className="w-8 h-8 text-red-600 dark:text-red-400" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-orange-50 border-orange-200">
+                <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-orange-700">Retrasos</p>
-                        <p className="text-2xl font-bold text-orange-900">{analysisData.summary?.late || 0}</p>
+                        <p className="text-xs text-orange-700 dark:text-orange-300">Retrasos</p>
+                        <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{analysisData.summary?.late || 0}</p>
                       </div>
-                      <Clock className="w-8 h-8 text-orange-600" />
+                      <Clock className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                     </div>
                   </CardContent>
                 </Card>

@@ -55,7 +55,7 @@ import AbsenceForm from "../components/absences/AbsenceForm";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
 import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
-import Breadcrumbs from "../components/common/Breadcrumbs";
+
 import AvailabilitySyncMonitor from "../components/hr/AvailabilitySyncMonitor";
 import AbsenceConfigurationTab from "./AbsenceConfigurationTab";
 
@@ -165,7 +165,7 @@ export default function AbsenceManagementPage() {
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Breadcrumbs showBack={true} onBack={goBack} />
+
         </div>
 
         <div className="flex justify-between items-center mb-8">

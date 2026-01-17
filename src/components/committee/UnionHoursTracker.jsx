@@ -204,10 +204,10 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
                         <span className="font-bold">{hoursUsed}h</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Disponibles:</span>
-                        <span className="font-bold text-green-600">{remaining}h</span>
+                        <span className="dark:text-slate-300">Disponibles:</span>
+                        <span className="font-bold text-green-600 dark:text-green-400">{remaining}h</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                         <div 
                           className={`h-2 rounded-full ${
                             percentage > 90 ? 'bg-red-600' : 

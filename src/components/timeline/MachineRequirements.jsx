@@ -90,31 +90,31 @@ export default function MachineRequirements() {
 
           <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
             hasDeficit 
-              ? 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200' 
-              : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+              ? 'bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30 border-red-200 dark:border-red-900' 
+              : 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-900'
           }`}>
             <div className="flex items-center gap-3">
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                hasDeficit ? 'bg-red-600' : 'bg-green-600'
+                hasDeficit ? 'bg-red-600 dark:bg-red-700' : 'bg-green-600 dark:bg-green-700'
               }`}>
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div>
-                <div className={`text-sm font-medium ${hasDeficit ? 'text-red-700' : 'text-green-700'}`}>
+                <div className={`text-sm font-medium ${hasDeficit ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
                   Operadores FABRICACIÓN (en planning)
                 </div>
-                <div className={`text-xs ${hasDeficit ? 'text-red-600' : 'text-green-600'}`}>
+                <div className={`text-xs ${hasDeficit ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                   Responsable, Segunda, Operaria línea
                 </div>
-                <div className={`text-3xl font-bold ${hasDeficit ? 'text-red-900' : 'text-green-900'}`}>
+                <div className={`text-3xl font-bold ${hasDeficit ? 'text-red-900 dark:text-red-100' : 'text-green-900 dark:text-green-100'}`}>
                   {availableOperators}
                 </div>
               </div>
             </div>
             {hasDeficit && (
               <div className="text-right">
-                <div className="text-sm text-red-700 font-medium">Déficit</div>
-                <div className="text-2xl font-bold text-red-900">-{operatorDeficit}</div>
+                <div className="text-sm text-red-700 dark:text-red-300 font-medium">Déficit</div>
+                <div className="text-2xl font-bold text-red-900 dark:text-red-100">-{operatorDeficit}</div>
               </div>
             )}
           </div>
