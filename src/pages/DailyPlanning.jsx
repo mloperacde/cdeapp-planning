@@ -24,13 +24,13 @@ export default function DailyPlanningPage() {
   const [activeTab, setActiveTab] = useState('production');
   const [isCalling, setIsCalling] = useState(false);
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
 
-  const { data: teamSchedules } = useQuery({
+  const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(),
     initialData: [],
