@@ -37,20 +37,6 @@ export default function AdminDeploymentGuidePage() {
     toast.success("Copiado al portapapeles");
   };
 
-  const initializeRoles = async () => {
-    try {
-      const response = await base44.functions.invoke('initialize_default_roles');
-      if (response.data.success) {
-        toast.success("Roles inicializados correctamente");
-        setCurrentStep(1);
-      } else {
-        toast.info(response.data.message);
-      }
-    } catch (error) {
-      toast.error("Error al inicializar roles: " + error.message);
-    }
-  };
-
   return (
     <div className="space-y-6 p-6 md:p-8 max-w-7xl mx-auto">
       <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -407,6 +393,13 @@ export default function AdminDeploymentGuidePage() {
                           <p className="text-sm text-slate-600 mb-3">
                             Una vez el usuario ha activado su cuenta, asígnale un rol:
                           </p>
+                          <ol className="text-sm space-y-1 text-slate-600 list-decimal list-inside">
+                            <li>Ve a <strong>Dashboard de Base44 → Users</strong></li>
+                            <li>Busca el usuario</li>
+                            <li>Selecciona el rol apropiado (ej. <strong>admin</strong> o <strong>user</strong>)</li>
+                            <li>Guarda los cambios</li>
+                          </ol>
+                        </div>
                           <ol className="text-sm space-y-1 text-slate-600 list-decimal list-inside mb-3">
                             <li>Ve a <strong>Configuración → Asignación de Roles</strong></li>
                             <li>Busca al usuario en la lista</li>
@@ -472,7 +465,7 @@ export default function AdminDeploymentGuidePage() {
                         <div className="flex-1">
                           <h4 className="font-semibold mb-2">Asignar Rol</h4>
                           <p className="text-sm text-slate-600">
-                            Asigna el rol correspondiente desde Configuración → Asignación de Roles
+                            Asigna el rol correspondiente desde el Dashboard de Base44 (sección Users)
                           </p>
                         </div>
                       </div>
