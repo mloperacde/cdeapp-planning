@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useState, useMemo } from 'react';
-import { useAppData } from '../components/data/DataProvider';
-import { useBase44 } from '../hooks/useBase44';
 import EmployeeSkillsView from "../components/team/EmployeeSkillsView";
 import MachineSkillsView from "../components/team/MachineSkillsView";
 import IdealAssignmentView from "../components/team/IdealAssignmentView";
+import Breadcrumbs from "@/components/common/Breadcrumbs";
 
 export default function MachineAssignmentsPage() {
     const [isExporting, setIsExporting] = useState(false);
