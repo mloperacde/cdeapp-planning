@@ -2,6 +2,7 @@ import Layout from "../Layout";
 
 import AbsenceManagement from "./AbsenceManagement";
 import AbsenceConfigurationTab from "./AbsenceConfigurationTab";
+import AcceptInvitation from "./AcceptInvitation";
 import AdvancedConfiguration from "./AdvancedConfiguration";
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
 import AppUserManagement from "./AppUserManagement";
@@ -10,11 +11,15 @@ import AttendanceManagement from "./AttendanceManagement";
 import CommitteeManagement from "./CommitteeManagement";
 import Configuration from "./Configuration";
 import DailyPlanning from "./DailyPlanning";
+import DailyShiftPlanning from "./DailyShiftPlanning";
 import Dashboard from "./Dashboard";
+import DataMigration from "./DataMigration";
 import DocumentManagement from "./DocumentManagement";
 import DeploymentGuide from "./DeploymentGuide";
 import AdminDeploymentGuide from "./AdminDeploymentGuide";
 import ETTTemporaryEmployees from "./ETTTemporaryEmployees";
+import EmailNotifications from "./EmailNotifications";
+import EmployeeAbsenceInfo from "./EmployeeAbsenceInfo";
 import EmployeeOnboarding from "./EmployeeOnboarding";
 import EmployeesShiftManager from "./EmployeesShiftManager";
 import IncentiveManagement from "./IncentiveManagement";
@@ -29,7 +34,9 @@ import MasterEmployeeDatabase from "./MasterEmployeeDatabase";
 import MobileHome from "./MobileHome";
 import PerformanceManagement from "./PerformanceManagement";
 import ProcessConfiguration from "./ProcessConfiguration";
+import ProductionDashboard from "./ProductionDashboard";
 import ProductionPlanning from "./ProductionPlanning";
+import QualityControl from "./QualityControl";
 import QuickStartGuide from "./QuickStartGuide";
 import Reports from "./Reports";
 import ShiftHandover from "./ShiftHandover";
@@ -38,12 +45,19 @@ import ShiftManagers from "./ShiftManagers";
 import ShiftPlanning from "./ShiftPlanning";
 import SkillMatrix from "./SkillMatrix";
 import SupportManagement1415 from "./SupportManagement1415";
+import SystemHealth from "./SystemHealth";
 import SystemReset from "./SystemReset";
 import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
 import MobileAppConfig from "./mobileAppConfig";
+import MobileAbsences from "./mobileAbsences";
+import MobileChat from "./mobileChat";
+import MobileNotifications from "./mobileNotifications";
+import MobilePlanning from "./mobilePlanning";
+import MobileProfile from "./mobileProfile";
+import MobileVacations from "./mobileVacations";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -67,6 +81,7 @@ const PAGES = {
   Dashboard: Dashboard,
   AbsenceManagement: AbsenceManagement,
   AbsenceConfigurationTab: AbsenceConfigurationTab,
+  AcceptInvitation: AcceptInvitation,
   AdvancedConfiguration: AdvancedConfiguration,
   AdvancedHRDashboard: AdvancedHRDashboard,
   AppUserManagement: AppUserManagement,
@@ -75,10 +90,13 @@ const PAGES = {
   CommitteeManagement: CommitteeManagement,
   Configuration: Configuration,
   DailyPlanning: DailyPlanning,
+  DailyShiftPlanning: DailyShiftPlanning,
   DocumentManagement: DocumentManagement,
   DeploymentGuide: DeploymentGuide,
   AdminDeploymentGuide: AdminDeploymentGuide,
   ETTTemporaryEmployees: ETTTemporaryEmployees,
+  EmailNotifications: EmailNotifications,
+  EmployeeAbsenceInfo: EmployeeAbsenceInfo,
   EmployeeOnboarding: EmployeeOnboarding,
   EmployeesShiftManager: EmployeesShiftManager,
   IncentiveManagement: IncentiveManagement,
@@ -93,7 +111,9 @@ const PAGES = {
   MobileHome: MobileHome,
   PerformanceManagement: PerformanceManagement,
   ProcessConfiguration: ProcessConfiguration,
+  ProductionDashboard: ProductionDashboard,
   ProductionPlanning: ProductionPlanning,
+  QualityControl: QualityControl,
   QuickStartGuide: QuickStartGuide,
   Reports: Reports,
   ShiftHandover: ShiftHandover,
@@ -102,12 +122,20 @@ const PAGES = {
   ShiftPlanning: ShiftPlanning,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
+  SystemHealth: SystemHealth,
   SystemReset: SystemReset,
   Timeline: Timeline,
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
   MachinePlanning: MachinePlanning,
   MobileAppConfig: MobileAppConfig,
+  DataMigration: DataMigration,
+  mobileAbsences: MobileAbsences,
+  mobileChat: MobileChat,
+  mobileNotifications: MobileNotifications,
+  mobilePlanning: MobilePlanning,
+  mobileProfile: MobileProfile,
+  mobileVacations: MobileVacations,
 }
 
 function _getCurrentPage(url) {
@@ -149,6 +177,8 @@ function PagesContent() {
                 
                 
                 <Route path="/AbsenceManagement" element={<AbsenceManagement />} />
+                <Route path="/EmailNotifications" element={<EmailNotifications />} />
+                <Route path="/EmployeeAbsenceInfo" element={<EmployeeAbsenceInfo />} />
                 
 
                 
@@ -167,8 +197,11 @@ function PagesContent() {
                 <Route path="/Configuration" element={<Configuration />} />
                 <Route path="/AbsenceConfigurationTab" element={<AbsenceConfigurationTab />} />
                 <Route path="/DailyPlanning" element={<DailyPlanning />} />
+                <Route path="/DailyShiftPlanning" element={<DailyShiftPlanning />} />
                 
                 <Route path="/Dashboard" element={<Dashboard />} />
+                <Route path="/AcceptInvitation" element={<AcceptInvitation />} />
+                <Route path="/DataMigration" element={<DataMigration />} />
                 
 
                 
@@ -209,9 +242,9 @@ function PagesContent() {
 
                 
                 <Route path="/ProcessConfiguration" element={<ProcessConfiguration />} />
-                
+                <Route path="/ProductionDashboard" element={<ProductionDashboard />} />
                 <Route path="/ProductionPlanning" element={<ProductionPlanning />} />
-                
+                <Route path="/QualityControl" element={<QualityControl />} />
                 <Route path="/Reports" element={<Reports />} />
                 
 
@@ -227,9 +260,7 @@ function PagesContent() {
                 <Route path="/SkillMatrix" element={<SkillMatrix />} />
 
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
-
-
-
+                <Route path="/SystemHealth" element={<SystemHealth />} />
                 <Route path="/SystemReset" element={<SystemReset />} />
                 
 
@@ -245,6 +276,12 @@ function PagesContent() {
                 <Route path="/AdminDeploymentGuide" element={<AdminDeploymentGuide />} />
                 <Route path="/MobileHome" element={<MobileHome />} />
                 <Route path="/MobileAppConfig" element={<MobileAppConfig />} />
+                <Route path="/mobileAbsences" element={<MobileAbsences />} />
+                <Route path="/mobileChat" element={<MobileChat />} />
+                <Route path="/mobileNotifications" element={<MobileNotifications />} />
+                <Route path="/mobilePlanning" element={<MobilePlanning />} />
+                <Route path="/mobileProfile" element={<MobileProfile />} />
+                <Route path="/mobileVacations" element={<MobileVacations />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/BrandingConfig" element={<AdvancedConfiguration />} />
