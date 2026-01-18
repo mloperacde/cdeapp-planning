@@ -48,10 +48,9 @@ import EmployeeForm from "../components/employees/EmployeeForm";
 export default function EmployeeOnboardingPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  // const [showWizard, setShowWizard] = useState(false); // Removed as wizard is now a tab
   const [selectedOnboarding, setSelectedOnboarding] = useState(null);
-  const [activeTab, setActiveTab] = useState("active"); // New state for active tab
-  const [selectedEmployee, setSelectedEmployee] = useState(null); // New state for AI assistant
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [ettFilters, setEttFilters] = useState({
     searchTerm: "",
     tipoContrato: "all",
@@ -61,6 +60,13 @@ export default function EmployeeOnboardingPage() {
   });
   const [selectedEttEmployee, setSelectedEttEmployee] = useState(null);
   const [showEttEmployeeForm, setShowEttEmployeeForm] = useState(false);
+  const [newDoc, setNewDoc] = useState({ title: "", description: "", url: "" });
+  const [newTraining, setNewTraining] = useState({
+    title: "",
+    colectivo: "",
+    fecha: "",
+    estado: "Pendiente",
+  });
   const queryClient = useQueryClient();
   const { masterEmployees: employees, machines } = useAppData();
 
@@ -70,10 +76,23 @@ export default function EmployeeOnboardingPage() {
     initialData: [],
   });
 
+  const { data: trainingResources = [] } = useQuery({
+    queryKey: ['onboardingTrainingResources'],
+    queryFn: () => base44.entities.OnboardingTrainingResource.list('-created_at'),
+    initialData: [],
+  });
+
   const deleteOnboardingMutation = useMutation({
     mutationFn: (id) => base44.entities.EmployeeOnboarding.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employeeOnboardings'] });
+    },
+  });
+
+  const createTrainingResourceMutation = useMutation({
+    mutationFn: (data) => base44.entities.OnboardingTrainingResource.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['onboardingTrainingResources'] });
     },
   });
 
@@ -232,6 +251,16 @@ export default function EmployeeOnboardingPage() {
     return Array.from(depts).sort();
   }, [ettAndTemporaryEmployees]);
 
+  const trainingDocs = useMemo(
+    () => trainingResources.filter(r => r.type === "document"),
+    [trainingResources]
+  );
+
+  const trainings = useMemo(
+    () => trainingResources.filter(r => r.type === "training"),
+    [trainingResources]
+  );
+
   const ettFilteredEmployees = useMemo(() => {
     return ettAndTemporaryEmployees.filter(emp => {
       const matchesSearch =
@@ -326,6 +355,47 @@ export default function EmployeeOnboardingPage() {
     setShowEttEmployeeForm(true);
   };
 
+  const handleAddDoc = () => {
+    if (!newDoc.title || !newDoc.url) return;
+    createTrainingResourceMutation.mutate({
+      type: "document",
+      title: newDoc.title,
+      description: newDoc.description,
+      url: newDoc.url,
+    });
+    setNewDoc({ title: "", description: "", url: "" });
+  };
+
+  const handleAddTraining = () => {
+    if (!newTraining.title || !newTraining.fecha) return;
+    createTrainingResourceMutation.mutate({
+      type: "training",
+      title: newTraining.title,
+      colectivo: newTraining.colectivo,
+      fecha: newTraining.fecha,
+      estado: newTraining.estado,
+    });
+    setNewTraining({
+      title: "",
+      colectivo: "",
+      fecha: "",
+      estado: "Pendiente",
+    });
+  };
+
+  const handleTabChange = (value) => {
+    setActiveTab(value);
+    if (value === "ai" && !selectedEmployee) {
+      const firstOnboarding = onboardings[0];
+      if (firstOnboarding) {
+        const emp = getEmployeeData(firstOnboarding.employee_id);
+        if (emp) {
+          setSelectedEmployee(emp);
+        }
+      }
+    }
+  };
+
   const handleEdit = (onboarding) => {
     setSelectedOnboarding(onboarding);
     setActiveTab("wizard"); // Navigate to wizard tab
@@ -365,10 +435,10 @@ export default function EmployeeOnboardingPage() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <UserPlus className="w-8 h-8 text-blue-600" />
-              Onboarding de Empleados
+              ETT, Temporales, Onboarding
             </h1>
             <p className="text-slate-600 mt-1">
-              Gestiona el proceso de incorporación de nuevos empleados
+              Gestiona incorporaciones, contratos temporales y empleados ETT
             </p>
           </div>
           <Button
@@ -380,12 +450,8 @@ export default function EmployeeOnboardingPage() {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="active">
-              <Users className="w-4 h-4 mr-2" />
-              Activos
-            </TabsTrigger>
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -394,9 +460,9 @@ export default function EmployeeOnboardingPage() {
               <Clock className="w-4 h-4 mr-2" />
               ETT y Temporales
             </TabsTrigger>
-            <TabsTrigger value="wizard">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Nuevo Onboarding
+            <TabsTrigger value="active">
+              <Users className="w-4 h-4 mr-2" />
+              Activos
             </TabsTrigger>
             <TabsTrigger value="training">
               <BookOpen className="w-4 h-4 mr-2" />
@@ -1030,11 +1096,180 @@ export default function EmployeeOnboardingPage() {
           </TabsContent>
 
           <TabsContent value="training" className="space-y-6">
-            <Card>
-              <CardContent className="p-12 text-center">
-                <p className="text-slate-500">Contenido para Formaciones (en desarrollo)</p>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-slate-100">
+                  <CardTitle>Documentos de formaciones</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 p-6">
+                  <div className="grid grid-cols-1 gap-3">
+                    <Input
+                      placeholder="Título del documento"
+                      value={newDoc.title}
+                      onChange={(e) =>
+                        setNewDoc((prev) => ({ ...prev, title: e.target.value }))
+                      }
+                    />
+                    <Input
+                      placeholder="Descripción breve"
+                      value={newDoc.description}
+                      onChange={(e) =>
+                        setNewDoc((prev) => ({ ...prev, description: e.target.value }))
+                      }
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enlace o ruta al documento"
+                        value={newDoc.url}
+                        onChange={(e) =>
+                          setNewDoc((prev) => ({ ...prev, url: e.target.value }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddDoc}
+                        disabled={!newDoc.title || !newDoc.url}
+                      >
+                        Añadir
+                      </Button>
+                    </div>
+                  </div>
+
+                  {trainingDocs.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {trainingDocs.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-3 border rounded-lg bg-slate-50"
+                        >
+                          <div>
+                            <p className="font-semibold text-slate-900">{doc.title}</p>
+                            {doc.description && (
+                              <p className="text-xs text-slate-600">{doc.description}</p>
+                            )}
+                          </div>
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            Abrir
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-slate-100">
+                  <CardTitle>Plan de formaciones</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                    <div className="space-y-1 md:col-span-2">
+                      <Label>Formación</Label>
+                      <Input
+                        placeholder="Nombre de la formación"
+                        value={newTraining.title}
+                        onChange={(e) =>
+                          setNewTraining((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Colectivo</Label>
+                      <Input
+                        placeholder="Ej: Operarios, Mandos intermedios..."
+                        value={newTraining.colectivo}
+                        onChange={(e) =>
+                          setNewTraining((prev) => ({
+                            ...prev,
+                            colectivo: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Fecha</Label>
+                      <Input
+                        type="date"
+                        value={newTraining.fecha}
+                        onChange={(e) =>
+                          setNewTraining((prev) => ({
+                            ...prev,
+                            fecha: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Estado</Label>
+                      <Select
+                        value={newTraining.estado}
+                        onValueChange={(value) =>
+                          setNewTraining((prev) => ({ ...prev, estado: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Pendiente">Pendiente</SelectItem>
+                          <SelectItem value="Programado">Programado</SelectItem>
+                          <SelectItem value="Realizado">Realizado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-4 flex justify-end">
+                      <Button
+                        type="button"
+                        onClick={handleAddTraining}
+                        disabled={!newTraining.title || !newTraining.fecha}
+                      >
+                        Añadir formación
+                      </Button>
+                    </div>
+                  </div>
+
+                  {trainings.length > 0 && (
+                    <div className="mt-4">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50">
+                              <TableHead>Formación</TableHead>
+                              <TableHead>Colectivo</TableHead>
+                              <TableHead>Fecha</TableHead>
+                              <TableHead>Estado</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {trainings.map((t) => (
+                              <TableRow key={t.id}>
+                                <TableCell>{t.title}</TableCell>
+                                <TableCell>{t.colectivo || "-"}</TableCell>
+                                <TableCell>{t.fecha}</TableCell>
+                                <TableCell>
+                                  <Badge className="bg-slate-100 text-slate-800">
+                                    {t.estado}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="ai" className="space-y-6">

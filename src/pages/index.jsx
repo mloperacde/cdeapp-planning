@@ -177,7 +177,7 @@ function PagesContent() {
                 
                 <Route path="/DocumentManagement" element={<DocumentManagement />} />
                 
-                <Route path="/ETTTemporaryEmployees" element={<ETTTemporaryEmployees />} />
+                <Route path="/ETTTemporaryEmployees" element={<EmployeeOnboarding />} />
                 
                 <Route path="/EmployeeOnboarding" element={<EmployeeOnboarding />} />
                 
