@@ -8,13 +8,15 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
   }
 
   const absenceStart = new Date(absence.fecha_inicio);
+  const today = new Date();
 
   let rawEnd;
 
   if (absence.fecha_fin) {
-    rawEnd = new Date(absence.fecha_fin);
+    const endDate = new Date(absence.fecha_fin);
+    rawEnd = endDate > today ? today : endDate;
   } else {
-    rawEnd = new Date("2099-12-31");
+    rawEnd = today;
   }
 
   const absenceEnd = rawEnd;
