@@ -212,7 +212,7 @@ export default function AbsenceManagementPage() {
 
         </div>
 
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
               <UserX className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
@@ -224,17 +224,28 @@ export default function AbsenceManagementPage() {
           </div>
           
           {!isShiftManager && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2 text-purple-700 border-purple-200 hover:bg-purple-50">
-                  <Brain className="w-4 h-4" />
-                  Análisis IA
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-5xl h-[85vh] overflow-y-auto">
-                <AttendanceAnalyzer />
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2 text-slate-700 border-slate-200 hover:bg-slate-50"
+                onClick={() => handleTabChange("reports")}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Informes
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 text-purple-700 border-purple-200 hover:bg-purple-50">
+                    <Brain className="w-4 h-4" />
+                    Análisis IA
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-5xl h-[85vh] overflow-y-auto">
+                  <AttendanceAnalyzer />
+                </DialogContent>
+              </Dialog>
+            </div>
           )}
         </div>
 
@@ -249,7 +260,6 @@ export default function AbsenceManagementPage() {
                 <TabsTrigger value="calendar" className="py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
                 <TabsTrigger value="types-config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias</TabsTrigger>
                 <TabsTrigger value="config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Protección de vacaciones</TabsTrigger>
-                <TabsTrigger value="reports" className="py-2" type="button"><BarChart3 className="w-4 h-4 mr-2"/> Informes</TabsTrigger>
               </>
             )}
           </TabsList>
