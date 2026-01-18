@@ -131,20 +131,6 @@ export default function AbsenceManagementPage() {
     refetchOnWindowFocus: false,
   });
 
-  const pendingAbsences = useMemo(
-    () => filteredAbsences.filter((a) => a.estado_aprobacion === "Pendiente"),
-    [filteredAbsences]
-  );
-
-  const getEmployeeName = (employeeId) => {
-    const emp = employees.find((e) => e.id === employeeId);
-    return emp?.nombre || "Desconocido";
-  };
-
-  const getAbsenceTypeName = (typeId) => {
-    return absenceTypes.find((t) => t.id === typeId)?.nombre || "Sin tipo";
-  };
-
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -240,70 +226,6 @@ export default function AbsenceManagementPage() {
                 </CardContent>
               </Card>
             </div>
-
-            {!isShiftManager && (
-              <Card className="border-orange-200 bg-orange-50/40">
-                <CardContent className="p-4 md:p-5">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-                    <div>
-                      <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">
-                        Bandeja de consolidación
-                      </p>
-                      <p className="text-lg font-bold text-slate-900">
-                        Ausencias pendientes de consolidar
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        Otros usuarios han informado ausencias. RRHH debe aprobarlas y consolidarlas en el sistema.
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-extrabold text-orange-700">
-                        {pendingAbsences.length}
-                      </p>
-                      <p className="text-xs text-orange-700">
-                        pendientes de aprobación
-                      </p>
-                      <Button
-                        size="sm"
-                        className="mt-2 bg-orange-600 hover:bg-orange-700"
-                        onClick={() => handleTabChange("approval")}
-                      >
-                        Ir a aprobaciones
-                      </Button>
-                    </div>
-                  </div>
-                  {pendingAbsences.length > 0 && (
-                    <div className="space-y-2">
-                      {pendingAbsences.slice(0, 3).map((absence) => (
-                        <div
-                          key={absence.id}
-                          className="flex items-start justify-between rounded-md border border-orange-200 bg-white/60 px-3 py-2"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {getEmployeeName(absence.employee_id)}
-                            </p>
-                            <p className="text-xs text-slate-600">
-                              {getAbsenceTypeName(absence.absence_type_id)} ·{" "}
-                              {format(new Date(absence.fecha_inicio), "dd/MM", { locale: es })}{" "}
-                              -{" "}
-                              {absence.fecha_fin_desconocida
-                                ? "Sin fecha fin"
-                                : format(new Date(absence.fecha_fin), "dd/MM", { locale: es })}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {pendingAbsences.length > 3 && (
-                        <p className="text-xs text-slate-500">
-                          +{pendingAbsences.length - 3} ausencias más pendientes...
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {isShiftManager ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
