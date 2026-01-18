@@ -2,22 +2,32 @@ import { base44 } from "@/api/base44Client";
 import { eachDayOfInterval, isWeekend, format } from "date-fns";
 
 export async function calculateVacationPendingBalance(absence, absenceType, vacations, holidays) {
-  // Solo calcular si el tipo NO consume vacaciones
   if (!absenceType?.no_consume_vacaciones) {
     return null;
   }
 
-  // Si la ausencia no tiene fecha de fin definida, usar hoy
+  const now = new Date();
   const absenceStart = new Date(absence.fecha_inicio);
-  let absenceEnd;
-  
-  if (absence.fecha_fin_desconocida) {
-    absenceEnd = new Date(); // Calcular hasta hoy
-  } else if (absence.fecha_fin) {
-    absenceEnd = new Date(absence.fecha_fin);
-  } else {
-    return null; // Should not happen if data is correct
+
+  if (absenceStart > now) {
+    return null;
   }
+
+  let rawEnd;
+
+  if (absence.fecha_fin_desconocida) {
+    rawEnd = new Date("2099-12-31");
+  } else if (absence.fecha_fin) {
+    rawEnd = new Date(absence.fecha_fin);
+  } else {
+    return null;
+  }
+
+  if (!absence.fecha_fin_desconocida && rawEnd < now) {
+    return null;
+  }
+
+  const absenceEnd = rawEnd > now ? now : rawEnd;
   const year = absenceStart.getFullYear();
 
   // Obtener todos los días del rango de ausencia

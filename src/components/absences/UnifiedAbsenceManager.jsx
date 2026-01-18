@@ -411,6 +411,7 @@ export default function UnifiedAbsenceManager(props) {
               absenceTypes={absenceTypes}
               onSubmit={handleFormSubmit}
               onCancel={handleClose}
+              onDelete={(id) => deleteMutation.mutate(id, { onSuccess: handleClose })}
               isSubmitting={saveMutation.isPending}
             />
           </DialogContent>

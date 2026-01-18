@@ -17,6 +17,8 @@ import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager"
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
 import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
+import VacationPendingConsumptionManager from "../components/absences/VacationPendingConsumptionManager";
+import UnpaidLeaveTracker from "../components/absences/UnpaidLeaveTracker";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 
@@ -352,6 +354,8 @@ export default function AbsenceManagementPage() {
           <TabsContent value="config">
             <div className="space-y-6">
               <VacationPendingBalancePanel employees={employees} />
+              <VacationPendingConsumptionManager employees={employees} />
+              <UnpaidLeaveTracker employees={employees} />
             </div>
           </TabsContent>
 

@@ -76,6 +76,7 @@ export default function AbsenceForm({
   absenceTypes = [], 
   onSubmit, 
   onCancel, 
+  onDelete,
   isSubmitting = false 
 }) {
   const [formData, setFormData] = useState({
@@ -580,13 +581,30 @@ export default function AbsenceForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Guardar"}
-        </Button>
+      <div className="flex justify-between items-center pt-4 border-t">
+        {isEditing && onDelete && (
+          <Button 
+            type="button" 
+            variant="destructive" 
+            onClick={(e) => {
+              e.preventDefault();
+              if(window.confirm("¿Estás seguro de que quieres eliminar esta ausencia? Esta acción no se puede deshacer.")) {
+                onDelete(initialData.id);
+              }
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Eliminar
+          </Button>
+        )}
+        <div className={`flex gap-3 ${!isEditing || !onDelete ? 'w-full justify-end' : ''}`}>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
+            {isSubmitting ? "Guardando..." : "Guardar"}
+          </Button>
+        </div>
       </div>
     </form>
   );
