@@ -14,7 +14,6 @@ import { getAvailability } from "@/lib/domain/planning";
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
-import LongAbsenceAlert from "../components/absences/LongAbsenceAlert";
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
 import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
@@ -311,7 +310,6 @@ export default function AbsenceManagementPage() {
                   <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
                 </div>
                 <AbsenceDashboard absences={filteredAbsences} employees={employees} />
-                <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
               </div>
             ) : (
               <div className="space-y-6">
@@ -319,7 +317,6 @@ export default function AbsenceManagementPage() {
                   <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
                 </div>
                 <AbsenceDashboard absences={filteredAbsences} employees={employees} />
-                <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
               </div>
             )}
           </TabsContent>
