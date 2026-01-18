@@ -231,17 +231,6 @@ function PagesContent() {
                 
                 <Route path="/Breaks" element={<Breaks />} />
                 <Route path="/MachinePlanning" element={<MachinePlanning />} />
-                <Route path="/QuickStartGuide" element={<QuickStartGuide />} />
-                <Route path="/DeploymentGuide" element={<DeploymentGuide />} />
-                <Route path="/AdminDeploymentGuide" element={<AdminDeploymentGuide />} />
-                <Route path="/MobileHome" element={<MobileHome />} />
-                <Route path="/MobileAppConfig" element={<MobileAppConfig />} />
-                <Route path="/mobileAbsences" element={<MobileAbsences />} />
-                <Route path="/mobileChat" element={<MobileChat />} />
-                <Route path="/mobileNotifications" element={<MobileNotifications />} />
-                <Route path="/mobilePlanning" element={<MobilePlanning />} />
-                <Route path="/mobileProfile" element={<MobileProfile />} />
-                <Route path="/mobileVacations" element={<MobileVacations />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/BrandingConfig" element={<AdvancedConfiguration />} />

@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAppData } from '@/components/data/DataProvider';
 import { 
   Menu, X, Home, Users, Calendar, Wrench, Settings, FileText, Shield, 
   DollarSign, Cog, Package, ChevronDown, ChevronRight, LogOut, 
-  User as UserIcon, Moon, Sun, Key, Database, Award, RefreshCw, ClipboardCheck, Briefcase
+  User as UserIcon, Key, Award, RefreshCw, ClipboardCheck, Briefcase
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
