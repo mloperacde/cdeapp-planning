@@ -82,7 +82,6 @@ export default function ConfigurationPage() {
     produccion: {
       title: "Producción",
       modules: [
-
         {
           title: "Configuración de Procesos",
           description: "Define procesos y requisitos por máquina",
@@ -96,6 +95,13 @@ export default function ConfigurationPage() {
           icon: Package,
           url: "/ArticleManagement",
           color: "teal"
+        },
+        {
+          title: "Control de Calidad",
+          description: "Gestión de inspecciones y no conformidades",
+          icon: Shield,
+          url: "/QualityControl",
+          color: "red"
         },
         {
           title: "Mantenimiento",
@@ -164,7 +170,7 @@ export default function ConfigurationPage() {
           title: "Notificaciones",
           description: "Configura preferencias de notificaciones",
           icon: Bell,
-          url: "/AdvancedConfiguration?tab=notifications",
+          url: "/EmailNotifications",
           color: "purple"
         },
         {

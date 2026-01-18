@@ -1,12 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { 
   Upload, 
   Download, 
@@ -20,7 +17,7 @@ import { toast } from "sonner";
 import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function AttendanceImporter({ selectedDate, onDateChange, config }) {
+export default function AttendanceImporter({ selectedDate, config }) {
   const [file, setFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -128,8 +125,7 @@ export default function AttendanceImporter({ selectedDate, onDateChange, config 
     setImporting(true);
     try {
       // Subir archivo
-      const uploadResult = await base44.integrations.Core.UploadFile({ file });
-      const fileUrl = uploadResult.file_url;
+      await base44.integrations.Core.UploadFile({ file });
 
       // Leer contenido del archivo
       const text = await file.text();
