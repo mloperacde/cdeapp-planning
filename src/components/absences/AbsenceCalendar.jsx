@@ -1,16 +1,15 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, UserX, Building2, TrendingUp, AlertCircle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, addMonths, subMonths } from "date-fns";
+import { Calendar as CalendarIcon, UserX, Building2, TrendingUp, AlertCircle } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { calculateGlobalAbsenteeism, calculateEmployeeAbsenteeism } from "./AbsenteeismCalculator";
+import { calculateGlobalAbsenteeism } from "./AbsenteeismCalculator";
 import { useAppData } from "../data/DataProvider";
 
 export default function AbsenceCalendar({ absences: propsAbsences, employees: propsEmployees, absenceTypes, selectedDepartment = "all" }) {
@@ -28,8 +27,7 @@ export default function AbsenceCalendar({ absences: propsAbsences, employees: pr
   const [selectedType, setSelectedType] = useState("all");
   const [filterDept, setFilterDept] = useState(selectedDepartment);
 
-  // Stats Query
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
+  const { data: stats } = useQuery({
     queryKey: ['calendarStats', dateRange, employees.length, absences.length],
     queryFn: async () => {
       if (!dateRange?.from) return null;
@@ -254,7 +252,6 @@ export default function AbsenceCalendar({ absences: propsAbsences, employees: pr
           </div>
 
           <div className="grid grid-cols-7 gap-2">
-            {/* Empty cells for alignment if starting mid-week */}
             {calendarDays.length > 0 && Array.from({ length: (getDay(calendarDays[0]) + 6) % 7 }).map((_, i) => (
               <div key={`empty-${i}`} className="aspect-square bg-slate-50/50" />
             ))}
@@ -285,7 +282,7 @@ export default function AbsenceCalendar({ absences: propsAbsences, employees: pr
                         {format(day, 'MMM', { locale: es })}
                       </div>
                     </div>
-                    
+
                     {absencesForDay.length > 0 && (
                       <div className="space-y-1 overflow-y-auto max-h-[calc(100%-24px)] custom-scrollbar">
                         {Object.entries(
@@ -310,17 +307,6 @@ export default function AbsenceCalendar({ absences: propsAbsences, employees: pr
                   </div>
                 );
               })}
-          </div>
-
-          <div className="mt-6 pt-4 border-t">
-            <h4 className="text-sm font-semibold text-slate-700 mb-2">Leyenda:</h4>
-            <div className="flex flex-wrap gap-2">
-              {absenceTypes.map(type => (
-                <Badge key={type.id} style={{ backgroundColor: type.color, color: 'white' }}>
-                  {type.nombre}
-                </Badge>
-              ))}
-            </div>
           </div>
         </CardContent>
       </Card>
