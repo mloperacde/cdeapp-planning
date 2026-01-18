@@ -239,7 +239,7 @@ export default function AbsenceManagementPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
+          <TabsList className="flex w-full flex-nowrap overflow-x-auto mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
             <TabsTrigger value="dashboard" className="py-2" type="button"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
             <TabsTrigger value="list" className="py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
             
