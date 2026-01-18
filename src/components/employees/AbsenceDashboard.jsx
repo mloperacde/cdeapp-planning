@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, Users, Calendar, AlertCircle, RefreshCw, BarChart3 } from "lucide-react";
-import { startOfYear, endOfYear } from "date-fns";
+import { startOfYear, endOfYear, differenceInCalendarDays } from "date-fns";
 import { calculateGlobalAbsenteeism } from "../absences/AbsenteeismCalculator";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -40,39 +40,66 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
     refetchOnWindowFocus: false,
   });
 
+  const yearAbsences = useMemo(() => {
+    const now = new Date();
+    const yearStart = startOfYear(now);
+    const yearEnd = endOfYear(now);
+    return absences.filter(abs => {
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida ? now : new Date(abs.fecha_fin);
+      return start <= yearEnd && end >= yearStart;
+    });
+  }, [absences]);
+
   const byType = useMemo(() => {
     const typeCount = {};
-    absences.forEach(abs => {
+    yearAbsences.forEach(abs => {
       const tipo = abs.tipo || "Sin especificar";
       typeCount[tipo] = (typeCount[tipo] || 0) + 1;
     });
     return Object.entries(typeCount).map(([name, value]) => ({ name, value }));
-  }, [absences]);
+  }, [yearAbsences]);
 
   const byEmployee = useMemo(() => {
     const empCount = {};
-    absences.forEach(abs => {
+    yearAbsences.forEach(abs => {
       const emp = employees.find(e => e.id === abs.employee_id);
       const name = emp?.nombre || "Desconocido";
       empCount[name] = (empCount[name] || 0) + 1;
     });
     return Object.entries(empCount)
       .map(([name, value]) => ({ name, value }))
+      .filter(item => item.value > 1)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [absences, employees]);
+  }, [yearAbsences, employees]);
 
   const byDepartment = useMemo(() => {
-    const deptCount = {};
-    absences.forEach(abs => {
+    const now = new Date();
+    const yearStart = startOfYear(now);
+    const yearEnd = endOfYear(now);
+    const daysInRange = differenceInCalendarDays(yearEnd, yearStart) + 1;
+    const deptDays = {};
+
+    yearAbsences.forEach(abs => {
       const emp = employees.find(e => e.id === abs.employee_id);
       const dept = emp?.departamento || "Sin departamento";
-      deptCount[dept] = (deptCount[dept] || 0) + 1;
+      const absStart = new Date(abs.fecha_inicio);
+      const absEnd = abs.fecha_fin_desconocida ? now : new Date(abs.fecha_fin);
+      const start = absStart > yearStart ? absStart : yearStart;
+      const end = absEnd < yearEnd ? absEnd : yearEnd;
+      if (start > end) return;
+      const days = differenceInCalendarDays(end, start) + 1;
+      deptDays[dept] = (deptDays[dept] || 0) + days;
     });
-    return Object.entries(deptCount)
-      .map(([department, value]) => ({ department, value }))
+
+    return Object.entries(deptDays)
+      .map(([department, totalDays]) => ({
+        department,
+        value: daysInRange > 0 ? totalDays / daysInRange : 0
+      }))
       .sort((a, b) => b.value - a.value);
-  }, [absences, employees]);
+  }, [yearAbsences, employees]);
 
   const COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#EF4444', '#6366F1', '#14B8A6'];
 
@@ -90,6 +117,9 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Ausencias por Tipo</CardTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              Datos acumulados del año en curso.
+            </p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
@@ -117,6 +147,9 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Ausencias por Departamento</CardTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              Promedio diario de personas ausentes por departamento (año en curso).
+            </p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
@@ -134,6 +167,9 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Top 10 Empleados con Más Ausencias</CardTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              Solo empleados con más de una ausencia (año en curso).
+            </p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
