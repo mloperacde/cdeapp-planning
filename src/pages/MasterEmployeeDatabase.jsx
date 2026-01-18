@@ -21,6 +21,16 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
@@ -81,6 +91,10 @@ export default function MasterEmployeeDatabasePage() {
   const [filters, setFilters] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
+
+  // Estado para confirmación de borrado
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
   
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem("masterEmployeeColumns");
@@ -536,9 +550,8 @@ export default function MasterEmployeeDatabasePage() {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => {
-                                  if (confirm('¿Eliminar este registro?')) {
-                                    deleteMutation.mutate(emp.id);
-                                  }
+                                  setEmployeeToDelete(emp);
+                                  setDeleteConfirmOpen(true);
                                 }}
                                 className="h-8 w-8 p-0 rounded-full hover:bg-red-100"
                                 title="Eliminar"
@@ -575,6 +588,34 @@ export default function MasterEmployeeDatabasePage() {
           )}
         </>
       )}
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al empleado 
+              <span className="font-bold text-slate-900 dark:text-slate-100"> {employeeToDelete?.nombre} </span>
+              de la base de datos maestra y del sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setEmployeeToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              onClick={() => {
+                if (employeeToDelete) {
+                  deleteMutation.mutate(employeeToDelete.id);
+                  setDeleteConfirmOpen(false);
+                  setEmployeeToDelete(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
