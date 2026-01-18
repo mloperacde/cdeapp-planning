@@ -13,6 +13,7 @@ import { useAppData } from "../components/data/DataProvider";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 import WorkCalendar from "../components/absences/WorkCalendar";
+import ShiftSwapWidget from "../components/dashboard/ShiftSwapWidget";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -179,6 +180,16 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <div className="lg:col-span-1 h-[600px]">
+                <ShiftSwapWidget />
+            </div>
+            <div className="lg:col-span-2">
+                <h2 className="text-xl font-semibold text-slate-900 mb-4">Calendario Laboral</h2>
+                <WorkCalendar />
+            </div>
+        </div>
+
         <TimelineSection />
       </div>
     </div>
@@ -260,11 +271,6 @@ function TimelineSection() {
           selectedDepartment={selectedDepartment}
         />
       </Card>
-
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4">Calendario Laboral</h2>
-        <WorkCalendar />
-      </div>
     </div>
   );
 }

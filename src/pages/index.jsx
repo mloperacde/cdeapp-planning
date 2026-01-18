@@ -98,7 +98,6 @@ const PAGES = {
   QualityControl: QualityControl,
   Reports: Reports,
   ShiftHandover: ShiftHandover,
-  ShiftManagement: ShiftManagement,
   ShiftManagers: ShiftManagers,
   ShiftPlanning: ShiftPlanning,
   SkillMatrix: SkillMatrix,

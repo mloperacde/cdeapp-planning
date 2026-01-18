@@ -55,7 +55,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Base de datos de Empleados', icon: Users, path: '/MasterEmployeeDatabase', category: 'Recursos Humanos' },
     { name: 'Gestión Ausencias', icon: Calendar, path: '/AbsenceManagement', category: 'Recursos Humanos' },
     { name: 'Matriz Habilidades', icon: Award, path: '/SkillMatrix', category: 'Recursos Humanos' },
-    { name: 'Intercambios Turno', icon: RefreshCw, path: '/ShiftManagement', category: 'Recursos Humanos' },
     { name: 'Temporales/ETT/Onboarding', icon: Users, path: '/EmployeeOnboarding', category: 'Recursos Humanos' },
     { name: 'Control Presencia', icon: Calendar, path: '/AttendanceManagement', category: 'Recursos Humanos' },
     { name: 'Comités y PRL', icon: Shield, path: '/CommitteeManagement', category: 'Recursos Humanos' },

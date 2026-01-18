@@ -183,14 +183,6 @@ export function ModulesWidget({ pendingSwaps, lockersWithoutNumber, setActiveVie
             description: "Distribuye operarios"
         },
         {
-            title: "Intercambios",
-            icon: RefreshCw,
-            url: createPageUrl("ShiftManagement"),
-            color: "green",
-            description: "Gestiona cambios",
-            badge: pendingSwaps.length > 0 ? pendingSwaps.length : null
-        },
-        {
             title: "Taquillas",
             icon: KeyRound,
             url: createPageUrl("LockerManagement"),
@@ -359,7 +351,7 @@ export function RequestsAndBirthdaysWidget({ pendingSwaps, employees, upcomingBi
                                     </div>
                                 );
                             })}
-                            <Link to={createPageUrl("ShiftManagement")}><Button variant="outline" className="w-full mt-2">Ver Todas</Button></Link>
+                            <Link to={createPageUrl("Dashboard")}><Button variant="outline" className="w-full mt-2">Ver en Dashboard</Button></Link>
                         </div>
                     )}
                 </CardContent>
