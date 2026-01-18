@@ -107,12 +107,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
     });
 
     return result
-      .filter(
-        (b) =>
-          b.dias_disponibles > 0 &&
-          Array.isArray(b.detalle_ausencias) &&
-          b.detalle_ausencias.length > 0
-      )
+      .filter((b) => b.dias_disponibles > 0)
       .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
 
