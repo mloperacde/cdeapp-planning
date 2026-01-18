@@ -116,8 +116,11 @@ export async function calculateGlobalAbsenteeism(startDate, endDate, preloadedDa
   // Pasar datos precargados a cada cálculo individual
   const sharedData = { employees, absences, vacations, holidays };
 
-  for (const emp of employees) {
-    const result = await calculateEmployeeAbsenteeism(emp.id, startDate, endDate, sharedData);
+  const results = await Promise.all(employees.map(emp => 
+    calculateEmployeeAbsenteeism(emp.id, startDate, endDate, sharedData)
+  ));
+
+  for (const result of results) {
     if (result) {
       totalHorasNoTrabajadas += result.horasNoTrabajadas;
       totalHorasDeberianTrabajarse += result.horasDeberianTrabajarse;
