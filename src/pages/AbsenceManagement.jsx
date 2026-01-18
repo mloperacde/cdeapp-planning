@@ -2,10 +2,12 @@ import React, { useState, useMemo } from "react";
 import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { 
   UserX, 
   BarChart3, CalendarDays, FileText, CheckSquare, 
-  LayoutDashboard, Settings, Activity 
+  LayoutDashboard, Settings, Activity, Brain 
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { startOfMonth, eachDayOfInterval } from "date-fns";
@@ -220,11 +222,24 @@ export default function AbsenceManagementPage() {
               {isShiftManager ? "Gestión de equipo y reportes de turno" : "Control centralizado de RRHH"}
             </p>
           </div>
-          {/* Button moved to UnifiedAbsenceManager inside list tab */}
+          
+          {!isShiftManager && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2 text-purple-700 border-purple-200 hover:bg-purple-50">
+                  <Brain className="w-4 h-4" />
+                  Análisis IA
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-5xl h-[85vh] overflow-y-auto">
+                <AttendanceAnalyzer />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
             <TabsTrigger value="dashboard" className="py-2" type="button"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
             <TabsTrigger value="list" className="py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
             
@@ -232,10 +247,9 @@ export default function AbsenceManagementPage() {
               <>
                 <TabsTrigger value="approval" className="py-2" type="button"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
                 <TabsTrigger value="calendar" className="py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
-                <TabsTrigger value="types-config" className="py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Tipos de Ausencias</TabsTrigger>
+                <TabsTrigger value="types-config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias</TabsTrigger>
                 <TabsTrigger value="config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Protección de vacaciones</TabsTrigger>
                 <TabsTrigger value="reports" className="py-2" type="button"><BarChart3 className="w-4 h-4 mr-2"/> Informes</TabsTrigger>
-                <TabsTrigger value="analysis" className="py-2" type="button"><Activity className="w-4 h-4 mr-2"/> Análisis & IA</TabsTrigger>
               </>
             )}
           </TabsList>
@@ -387,10 +401,6 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="reports">
             <AdvancedReportGenerator />
-          </TabsContent>
-
-          <TabsContent value="analysis">
-            <AttendanceAnalyzer />
           </TabsContent>
         </Tabs>
 
