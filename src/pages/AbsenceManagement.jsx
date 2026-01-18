@@ -306,19 +306,19 @@ export default function AbsenceManagementPage() {
             </div>
 
             {isShiftManager ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <AbsenceDashboard absences={filteredAbsences} employees={employees} />
-                <div className="space-y-6">
+              <div className="space-y-6">
+                <div className="w-full">
                   <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
-                  <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
                 </div>
+                <AbsenceDashboard absences={filteredAbsences} employees={employees} />
+                <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <AbsenceDashboard absences={filteredAbsences} employees={employees} />
+                <div className="w-full">
                   <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
                 </div>
+                <AbsenceDashboard absences={filteredAbsences} employees={employees} />
                 <LongAbsenceAlert employees={employees} absences={filteredAbsences} />
               </div>
             )}
