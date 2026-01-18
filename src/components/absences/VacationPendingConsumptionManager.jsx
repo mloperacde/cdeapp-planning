@@ -21,44 +21,80 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
   });
 
   const employeesWithBalance = useMemo(() => {
-    const map = new Map();
+    const employeeYearMap = new Map();
 
     balances.forEach((balance) => {
+      if (!balance || !balance.employee_id) return;
+
       const employee = employees.find((e) => e.id === balance.employee_id);
       if (!employee) return;
 
       const diasPendientes = balance.dias_pendientes || 0;
       const diasConsumidos = balance.dias_consumidos || 0;
+      const rawYear = balance.anio;
+      const year = typeof rawYear === "number" ? rawYear : parseInt(rawYear || "0", 10);
+      if (!year) return;
 
-      const existing = map.get(balance.employee_id);
-
-      if (existing) {
-        const totalPendientes = existing.dias_pendientes + diasPendientes;
-        const totalConsumidos = existing.dias_consumidos + diasConsumidos;
-        const totalDisponibles = totalPendientes - totalConsumidos;
-
-        map.set(balance.employee_id, {
-          ...existing,
-          dias_pendientes: totalPendientes,
-          dias_consumidos: totalConsumidos,
-          dias_disponibles: totalDisponibles,
-        });
-      } else {
-        const diasDisponibles = diasPendientes - diasConsumidos;
-
-        if (diasDisponibles <= 0) return;
-
-        map.set(balance.employee_id, {
-          employee_id: balance.employee_id,
-          employee,
-          dias_pendientes: diasPendientes,
-          dias_consumidos: diasConsumidos,
-          dias_disponibles: diasDisponibles,
-        });
+      let yearMap = employeeYearMap.get(balance.employee_id);
+      if (!yearMap) {
+        yearMap = new Map();
+        employeeYearMap.set(balance.employee_id, yearMap);
       }
+
+      const existingYearData = yearMap.get(year) || {
+        dias_pendientes: 0,
+        dias_consumidos: 0,
+      };
+
+      existingYearData.dias_pendientes += diasPendientes;
+      existingYearData.dias_consumidos += diasConsumidos;
+
+      yearMap.set(year, existingYearData);
     });
 
-    return Array.from(map.values())
+    const result = [];
+
+    employeeYearMap.forEach((yearMap, employeeId) => {
+      const employee = employees.find((e) => e.id === employeeId);
+      if (!employee) return;
+
+      let totalPendientes = 0;
+      let totalConsumidos = 0;
+      const yearBreakdown = [];
+
+      yearMap.forEach((data, year) => {
+        const disponibles = data.dias_pendientes - data.dias_consumidos;
+
+        yearBreakdown.push({
+          year,
+          dias_pendientes: data.dias_pendientes,
+          dias_consumidos: data.dias_consumidos,
+          dias_disponibles: disponibles,
+        });
+
+        totalPendientes += data.dias_pendientes;
+        totalConsumidos += data.dias_consumidos;
+      });
+
+      const diasDisponibles = totalPendientes - totalConsumidos;
+
+      if (diasDisponibles <= 0) {
+        return;
+      }
+
+      yearBreakdown.sort((a, b) => a.year - b.year);
+
+      result.push({
+        employee_id: employeeId,
+        employee,
+        dias_pendientes: totalPendientes,
+        dias_consumidos: totalConsumidos,
+        dias_disponibles: diasDisponibles,
+        year_breakdown: yearBreakdown,
+      });
+    });
+
+    return result
       .filter((b) => b.dias_disponibles > 0)
       .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
@@ -185,6 +221,24 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
             />
           </div>
         </div>
+
+        {selectedBalance &&
+          selectedBalance.year_breakdown &&
+          selectedBalance.year_breakdown.length > 0 && (
+            <div className="mt-4 border rounded-lg p-3 bg-emerald-50">
+              <p className="text-xs font-semibold text-emerald-900 mb-2">
+                Desglose por año
+              </p>
+              <div className="space-y-1 text-xs text-emerald-800">
+                {selectedBalance.year_breakdown.map((yb) => (
+                  <div key={yb.year} className="flex justify-between">
+                    <span>{yb.year}</span>
+                    <span>{yb.dias_disponibles} días disponibles</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         <div className="flex justify-end">
           <Button

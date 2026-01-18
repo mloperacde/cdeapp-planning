@@ -19,49 +19,94 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
   const employeesWithBalance = useMemo(() => {
     if (!Array.isArray(employees) || employees.length === 0 || !Array.isArray(balances)) return [];
 
-    const map = new Map();
+    const employeeYearMap = new Map();
+    const employeeDetailMap = new Map();
 
     balances.forEach((balance) => {
+      if (!balance || !balance.employee_id) return;
+
       const employee = employees.find((e) => e?.id === balance.employee_id);
       if (!employee) return;
 
       const diasPendientes = balance.dias_pendientes || 0;
       const diasConsumidos = balance.dias_consumidos || 0;
+      const rawYear = balance.anio;
+      const year = typeof rawYear === "number" ? rawYear : parseInt(rawYear || "0", 10);
+      if (!year) return;
 
-      const existing = map.get(balance.employee_id);
+      let yearMap = employeeYearMap.get(balance.employee_id);
+      if (!yearMap) {
+        yearMap = new Map();
+        employeeYearMap.set(balance.employee_id, yearMap);
+      }
 
-      if (existing) {
-        const totalPendientes = existing.dias_pendientes + diasPendientes;
-        const totalConsumidos = existing.dias_consumidos + diasConsumidos;
-        const totalDisponibles = totalPendientes - totalConsumidos;
+      const existingYearData = yearMap.get(year) || {
+        dias_pendientes: 0,
+        dias_consumidos: 0,
+      };
 
-        const detalleExistente = Array.isArray(existing.detalle_ausencias) ? existing.detalle_ausencias : [];
-        const detalleNuevo = Array.isArray(balance.detalle_ausencias) ? balance.detalle_ausencias : [];
+      existingYearData.dias_pendientes += diasPendientes;
+      existingYearData.dias_consumidos += diasConsumidos;
 
-        map.set(balance.employee_id, {
-          ...existing,
-          dias_pendientes: totalPendientes,
-          dias_consumidos: totalConsumidos,
-          dias_disponibles: totalDisponibles,
-          detalle_ausencias: [...detalleExistente, ...detalleNuevo],
-        });
-      } else {
-        const diasDisponibles = diasPendientes - diasConsumidos;
+      yearMap.set(year, existingYearData);
 
-        if (diasDisponibles <= 0) return;
-
-        map.set(balance.employee_id, {
-          ...balance,
-          employee,
-          dias_pendientes: diasPendientes,
-          dias_consumidos: diasConsumidos,
-          dias_disponibles: diasDisponibles,
-          detalle_ausencias: Array.isArray(balance.detalle_ausencias) ? balance.detalle_ausencias : [],
-        });
+      const existingDetails = employeeDetailMap.get(balance.employee_id) || [];
+      if (Array.isArray(balance.detalle_ausencias) && balance.detalle_ausencias.length > 0) {
+        employeeDetailMap.set(balance.employee_id, [
+          ...existingDetails,
+          ...balance.detalle_ausencias,
+        ]);
+      } else if (!employeeDetailMap.has(balance.employee_id)) {
+        employeeDetailMap.set(balance.employee_id, existingDetails);
       }
     });
 
-    return Array.from(map.values())
+    const result = [];
+
+    employeeYearMap.forEach((yearMap, employeeId) => {
+      const employee = employees.find((e) => e?.id === employeeId);
+      if (!employee) return;
+
+      let totalPendientes = 0;
+      let totalConsumidos = 0;
+      const yearBreakdown = [];
+
+      yearMap.forEach((data, year) => {
+        const disponibles = data.dias_pendientes - data.dias_consumidos;
+
+        yearBreakdown.push({
+          year,
+          dias_pendientes: data.dias_pendientes,
+          dias_consumidos: data.dias_consumidos,
+          dias_disponibles: disponibles,
+        });
+
+        totalPendientes += data.dias_pendientes;
+        totalConsumidos += data.dias_consumidos;
+      });
+
+      const diasDisponibles = totalPendientes - totalConsumidos;
+
+      if (diasDisponibles <= 0) {
+        return;
+      }
+
+      yearBreakdown.sort((a, b) => a.year - b.year);
+
+      const detalleAusencias = employeeDetailMap.get(employeeId) || [];
+
+      result.push({
+        employee_id: employeeId,
+        employee,
+        dias_pendientes: totalPendientes,
+        dias_consumidos: totalConsumidos,
+        dias_disponibles: diasDisponibles,
+        year_breakdown: yearBreakdown,
+        detalle_ausencias: detalleAusencias,
+      });
+    });
+
+    return result
       .filter(
         (b) =>
           b.dias_disponibles > 0 &&
@@ -222,6 +267,20 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                           </p>
                         </div>
                       </div>
+
+                      {balance.year_breakdown && balance.year_breakdown.length > 0 && (
+                        <div className="mt-3 text-xs text-slate-700">
+                          <p className="font-semibold mb-1">Desglose por año</p>
+                          <div className="space-y-1">
+                            {balance.year_breakdown.map((yb) => (
+                              <div key={yb.year} className="flex justify-between">
+                                <span>{yb.year}</span>
+                                <span>{yb.dias_disponibles} días disponibles</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {balance.detalle_ausencias?.length > 0 && (
                         <details className="mt-3">
