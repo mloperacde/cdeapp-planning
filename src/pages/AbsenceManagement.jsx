@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent } from "@/components/ui/card";
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   UserX, 
@@ -10,9 +8,8 @@ import {
   LayoutDashboard, Settings, Activity 
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import { startOfYear } from "date-fns";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { startOfMonth, eachDayOfInterval } from "date-fns";
+import { getAvailability } from "@/lib/domain/planning";
 
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
@@ -24,17 +21,13 @@ import VacationPendingBalancePanel from "../components/absences/VacationPendingB
 import ResidualDaysManager from "../components/absences/ResidualDaysManager";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
-import { calculateGlobalAbsenteeism } from "../components/absences/AbsenteeismCalculator";
-import { Button } from "@/components/ui/button";
 
 export default function AbsenceManagementPage() {
   const { 
     user: currentUser,
     absences = [], 
     employees = [],
-    absenceTypes = [],
-    vacations = [],
-    holidays = []
+    absenceTypes = []
   } = useAppData();
 
   const isShiftManager = useMemo(() => {
@@ -93,43 +86,120 @@ export default function AbsenceManagementPage() {
 
   const departmentsWithActiveAbsencesCount = departmentsWithActiveAbsences.length;
 
-  const absenteeismByDept = useMemo(() => {
-    const deptStats = {};
-    employees.forEach((emp) => {
-      if (!emp.departamento || emp.tasa_absentismo == null) return;
-      const key = emp.departamento;
-      const current = deptStats[key] || { sum: 0, count: 0 };
-      current.sum += emp.tasa_absentismo;
-      current.count += 1;
-      deptStats[key] = current;
+  const scopedEmployees = useMemo(() => {
+    return employees.filter((emp) => {
+      if (isShiftManager && emp.departamento !== currentUser?.departamento) return false;
+      return true;
     });
-    return Object.entries(deptStats)
-      .map(([dept, { sum, count }]) => ({
-        dept,
-        rate: count ? sum / count : 0,
-      }))
-      .sort((a, b) => b.rate - a.rate);
-  }, [employees]);
+  }, [employees, isShiftManager, currentUser]);
 
-  const topAbsenteeismDept = absenteeismByDept[0];
+  const activeEmployees = useMemo(() => {
+    return scopedEmployees.filter(
+      (emp) => emp.estado_empleado === "Alta" && emp.incluir_en_planning !== false
+    );
+  }, [scopedEmployees]);
 
-  const { data: globalAbsenteeism } = useQuery({
-    queryKey: ["globalAbsenteeism-dashboard", employees.length, absences.length],
-    queryFn: async () => {
-      const now = new Date();
-      const yearStart = startOfYear(now);
-      return calculateGlobalAbsenteeism(yearStart, now, {
-        employees,
-        absences,
-        vacations,
-        holidays,
+  const todayISO = useMemo(() => {
+    const now = new Date();
+    return now.toISOString().slice(0, 10);
+  }, []);
+
+  const dailyGlobalAbsenteeism = useMemo(() => {
+    if (activeEmployees.length === 0) {
+      return { rate: 0, total: 0, absent: 0 };
+    }
+    const result = getAvailability(activeEmployees, filteredAbsences, todayISO);
+    const rate =
+      result.totalEmpleados > 0
+        ? (result.ausentes / result.totalEmpleados) * 100
+        : 0;
+    return {
+      rate,
+      total: result.totalEmpleados,
+      absent: result.ausentes,
+    };
+  }, [activeEmployees, filteredAbsences, todayISO]);
+
+  const monthlyGlobalAbsenteeism = useMemo(() => {
+    if (activeEmployees.length === 0) {
+      return { rate: 0 };
+    }
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const days = eachDayOfInterval({ start: monthStart, end: now });
+    if (days.length === 0) {
+      return { rate: 0 };
+    }
+    let sumRates = 0;
+    days.forEach((day) => {
+      const dateISO = day.toISOString().slice(0, 10);
+      const result = getAvailability(activeEmployees, filteredAbsences, dateISO);
+      const rate =
+        result.totalEmpleados > 0
+          ? (result.ausentes / result.totalEmpleados) * 100
+          : 0;
+      sumRates += rate;
+    });
+    const avgRate = sumRates / days.length;
+    return { rate: avgRate };
+  }, [activeEmployees, filteredAbsences]);
+
+  const dailyDeptAbsenteeism = useMemo(() => {
+    const deptRates = [];
+    const deptSet = new Set(
+      activeEmployees
+        .map((emp) => emp.departamento)
+        .filter((dept) => !!dept)
+    );
+    deptSet.forEach((dept) => {
+      const emps = activeEmployees.filter((emp) => emp.departamento === dept);
+      if (emps.length === 0) return;
+      const result = getAvailability(emps, filteredAbsences, todayISO);
+      const rate =
+        result.totalEmpleados > 0
+          ? (result.ausentes / result.totalEmpleados) * 100
+          : 0;
+      deptRates.push({ dept, rate });
+    });
+    deptRates.sort((a, b) => b.rate - a.rate);
+    return deptRates;
+  }, [activeEmployees, filteredAbsences, todayISO]);
+
+  const topDeptToday = dailyDeptAbsenteeism[0];
+
+  const monthlyDeptAbsenteeism = useMemo(() => {
+    const deptRates = [];
+    const deptSet = new Set(
+      activeEmployees
+        .map((emp) => emp.departamento)
+        .filter((dept) => !!dept)
+    );
+    if (deptSet.size === 0) return [];
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const days = eachDayOfInterval({ start: monthStart, end: now });
+    if (days.length === 0) return [];
+    deptSet.forEach((dept) => {
+      const emps = activeEmployees.filter((emp) => emp.departamento === dept);
+      if (emps.length === 0) return;
+      let sumRates = 0;
+      days.forEach((day) => {
+        const dateISO = day.toISOString().slice(0, 10);
+        const result = getAvailability(emps, filteredAbsences, dateISO);
+        const rate =
+          result.totalEmpleados > 0
+            ? (result.ausentes / result.totalEmpleados) * 100
+            : 0;
+        sumRates += rate;
       });
-    },
-    enabled: employees.length > 0 && absences.length >= 0,
-    staleTime: 60 * 60 * 1000,
-    gcTime: 2 * 60 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+      const avgRate = sumRates / days.length;
+      deptRates.push({ dept, rate: avgRate });
+    });
+    deptRates.sort((a, b) => b.rate - a.rate);
+    return deptRates;
+  }, [activeEmployees, filteredAbsences]);
+
+  const topDeptMonth = monthlyDeptAbsenteeism[0];
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
@@ -197,9 +267,12 @@ export default function AbsenceManagementPage() {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-xs text-emerald-700 font-medium">Tasa de absentismo global</p>
+                      <p className="text-xs text-emerald-700 font-medium">Absentismo global</p>
                       <p className="text-2xl font-bold text-emerald-900">
-                        {globalAbsenteeism?.tasaAbsentismoGlobal?.toFixed(2) || "0.00"}%
+                        {dailyGlobalAbsenteeism.rate.toFixed(2)}%
+                      </p>
+                      <p className="text-xs text-emerald-700 mt-1">
+                        Mes actual: {monthlyGlobalAbsenteeism.rate.toFixed(2)}%
                       </p>
                     </div>
                     <Activity className="w-8 h-8 text-emerald-600" />
@@ -211,13 +284,18 @@ export default function AbsenceManagementPage() {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-xs text-orange-700 font-medium">Tasa por departamento</p>
+                      <p className="text-xs text-orange-700 font-medium">Absentismo por departamento</p>
                       <p className="text-2xl font-bold text-orange-900">
-                        {topAbsenteeismDept ? topAbsenteeismDept.rate.toFixed(2) : "0.00"}%
+                        {topDeptToday ? topDeptToday.rate.toFixed(2) : "0.00"}%
                       </p>
-                      {topAbsenteeismDept && (
+                      {topDeptToday && (
                         <p className="text-xs text-orange-700 mt-1">
-                          Departamento con mayor absentismo: {topAbsenteeismDept.dept}
+                          Hoy: {topDeptToday.dept}
+                        </p>
+                      )}
+                      {topDeptMonth && (
+                        <p className="text-xs text-orange-700">
+                          Mes: {topDeptMonth.dept} ({topDeptMonth.rate.toFixed(2)}%)
                         </p>
                       )}
                     </div>
