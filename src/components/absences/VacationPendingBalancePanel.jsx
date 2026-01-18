@@ -1,19 +1,36 @@
 
 import React, { useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, TrendingUp, AlertCircle, ChevronRight } from "lucide-react";
+import { CalendarDays, TrendingUp, AlertCircle, ChevronRight, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { toast } from "sonner";
+import { recalculateVacationPendingBalances } from "./VacationPendingCalculator";
 
 export default function VacationPendingBalancePanel({ employees = [], compact = false }) {
+  const queryClient = useQueryClient();
+
   const { data: balances = [] } = useQuery({
     queryKey: ["vacationPendingBalances"],
     queryFn: () => base44.entities.VacationPendingBalance.list(),
     initialData: [],
+  });
+
+  const recalcMutation = useMutation({
+    mutationFn: recalculateVacationPendingBalances,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      toast.success("Saldo de vacaciones pendientes recalculado");
+    },
+    onError: (error) => {
+      toast.error(
+        "Error al recalcular saldo: " + (error?.message || "desconocido")
+      );
+    },
   });
 
   const employeesWithBalance = useMemo(() => {
@@ -191,6 +208,15 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
               <p className="text-xs text-slate-600">Total Días</p>
               <p className="text-2xl font-bold text-orange-900">{totalDiasPendientes}</p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => recalcMutation.mutate()}
+              disabled={recalcMutation.isPending}
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              {recalcMutation.isPending ? "Recalculando" : "Recalcular"}
+            </Button>
           </div>
         </div>
       </CardHeader>

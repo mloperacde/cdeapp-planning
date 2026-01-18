@@ -68,21 +68,14 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
   };
 
   if (balance) {
-    // Actualizar balance existente
     const detalleAusencias = balance.detalle_ausencias || [];
-    
-    // Verificar si ya existe esta ausencia en el detalle
     const existingIndex = detalleAusencias.findIndex(d => d.absence_id === absence.id);
-    
     if (existingIndex >= 0) {
-      // Actualizar ausencia existente
       detalleAusencias[existingIndex] = detalleAusencia;
     } else {
-      // Añadir nueva ausencia
       detalleAusencias.push(detalleAusencia);
     }
 
-    // Recalcular total de días pendientes
     const totalDiasPendientes = detalleAusencias.reduce((sum, d) => sum + d.dias_coincidentes, 0);
     const diasDisponibles = totalDiasPendientes - (balance.dias_consumidos || 0);
 
@@ -94,7 +87,6 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
 
     return { ...balance, dias_pendientes: totalDiasPendientes, dias_disponibles: diasDisponibles };
   } else {
-    // Crear nuevo balance
     const newBalance = await base44.entities.VacationPendingBalance.create({
       employee_id: absence.employee_id,
       anio: year,
@@ -105,6 +97,29 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
     });
 
     return newBalance;
+  }
+}
+
+export async function recalculateVacationPendingBalances() {
+  const [absences, absenceTypes, vacations, holidays] = await Promise.all([
+    base44.entities.Absence.list("-fecha_inicio", 1000),
+    base44.entities.AbsenceType.list("orden", 200),
+    base44.entities.Vacation.list(),
+    base44.entities.Holiday.list()
+  ]);
+
+  const typeById = new Map();
+  absenceTypes.forEach(type => {
+    if (type && type.id) {
+      typeById.set(type.id, type);
+    }
+  });
+
+  for (const absence of absences) {
+    if (!absence.absence_type_id) continue;
+    const absenceType = typeById.get(absence.absence_type_id);
+    if (!absenceType) continue;
+    await calculateVacationPendingBalance(absence, absenceType, vacations, holidays);
   }
 }
 
