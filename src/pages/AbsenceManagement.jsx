@@ -26,7 +26,7 @@ import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerat
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import { calculateGlobalAbsenteeism } from "../components/absences/AbsenteeismCalculator";
 import { Button } from "@/components/ui/button";
-import AvailabilitySyncMonitor from "../components/hr/AvailabilitySyncMonitor";
+
 export default function AbsenceManagementPage() {
   const { 
     user: currentUser,
@@ -305,8 +305,6 @@ export default function AbsenceManagementPage() {
               </Card>
             )}
 
-            <AvailabilitySyncMonitor employees={employees} absences={absences} />
-            
             {isShiftManager ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <AbsenceDashboard absences={filteredAbsences} employees={employees} />
