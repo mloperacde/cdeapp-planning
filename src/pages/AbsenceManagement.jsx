@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "../components/data/DataProvider";
@@ -57,8 +57,6 @@ import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../co
 import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
 
 import AvailabilitySyncMonitor from "../components/hr/AvailabilitySyncMonitor";
-import AbsenceConfigurationTab from "./AbsenceConfigurationTab";
-
 export default function AbsenceManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
