@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Database, Trash2, CheckCircle2, AlertCircle, Clock, User, Columns } from "lucide-react";
+import { Database, Trash2, User, Columns } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -208,10 +208,18 @@ export default function MasterEmployeeDatabasePage() {
 
   const stats = {
     total: masterEmployees.length,
-    sincronizados: masterEmployees.filter(e => e.estado_sincronizacion === 'Sincronizado').length,
-    pendientes: masterEmployees.filter(e => e.estado_sincronizacion === 'Pendiente').length,
-    errores: masterEmployees.filter(e => e.estado_sincronizacion === 'Error').length,
   };
+
+  const employeesByDepartment = useMemo(() => {
+    const map = {};
+    masterEmployees.forEach(emp => {
+      const dept = emp.departamento || "Sin departamento";
+      map[dept] = (map[dept] || 0) + 1;
+    });
+    return Object.entries(map)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [masterEmployees]);
 
   if (!isHrModuleAllowed) {
     return (
@@ -246,12 +254,12 @@ export default function MasterEmployeeDatabasePage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Total Registros</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Total empleados en el sistema</p>
                   <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
                 </div>
                 <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
@@ -259,38 +267,28 @@ export default function MasterEmployeeDatabasePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800 shadow-md hover:shadow-lg transition-shadow">
+          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 border-emerald-200 dark:border-emerald-800 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">Sincronizados</p>
-                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.sincronizados}</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Distribución por departamento</p>
+                  <p className="text-sm text-emerald-900 dark:text-emerald-100">
+                    Visión rápida de dónde están tus equipos
+                  </p>
                 </div>
-                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                <User className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Pendientes</p>
-                  <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.pendientes}</p>
-                </div>
-                <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-red-700 dark:text-red-300 font-medium">Errores</p>
-                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.errores}</p>
-                </div>
-                <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                {employeesByDepartment.map(dept => (
+                  <div key={dept.name} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-700 dark:text-slate-200 truncate max-w-[70%]" title={dept.name}>
+                      {dept.name}
+                    </span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      {dept.count}
+                    </span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -497,26 +495,9 @@ export default function MasterEmployeeDatabasePage() {
                         )}
                         {visibleColumns.estado_sincronizacion && (
                           <TableCell>
-                            <div className="flex flex-col gap-1">
-                              {emp.estado_sincronizacion === 'Sincronizado' && (
-                                <Badge className="bg-green-600 w-fit">
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                  Sync
-                                </Badge>
-                              )}
-                              {emp.estado_sincronizacion === 'Pendiente' && (
-                                <Badge className="bg-amber-600 w-fit">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Pend
-                                </Badge>
-                              )}
-                              {emp.estado_sincronizacion === 'Error' && (
-                                <Badge className="bg-red-600 w-fit">
-                                  <AlertCircle className="w-3 h-3 mr-1" />
-                                  Err
-                                </Badge>
-                              )}
-                            </div>
+                            <Badge className="bg-slate-600 dark:bg-slate-700 w-fit">
+                              {emp.estado_sincronizacion || "-"}
+                            </Badge>
                           </TableCell>
                         )}
                         {visibleColumns.ultimo_sincronizado && (
