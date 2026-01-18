@@ -52,7 +52,7 @@ export default function Layout({ children, currentPageName }) {
     
     // Recursos Humanos
     { name: 'Dashboard RRHH', icon: Users, path: '/AdvancedHRDashboard', category: 'Recursos Humanos' },
-    { name: 'Base de Empleados', icon: Users, path: '/MasterEmployeeDatabase', category: 'Recursos Humanos' },
+    { name: 'Base de datos de Empleados', icon: Users, path: '/MasterEmployeeDatabase', category: 'Recursos Humanos' },
     { name: 'Matriz Habilidades', icon: Award, path: '/SkillMatrix', category: 'Recursos Humanos' },
     { name: 'Gestión Ausencias', icon: Calendar, path: '/AbsenceManagement', category: 'Recursos Humanos' },
     { name: 'Intercambios Turno', icon: RefreshCw, path: '/ShiftManagement', category: 'Recursos Humanos' },
