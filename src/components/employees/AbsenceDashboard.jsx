@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, Users, Calendar, AlertCircle, RefreshCw } from "lucide-react";
+import { TrendingUp, Users, Calendar, AlertCircle, RefreshCw, BarChart3 } from "lucide-react";
 import { startOfYear, endOfYear } from "date-fns";
 import { calculateGlobalAbsenteeism } from "../absences/AbsenteeismCalculator";
 import { useQuery } from "@tanstack/react-query";
@@ -60,6 +60,18 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
+  }, [absences, employees]);
+
+  const byDepartment = useMemo(() => {
+    const deptCount = {};
+    absences.forEach(abs => {
+      const emp = employees.find(e => e.id === abs.employee_id);
+      const dept = emp?.departamento || "Sin departamento";
+      deptCount[dept] = (deptCount[dept] || 0) + 1;
+    });
+    return Object.entries(deptCount)
+      .map(([department, value]) => ({ department, value }))
+      .sort((a, b) => b.value - a.value);
   }, [absences, employees]);
 
   const COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#EF4444', '#6366F1', '#14B8A6'];
@@ -165,13 +177,13 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Ausencias por Tipo</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={byType}
@@ -195,13 +207,30 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
 
         <Card className="shadow-lg">
           <CardHeader>
+            <CardTitle>Ausencias por Departamento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={byDepartment}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="department" angle={-40} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#10B981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader>
             <CardTitle>Top 10 Empleados con Más Ausencias</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={byEmployee}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <XAxis dataKey="name" angle={-40} textAnchor="end" height={100} />
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="value" fill="#3B82F6" />
