@@ -2,7 +2,8 @@ import { base44 } from "@/api/base44Client";
 import { eachDayOfInterval, isWeekend, format } from "date-fns";
 
 export async function calculateVacationPendingBalance(absence, absenceType, vacations, holidays) {
-  if (!absenceType?.no_consume_vacaciones) {
+  const noConsumeVacaciones = absenceType?.no_consume_vacaciones ?? true;
+  if (!noConsumeVacaciones) {
     return null;
   }
 
@@ -29,11 +30,6 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
   for (const vacation of vacations) {
     const vacStart = new Date(vacation.start_date);
     const vacEnd = new Date(vacation.end_date);
-
-    // Solo considerar si las vacaciones son del mismo año
-    if (vacStart.getFullYear() !== year && vacEnd.getFullYear() !== year) {
-      continue;
-    }
 
     // Verificar si la ausencia se solapa con este período de vacaciones
     const overlap = absenceDays.filter(day => {
