@@ -96,16 +96,20 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   }
 
   const [formData, setFormData] = useState(initialNewEmployeeFormData);
-  const [activeTab, setActiveTab] = useState("datos"); // New state for active tab
+  const [activeTab, setActiveTab] = useState("datos");
 
   const queryClient = useQueryClient();
 
-  // Cargar datos del empleado cuando cambie la prop
+  const { data: employeeMachineSkills = [] } = useQuery({
+    queryKey: ['employeeMachineSkills'],
+    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
+    staleTime: 5 * 60 * 1000,
+  });
+
   useEffect(() => {
     if (employee) {
       const loadedData = { ...employee };
-      
-      // Cargar máquinas desde EmployeeMachineSkill
+
       if (employee.id) {
         const skills = employeeMachineSkills.filter(s => s.employee_id === employee.id);
         skills.forEach(skill => {
@@ -114,7 +118,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
           }
         });
       }
-      
+
       setFormData(loadedData);
     } else {
       setFormData(initialNewEmployeeFormData);
@@ -144,12 +148,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
   const { data: absences = [] } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 500),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: employeeMachineSkills = [] } = useQuery({
-    queryKey: ['employeeMachineSkills'],
-    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
     staleTime: 5 * 60 * 1000,
   });
 
