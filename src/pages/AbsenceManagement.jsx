@@ -263,9 +263,12 @@ export default function AbsenceManagementPage() {
             <AttendanceAnalyzer />
           </TabsContent>
 
+          <TabsContent value="info">
+            <EmployeeAbsenceInfo />
+          </TabsContent>
+
           <TabsContent value="config">
             <div className="space-y-6">
-              <AbsenceConfigurationTab />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <VacationPendingBalancePanel employees={employees} compact={true} />
                 <ResidualDaysManager employees={employees} />

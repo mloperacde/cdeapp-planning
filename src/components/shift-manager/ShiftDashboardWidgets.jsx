@@ -200,6 +200,13 @@ export function ModulesWidget({ pendingSwaps, lockersWithoutNumber, setActiveVie
             badge: lockersWithoutNumber > 0 ? lockersWithoutNumber : null
         },
         {
+            title: "Rendimiento",
+            icon: TrendingUp,
+            url: createPageUrl("PerformanceManagement"),
+            color: "cyan",
+            description: "Evaluaciones y PIPs"
+        },
+        {
             title: "Ausencias",
             icon: MessageSquare,
             action: "absences",

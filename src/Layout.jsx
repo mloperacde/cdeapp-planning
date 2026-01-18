@@ -85,36 +85,18 @@ export default function Layout({ children, currentPageName }) {
     // Configuración
     { name: 'Configuración', icon: Settings, path: '/Configuration', category: 'Configuración' },
 
-    // Revisión de páginas
-    { name: 'AbsenceConfigurationTab', icon: FileText, path: '/AbsenceConfigurationTab', category: 'Revisión de páginas' },
-    { name: 'AcceptInvitation', icon: Users, path: '/AcceptInvitation', category: 'Revisión de páginas' },
+    // Revisión de páginas (solo vistas que seguimos revisando)
     { name: 'DailyShiftPlanning', icon: Calendar, path: '/DailyShiftPlanning', category: 'Revisión de páginas' },
-    { name: 'DataMigration', icon: Database, path: '/DataMigration', category: 'Revisión de páginas' },
     { name: 'EmailNotifications', icon: FileText, path: '/EmailNotifications', category: 'Revisión de páginas' },
     { name: 'EmployeeAbsenceInfo', icon: Users, path: '/EmployeeAbsenceInfo', category: 'Revisión de páginas' },
-    { name: 'AppUserManagement', icon: Users, path: '/AppUserManagement', category: 'Revisión de páginas' },
     { name: 'ArticleManagement', icon: FileText, path: '/ArticleManagement', category: 'Revisión de páginas' },
     { name: 'LockerManagement', icon: Package, path: '/LockerManagement', category: 'Revisión de páginas' },
     { name: 'MachineAssignments', icon: Users, path: '/MachineAssignments', category: 'Revisión de páginas' },
     { name: 'MachineMaintenance', icon: Wrench, path: '/MachineMaintenance', category: 'Revisión de páginas' },
     { name: 'PerformanceManagement', icon: FileText, path: '/PerformanceManagement', category: 'Revisión de páginas' },
     { name: 'SupportManagement1415', icon: FileText, path: '/SupportManagement1415', category: 'Revisión de páginas' },
-    { name: 'SystemHealth', icon: Database, path: '/SystemHealth', category: 'Revisión de páginas' },
-    { name: 'SystemReset', icon: Database, path: '/SystemReset', category: 'Revisión de páginas' },
     { name: 'Timeline', icon: Calendar, path: '/Timeline', category: 'Revisión de páginas' },
     { name: 'Breaks', icon: Calendar, path: '/Breaks', category: 'Revisión de páginas' },
-    { name: 'MachinePlanning', icon: Package, path: '/MachinePlanning', category: 'Revisión de páginas' },
-    { name: 'QuickStartGuide', icon: FileText, path: '/QuickStartGuide', category: 'Revisión de páginas' },
-    { name: 'DeploymentGuide', icon: FileText, path: '/DeploymentGuide', category: 'Revisión de páginas' },
-    { name: 'AdminDeploymentGuide', icon: FileText, path: '/AdminDeploymentGuide', category: 'Revisión de páginas' },
-    { name: 'MobileHome', icon: Users, path: '/MobileHome', category: 'Revisión de páginas' },
-    { name: 'MobileAppConfig', icon: Settings, path: '/MobileAppConfig', category: 'Revisión de páginas' },
-    { name: 'mobileAbsences', icon: Calendar, path: '/mobileAbsences', category: 'Revisión de páginas' },
-    { name: 'mobileChat', icon: Users, path: '/mobileChat', category: 'Revisión de páginas' },
-    { name: 'mobileNotifications', icon: FileText, path: '/mobileNotifications', category: 'Revisión de páginas' },
-    { name: 'mobilePlanning', icon: Calendar, path: '/mobilePlanning', category: 'Revisión de páginas' },
-    { name: 'mobileProfile', icon: Users, path: '/mobileProfile', category: 'Revisión de páginas' },
-    { name: 'mobileVacations', icon: Calendar, path: '/mobileVacations', category: 'Revisión de páginas' },
   ];
 
   // Agrupar items por categoría

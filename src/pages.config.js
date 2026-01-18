@@ -1,24 +1,18 @@
-import AbsenceConfigurationTab from './pages/AbsenceConfigurationTab';
 import AbsenceManagement from './pages/AbsenceManagement';
-import AcceptInvitation from './pages/AcceptInvitation';
-import AdminDeploymentGuide from './pages/AdminDeploymentGuide';
 import AdvancedConfiguration from './pages/AdvancedConfiguration';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
-import AppUserManagement from './pages/AppUserManagement';
-import ArticleManagement from './pages/ArticleManagement';
+import ArticleManagement from './pages/production/ArticleManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
 import BrandingConfig from './pages/BrandingConfig';
 import Breaks from './pages/Breaks';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
-import DailyPlanning from './pages/DailyPlanning';
+import DailyPlanning from './pages/planning/DailyPlanning';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
-import DataMigration from './pages/DataMigration';
-import DeploymentGuide from './pages/DeploymentGuide';
 import DocumentManagement from './pages/DocumentManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
-import EmailNotifications from './pages/EmailNotifications';
+import EmailNotifications from './modules/notifications/EmailNotifications';
 import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
@@ -32,13 +26,11 @@ import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
-import MobileHome from './pages/MobileHome';
 import PerformanceManagement from './pages/PerformanceManagement';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionDashboard from './pages/ProductionDashboard';
 import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
-import QuickStartGuide from './pages/QuickStartGuide';
 import Reports from './pages/Reports';
 import ShiftHandover from './pages/ShiftHandover';
 import ShiftManagement from './pages/ShiftManagement';
@@ -46,29 +38,16 @@ import ShiftManagers from './pages/ShiftManagers';
 import ShiftPlanning from './pages/ShiftPlanning';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
-import SystemHealth from './pages/SystemHealth';
-import SystemReset from './pages/SystemReset';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import mobileAbsences from './pages/mobileAbsences';
-import mobileAppConfig from './pages/mobileAppConfig';
-import mobileChat from './pages/mobileChat';
-import mobileNotifications from './pages/mobileNotifications';
-import mobilePlanning from './pages/mobilePlanning';
-import mobileProfile from './pages/mobileProfile';
-import mobileVacations from './pages/mobileVacations';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "AbsenceConfigurationTab": AbsenceConfigurationTab,
     "AbsenceManagement": AbsenceManagement,
-    "AcceptInvitation": AcceptInvitation,
-    "AdminDeploymentGuide": AdminDeploymentGuide,
     "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedHRDashboard": AdvancedHRDashboard,
-    "AppUserManagement": AppUserManagement,
     "ArticleManagement": ArticleManagement,
     "AttendanceManagement": AttendanceManagement,
     "BrandingConfig": BrandingConfig,
@@ -78,8 +57,6 @@ export const PAGES = {
     "DailyPlanning": DailyPlanning,
     "DailyShiftPlanning": DailyShiftPlanning,
     "Dashboard": Dashboard,
-    "DataMigration": DataMigration,
-    "DeploymentGuide": DeploymentGuide,
     "DocumentManagement": DocumentManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
     "EmailNotifications": EmailNotifications,
@@ -96,13 +73,11 @@ export const PAGES = {
     "MachineMaster": MachineMaster,
     "MaintenanceTracking": MaintenanceTracking,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
-    "MobileHome": MobileHome,
     "PerformanceManagement": PerformanceManagement,
     "ProcessConfiguration": ProcessConfiguration,
     "ProductionDashboard": ProductionDashboard,
     "ProductionPlanning": ProductionPlanning,
     "QualityControl": QualityControl,
-    "QuickStartGuide": QuickStartGuide,
     "Reports": Reports,
     "ShiftHandover": ShiftHandover,
     "ShiftManagement": ShiftManagement,
@@ -110,18 +85,9 @@ export const PAGES = {
     "ShiftPlanning": ShiftPlanning,
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
-    "SystemHealth": SystemHealth,
-    "SystemReset": SystemReset,
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "mobileAbsences": mobileAbsences,
-    "mobileAppConfig": mobileAppConfig,
-    "mobileChat": mobileChat,
-    "mobileNotifications": mobileNotifications,
-    "mobilePlanning": mobilePlanning,
-    "mobileProfile": mobileProfile,
-    "mobileVacations": mobileVacations,
 }
 
 export const pagesConfig = {
