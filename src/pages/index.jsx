@@ -13,7 +13,7 @@ import DailyShiftPlanning from "./DailyShiftPlanning";
 import Dashboard from "./Dashboard";
 import DocumentManagement from "./DocumentManagement";
 import ETTTemporaryEmployees from "./ETTTemporaryEmployees";
-import EmailNotifications from "./EmailNotifications";
+import EmailNotifications from "../modules/notifications/EmailNotifications";
 import EmployeeAbsenceInfo from "./EmployeeAbsenceInfo";
 import EmployeeOnboarding from "./EmployeeOnboarding";
 import EmployeesShiftManager from "./EmployeesShiftManager";
