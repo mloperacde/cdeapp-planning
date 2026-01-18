@@ -73,11 +73,11 @@ export default function LongAbsenceAlert({ employees, absences, masterEmployees 
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
-        <p className="text-xs text-amber-800 mb-3">
-          Más de 30 días ausentes. Considera reasignar taquilla.
+        <p className="text-xs text-amber-800 mb-3 font-medium">
+          Contactar para autorización de vaciado de taquilla.
         </p>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {longAbsences.slice(0, 3).map(({ absence, employee, locker, hasLocker, daysAbsent }) => (
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {longAbsences.map(({ absence, employee, locker, hasLocker, daysAbsent }) => (
             <div key={absence.id} className="bg-white border border-amber-200 rounded-lg p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">

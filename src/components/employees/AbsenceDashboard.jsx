@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, Users, Calendar, AlertCircle, RefreshCw, BarChart3 } from "lucide-react";
-import { startOfYear, endOfYear, differenceInCalendarDays } from "date-fns";
+import { startOfYear, endOfYear, startOfMonth, differenceInCalendarDays } from "date-fns";
 import { calculateGlobalAbsenteeism } from "../absences/AbsenteeismCalculator";
+import LongAbsenceAlert from "../absences/LongAbsenceAlert";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import AIDashboardSummary from "../reports/AIDashboardSummary";
@@ -21,21 +22,30 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
   const vacations = appData?.vacations || [];
   const holidays = appData?.holidays || [];
 
-  const { data: globalAbsenteeism, refetch: refetchAbsenteeism, isLoading: calculatingAbsenteeism } = useQuery({
-    queryKey: ['globalAbsenteeism', employees.length, absences.length],
+  const { data: absenteeismData, refetch: refetchAbsenteeism, isLoading: calculatingAbsenteeism } = useQuery({
+    queryKey: ['absenteeismData', employees.length, absences.length],
     queryFn: async () => {
       const now = new Date();
       const yearStart = startOfYear(now);
-      // CRÍTICO: Pasar TODOS los datos precargados para evitar llamadas internas
-      return calculateGlobalAbsenteeism(yearStart, now, {
-        employees: employees,
-        absences: absences,
-        vacations: vacations,
-        holidays: holidays
-      });
+      const monthStart = startOfMonth(now);
+      
+      // Datos compartidos para optimizar
+      const sharedData = {
+        employees,
+        absences,
+        vacations,
+        holidays
+      };
+
+      const [yearStats, monthStats] = await Promise.all([
+        calculateGlobalAbsenteeism(yearStart, now, sharedData),
+        calculateGlobalAbsenteeism(monthStart, now, sharedData)
+      ]);
+
+      return { yearStats, monthStats };
     },
     enabled: employees.length > 0 && vacations.length >= 0 && holidays.length >= 0,
-    staleTime: 60 * 60 * 1000, // 1 hora
+    staleTime: 60 * 60 * 1000,
     gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -77,8 +87,7 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
   const byDepartment = useMemo(() => {
     const now = new Date();
     const yearStart = startOfYear(now);
-    const yearEnd = endOfYear(now);
-    const daysInRange = differenceInCalendarDays(yearEnd, yearStart) + 1;
+    const daysInRange = differenceInCalendarDays(now, yearStart) + 1;
     const deptDays = {};
 
     yearAbsences.forEach(abs => {
@@ -87,7 +96,7 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
       const absStart = new Date(abs.fecha_inicio);
       const absEnd = abs.fecha_fin_desconocida ? now : new Date(abs.fecha_fin);
       const start = absStart > yearStart ? absStart : yearStart;
-      const end = absEnd < yearEnd ? absEnd : yearEnd;
+      const end = absEnd < now ? absEnd : now;
       if (start > end) return;
       const days = differenceInCalendarDays(end, start) + 1;
       deptDays[dept] = (deptDays[dept] || 0) + days;
@@ -185,35 +194,46 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
         </Card>
       </div>
 
-      {globalAbsenteeism && (
-        <Card className="shadow-lg border-2 border-blue-200">
-          <CardHeader>
-            <CardTitle>Datos de Absentismo Global</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-600 mb-1">Total Horas No Trabajadas</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {globalAbsenteeism.totalHorasNoTrabajadas.toLocaleString('es-ES')} h
-                </p>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-600 mb-1">Total Horas Esperadas</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {globalAbsenteeism.totalHorasDeberianTrabajarse.toLocaleString('es-ES')} h
-                </p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-                <p className="text-sm text-blue-700 mb-1 font-semibold">Tasa Global</p>
-                <p className="text-2xl font-bold text-blue-900">
-                  {globalAbsenteeism.tasaAbsentismoGlobal.toFixed(2)}%
-                </p>
-              </div>
+      <Card className="shadow-lg border-2 border-blue-200">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle>Datos de Absentismo Global</CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefreshAbsenteeism}
+            disabled={calculatingAbsenteeism}
+          >
+            {calculatingAbsenteeism ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Actualizar
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-slate-50 p-4 rounded-lg">
+              <p className="text-sm text-slate-600 mb-1">Horas Perdidas (Mes en curso)</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {absenteeismData?.monthStats?.totalHorasNoTrabajadas?.toLocaleString('es-ES') ?? 0} h
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="bg-slate-50 p-4 rounded-lg">
+              <p className="text-sm text-slate-600 mb-1">Horas Perdidas (Año en curso)</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {absenteeismData?.yearStats?.totalHorasNoTrabajadas?.toLocaleString('es-ES') ?? 0} h
+              </p>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+              <p className="text-sm text-blue-700 mb-1 font-semibold">Tasa Global (Año)</p>
+              <p className="text-2xl font-bold text-blue-900">
+                {absenteeismData?.yearStats?.tasaAbsentismoGlobal?.toFixed(2) ?? 0}%
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1">
+        <LongAbsenceAlert employees={employees} absences={absences} />
+      </div>
 
       <AIDashboardSummary 
         data={{ absences, employees, byType, byEmployee }} 
