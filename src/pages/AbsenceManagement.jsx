@@ -17,7 +17,6 @@ import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager"
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
 import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
-import ResidualDaysManager from "../components/absences/ResidualDaysManager";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 
@@ -230,7 +229,7 @@ export default function AbsenceManagementPage() {
                 <TabsTrigger value="approval" className="py-2" type="button"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
                 <TabsTrigger value="calendar" className="py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
                 <TabsTrigger value="analysis" className="py-2" type="button"><Activity className="w-4 h-4 mr-2"/> Análisis & IA</TabsTrigger>
-                <TabsTrigger value="config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Configuración</TabsTrigger>
+                <TabsTrigger value="config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Protección de vacaciones</TabsTrigger>
                 <TabsTrigger value="reports" className="py-2" type="button"><BarChart3 className="w-4 h-4 mr-2"/> Informes</TabsTrigger>
               </>
             )}
@@ -352,10 +351,7 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="config">
             <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <VacationPendingBalancePanel employees={employees} compact={true} />
-                <ResidualDaysManager employees={employees} />
-              </div>
+              <VacationPendingBalancePanel employees={employees} />
             </div>
           </TabsContent>
 
