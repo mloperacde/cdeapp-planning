@@ -251,15 +251,15 @@ export default function AbsenceManagementPage() {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="flex w-full flex-nowrap overflow-x-auto mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
-            <TabsTrigger value="dashboard" className="py-2" type="button"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
-            <TabsTrigger value="list" className="py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
+            <TabsTrigger value="dashboard" className="flex-1 py-2" type="button"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
+            <TabsTrigger value="list" className="flex-1 py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
             
             {!isShiftManager && (
               <>
-                <TabsTrigger value="approval" className="py-2" type="button"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
-                <TabsTrigger value="calendar" className="py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
-                <TabsTrigger value="types-config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias</TabsTrigger>
-                <TabsTrigger value="config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Protección de vacaciones</TabsTrigger>
+                <TabsTrigger value="approval" className="flex-1 py-2" type="button"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
+                <TabsTrigger value="calendar" className="flex-1 py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
+                <TabsTrigger value="types-config" className="flex-1 py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias</TabsTrigger>
+                <TabsTrigger value="config" className="flex-1 py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Protección de vacaciones</TabsTrigger>
               </>
             )}
           </TabsList>
