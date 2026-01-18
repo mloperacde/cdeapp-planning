@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import AdminOnly from "@/components/security/AdminOnly";
 import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
+import VacationAccumulationConfig from "../components/absences/VacationAccumulationConfig";
 
 export default function AbsenceTypeConfig() {
   const [activeTab, setActiveTab] = useState("types");
@@ -38,8 +39,8 @@ export default function AbsenceTypeConfig() {
               <TabsTrigger value="types">
                 Tipos de Ausencia
               </TabsTrigger>
-              <TabsTrigger value="advanced">
-                Opciones Avanzadas
+              <TabsTrigger value="vacation-rules">
+                Reglas de Vacaciones
               </TabsTrigger>
             </TabsList>
 
@@ -47,19 +48,14 @@ export default function AbsenceTypeConfig() {
               <AbsenceTypeManager />
             </TabsContent>
 
-            <TabsContent value="advanced" className="mt-6">
-              <div className="border rounded-lg p-6 bg-slate-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Settings className="w-5 h-5 text-slate-600" />
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    Opciones avanzadas
-                  </h2>
-                </div>
-                <p className="text-sm text-slate-600">
-                  Este apartado se reservará para reglas avanzadas de configuración
-                  de ausencias e integración con otros módulos.
+            <TabsContent value="vacation-rules" className="mt-6 space-y-4">
+              <div className="border rounded-lg p-4 bg-slate-50 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-slate-600" />
+                <p className="text-sm text-slate-700">
+                  Configura cómo afectan las ausencias a las vacaciones y la acumulación de días pendientes.
                 </p>
               </div>
+              <VacationAccumulationConfig />
             </TabsContent>
           </Tabs>
         </div>
@@ -67,4 +63,3 @@ export default function AbsenceTypeConfig() {
     </AdminOnly>
   );
 }
-
