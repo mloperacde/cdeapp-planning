@@ -123,13 +123,7 @@ export default function ConfigurationPage() {
           url: "/MachineMaster",
           color: "blue"
         },
-        {
-          title: "Tipos de Ausencias",
-          description: "Configura la base de datos maestra de tipos de ausencia",
-          icon: Calendar,
-          url: "/AbsenceTypeConfig",
-          color: "red"
-        }
+        
       ]
     },
     sistema: {

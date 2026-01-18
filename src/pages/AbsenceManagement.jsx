@@ -19,6 +19,8 @@ import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
 import VacationPendingConsumptionManager from "../components/absences/VacationPendingConsumptionManager";
 import UnpaidLeaveTracker from "../components/absences/UnpaidLeaveTracker";
+import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
+import VacationAccumulationConfig from "../components/absences/VacationAccumulationConfig";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 
@@ -230,9 +232,10 @@ export default function AbsenceManagementPage() {
               <>
                 <TabsTrigger value="approval" className="py-2" type="button"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
                 <TabsTrigger value="calendar" className="py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
-                <TabsTrigger value="analysis" className="py-2" type="button"><Activity className="w-4 h-4 mr-2"/> Análisis & IA</TabsTrigger>
+                <TabsTrigger value="types-config" className="py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Tipos de Ausencias</TabsTrigger>
                 <TabsTrigger value="config" className="py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Protección de vacaciones</TabsTrigger>
                 <TabsTrigger value="reports" className="py-2" type="button"><BarChart3 className="w-4 h-4 mr-2"/> Informes</TabsTrigger>
+                <TabsTrigger value="analysis" className="py-2" type="button"><Activity className="w-4 h-4 mr-2"/> Análisis & IA</TabsTrigger>
               </>
             )}
           </TabsList>
@@ -347,8 +350,31 @@ export default function AbsenceManagementPage() {
             />
           </TabsContent>
 
-          <TabsContent value="analysis">
-            <AttendanceAnalyzer />
+          <TabsContent value="types-config">
+            <div className="space-y-6">
+              <div className="border rounded-lg p-4 bg-slate-50 flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-slate-600" />
+                <p className="text-sm text-slate-700">
+                  RRHH gestiona la base de datos maestra de tipos de ausencia y sus reglas.
+                </p>
+              </div>
+              <Tabs defaultValue="types">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="types">
+                    Tipos de Ausencia
+                  </TabsTrigger>
+                  <TabsTrigger value="vacation-rules">
+                    Reglas de Vacaciones
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="types" className="mt-4">
+                  <AbsenceTypeManager />
+                </TabsContent>
+                <TabsContent value="vacation-rules" className="mt-4 space-y-4">
+                  <VacationAccumulationConfig />
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
 
           <TabsContent value="config">
@@ -361,6 +387,10 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="reports">
             <AdvancedReportGenerator />
+          </TabsContent>
+
+          <TabsContent value="analysis">
+            <AttendanceAnalyzer />
           </TabsContent>
         </Tabs>
 
