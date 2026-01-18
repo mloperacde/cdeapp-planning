@@ -1,46 +1,14 @@
-import { useState, useMemo, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useMemo } from "react";
 import { useAppData } from "../components/data/DataProvider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useNavigationHistory } from "../components/utils/useNavigationHistory";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table.jsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Plus, Edit, Trash2, UserX, Search, AlertCircle, ArrowLeft, 
-  BarChart3, Infinity as InfinityIcon, CalendarDays, FileText, CheckSquare, 
+  UserX, 
+  BarChart3, CalendarDays, FileText, CheckSquare, 
   LayoutDashboard, Settings, Activity 
 } from "lucide-react";
-import { format, isPast } from "date-fns";
-import { es } from "date-fns/locale";
-import { Link, useLocation } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { toast } from 'sonner';
-import { debounce } from "lodash";
+import { useLocation } from "react-router-dom";
 
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
@@ -51,31 +19,15 @@ import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
 import ResidualDaysManager from "../components/absences/ResidualDaysManager";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
-import AbsenceForm from "../components/absences/AbsenceForm";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
-import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "../components/absences/VacationPendingCalculator";
-import { notifyAbsenceRequestRealtime } from "../components/notifications/AdvancedNotificationService";
 
 import AvailabilitySyncMonitor from "../components/hr/AvailabilitySyncMonitor";
 export default function AbsenceManagementPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingAbsence, setEditingAbsence] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTeam, setSelectedTeam] = useState("all");
-  const [selectedDepartment, setSelectedDepartment] = useState("all");
-  const queryClient = useQueryClient();
-  const { goBack } = useNavigationHistory();
-
-  // Usar datos compartidos del DataProvider
   const { 
     user: currentUser,
     absences = [], 
-    absencesLoading: isLoading,
     employees = [],
-    teams = [],
-    absenceTypes = [],
-    vacations = [],
-    holidays = []
+    absenceTypes = []
   } = useAppData();
 
   const isShiftManager = useMemo(() => {
@@ -106,51 +58,13 @@ export default function AbsenceManagementPage() {
     window.history.pushState({}, '', url);
   };
 
-  // Derived Data
-  const departments = useMemo(() => {
-    const depts = new Set();
-    employees.forEach(emp => { if (emp.departamento) depts.add(emp.departamento); });
-    return Array.from(depts).sort();
-  }, [employees]);
-
-  // Mutations and Handlers removed as UnifiedAbsenceManager handles them now for the list tab.
-  // We keep state for local dashboard if needed, but the main CRUD is in UnifiedAbsenceManager.
-  // The showForm/editingAbsence state might still be used if we want a global "New Absence" button in the header.
-  
-  // Handlers for the header button (New Absence)
-  // We can pass these to UnifiedAbsenceManager or use a ref, but simpler is to let UnifiedAbsenceManager handle its own form,
-  // or if we want the header button to work, we might need to expose the form. 
-  // For now, I'll rely on UnifiedAbsenceManager's internal button for the list view, 
-  // and if the header button is clicked, we can redirect to the list tab or open a dialog here.
-  // But wait, UnifiedAbsenceManager is only in "list" tab. 
-  // If user clicks "New Absence" in header, we should probably switch to "list" tab and open form, OR open a form here.
-  // Since I removed the manual table code, I should clean up the unused mutations if they are not used elsewhere.
-  // But wait, I see "New Absence" button in the header (line 240). 
-  // I should probably remove it or make it open a dialog that uses the shared create logic.
-  // To avoid duplication, let's keep the header button but make it use the shared operations logic if possible, 
-  // OR just rely on UnifiedAbsenceManager which has its own button.
-  // I will hide the header button since UnifiedAbsenceManager has one.
-  
-  const handleClose = () => { setShowForm(false); setEditingAbsence(null); };
-  // ... keeping necessary parts if any ...
-  const getEmployeeName = (id) => {
-    const emp = employees.find(e => e.id === id);
-    return emp?.nombre || "Desconocido";
-  };
-  
-  const debouncedSearchChange = useCallback(debounce((val) => setSearchTerm(val), 300), []);
-
   const filteredAbsences = useMemo(() => {
     return absences.filter(abs => {
       const emp = employees.find(e => e.id === abs.employee_id);
       if (isShiftManager && emp?.departamento !== currentUser?.departamento) return false; // Basic Shift Manager filter
-
-      const matchesSearch = getEmployeeName(abs.employee_id).toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTeam = selectedTeam === "all" || emp?.equipo === selectedTeam;
-      const matchesDept = selectedDepartment === "all" || emp?.departamento === selectedDepartment;
-      return matchesSearch && matchesTeam && matchesDept;
+      return true;
     });
-  }, [absences, searchTerm, selectedTeam, selectedDepartment, employees, isShiftManager, currentUser]);
+  }, [absences, employees, isShiftManager, currentUser]);
 
   const activeAbsences = filteredAbsences.filter(a => {
     const now = new Date();
@@ -259,10 +173,6 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="analysis">
             <AttendanceAnalyzer />
-          </TabsContent>
-
-          <TabsContent value="info">
-            <EmployeeAbsenceInfo />
           </TabsContent>
 
           <TabsContent value="config">

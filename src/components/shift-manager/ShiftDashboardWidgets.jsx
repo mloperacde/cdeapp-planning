@@ -1,4 +1,3 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
     CheckCircle2, UserX, RefreshCw, KeyRound, Clock, 
-    Sunrise, Sunset, Users, LayoutDashboard, Calendar, 
+    Sunrise, Sunset, Users, Calendar, 
     Cake, AlertTriangle, ArrowLeftRight, Coffee, MessageSquare, 
-    Settings2, UserCog, UsersRound
+    UserCog, UsersRound, TrendingUp
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";

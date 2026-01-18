@@ -1,9 +1,7 @@
-import React, { useMemo } from "react";
-import { motion } from "framer-motion";
+import { useMemo } from "react";
 import { format, isWithinInterval, isSameDay, startOfWeek } from "date-fns";
-import { es } from "date-fns/locale";
 import TimeSlot from "./TimeSlot";
-import { AlertCircle, Calendar, Clock, Users } from "lucide-react";
+import { AlertCircle, Clock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const WORKING_DAY_START = 7 * 60;
@@ -209,30 +207,6 @@ export default function TimelineView({
 
     return { workingIntervals: allIntervals, stats };
   }, [startDate, endDate, holidays, vacations, selectedTeam, employees, teams, teamSchedules, selectedDepartment]);
-
-  const isDateInVacation = (date) => {
-    if (!vacations || vacations.length === 0) return false;
-
-    const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
-
-    return vacations.some((vacation) => {
-      if (!vacation.start_date || !vacation.end_date) return false;
-      const start = new Date(vacation.start_date);
-      const end = new Date(vacation.end_date);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(0, 0, 0, 0);
-
-      return checkDate >= start && checkDate <= end;
-    });
-  };
-
-  const isDateHoliday = (date) => {
-    if (!holidays || holidays.length === 0) return false;
-    const dateStr = format(date, 'yyyy-MM-dd');
-    // Assuming 'date' is the property holding the date string for holidays
-    return holidays.some((h) => h.date && format(new Date(h.date), 'yyyy-MM-dd') === dateStr);
-  };
 
   if (workingIntervals.length === 0) {
     return (
