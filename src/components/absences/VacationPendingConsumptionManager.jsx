@@ -11,16 +11,12 @@ import { toast } from "sonner";
 
 export default function VacationPendingConsumptionManager({ employees = [] }) {
   const queryClient = useQueryClient();
-  const currentYear = new Date().getFullYear();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [daysToConsume, setDaysToConsume] = useState("");
 
   const { data: balances = [] } = useQuery({
     queryKey: ["vacationPendingBalances"],
-    queryFn: () =>
-      base44.entities.VacationPendingBalance.filter({
-        anio: currentYear,
-      }),
+    queryFn: () => base44.entities.VacationPendingBalance.list(),
     initialData: [],
   });
 
@@ -31,21 +27,40 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
       const employee = employees.find((e) => e.id === balance.employee_id);
       if (!employee) return;
 
-      const diasDisponibles =
-        (balance.dias_pendientes || 0) - (balance.dias_consumidos || 0);
+      const diasPendientes = balance.dias_pendientes || 0;
+      const diasConsumidos = balance.dias_consumidos || 0;
 
-      if (diasDisponibles <= 0) return;
+      const existing = map.get(balance.employee_id);
 
-      map.set(balance.employee_id, {
-        ...balance,
-        employee,
-        dias_disponibles: diasDisponibles,
-      });
+      if (existing) {
+        const totalPendientes = existing.dias_pendientes + diasPendientes;
+        const totalConsumidos = existing.dias_consumidos + diasConsumidos;
+        const totalDisponibles = totalPendientes - totalConsumidos;
+
+        map.set(balance.employee_id, {
+          ...existing,
+          dias_pendientes: totalPendientes,
+          dias_consumidos: totalConsumidos,
+          dias_disponibles: totalDisponibles,
+        });
+      } else {
+        const diasDisponibles = diasPendientes - diasConsumidos;
+
+        if (diasDisponibles <= 0) return;
+
+        map.set(balance.employee_id, {
+          employee_id: balance.employee_id,
+          employee,
+          dias_pendientes: diasPendientes,
+          dias_consumidos: diasConsumidos,
+          dias_disponibles: diasDisponibles,
+        });
+      }
     });
 
-    return Array.from(map.values()).sort(
-      (a, b) => b.dias_disponibles - a.dias_disponibles
-    );
+    return Array.from(map.values())
+      .filter((b) => b.dias_disponibles > 0)
+      .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
 
   const selectedBalance = useMemo(() => {
@@ -75,18 +90,40 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
         );
       }
 
-      const updatedConsumed =
-        (selectedBalance.dias_consumidos || 0) + amount;
-      const updatedAvailable =
-        (selectedBalance.dias_pendientes || 0) - updatedConsumed;
+      let remaining = amount;
 
-      await base44.entities.VacationPendingBalance.update(
-        selectedBalance.id,
-        {
-          dias_consumidos: updatedConsumed,
-          dias_disponibles: updatedAvailable,
+      const employeeBalances = balances
+        .filter((b) => b.employee_id === selectedBalance.employee_id)
+        .sort((a, b) => {
+          const yearA = typeof a.anio === "number" ? a.anio : parseInt(a.anio || "0", 10);
+          const yearB = typeof b.anio === "number" ? b.anio : parseInt(b.anio || "0", 10);
+          return yearA - yearB;
+        });
+
+      for (const balance of employeeBalances) {
+        if (remaining <= 0) {
+          break;
         }
-      );
+
+        const diasPendientes = balance.dias_pendientes || 0;
+        const diasConsumidos = balance.dias_consumidos || 0;
+        const disponiblesFila = diasPendientes - diasConsumidos;
+
+        if (disponiblesFila <= 0) {
+          continue;
+        }
+
+        const toConsume = Math.min(remaining, disponiblesFila);
+        const updatedConsumidos = diasConsumidos + toConsume;
+        const updatedDisponibles = diasPendientes - updatedConsumidos;
+
+        await base44.entities.VacationPendingBalance.update(balance.id, {
+          dias_consumidos: updatedConsumidos,
+          dias_disponibles: updatedDisponibles,
+        });
+
+        remaining -= toConsume;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
@@ -166,4 +203,3 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
     </Card>
   );
 }
-

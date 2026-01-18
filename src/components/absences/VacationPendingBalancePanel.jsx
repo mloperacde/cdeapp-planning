@@ -10,29 +10,64 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 export default function VacationPendingBalancePanel({ employees = [], compact = false }) {
-  const currentYear = new Date().getFullYear();
-
   const { data: balances = [] } = useQuery({
-    queryKey: ['vacationPendingBalances'],
-    queryFn: () => base44.entities.VacationPendingBalance.filter({ anio: currentYear }),
+    queryKey: ["vacationPendingBalances"],
+    queryFn: () => base44.entities.VacationPendingBalance.list(),
     initialData: [],
   });
 
   const employeesWithBalance = useMemo(() => {
     if (!Array.isArray(employees) || employees.length === 0 || !Array.isArray(balances)) return [];
-    
-    return balances
-      .map(balance => {
-        const employee = employees.find(e => e?.id === balance.employee_id);
-        const diasDisponibles = (balance.dias_pendientes || 0) - (balance.dias_consumidos || 0);
-        
-        return {
+
+    const map = new Map();
+
+    balances.forEach((balance) => {
+      const employee = employees.find((e) => e?.id === balance.employee_id);
+      if (!employee) return;
+
+      const diasPendientes = balance.dias_pendientes || 0;
+      const diasConsumidos = balance.dias_consumidos || 0;
+
+      const existing = map.get(balance.employee_id);
+
+      if (existing) {
+        const totalPendientes = existing.dias_pendientes + diasPendientes;
+        const totalConsumidos = existing.dias_consumidos + diasConsumidos;
+        const totalDisponibles = totalPendientes - totalConsumidos;
+
+        const detalleExistente = Array.isArray(existing.detalle_ausencias) ? existing.detalle_ausencias : [];
+        const detalleNuevo = Array.isArray(balance.detalle_ausencias) ? balance.detalle_ausencias : [];
+
+        map.set(balance.employee_id, {
+          ...existing,
+          dias_pendientes: totalPendientes,
+          dias_consumidos: totalConsumidos,
+          dias_disponibles: totalDisponibles,
+          detalle_ausencias: [...detalleExistente, ...detalleNuevo],
+        });
+      } else {
+        const diasDisponibles = diasPendientes - diasConsumidos;
+
+        if (diasDisponibles <= 0) return;
+
+        map.set(balance.employee_id, {
           ...balance,
           employee,
-          dias_disponibles: diasDisponibles
-        };
-      })
-      .filter(b => b.employee && b.dias_disponibles > 0 && Array.isArray(b.detalle_ausencias) && b.detalle_ausencias.length > 0)
+          dias_pendientes: diasPendientes,
+          dias_consumidos: diasConsumidos,
+          dias_disponibles: diasDisponibles,
+          detalle_ausencias: Array.isArray(balance.detalle_ausencias) ? balance.detalle_ausencias : [],
+        });
+      }
+    });
+
+    return Array.from(map.values())
+      .filter(
+        (b) =>
+          b.dias_disponibles > 0 &&
+          Array.isArray(b.detalle_ausencias) &&
+          b.detalle_ausencias.length > 0
+      )
       .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
 
@@ -46,7 +81,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarDays className="w-5 h-5 text-orange-600" />
-            Saldo Vacaciones Pendientes {currentYear}
+            Saldo Vacaciones Pendientes
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -63,9 +98,14 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
 
           {employeesWithBalance.length > 0 ? (
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {employeesWithBalance.slice(0, 5).map(balance => (
-                <div key={balance.id} className="flex items-center justify-between p-2 bg-white rounded-lg hover:bg-orange-50 transition-colors">
-                  <span className="text-sm font-medium text-slate-900">{balance.employee?.nombre}</span>
+              {employeesWithBalance.slice(0, 5).map((balance) => (
+                <div
+                  key={balance.employee_id}
+                  className="flex items-center justify-between p-2 bg-white rounded-lg hover:bg-orange-50 transition-colors"
+                >
+                  <span className="text-sm font-medium text-slate-900">
+                    {balance.employee?.nombre}
+                  </span>
                   <Badge className="bg-orange-600 text-white font-semibold">
                     {balance.dias_disponibles} días
                   </Badge>
@@ -73,7 +113,11 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
               ))}
               {employeesWithBalance.length > 5 && (
                 <Link to={createPageUrl("AbsenceManagement")}>
-                  <Button variant="ghost" size="sm" className="w-full text-orange-700 hover:text-orange-800 hover:bg-orange-50">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-orange-700 hover:text-orange-800 hover:bg-orange-50"
+                  >
                     Ver todos ({employeesWithBalance.length})
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
@@ -96,7 +140,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <CalendarDays className="w-6 h-6 text-orange-600" />
-            Saldo de Vacaciones Pendientes {currentYear}
+            Saldo de Vacaciones Pendientes
           </CardTitle>
           <div className="flex items-center gap-4">
             <div className="text-right">
@@ -115,10 +159,13 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-amber-900 mb-1">¿Qué son las Vacaciones Pendientes?</h4>
+              <h4 className="font-semibold text-amber-900 mb-1">
+                ¿Qué son las Vacaciones Pendientes?
+              </h4>
               <p className="text-sm text-amber-800">
-                Son días de vacaciones colectivas que no fueron disfrutados porque el empleado estaba ausente 
-                (ej. baja médica, permiso sin sueldo). Estos días se suman a su saldo anual de vacaciones.
+                Son días de vacaciones colectivas que no fueron disfrutados porque el
+                empleado estaba ausente (ej. baja médica, permiso sin sueldo). Estos días
+                se suman a su saldo anual de vacaciones.
               </p>
             </div>
           </div>
@@ -127,16 +174,23 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         {employeesWithBalance.length === 0 ? (
           <div className="text-center py-12">
             <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">No hay empleados con saldo de vacaciones pendientes para {currentYear}</p>
+            <p className="text-slate-500">
+              No hay empleados con saldo de vacaciones pendientes
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {employeesWithBalance.map(balance => (
-              <Card key={balance.id} className="border-2 border-orange-100 hover:border-orange-300 transition-colors">
+            {employeesWithBalance.map((balance) => (
+              <Card
+                key={balance.employee_id}
+                className="border-2 border-orange-100 hover:border-orange-300 transition-colors"
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="font-bold text-slate-900 mb-1">{balance.employee?.nombre}</h4>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        {balance.employee?.nombre}
+                      </h4>
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline" className="text-xs">
                           {balance.employee?.departamento || "Sin departamento"}
@@ -147,19 +201,25 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                           </Badge>
                         )}
                       </div>
-                      
+
                       <div className="grid grid-cols-3 gap-2 text-sm mt-3">
                         <div className="bg-orange-50 p-2 rounded">
                           <p className="text-xs text-orange-700">Pendientes</p>
-                          <p className="font-bold text-orange-900">{balance.dias_pendientes} días</p>
+                          <p className="font-bold text-orange-900">
+                            {balance.dias_pendientes} días
+                          </p>
                         </div>
                         <div className="bg-green-50 p-2 rounded">
                           <p className="text-xs text-green-700">Consumidos</p>
-                          <p className="font-bold text-green-900">{balance.dias_consumidos} días</p>
+                          <p className="font-bold text-green-900">
+                            {balance.dias_consumidos} días
+                          </p>
                         </div>
                         <div className="bg-blue-50 p-2 rounded">
                           <p className="text-xs text-blue-700">Disponibles</p>
-                          <p className="font-bold text-blue-900">{balance.dias_disponibles} días</p>
+                          <p className="font-bold text-blue-900">
+                            {balance.dias_disponibles} días
+                          </p>
                         </div>
                       </div>
 
@@ -170,13 +230,19 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                           </summary>
                           <div className="mt-2 space-y-2 pl-4">
                             {balance.detalle_ausencias.map((det, idx) => (
-                              <div key={idx} className="text-xs p-2 bg-slate-50 rounded border">
+                              <div
+                                key={idx}
+                                className="text-xs p-2 bg-slate-50 rounded border"
+                              >
                                 <p className="font-medium">{det.tipo_ausencia}</p>
                                 <p className="text-slate-600">
-                                  {det.dias_coincidentes} día(s) coincidentes con vacaciones
+                                  {det.dias_coincidentes} día(s) coincidentes con
+                                  vacaciones
                                 </p>
                                 {det.periodos_vacaciones?.map((vac, vIdx) => (
-                                  <p key={vIdx} className="text-slate-500 ml-2">• {vac.nombre}</p>
+                                  <p key={vIdx} className="text-slate-500 ml-2">
+                                    • {vac.nombre}
+                                  </p>
                                 ))}
                               </div>
                             ))}
@@ -184,7 +250,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                         </details>
                       )}
                     </div>
-                    
+
                     <Badge className="bg-orange-600 text-white text-lg px-4 py-2 ml-4">
                       +{balance.dias_disponibles}
                     </Badge>
