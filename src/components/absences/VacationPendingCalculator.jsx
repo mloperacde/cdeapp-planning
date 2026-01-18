@@ -20,6 +20,9 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
   const absenceEnd = rawEnd;
   const year = absenceStart.getFullYear();
 
+  // Preparar conjunto de fechas festivas para búsqueda rápida
+  const holidaySet = new Set(holidays.map(h => format(new Date(h.date), 'yyyy-MM-dd')));
+
   // Obtener todos los días del rango de ausencia
   const absenceDays = eachDayOfInterval({ start: absenceStart, end: absenceEnd });
 
@@ -33,7 +36,9 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
 
     // Verificar si la ausencia se solapa con este período de vacaciones
     const overlap = absenceDays.filter(day => {
-      return day >= vacStart && day <= vacEnd && !isWeekend(day);
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const isHoliday = holidaySet.has(dateStr);
+      return day >= vacStart && day <= vacEnd && !isWeekend(day) && !isHoliday;
     });
 
     if (overlap.length > 0) {
