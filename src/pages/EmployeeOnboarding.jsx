@@ -77,8 +77,14 @@ export default function EmployeeOnboardingPage() {
   });
 
   const { data: trainingResources = [] } = useQuery({
-    queryKey: ['onboardingTrainingResources'],
-    queryFn: () => base44.entities.OnboardingTrainingResource.list('-created_at'),
+    queryKey: ["onboardingTrainingResources"],
+    queryFn: async () => {
+      const entity = base44.entities.OnboardingTrainingResource;
+      if (!entity || typeof entity.list !== "function") {
+        return [];
+      }
+      return entity.list("-created_at");
+    },
     initialData: [],
   });
 
@@ -90,9 +96,18 @@ export default function EmployeeOnboardingPage() {
   });
 
   const createTrainingResourceMutation = useMutation({
-    mutationFn: (data) => base44.entities.OnboardingTrainingResource.create(data),
+    mutationFn: async (data) => {
+      const entity = base44.entities.OnboardingTrainingResource;
+      if (!entity || typeof entity.create !== "function") {
+        console.warn("OnboardingTrainingResource entity is not configured in Base44");
+        return null;
+      }
+      return entity.create(data);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['onboardingTrainingResources'] });
+      queryClient.invalidateQueries({
+        queryKey: ["onboardingTrainingResources"],
+      });
     },
   });
 
