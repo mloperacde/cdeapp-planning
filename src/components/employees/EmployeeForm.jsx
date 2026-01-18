@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, Suspense, lazy } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -24,9 +24,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { differenceInDays, differenceInMonths, differenceInYears, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle } from "lucide-react";
-import LockerAssignmentPanel from "./LockerAssignmentPanel";
-import AbsenteeismCard from "./AbsenteeismCard";
 import { toast } from "sonner";
+
+const LockerAssignmentPanel = lazy(() => import("./LockerAssignmentPanel"));
+const AbsenteeismCard = lazy(() => import("./AbsenteeismCard"));
 
 export default function EmployeeForm({ employee, machines, onClose }) {
   // Define initial state for new employees, including all possible machine fields
@@ -599,7 +600,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
             <TabsContent value="taquilla" className="space-y-4 mt-4">
               {employee?.id ? (
-                <LockerAssignmentPanel employee={employee} />
+                <Suspense fallback={<div className="p-4 text-center">Cargando panel de taquilla...</div>}>
+                  <LockerAssignmentPanel employee={employee} />
+                </Suspense>
               ) : (
                 <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
                   <AlertCircle className="w-12 h-12 text-blue-600 mx-auto mb-3" />
@@ -1025,7 +1028,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
             <TabsContent value="absentismo" className="space-y-4">
               {employee?.id ? (
-                <AbsenteeismCard employee={employee} />
+                <Suspense fallback={<div className="p-4 text-center">Cargando datos de absentismo...</div>}>
+                  <AbsenteeismCard employee={employee} />
+                </Suspense>
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
