@@ -1,6 +1,7 @@
 import Layout from "../Layout";
 
 import AbsenceManagement from "./AbsenceManagement";
+import AbsenceTypeConfig from "./AbsenceTypeConfig";
 import AdvancedConfiguration from "./AdvancedConfiguration";
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
 import AppUserManagement from "./AppUserManagement";
@@ -65,6 +66,7 @@ const queryClient = new QueryClient({
 const PAGES = {
   Dashboard: Dashboard,
   AbsenceManagement: AbsenceManagement,
+  AbsenceTypeConfig: AbsenceTypeConfig,
   AdvancedConfiguration: AdvancedConfiguration,
   AdvancedHRDashboard: AdvancedHRDashboard,
   ArticleManagement: ArticleManagement,
@@ -164,6 +166,8 @@ function PagesContent() {
                 <Route path="/CommitteeManagement" element={<CommitteeManagement />} />
 
                 <Route path="/Configuration" element={<Configuration />} />
+                <Route path="/AbsenceTypeConfig" element={<AbsenceTypeConfig />} />
+                <Route path="/AbsenceConfigurationTab" element={<AbsenceTypeConfig />} />
                 <Route path="/DailyPlanning" element={<DailyPlanning />} />
                 <Route path="/DailyShiftPlanning" element={<DailyShiftPlanning />} />
                 
