@@ -28,8 +28,6 @@ import AbsenceForm from "./AbsenceForm";
 
 const EMPTY_ARRAY = [];
 
-import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
-
 export default function UnifiedAbsenceManager(props) {
   const { sourceContext = "rrhh" } = props;
   const [showForm, setShowForm] = useState(false);
