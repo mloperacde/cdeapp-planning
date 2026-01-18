@@ -46,7 +46,6 @@ export default function Layout({ children, currentPageName }) {
 
   // Dark mode ya no se maneja aquí - lo hace ThemeProvider
 
-  // Estructura del menú organizada por categorías
   const MENU_STRUCTURE = [
     // Principal
     { name: 'Dashboard', icon: Home, path: '/Dashboard', category: 'Principal' },
@@ -98,8 +97,11 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Breaks', icon: Calendar, path: '/Breaks', category: 'Revisión de páginas' },
   ];
 
-  // Agrupar items por categoría
-  const groupedMenu = MENU_STRUCTURE.reduce((acc, item) => {
+  const menuItems = isAdmin 
+    ? MENU_STRUCTURE 
+    : MENU_STRUCTURE.filter(item => item.category !== 'Configuración');
+
+  const groupedMenu = menuItems.reduce((acc, item) => {
     const category = item.category || 'Otros';
     if (!acc[category]) acc[category] = [];
     acc[category].push(item);

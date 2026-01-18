@@ -2,18 +2,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Package, ArrowLeft, UserCog, FolderOpen, Activity, Database, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import AdminOnly from "@/components/security/AdminOnly";
 export default function ConfigurationPage() {
   const configModules = {
     rrhh: {
       title: "Recursos Humanos",
       modules: [
-        {
-          title: "Tipos de Ausencias",
-          description: "Configura tipos de ausencias y permisos",
-          icon: Calendar,
-          url: "/AbsenceManagement?tab=config",
-          color: "red"
-        },
         {
           title: "Ausencias Avanzado",
           description: "Flujos de aprobación, notificaciones y acumulación",
@@ -41,13 +35,6 @@ export default function ConfigurationPage() {
           icon: FileText,
           url: "/LockerManagement",
           color: "indigo"
-        },
-        {
-          title: "Base de Datos Maestra",
-          description: "Importar, sincronizar y gestionar archivo maestro",
-          icon: Users,
-          url: "/MasterEmployeeDatabase",
-          color: "blue"
         },
         {
           title: "Auditoría de Datos",
@@ -116,6 +103,18 @@ export default function ConfigurationPage() {
           icon: Database,
           url: "/AdvancedConfiguration?tab=machine-audit",
           color: "purple"
+        }
+      ]
+    },
+    maestras: {
+      title: "Bases de Datos Maestras",
+      modules: [
+        {
+          title: "Base de Datos Maestra de Empleados",
+          description: "Importar, sincronizar y gestionar archivo maestro de empleados",
+          icon: Users,
+          url: "/MasterEmployeeDatabase",
+          color: "blue"
         },
         {
           title: "Archivo Maestro de Máquinas",
@@ -123,6 +122,13 @@ export default function ConfigurationPage() {
           icon: Database,
           url: "/MachineMaster",
           color: "blue"
+        },
+        {
+          title: "Tipos de Ausencias",
+          description: "Configura la base de datos maestra de tipos de ausencia",
+          icon: Calendar,
+          url: "/AbsenceTypeConfig",
+          color: "red"
         }
       ]
     },
@@ -212,55 +218,57 @@ export default function ConfigurationPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to="/Dashboard">
-            <Button type="button" variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al Dashboard
-            </Button>
-          </Link>
-        </div>
+    <AdminOnly message="Solo administradores pueden acceder al módulo de configuración">
+      <div className="p-6 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <Link to="/Dashboard">
+              <Button type="button" variant="ghost" className="mb-2">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver al Dashboard
+              </Button>
+            </Link>
+          </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <Settings className="w-8 h-8 text-blue-600" />
-            Configuración del Sistema
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Accede a los diferentes módulos de configuración
-          </p>
-        </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              <Settings className="w-8 h-8 text-blue-600" />
+              Configuración del Sistema
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
+              Accede a los diferentes módulos de configuración
+            </p>
+          </div>
 
-        <div className="space-y-8">
-          {Object.entries(configModules).map(([key, category]) => (
-            <div key={key}>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4">{category.title}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {category.modules.map((module) => {
-                  const Icon = module.icon;
-                  return (
-                    <Link key={module.title} to={module.url}>
-                      <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm cursor-pointer group">
-                        <CardContent className="p-4">
-                          <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                            <Icon className="w-6 h-6 text-white" />
-                          </div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 group-hover:text-blue-600 transition-colors">
-                            {module.title}
-                          </h3>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">{module.description}</p>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  );
-                })}
+          <div className="space-y-8">
+            {Object.entries(configModules).map(([key, category]) => (
+              <div key={key}>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4">{category.title}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {category.modules.map((module) => {
+                    const Icon = module.icon;
+                    return (
+                      <Link key={module.title} to={module.url}>
+                        <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm cursor-pointer group">
+                          <CardContent className="p-4">
+                            <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                              <Icon className="w-6 h-6 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 group-hover:text-blue-600 transition-colors">
+                              {module.title}
+                            </h3>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">{module.description}</p>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </AdminOnly>
   );
 }
