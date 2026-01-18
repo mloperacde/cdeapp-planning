@@ -6,12 +6,7 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
     return null;
   }
 
-  const now = new Date();
   const absenceStart = new Date(absence.fecha_inicio);
-
-  if (absenceStart > now) {
-    return null;
-  }
 
   let rawEnd;
 
@@ -21,7 +16,7 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
     rawEnd = new Date("2099-12-31");
   }
 
-  const absenceEnd = rawEnd > now ? now : rawEnd;
+  const absenceEnd = rawEnd;
   const year = absenceStart.getFullYear();
 
   // Obtener todos los días del rango de ausencia
