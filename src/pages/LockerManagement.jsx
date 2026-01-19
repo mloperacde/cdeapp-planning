@@ -272,8 +272,12 @@ export default function LockerManagementPage() {
     mutationFn: async () => {
       const errores = [];
       
-      for (const [employeeId, data] of Object.entries(editingAssignments)) {
-        const existing = lockerAssignments.find(la => la.employee_id === employeeId);
+      for (const [employeeIdStr, data] of Object.entries(editingAssignments)) {
+        // CRITICAL FIX: employeeId from Object.entries is string, but data IDs might be numbers
+        // Use loose equality or explicit conversion
+        const employeeId = employees.find(e => e.id == employeeIdStr)?.id || employeeIdStr;
+        
+        const existing = lockerAssignments.find(la => la.employee_id == employeeId);
         // Resolver requiere_taquilla combinando edición y estado actual
         const requiresLocker = data.requiere_taquilla !== undefined 
           ? data.requiere_taquilla 
@@ -291,20 +295,20 @@ export default function LockerManagementPage() {
         const identificadoresValidos = config?.identificadores_taquillas || [];
         
         if (identificadoresValidos.length > 0 && !identificadoresValidos.includes(numeroAUsar)) {
-          const emp = employees.find(e => e.id === employeeId);
+          const emp = employees.find(e => e.id == employeeId);
           errores.push(`${emp?.nombre || 'Empleado'}: El identificador "${numeroAUsar}" no existe en ${vestuario}`);
           continue;
         }
         
         const duplicado = lockerAssignments.find(la => 
           la.vestuario === vestuario &&
-          la.numero_taquilla_actual?.replace(/['"'']/g, '').trim() === numeroAUsar &&
-          la.employee_id !== employeeId &&
+          la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroAUsar &&
+          la.employee_id != employeeId &&
           la.requiere_taquilla !== false
         );
 
         if (duplicado) {
-          const emp1 = employees.find(e => e.id === employeeId);
+          const emp1 = employees.find(e => e.id == employeeId);
           const emp2 = employees.find(e => e.id === duplicado.employee_id);
           errores.push(`⚠️ Taquilla "${numeroAUsar}" en ${vestuario}:\n   Ya asignada a: ${emp2?.nombre}\n   No se puede asignar a: ${emp1?.nombre}`);
         }
