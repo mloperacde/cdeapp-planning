@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Bell, MessageSquare, Calendar, FileText, AlertCircle, 
+  Bell, MessageSquare, Calendar, FileText, 
   CheckCircle2, Clock, X 
 } from "lucide-react";
 import { format } from "date-fns";

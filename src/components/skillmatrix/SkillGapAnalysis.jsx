@@ -130,8 +130,6 @@ export default function SkillGapAnalysis({ department = "all" }) {
       .sort((a, b) => a.coverage - b.coverage);
   }, [skills, employeeSkills, processSkillRequirements]);
 
-  const getSkillName = (skillId) => skills.find(s => s.id === skillId)?.nombre || "Desconocida";
-
   return (
     <div className="space-y-6">
       {/* Resumen de Riesgo */}

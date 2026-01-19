@@ -1,8 +1,7 @@
-import React from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function MaintenanceWorkOrderPDF({ maintenance, machine, employees, maintenanceType }) {
+export default function MaintenanceWorkOrderPDF({ order: maintenance, machine, employees }) {
   const getEmployeeName = (employeeId) => {
     if (!employeeId) return "No asignado";
     const emp = employees?.find(e => e.id === employeeId);

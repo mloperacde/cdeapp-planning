@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { format, isWithinInterval, isSameDay, startOfWeek } from "date-fns";
+import { format, isWithinInterval, startOfWeek } from "date-fns";
 import TimeSlot from "./TimeSlot";
 import { AlertCircle, Clock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

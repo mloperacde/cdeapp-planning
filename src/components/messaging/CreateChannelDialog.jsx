@@ -1,12 +1,13 @@
-import React, { useState, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { X } from "lucide-react";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -14,9 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import EmployeeSelect from "../common/EmployeeSelect";
-import { X } from "lucide-react";
 
 export default function CreateChannelDialog({ onClose, employees, currentEmployee }) {
   const [tipo, setTipo] = useState("Equipo");

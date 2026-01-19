@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Building2, Briefcase, Clock, RefreshCw, FileSpreadsheet, ArrowLeft, Gavel, FileCode, Users, Shield, Activity, MessageSquare, Database, CalendarDays, Wrench } from "lucide-react";
+import { Settings, Building2, Clock, RefreshCw, FileSpreadsheet, ArrowLeft, Gavel, FileCode, Users, Shield, Activity, MessageSquare, Database, CalendarDays, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";

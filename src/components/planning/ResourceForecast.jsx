@@ -1,7 +1,7 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, TrendingDown, TrendingUp } from "lucide-react";
 import { addDays, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -97,8 +97,6 @@ export default function ResourceForecast({ orders, processes, machineProcesses, 
   }, [days, orders, processes, machineProcesses, employees, selectedTeam]);
 
   // Aggregate totals
-  const totalDemand = forecast.reduce((sum, d) => sum + d.demand, 0);
-  const totalSupply = forecast.reduce((sum, d) => sum + d.supply, 0);
   const avgBalance = forecast.length ? (forecast.reduce((sum, d) => sum + d.balance, 0) / forecast.length).toFixed(1) : 0;
 
   return (

@@ -1,12 +1,12 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { addDays, format, differenceInDays, isSameDay, parseISO, isWeekend } from "date-fns";
+import { addDays, format, isSameDay, parseISO, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertCircle, CalendarClock, GripVertical, AlertTriangle } from "lucide-react";
+import { AlertCircle, CalendarClock } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-export default function PlanningGantt({ orders = [], machines = [], processes = [], dateRange, onEditOrder, onOrderDrop, holidays = [] }) {
+export default function PlanningGantt({ orders = [], machines = [], dateRange, onEditOrder, onOrderDrop, holidays = [] }) {
   // 1. Calculate Working Days (Skip weekends and holidays)
   const days = useMemo(() => {
     const start = new Date(dateRange.start);
@@ -225,7 +225,6 @@ export default function PlanningGantt({ orders = [], machines = [], processes = 
                      const durationCols = effectiveEndIndex - effectiveStartIndex + 1;
                      if (durationCols <= 0) return null;
 
-                     const process = processes.find(p => p.id === order.process_id);
                      const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
 
                      return (

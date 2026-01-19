@@ -1,7 +1,5 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Bug, Users, UserX, CheckCircle2 } from "lucide-react";
+import { Bug, CheckCircle2, UserX } from "lucide-react";
 import { format } from "date-fns";
 
 export default function AvailabilityDebugPanel({ employees, absences, selectedDate }) {

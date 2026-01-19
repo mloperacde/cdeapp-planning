@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAppData } from "../data/DataProvider";
@@ -38,8 +38,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     incluir_en_planning: true,
   });
   const queryClient = useQueryClient();
-  const { goBack } = useNavigationHistory();
-  const employeeMutation = useEntityMutation('EmployeeMasterDatabase');
 
   // USAR DATAPROVIDER PARA MÁQUINAS Y EQUIPOS - evita duplicación y problemas de timing
   const { teams = [], machines: sharedMachines = [] } = useAppData();

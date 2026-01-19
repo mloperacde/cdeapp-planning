@@ -1,6 +1,6 @@
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, FileUp, AlertCircle, CheckCircle2, Loader2, ArrowRight, Settings2, Save } from "lucide-react";
+import { FileUp, Settings2, Save } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import {
@@ -12,12 +12,9 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const SYSTEM_FIELDS = [
   { key: 'order_number', label: 'Orden (ID)', required: true },
@@ -36,7 +33,7 @@ const SYSTEM_FIELDS = [
   { key: 'customer_order_reference', label: 'Su Pedido' },
 ];
 
-export default function WorkOrderImporter({ machines, processes, onImportSuccess }) {
+export default function WorkOrderImporter({ machines, processes: _processes, onImportSuccess }) {
   const fileInputRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState('upload'); // upload, mapping, processing, result
@@ -226,7 +223,6 @@ export default function WorkOrderImporter({ machines, processes, onImportSuccess
           const existing = existingOrderMap.get(orderNumber);
           
           // High Priority (1-2) Logic: Put in backlog (no start_date)
-          const isHighPriority = payload.priority <= 2;
           // For new orders: if high priority -> no start date. else -> today (or also backlog? user said "extract... to chips", implies backlog)
           // Actually, let's put ALL imported orders in backlog (no start_date) unless user manually schedules.
           // BUT previous logic set start_date=today for low priority. User's new prompt implies a backlog/chip workflow.

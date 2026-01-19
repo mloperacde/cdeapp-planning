@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Download, FileText, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 export default function HRReportExporter() {
   const [reportType, setReportType] = useState('absences');
@@ -46,7 +45,7 @@ export default function HRReportExporter() {
     link.click();
   };
 
-  const exportToPDF = async (data, title) => {
+  const exportToPDF = async (_data, _title) => {
     toast.info('Exportación PDF en desarrollo - Próximamente disponible');
   };
 

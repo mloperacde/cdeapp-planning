@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserCog, Save, UserCheck, User, Users, History, MapPin, Sparkles, Loader2, AlertCircle, Wand2 } from "lucide-react";
+import { Save, UserCheck, User, Users, History, MapPin, Sparkles, Loader2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -21,7 +21,7 @@ export default function IdealAssignmentView() {
   const [assignments, setAssignments] = useState({});
   const [historyOpen, setHistoryOpen] = useState(false);
   const [currentMachineHistory, setCurrentMachineHistory] = useState([]);
-  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState(null);
   
   const queryClient = useQueryClient();
@@ -255,7 +255,7 @@ export default function IdealAssignmentView() {
   }, [machines, machineAssignments, currentTeam, employees]); // Added employees dependency
 
   // 6. Get Candidates for Dropdown
-  const getCandidatesForDropdown = (machineId, roleType, currentMachineData) => {
+  const getCandidatesForDropdown = (machineId, roleType, _currentMachineData) => {
       // Include team employees + fixed shift employees from FABRICACION
       if (!currentTeam) return [];
 

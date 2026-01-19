@@ -1,6 +1,5 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   BarChart,
   Bar,
@@ -12,13 +11,10 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  LineChart,
-  Line,
+  Cell
 } from "recharts";
-import { Clock, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
-import { differenceInDays, format } from "date-fns";
-import { es } from "date-fns/locale";
+import { CheckCircle2, Clock, TrendingUp, AlertCircle } from "lucide-react";
+import { differenceInDays } from "date-fns";
 
 export default function OnboardingDashboard({ onboardings, employees }) {
   const stats = useMemo(() => {

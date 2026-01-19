@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,12 +64,6 @@ export default function TrainingModuleManager({ onClose }) {
     initialData: [],
   });
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    initialData: [],
-  });
-
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       if (editingModule) {
@@ -91,8 +85,6 @@ export default function TrainingModuleManager({ onClose }) {
       toast.success("Módulo eliminado");
     },
   });
-
-  const departments = [...new Set(employees.map(e => e.departamento).filter(Boolean))];
 
   const handleEdit = (module) => {
     setEditingModule(module);

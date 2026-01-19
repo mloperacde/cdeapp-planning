@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Bell, Check, Trash2, Settings } from "lucide-react";
@@ -22,7 +22,7 @@ export default function NotificationBell() {
   const queryClient = useQueryClient();
 
   // Usar datos compartidos del provider
-  const { user, currentEmployee: employee } = useAppData();
+  const { currentEmployee: employee } = useAppData();
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['pushNotifications', employee?.id],

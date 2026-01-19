@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,6 @@ import { format, addDays, isWeekend } from "date-fns";
 export default function ScheduleOrderDialog({ open, onClose, order, dropDate, processes, machineProcesses, onConfirm, holidays = [] }) {
   const [processId, setProcessId] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [quantity, setQuantity] = useState(0);
-  const [cadence, setCadence] = useState(0);
   const [estimatedHours, setEstimatedHours] = useState(0);
 
   // Helper to calculate end date skipping weekends and holidays
@@ -96,8 +94,6 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
   useEffect(() => {
     if (order) {
       setProcessId(order.process_id || "");
-      setQuantity(order.quantity || 0);
-      setCadence(order.production_cadence || 0);
       setEstimatedHours(order.estimated_duration || 0);
       
       const hours = order.estimated_duration || 

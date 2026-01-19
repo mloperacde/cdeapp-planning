@@ -1,6 +1,5 @@
-import React from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Award } from "lucide-react";
+import { Award } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 

@@ -5,9 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
     CheckCircle2, UserX, RefreshCw, KeyRound, Clock, 
-    Sunrise, Sunset, Users, Calendar, 
-    Cake, AlertTriangle, ArrowLeftRight, Coffee, MessageSquare, 
-    UserCog, UsersRound, TrendingUp
+    Sunrise, Sunset, Users, 
+    UserCog, UsersRound, TrendingUp,
+    MessageSquare, ArrowLeftRight, Coffee, Cake, Calendar, AlertTriangle
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -159,7 +159,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam }) {
 }
 
 // Widget: Modules Grid
-export function ModulesWidget({ pendingSwaps, lockersWithoutNumber, setActiveView }) {
+export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
     const modules = [
         {
             title: "Planificación Equipos",

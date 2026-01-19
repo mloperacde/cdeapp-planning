@@ -132,7 +132,6 @@ export default function TrainingNeedsView({ department = "all" }) {
 
   const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || "Desconocido";
   const getSkillName = (id) => skills.find(s => s.id === id)?.nombre || "Desconocida";
-  const getProcessName = (id) => processes.find(p => p.id === id)?.nombre || "Desconocido";
 
   const filteredTrainingNeeds = trainingNeeds.filter(tn => {
     if (department === "all") return true;

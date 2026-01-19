@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  User, Mail, Phone, MapPin, AlertCircle, UserCheck, Building,
+  Mail, MapPin, AlertCircle, Building,
   CheckCircle2, Clock, XCircle, FileText
 } from "lucide-react";
 import { toast } from "sonner";

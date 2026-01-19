@@ -1,8 +1,7 @@
-import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { FileText, Image } from "lucide-react";
+import { FileText } from "lucide-react";
 
 export default function MessageList({ messages, currentEmployee, employees }) {
   const getSenderName = (senderId) => {

@@ -27,10 +27,8 @@ import {
   ChevronLeft,
   Save,
   Upload,
-  Trash2,
   Send,
   PenTool,
-  GraduationCap,
   Settings
 } from "lucide-react";
 import { toast } from "sonner";
@@ -146,7 +144,7 @@ export default function OnboardingWizard({ onboarding, onClose }) {
       };
       setFormData({ ...formData, documentos_pendientes: newDocs });
       toast.success("Documento subido correctamente");
-    } catch (error) {
+    } catch {
       toast.error("Error al subir documento");
     } finally {
       setUploading(false);
@@ -194,7 +192,7 @@ export default function OnboardingWizard({ onboarding, onClose }) {
         },
       });
       toast.success("Taquilla asignada correctamente");
-    } catch (error) {
+    } catch {
       toast.error("Error al asignar taquilla");
     }
   };
@@ -246,7 +244,7 @@ export default function OnboardingWizard({ onboarding, onClose }) {
       });
 
       toast.success("Notificación enviada correctamente");
-    } catch (error) {
+    } catch {
       toast.error("Error al enviar notificación");
     }
   };
