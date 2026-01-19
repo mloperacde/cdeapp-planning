@@ -14,6 +14,11 @@ import TrainingNeedsView from "./TrainingNeedsView";
 import DepartmentPositionSkillConfig from "./DepartmentPositionSkillConfig";
 import EmployeeSkillsView from "../team/EmployeeSkillsView";
 
+const normalizeString = (str) => {
+  if (!str) return "";
+  return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+};
+
 export default function DepartmentSkillMatrix({ 
   department, 
   title, 
@@ -54,7 +59,7 @@ export default function DepartmentSkillMatrix({
   // Filtered Data for Stats
   const deptEmployees = useMemo(() => {
     return employees.filter(e => {
-        const matchesDept = department === "all" || (e.departamento && e.departamento.toUpperCase() === department.toUpperCase());
+        const matchesDept = department === "all" || (e.departamento && normalizeString(e.departamento) === normalizeString(department));
         const matchesManager = !onlyManagers || (e.puesto && e.puesto.toLowerCase().includes('jefe'));
         return matchesDept && matchesManager;
     });

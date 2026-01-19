@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Users, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+
+const normalizeString = (str) => {
+  if (!str) return "";
+  return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+};
 
 export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedDepartment = false, onlyManagers = false }) {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -86,10 +91,26 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
 
   const departments = useMemo(() => [...new Set(employees.map(e => e.departamento).filter(Boolean))], [employees]);
 
+  useEffect(() => {
+    if (!defaultDepartment || defaultDepartment === "all") {
+      setFilterDepartment("all");
+      return;
+    }
+    const normalizedDefault = normalizeString(defaultDepartment);
+    const matchingDept = departments.find(dept => normalizeString(dept) === normalizedDefault);
+    if (matchingDept) {
+      setFilterDepartment(matchingDept);
+    } else {
+      setFilterDepartment(defaultDepartment);
+    }
+  }, [defaultDepartment, departments]);
+
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const matchesSearch = emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesDepartment = filterDepartment === "all" || emp.departamento === filterDepartment;
+      const matchesDepartment =
+        filterDepartment === "all" ||
+        (emp.departamento && normalizeString(emp.departamento) === normalizeString(filterDepartment));
       const puesto = typeof emp.puesto === "string" ? emp.puesto.toLowerCase() : "";
       const matchesManager = !onlyManagers || puesto.includes("jefe");
       return matchesSearch && matchesDepartment && matchesManager;

@@ -6,6 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, AlertTriangle, Users } from "lucide-react";
 
+const normalizeString = (str) => {
+  if (!str) return "";
+  return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+};
+
 export default function SkillGapAnalysis({ department = "all" }) {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
@@ -57,7 +62,9 @@ export default function SkillGapAnalysis({ department = "all" }) {
       let employeesNotQualified = 0;
 
       employees.forEach(emp => {
-        const matchesDepartment = department === "all" || (emp.departamento && emp.departamento.toUpperCase() === department.toUpperCase());
+        const matchesDepartment =
+          department === "all" ||
+          (emp.departamento && normalizeString(emp.departamento) === normalizeString(department));
         if (matchesDepartment && emp.disponibilidad === "Disponible") {
           const empSkills = employeeSkills.filter(es => es.employee_id === emp.id);
           

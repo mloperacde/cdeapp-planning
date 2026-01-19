@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Briefcase, Plus, Edit, Trash2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+
+const normalizeString = (str) => {
+  if (!str) return "";
+  return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+};
 
 export default function DepartmentPositionSkillConfig({ defaultDepartment = "all", fixedDepartment = false }) {
   const [showDialog, setShowDialog] = useState(false);
@@ -72,15 +77,29 @@ export default function DepartmentPositionSkillConfig({ defaultDepartment = "all
     },
   });
 
-  const departments = useMemo(() => 
-    [...new Set(employees.map(e => e.departamento).filter(Boolean))], 
+  const departments = useMemo(
+    () => [...new Set(employees.map(e => e.departamento).filter(Boolean))],
     [employees]
   );
 
-  const puestos = useMemo(() => 
-    [...new Set(employees.map(e => e.puesto).filter(Boolean))], 
+  const puestos = useMemo(
+    () => [...new Set(employees.map(e => e.puesto).filter(Boolean))],
     [employees]
   );
+
+  useEffect(() => {
+    if (!defaultDepartment || defaultDepartment === "all") {
+      setFilterDepartment("all");
+      return;
+    }
+    const normalizedDefault = normalizeString(defaultDepartment);
+    const matchingDept = departments.find(dept => normalizeString(dept) === normalizedDefault);
+    if (matchingDept) {
+      setFilterDepartment(matchingDept);
+    } else {
+      setFilterDepartment(defaultDepartment);
+    }
+  }, [defaultDepartment, departments]);
 
   const filteredConfigs = useMemo(() => {
     return deptPositionSkills.filter(config => {

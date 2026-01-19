@@ -7,6 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
+const normalizeString = (str) => {
+  if (!str) return "";
+  return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+};
+
 export default function TrainingNeedsView({ department = "all" }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const queryClient = useQueryClient();
@@ -60,7 +65,9 @@ export default function TrainingNeedsView({ department = "all" }) {
       const newNeeds = [];
 
       employees.forEach(emp => {
-        const matchesDepartment = department === "all" || (emp.departamento && emp.departamento.toUpperCase() === department.toUpperCase());
+        const matchesDepartment =
+          department === "all" ||
+          (emp.departamento && normalizeString(emp.departamento) === normalizeString(department));
         if (!matchesDepartment) return;
         if (emp.disponibilidad !== "Disponible") return;
         
@@ -128,9 +135,9 @@ export default function TrainingNeedsView({ department = "all" }) {
   const getProcessName = (id) => processes.find(p => p.id === id)?.nombre || "Desconocido";
 
   const filteredTrainingNeeds = trainingNeeds.filter(tn => {
-      if (department === "all") return true;
-      const emp = employees.find(e => e.id === tn.employee_id);
-      return emp && emp.departamento === department;
+    if (department === "all") return true;
+    const emp = employees.find(e => e.id === tn.employee_id);
+    return emp && normalizeString(emp.departamento) === normalizeString(department);
   });
 
   const pendingNeeds = filteredTrainingNeeds.filter(tn => tn.estado === "Pendiente");
