@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Building2, Briefcase, Clock, RefreshCw, FileSpreadsheet, ArrowLeft, Gavel, FileCode } from "lucide-react";
+import { Settings, Building2, Briefcase, Clock, RefreshCw, FileSpreadsheet, ArrowLeft, Gavel, FileCode, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -12,6 +12,7 @@ import CSVFieldMapper from "../components/config/CSVFieldMapper";
 import BusinessRulesConfig from "../components/config/BusinessRulesConfig";
 import CustomFieldTemplates from "../components/config/CustomFieldTemplates";
 import BrandingConfig from "../components/config/BrandingConfig";
+import TeamManagementConfig from "../components/config/TeamManagementConfig";
 
 export default function AdvancedConfigurationPage() {
   // Get tab from URL if provided
@@ -42,10 +43,14 @@ export default function AdvancedConfigurationPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-8">
             <TabsTrigger value="departments">
               <Building2 className="w-4 h-4 mr-2" />
               Departamentos
+            </TabsTrigger>
+            <TabsTrigger value="teams">
+              <Users className="w-4 h-4 mr-2" />
+              Equipos
             </TabsTrigger>
             <TabsTrigger value="schedules">
               <Clock className="w-4 h-4 mr-2" />
@@ -85,6 +90,23 @@ export default function AdvancedConfigurationPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <DepartmentPositionManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="teams">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-green-600" />
+                  Configuración de Equipos y Rotación
+                </CardTitle>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  Gestiona nombres de equipos, rotación de turnos y composición por departamento
+                </p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <TeamManagementConfig />
               </CardContent>
             </Card>
           </TabsContent>

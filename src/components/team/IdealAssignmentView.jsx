@@ -266,7 +266,7 @@ export default function IdealAssignmentView() {
           if (emp.departamento !== "FABRICACION") return false;
           
           // Include employees from the team OR fixed shift employees
-          const isTeamMember = emp.equipo === teamName;
+          const isTeamMember = emp.equipo === teamName || emp.equipo === currentTeam;
           const isFixedShift = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
           
           if (!isTeamMember && !isFixedShift) return false;
