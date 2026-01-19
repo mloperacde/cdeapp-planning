@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,8 @@ export default function LockerManagementPage() {
   const [importing, setImporting] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
 
+  const queryClient = useQueryClient();
+  
   const {
     employees,
     lockerAssignments,
@@ -74,9 +77,9 @@ export default function LockerManagementPage() {
   } = useLockerData();
 
   // DEBUG: Log assignments count changes
-  useEffect(() => {
-    console.log(`[LockerManagement] Data Updated. Demo: ${isDemoMode}. Employees: ${employees.length}. Assignments: ${lockerAssignments.length}`);
-  }, [employees.length, lockerAssignments.length, isDemoMode]);
+  // useEffect(() => {
+  //   console.log(`[LockerManagement] Data Updated. Demo: ${isDemoMode}. Employees: ${employees.length}. Assignments: ${lockerAssignments.length}`);
+  // }, [employees.length, lockerAssignments.length, isDemoMode]);
 
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
@@ -697,14 +700,6 @@ export default function LockerManagementPage() {
 
   return (
     <div className="p-6 md:p-8 relative">
-        {/* DEBUG PANEL */}
-        <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded text-xs z-[9999] pointer-events-none opacity-75">
-            <p className="font-bold">DEBUG STATE</p>
-            <p>Mode: {isDemoMode ? "DEMO" : "REAL"}</p>
-            <p>Employees: {employees.length}</p>
-            <p>Assignments: {lockerAssignments.length}</p>
-            <p>Loading: {isLoading ? "YES" : "NO"}</p>
-        </div>
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Link to={createPageUrl("ShiftManagers")}>
@@ -760,11 +755,11 @@ export default function LockerManagementPage() {
                 </div>
                 <Button
                   onClick={handleSaveAll}
-                  disabled={saveAllMutation.isPending}
+                  disabled={isSaving}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {saveAllMutation.isPending ? "Guardando..." : "Guardar Ahora"}
+                  {isSaving ? "Guardando..." : "Guardar Ahora"}
                 </Button>
               </div>
             </CardContent>
@@ -791,7 +786,7 @@ export default function LockerManagementPage() {
             </TabsTrigger>
             <TabsTrigger value="asignaciones">
               <Users className="w-4 h-4 mr-2" />
-              Asignaciones
+              Lista
             </TabsTrigger>
             <TabsTrigger value="auditoria">
               <Database className="w-4 h-4 mr-2" />
@@ -922,16 +917,6 @@ export default function LockerManagementPage() {
 
           <TabsContent value="mapa">
             <LockerRoomMap 
-              lockerAssignments={lockerAssignments}
-              employees={employees}
-              lockerRoomConfigs={lockerRoomConfigs}
-              saveAssignments={saveAssignments}
-              isDemoMode={isDemoMode}
-            />
-          </TabsContent>
-
-          <TabsContent value="lista">
-            <LockerListView 
               lockerAssignments={lockerAssignments}
               employees={employees}
               lockerRoomConfigs={lockerRoomConfigs}

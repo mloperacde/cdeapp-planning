@@ -91,7 +91,7 @@ export function useLockerData() {
     mutationFn: async (updates) => {
       if (!Array.isArray(updates)) updates = [updates];
       
-      console.log("[saveAssignments] Starting save for", updates.length, "updates. Demo Mode:", isDemoMode);
+      // console.log("[saveAssignments] Starting save for", updates.length, "updates. Demo Mode:", isDemoMode);
       
       const errors = [];
       let processedCount = 0;
