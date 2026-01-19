@@ -76,8 +76,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
     if (employee && open) {
-      console.log('📋 Loading employee data:', employee.nombre);
-      console.log('📊 Employee skills loaded:', employeeSkills.length);
       
       // Empezar con datos base del empleado
       const updatedFormData = { ...employee };
@@ -85,7 +83,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       // PRIORIZAR EmployeeMachineSkill sobre campos legacy maquina_X
       // Esto asegura que siempre mostramos los datos correctos de la tabla normalizada
       if (employeeSkills && employeeSkills.length > 0) {
-        console.log('✅ Applying skills from EmployeeMachineSkill:', employeeSkills);
         
         // Primero limpiar todos los slots legacy
         for (let i = 1; i <= 10; i++) {
@@ -97,18 +94,10 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
           const prioridad = skill.orden_preferencia;
           if (prioridad >= 1 && prioridad <= 10) {
             updatedFormData[`maquina_${prioridad}`] = skill.machine_id;
-            console.log(`✅ Set maquina_${prioridad} =`, skill.machine_id);
           }
         });
-      } else {
-        console.log('⚠️ No skills found in EmployeeMachineSkill, usando datos legacy de campos maquina_X');
       }
       
-      console.log('📝 Final formData con máquinas:', 
-        Object.keys(updatedFormData)
-          .filter(k => k.startsWith('maquina_'))
-          .map(k => `${k}: ${updatedFormData[k]}`)
-      );
       setFormData(updatedFormData);
     } else if (!employee) {
       setFormData({
@@ -1074,24 +1063,21 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
-                 // CRITICAL: Obtener valor actual del formData (ya procesado en useEffect)
-                 const currentValue = formData[`maquina_${num}`];
-                 
-                 // Buscar la máquina seleccionada en allMachines
-                 const selectedMachine = currentValue ? allMachines.find(m => m.id === currentValue) : null;
+                  // CRITICAL: Obtener valor actual del formData (ya procesado en useEffect)
+                  const currentValue = formData[`maquina_${num}`];
+                  
+                  // Buscar la máquina seleccionada en allMachines
+                  const selectedMachine = currentValue ? allMachines.find(m => m.id === currentValue) : null;
 
-                 console.log(`Slot ${num}: currentValue=${currentValue}, found=${!!selectedMachine}`);
-
-                 return (
-                   <div key={num} className="space-y-2">
-                     <Label>Máquina Prioridad {num}</Label>
-                     <Select
-                       value={currentValue || "none"}
-                       onValueChange={(value) => {
-                         console.log(`Changing slot ${num} to`, value);
-                         setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? null : value });
-                       }}
-                     >
+                  return (
+                    <div key={num} className="space-y-2">
+                      <Label>Máquina Prioridad {num}</Label>
+                      <Select
+                        value={currentValue || "none"}
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, [`maquina_${num}`]: value === "none" ? null : value });
+                        }}
+                      >
                        <SelectTrigger>
                          <SelectValue placeholder="Sin asignar">
                            {selectedMachine ? `${selectedMachine.nombre} (${selectedMachine.codigo})` : "Sin asignar"}
