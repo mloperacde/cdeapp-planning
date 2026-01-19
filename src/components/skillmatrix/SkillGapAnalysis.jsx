@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, AlertTriangle, Users } from "lucide-react";
 
-export default function SkillGapAnalysis() {
+export default function SkillGapAnalysis({ department = "all" }) {
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
@@ -57,7 +57,8 @@ export default function SkillGapAnalysis() {
       let employeesNotQualified = 0;
 
       employees.forEach(emp => {
-        if (emp.departamento === "FABRICACION" && emp.disponibilidad === "Disponible") {
+        const matchesDepartment = department === "all" || (emp.departamento && emp.departamento.toUpperCase() === department.toUpperCase());
+        if (matchesDepartment && emp.disponibilidad === "Disponible") {
           const empSkills = employeeSkills.filter(es => es.employee_id === emp.id);
           
           let meetsRequirements = 0;

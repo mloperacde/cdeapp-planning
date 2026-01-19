@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function TrainingNeedsView() {
+export default function TrainingNeedsView({ department = "all" }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const queryClient = useQueryClient();
 
@@ -60,6 +60,8 @@ export default function TrainingNeedsView() {
       const newNeeds = [];
 
       employees.forEach(emp => {
+        const matchesDepartment = department === "all" || (emp.departamento && emp.departamento.toUpperCase() === department.toUpperCase());
+        if (!matchesDepartment) return;
         if (emp.disponibilidad !== "Disponible") return;
         
         const empSkills = employeeSkills.filter(es => es.employee_id === emp.id);
@@ -125,9 +127,15 @@ export default function TrainingNeedsView() {
   const getSkillName = (id) => skills.find(s => s.id === id)?.nombre || "Desconocida";
   const getProcessName = (id) => processes.find(p => p.id === id)?.nombre || "Desconocido";
 
-  const pendingNeeds = trainingNeeds.filter(tn => tn.estado === "Pendiente");
-  const inProgressNeeds = trainingNeeds.filter(tn => tn.estado === "En Progreso");
-  const completedNeeds = trainingNeeds.filter(tn => tn.estado === "Completada");
+  const filteredTrainingNeeds = trainingNeeds.filter(tn => {
+      if (department === "all") return true;
+      const emp = employees.find(e => e.id === tn.employee_id);
+      return emp && emp.departamento === department;
+  });
+
+  const pendingNeeds = filteredTrainingNeeds.filter(tn => tn.estado === "Pendiente");
+  const inProgressNeeds = filteredTrainingNeeds.filter(tn => tn.estado === "En Progreso");
+  const completedNeeds = filteredTrainingNeeds.filter(tn => tn.estado === "Completada");
 
   return (
     <div className="space-y-6">

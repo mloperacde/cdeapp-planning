@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getEmployeeDefaultMachineExperience } from "@/lib/domain/planning";
 
-export default function EmployeeSkillsView() {
+export default function EmployeeSkillsView({ department = "all" }) {
     const queryClient = useQueryClient();
     const [filters, setFilters] = useState({});
     const [editingState, setEditingState] = useState({});
@@ -138,7 +138,10 @@ export default function EmployeeSkillsView() {
 
     // Filter Logic
     const filteredEmployees = useMemo(() => {
-        let result = employees.filter(e => e.departamento === "FABRICACION" && e.estado_empleado === "Alta");
+        let result = employees.filter(e => {
+            const matchesDepartment = department === "all" || e.departamento === department;
+            return matchesDepartment && e.estado_empleado === "Alta";
+        });
 
         if (filters.searchTerm) {
             const lower = filters.searchTerm.toLowerCase();

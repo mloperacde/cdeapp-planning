@@ -13,10 +13,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Briefcase, Plus, Edit, Trash2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function DepartmentPositionSkillConfig() {
+export default function DepartmentPositionSkillConfig({ defaultDepartment = "all", fixedDepartment = false }) {
   const [showDialog, setShowDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [filterDepartment, setFilterDepartment] = useState("all");
+  const [filterDepartment, setFilterDepartment] = useState(defaultDepartment);
   const [filterPuesto, setFilterPuesto] = useState("all");
   const queryClient = useQueryClient();
 
@@ -229,20 +229,22 @@ export default function DepartmentPositionSkillConfig() {
         <CardContent className="p-6">
           {/* Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="space-y-2">
-              <Label>Filtrar por Departamento</Label>
-              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!fixedDepartment && (
+              <div className="space-y-2">
+                <Label>Filtrar por Departamento</Label>
+                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {departments.map(dept => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Filtrar por Puesto</Label>
