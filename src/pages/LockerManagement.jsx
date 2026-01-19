@@ -36,7 +36,6 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import LockerRoomMap from "../components/lockers/LockerRoomMap";
 import LockerConfigForm from "../components/lockers/LockerConfigForm";
-import LockerDiagnostics from "../components/lockers/LockerDiagnostics";
 import LockerAudit from "../components/lockers/LockerAudit";
 import EmployeesWithoutLocker from "../components/lockers/EmployeesWithoutLocker";
 import AdvancedSearch from "../components/common/AdvancedSearch";
@@ -69,9 +68,6 @@ export default function LockerManagementPage() {
     teams,
     lockerRoomConfigs,
     isLoading,
-    isDemoMode,
-    toggleDemoMode,
-    loadTestData,
     saveAssignments,
     isSaving
   } = useLockerData();
@@ -683,21 +679,6 @@ export default function LockerManagementPage() {
     </TableHead>
   );
 
-  const problemasDetectados = useMemo(() => {
-    const problemas = [];
-    
-    lockerRoomStats.forEach(stat => {
-      if (stat.fueraDeRango > 0) {
-        problemas.push({
-          tipo: 'fuera_rango',
-          mensaje: `${stat.vestuario}: ${stat.fueraDeRango} taquilla(s) con identificadores no válidos`
-        });
-      }
-    });
-    
-    return problemas;
-  }, [lockerRoomStats]);
-
   return (
     <div className="p-6 md:p-8 relative">
       <div className="max-w-7xl mx-auto">
@@ -721,23 +702,9 @@ export default function LockerManagementPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={loadTestData} variant="outline" className="border-dashed">
-              <Database className="w-4 h-4 mr-2" />
-              Cargar Datos de Prueba
-            </Button>
             <ThemeToggle />
           </div>
         </div>
-
-        {problemasDetectados.length > 0 && (
-          <div className="mb-6">
-            <LockerDiagnostics 
-              lockerAssignments={lockerAssignments}
-              lockerRoomConfigs={lockerRoomConfigs}
-              employees={employees}
-            />
-          </div>
-        )}
 
         {hasChanges && (
           <Card className="mb-6 bg-amber-50 border-2 border-amber-300">
@@ -786,7 +753,7 @@ export default function LockerManagementPage() {
             </TabsTrigger>
             <TabsTrigger value="asignaciones">
               <Users className="w-4 h-4 mr-2" />
-              Lista
+              Asignaciones
             </TabsTrigger>
             <TabsTrigger value="auditoria">
               <Database className="w-4 h-4 mr-2" />
