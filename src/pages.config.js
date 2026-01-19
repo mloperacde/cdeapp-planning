@@ -34,7 +34,6 @@ import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
 import Reports from './pages/Reports';
 import ShiftHandover from './pages/ShiftHandover';
-import ShiftManagement from './pages/ShiftManagement';
 import ShiftManagers from './pages/ShiftManagers';
 import ShiftPlanning from './pages/ShiftPlanning';
 import SkillMatrix from './pages/SkillMatrix';

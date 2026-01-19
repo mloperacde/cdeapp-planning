@@ -35,7 +35,6 @@ import ProductionPlanning from "./ProductionPlanning";
 import QualityControl from "./QualityControl";
 import Reports from "./Reports";
 import ShiftHandover from "./ShiftHandover";
-import ShiftManagement from "./ShiftManagement";
 import ShiftManagers from "./ShiftManagers";
 import ShiftPlanning from "./ShiftPlanning";
 import SkillMatrix from "./SkillMatrix";
@@ -219,8 +218,6 @@ function PagesContent() {
 
                 
                 <Route path="/ShiftHandover" element={<ShiftHandover />} />
-                
-                <Route path="/ShiftManagement" element={<ShiftManagement />} />
                 
                 <Route path="/ShiftManagers" element={<ShiftManagers />} />
                 
