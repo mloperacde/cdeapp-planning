@@ -11,11 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Users, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
-export default function EmployeeSkillsMatrix() {
+export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedDepartment = false, onlyManagers = false }) {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showAddSkillDialog, setShowAddSkillDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterDepartment, setFilterDepartment] = useState("all");
+  const [filterDepartment, setFilterDepartment] = useState(defaultDepartment);
   const queryClient = useQueryClient();
 
   const [newSkill, setNewSkill] = useState({
@@ -90,9 +90,11 @@ export default function EmployeeSkillsMatrix() {
     return employees.filter(emp => {
       const matchesSearch = emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesDepartment = filterDepartment === "all" || emp.departamento === filterDepartment;
-      return matchesSearch && matchesDepartment;
+      const puesto = typeof emp.puesto === "string" ? emp.puesto.toLowerCase() : "";
+      const matchesManager = !onlyManagers || puesto.includes("jefe");
+      return matchesSearch && matchesDepartment && matchesManager;
     });
-  }, [employees, searchTerm, filterDepartment]);
+  }, [employees, searchTerm, filterDepartment, onlyManagers]);
 
   const getEmployeeSkills = (employeeId) => {
     return employeeSkills.filter(es => es.employee_id === employeeId);
@@ -168,20 +170,22 @@ export default function EmployeeSkillsMatrix() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Filtrar por Departamento</Label>
-              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!fixedDepartment && (
+              <div className="space-y-2">
+                <Label>Filtrar por Departamento</Label>
+                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {departments.map(dept => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

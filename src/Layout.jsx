@@ -23,9 +23,13 @@ export default function Layout({ children, currentPageName }) {
   const [expandedCategories, setExpandedCategories] = useState({
     'Principal': true,
     'Recursos Humanos': true,
+    'Dirección': true,
     'Planificación': true,
+    'Fabricación': true,
     'Producción': true,
     'Mantenimiento': true,
+    'Almacén': true,
+    'Calidad': true,
     'Análisis': true,
     'Configuración': true,
     'Revisión de páginas': true
@@ -59,12 +63,19 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Control Presencia', icon: Calendar, path: '/AttendanceManagement', category: 'Recursos Humanos' },
     { name: 'Comités y PRL', icon: Shield, path: '/CommitteeManagement', category: 'Recursos Humanos' },
     { name: 'Plan Incentivos', icon: DollarSign, path: '/IncentiveManagement', category: 'Recursos Humanos' },
+
+    // Dirección
+    { name: 'Dirección - Habilidades', icon: Award, path: '/DireccionSkills', category: 'Dirección' },
     
     // Planificación
     { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Planificación' },
     { name: 'Personal Fabricación', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Planificación' },
     { name: 'Planning Diario', icon: Calendar, path: '/DailyPlanning', category: 'Planificación' },
     { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
+    { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
+
+    // Fabricación
+    { name: 'Fabricación - Habilidades', icon: Award, path: '/FabricacionSkills', category: 'Fabricación' },
     
     // Producción
     { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Producción' },
@@ -73,6 +84,13 @@ export default function Layout({ children, currentPageName }) {
     
     // Mantenimiento
     { name: 'Seguimiento', icon: Wrench, path: '/MaintenanceTracking', category: 'Mantenimiento' },
+    { name: 'Mantenimiento - Habilidades', icon: Award, path: '/MantenimientoSkills', category: 'Mantenimiento' },
+
+    // Almacén
+    { name: 'Almacén - Habilidades', icon: Award, path: '/AlmacenSkills', category: 'Almacén' },
+
+    // Calidad
+    { name: 'Calidad - Habilidades', icon: Award, path: '/CalidadSkills', category: 'Calidad' },
     
     // Análisis
     { name: 'Informes', icon: FileText, path: '/Reports', category: 'Análisis' },

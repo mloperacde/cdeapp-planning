@@ -43,6 +43,12 @@ import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
+import DireccionSkills from "./DireccionSkills";
+import PlanificacionSkills from "./PlanificacionSkills";
+import FabricacionSkills from "./FabricacionSkills";
+import MantenimientoSkills from "./MantenimientoSkills";
+import AlmacenSkills from "./AlmacenSkills";
+import CalidadSkills from "./CalidadSkills";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -105,6 +111,12 @@ const PAGES = {
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
   MachinePlanning: MachinePlanning,
+  DireccionSkills: DireccionSkills,
+  PlanificacionSkills: PlanificacionSkills,
+  FabricacionSkills: FabricacionSkills,
+  MantenimientoSkills: MantenimientoSkills,
+  AlmacenSkills: AlmacenSkills,
+  CalidadSkills: CalidadSkills,
 }
 
 function _getCurrentPage(url) {
@@ -224,6 +236,12 @@ function PagesContent() {
                 <Route path="/ShiftPlanning" element={<ShiftPlanning />} />
                 
                 <Route path="/SkillMatrix" element={<SkillMatrix />} />
+                <Route path="/DireccionSkills" element={<DireccionSkills />} />
+                <Route path="/PlanificacionSkills" element={<PlanificacionSkills />} />
+                <Route path="/FabricacionSkills" element={<FabricacionSkills />} />
+                <Route path="/MantenimientoSkills" element={<MantenimientoSkills />} />
+                <Route path="/AlmacenSkills" element={<AlmacenSkills />} />
+                <Route path="/CalidadSkills" element={<CalidadSkills />} />
 
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
                 
