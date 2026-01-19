@@ -273,12 +273,18 @@ export default function LockerManagementPage() {
       const errores = [];
       
       for (const [employeeId, data] of Object.entries(editingAssignments)) {
-        if (!data.requiere_taquilla) continue;
+        const existing = lockerAssignments.find(la => la.employee_id === employeeId);
+        // Resolver requiere_taquilla combinando edición y estado actual
+        const requiresLocker = data.requiere_taquilla !== undefined 
+          ? data.requiere_taquilla 
+          : (existing?.requiere_taquilla !== false);
+
+        if (!requiresLocker) continue;
         
-        const numeroAUsar = (data.numero_taquilla_nuevo || data.numero_taquilla_actual || '').replace(/['"'']/g, '').trim();
+        const numeroAUsar = (data.numero_taquilla_nuevo || data.numero_taquilla_actual || existing?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
         if (!numeroAUsar) continue;
         
-        const vestuario = data.vestuario;
+        const vestuario = data.vestuario || existing?.vestuario;
         if (!vestuario) continue;
         
         const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
@@ -312,21 +318,36 @@ export default function LockerManagementPage() {
       
       const promises = Object.entries(editingAssignments).map(async ([employeeId, data]) => {
         const existing = lockerAssignments.find(la => la.employee_id === employeeId);
+
+        // Resolver estado final combinando edición y existente
+        const requiresLocker = data.requiere_taquilla !== undefined 
+          ? data.requiere_taquilla 
+          : (existing?.requiere_taquilla !== false);
         
-        const numeroActualClean = (data.numero_taquilla_actual || '').replace(/['"'']/g, '').trim();
-        const numeroNuevoClean = (data.numero_taquilla_nuevo || '').replace(/['"'']/g, '').trim();
+        // Si no requiere taquilla, guardamos vacíos pero mantenemos el registro si existe
+        // O podríamos optar por borrarlo, pero el sistema parece mantener registros con requiere_taquilla=false
+        
+        const vestuario = data.vestuario || existing?.vestuario || "";
+        const numeroActualRaw = data.numero_taquilla_actual || existing?.numero_taquilla_actual || "";
+        const numeroNuevoRaw = data.numero_taquilla_nuevo || "";
+
+        const numeroActualClean = numeroActualRaw.replace(/['"''‚„]/g, '').trim();
+        const numeroNuevoClean = numeroNuevoRaw.replace(/['"''‚„]/g, '').trim();
         
         const hasLockerChange = numeroNuevoClean && numeroNuevoClean !== numeroActualClean;
         
         const now = new Date().toISOString();
         const finalNumero = hasLockerChange ? numeroNuevoClean : numeroActualClean;
-        const finalVestuario = data.vestuario || "";
         
+        // Si se desactiva requiere_taquilla, limpiamos los datos de asignación
+        const finalVestuarioToSave = requiresLocker ? vestuario : "";
+        const finalNumeroToSave = requiresLocker ? finalNumero : "";
+
         const updatedData = {
           employee_id: employeeId,
-          requiere_taquilla: data.requiere_taquilla,
-          vestuario: finalVestuario,
-          numero_taquilla_actual: finalNumero,
+          requiere_taquilla: requiresLocker,
+          vestuario: finalVestuarioToSave,
+          numero_taquilla_actual: finalNumeroToSave,
           numero_taquilla_nuevo: "",
           fecha_asignacion: now,
           notificacion_enviada: hasLockerChange ? false : (existing?.notificacion_enviada || false)
@@ -338,8 +359,8 @@ export default function LockerManagementPage() {
             fecha: now,
             vestuario_anterior: existing.vestuario,
             taquilla_anterior: existing.numero_taquilla_actual,
-            vestuario_nuevo: finalVestuario,
-            taquilla_nueva: finalNumero,
+            vestuario_nuevo: finalVestuarioToSave,
+            taquilla_nueva: finalNumeroToSave,
             motivo: "Reasignación manual"
           });
           updatedData.historial_cambios = historial;
@@ -353,9 +374,10 @@ export default function LockerManagementPage() {
         }
 
         // Sincronizar con EmployeeMasterDatabase
+        // IMPORTANTE: Asegurar que se actualizan ambos campos
         await base44.entities.EmployeeMasterDatabase.update(employeeId, {
-          taquilla_vestuario: data.requiere_taquilla ? finalVestuario : "",
-          taquilla_numero: data.requiere_taquilla ? finalNumero : ""
+          taquilla_vestuario: finalVestuarioToSave,
+          taquilla_numero: finalNumeroToSave
         });
       });
 
