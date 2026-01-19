@@ -100,8 +100,9 @@ export function useLockerData() {
       const updateCache = (updater) => {
         queryClient.setQueryData(['lockerAssignments'], (oldData) => {
           const currentData = oldData || [];
-          console.log("[saveAssignments] Updating cache. Current items:", currentData.length);
-          return updater(currentData);
+          const newData = updater(currentData);
+          console.log("[saveAssignments] Cache updated. Old count:", currentData.length, "New count:", newData.length);
+          return newData;
         });
       };
 

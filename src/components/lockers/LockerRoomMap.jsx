@@ -18,6 +18,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [quickEditMode, setQuickEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [lastAction, setLastAction] = useState("Ninguna");
 
   const vestuarioConfig = useMemo(() => {
     const config = lockerRoomConfigs.find(c => c.vestuario === selectedVestuario);
@@ -87,15 +88,27 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
   }, [lockerData]);
 
   const handleLockerClick = (locker) => {
-    console.log("[LockerRoomMap] Locker clicked:", locker);
-    setSelectedLocker(locker);
+    try {
+      console.log("[LockerRoomMap] Locker clicked:", locker);
+      setLastAction(`Click en taquilla ${locker.numero} - Ocupada: ${locker.ocupada}`);
+      setSelectedLocker(locker);
+    } catch (error) {
+      console.error("Error handling click:", error);
+      setLastAction(`Error al hacer click: ${error.message}`);
+      toast.error(`Error: ${error.message}`);
+    }
   };
 
   const handleDragStart = (e, employee) => {
-    console.log("[LockerRoomMap] Drag start:", employee);
-    e.dataTransfer.setData('employeeId', employee.id);
-    e.dataTransfer.setData('employeeName', employee.nombre); // Fix: use nombre instead of name
-    e.dataTransfer.effectAllowed = 'move';
+    try {
+      console.log("[LockerRoomMap] Drag start:", employee);
+      setLastAction(`Arrastrando: ${employee.nombre}`);
+      e.dataTransfer.setData('employeeId', employee.id);
+      e.dataTransfer.setData('employeeName', employee.nombre);
+      e.dataTransfer.effectAllowed = 'move';
+    } catch (error) {
+      console.error("Error drag start:", error);
+    }
   };
 
   const handleDragOver = (e, locker) => {
@@ -106,18 +119,28 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
   };
 
   const handleDrop = async (e, locker) => {
-    e.preventDefault();
-    const employeeId = e.dataTransfer.getData('employeeId');
-    const employeeName = e.dataTransfer.getData('employeeName');
-    
-    console.log("[LockerRoomMap] Drop:", { locker, employeeId, employeeName });
+    try {
+      e.preventDefault();
+      const employeeId = e.dataTransfer.getData('employeeId');
+      const employeeName = e.dataTransfer.getData('employeeName');
+      
+      console.log("[LockerRoomMap] Drop:", { locker, employeeId, employeeName });
+      setLastAction(`Drop: ${employeeName} en taquilla ${locker.numero}`);
 
-    if (!employeeId || locker.ocupada) return;
-    
-    // La asignación se manejará a través del dialog que se abrirá
-    const selected = { ...locker, draggedEmployeeId: employeeId };
-    console.log("[LockerRoomMap] Setting selected locker with dragged employee:", selected);
-    setSelectedLocker(selected);
+      if (!employeeId || locker.ocupada) {
+        setLastAction(`Drop ignorado: ${locker.ocupada ? 'Taquilla ocupada' : 'Sin ID empleado'}`);
+        return;
+      }
+      
+      // La asignación se manejará a través del dialog que se abrirá
+      const selected = { ...locker, draggedEmployeeId: employeeId };
+      console.log("[LockerRoomMap] Setting selected locker with dragged employee:", selected);
+      setSelectedLocker(selected);
+    } catch (error) {
+      console.error("Error handling drop:", error);
+      setLastAction(`Error en drop: ${error.message}`);
+      toast.error(`Error al soltar: ${error.message}`);
+    }
   };
 
   return (
@@ -150,6 +173,11 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Debug Info */}
+        <div className="lg:col-span-4 bg-slate-100 p-2 rounded border border-slate-300 text-xs font-mono">
+           <strong>DEBUG MAP:</strong> Taquillas: {lockerData.length} | Asignaciones: {lockerAssignments.length} | Última acción: {lastAction} | Modo: {isDemoMode ? 'DEMO' : 'REAL'}
+        </div>
+
         {/* Panel lateral con empleados sin taquilla */}
         <div className="lg:col-span-1">
           <Card className="sticky top-6 shadow-lg">
