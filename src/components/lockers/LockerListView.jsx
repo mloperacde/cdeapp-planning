@@ -24,8 +24,7 @@ export default function LockerListView({
   lockerAssignments, 
   employees, 
   lockerRoomConfigs, 
-  saveAssignments, 
-  isDemoMode 
+  saveAssignments 
 }) {
   const [selectedVestuario, setSelectedVestuario] = useState("all");
   const [filterEstado, setFilterEstado] = useState("all"); // all, free, occupied
@@ -236,7 +235,6 @@ export default function LockerListView({
           lockerAssignments={lockerAssignments}
           onClose={() => setSelectedLocker(null)}
           saveAssignments={saveAssignments}
-          isDemoMode={isDemoMode}
         />
       )}
     </div>

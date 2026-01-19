@@ -74,8 +74,8 @@ export default function LockerManagementPage() {
 
   // DEBUG: Log assignments count changes
   // useEffect(() => {
-  //   console.log(`[LockerManagement] Data Updated. Demo: ${isDemoMode}. Employees: ${employees.length}. Assignments: ${lockerAssignments.length}`);
-  // }, [employees.length, lockerAssignments.length, isDemoMode]);
+  //   console.log(`[LockerManagement] Data Updated. Employees: ${employees.length}. Assignments: ${lockerAssignments.length}`);
+  // }, [employees.length, lockerAssignments.length]);
 
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
