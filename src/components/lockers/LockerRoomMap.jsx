@@ -13,7 +13,7 @@ import {
 import { CheckCircle2, XCircle, Settings, Edit3, Users, Search } from "lucide-react";
 import LockerAssignmentDialog from "./LockerAssignmentDialog";
 
-export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs }) {
+export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs, saveAssignments, isDemoMode }) {
   const [selectedVestuario, setSelectedVestuario] = useState("Vestuario Femenino Planta Alta");
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [quickEditMode, setQuickEditMode] = useState(false);
@@ -29,12 +29,12 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
 
   const employeesWithoutLocker = useMemo(() => {
     return employees.filter(emp => {
-      const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
+      const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
       if (!assignment) return true;
       if (assignment.requiere_taquilla === false) return false;
       
       const tieneTaquilla = assignment.numero_taquilla_actual && 
-                           assignment.numero_taquilla_actual.replace(/['"]/g, '').trim() !== "";
+                           String(assignment.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
       
       return !tieneTaquilla;
     }).filter(emp => {
@@ -52,18 +52,23 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
       : Array.from({ length: vestuarioConfig.total }, (_, i) => (i + 1).toString());
     
     identificadores.forEach((identificador) => {
+      // Robust comparison with standardized regex
+      const cleanId = String(identificador).replace(/['"''‚„]/g, '').trim();
+      
       const assignment = lockerAssignments.find(la => {
-        const esEsteVestuario = la.vestuario === selectedVestuario;
-        const esEstaIdentificacion = la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === identificador;
+        if (!la.vestuario || la.vestuario !== selectedVestuario) return false;
+        
+        const laNumero = String(la.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
+        const numeroMatch = laNumero === cleanId;
         const requiere = la.requiere_taquilla !== false;
         
-        return esEsteVestuario && esEstaIdentificacion && requiere;
+        return numeroMatch && requiere;
       });
       
-      const employee = assignment ? employees.find(e => e.id === assignment.employee_id) : null;
+      const employee = assignment ? employees.find(e => String(e.id) === String(assignment.employee_id)) : null;
       
       data.push({
-        numero: identificador,
+        numero: cleanId,
         ocupada: !!assignment,
         employee,
         assignment
@@ -82,12 +87,14 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
   }, [lockerData]);
 
   const handleLockerClick = (locker) => {
+    console.log("[LockerRoomMap] Locker clicked:", locker);
     setSelectedLocker(locker);
   };
 
   const handleDragStart = (e, employee) => {
+    console.log("[LockerRoomMap] Drag start:", employee);
     e.dataTransfer.setData('employeeId', employee.id);
-    e.dataTransfer.setData('employeeName', employee.name);
+    e.dataTransfer.setData('employeeName', employee.nombre); // Fix: use nombre instead of name
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -103,10 +110,14 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
     const employeeId = e.dataTransfer.getData('employeeId');
     const employeeName = e.dataTransfer.getData('employeeName');
     
+    console.log("[LockerRoomMap] Drop:", { locker, employeeId, employeeName });
+
     if (!employeeId || locker.ocupada) return;
     
     // La asignación se manejará a través del dialog que se abrirá
-    setSelectedLocker({ ...locker, draggedEmployeeId: employeeId });
+    const selected = { ...locker, draggedEmployeeId: employeeId };
+    console.log("[LockerRoomMap] Setting selected locker with dragged employee:", selected);
+    setSelectedLocker(selected);
   };
 
   return (
@@ -334,6 +345,8 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
           employeesWithoutLocker={employeesWithoutLocker}
           lockerAssignments={lockerAssignments}
           onClose={() => setSelectedLocker(null)}
+          saveAssignments={saveAssignments}
+          isDemoMode={isDemoMode}
         />
       )}
     </div>

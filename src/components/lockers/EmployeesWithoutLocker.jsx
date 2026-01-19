@@ -29,14 +29,14 @@ export default function EmployeesWithoutLocker({ employees, lockerAssignments, o
 
   const employeesWithoutLocker = useMemo(() => {
     return employees.filter(emp => {
-      const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
+      const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
       
       // Sin asignación o sin taquilla asignada
       if (!assignment) return true;
       if (assignment.requiere_taquilla === false) return false;
       
       const tieneTaquilla = assignment.numero_taquilla_actual && 
-                           assignment.numero_taquilla_actual.trim() !== "";
+                           String(assignment.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
       
       return !tieneTaquilla;
     });

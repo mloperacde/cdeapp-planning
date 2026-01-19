@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +40,8 @@ import LockerAudit from "../components/lockers/LockerAudit";
 import EmployeesWithoutLocker from "../components/lockers/EmployeesWithoutLocker";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
+import { useLockerData } from "@/hooks/useLockerData";
+import { base44 } from "@/api/base44Client";
 
 const EMPTY_ARRAY = [];
 
@@ -59,31 +59,27 @@ export default function LockerManagementPage() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
-  const queryClient = useQueryClient();
 
-  const { data: employees = EMPTY_ARRAY } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
-  });
+  const {
+    employees,
+    lockerAssignments,
+    teams,
+    lockerRoomConfigs,
+    isLoading,
+    isDemoMode,
+    toggleDemoMode,
+    loadTestData,
+    saveAssignments,
+    isSaving
+  } = useLockerData();
 
-  const { data: lockerAssignments = EMPTY_ARRAY } = useQuery({
-    queryKey: ['lockerAssignments'],
-    queryFn: () => base44.entities.LockerAssignment.list(),
-    refetchInterval: 5000,
-  });
-
-  const { data: teams = EMPTY_ARRAY } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-  });
-
-  const { data: lockerRoomConfigs = EMPTY_ARRAY } = useQuery({
-    queryKey: ['lockerRoomConfigs'],
-    queryFn: () => base44.entities.LockerRoomConfig.list(),
-  });
+  // DEBUG: Log assignments count changes
+  useEffect(() => {
+    console.log(`[LockerManagement] Data Updated. Demo: ${isDemoMode}. Employees: ${employees.length}. Assignments: ${lockerAssignments.length}`);
+  }, [employees.length, lockerAssignments.length, isDemoMode]);
 
   const getAssignment = (employeeId) => {
-    return lockerAssignments.find(la => la.employee_id === employeeId);
+    return lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
   };
 
   useEffect(() => {
@@ -136,306 +132,139 @@ export default function LockerManagementPage() {
     return false;
   };
 
-  const handleImportFile = async () => {
-    if (!importFile) {
-      toast.error("Selecciona un archivo");
-      return;
-    }
+  const handleSaveAll = async () => {
+    const updates = [];
+    const errores = [];
 
-    setImporting(true);
-    try {
-      const text = await importFile.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      const hasHeader = lines[0].toLowerCase().includes('nombre') || 
-                        lines[0].toLowerCase().includes('codigo');
-      const dataLines = hasHeader ? lines.slice(1) : lines;
-
-      const matched = [];
-      const unmatched = [];
-
-      for (const line of dataLines) {
-        const parts = line.includes(';') ? line.split(';') : line.split(',');
-        if (parts.length < 3) continue;
-
-        const codigo = parts[0]?.trim();
-        const nombre = parts[1]?.trim();
-        const vestuario = parts[2]?.trim();
-        const numeroTaquilla = parts[3]?.trim().replace(/['"''‚„]/g, ''); // Limpiar comillas y variantes
-
-        let employee = null;
-        
-        if (codigo) {
-          employee = employees.find(e => e.codigo_empleado === codigo);
-        }
-        
-        if (!employee && nombre) {
-          employee = employees.find(e => matchNames(e.nombre, nombre));
-        }
-
-        if (employee) {
-          matched.push({
-            employee,
-            vestuario,
-            numeroTaquilla,
-            codigo,
-            nombre
-          });
-        } else {
-          unmatched.push({ codigo, nombre, vestuario, numeroTaquilla });
-        }
-      }
-
-      setImportPreview({ matched, unmatched });
-      toast.success(`${matched.length} empleados encontrados, ${unmatched.length} sin coincidencia`);
-    } catch (error) {
-      toast.error("Error al procesar el archivo");
-      console.error(error);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleConfirmImport = async () => {
-    if (!importPreview?.matched) return;
-
-    try {
-      let importedCount = 0;
-      // Process sequentially to avoid 429
-      for (const { employee, vestuario, numeroTaquilla } of importPreview.matched) {
-        const existing = lockerAssignments.find(la => la.employee_id === employee.id);
-        
-        const duplicado = lockerAssignments.find(la => 
-          la.vestuario === vestuario &&
-          la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroTaquilla &&
-          la.employee_id !== employee.id &&
-          la.requiere_taquilla !== false
-        );
-
-        if (duplicado) {
-          const empDuplicado = employees.find(e => e.id === duplicado.employee_id);
-          // Instead of throwing and stopping everything, maybe just log/toast and skip?
-          // For now, let's keep throwing to stop on critical error, or maybe just skip this one.
-          // Let's log and skip to allow partial import.
-          console.warn(`Taquilla ${numeroTaquilla} en ${vestuario} ya asignada a ${empDuplicado?.nombre}. Saltando...`);
-          continue; 
-        }
-        
-        const now = new Date().toISOString();
-        const hasChange = existing && existing.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() !== numeroTaquilla;
-
-        const dataToSave = {
-          employee_id: employee.id,
-          requiere_taquilla: true,
-          vestuario: vestuario,
-          numero_taquilla_actual: numeroTaquilla,
-          numero_taquilla_nuevo: "",
-          fecha_asignacion: now,
-          notificacion_enviada: false
-        };
-
-        if (hasChange && existing) {
-          const historial = existing.historial_cambios || [];
-          historial.push({
-            fecha: now,
-            vestuario_anterior: existing.vestuario,
-            taquilla_anterior: existing.numero_taquilla_actual,
-            vestuario_nuevo: vestuario,
-            taquilla_nueva: numeroTaquilla,
-            motivo: "Importación masiva"
-          });
-          dataToSave.historial_cambios = historial;
-        }
-
-        // Actualizar LockerAssignment
-        if (existing) {
-          await base44.entities.LockerAssignment.update(existing.id, dataToSave);
-        } else {
-          await base44.entities.LockerAssignment.create(dataToSave);
-        }
-
-        // Sincronizar con EmployeeMasterDatabase
-        await base44.entities.EmployeeMasterDatabase.update(employee.id, {
-          taquilla_vestuario: vestuario,
-          taquilla_numero: numeroTaquilla
-        });
-        
-        importedCount++;
-        // Small delay
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-      toast.success(`${importedCount} asignaciones importadas y sincronizadas`);
-      setImportPreview(null);
-      setImportFile(null);
-    } catch (error) {
-      toast.error(error.message);
-      console.error(error);
-    }
-  };
-
-  const saveAllMutation = useMutation({
-    mutationFn: async () => {
-      const errores = [];
-      
-      for (const [employeeIdStr, data] of Object.entries(editingAssignments)) {
-        // CRITICAL FIX: employeeId from Object.entries is string, but data IDs might be numbers
-        // Use loose equality or explicit conversion
+    for (const [employeeIdStr, data] of Object.entries(editingAssignments)) {
+        // Ensure correct ID type
         const employeeId = employees.find(e => e.id == employeeIdStr)?.id || employeeIdStr;
-        
-        const existing = lockerAssignments.find(la => la.employee_id == employeeId);
+        const existing = lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
+
         // Resolver requiere_taquilla combinando edición y estado actual
         const requiresLocker = data.requiere_taquilla !== undefined 
           ? data.requiere_taquilla 
           : (existing?.requiere_taquilla !== false);
 
-        if (!requiresLocker) continue;
-        
+        if (!requiresLocker && !existing) continue;
+
         const numeroAUsar = (data.numero_taquilla_nuevo || data.numero_taquilla_actual || existing?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
-        if (!numeroAUsar) continue;
-        
-        const vestuario = data.vestuario || existing?.vestuario;
-        if (!vestuario) continue;
-        
-        const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
-        const identificadoresValidos = config?.identificadores_taquillas || [];
-        
-        if (identificadoresValidos.length > 0 && !identificadoresValidos.includes(numeroAUsar)) {
-          const emp = employees.find(e => e.id == employeeId);
-          errores.push(`${emp?.nombre || 'Empleado'}: El identificador "${numeroAUsar}" no existe en ${vestuario}`);
-          continue;
-        }
-        
-        const duplicado = lockerAssignments.find(la => 
-          la.vestuario === vestuario &&
-          la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroAUsar &&
-          la.employee_id != employeeId &&
-          la.requiere_taquilla !== false
-        );
-
-        if (duplicado) {
-          const emp1 = employees.find(e => e.id == employeeId);
-          const emp2 = employees.find(e => e.id === duplicado.employee_id);
-          errores.push(`⚠️ Taquilla "${numeroAUsar}" en ${vestuario}:\n   Ya asignada a: ${emp2?.nombre}\n   No se puede asignar a: ${emp1?.nombre}`);
-        }
-      }
-      
-      if (errores.length > 0) {
-        const mensaje = "❌ Errores de validación:\n\n" + errores.join('\n\n');
-        toast.error(mensaje, { duration: 10000 });
-        throw new Error("Validación fallida");
-      }
-      
-      // Process updates sequentially to avoid 429 errors
-      let processedCount = 0;
-      
-      for (const [employeeIdStr, data] of Object.entries(editingAssignments)) {
-        // CRITICAL FIX: Ensure correct ID type
-        const employeeId = employees.find(e => e.id == employeeIdStr)?.id || employeeIdStr;
-        const existing = lockerAssignments.find(la => la.employee_id == employeeId);
-
-        // Resolver estado final combinando edición y existente
-        const requiresLocker = data.requiere_taquilla !== undefined 
-          ? data.requiere_taquilla 
-          : (existing?.requiere_taquilla !== false);
-        
         const vestuario = data.vestuario || existing?.vestuario || "";
-        const numeroActualRaw = data.numero_taquilla_actual || existing?.numero_taquilla_actual || "";
-        const numeroNuevoRaw = data.numero_taquilla_nuevo || "";
+        
+        // Validations
+        if (requiresLocker) {
+            if (!numeroAUsar || !vestuario) continue; // Incomplete data, maybe skip or warn?
 
-        const numeroActualClean = numeroActualRaw.replace(/['"''‚„]/g, '').trim();
-        const numeroNuevoClean = numeroNuevoRaw.replace(/['"''‚„]/g, '').trim();
-        
-        const hasLockerChange = numeroNuevoClean && numeroNuevoClean !== numeroActualClean;
-        const finalNumero = hasLockerChange ? numeroNuevoClean : numeroActualClean;
-        
-        // Check for changes to avoid unnecessary API calls
+            const config = lockerRoomConfigs.find(c => c.vestuario === vestuario);
+            const identificadoresValidos = config?.identificadores_taquillas || [];
+            
+            if (identificadoresValidos.length > 0 && !identificadoresValidos.includes(numeroAUsar)) {
+              const emp = employees.find(e => e.id == employeeId);
+              errores.push(`${emp?.nombre || 'Empleado'}: El identificador "${numeroAUsar}" no existe en ${vestuario}`);
+              continue;
+            }
+            
+            const duplicado = lockerAssignments.find(la => 
+              la.vestuario === vestuario &&
+              la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroAUsar &&
+              String(la.employee_id) !== String(employeeId) &&
+              la.requiere_taquilla !== false
+            );
+
+            if (duplicado) {
+              const emp1 = employees.find(e => e.id == employeeId);
+              const emp2 = employees.find(e => String(e.id) === String(duplicado.employee_id));
+              errores.push(`⚠️ Taquilla "${numeroAUsar}" en ${vestuario}:\n   Ya asignada a: ${emp2?.nombre}\n   No se puede asignar a: ${emp1?.nombre}`);
+              continue;
+            }
+        }
+
+        // Check for changes
         const existingVestuario = existing?.vestuario || "";
         const existingNumero = existing?.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() || "";
         const existingRequires = existing?.requiere_taquilla !== false;
         
-        // If not requiring locker and didn't have one before, skip
-        if (!requiresLocker && !existing) continue;
-
-        // If requires locker, check if data matches existing
         if (requiresLocker && existing) {
             const vestuarioMatch = vestuario === existingVestuario;
-            const numeroMatch = finalNumero === existingNumero;
+            const numeroMatch = numeroAUsar === existingNumero;
             const requiresMatch = requiresLocker === existingRequires;
             
-            if (vestuarioMatch && numeroMatch && requiresMatch && !hasLockerChange) {
-                continue; // No changes, skip
+            if (vestuarioMatch && numeroMatch && requiresMatch) {
+                continue; // No changes
             }
         }
 
-        // Si se desactiva requiere_taquilla, limpiamos los datos de asignación
-        const finalVestuarioToSave = requiresLocker ? vestuario : "";
-        const finalNumeroToSave = requiresLocker ? finalNumero : "";
+        updates.push({
+            employeeId,
+            requiere_taquilla: requiresLocker,
+            vestuario: requiresLocker ? vestuario : "",
+            numero_taquilla_actual: requiresLocker ? numeroAUsar : "",
+            motivo: "Guardado masivo"
+        });
+    }
 
-        const updatedData = {
-          employee_id: employeeId,
-          requiere_taquilla: requiresLocker,
-          vestuario: finalVestuarioToSave,
-          numero_taquilla_actual: finalNumeroToSave,
-          numero_taquilla_nuevo: "",
-          fecha_asignacion: new Date().toISOString(),
-          notificacion_enviada: hasLockerChange ? false : (existing?.notificacion_enviada || false)
-        };
+    if (errores.length > 0) {
+        const mensaje = "❌ Errores de validación:\n\n" + errores.join('\n\n');
+        toast.error(mensaje, { duration: 10000 });
+        return;
+    }
 
-        if (hasLockerChange && existing) {
-          const historial = existing.historial_cambios || [];
-          historial.push({
-            fecha: new Date().toISOString(),
-            vestuario_anterior: existing.vestuario,
-            taquilla_anterior: existing.numero_taquilla_actual,
-            vestuario_nuevo: finalVestuarioToSave,
-            taquilla_nueva: finalNumeroToSave,
-            motivo: "Reasignación manual"
-          });
-          updatedData.historial_cambios = historial;
-        }
+    if (updates.length === 0) {
+        toast.info("No hay cambios para guardar");
+        return;
+    }
 
-        try {
-            // Actualizar LockerAssignment
-            if (existing) {
-              await base44.entities.LockerAssignment.update(existing.id, updatedData);
-            } else {
-              await base44.entities.LockerAssignment.create(updatedData);
-            }
+    try {
+        const count = await saveAssignments(updates);
+        setHasChanges(false);
+        toast.success(`✅ ${count} cambios guardados correctamente`);
+    } catch (error) {
+        toast.error(error.message);
+    }
+  };
 
-            // Sincronizar con EmployeeMasterDatabase
-            await base44.entities.EmployeeMasterDatabase.update(employeeId, {
-              taquilla_vestuario: finalVestuarioToSave,
-              taquilla_numero: finalNumeroToSave
-            });
-            
-            processedCount++;
-            // Small delay to be nice to the API
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-        } catch (err) {
-            console.error(`Error updating employee ${employeeId}:`, err);
-            // Continue with next employee instead of failing all
-        }
+  const handleAssign = async (employeeId, vestuario, lockerNumber) => {
+      // Validate duplicate
+      const duplicado = lockerAssignments.find(la => 
+        la.vestuario === vestuario &&
+        la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === String(lockerNumber) &&
+        String(la.employee_id) !== String(employeeId) &&
+        la.requiere_taquilla !== false
+      );
+
+      if (duplicado) {
+        const empDuplicado = employees.find(e => String(e.id) === String(duplicado.employee_id));
+        throw new Error(`La taquilla ${lockerNumber} en ${vestuario} ya está asignada a ${empDuplicado?.nombre || 'otro empleado'}`);
       }
 
-      return processedCount;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-      setHasChanges(false);
-      toast.success("✅ Cambios guardados y sincronizados correctamente");
-    },
-    onError: () => {}
-  });
+      await saveAssignments({
+          employeeId,
+          requiere_taquilla: true,
+          vestuario,
+          numero_taquilla_actual: String(lockerNumber),
+          motivo: "Asignación desde mapa"
+      });
+  };
+
+  const handleUnassign = async (assignmentId, employeeId) => {
+      await saveAssignments({
+          employeeId,
+          requiere_taquilla: true, // Keep requirement? Or false? Usually unassigning frees the locker but employee might still need one? 
+          // Assuming unassign means "remove locker but maybe keep need", OR "remove need". 
+          // Looking at old code: it updated numero_taquilla_actual to "" but didn't set requiere_taquilla to false explicitly, so it defaulted/stayed.
+          // Let's set numero to empty string.
+          vestuario: "", // Also clear vestuario? Old code didn't clear vestuario explicitly in one place but cleared in another. 
+          // In handleImportConfirm it set vestuario. In unassignMutation it set numero_taquilla_actual: "".
+          // Let's clear both to be safe/clean.
+          numero_taquilla_actual: "",
+          motivo: "Liberación de taquilla"
+      });
+  };
+
 
   const sendNotificationMutation = useMutation({
     mutationFn: async ({ employeeId, vestuario, numeroTaquilla }) => {
-      const employee = employees.find(e => e.id === employeeId);
+      const employee = employees.find(e => String(e.id) === String(employeeId));
       if (!employee || !employee.email) return;
 
       await base44.integrations.Core.SendEmail({
@@ -606,15 +435,109 @@ export default function LockerManagementPage() {
     }
   };
 
+  const handleImportFile = async () => {
+    if (!importFile) {
+      toast.error("Selecciona un archivo");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const text = await importFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const hasHeader = lines[0].toLowerCase().includes('nombre') || 
+                        lines[0].toLowerCase().includes('codigo');
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+
+      const matched = [];
+      const unmatched = [];
+
+      for (const line of dataLines) {
+        const parts = line.includes(';') ? line.split(';') : line.split(',');
+        if (parts.length < 3) continue;
+
+        const codigo = parts[0]?.trim();
+        const nombre = parts[1]?.trim();
+        const vestuario = parts[2]?.trim();
+        const numeroTaquilla = parts[3]?.trim().replace(/['"''‚„]/g, ''); 
+
+        let employee = null;
+        
+        if (codigo) {
+          employee = employees.find(e => e.codigo_empleado === codigo);
+        }
+        
+        if (!employee && nombre) {
+          employee = employees.find(e => matchNames(e.nombre, nombre));
+        }
+
+        if (employee) {
+          matched.push({
+            employee,
+            vestuario,
+            numeroTaquilla,
+            codigo,
+            nombre
+          });
+        } else {
+          unmatched.push({ codigo, nombre, vestuario, numeroTaquilla });
+        }
+      }
+
+      setImportPreview({ matched, unmatched });
+      toast.success(`${matched.length} empleados encontrados, ${unmatched.length} sin coincidencia`);
+    } catch (error) {
+      toast.error("Error al procesar el archivo");
+      console.error(error);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview?.matched) return;
+
+    try {
+      const updates = [];
+      
+      for (const { employee, vestuario, numeroTaquilla } of importPreview.matched) {
+        const existing = lockerAssignments.find(la => String(la.employee_id) === String(employee.id));
+        
+        const duplicado = lockerAssignments.find(la => 
+          la.vestuario === vestuario &&
+          la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroTaquilla &&
+          String(la.employee_id) !== String(employee.id) &&
+          la.requiere_taquilla !== false
+        );
+
+        if (duplicado) {
+          const empDuplicado = employees.find(e => e.id === duplicado.employee_id);
+          console.warn(`Taquilla ${numeroTaquilla} en ${vestuario} ya asignada a ${empDuplicado?.nombre}. Saltando...`);
+          continue; 
+        }
+        
+        updates.push({
+            employeeId: employee.id,
+            requiere_taquilla: true,
+            vestuario: vestuario,
+            numero_taquilla_actual: numeroTaquilla,
+            motivo: "Importación masiva"
+        });
+      }
+      
+      const count = await saveAssignments(updates);
+      toast.success(`${count} asignaciones importadas y sincronizadas`);
+      setImportPreview(null);
+      setImportFile(null);
+    } catch (error) {
+      toast.error(error.message);
+      console.error(error);
+    }
+  };
+
   const handleShowHistory = (employee) => {
     setSelectedEmployee(employee);
     setShowHistory(true);
-  };
-
-  const handleSaveAll = () => {
-    if (window.confirm('¿Guardar todos los cambios realizados?')) {
-      saveAllMutation.mutate();
-    }
   };
 
   const downloadTemplate = () => {
@@ -636,30 +559,30 @@ export default function LockerManagementPage() {
     
     const conTaquilla = lockerAssignments.filter(la => {
       // Verificar que el empleado exista y esté activo
-      const employee = activeEmployees.find(e => e.id === la.employee_id);
+      const employee = activeEmployees.find(e => String(e.id) === String(la.employee_id));
       if (!employee) return false;
       
       const tieneTaquilla = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
+                           String(la.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
       const requiere = la.requiere_taquilla !== false;
       return tieneTaquilla && requiere;
     }).length;
 
     const sinTaquilla = activeEmployees.filter(emp => {
-      const assignment = lockerAssignments.find(la => la.employee_id === emp.id);
+      const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
       if (!assignment) return true;
       if (assignment.requiere_taquilla === false) return false;
       const tieneTaquilla = assignment.numero_taquilla_actual && 
-                           assignment.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
+                           String(assignment.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
       return !tieneTaquilla;
     }).length;
 
     const pendientesNotificacion = lockerAssignments.filter(la => {
-      const employee = activeEmployees.find(e => e.id === la.employee_id);
+      const employee = activeEmployees.find(e => String(e.id) === String(la.employee_id));
       if (!employee) return false;
       
       const tieneTaquilla = la.numero_taquilla_actual && 
-                           la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
+                           String(la.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
       return !la.notificacion_enviada && tieneTaquilla && la.requiere_taquilla !== false;
     }).length;
 
@@ -696,7 +619,7 @@ export default function LockerManagementPage() {
       // Iterate through all assignments to determine status
       lockerAssignments.forEach(la => {
         // Verificar que el empleado existe y está activo
-        const employee = activeEmployees.find(e => e.id === la.employee_id);
+        const employee = activeEmployees.find(e => String(e.id) === String(la.employee_id));
         if (!employee) return;
         
         // Only consider assignments for this vestuario that require a locker and have a locker ID
@@ -773,7 +696,15 @@ export default function LockerManagementPage() {
   }, [lockerRoomStats]);
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8 relative">
+        {/* DEBUG PANEL */}
+        <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded text-xs z-[9999] pointer-events-none opacity-75">
+            <p className="font-bold">DEBUG STATE</p>
+            <p>Mode: {isDemoMode ? "DEMO" : "REAL"}</p>
+            <p>Employees: {employees.length}</p>
+            <p>Assignments: {lockerAssignments.length}</p>
+            <p>Loading: {isLoading ? "YES" : "NO"}</p>
+        </div>
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Link to={createPageUrl("ShiftManagers")}>
@@ -794,7 +725,13 @@ export default function LockerManagementPage() {
               Configura vestuarios y asigna taquillas a empleados
             </p>
           </div>
-          <ThemeToggle />
+          <div className="flex gap-2">
+            <Button onClick={loadTestData} variant="outline" className="border-dashed">
+              <Database className="w-4 h-4 mr-2" />
+              Cargar Datos de Prueba
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
 
         {problemasDetectados.length > 0 && (
@@ -988,6 +925,8 @@ export default function LockerManagementPage() {
               lockerAssignments={lockerAssignments}
               employees={employees}
               lockerRoomConfigs={lockerRoomConfigs}
+              saveAssignments={saveAssignments}
+              isDemoMode={isDemoMode}
             />
           </TabsContent>
 
@@ -1167,11 +1106,11 @@ export default function LockerManagementPage() {
                   {hasChanges && (
                     <Button
                       onClick={handleSaveAll}
-                      disabled={saveAllMutation.isPending}
+                      disabled={isSaving}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      {saveAllMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+                      {isSaving ? "Guardando..." : "Guardar Cambios"}
                     </Button>
                   )}
                 </div>

@@ -88,7 +88,7 @@ export default function EmployeeSelect({
     return groups;
   }, [sortedEmployees]);
 
-  const selectedEmployee = employees.find(e => e.id === value);
+  const selectedEmployee = employees.find(e => String(e.id) === String(value));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -157,7 +157,7 @@ export default function EmployeeSelect({
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4 shrink-0",
-                          value === employee.id ? "opacity-100" : "opacity-0"
+                          String(value) === String(employee.id) ? "opacity-100" : "opacity-0"
                         )}
                       />
                       <div className="flex-1 min-w-0 text-left">

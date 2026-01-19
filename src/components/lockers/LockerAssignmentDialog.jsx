@@ -1,24 +1,15 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { User, UserPlus, XCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+import { User, XCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import EmployeeSelect from "../common/EmployeeSelect";
 
@@ -26,136 +17,116 @@ export default function LockerAssignmentDialog({
   locker, 
   vestuario, 
   employees = [], 
-  employeesWithoutLocker = [], // Kept as per original props, but its internal use is removed/changed
   lockerAssignments = [], 
-  onClose 
+  onClose,
+  saveAssignments,
+  isDemoMode
 }) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(locker.draggedEmployeeId || "");
-  const [searchTerm, setSearchTerm] = useState("");
-  const queryClient = useQueryClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Debug: Log mount and props
+  React.useEffect(() => {
+    console.log("[LockerAssignmentDialog] Mounted", { 
+        lockerNumber: locker.numero, 
+        draggedId: locker.draggedEmployeeId,
+        vestuario,
+        isDemoMode
+    });
+  }, [locker, vestuario, isDemoMode]);
 
   const availableEmployees = useMemo(() => {
     if (!employees || !Array.isArray(employees)) return [];
     
-    return employees
-      .filter(emp => {
-        const hasAssignment = lockerAssignments.find(la => la.employee_id === emp.id);
-        if (!hasAssignment) return true; // Employee has no assignment, thus is available
+    return employees.filter(emp => {
+        // Always include the currently selected employee so they appear in the dropdown
+        if (selectedEmployeeId && String(emp.id) === String(selectedEmployeeId)) return true;
 
-        // If an assignment exists, check if it's an "empty" one or if they don't require a locker
+        const hasAssignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
+        if (!hasAssignment) return true; 
+
         const hasLocker = hasAssignment.numero_taquilla_actual && 
                          hasAssignment.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() !== "";
-        const requiresLocker = hasAssignment.requiere_taquilla !== false; // requires_taquilla defaults to true if not specified as false
+        const requiresLocker = hasAssignment.requiere_taquilla !== false;
         
-        return !hasLocker && requiresLocker; // Available if no current locker AND requires one
-      })
-      .filter(emp => {
-        if (!searchTerm) return true;
-        return emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               emp.codigo_empleado?.toLowerCase().includes(searchTerm.toLowerCase());
+        return !hasLocker && requiresLocker; 
       });
-  }, [employees, lockerAssignments, searchTerm]);
+  }, [employees, lockerAssignments, selectedEmployeeId]);
 
-  const assignMutation = useMutation({
-    mutationFn: async () => {
+  const handleAssign = async () => {
       if (!selectedEmployeeId) {
-        throw new Error("Selecciona un empleado");
+        toast.error("Selecciona un empleado");
+        return;
       }
+      
+      const numeroLimpio = locker.numero.toString().replace(/['"''‚„]/g, '').trim();
 
       const duplicado = lockerAssignments.find(la => 
         la.vestuario === vestuario &&
-        la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === locker.numero.toString() &&
-        la.employee_id !== selectedEmployeeId &&
+        la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroLimpio &&
+        String(la.employee_id) !== String(selectedEmployeeId) &&
         la.requiere_taquilla !== false
       );
 
       if (duplicado) {
-        const empDuplicado = employees.find(e => e.id === duplicado.employee_id);
-        throw new Error(`La taquilla ${locker.numero} en ${vestuario} ya está asignada a ${empDuplicado?.nombre || 'otro empleado'}`);
+        const empDuplicado = employees.find(e => String(e.id) === String(duplicado.employee_id));
+        toast.error(`La taquilla ${locker.numero} en ${vestuario} ya está asignada a ${empDuplicado?.nombre || 'otro empleado'}`);
+        return;
       }
 
-      const existing = lockerAssignments.find(la => la.employee_id === selectedEmployeeId);
-      const now = new Date().toISOString();
-      const numeroLimpio = locker.numero.toString().replace(/['"''‚„]/g, '').trim();
-
-      const dataToSave = {
-        employee_id: selectedEmployeeId,
-        requiere_taquilla: true,
-        vestuario: vestuario,
-        numero_taquilla_actual: numeroLimpio,
-        numero_taquilla_nuevo: "",
-        fecha_asignacion: now,
-        notificacion_enviada: false
-      };
-
-      if (existing) {
-        const historial = existing.historial_cambios || [];
-        historial.push({
-          fecha: now,
-          vestuario_anterior: existing.vestuario,
-          taquilla_anterior: existing.numero_taquilla_actual,
-          vestuario_nuevo: vestuario,
-          taquilla_nueva: numeroLimpio,
-          motivo: "Asignación desde mapa interactivo"
+      setIsSubmitting(true);
+      try {
+        console.log("Assigning locker:", { selectedEmployeeId, vestuario, numeroLimpio });
+        await saveAssignments({
+            employeeId: selectedEmployeeId,
+            requiere_taquilla: true,
+            vestuario: vestuario,
+            numero_taquilla_actual: numeroLimpio,
+            motivo: "Asignación desde mapa interactivo"
         });
-        dataToSave.historial_cambios = historial;
         
-        await base44.entities.LockerAssignment.update(existing.id, dataToSave);
-      } else {
-        await base44.entities.LockerAssignment.create(dataToSave);
+        const emp = employees.find(e => String(e.id) === String(selectedEmployeeId));
+        toast.success(`Taquilla ${locker.numero} asignada a ${emp?.nombre}`);
+        onClose();
+      } catch (error) {
+        console.error("Error assigning:", error);
+        toast.error(error.message);
+      } finally {
+        setIsSubmitting(false);
       }
+  };
 
-      // Sincronizar con EmployeeMasterDatabase
-      await base44.entities.EmployeeMasterDatabase.update(selectedEmployeeId, {
-        taquilla_vestuario: vestuario,
-        taquilla_numero: numeroLimpio
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      const emp = employees.find(e => e.id === selectedEmployeeId);
-      toast.success(`Taquilla ${locker.numero} asignada a ${emp?.nombre}`);
-      onClose();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    }
-  });
-
-  const unassignMutation = useMutation({
-    mutationFn: async () => {
+  const handleUnassign = async () => {
       if (!locker.assignment) return;
-
-      await base44.entities.LockerAssignment.update(locker.assignment.id, {
-        numero_taquilla_actual: "",
-        numero_taquilla_nuevo: "",
-        notificacion_enviada: false
-      });
-
-      if (locker.employee?.id) {
-        await base44.entities.EmployeeMasterDatabase.update(locker.employee.id, {
-          taquilla_vestuario: "",
-          taquilla_numero: ""
+      
+      setIsSubmitting(true);
+      try {
+        await saveAssignments({
+            employeeId: locker.employee.id,
+            requiere_taquilla: true,
+            vestuario: "",
+            numero_taquilla_actual: "",
+            motivo: "Liberación de taquilla desde mapa"
         });
+        toast.success("Taquilla liberada");
+        onClose();
+      } catch (error) {
+        toast.error(error.message);
+      } finally {
+        setIsSubmitting(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
-      toast.success("Taquilla liberada y sincronizada");
-      onClose();
-    },
-  });
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            Taquilla #{locker.numero} - {vestuario}
+            Taquilla #{locker.numero} - {vestuario} {isDemoMode && <Badge variant="destructive" className="ml-2">Modo Demo</Badge>}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Gestión de asignación para la taquilla número {locker.numero} en {vestuario}.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -191,16 +162,17 @@ export default function LockerAssignmentDialog({
                   onClick={onClose} 
                   variant="outline"
                   className="flex-1"
+                  disabled={isSubmitting}
                 >
                   Cerrar
                 </Button>
                 <Button
-                  onClick={() => unassignMutation.mutate()}
-                  disabled={unassignMutation.isPending}
+                  onClick={handleUnassign}
+                  disabled={isSubmitting}
                   className="flex-1 bg-red-600 hover:bg-red-700"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
-                  {unassignMutation.isPending ? "Liberando..." : "Liberar Taquilla"}
+                  {isSubmitting ? "Procesando..." : "Liberar Taquilla"}
                 </Button>
               </div>
             </>
@@ -242,16 +214,16 @@ export default function LockerAssignmentDialog({
                   onClick={onClose} 
                   variant="outline"
                   className="flex-1"
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </Button>
                 <Button
-                  onClick={() => assignMutation.mutate()}
-                  disabled={!selectedEmployeeId || assignMutation.isPending}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={handleAssign}
+                  disabled={isSubmitting || !selectedEmployeeId}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  {assignMutation.isPending ? "Asignando..." : "Asignar Taquilla"}
+                  {isSubmitting ? "Asignando..." : "Confirmar Asignación"}
                 </Button>
               </div>
             </>
