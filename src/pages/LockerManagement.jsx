@@ -930,6 +930,16 @@ export default function LockerManagementPage() {
             />
           </TabsContent>
 
+          <TabsContent value="lista">
+            <LockerListView 
+              lockerAssignments={lockerAssignments}
+              employees={employees}
+              lockerRoomConfigs={lockerRoomConfigs}
+              saveAssignments={saveAssignments}
+              isDemoMode={isDemoMode}
+            />
+          </TabsContent>
+
           <TabsContent value="importar">
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
