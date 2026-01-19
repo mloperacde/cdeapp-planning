@@ -13,7 +13,7 @@ import {
 import { CheckCircle2, XCircle, Settings, Edit3, Users, Search } from "lucide-react";
 import LockerAssignmentDialog from "./LockerAssignmentDialog";
 
-export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs, saveAssignments, isDemoMode }) {
+export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs, saveAssignments }) {
   const [selectedVestuario, setSelectedVestuario] = useState("Vestuario Femenino Planta Alta");
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [quickEditMode, setQuickEditMode] = useState(false);
@@ -175,7 +175,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Debug Info */}
         <div className="lg:col-span-4 bg-slate-100 p-2 rounded border border-slate-300 text-xs font-mono">
-           <strong>DEBUG MAP:</strong> Taquillas: {lockerData.length} | Asignaciones: {lockerAssignments.length} | Última acción: {lastAction} | Modo: {isDemoMode ? 'DEMO' : 'REAL'}
+           <strong>DEBUG MAP:</strong> Taquillas: {lockerData.length} | Asignaciones: {lockerAssignments.length} | Última acción: {lastAction}
         </div>
 
         {/* Panel lateral con empleados sin taquilla */}
@@ -374,7 +374,6 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
           lockerAssignments={lockerAssignments}
           onClose={() => setSelectedLocker(null)}
           saveAssignments={saveAssignments}
-          isDemoMode={isDemoMode}
         />
       )}
     </div>

@@ -888,7 +888,6 @@ export default function LockerManagementPage() {
               employees={employees}
               lockerRoomConfigs={lockerRoomConfigs}
               saveAssignments={saveAssignments}
-              isDemoMode={isDemoMode}
             />
           </TabsContent>
 

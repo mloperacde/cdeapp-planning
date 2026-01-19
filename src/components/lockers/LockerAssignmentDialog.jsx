@@ -19,8 +19,7 @@ export default function LockerAssignmentDialog({
   employees = [], 
   lockerAssignments = [], 
   onClose,
-  saveAssignments,
-  isDemoMode
+  saveAssignments
 }) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(locker.draggedEmployeeId || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,10 +29,9 @@ export default function LockerAssignmentDialog({
     console.log("[LockerAssignmentDialog] Mounted", { 
         lockerNumber: locker.numero, 
         draggedId: locker.draggedEmployeeId,
-        vestuario,
-        isDemoMode
+        vestuario
     });
-  }, [locker, vestuario, isDemoMode]);
+  }, [locker, vestuario]);
 
   const availableEmployees = useMemo(() => {
     if (!employees || !Array.isArray(employees)) return [];
@@ -122,7 +120,7 @@ export default function LockerAssignmentDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            Taquilla #{locker.numero} - {vestuario} {isDemoMode && <Badge variant="destructive" className="ml-2">Modo Demo</Badge>}
+            Taquilla #{locker.numero} - {vestuario}
           </DialogTitle>
           <DialogDescription className="sr-only">
             Gestión de asignación para la taquilla número {locker.numero} en {vestuario}.
