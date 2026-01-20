@@ -1053,6 +1053,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
 
                 <div className="space-y-2">
+                  <Label>Días Vacaciones Protección (Pendientes)</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={formData.dias_vacaciones_proteccion || 0}
+                    onChange={(e) => setFormData({ ...formData, dias_vacaciones_proteccion: parseFloat(e.target.value) || 0 })}
+                  />
+                  <p className="text-xs text-muted-foreground">Días pendientes por protección de vacaciones</p>
+                </div>
+
+                <div className="space-y-2">
                   <Label>Último Reset Causa Mayor</Label>
                   <Input
                     type="date"
