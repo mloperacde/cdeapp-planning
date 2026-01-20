@@ -44,6 +44,7 @@ import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
+import ManufacturingConfig from "./ManufacturingConfig";
 import DireccionSkills from "./DireccionSkills";
 import PlanificacionSkills from "./PlanificacionSkills";
 import FabricacionSkills from "./FabricacionSkills";
@@ -113,6 +114,7 @@ const PAGES = {
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
   MachinePlanning: MachinePlanning,
+  ManufacturingConfig: ManufacturingConfig,
   DireccionSkills: DireccionSkills,
   PlanificacionSkills: PlanificacionSkills,
   FabricacionSkills: FabricacionSkills,
