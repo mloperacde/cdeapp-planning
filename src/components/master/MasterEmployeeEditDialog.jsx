@@ -13,6 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   Select,
   SelectContent,
@@ -20,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft } from "lucide-react";
+import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigationHistory } from "../utils/useNavigationHistory";
 import { useEntityMutation } from "../utils/useEntityMutation";
@@ -72,6 +76,16 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     initialData: [],
     staleTime: 0, // Forzar recarga cada vez
   });
+
+  const { data: emergencyMembers } = useQuery({
+    queryKey: ['emergencyTeamMembers'],
+    queryFn: () => base44.entities.EmergencyTeamMember.list(),
+    initialData: [],
+    staleTime: 0,
+    gcTime: 0
+  });
+
+  const emergency = (emergencyMembers || []).filter(em => em.employee_id === employee?.id && em.activo);
 
   // Cargar datos del empleado cuando cambie la prop
   useEffect(() => {
@@ -131,7 +145,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       contrato: true,
       absentismo: true,
       maquinas: true,
-      disponibilidad: true
+      disponibilidad: true,
+      emergencias: true
     }
   };
 
@@ -307,6 +322,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 <TabsTrigger value="disponibilidad" className="flex-1">
                   <Calendar className="w-4 h-4 mr-1" />
                   Disp.
+                </TabsTrigger>
+              )}
+              {permissions.tabs.emergencias && (
+                <TabsTrigger value="emergencias" className="flex-1">
+                  <Flame className="w-4 h-4 mr-1" />
+                  Emergencias
                 </TabsTrigger>
               )}
             </TabsList>
@@ -1154,6 +1175,66 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <p className="text-sm text-blue-800">
                     <strong>Nota:</strong> Para gestión completa de ausencias (solicitudes, aprobaciones, tipos), 
                     utiliza el módulo de "Gestión de Ausencias" que sincronizará automáticamente con este campo.
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+            )}
+
+            {permissions.tabs.emergencias && (
+            <TabsContent value="emergencias" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg text-slate-900">
+                  Equipo de Emergencia ({emergency.length})
+                </h3>
+
+                {emergency.length === 0 ? (
+                  <Card className="bg-slate-50">
+                    <CardContent className="p-8 text-center">
+                      <Flame className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                      <p className="text-slate-500">No participa en equipos de emergencia</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {emergency.map((em) => (
+                      <Card key={em.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <Badge className="bg-red-600 mb-2">{em.rol_emergencia}</Badge>
+                              {em.es_suplente && (
+                                <Badge variant="outline" className="ml-2">Suplente</Badge>
+                              )}
+                              <p className="text-xs text-slate-500 mt-2">
+                                Desde: {em.fecha_nombramiento ? format(new Date(em.fecha_nombramiento), "dd/MM/yyyy", { locale: es }) : "-"}
+                              </p>
+                              {em.zona_asignada && (
+                                <p className="text-xs text-slate-600 mt-1">
+                                  Zona: {em.zona_asignada}
+                                </p>
+                              )}
+                              {em.formacion_recibida && em.formacion_recibida.length > 0 && (
+                                <div className="mt-2">
+                                  <p className="text-xs font-semibold text-slate-700">Formaciones:</p>
+                                  {em.formacion_recibida.map((f, idx) => (
+                                    <Badge key={idx} variant="outline" className="mr-1 mt-1 text-xs">
+                                      {f.nombre_curso}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Nota:</strong> La gestión de los equipos de emergencia (asignación de roles, altas y bajas) se realiza desde el módulo "Comités y PRL".
                   </p>
                 </div>
               </div>
