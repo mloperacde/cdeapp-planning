@@ -241,29 +241,27 @@ function TeamColumn({ teamName, color, groups, allTeams, onMove, onBulkMove, isU
                                 <p className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">{puesto}</p>
                                 <div className="space-y-1">
                                     {employees.sort((a,b) => a.nombre.localeCompare(b.nombre)).map(emp => (
-                                        <div key={emp.id} className="flex items-center justify-between bg-white p-2 rounded shadow-sm border border-slate-100 group">
-                                            <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                                        <div key={emp.id} className="grid grid-cols-[1fr_auto] gap-2 items-center bg-white p-2 rounded shadow-sm border border-slate-100 group">
+                                            <div className="flex items-center gap-2 overflow-hidden min-w-0">
                                                 <User className="w-3 h-3 text-slate-400 flex-shrink-0" />
                                                 <span className="text-sm truncate" title={emp.nombre}>{emp.nombre}</span>
                                             </div>
                                             
-                                            <div className="flex-shrink-0 ml-2">
-                                                <Select 
-                                                    value={isUnassigned ? "Sin Equipo" : teamName} 
-                                                    onValueChange={(val) => onMove(emp.id, val)}
-                                                >
-                                                    <SelectTrigger className="w-[24px] h-[24px] p-0 border-0 shadow-none">
-                                                        <ArrowRightLeft className="w-4 h-4 text-slate-400 hover:text-slate-600" /> 
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {isOrphan && <SelectItem value={teamName} disabled>{teamName} (Actual)</SelectItem>}
-                                                        <SelectItem value="Sin Equipo">Sin Equipo</SelectItem>
-                                                        {allTeams.map(t => (
-                                                            <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                            <Select 
+                                                value={isUnassigned ? "Sin Equipo" : teamName} 
+                                                onValueChange={(val) => onMove(emp.id, val)}
+                                            >
+                                                <SelectTrigger className="w-[24px] h-[24px] p-0 border-0 shadow-none">
+                                                    <ArrowRightLeft className="w-4 h-4 text-slate-400 hover:text-slate-600" /> 
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {isOrphan && <SelectItem value={teamName} disabled>{teamName} (Actual)</SelectItem>}
+                                                    <SelectItem value="Sin Equipo">Sin Equipo</SelectItem>
+                                                    {allTeams.map(t => (
+                                                        <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     ))}
                                 </div>
