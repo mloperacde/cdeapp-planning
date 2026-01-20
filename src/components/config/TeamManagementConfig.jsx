@@ -58,6 +58,7 @@ function GeneralTeamConfig() {
   const { data: teams = [], isLoading } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
+    refetchOnMount: true, // Ensure fresh data when tab is switched
   });
 
   // Initialize editing state when data loads
@@ -99,10 +100,13 @@ function GeneralTeamConfig() {
         console.log("Detected team name changes:", nameChanges);
         
         // Fetch all employees to find matches
-        // Using a large limit to ensure we get everyone
+        // Add timestamp to bust potential cache
         let allEmployees = [];
         try {
-            allEmployees = await base44.entities.EmployeeMasterDatabase.list({ limit: 2000 });
+            allEmployees = await base44.entities.EmployeeMasterDatabase.list({ 
+                limit: 2000,
+                _t: Date.now() 
+            });
         } catch (e) {
             console.error("Error fetching employees:", e);
             allEmployees = [];
@@ -115,9 +119,14 @@ function GeneralTeamConfig() {
         allEmployees.forEach(emp => {
           if (!emp.equipo) return;
           
-          // Normalize names for comparison (trim)
+          // Normalize names for comparison (trim and lowercase for robust matching)
           const empTeamName = String(emp.equipo).trim();
-          const change = nameChanges.find(c => String(c.oldName).trim() === empTeamName);
+          
+          const change = nameChanges.find(c => {
+             // Check exact match (trimmed) or case-insensitive match
+             const oldName = String(c.oldName).trim();
+             return oldName === empTeamName || oldName.toLowerCase() === empTeamName.toLowerCase();
+          });
           
           if (change) {
             updatesToProcess.push({
@@ -129,9 +138,9 @@ function GeneralTeamConfig() {
         });
 
         if (updatesToProcess.length > 0) {
-          console.log(`Updating ${updatesToProcess.length} employees due to team name changes. Examples:`, updatesToProcess.slice(0, 3));
+          console.log(`Updating ${updatesToProcess.length} employees due to team name changes.`);
           
-          // Process in batches to avoid 429 Too Many Requests
+          // Process in batches
           const BATCH_SIZE = 5;
           for (let i = 0; i < updatesToProcess.length; i += BATCH_SIZE) {
             const batch = updatesToProcess.slice(i, i + BATCH_SIZE);
@@ -141,20 +150,27 @@ function GeneralTeamConfig() {
               )
             );
             
-            // Add a small delay between batches if there are more items
             if (i + BATCH_SIZE < updatesToProcess.length) {
-              await new Promise(resolve => setTimeout(resolve, 500));
+              await new Promise(resolve => setTimeout(resolve, 300));
             }
           }
+          return { updatedCount: updatesToProcess.length };
         } else {
             console.log("No employees found matching the old team names.");
+            return { updatedCount: 0 };
         }
       }
+      return { updatedCount: 0 };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast.success("Configuración de equipos actualizada y empleados sincronizados");
+      
+      const msg = data.updatedCount > 0 
+        ? `Configuración guardada y ${data.updatedCount} empleados movidos al nuevo nombre de equipo.` 
+        : "Configuración de equipos actualizada.";
+        
+      toast.success(msg);
     }
   });
 
