@@ -74,6 +74,7 @@ export default function Layout({ children, currentPageName }) {
 
     // Fabricación
     { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Fabricación' },
+    { name: 'Config. Fabricación', icon: Settings, path: '/ManufacturingConfig', category: 'Fabricación' },
     { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Fabricación' },
     { name: 'Control Calidad', icon: ClipboardCheck, path: '/QualityControl', category: 'Fabricación' },
     { name: 'Config. Procesos', icon: Cog, path: '/ProcessConfiguration', category: 'Fabricación' },

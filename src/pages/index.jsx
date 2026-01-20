@@ -253,6 +253,7 @@ function PagesContent() {
                 
                 <Route path="/Breaks" element={<Breaks />} />
                 <Route path="/MachinePlanning" element={<MachinePlanning />} />
+                <Route path="/ManufacturingConfig" element={<ManufacturingConfig />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/BrandingConfig" element={<AdvancedConfiguration />} />

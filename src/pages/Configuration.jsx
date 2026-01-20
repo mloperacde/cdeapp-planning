@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Package, ArrowLeft, UserCog, FolderOpen, Activity, Database, Palette } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Package, ArrowLeft, UserCog, FolderOpen, Activity, Database, Palette, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import AdminOnly from "@/components/security/AdminOnly";
@@ -69,6 +69,13 @@ export default function ConfigurationPage() {
     produccion: {
       title: "Producción",
       modules: [
+        {
+          title: "Configuración de Fabricación",
+          description: "Áreas, Salas, Jefes de Turno y Tareas",
+          icon: Factory,
+          url: "/ManufacturingConfig",
+          color: "blue"
+        },
         {
           title: "Configuración de Procesos",
           description: "Define procesos y requisitos por máquina",
