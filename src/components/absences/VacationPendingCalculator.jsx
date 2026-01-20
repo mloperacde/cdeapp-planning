@@ -1,13 +1,19 @@
 import { base44 } from "@/api/base44Client";
 import { eachDayOfInterval, isWeekend, format } from "date-fns";
 
-export async function syncEmployeeVacationProtection(employeeId) {
+export async function syncEmployeeVacationProtection(employeeId, preloadedBalances = null) {
   try {
-    const balances = await base44.entities.VacationPendingBalance.filter({
-      employee_id: employeeId
-    });
+    let balances;
+    
+    if (preloadedBalances) {
+      balances = preloadedBalances;
+    } else {
+      // Usar list() en lugar de filter() para asegurar consistencia y evitar problemas de caché
+      balances = await base44.entities.VacationPendingBalance.list();
+    }
 
-    const totalDiasDisponibles = balances.reduce((sum, b) => sum + (b.dias_disponibles || 0), 0);
+    const employeeBalances = balances.filter(b => b.employee_id === employeeId);
+    const totalDiasDisponibles = employeeBalances.reduce((sum, b) => sum + (b.dias_disponibles || 0), 0);
 
     await base44.entities.EmployeeMasterDatabase.update(employeeId, {
       dias_vacaciones_proteccion: totalDiasDisponibles
@@ -195,7 +201,7 @@ export async function recalculateVacationPendingBalances() {
   
   for (const empId of distinctEmployeeIds) {
     if (empId) {
-      await syncEmployeeVacationProtection(empId);
+      await syncEmployeeVacationProtection(empId, allBalances);
     }
   }
 }

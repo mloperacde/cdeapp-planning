@@ -24,6 +24,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
     mutationFn: recalculateVacationPendingBalances,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      await queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
       toast.success("Saldo de vacaciones pendientes recalculado");
     },
     onError: (error) => {
