@@ -96,22 +96,40 @@ function GeneralTeamConfig() {
 
       // 3. Cascade update to employees if names changed
       if (nameChanges.length > 0) {
+        console.log("Detected team name changes:", nameChanges);
+        
         // Fetch all employees to find matches
-        const allEmployees = await base44.entities.EmployeeMasterDatabase.list();
+        // Using a large limit to ensure we get everyone
+        let allEmployees = [];
+        try {
+            allEmployees = await base44.entities.EmployeeMasterDatabase.list({ limit: 2000 });
+        } catch (e) {
+            console.error("Error fetching employees:", e);
+            allEmployees = [];
+        }
+
+        console.log(`Scanned ${allEmployees.length} employees for team updates`);
+        
         const updatesToProcess = [];
 
         allEmployees.forEach(emp => {
-          const change = nameChanges.find(c => c.oldName === emp.equipo);
+          if (!emp.equipo) return;
+          
+          // Normalize names for comparison (trim)
+          const empTeamName = String(emp.equipo).trim();
+          const change = nameChanges.find(c => String(c.oldName).trim() === empTeamName);
+          
           if (change) {
             updatesToProcess.push({
               id: emp.id,
-              data: { equipo: change.newName }
+              data: { equipo: change.newName.trim() },
+              name: emp.nombre
             });
           }
         });
 
         if (updatesToProcess.length > 0) {
-          console.log(`Updating ${updatesToProcess.length} employees due to team name changes`);
+          console.log(`Updating ${updatesToProcess.length} employees due to team name changes. Examples:`, updatesToProcess.slice(0, 3));
           
           // Process in batches to avoid 429 Too Many Requests
           const BATCH_SIZE = 5;
@@ -128,6 +146,8 @@ function GeneralTeamConfig() {
               await new Promise(resolve => setTimeout(resolve, 500));
             }
           }
+        } else {
+            console.log("No employees found matching the old team names.");
         }
       }
     },

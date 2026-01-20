@@ -142,17 +142,20 @@ export default function TeamCompositionConfig() {
   );
 }
 
-function TeamColumn({ teamName, color, groups, allTeams, onMove, isUnassigned }) {
+function TeamColumn({ teamName, color, groups, allTeams, onMove, isUnassigned, isOrphan }) {
     const totalEmployees = Object.values(groups).reduce((acc, curr) => acc + curr.length, 0);
-    const borderColor = isUnassigned ? "border-slate-200" : `border-${color}-200`;
-    const bgColor = isUnassigned ? "bg-slate-50" : `bg-${color}-50`;
-    const headerColor = isUnassigned ? "text-slate-700" : `text-${color}-800`;
+    const borderColor = isOrphan ? "border-red-200" : (isUnassigned ? "border-slate-200" : `border-${color}-200`);
+    const bgColor = isOrphan ? "bg-red-50" : (isUnassigned ? "bg-slate-50" : `bg-${color}-50`);
+    const headerColor = isOrphan ? "text-red-700" : (isUnassigned ? "text-slate-700" : `text-${color}-800`);
 
     return (
         <div className={`rounded-lg border ${borderColor} flex flex-col h-full`}>
             <div className={`p-3 ${bgColor} border-b ${borderColor} flex justify-between items-center`}>
-                <h4 className={`font-semibold ${headerColor}`}>{teamName}</h4>
-                <Badge variant={isUnassigned ? "secondary" : "default"} className={isUnassigned ? "" : `bg-${color}-600`}>
+                <div className="flex flex-col">
+                    <h4 className={`font-semibold ${headerColor}`}>{teamName}</h4>
+                    {isOrphan && <span className="text-xs text-red-500">Equipo no encontrado</span>}
+                </div>
+                <Badge variant={isUnassigned ? "secondary" : (isOrphan ? "destructive" : "default")} className={(!isUnassigned && !isOrphan) ? `bg-${color}-600` : ""}>
                     {totalEmployees}
                 </Badge>
             </div>
