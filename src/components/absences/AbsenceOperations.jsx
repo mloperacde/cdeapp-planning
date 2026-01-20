@@ -5,6 +5,23 @@ import { notifyAbsenceRequestRealtime } from "../notifications/AdvancedNotificat
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+async function getEmployeeVacationAbsences(employeeId, absenceTypes) {
+  const vacationTypeIds = new Set(
+    absenceTypes
+      .filter(type => {
+        const nombreLower = (type.nombre || "").toLowerCase();
+        const catLower = (type.categoria_principal || "").toLowerCase();
+        return nombreLower.includes("vacaciones") || catLower.includes("vacaciones");
+      })
+      .map(t => t.id)
+  );
+
+  if (vacationTypeIds.size === 0) return [];
+
+  const allAbsences = await base44.entities.Absence.filter({ employee_id: employeeId });
+  return allAbsences.filter(abs => vacationTypeIds.has(abs.absence_type_id));
+}
+
 /**
  * Updates the employee's availability status in the Employee entity.
  */
@@ -58,7 +75,8 @@ export const createAbsence = async (data, currentUser, employees, absenceTypes, 
   // 3. Calculate Vacation Pending Balance if applicable
   const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
   if (absenceType) {
-    await calculateVacationPendingBalance(result, absenceType, vacations, holidays);
+    const employeeVacations = await getEmployeeVacationAbsences(data.employee_id, absenceTypes);
+    await calculateVacationPendingBalance(result, absenceType, vacations, holidays, employeeVacations);
   }
 
   // 4. Update Absenteeism Stats
@@ -123,16 +141,13 @@ export const updateAbsence = async (id, data, currentUser, absenceTypes, vacatio
       }
   }
 
-  // 3. Recalculate Vacation Balance (remove old and add new?)
-  // Simplified: we call calculate again. Note: calculateVacationPendingBalance might duplicate if not handled.
-  // Actually VacationPendingCalculator adds a new record. We might need to handle updates.
-  // For now, let's assume updates to vacation-generating absences are handled manually or we accept duplicates.
-  // Better: try to clean up for this absence id first?
-  // await removeAbsenceFromBalance(id, data.employee_id, new Date(data.fecha_inicio).getFullYear());
-  // const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
-  // if (absenceType) {
-  //   await calculateVacationPendingBalance(result, absenceType, vacations, holidays);
-  // }
+  // 3. Recalculate Vacation Balance (remove old and add new)
+  await removeAbsenceFromBalance(id, data.employee_id, new Date(data.fecha_inicio).getFullYear());
+  const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
+  if (absenceType) {
+    const employeeVacations = await getEmployeeVacationAbsences(data.employee_id, absenceTypes);
+    await calculateVacationPendingBalance(result, absenceType, vacations, holidays, employeeVacations);
+  }
   
   // 4. Update Absenteeism
   await updateEmployeeAbsenteeismDaily(data.employee_id);

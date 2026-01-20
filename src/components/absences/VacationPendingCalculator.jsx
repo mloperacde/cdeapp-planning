@@ -1,7 +1,7 @@
 import { base44 } from "@/api/base44Client";
 import { eachDayOfInterval, isWeekend, format } from "date-fns";
 
-export async function calculateVacationPendingBalance(absence, absenceType, vacations, holidays) {
+export async function calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacationAbsences = []) {
   const noConsumeVacaciones = absenceType?.no_consume_vacaciones ?? true;
   if (!noConsumeVacaciones) {
     return null;
@@ -31,8 +31,23 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
   let diasCoincidentes = 0;
   const periodosVacaciones = [];
 
+  // Combinar vacaciones globales y ausencias de vacaciones individuales
+  const allVacations = [
+    ...vacations.map(v => ({ ...v, type: 'global' })),
+    ...employeeVacationAbsences.map(v => ({
+      id: v.id,
+      start_date: v.fecha_inicio,
+      end_date: v.fecha_fin || v.fecha_inicio,
+      nombre: `Vacaciones Indiv. (${v.tipo || 'Vacaciones'})`,
+      type: 'individual'
+    }))
+  ];
+
   // Verificar cada período de vacaciones
-  for (const vacation of vacations) {
+  for (const vacation of allVacations) {
+    // Evitar solapamiento consigo mismo (aunque no debería pasar si noConsumeVacaciones es true)
+    if (vacation.type === 'individual' && vacation.id === absence.id) continue;
+
     const vacStart = new Date(vacation.start_date);
     const vacEnd = new Date(vacation.end_date);
 
@@ -109,24 +124,49 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
 
 export async function recalculateVacationPendingBalances() {
   const [absences, absenceTypes, vacations, holidays] = await Promise.all([
-    base44.entities.Absence.list("-fecha_inicio", 1000),
+    base44.entities.Absence.list("-fecha_inicio", 2000), // Aumentar límite por seguridad
     base44.entities.AbsenceType.list("orden", 200),
     base44.entities.Vacation.list(),
     base44.entities.Holiday.list()
   ]);
 
   const typeById = new Map();
+  const vacationTypeIds = new Set();
+
   absenceTypes.forEach(type => {
     if (type && type.id) {
       typeById.set(type.id, type);
+      
+      // Identificar tipos de vacaciones
+      const nombreLower = (type.nombre || "").toLowerCase();
+      const catLower = (type.categoria_principal || "").toLowerCase();
+      if (nombreLower.includes("vacaciones") || catLower.includes("vacaciones")) {
+        vacationTypeIds.add(type.id);
+      }
     }
   });
+
+  // Agrupar ausencias de vacaciones por empleado
+  const vacationAbsencesByEmployee = new Map();
+  
+  for (const abs of absences) {
+    if (vacationTypeIds.has(abs.absence_type_id)) {
+      const empId = abs.employee_id;
+      if (!vacationAbsencesByEmployee.has(empId)) {
+        vacationAbsencesByEmployee.set(empId, []);
+      }
+      vacationAbsencesByEmployee.get(empId).push(abs);
+    }
+  }
 
   for (const absence of absences) {
     if (!absence.absence_type_id) continue;
     const absenceType = typeById.get(absence.absence_type_id);
     if (!absenceType) continue;
-    await calculateVacationPendingBalance(absence, absenceType, vacations, holidays);
+
+    const employeeVacations = vacationAbsencesByEmployee.get(absence.employee_id) || [];
+
+    await calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacations);
   }
 }
 

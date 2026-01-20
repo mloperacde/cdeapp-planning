@@ -213,8 +213,13 @@ export default function UnpaidLeaveTracker({ employees = [] }) {
                   </p>
                   <Dialog open={isEditingLimit} onOpenChange={setIsEditingLimit}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setNewLimit(employeeLimit.toString())}>
-                        <Edit2 className="w-3 h-3 text-slate-700" />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 hover:bg-slate-200 rounded-full border border-slate-300 bg-white shadow-sm" 
+                        onClick={() => setNewLimit(employeeLimit.toString())}
+                      >
+                        <Edit2 className="w-4 h-4 text-slate-700" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
