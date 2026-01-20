@@ -73,8 +73,8 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
 
     // Fabricación
+    { name: 'Config. Fabricación', icon: Factory, path: '/ManufacturingConfig', category: 'Fabricación' },
     { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Fabricación' },
-    { name: 'Config. Fabricación', icon: Settings, path: '/ManufacturingConfig', category: 'Fabricación' },
     { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Fabricación' },
     { name: 'Control Calidad', icon: ClipboardCheck, path: '/QualityControl', category: 'Fabricación' },
     { name: 'Config. Procesos', icon: Cog, path: '/ProcessConfiguration', category: 'Fabricación' },
