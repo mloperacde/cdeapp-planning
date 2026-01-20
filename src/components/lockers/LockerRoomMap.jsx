@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import { CheckCircle2, XCircle, Settings, Edit3, Users, Search } from "lucide-react";
 import LockerAssignmentDialog from "./LockerAssignmentDialog";
+import { cleanLockerNumber } from "@/utils";
+import { toast } from "sonner";
 
 export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs, saveAssignments }) {
   const [selectedVestuario, setSelectedVestuario] = useState("Vestuario Femenino Planta Alta");
@@ -88,20 +90,15 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
 
   const handleLockerClick = (locker) => {
     try {
-      console.log("[LockerRoomMap] Locker clicked:", locker);
-      setLastAction(`Click en taquilla ${locker.numero} - Ocupada: ${locker.ocupada}`);
       setSelectedLocker(locker);
     } catch (error) {
       console.error("Error handling click:", error);
-      setLastAction(`Error al hacer click: ${error.message}`);
       toast.error(`Error: ${error.message}`);
     }
   };
 
   const handleDragStart = (e, employee) => {
     try {
-      console.log("[LockerRoomMap] Drag start:", employee);
-      setLastAction(`Arrastrando: ${employee.nombre}`);
       e.dataTransfer.setData('employeeId', employee.id);
       e.dataTransfer.setData('employeeName', employee.nombre);
       e.dataTransfer.effectAllowed = 'move';
@@ -123,21 +120,15 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
       const employeeId = e.dataTransfer.getData('employeeId');
       const employeeName = e.dataTransfer.getData('employeeName');
       
-      console.log("[LockerRoomMap] Drop:", { locker, employeeId, employeeName });
-      setLastAction(`Drop: ${employeeName} en taquilla ${locker.numero}`);
-
       if (!employeeId || locker.ocupada) {
-        setLastAction(`Drop ignorado: ${locker.ocupada ? 'Taquilla ocupada' : 'Sin ID empleado'}`);
         return;
       }
       
       // La asignación se manejará a través del dialog que se abrirá
       const selected = { ...locker, draggedEmployeeId: employeeId };
-      console.log("[LockerRoomMap] Setting selected locker with dragged employee:", selected);
       setSelectedLocker(selected);
     } catch (error) {
       console.error("Error handling drop:", error);
-      setLastAction(`Error en drop: ${error.message}`);
       toast.error(`Error al soltar: ${error.message}`);
     }
   };

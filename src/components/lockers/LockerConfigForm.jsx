@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Save, Plus, X, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { cleanLockerNumber } from "@/utils";
 
 export default function LockerConfigForm({ vestuario, config, lockerRoomStats }) {
   const [numTaquillas, setNumTaquillas] = useState(config?.numero_taquillas_instaladas || 0);
@@ -37,7 +38,7 @@ export default function LockerConfigForm({ vestuario, config, lockerRoomStats })
       if (modoEntrada === "manual") {
         identificadoresArray = identificadores
           .split(',')
-          .map(id => id.trim())
+          .map(id => cleanLockerNumber(id))
           .filter(id => id !== "");
         
         if (identificadoresArray.length !== numTaquillas) {

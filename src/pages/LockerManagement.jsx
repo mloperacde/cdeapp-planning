@@ -24,7 +24,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KeyRound, Save, ArrowLeft, Bell, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, ArrowUpDown, Database, UserX, FileSpreadsheet, Filter, ExternalLink, XCircle, History } from "lucide-react";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { createPageUrl, cleanLockerNumber } from "@/utils";
 import {
   Dialog,
   DialogContent,
@@ -175,7 +175,7 @@ export default function LockerManagementPage() {
 
         // Check for changes
         const existingVestuario = existing?.vestuario || "";
-        const existingNumero = existing?.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() || "";
+        const existingNumero = cleanLockerNumber(existing?.numero_taquilla_actual);
         const existingRequires = existing?.requiere_taquilla !== false;
         
         if (requiresLocker && existing) {
@@ -217,43 +217,7 @@ export default function LockerManagementPage() {
     }
   };
 
-  const handleAssign = async (employeeId, vestuario, lockerNumber) => {
-      // Validate duplicate
-      const duplicado = lockerAssignments.find(la => 
-        la.vestuario === vestuario &&
-        la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === String(lockerNumber) &&
-        String(la.employee_id) !== String(employeeId) &&
-        la.requiere_taquilla !== false
-      );
 
-      if (duplicado) {
-        const empDuplicado = employees.find(e => String(e.id) === String(duplicado.employee_id));
-        throw new Error(`La taquilla ${lockerNumber} en ${vestuario} ya está asignada a ${empDuplicado?.nombre || 'otro empleado'}`);
-      }
-
-      await saveAssignments({
-          employeeId,
-          requiere_taquilla: true,
-          vestuario,
-          numero_taquilla_actual: String(lockerNumber),
-          motivo: "Asignación desde mapa"
-      });
-  };
-
-  const handleUnassign = async (assignmentId, employeeId) => {
-      await saveAssignments({
-          employeeId,
-          requiere_taquilla: true, // Keep requirement? Or false? Usually unassigning frees the locker but employee might still need one? 
-          // Assuming unassign means "remove locker but maybe keep need", OR "remove need". 
-          // Looking at old code: it updated numero_taquilla_actual to "" but didn't set requiere_taquilla to false explicitly, so it defaulted/stayed.
-          // Let's set numero to empty string.
-          vestuario: "", // Also clear vestuario? Old code didn't clear vestuario explicitly in one place but cleared in another. 
-          // In handleImportConfirm it set vestuario. In unassignMutation it set numero_taquilla_actual: "".
-          // Let's clear both to be safe/clean.
-          numero_taquilla_actual: "",
-          motivo: "Liberación de taquilla"
-      });
-  };
 
 
   const sendNotificationMutation = useMutation({
@@ -330,8 +294,8 @@ export default function LockerManagementPage() {
       } else if (sortConfig.field === "taquilla") {
         const aAssign = editingAssignments[a.id] || getAssignment(a.id);
         const bAssign = editingAssignments[b.id] || getAssignment(b.id);
-        aVal = (aAssign?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
-        bVal = (bAssign?.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
+        aVal = cleanLockerNumber(aAssign?.numero_taquilla_actual);
+        bVal = cleanLockerNumber(bAssign?.numero_taquilla_actual);
       } else if (sortConfig.field === "departamento") {
         aVal = a.departamento || "";
         bVal = b.departamento || "";
@@ -495,11 +459,10 @@ export default function LockerManagementPage() {
       const updates = [];
       
       for (const { employee, vestuario, numeroTaquilla } of importPreview.matched) {
-        const existing = lockerAssignments.find(la => String(la.employee_id) === String(employee.id));
         
         const duplicado = lockerAssignments.find(la => 
           la.vestuario === vestuario &&
-          la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroTaquilla &&
+          cleanLockerNumber(la.numero_taquilla_actual) === numeroTaquilla &&
           String(la.employee_id) !== String(employee.id) &&
           la.requiere_taquilla !== false
         );
@@ -556,8 +519,7 @@ export default function LockerManagementPage() {
       const employee = activeEmployees.find(e => String(e.id) === String(la.employee_id));
       if (!employee) return false;
       
-      const tieneTaquilla = la.numero_taquilla_actual && 
-                           String(la.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
+      const tieneTaquilla = cleanLockerNumber(la.numero_taquilla_actual) !== "";
       const requiere = la.requiere_taquilla !== false;
       return tieneTaquilla && requiere;
     }).length;
@@ -619,7 +581,7 @@ export default function LockerManagementPage() {
         // Only consider assignments for this vestuario that require a locker and have a locker ID
         if (la.vestuario !== vestuario || la.requiere_taquilla === false) return;
         
-        const cleanedLockerId = (la.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
+        const cleanedLockerId = cleanLockerNumber(la.numero_taquilla_actual);
         if (!cleanedLockerId) return; // No locker ID assigned
 
         let isValidId = false;
@@ -734,21 +696,17 @@ export default function LockerManagementPage() {
               <BarChart3 className="w-4 h-4 mr-2" />
               Estadísticas
             </TabsTrigger>
-            <TabsTrigger value="sin-taquilla">
-              <UserX className="w-4 h-4 mr-2" />
-              Sin Taquilla
+            <TabsTrigger value="asignaciones">
+              <Users className="w-4 h-4 mr-2" />
+              Asignaciones
             </TabsTrigger>
             <TabsTrigger value="mapa">
               <KeyRound className="w-4 h-4 mr-2" />
               Mapa
             </TabsTrigger>
-            <TabsTrigger value="importar">
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
-            </TabsTrigger>
-            <TabsTrigger value="asignaciones">
-              <Users className="w-4 h-4 mr-2" />
-              Asignaciones
+            <TabsTrigger value="sin-taquilla">
+              <UserX className="w-4 h-4 mr-2" />
+              Sin Taquilla
             </TabsTrigger>
             <TabsTrigger value="auditoria">
               <Database className="w-4 h-4 mr-2" />
@@ -757,6 +715,10 @@ export default function LockerManagementPage() {
             <TabsTrigger value="configuracion">
               <Settings className="w-4 h-4 mr-2" />
               Config
+            </TabsTrigger>
+            <TabsTrigger value="importar">
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
             </TabsTrigger>
           </TabsList>
 

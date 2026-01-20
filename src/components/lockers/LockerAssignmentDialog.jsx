@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { User, XCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import EmployeeSelect from "../common/EmployeeSelect";
+import { cleanLockerNumber } from "@/utils";
 
 export default function LockerAssignmentDialog({ 
   locker, 
@@ -23,15 +24,6 @@ export default function LockerAssignmentDialog({
 }) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(locker.draggedEmployeeId || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Debug: Log mount and props
-  React.useEffect(() => {
-    console.log("[LockerAssignmentDialog] Mounted", { 
-        lockerNumber: locker.numero, 
-        draggedId: locker.draggedEmployeeId,
-        vestuario
-    });
-  }, [locker, vestuario]);
 
   const availableEmployees = useMemo(() => {
     if (!employees || !Array.isArray(employees)) return [];

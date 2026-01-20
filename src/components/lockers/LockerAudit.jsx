@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { createPageUrl, cleanLockerNumber } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,8 @@ export default function LockerAudit({ employees, lockerAssignments }) {
     lockerAssignments.forEach(la => {
       if (!la.numero_taquilla_actual || la.requiere_taquilla === false) return;
       
-      const key = `${la.vestuario}|${la.numero_taquilla_actual}`;
+      const cleanNum = cleanLockerNumber(la.numero_taquilla_actual);
+      const key = `${la.vestuario}|${cleanNum}`;
       if (!assignmentMap.has(key)) {
         assignmentMap.set(key, []);
       }
