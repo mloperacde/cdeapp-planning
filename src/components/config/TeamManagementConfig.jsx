@@ -72,18 +72,56 @@ function GeneralTeamConfig() {
   }, [teams]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updatedTeams) => {
-      const promises = Object.values(updatedTeams).map(team => 
+    mutationFn: async ({ updatedTeams, originalTeams }) => {
+      // 1. Detect name changes
+      const nameChanges = [];
+      Object.values(updatedTeams).forEach(newTeam => {
+        const oldTeam = originalTeams.find(t => t.id === newTeam.id);
+        if (oldTeam && oldTeam.team_name !== newTeam.team_name) {
+          nameChanges.push({
+            oldName: oldTeam.team_name,
+            newName: newTeam.team_name
+          });
+        }
+      });
+
+      // 2. Update Team Configs
+      const teamPromises = Object.values(updatedTeams).map(team => 
         base44.entities.TeamConfig.update(team.id, {
           team_name: team.team_name,
           color: team.color
         })
       );
-      return Promise.all(promises);
+      await Promise.all(teamPromises);
+
+      // 3. Cascade update to employees if names changed
+      if (nameChanges.length > 0) {
+        // Fetch all employees to find matches
+        // Note: In a real backend this should be a backend transaction or specific endpoint
+        const allEmployees = await base44.entities.EmployeeMasterDatabase.list();
+        const employeeUpdates = [];
+
+        allEmployees.forEach(emp => {
+          const change = nameChanges.find(c => c.oldName === emp.equipo);
+          if (change) {
+            employeeUpdates.push(
+              base44.entities.EmployeeMasterDatabase.update(emp.id, {
+                equipo: change.newName
+              })
+            );
+          }
+        });
+
+        if (employeeUpdates.length > 0) {
+          console.log(`Updating ${employeeUpdates.length} employees due to team name changes`);
+          await Promise.all(employeeUpdates);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamConfigs'] });
-      toast.success("Configuración de equipos actualizada");
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success("Configuración de equipos actualizada y empleados sincronizados");
     }
   });
 
@@ -95,7 +133,7 @@ function GeneralTeamConfig() {
   };
 
   const handleSave = () => {
-    updateMutation.mutate(editingTeams);
+    updateMutation.mutate({ updatedTeams: editingTeams, originalTeams: teams });
   };
 
   if (isLoading) return <div>Cargando...</div>;
