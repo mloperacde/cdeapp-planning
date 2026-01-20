@@ -77,6 +77,18 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     staleTime: 0, // Forzar recarga cada vez
   });
 
+  // Query para obtener datos frescos del empleado individual al abrir el diálogo
+  // Esto asegura que veamos los saldos actualizados aunque la lista padre esté cacheada
+  const { data: freshEmployeeData } = useQuery({
+    queryKey: ['employeeMasterDatabase', employee?.id],
+    queryFn: async () => {
+      if (!employee?.id) return null;
+      return await base44.entities.EmployeeMasterDatabase.read(employee.id);
+    },
+    enabled: !!employee?.id && open,
+    staleTime: 0,
+  });
+
   const { data: emergencyMembers } = useQuery({
     queryKey: ['emergencyTeamMembers'],
     queryFn: () => base44.entities.EmergencyTeamMember.list(),
@@ -87,12 +99,15 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   const emergency = (emergencyMembers || []).filter(em => em.employee_id === employee?.id && em.activo);
 
-  // Cargar datos del empleado cuando cambie la prop
+  // Cargar datos del empleado cuando cambie la prop o llegue data fresca
   useEffect(() => {
-    if (employee && open) {
+    // Preferir datos frescos de la query individual, fallback a la prop
+    const sourceData = freshEmployeeData || employee;
+
+    if (sourceData && open) {
       
       // Empezar con datos base del empleado
-      const updatedFormData = { ...employee };
+      const updatedFormData = { ...sourceData };
       
       // PRIORIZAR EmployeeMachineSkill sobre campos legacy maquina_X
       // Esto asegura que siempre mostramos los datos correctos de la tabla normalizada
@@ -122,7 +137,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         incluir_en_planning: true,
       });
     }
-  }, [employee, employeeSkills, open]);
+  }, [employee, freshEmployeeData, employeeSkills, open]);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],

@@ -1,5 +1,5 @@
 import { base44 } from "@/api/base44Client";
-import { differenceInHours, eachDayOfInterval, isWeekend, startOfYear, endOfYear } from "date-fns";
+import { differenceInHours, eachDayOfInterval, isWeekend, startOfYear, endOfYear, startOfDay, endOfDay, max, min, differenceInMinutes } from "date-fns";
 
 /**
  * Calcula la tasa de absentismo para un empleado
@@ -19,9 +19,12 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
   // Usar ausencias precargadas si existen
   const allAbsences = absences || await base44.entities.Absence.filter({ employee_id: employeeId });
   
-  // Filtrar ausencias que caen en el rango y excluir vacaciones/festivos
+  // Filtrar ausencias que caen en el rango
   const relevantAbsences = allAbsences.filter(abs => {
     if (abs.employee_id !== employeeId) return false;
+    // Solo considerar ausencias aprobadas para el cálculo real (opcional, según regla de negocio)
+    // if (abs.estado_aprobacion !== 'Aprobada') return false; 
+    
     const absStart = new Date(abs.fecha_inicio);
     const absEnd = abs.fecha_fin_desconocida ? endDate : new Date(abs.fecha_fin);
     return absEnd >= startDate && absStart <= endDate;
@@ -31,14 +34,22 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
   const allVacations = vacations || await base44.entities.Vacation.list();
   const allHolidays = holidays || await base44.entities.Holiday.list();
 
-  // Calcular horas no trabajadas (excluyendo vacaciones y festivos)
+  const dailyHours = (emp.num_horas_jornada || 40) / 5; // Horas diarias estimadas
+
+  // Calcular horas no trabajadas
   let horasNoTrabajadas = 0;
   
   for (const absence of relevantAbsences) {
-    const absStart = new Date(absence.fecha_inicio) < startDate ? startDate : new Date(absence.fecha_inicio);
-    const absEnd = absence.fecha_fin_desconocida ? new Date() : (new Date(absence.fecha_fin) > endDate ? endDate : new Date(absence.fecha_fin));
+    const absStart = new Date(absence.fecha_inicio);
+    const absEnd = absence.fecha_fin_desconocida ? new Date() : new Date(absence.fecha_fin);
     
-    const days = eachDayOfInterval({ start: absStart, end: absEnd });
+    // Intersección de la ausencia con el rango de cálculo
+    const calcStart = absStart < startDate ? startDate : absStart;
+    const calcEnd = absEnd > endDate ? endDate : absEnd;
+    
+    if (calcStart > calcEnd) continue;
+
+    const days = eachDayOfInterval({ start: calcStart, end: calcEnd });
     
     for (const day of days) {
       // Skip weekends
@@ -57,14 +68,42 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
         return day.toDateString() === holDate.toDateString();
       });
       
-      // Only count if not vacation or holiday
+      // Solo contar si no es vacación ni festivo
       if (!isVacationDay && !isHoliday) {
-        horasNoTrabajadas += (emp.num_horas_jornada || 40) / 5; // Dividir horas semanales entre 5 días laborables
+        // Calcular duración de la ausencia en este día específico
+        const dayStart = startOfDay(day);
+        const dayEnd = endOfDay(day);
+        
+        // Intersección de la ausencia con el día actual
+        const intersectionStart = max([absStart, dayStart]);
+        const intersectionEnd = min([absEnd, dayEnd]);
+        
+        // Si la intersección es válida
+        if (intersectionStart < intersectionEnd) {
+          const minutesAbsent = differenceInMinutes(intersectionEnd, intersectionStart);
+          let hoursAbsent = minutesAbsent / 60;
+          
+          // Si la ausencia cubre todo el día o excede la jornada, limitar a la jornada diaria
+          // "si la ausencia son por horario completo se decontaran las horas de su jornada"
+          // "en caso de que la ausencia se haya configurado por horas seran las horas configuradas"
+          
+          // Si es casi 24h (día completo), usamos dailyHours
+          if (hoursAbsent >= 23) {
+            hoursAbsent = dailyHours;
+          } else {
+             // Si es por horas, usamos el valor real, pero topeado por la jornada laboral
+             // (Ej: no puedes faltar 10 horas en una jornada de 8)
+             hoursAbsent = Math.min(hoursAbsent, dailyHours);
+          }
+          
+          horasNoTrabajadas += hoursAbsent;
+        }
       }
     }
   }
 
-  // Calcular horas que deberían haberse trabajado
+  // Calcular horas que deberían haberse trabajado (Theoretical Hours)
+  // "se calculara el numero de dias laborables transcurridos hasta hoy y se multiplicará por las de duración de su jornada"
   const totalDays = eachDayOfInterval({ start: startDate, end: endDate });
   let horasDeberianTrabajarse = 0;
 
@@ -83,7 +122,7 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
     });
     
     if (!isVacationDay && !isHoliday) {
-      horasDeberianTrabajarse += (emp.num_horas_jornada || 40) / 5;
+      horasDeberianTrabajarse += dailyHours;
     }
   }
 

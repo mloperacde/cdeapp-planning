@@ -15,6 +15,8 @@ export async function syncEmployeeVacationProtection(employeeId, preloadedBalanc
     const employeeBalances = balances.filter(b => b.employee_id === employeeId);
     const totalDiasDisponibles = employeeBalances.reduce((sum, b) => sum + (b.dias_disponibles || 0), 0);
 
+    console.log(`Sincronizando empleado ${employeeId}: ${totalDiasDisponibles} días encontrados.`);
+
     await base44.entities.EmployeeMasterDatabase.update(employeeId, {
       dias_vacaciones_proteccion: totalDiasDisponibles
     });
