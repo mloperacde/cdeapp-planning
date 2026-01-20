@@ -1058,9 +1058,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     type="number"
                     step="1"
                     value={formData.dias_vacaciones_proteccion || 0}
-                    onChange={(e) => setFormData({ ...formData, dias_vacaciones_proteccion: parseFloat(e.target.value) || 0 })}
+                    readOnly
+                    className="bg-slate-100 text-slate-500 cursor-not-allowed"
                   />
-                  <p className="text-xs text-muted-foreground">Días pendientes por protección de vacaciones</p>
+                  <p className="text-xs text-amber-600 font-medium">
+                    ⚠️ Este campo se calcula automáticamente desde el panel de ausencias. No es editable manualmente para evitar desincronización.
+                  </p>
                 </div>
 
                 <div className="space-y-2">

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
+import { syncEmployeeVacationProtection } from "./VacationPendingCalculator";
 
 export default function VacationPendingConsumptionManager({ employees = [] }) {
   const queryClient = useQueryClient();
@@ -160,9 +161,13 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
 
         remaining -= toConsume;
       }
+
+      // Sincronizar ficha del empleado
+      await syncEmployeeVacationProtection(selectedBalance.employee_id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
       toast.success("Consumo de vacaciones pendientes registrado");
       setDaysToConsume("");
     },
