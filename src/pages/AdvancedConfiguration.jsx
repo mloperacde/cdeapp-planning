@@ -53,11 +53,7 @@ export default function AdvancedConfigurationPage() {
               <Building2 className="w-4 h-4 mr-2" />
               Departamentos
             </TabsTrigger>
-            <TabsTrigger value="schedules" className="flex-1 min-w-[120px]">
-              <Clock className="w-4 h-4 mr-2" />
-              Horarios
-            </TabsTrigger>
-            <TabsTrigger value="absences" className="flex-1 min-w-[120px]">
+            <TabsTrigger value="teams" className="flex-1 min-w-[120px]">
               <Users className="w-4 h-4 mr-2" />
               Equipos
             </TabsTrigger>
@@ -65,6 +61,7 @@ export default function AdvancedConfigurationPage() {
               <Clock className="w-4 h-4 mr-2" />
               Horarios
             </TabsTrigger>
+
             <TabsTrigger value="absences" className="flex-1 min-w-[120px]">
               <CalendarDays className="w-4 h-4 mr-2" />
               Ausencias
@@ -127,6 +124,8 @@ export default function AdvancedConfigurationPage() {
             </Card>
           </TabsContent>
 
+
+
           <TabsContent value="schedules">
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100 dark:border-slate-800">
@@ -139,7 +138,7 @@ export default function AdvancedConfigurationPage() {
                 </p>
               </CardHeader>
               <CardContent className="p-6">
-                <ScheduleConfig />
+                <WorkScheduleConfig />
               </CardContent>
             </Card>
           </TabsContent>

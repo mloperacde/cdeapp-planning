@@ -108,6 +108,7 @@ const PAGES = {
   ShiftPlanning: ShiftPlanning,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
+  TeamManagement: TeamManagement,
   Timeline: Timeline,
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
@@ -245,7 +246,7 @@ function PagesContent() {
                 <Route path="/CalidadSkills" element={<CalidadSkills />} />
 
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
-                
+                <Route path="/TeamManagement" element={<TeamManagement />} />
                 <Route path="/Timeline" element={<Timeline />} />
                 
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
