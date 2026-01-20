@@ -1198,6 +1198,18 @@ export default function LockerManagementPage() {
                                       <History className="w-4 h-4" />
                                     </Button>
                                   )}
+                                  {assignment?.numero_taquilla_actual && (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleQuickUnassign(employee.id)}
+                                      disabled={isSaving}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      title="Liberar taquilla inmediatamente"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               </TableCell>
                             </TableRow>
