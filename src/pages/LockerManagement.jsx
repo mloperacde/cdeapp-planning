@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, ArrowLeft, Bell, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, ArrowUpDown, Database, UserX, FileSpreadsheet, Filter, ExternalLink, XCircle, History } from "lucide-react";
+import { KeyRound, Save, ArrowLeft, Bell, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, ArrowUpDown, Database, UserX, FileSpreadsheet, Filter, ExternalLink, XCircle, History, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl, cleanLockerNumber } from "@/utils";
 import {
