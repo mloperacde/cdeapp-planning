@@ -18,7 +18,6 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [quickEditMode, setQuickEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [lastAction, setLastAction] = useState("Ninguna");
 
   const vestuarioConfig = useMemo(() => {
     const config = lockerRoomConfigs.find(c => c.vestuario === selectedVestuario);
@@ -54,12 +53,12 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
     
     identificadores.forEach((identificador) => {
       // Robust comparison with standardized regex
-      const cleanId = String(identificador).replace(/['"''‚„]/g, '').trim();
+      const cleanId = cleanLockerNumber(identificador);
       
       const assignment = lockerAssignments.find(la => {
         if (!la.vestuario || la.vestuario !== selectedVestuario) return false;
         
-        const laNumero = String(la.numero_taquilla_actual || '').replace(/['"''‚„]/g, '').trim();
+        const laNumero = cleanLockerNumber(la.numero_taquilla_actual);
         const numeroMatch = laNumero === cleanId;
         const requiere = la.requiere_taquilla !== false;
         
@@ -173,11 +172,7 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Debug Info */}
-        <div className="lg:col-span-4 bg-slate-100 p-2 rounded border border-slate-300 text-xs font-mono">
-           <strong>DEBUG MAP:</strong> Taquillas: {lockerData.length} | Asignaciones: {lockerAssignments.length} | Última acción: {lastAction}
-        </div>
-
+        
         {/* Panel lateral con empleados sin taquilla */}
         <div className="lg:col-span-1">
           <Card className="sticky top-6 shadow-lg">
@@ -370,7 +365,6 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
           locker={selectedLocker}
           vestuario={selectedVestuario}
           employees={employees}
-          employeesWithoutLocker={employeesWithoutLocker}
           lockerAssignments={lockerAssignments}
           onClose={() => setSelectedLocker(null)}
           saveAssignments={saveAssignments}

@@ -57,11 +57,11 @@ export default function LockerAssignmentDialog({
         return;
       }
       
-      const numeroLimpio = locker.numero.toString().replace(/['"''‚„]/g, '').trim();
+      const numeroLimpio = cleanLockerNumber(locker.numero);
 
       const duplicado = lockerAssignments.find(la => 
         la.vestuario === vestuario &&
-        la.numero_taquilla_actual?.replace(/['"''‚„]/g, '').trim() === numeroLimpio &&
+        cleanLockerNumber(la.numero_taquilla_actual) === numeroLimpio &&
         String(la.employee_id) !== String(selectedEmployeeId) &&
         la.requiere_taquilla !== false
       );
@@ -74,7 +74,6 @@ export default function LockerAssignmentDialog({
 
       setIsSubmitting(true);
       try {
-        console.log("Assigning locker:", { selectedEmployeeId, vestuario, numeroLimpio });
         await saveAssignments({
             employeeId: selectedEmployeeId,
             requiere_taquilla: true,

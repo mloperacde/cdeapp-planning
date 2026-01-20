@@ -72,11 +72,6 @@ export default function LockerManagementPage() {
     isSaving
   } = useLockerData();
 
-  // DEBUG: Log assignments count changes
-  // useEffect(() => {
-  //   console.log(`[LockerManagement] Data Updated. Employees: ${employees.length}. Assignments: ${lockerAssignments.length}`);
-  // }, [employees.length, lockerAssignments.length]);
-
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
   };
@@ -458,7 +453,7 @@ export default function LockerManagementPage() {
         const codigo = parts[0]?.trim();
         const nombre = parts[1]?.trim();
         const vestuario = parts[2]?.trim();
-        const numeroTaquilla = parts[3]?.trim().replace(/['"''‚„]/g, ''); 
+        const numeroTaquilla = cleanLockerNumber(parts[3]); 
 
         let employee = null;
         
