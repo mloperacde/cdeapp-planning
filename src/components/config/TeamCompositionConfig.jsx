@@ -251,13 +251,11 @@ function TeamColumn({ teamName, color, groups, allTeams, onMove, onBulkMove, isU
                                                 value={isUnassigned ? "Sin Equipo" : teamName} 
                                                 onValueChange={(val) => onMove(emp.id, val)}
                                             >
-                                                <SelectTrigger className="w-[24px] h-[24px] p-0 border-0 shadow-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {/* Hidden trigger, just clickable area or icon? 
-                                                        Better: small icon button that opens dropdown
-                                                    */}
-                                                    <Settings className="w-3 h-3 text-slate-400" /> 
+                                                <SelectTrigger className="w-[24px] h-[24px] p-0 border-0 shadow-none">
+                                                    <ArrowRightLeft className="w-4 h-4 text-slate-400 hover:text-slate-600" /> 
                                                 </SelectTrigger>
                                                 <SelectContent>
+                                                    {isOrphan && <SelectItem value={teamName} disabled>{teamName} (Actual)</SelectItem>}
                                                     <SelectItem value="Sin Equipo">Sin Equipo</SelectItem>
                                                     {allTeams.map(t => (
                                                         <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>
