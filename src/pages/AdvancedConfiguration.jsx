@@ -53,7 +53,11 @@ export default function AdvancedConfigurationPage() {
               <Building2 className="w-4 h-4 mr-2" />
               Departamentos
             </TabsTrigger>
-            <TabsTrigger value="teams" className="flex-1 min-w-[120px]">
+            <TabsTrigger value="schedules" className="flex-1 min-w-[120px]">
+              <Clock className="w-4 h-4 mr-2" />
+              Horarios
+            </TabsTrigger>
+            <TabsTrigger value="absences" className="flex-1 min-w-[120px]">
               <Users className="w-4 h-4 mr-2" />
               Equipos
             </TabsTrigger>
@@ -123,23 +127,6 @@ export default function AdvancedConfigurationPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="teams">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-green-600" />
-                  Configuración de Equipos y Rotación
-                </CardTitle>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Gestiona nombres de equipos, rotación de turnos y composición por departamento
-                </p>
-              </CardHeader>
-              <CardContent className="p-6">
-                <TeamManagementConfig />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="schedules">
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100 dark:border-slate-800">
@@ -148,11 +135,11 @@ export default function AdvancedConfigurationPage() {
                   Configuración de Horarios y Jornadas
                 </CardTitle>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Define los tipos de jornada y horarios por defecto
+                  Gestiona horarios predefinidos y tipos de jornada
                 </p>
               </CardHeader>
               <CardContent className="p-6">
-                <WorkScheduleConfig />
+                <ScheduleConfig />
               </CardContent>
             </Card>
           </TabsContent>

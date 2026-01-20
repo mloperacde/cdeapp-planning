@@ -39,6 +39,7 @@ import ShiftManagers from "./ShiftManagers";
 import ShiftPlanning from "./ShiftPlanning";
 import SkillMatrix from "./SkillMatrix";
 import SupportManagement1415 from "./SupportManagement1415";
+import TeamManagement from "./TeamManagement";
 import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";

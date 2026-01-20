@@ -19,7 +19,7 @@ export default function ConfigurationPage() {
           title: "Configuración de Equipos",
           description: "Gestiona equipos y turnos rotativos",
           icon: Users,
-          url: "/AdvancedConfiguration?tab=teams",
+          url: "/TeamManagement",
           color: "green"
         },
         {
