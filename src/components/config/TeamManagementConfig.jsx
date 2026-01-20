@@ -97,24 +97,37 @@ function GeneralTeamConfig() {
       // 3. Cascade update to employees if names changed
       if (nameChanges.length > 0) {
         // Fetch all employees to find matches
-        // Note: In a real backend this should be a backend transaction or specific endpoint
         const allEmployees = await base44.entities.EmployeeMasterDatabase.list();
-        const employeeUpdates = [];
+        const updatesToProcess = [];
 
         allEmployees.forEach(emp => {
           const change = nameChanges.find(c => c.oldName === emp.equipo);
           if (change) {
-            employeeUpdates.push(
-              base44.entities.EmployeeMasterDatabase.update(emp.id, {
-                equipo: change.newName
-              })
-            );
+            updatesToProcess.push({
+              id: emp.id,
+              data: { equipo: change.newName }
+            });
           }
         });
 
-        if (employeeUpdates.length > 0) {
-          console.log(`Updating ${employeeUpdates.length} employees due to team name changes`);
-          await Promise.all(employeeUpdates);
+        if (updatesToProcess.length > 0) {
+          console.log(`Updating ${updatesToProcess.length} employees due to team name changes`);
+          
+          // Process in batches to avoid 429 Too Many Requests
+          const BATCH_SIZE = 5;
+          for (let i = 0; i < updatesToProcess.length; i += BATCH_SIZE) {
+            const batch = updatesToProcess.slice(i, i + BATCH_SIZE);
+            await Promise.all(
+              batch.map(item => 
+                base44.entities.EmployeeMasterDatabase.update(item.id, item.data)
+              )
+            );
+            
+            // Add a small delay between batches if there are more items
+            if (i + BATCH_SIZE < updatesToProcess.length) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
         }
       }
     },
