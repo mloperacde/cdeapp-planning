@@ -1,6 +1,22 @@
 import { base44 } from "@/api/base44Client";
 import { eachDayOfInterval, isWeekend, format } from "date-fns";
 
+export async function syncEmployeeVacationProtection(employeeId) {
+  try {
+    const balances = await base44.entities.VacationPendingBalance.filter({
+      employee_id: employeeId
+    });
+
+    const totalDiasDisponibles = balances.reduce((sum, b) => sum + (b.dias_disponibles || 0), 0);
+
+    await base44.entities.EmployeeMasterDatabase.update(employeeId, {
+      dias_vacaciones_proteccion: totalDiasDisponibles
+    });
+  } catch (error) {
+    console.error("Error syncing employee vacation protection:", error);
+  }
+}
+
 export async function calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacationAbsences = []) {
   const noConsumeVacaciones = absenceType?.no_consume_vacaciones ?? true;
   if (!noConsumeVacaciones) {
@@ -107,6 +123,8 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
       detalle_ausencias: detalleAusencias
     });
 
+    await syncEmployeeVacationProtection(absence.employee_id);
+
     return { ...balance, dias_pendientes: totalDiasPendientes, dias_disponibles: diasDisponibles };
   } else {
     const newBalance = await base44.entities.VacationPendingBalance.create({
@@ -117,6 +135,8 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
       dias_disponibles: diasCoincidentes,
       detalle_ausencias: [detalleAusencia]
     });
+
+    await syncEmployeeVacationProtection(absence.employee_id);
 
     return newBalance;
   }
@@ -196,4 +216,6 @@ export async function removeAbsenceFromBalance(absenceId, employeeId, year) {
       detalle_ausencias: detalleAusencias
     });
   }
+
+  await syncEmployeeVacationProtection(employeeId);
 }
