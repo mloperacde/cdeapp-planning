@@ -188,6 +188,16 @@ export async function recalculateVacationPendingBalances() {
 
     await calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacations);
   }
+
+  // Sincronización final masiva: asegurar que todos los saldos se reflejen en las fichas de empleado
+  const allBalances = await base44.entities.VacationPendingBalance.list();
+  const distinctEmployeeIds = new Set(allBalances.map(b => b.employee_id));
+  
+  for (const empId of distinctEmployeeIds) {
+    if (empId) {
+      await syncEmployeeVacationProtection(empId);
+    }
+  }
 }
 
 export async function removeAbsenceFromBalance(absenceId, employeeId, year) {
