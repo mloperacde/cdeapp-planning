@@ -119,6 +119,7 @@ export function usePermissions() {
         canManageMachines: false,
         canViewReports: false,
         canConfigureSystem: false,
+        canAccessPage: () => false,
       };
     }
 
