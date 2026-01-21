@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Building2, Clock, RefreshCw, FileSpreadsheet, ArrowLeft, Gavel, FileCode, Users, Shield, Activity, MessageSquare, Database, CalendarDays, Wrench } from "lucide-react";
+import { Settings, Building2, Clock, RefreshCw, FileSpreadsheet, ArrowLeft, Gavel, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -11,13 +11,6 @@ import SyncParametersConfig from "../components/config/SyncParametersConfig";
 import CSVFieldMapper from "../components/config/CSVFieldMapper";
 import BusinessRulesConfig from "../components/config/BusinessRulesConfig";
 import CustomFieldTemplates from "../components/config/CustomFieldTemplates";
-import BrandingConfig from "../components/config/BrandingConfig";
-import TeamManagementConfig from "../components/config/TeamManagementConfig";
-import EmployeeDataAudit from "../components/audit/EmployeeDataAudit";
-import MachineProcessDataAudit from "../components/audit/MachineProcessDataAudit";
-import AbsenceSyncAudit from "../components/absences/AbsenceSyncAudit";
-import NotificationTemplateManager from "../components/notifications/NotificationTemplateManager";
-import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
 
 export default function AdvancedConfigurationPage() {
   // Get tab from URL if provided
@@ -43,7 +36,7 @@ export default function AdvancedConfigurationPage() {
             Configuración Avanzada
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Personaliza todos los aspectos del sistema de empleados
+            Gestión de estructura organizativa, horarios y reglas de negocio
           </p>
         </div>
 
@@ -53,38 +46,9 @@ export default function AdvancedConfigurationPage() {
               <Building2 className="w-4 h-4 mr-2" />
               Departamentos
             </TabsTrigger>
-            <TabsTrigger value="teams" className="flex-1 min-w-[120px]">
-              <Users className="w-4 h-4 mr-2" />
-              Equipos
-            </TabsTrigger>
             <TabsTrigger value="schedules" className="flex-1 min-w-[120px]">
               <Clock className="w-4 h-4 mr-2" />
               Horarios
-            </TabsTrigger>
-
-            <TabsTrigger value="absences" className="flex-1 min-w-[120px]">
-              <CalendarDays className="w-4 h-4 mr-2" />
-              Ausencias
-            </TabsTrigger>
-            <TabsTrigger value="audit" className="flex-1 min-w-[120px]">
-              <Database className="w-4 h-4 mr-2" />
-              Auditoría Datos
-            </TabsTrigger>
-            <TabsTrigger value="machine-audit" className="flex-1 min-w-[120px]">
-              <Wrench className="w-4 h-4 mr-2" />
-              Audit. Máquinas
-            </TabsTrigger>
-            <TabsTrigger value="system-audit" className="flex-1 min-w-[120px]">
-              <Shield className="w-4 h-4 mr-2" />
-              Audit. Sistema
-            </TabsTrigger>
-            <TabsTrigger value="health" className="flex-1 min-w-[120px]">
-              <Activity className="w-4 h-4 mr-2" />
-              Salud Sistema
-            </TabsTrigger>
-            <TabsTrigger value="messaging" className="flex-1 min-w-[120px]">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Mensajería
             </TabsTrigger>
             <TabsTrigger value="sync" className="flex-1 min-w-[120px]">
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -101,9 +65,6 @@ export default function AdvancedConfigurationPage() {
             <TabsTrigger value="templates" className="flex-1 min-w-[120px]">
               <FileCode className="w-4 h-4 mr-2" />
               Plantillas
-            </TabsTrigger>
-            <TabsTrigger value="branding" className="flex-1 min-w-[120px]">
-              Marca
             </TabsTrigger>
           </TabsList>
 
@@ -123,8 +84,6 @@ export default function AdvancedConfigurationPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
-
 
           <TabsContent value="schedules">
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
@@ -209,112 +168,6 @@ export default function AdvancedConfigurationPage() {
                 <CustomFieldTemplates />
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="absences">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5 text-purple-600" />
-                  Configuración de Ausencias
-                </CardTitle>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Gestiona tipos de ausencia y reglas de acumulación
-                </p>
-              </CardHeader>
-              <CardContent className="p-6">
-                <AbsenceTypeManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="audit">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-indigo-600" />
-                  Auditoría de Datos de Empleados
-                </CardTitle>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Analiza la calidad e integridad de los datos de empleados
-                </p>
-              </CardHeader>
-              <CardContent className="p-6">
-                <EmployeeDataAudit />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="machine-audit">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench className="w-5 h-5 text-purple-600" />
-                  Auditoría de Máquinas y Procesos
-                </CardTitle>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Verifica la integridad de datos de máquinas y procesos
-                </p>
-              </CardHeader>
-              <CardContent className="p-6">
-                <MachineProcessDataAudit />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="system-audit">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-red-600" />
-                  Auditoría del Sistema
-                </CardTitle>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Análisis de entidades y seguridad del sistema
-                </p>
-              </CardHeader>
-              <CardContent className="p-6">
-                <EmployeeDataAudit />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="health">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-green-600" />
-                  Salud del Sistema y Sincronización
-                </CardTitle>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Monitoreo de sincronización de ausencias y fichajes
-                </p>
-              </CardHeader>
-              <CardContent className="p-6">
-                <AbsenceSyncAudit />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="messaging">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-indigo-600" />
-                  Configuración de Mensajería
-                </CardTitle>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Gestiona plantillas y tipos de mensajes
-                </p>
-              </CardHeader>
-              <CardContent className="p-6">
-                <NotificationTemplateManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="branding">
-            <BrandingConfig />
           </TabsContent>
         </Tabs>
       </div>

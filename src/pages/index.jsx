@@ -46,6 +46,8 @@ import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
 import ManufacturingConfig from "./ManufacturingConfig";
 import RolesConfig from "./RolesConfig";
+import SystemAudits from "./SystemAudits";
+import MessagingConfiguration from "./MessagingConfiguration";
 import DireccionSkills from "./DireccionSkills";
 import PlanificacionSkills from "./PlanificacionSkills";
 import FabricacionSkills from "./FabricacionSkills";
@@ -178,11 +180,13 @@ function PagesContent() {
                 <Route path="/ArticleManagement" element={<ArticleManagement />} />
                 
                 <Route path="/AttendanceManagement" element={<AttendanceManagement />} />
+                <Route path="/BrandingConfig" element={<BrandingConfig />} />
                 
                 <Route path="/CommitteeManagement" element={<CommitteeManagement />} />
 
                 <Route path="/Configuration" element={<Configuration />} />
                 <Route path="/AbsenceTypeConfig" element={<AbsenceTypeConfig />} />
+                <Route path="/AbsenceConfiguration" element={<AbsenceTypeConfig />} />
                 <Route path="/AbsenceConfigurationTab" element={<AbsenceTypeConfig />} />
                 <Route path="/DailyPlanning" element={<DailyPlanning />} />
                 <Route path="/DailyShiftPlanning" element={<DailyShiftPlanning />} />
@@ -257,9 +261,12 @@ function PagesContent() {
                 <Route path="/Breaks" element={<Breaks />} />
                 <Route path="/MachinePlanning" element={<MachinePlanning />} />
                 <Route path="/ManufacturingConfig" element={<ManufacturingConfig />} />
+                <Route path="/SystemAudits" element={<SystemAudits />} />
+                <Route path="/MessagingConfiguration" element={<MessagingConfiguration />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
-                <Route path="/BrandingConfig" element={<AdvancedConfiguration />} />
+                {/* BrandingConfig already has a route above, but let's ensure it uses the correct component if defined elsewhere */}
+
 
                 </Routes>
         </Layout>

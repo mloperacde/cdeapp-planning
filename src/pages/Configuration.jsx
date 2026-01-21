@@ -12,7 +12,7 @@ export default function ConfigurationPage() {
           title: "Ausencias Avanzado",
           description: "Flujos de aprobación, notificaciones y acumulación",
           icon: FileText,
-          url: "/AdvancedConfiguration?tab=absences",
+          url: "/AbsenceConfiguration",
           color: "purple"
         },
         {
@@ -40,7 +40,7 @@ export default function ConfigurationPage() {
           title: "Auditoría de Datos",
           description: "Análisis y consolidación de datos de empleados",
           icon: Database,
-          url: "/AdvancedConfiguration?tab=audit",
+          url: "/SystemAudits?tab=data-integrity",
           color: "indigo"
         },
         {
@@ -101,11 +101,9 @@ export default function ConfigurationPage() {
           title: "Auditoría de Máquinas y Procesos",
           description: "Análisis de integridad y relaciones",
           icon: Database,
-          url: "/AdvancedConfiguration?tab=machine-audit",
+          url: "/SystemAudits?tab=machines",
           color: "purple"
-        }
-      ]
-    },
+        },
     maestras: {
       title: "Bases de Datos Maestras",
       modules: [
@@ -158,14 +156,6 @@ export default function ConfigurationPage() {
         },
 
         {
-          title: "Auditoría del Sistema",
-          description: "Análisis de entidades, seguridad y optimización",
-          icon: Shield,
-          url: "/AdvancedConfiguration?tab=system-audit",
-          color: "red"
-        },
-
-        {
           title: "Configuración Avanzada",
           description: "Estructura organizativa, puestos y sincronización",
           icon: Settings,
@@ -183,7 +173,7 @@ export default function ConfigurationPage() {
           title: "Mensajería",
           description: "Configura tipos de mensajes y permisos de envío",
           icon: MessageSquare,
-          url: "/AdvancedConfiguration?tab=messaging",
+          url: "/MessagingConfiguration",
           color: "indigo"
         },
         {
@@ -197,7 +187,7 @@ export default function ConfigurationPage() {
           title: "Salud del Sistema",
           description: "Monitoreo y sincronización de datos",
           icon: Activity,
-          url: "/AdvancedConfiguration?tab=health",
+          url: "/SystemAudits?tab=sync-health",
           color: "green"
         }
       ]
