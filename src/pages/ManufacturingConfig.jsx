@@ -140,7 +140,7 @@ function StructureConfig({ config, setConfig }) {
     if (!newArea.trim()) return;
     setConfig(prev => ({
       ...prev,
-      areas: [...prev.areas, { id: uuidv4(), name: newArea, rooms: [] }]
+      areas: [...prev.areas, { id: generateId(), name: newArea, rooms: [] }]
     }));
     setNewArea("");
   };
@@ -160,7 +160,7 @@ function StructureConfig({ config, setConfig }) {
         if (area.id === areaId) {
           return {
             ...area,
-            rooms: [...(area.rooms || []), { id: uuidv4(), name: newRoom.name }]
+            rooms: [...(area.rooms || []), { id: generateId(), name: newRoom.name }]
           };
         }
         return area;
