@@ -34,7 +34,7 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
   const allVacations = vacations || await base44.entities.Vacation.list();
   const allHolidays = holidays || await base44.entities.Holiday.list();
 
-  const dailyHours = (emp.num_horas_jornada || 40) / 5; // Horas diarias estimadas
+  const dailyHours = (emp.num_horas_jornada || 40) / 5; // Horas diarias estimadas (Si no definido, asume 40h/semana)
 
   // Calcular horas no trabajadas
   let horasNoTrabajadas = 0;
@@ -73,7 +73,7 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
         // Calcular duración de la ausencia en este día específico
         const dayStart = startOfDay(day);
         const dayEnd = endOfDay(day);
-        
+
         // Intersección de la ausencia con el día actual
         const intersectionStart = max([absStart, dayStart]);
         const intersectionEnd = min([absEnd, dayEnd]);
@@ -83,16 +83,16 @@ export async function calculateEmployeeAbsenteeism(employeeId, startDate, endDat
           const minutesAbsent = differenceInMinutes(intersectionEnd, intersectionStart);
           let hoursAbsent = minutesAbsent / 60;
           
-          // Si la ausencia cubre todo el día o excede la jornada, limitar a la jornada diaria
-          // "si la ausencia son por horario completo se decontaran las horas de su jornada"
           // "en caso de que la ausencia se haya configurado por horas seran las horas configuradas"
+          // "si la ausencia son por horario completo se decontaran las horas de su jornada"
           
-          // Si es casi 24h (día completo), usamos dailyHours
-          if (hoursAbsent >= 23) {
-            hoursAbsent = dailyHours;
+          // Consideramos horario completo si cubre la mayor parte del día (ej. > 70% de la jornada) o si es explícitamente largo
+          // Si es mayor o igual a la jornada diaria, tomamos la jornada diaria completa
+          if (hoursAbsent >= dailyHours * 0.9) { // Margen del 10%
+             hoursAbsent = dailyHours;
           } else {
-             // Si es por horas, usamos el valor real, pero topeado por la jornada laboral
-             // (Ej: no puedes faltar 10 horas en una jornada de 8)
+             // Si es parcial, usamos las horas reales
+             // Aseguramos que no exceda la jornada
              hoursAbsent = Math.min(hoursAbsent, dailyHours);
           }
           

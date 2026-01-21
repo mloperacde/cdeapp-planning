@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Save, Factory, Users, ClipboardList, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 import Breadcrumbs from "@/components/common/Breadcrumbs";
+
+const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
 export default function ManufacturingConfig() {
   const queryClient = useQueryClient();
@@ -399,7 +400,7 @@ function TasksConfig({ config, setConfig }) {
     if (!newTask.time || !newTask.description) return;
     setConfig(prev => ({
       ...prev,
-      tasks: [...prev.tasks, { id: uuidv4(), ...newTask }].sort((a, b) => a.time.localeCompare(b.time))
+      tasks: [...prev.tasks, { id: generateId(), ...newTask }].sort((a, b) => a.time.localeCompare(b.time))
     }));
     setNewTask({ time: "", description: "", role: "Todos" });
   };
