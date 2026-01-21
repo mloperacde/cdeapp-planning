@@ -95,12 +95,20 @@ export default function Layout({ children, currentPageName }) {
         {/* Logo y título */}
         <div className="p-4 border-b border-slate-800 dark:border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
-              <Cog className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg text-white">CDE PlanApp</h1>
-              <p className="text-xs text-slate-400">Sistema de Gestión</p>
+            {branding?.logo_url ? (
+              <img 
+                src={branding.logo_url} 
+                alt="Logo" 
+                className="w-10 h-10 object-contain rounded-lg bg-white p-1"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
+                <Cog className="w-6 h-6 text-white" />
+              </div>
+            )}
+            <div className="overflow-hidden">
+              <h1 className="font-bold text-lg text-white truncate">{branding?.app_name || 'CDE PlanApp'}</h1>
+              <p className="text-xs text-slate-400 truncate">{branding?.app_subtitle || 'Sistema de Gestión'}</p>
             </div>
           </div>
           <button 

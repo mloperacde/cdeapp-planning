@@ -12,6 +12,7 @@ export default function BrandingConfig() {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const queryClient = useQueryClient();
 

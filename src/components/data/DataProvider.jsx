@@ -206,6 +206,36 @@ export function DataProvider({ children }) {
     refetchOnWindowFocus: false,
   });
 
+  // 14. BRANDING - Cache 1 hora (cambia poco)
+  const brandingConfigQuery = useQuery({
+    queryKey: ['brandingConfig'],
+    queryFn: async () => {
+      if (isLocal) return null;
+      try {
+        const configs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
+        const config = configs[0];
+        // El branding se guarda como objeto plano en BrandingConfig.jsx, no JSON stringify directo en algunos casos antiguos,
+        // pero el nuevo BrandingConfig usa AppConfig.create({...data}).
+        // Revisando BrandingConfig.jsx: AppConfig.create({ ...data, config_key: 'branding' })
+        // Los campos están en el nivel raíz del registro (app_name, logo_url, etc) si se usa la estructura plana,
+        // O si se usa value JSON.
+        // BrandingConfig.jsx usa: 
+        // const { data: brandingConfig } = useQuery(...) -> configs[0]
+        // setFormData({ app_name: brandingConfig.app_name ... })
+        // Entonces NO está en un campo 'value' JSON, sino columnas directas o propiedades del objeto devuelto?
+        // Base44 AppConfig suele ser clave-valor.
+        // Revisemos BrandingConfig.jsx de nuevo.
+        return config || null;
+      } catch (err) {
+        console.warn('No branding configuration found');
+        return null;
+      }
+    },
+    staleTime: 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const allAbsenceTypes = absenceTypesQuery.data || [];
 
   const value = {
