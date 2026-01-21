@@ -66,7 +66,7 @@ export default function ConfigurationPage() {
         }
       ]
     },
-    sistema: {
+    sistema_y_seguridad: {
       title: "Sistema y Seguridad",
       modules: [
         {
