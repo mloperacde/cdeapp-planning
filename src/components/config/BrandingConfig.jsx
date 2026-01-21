@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Palette, Save, Image as ImageIcon } from "lucide-react";
+import { Upload, Palette, Save, Image as ImageIcon, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "@/components/common/ThemeProvider";
 
 export default function BrandingConfig() {
   const [logoFile, setLogoFile] = useState(null);

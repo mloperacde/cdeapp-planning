@@ -66,25 +66,6 @@ export default function ConfigurationPage() {
         }
       ]
     },
-    sistema_y_seguridad: {
-      title: "Sistema y Seguridad",
-      modules: [
-        {
-          title: "Roles y Permisos",
-          description: "Gestión de roles, accesos y asignación de usuarios",
-          icon: Shield,
-          url: "/RolesConfig",
-          color: "rose"
-        },
-        {
-          title: "Identidad Corporativa",
-          description: "Logos, colores y nombre de la empresa",
-          icon: Palette,
-          url: "/BrandingConfig",
-          color: "violet"
-        }
-      ]
-    },
     produccion: {
       title: "Producción",
       modules: [
@@ -101,13 +82,6 @@ export default function ConfigurationPage() {
           icon: Settings,
           url: "/ProcessConfiguration",
           color: "purple"
-        },
-        {
-          title: "Catálogo de Artículos",
-          description: "Gestión de artículos/productos fabricables",
-          icon: Package,
-          url: "/ArticleManagement",
-          color: "teal"
         },
         {
           title: "Control de Calidad",
@@ -149,7 +123,13 @@ export default function ConfigurationPage() {
           url: "/MachineMaster",
           color: "blue"
         },
-        
+        {
+          title: "Catálogo de Artículos",
+          description: "Gestión de artículos/productos fabricables",
+          icon: Package,
+          url: "/ArticleManagement",
+          color: "teal"
+        }
       ]
     },
     sistema: {

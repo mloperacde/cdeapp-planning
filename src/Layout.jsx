@@ -48,7 +48,7 @@ export default function Layout({ children, currentPageName }) {
     'Revisión de páginas': true
   });
   
-  const { user, isAdmin } = useAppData();
+  const { user, isAdmin, branding } = useAppData();
 
   const toggleCategory = (category) => {
     setExpandedCategories(prev => ({
