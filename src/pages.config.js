@@ -1,6 +1,6 @@
 import AbsenceManagement from './pages/AbsenceManagement';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
-import AdvancedConfiguration from './pages/AdvancedConfiguration';
+
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import ArticleManagement from './pages/production/ArticleManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
@@ -47,7 +47,6 @@ import __Layout from './Layout.jsx';
 export const PAGES = {
     "AbsenceManagement": AbsenceManagement,
     "AbsenceTypeConfig": AbsenceTypeConfig,
-    "AdvancedConfiguration": AdvancedConfiguration,
     "AdvancedHRDashboard": AdvancedHRDashboard,
     "ArticleManagement": ArticleManagement,
     "AttendanceManagement": AttendanceManagement,

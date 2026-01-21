@@ -1,138 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Save, Factory, Users, ClipboardList, Clock } from "lucide-react";
-import { toast } from "sonner";
-import Breadcrumbs from "@/components/common/Breadcrumbs";
+import { Plus, Trash2, Factory, Clock } from "lucide-react";
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
-export default function ManufacturingConfig() {
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("structure");
-
-  // Fetch AppConfig for manufacturing
-  const { data: configRecord, isLoading } = useQuery({
-    queryKey: ["appConfig", "manufacturing"],
-    queryFn: async () => {
-      const configs = await base44.entities.AppConfig.filter({ config_key: "manufacturing_config" });
-      return configs[0] || null;
-    },
-    staleTime: 0,
-  });
-
-  const [config, setConfig] = useState({
-    areas: [], // { id, name, rooms: [] }
-    assignments: {
-      shift1: { leaders: [], areas: {} }, // leaders: [{id, name}], areas: { leaderId: [areaId] }
-      shift2: { leaders: [], areas: {} }
-    },
-    tasks: [] // { id, time, description, role }
-  });
-
-  useEffect(() => {
-    if (configRecord?.value) {
-      try {
-        const parsed = typeof configRecord.value === 'string' ? JSON.parse(configRecord.value) : configRecord.value;
-        setConfig(prev => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error("Error parsing manufacturing config", e);
-      }
-    }
-  }, [configRecord]);
-
-  const saveMutation = useMutation({
-    mutationFn: async (newConfig) => {
-      const payload = {
-        config_key: "manufacturing_config",
-        value: JSON.stringify(newConfig),
-        description: "Configuración de Fabricación: Áreas, Salas y Asignaciones"
-      };
-
-      if (configRecord?.id) {
-        return await base44.entities.AppConfig.update(configRecord.id, payload);
-      } else {
-        return await base44.entities.AppConfig.create(payload);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["appConfig", "manufacturing"]);
-      toast.success("Configuración guardada correctamente");
-    },
-    onError: () => {
-      toast.error("Error al guardar la configuración");
-    }
-  });
-
-  const handleSave = () => {
-    saveMutation.mutate(config);
-  };
-
-  return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-       <Breadcrumbs 
-        items={[
-          { label: "Fabricación", url: "/ManufacturingConfig" },
-          { label: "Configuración" }
-        ]} 
-      />
-
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <Factory className="w-8 h-8 text-blue-600" />
-            Configuración de Fabricación
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Gestión de Áreas, Salas, Asignaciones de Jefes de Turno y Tareas de Supervisión.
-          </p>
-        </div>
-        <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
-          <Save className="w-4 h-4 mr-2" />
-          {saveMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-        </Button>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
-          <TabsTrigger value="structure" className="flex items-center gap-2">
-            <Factory className="w-4 h-4" />
-            Estructura (Áreas/Salas)
-          </TabsTrigger>
-          <TabsTrigger value="assignments" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Asignaciones Jefes
-          </TabsTrigger>
-          <TabsTrigger value="tasks" className="flex items-center gap-2">
-            <ClipboardList className="w-4 h-4" />
-            Escaleta de Tareas
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="structure">
-          <StructureConfig config={config} setConfig={setConfig} />
-        </TabsContent>
-
-        <TabsContent value="assignments">
-          <AssignmentsConfig config={config} setConfig={setConfig} />
-        </TabsContent>
-
-        <TabsContent value="tasks">
-          <TasksConfig config={config} setConfig={setConfig} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-function StructureConfig({ config, setConfig }) {
+export function StructureConfig({ config, setConfig }) {
   const [newArea, setNewArea] = useState("");
   const [newRoom, setNewRoom] = useState({ areaId: "", name: "" });
 
@@ -263,7 +139,7 @@ function StructureConfig({ config, setConfig }) {
   );
 }
 
-function AssignmentsConfig({ config, setConfig }) {
+export function AssignmentsConfig({ config, setConfig }) {
   // Predefined shift leaders as per request, but allowing dynamic later if needed
   // "Isa y Carlos Turno 1, Sara e Ivan turno 2"
   
@@ -393,7 +269,7 @@ function LeaderAssignment({ leaderName, shift, config, onToggle }) {
   );
 }
 
-function TasksConfig({ config, setConfig }) {
+export function TasksConfig({ config, setConfig }) {
   const [newTask, setNewTask] = useState({ time: "", description: "", role: "Todos" });
 
   const addTask = () => {

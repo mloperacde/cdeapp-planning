@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Package, ArrowLeft, UserCog, FolderOpen, Activity, Database, Palette, Factory } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Package, ArrowLeft, UserCog, FolderOpen, Activity, Database, Palette, Factory, Gavel, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import AdminOnly from "@/components/security/AdminOnly";
@@ -15,13 +15,7 @@ export default function ConfigurationPage() {
           url: "/AbsenceConfiguration",
           color: "purple"
         },
-        {
-          title: "Configuración de Equipos",
-          description: "Gestiona equipos y turnos rotativos",
-          icon: Users,
-          url: "/TeamManagement",
-          color: "green"
-        },
+
         {
           title: "Calendario Laboral",
           description: "Configuración de festivos y vacaciones",
@@ -36,13 +30,7 @@ export default function ConfigurationPage() {
           url: "/LockerManagement",
           color: "indigo"
         },
-        {
-          title: "Auditoría de Datos",
-          description: "Análisis y consolidación de datos de empleados",
-          icon: Database,
-          url: "/SystemAudits?tab=data-integrity",
-          color: "indigo"
-        },
+
         {
           title: "Reiniciar Sistema",
           description: "Borrar todo y empezar de cero con archivo maestro",
@@ -97,13 +85,7 @@ export default function ConfigurationPage() {
           url: "/MaintenanceTracking",
           color: "slate"
         },
-        {
-          title: "Auditoría de Máquinas y Procesos",
-          description: "Análisis de integridad y relaciones",
-          icon: Database,
-          url: "/SystemAudits?tab=machines",
-          color: "purple"
-        }
+
       ]
     },
     maestras: {
@@ -136,6 +118,20 @@ export default function ConfigurationPage() {
       title: "Sistema",
       modules: [
         {
+          title: "Estructura Organizativa",
+          description: "Departamentos, Equipos y Fabricación",
+          icon: Building2,
+          url: "/OrganizationalStructure",
+          color: "blue"
+        },
+        {
+          title: "Reglas y Plantillas",
+          description: "Reglas de negocio, notificaciones y plantillas",
+          icon: Gavel,
+          url: "/RulesAndTemplates",
+          color: "emerald"
+        },
+        {
           title: "Apariencia y Marca",
           description: "Personaliza logotipo, nombre y colores",
           icon: Palette,
@@ -156,14 +152,6 @@ export default function ConfigurationPage() {
           url: "/DocumentManagement",
           color: "orange"
         },
-
-        {
-          title: "Configuración Avanzada",
-          description: "Estructura organizativa, puestos y sincronización",
-          icon: Settings,
-          url: "/AdvancedConfiguration",
-          color: "emerald"
-        },
         {
           title: "Notificaciones",
           description: "Configura preferencias de notificaciones",
@@ -177,20 +165,6 @@ export default function ConfigurationPage() {
           icon: MessageSquare,
           url: "/MessagingConfiguration",
           color: "indigo"
-        },
-        {
-          title: "Migración de Datos",
-          description: "Migra datos legacy a base maestra",
-          icon: Database,
-          url: "/DataRecoveryDashboard",
-          color: "blue"
-        },
-        {
-          title: "Salud del Sistema",
-          description: "Monitoreo y sincronización de datos",
-          icon: Activity,
-          url: "/SystemAudits?tab=sync-health",
-          color: "green"
         }
       ]
     }

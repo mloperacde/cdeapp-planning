@@ -2,7 +2,6 @@ import Layout from "../Layout";
 
 import AbsenceManagement from "./AbsenceManagement";
 import AbsenceTypeConfig from "./AbsenceTypeConfig";
-import AdvancedConfiguration from "./AdvancedConfiguration";
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
 import AppUserManagement from "./AppUserManagement";
 import ArticleManagement from "./ArticleManagement";
@@ -44,10 +43,11 @@ import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
-import ManufacturingConfig from "./ManufacturingConfig";
+
 import RolesConfig from "./RolesConfig";
-import SystemAudits from "./SystemAudits";
 import MessagingConfiguration from "./MessagingConfiguration";
+import RulesAndTemplates from "./RulesAndTemplates";
+import OrganizationalStructure from "./OrganizationalStructure";
 import DireccionSkills from "./DireccionSkills";
 import PlanificacionSkills from "./PlanificacionSkills";
 import FabricacionSkills from "./FabricacionSkills";
@@ -77,7 +77,6 @@ const PAGES = {
   Dashboard: Dashboard,
   AbsenceManagement: AbsenceManagement,
   AbsenceTypeConfig: AbsenceTypeConfig,
-  AdvancedConfiguration: AdvancedConfiguration,
   AdvancedHRDashboard: AdvancedHRDashboard,
   ArticleManagement: ArticleManagement,
   AttendanceManagement: AttendanceManagement,
@@ -118,7 +117,7 @@ const PAGES = {
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
   MachinePlanning: MachinePlanning,
-  ManufacturingConfig: ManufacturingConfig,
+
   DireccionSkills: DireccionSkills,
   PlanificacionSkills: PlanificacionSkills,
   FabricacionSkills: FabricacionSkills,
@@ -253,7 +252,7 @@ function PagesContent() {
                 <Route path="/CalidadSkills" element={<CalidadSkills />} />
 
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
-                <Route path="/TeamManagement" element={<TeamManagement />} />
+
                 <Route path="/Timeline" element={<Timeline />} />
                 
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
@@ -261,8 +260,9 @@ function PagesContent() {
                 <Route path="/Breaks" element={<Breaks />} />
                 <Route path="/MachinePlanning" element={<MachinePlanning />} />
                 <Route path="/ManufacturingConfig" element={<ManufacturingConfig />} />
-                <Route path="/SystemAudits" element={<SystemAudits />} />
                 <Route path="/MessagingConfiguration" element={<MessagingConfiguration />} />
+                <Route path="/RulesAndTemplates" element={<RulesAndTemplates />} />
+                <Route path="/OrganizationalStructure" element={<OrganizationalStructure />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 {/* BrandingConfig already has a route above, but let's ensure it uses the correct component if defined elsewhere */}

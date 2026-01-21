@@ -27,7 +27,7 @@ export const MENU_STRUCTURE = [
   { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
 
   // Fabricación
-  { name: 'Config. Fabricación', icon: Factory, path: '/ManufacturingConfig', category: 'Fabricación' },
+  { name: 'Config. Fabricación', icon: Factory, path: '/OrganizationalStructure?tab=manufacturing', category: 'Fabricación' },
   { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Fabricación' },
   { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Fabricación' },
   { name: 'Control Calidad', icon: ClipboardCheck, path: '/QualityControl', category: 'Fabricación' },
