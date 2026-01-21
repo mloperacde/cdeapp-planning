@@ -45,6 +45,7 @@ import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
 import ManufacturingConfig from "./ManufacturingConfig";
+import RolesConfig from "./RolesConfig";
 import DireccionSkills from "./DireccionSkills";
 import PlanificacionSkills from "./PlanificacionSkills";
 import FabricacionSkills from "./FabricacionSkills";
@@ -104,6 +105,7 @@ const PAGES = {
   ProductionPlanning: ProductionPlanning,
   QualityControl: QualityControl,
   Reports: Reports,
+  RolesConfig: RolesConfig,
   ShiftHandover: ShiftHandover,
   ShiftManagers: ShiftManagers,
   ShiftPlanning: ShiftPlanning,
@@ -230,8 +232,7 @@ function PagesContent() {
                 <Route path="/ProductionPlanning" element={<ProductionPlanning />} />
                 <Route path="/QualityControl" element={<QualityControl />} />
                 <Route path="/Reports" element={<Reports />} />
-                
-
+                <Route path="/RolesConfig" element={<RolesConfig />} />
                 
                 <Route path="/ShiftHandover" element={<ShiftHandover />} />
                 

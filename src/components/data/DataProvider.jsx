@@ -188,6 +188,24 @@ export function DataProvider({ children }) {
     retry: 0,
   });
 
+  // 13. CONFIGURACIÓN DE ROLES - Cache 5 min
+  const rolesConfigQuery = useQuery({
+    queryKey: ['rolesConfig'],
+    queryFn: async () => {
+      if (isLocal) return null;
+      try {
+        const config = await base44.entities.AppConfig.findUnique('roles_config');
+        return config?.value ? JSON.parse(config.value) : null;
+      } catch (err) {
+        console.warn('No roles configuration found, using defaults');
+        return null;
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const allAbsenceTypes = absenceTypesQuery.data || [];
 
   const value = {
@@ -235,6 +253,9 @@ export function DataProvider({ children }) {
     
     maintenanceTypes: maintenanceTypesQuery.data || [],
     maintenanceTypesLoading: maintenanceTypesQuery.isLoading,
+    
+    rolesConfig: rolesConfigQuery.data,
+    rolesConfigLoading: rolesConfigQuery.isLoading,
     
     // Helper computed
     isAdmin: userQuery.data?.role === 'admin',

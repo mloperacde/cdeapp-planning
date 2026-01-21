@@ -66,6 +66,25 @@ export default function ConfigurationPage() {
         }
       ]
     },
+    sistema: {
+      title: "Sistema y Seguridad",
+      modules: [
+        {
+          title: "Roles y Permisos",
+          description: "Gestión de roles, accesos y asignación de usuarios",
+          icon: Shield,
+          url: "/RolesConfig",
+          color: "rose"
+        },
+        {
+          title: "Identidad Corporativa",
+          description: "Logos, colores y nombre de la empresa",
+          icon: Palette,
+          url: "/BrandingConfig",
+          color: "violet"
+        }
+      ]
+    },
     produccion: {
       title: "Producción",
       modules: [
