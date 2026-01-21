@@ -152,6 +152,31 @@ export function usePermissions() {
       userEmail: user.email,
       userName: user.full_name,
       ...permissions,
+      canAccessPage: (path) => {
+        if (permissions.isAdmin) return true;
+         
+         // Hard security check: Solo admin puede ver RolesConfig
+         if (path.includes('RolesConfig')) return false;
+
+         // Configuración dinámica de páginas
+         const roleConfig = rolesConfig?.roles?.[role];
+         if (roleConfig?.page_permissions) {
+            const perm = roleConfig.page_permissions[path];
+            if (perm !== undefined) return perm;
+            
+            // Si no está definido en la configuración dinámica (ruta no listada en menú):
+            // Aplicar reglas de seguridad mínimas para rutas críticas no listadas
+            if (path.startsWith('/Configuration') || path.includes('Config')) return false;
+            
+            return true;
+         }
+         
+         // Fallback estático (Legacy)
+        // Bloquear configuración para no admins
+        if (path.startsWith('/Configuration') || path.includes('Config')) return false;
+        
+        return true;
+      }
     };
 
     return base;

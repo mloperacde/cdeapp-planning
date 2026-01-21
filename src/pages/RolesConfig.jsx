@@ -11,8 +11,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users, Save, Plus, Trash2, AlertTriangle, RotateCcw } from "lucide-react";
+import { Shield, Users, Save, Plus, Trash2, AlertTriangle, RotateCcw, Factory } from "lucide-react";
 import { toast } from "sonner";
+
+import { MENU_STRUCTURE } from '@/config/menuConfig';
 
 // Definición de permisos y sus etiquetas legibles
 const PERMISSION_LABELS = {
@@ -200,6 +202,36 @@ export default function RolesConfig() {
     setIsDirty(true);
   };
 
+  const handlePagePermissionChange = (roleId, path, checked) => {
+    setLocalConfig(prev => {
+      const role = prev.roles[roleId];
+      const currentPagePermissions = role.page_permissions || {};
+      
+      return {
+        ...prev,
+        roles: {
+          ...prev.roles,
+          [roleId]: {
+            ...role,
+            page_permissions: {
+              ...currentPagePermissions,
+              [path]: checked
+            }
+          }
+        }
+      };
+    });
+    setIsDirty(true);
+  };
+
+  // Agrupar menú para visualización
+  const groupedMenu = MENU_STRUCTURE.reduce((acc, item) => {
+    const category = item.category || 'Otros';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(item);
+    return acc;
+  }, {});
+
   const handleAddRole = () => {
     if (!newRoleName || !newRoleId) return;
     
@@ -336,6 +368,9 @@ export default function RolesConfig() {
           <TabsTrigger value="matrix" className="flex items-center gap-2">
             <Shield className="w-4 h-4" /> Matriz de Permisos
           </TabsTrigger>
+          <TabsTrigger value="navigation" className="flex items-center gap-2">
+            <Factory className="w-4 h-4" /> Navegación
+          </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="w-4 h-4" /> Asignación de Usuarios
           </TabsTrigger>
@@ -399,6 +434,78 @@ export default function RolesConfig() {
                         );
                       })}
                     </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="navigation">
+          <Card>
+            <CardHeader>
+              <CardTitle>Permisos de Navegación</CardTitle>
+              <CardDescription>Controla a qué páginas puede acceder cada rol</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[300px] bg-slate-50 dark:bg-slate-900 sticky left-0 z-10">Página / Módulo</TableHead>
+                    {roleKeys.map(roleId => (
+                      <TableHead key={roleId} className="text-center min-w-[100px]">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="font-bold">{localConfig.roles[roleId].name}</span>
+                        </div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(groupedMenu).map(([category, items]) => (
+                    <React.Fragment key={category}>
+                      <TableRow className="bg-slate-100 dark:bg-slate-800">
+                        <TableCell colSpan={roleKeys.length + 1} className="font-bold py-2">
+                          {category}
+                        </TableCell>
+                      </TableRow>
+                      {items.map(item => (
+                        <TableRow key={item.path}>
+                          <TableCell className="pl-6 bg-slate-50 dark:bg-slate-900 sticky left-0 z-10 border-r">
+                            <div className="flex items-center gap-2">
+                              <span>{item.name}</span>
+                            </div>
+                            <p className="text-xs text-slate-400 font-normal ml-6 truncate max-w-[200px]">{item.path}</p>
+                          </TableCell>
+                          {roleKeys.map(roleId => {
+                            const role = localConfig.roles[roleId];
+                            
+                            // Lógica de visualización del estado actual
+                            // Si page_permissions es undefined, mostramos el valor por defecto (Legacy)
+                            let effectiveValue;
+                            if (role.page_permissions === undefined) {
+                                if (roleId === 'admin') effectiveValue = true;
+                                else if (item.category === 'Configuración') effectiveValue = false;
+                                else effectiveValue = true;
+                            } else {
+                                effectiveValue = !!role.page_permissions[item.path];
+                            }
+                            
+                            const isLocked = roleId === 'admin';
+
+                            return (
+                              <TableCell key={`${roleId}-${item.path}`} className="text-center">
+                                <Checkbox 
+                                  checked={effectiveValue}
+                                  disabled={isLocked}
+                                  onCheckedChange={(checked) => handlePagePermissionChange(roleId, item.path, checked)}
+                                />
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
