@@ -31,13 +31,7 @@ export default function ConfigurationPage() {
           color: "indigo"
         },
 
-        {
-          title: "Reiniciar Sistema",
-          description: "Borrar todo y empezar de cero con archivo maestro",
-          icon: Settings,
-          url: "/SystemReset",
-          color: "red"
-        },
+
         {
           title: "Matriz de Habilidades",
           description: "Gestión de competencias y formación",
@@ -61,7 +55,7 @@ export default function ConfigurationPage() {
           title: "Configuración de Fabricación",
           description: "Áreas, Salas, Jefes de Turno y Tareas",
           icon: Factory,
-          url: "/ManufacturingConfig",
+          url: "/OrganizationalStructure?tab=manufacturing",
           color: "blue"
         },
         {

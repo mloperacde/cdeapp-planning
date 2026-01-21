@@ -38,7 +38,7 @@ import ShiftManagers from "./ShiftManagers";
 import ShiftPlanning from "./ShiftPlanning";
 import SkillMatrix from "./SkillMatrix";
 import SupportManagement1415 from "./SupportManagement1415";
-import TeamManagement from "./TeamManagement";
+
 import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
@@ -112,7 +112,7 @@ const PAGES = {
   ShiftPlanning: ShiftPlanning,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
-  TeamManagement: TeamManagement,
+
   Timeline: Timeline,
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
@@ -170,7 +170,7 @@ function PagesContent() {
                 
 
                 
-                <Route path="/AdvancedConfiguration" element={<AdvancedConfiguration />} />
+
                 
                 <Route path="/AdvancedHRDashboard" element={<AdvancedHRDashboard />} />
                 
