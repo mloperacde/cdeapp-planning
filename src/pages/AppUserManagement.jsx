@@ -187,7 +187,7 @@ export default function AppUserManagement() {
                       .map(e => (
                         <div key={e.id} className="flex items-center gap-3 p-3 border rounded bg-white dark:bg-slate-950">
                           <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
-                            {e.nombre.charAt(0)}{e.apellidos.charAt(0)}
+                            {e.nombre?.charAt(0) || '?'}{e.apellidos?.charAt(0) || '?'}
                           </div>
                           <div className="overflow-hidden">
                             <p className="text-sm font-medium truncate">{e.nombre} {e.apellidos}</p>
