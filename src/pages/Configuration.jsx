@@ -103,7 +103,9 @@ export default function ConfigurationPage() {
           icon: Database,
           url: "/SystemAudits?tab=machines",
           color: "purple"
-        },
+        }
+      ]
+    },
     maestras: {
       title: "Bases de Datos Maestras",
       modules: [
