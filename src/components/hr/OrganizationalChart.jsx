@@ -46,11 +46,49 @@ export default function OrganizationalChart({
   const positions = data?.positions || fetchedPos;
   const employees = data?.employees || fetchedEmps;
 
+  // Calculate recursive stats for all departments
+  const deptStats = React.useMemo(() => {
+    const stats = {};
+    
+    const calculateStats = (deptId) => {
+      if (stats[deptId]) return stats[deptId];
+
+      const dept = departments.find(d => d.id === deptId);
+      if (!dept) return { employees: 0, headcount: 0 };
+
+      // Direct counts
+      const directPos = positions.filter(p => p.department_id === deptId);
+      const directHC = directPos.reduce((acc, p) => acc + (p.max_headcount || 0), 0);
+      // Match by name as per current system convention
+      const directEmp = employees.filter(e => e.departamento === dept.name).length;
+
+      // Children counts
+      const children = departments.filter(d => d.parent_id === deptId);
+      
+      let totalEmp = directEmp;
+      let totalHC = directHC;
+
+      children.forEach(child => {
+        const childStats = calculateStats(child.id);
+        totalEmp += childStats.employees;
+        totalHC += childStats.headcount;
+      });
+
+      stats[deptId] = { employees: totalEmp, headcount: totalHC };
+      return stats[deptId];
+    };
+
+    departments.forEach(d => calculateStats(d.id));
+    return stats;
+  }, [departments, positions, employees]);
+
   // Recursive component for tree branch
   const OrgNode = ({ dept }) => {
     const children = departments.filter(d => d.parent_id === dept.id);
     const deptPositions = positions.filter(p => p.department_id === dept.id);
-    const totalHeadcount = deptPositions.reduce((acc, p) => acc + (p.max_headcount || 0), 0);
+    // Use pre-calculated recursive stats
+    const stats = deptStats[dept.id] || { employees: 0, headcount: 0 };
+    
     const manager = employees.find(e => e.id === dept.manager_id);
     const [isDragOver, setIsDragOver] = React.useState(false);
 
@@ -169,9 +207,15 @@ export default function OrganizationalChart({
                 )}
               </div>
 
-              <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 flex justify-between">
-                <span>HC Planificado:</span>
-                <span className="font-bold">{totalHeadcount}</span>
+              <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 grid grid-cols-2 gap-2">
+                <div className="flex flex-col border-r border-slate-100 pr-2">
+                  <span className="text-[9px] uppercase tracking-wider" title="Total Empleados (Incl. sub-depts)">Empleados</span>
+                  <span className="font-bold text-indigo-600 text-sm">{stats.employees}</span>
+                </div>
+                <div className="flex flex-col text-right pl-2">
+                  <span className="text-[9px] uppercase tracking-wider" title="Headcount Total (Incl. sub-depts)">HC Total</span>
+                  <span className="font-bold text-slate-600 text-sm">{stats.headcount}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
