@@ -62,6 +62,10 @@ export default function DepartmentPositionManager() {
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [deptToMove, setDeptToMove] = useState(null);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [activeTab, setActiveTab] = useState("positions");
+  const [isEmpDialogOpen, setIsEmpDialogOpen] = useState(false);
+  const [empToEdit, setEmpToEdit] = useState(null);
 
   // Queries
   const { data: departments = [] } = useQuery({
@@ -87,6 +91,12 @@ export default function DepartmentPositionManager() {
   const deptPositions = useMemo(() => 
     positions.filter(p => p.department_id === selectedDeptId),
   [positions, selectedDeptId]);
+
+  const deptEmployees = useMemo(() => {
+    if (!selectedDept) return [];
+    const normalizedDeptName = (selectedDept.name || "").trim().toUpperCase();
+    return employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
+  }, [employees, selectedDept]);
 
   // Expand root departments by default
   useEffect(() => {
@@ -145,6 +155,16 @@ export default function DepartmentPositionManager() {
     }
   });
 
+  const movePosMutation = useMutation({
+    mutationFn: async ({ id, newDeptId }) => {
+      return base44.entities.Position.update(id, { department_id: newDeptId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['positions'] });
+      toast.success("Puesto movido correctamente");
+    }
+  });
+
   const moveDeptMutation = useMutation({
     mutationFn: async ({ id, newParentId }) => {
       // Prevent moving to self or own descendant (simple check)
@@ -157,6 +177,17 @@ export default function DepartmentPositionManager() {
       toast.success("Departamento movido correctamente");
       setIsMoveDialogOpen(false);
       setDeptToMove(null);
+    }
+  });
+
+  const updateEmployeeMutation = useMutation({
+    mutationFn: async ({ id, departamento, puesto }) => {
+      return base44.entities.EmployeeMasterDatabase.update(id, { departamento, puesto });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success("Empleado asignado correctamente");
+      setIsEmpDialogOpen(false);
     }
   });
 
@@ -360,6 +391,7 @@ export default function DepartmentPositionManager() {
   const DeptTreeItem = ({ dept, level = 0 }) => {
     const children = departments.filter(d => d.parent_id === dept.id);
     const hasChildren = children.length > 0;
+    const [isDragOver, setIsDragOver] = useState(false);
     
     // Search logic
     const matchesSearch = (d) => (d.name || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -385,25 +417,79 @@ export default function DepartmentPositionManager() {
     const isExpanded = expandedDepts.has(dept.id);
     const isSelected = selectedDeptId === dept.id;
 
-    // Calculate actual headcount for this department (recursive?)
-    // Or just direct assignment if we had it. 
-    // Currently employees are not linked by ID, but by string name often.
-    // Let's try to match by name for the badge count if possible, 
-    // or just use the positions count we have.
-    // For the tree, let's stick to structural children count or position count.
-    
-    // If we want "Actual Employee Count" we need to do the name matching logic here or pre-calculate it.
-    // Let's stick to simple "Positions" count for now in the tree to avoid perf issues.
+    // Drag Handlers
+    const handleDragStart = (e) => {
+        e.stopPropagation();
+        setDraggedItem({ type: 'dept', id: dept.id, data: dept });
+        e.dataTransfer.setData('text/plain', dept.id);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!draggedItem) return;
+
+        // Validation
+        if (draggedItem.type === 'dept') {
+            if (draggedItem.id === dept.id) return; // Can't drop on self
+            // Check descendant
+            const descendants = getDescendantIds(draggedItem.id, departments);
+            if (descendants.has(dept.id)) return; // Can't drop on descendant
+        }
+        
+        setIsDragOver(true);
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+
+        if (!draggedItem) return;
+
+        if (draggedItem.type === 'dept') {
+            if (draggedItem.id === dept.id) return;
+            const descendants = getDescendantIds(draggedItem.id, departments);
+            if (descendants.has(dept.id)) {
+                toast.error("No se puede mover un departamento dentro de su descendiente");
+                return;
+            }
+            if (draggedItem.data.parent_id === dept.id) return; // No change
+
+            moveDeptMutation.mutate({ id: draggedItem.id, newParentId: dept.id });
+        } else if (draggedItem.type === 'pos') {
+            if (draggedItem.data.department_id === dept.id) return; // No change
+            movePosMutation.mutate({ id: draggedItem.id, newDeptId: dept.id });
+        }
+        
+        setDraggedItem(null);
+    };
 
     return (
       <div className="select-none">
         <ContextMenu>
           <ContextMenuTrigger>
             <div 
+              draggable
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
               className={`
-                flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-colors group
+                flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-all group
                 ${isSelected ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100 text-slate-700"}
+                ${isDragOver ? "bg-indigo-50 border-2 border-indigo-500 border-dashed" : "border-2 border-transparent"}
                 ${level > 0 ? "ml-6" : ""}
+                ${draggedItem?.id === dept.id ? "opacity-50" : ""}
               `}
               onClick={() => setSelectedDeptId(dept.id)}
             >
@@ -544,8 +630,9 @@ export default function DepartmentPositionManager() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => handleCreateDept(null)}>
+              <Button size="sm" variant="outline" className="shrink-0 gap-2" onClick={() => handleCreateDept(null)}>
                 <Plus className="w-4 h-4 text-indigo-600" />
+                <span className="hidden xl:inline">Nuevo</span>
               </Button>
             </div>
             <ScrollArea className="flex-1 p-3">
@@ -616,65 +703,139 @@ export default function DepartmentPositionManager() {
                   </div>
                 </div>
 
-                {/* Positions Grid */}
-                <div className="flex-1 p-6 overflow-hidden flex flex-col">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                      <Briefcase className="w-5 h-5 text-slate-500" />
-                      Puestos Definidos
-                    </h4>
-                    <Button size="sm" onClick={handleCreatePos} className="bg-indigo-600 hover:bg-indigo-700">
-                      <Plus className="w-4 h-4 mr-2" /> Añadir Puesto
-                    </Button>
+                {/* Content Tabs */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+                  <div className="px-6 pt-4 border-b bg-white">
+                    <TabsList>
+                      <TabsTrigger value="positions">Puestos ({deptPositions.length})</TabsTrigger>
+                      <TabsTrigger value="employees">Empleados ({deptEmployees.length})</TabsTrigger>
+                    </TabsList>
                   </div>
 
-                  <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col">
-                    <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      <div className="col-span-4">Nombre del Puesto</div>
-                      <div className="col-span-2">Nivel</div>
-                      <div className="col-span-2 text-center">Headcount</div>
-                      <div className="col-span-3">Descripción</div>
-                      <div className="col-span-1 text-right">Acciones</div>
+                  {/* Positions Tab */}
+                  <TabsContent value="positions" className="flex-1 p-6 overflow-hidden flex flex-col mt-0 data-[state=inactive]:hidden">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <Briefcase className="w-5 h-5 text-slate-500" />
+                        Puestos Definidos
+                      </h4>
+                      <Button size="sm" onClick={handleCreatePos} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Plus className="w-4 h-4 mr-2" /> Añadir Puesto
+                      </Button>
                     </div>
-                    
-                    <ScrollArea className="flex-1">
-                      {deptPositions.length > 0 ? (
-                        <div className="divide-y divide-slate-100">
-                          {deptPositions.map(pos => (
-                            <div key={pos.id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors group">
-                              <div className="col-span-4 font-medium text-slate-900">{pos.name}</div>
-                              <div className="col-span-2">
-                                <Badge variant="secondary" className="font-normal text-xs bg-slate-100 text-slate-600">
-                                  {pos.level || "Mid"}
-                                </Badge>
+
+                    <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
+                      <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        <div className="col-span-4">Nombre del Puesto</div>
+                        <div className="col-span-2">Nivel</div>
+                        <div className="col-span-2 text-center">Headcount</div>
+                        <div className="col-span-3">Descripción</div>
+                        <div className="col-span-1 text-right">Acciones</div>
+                      </div>
+                      
+                      <ScrollArea className="flex-1">
+                        {deptPositions.length > 0 ? (
+                          <div className="divide-y divide-slate-100">
+                            {deptPositions.map(pos => (
+                              <div 
+                                key={pos.id} 
+                                draggable
+                                onDragStart={(e) => {
+                                  e.stopPropagation();
+                                  setDraggedItem({ type: 'pos', id: pos.id, data: pos });
+                                  e.dataTransfer.setData('text/plain', pos.id);
+                                  e.dataTransfer.effectAllowed = 'move';
+                                }}
+                                className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors group cursor-grab active:cursor-grabbing"
+                              >
+                                <div className="col-span-4 font-medium text-slate-900 flex items-center gap-2">
+                                  <GripVertical className="w-4 h-4 text-slate-300 cursor-grab active:cursor-grabbing" />
+                                  {pos.name}
+                                </div>
+                                <div className="col-span-2">
+                                  <Badge variant="secondary" className="font-normal text-xs bg-slate-100 text-slate-600">
+                                    {pos.level || "Mid"}
+                                  </Badge>
+                                </div>
+                                <div className="col-span-2 text-center">
+                                  <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs">{pos.max_headcount || 1}</span>
+                                </div>
+                                <div className="col-span-3 text-sm text-slate-500 truncate" title={pos.description}>
+                                  {pos.description || "-"}
+                                </div>
+                                <div className="col-span-1 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditPos(pos)}>
+                                    <Edit className="w-3.5 h-3.5 text-slate-500" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => deletePosMutation.mutate(pos.id)}>
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="col-span-2 text-center">
-                                <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs">{pos.max_headcount || 1}</span>
-                              </div>
-                              <div className="col-span-3 text-sm text-slate-500 truncate" title={pos.description}>
-                                {pos.description || "-"}
-                              </div>
-                              <div className="col-span-1 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditPos(pos)}>
-                                  <Edit className="w-3.5 h-3.5 text-slate-500" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => deletePosMutation.mutate(pos.id)}>
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
-                          <Briefcase className="w-8 h-8 mb-2 opacity-20" />
-                          <p>No hay puestos definidos en este departamento.</p>
-                          <Button variant="link" onClick={handleCreatePos}>Crear el primero</Button>
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </div>
-                </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
+                            <Briefcase className="w-8 h-8 mb-2 opacity-20" />
+                            <p>No hay puestos definidos en este departamento.</p>
+                            <Button variant="link" onClick={handleCreatePos}>Crear el primero</Button>
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
+                  </TabsContent>
+
+                  {/* Employees Tab */}
+                  <TabsContent value="employees" className="flex-1 p-6 overflow-hidden flex flex-col mt-0 data-[state=inactive]:hidden">
+                    <div className="flex justify-between items-center mb-4">
+                       <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                          <Users className="w-5 h-5 text-slate-500" />
+                          Empleados Asignados
+                       </h4>
+                       <Button size="sm" onClick={() => { setEmpToEdit(null); setIsEmpDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                          <UserCircle className="w-4 h-4 mr-2" /> Asignar Empleado
+                       </Button>
+                    </div>
+
+                    <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
+                       <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                          <div className="col-span-4">Nombre</div>
+                          <div className="col-span-4">Puesto Actual</div>
+                          <div className="col-span-2">Estado</div>
+                          <div className="col-span-2 text-right">Acciones</div>
+                       </div>
+                       <ScrollArea className="flex-1">
+                          {deptEmployees.length > 0 ? (
+                             <div className="divide-y divide-slate-100">
+                                {deptEmployees.map(emp => (
+                                   <div key={emp.id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors">
+                                      <div className="col-span-4 font-medium text-slate-900">{emp.nombre}</div>
+                                      <div className="col-span-4 text-sm text-slate-600">{emp.puesto || "-"}</div>
+                                      <div className="col-span-2">
+                                         <Badge variant={emp.estado_empleado === "Alta" ? "success" : "secondary"} className="text-xs">
+                                            {emp.estado_empleado || "N/A"}
+                                         </Badge>
+                                      </div>
+                                      <div className="col-span-2 flex justify-end">
+                                         <Button variant="ghost" size="sm" className="h-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" 
+                                            onClick={() => { setEmpToEdit(emp); setIsEmpDialogOpen(true); }}>
+                                            <Edit className="w-3.5 h-3.5 mr-1" /> Cambiar
+                                         </Button>
+                                      </div>
+                                   </div>
+                                ))}
+                             </div>
+                          ) : (
+                             <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
+                                <Users className="w-8 h-8 mb-2 opacity-20" />
+                                <p>No hay empleados asignados a este departamento.</p>
+                                <Button variant="link" onClick={() => setIsEmpDialogOpen(true)}>Asignar ahora</Button>
+                             </div>
+                          )}
+                       </ScrollArea>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-slate-400">
@@ -698,6 +859,14 @@ export default function DepartmentPositionManager() {
           onMove={(dept) => {
             setDeptToMove(dept);
             setIsMoveDialogOpen(true);
+          }}
+          onNodeDrop={(draggedId, targetId) => {
+             const descendants = getDescendantIds(draggedId, departments);
+             if (descendants.has(targetId)) {
+                toast.error("No se puede mover un departamento dentro de su descendiente");
+                return;
+             }
+             moveDeptMutation.mutate({ id: draggedId, newParentId: targetId });
           }}
         />
       )}
@@ -865,6 +1034,88 @@ export default function DepartmentPositionManager() {
           </div>
           <DialogFooter>
              <Button variant="outline" onClick={() => setIsMoveDialogOpen(false)}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Assignment Dialog */}
+      <Dialog open={isEmpDialogOpen} onOpenChange={setIsEmpDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{empToEdit ? "Cambiar Puesto/Dept" : "Asignar Empleado"}</DialogTitle>
+            <DialogDescription>
+              Asignar empleado al departamento <strong>{selectedDept?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+             {!empToEdit && (
+                <div className="space-y-2">
+                  <Label>Seleccionar Empleado</Label>
+                  <Select onValueChange={(val) => {
+                     const emp = employees.find(e => e.id === val);
+                     setEmpToEdit(emp);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Buscar empleado..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <ScrollArea className="h-[200px]">
+                        {employees
+                          .sort((a,b) => a.nombre.localeCompare(b.nombre))
+                          .map(e => (
+                          <SelectItem key={e.id} value={e.id}>
+                             {e.nombre} 
+                             {e.departamento ? ` (${e.departamento})` : ''}
+                          </SelectItem>
+                        ))}
+                      </ScrollArea>
+                    </SelectContent>
+                  </Select>
+                </div>
+             )}
+
+             {empToEdit && (
+                <div className="p-3 bg-slate-50 rounded border mb-2">
+                   <p className="text-sm font-medium">{empToEdit.nombre}</p>
+                   <p className="text-xs text-slate-500">
+                      Actual: {empToEdit.departamento || "Sin Dept"} - {empToEdit.puesto || "Sin Puesto"}
+                   </p>
+                </div>
+             )}
+
+             <div className="space-y-2">
+                <Label>Puesto en {selectedDept?.name}</Label>
+                <Select 
+                   value={empToEdit?.tempPuesto} 
+                   onValueChange={(val) => setEmpToEdit({...empToEdit, tempPuesto: val})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar puesto..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none_assigned">-- Sin Puesto Específico --</SelectItem>
+                    {deptPositions.map(p => (
+                       <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+             </div>
+          </div>
+          <DialogFooter>
+             <Button variant="outline" onClick={() => setIsEmpDialogOpen(false)}>Cancelar</Button>
+             <Button 
+               onClick={() => {
+                  if (!empToEdit) return;
+                  updateEmployeeMutation.mutate({
+                     id: empToEdit.id,
+                     departamento: selectedDept.name,
+                     puesto: empToEdit.tempPuesto === "none_assigned" ? "" : (empToEdit.tempPuesto || "")
+                  });
+               }} 
+               disabled={!empToEdit}
+             >
+               Confirmar Asignación
+             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

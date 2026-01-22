@@ -20,7 +20,8 @@ export default function OrganizationalChart({
   onEdit, 
   onAddChild, 
   onDelete, 
-  onMove 
+  onMove,
+  onNodeDrop
 }) {
   // Use props data if available, otherwise fetch
   const { data: fetchedDepts = [] } = useQuery({
@@ -51,12 +52,50 @@ export default function OrganizationalChart({
     const deptPositions = positions.filter(p => p.department_id === dept.id);
     const totalHeadcount = deptPositions.reduce((acc, p) => acc + (p.max_headcount || 0), 0);
     const manager = employees.find(e => e.id === dept.manager_id);
+    const [isDragOver, setIsDragOver] = React.useState(false);
+
+    const handleDragStart = (e) => {
+        if (!onNodeDrop) return;
+        e.stopPropagation();
+        e.dataTransfer.setData('application/x-dept-id', dept.id);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        if (!onNodeDrop) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(true);
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+        if (!onNodeDrop) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        const draggedId = e.dataTransfer.getData('application/x-dept-id');
+        if (draggedId && draggedId !== dept.id) {
+            onNodeDrop(draggedId, dept.id);
+        }
+    };
 
     return (
       <li className="flex flex-col items-center">
         <div className="relative group">
           <Card 
-            className="w-64 border-t-4 shadow-md z-10 relative bg-white hover:shadow-lg transition-shadow cursor-default" 
+            draggable={!!onNodeDrop}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`w-64 border-t-4 shadow-md z-10 relative bg-white hover:shadow-lg transition-all cursor-default ${isDragOver ? 'ring-2 ring-indigo-500 ring-offset-2 scale-105' : ''}`} 
             style={{ borderTopColor: dept.color || '#3b82f6' }}
           >
             <CardContent className="p-3">
