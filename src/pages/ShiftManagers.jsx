@@ -258,11 +258,28 @@ export default function ShiftManagersPage() {
     return (
       <div className="p-6 md:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <Button variant="ghost" onClick={() => setActiveView("dashboard")}>
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Volver al Dashboard
-            </Button>
+          {/* Header Compacto - Vista Ausencias */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <ArrowLeftRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                  Gestión de Ausencias
+                </h1>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                  Vista detallada de ausencias y solicitudes
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setActiveView("dashboard")}>
+                <ArrowLeft className="w-3 h-3 mr-1" />
+                Volver al Dashboard
+              </Button>
+              <ThemeToggle />
+            </div>
           </div>
           <UnifiedAbsenceManager sourceContext="shift_manager" />
         </div>
@@ -273,44 +290,62 @@ export default function ShiftManagersPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al Dashboard
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-                <LayoutDashboard className="w-8 h-8 text-blue-600" />
+        {/* Header Compacto */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <LayoutDashboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
                 Panel de Control - Jefes de Turno
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
+              </h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
                 Vista general y acceso rápido a gestión de turnos
-            </p>
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-white dark:bg-card p-2 rounded-lg border shadow-sm">
+            <Link to={createPageUrl("Dashboard")}>
+              <Button variant="ghost" size="sm" className="h-8 text-xs">
+                <ArrowLeft className="w-3 h-3 mr-1" />
+                Volver
+              </Button>
+            </Link>
+            <ThemeToggle />
+          </div>
+        </div>
+
+        {/* Toolbar Unificada */}
+        <div className="flex flex-col sm:flex-row gap-4 shrink-0 mb-6 justify-between items-center">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full sm:w-auto">
                 <Filter className="w-4 h-4 text-slate-500 ml-2" />
                 <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
-                    <SelectTrigger className="w-[180px] border-0 focus:ring-0">
+                    <SelectTrigger className="w-full sm:w-[200px] border-0 focus:ring-0 h-8 text-sm bg-transparent">
                         <SelectValue placeholder="Todos los Equipos" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Todos los Equipos</SelectItem>
-                        {teams.map(t => (
-                            <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>
+                        {teams.map(team => (
+                            <SelectItem key={team.id} value={team.team_name}>
+                                {team.team_name}
+                            </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
             </div>
-            <Button variant="outline" size="icon" onClick={() => setCustomizerOpen(true)} className="bg-white dark:bg-card">
-                <Settings2 className="w-4 h-4" />
-            </Button>
           </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setCustomizerOpen(true)}
+            className="w-full sm:w-auto h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+          >
+            <Settings2 className="w-4 h-4 mr-2" />
+            Personalizar Dashboard
+          </Button>
         </div>
 
         <div className="space-y-6">
