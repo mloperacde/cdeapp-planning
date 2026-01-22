@@ -272,31 +272,6 @@ export default function MasterEmployeeDatabasePage() {
         </div>
         
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {/* Stats in Header for Desktop */}
-          <div className="hidden md:flex items-center gap-3 mr-2 border-r border-slate-200 dark:border-slate-800 pr-3">
-            <div className="flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-slate-400" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 leading-none">Total</span>
-                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none">{stats.total}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <UserCheck className="w-3.5 h-3.5 text-green-500" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 leading-none">Activos</span>
-                <span className="text-xs font-bold text-green-600 dark:text-green-400 leading-none">{stats.active}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <UserX className="w-3.5 h-3.5 text-red-500" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 leading-none">Ausentes</span>
-                <span className="text-xs font-bold text-red-600 dark:text-red-400 leading-none">{stats.absent}</span>
-              </div>
-            </div>
-          </div>
-
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-7 text-xs px-2">
@@ -342,6 +317,43 @@ export default function MasterEmployeeDatabasePage() {
             </Button>
           )}
         </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-2 shrink-0">
+        <Card className="p-3 flex items-center justify-between bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex flex-col">
+            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Empleados</span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
+              <span className="text-xs text-slate-400">en {stats.departments} depts</span>
+            </div>
+          </div>
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+        </Card>
+
+        <Card className="p-3 flex items-center justify-between bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex flex-col">
+            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Estado</span>
+            <div className="flex items-center gap-4 mt-1">
+              <div className="flex items-center gap-1.5">
+                <UserCheck className="w-4 h-4 text-green-500" />
+                <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.active}</span>
+                <span className="text-xs text-slate-400">Activos</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <UserX className="w-4 h-4 text-red-500" />
+                <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.absent}</span>
+                <span className="text-xs text-slate-400">Ausentes</span>
+              </div>
+            </div>
+          </div>
+          <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <Database className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+          </div>
+        </Card>
       </div>
 
       {/* Main Content Area */}
