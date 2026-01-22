@@ -33,32 +33,56 @@ export default function BrandingConfig() {
   });
 
   const [formData, setFormData] = useState({
-    app_name: brandingConfig?.app_name || "CdeApp Planning",
-    app_subtitle: brandingConfig?.app_subtitle || "Gestión de Empleados y Planificador",
-    primary_color: brandingConfig?.primary_color || "#3B82F6"
+    app_name: "CdeApp Planning",
+    app_subtitle: "Gestión de Empleados y Planificador",
+    primary_color: "#3B82F6",
+    logo_url: ""
   });
 
   React.useEffect(() => {
-    if (brandingConfig) {
+    if (brandingConfig?.value) {
+      try {
+        const parsed = JSON.parse(brandingConfig.value);
+        setFormData({
+          app_name: parsed.app_name || "CdeApp Planning",
+          app_subtitle: parsed.app_subtitle || "Gestión de Empleados y Planificador",
+          primary_color: parsed.primary_color || "#3B82F6",
+          logo_url: parsed.logo_url || ""
+        });
+      } catch (e) {
+        console.error("Error parsing branding config", e);
+      }
+    } else if (brandingConfig) {
+      // Fallback para estructura antigua (si existiera)
       setFormData({
         app_name: brandingConfig.app_name || "CdeApp Planning",
         app_subtitle: brandingConfig.app_subtitle || "Gestión de Empleados y Planificador",
-        primary_color: brandingConfig.primary_color || "#3B82F6"
+        primary_color: brandingConfig.primary_color || "#3B82F6",
+        logo_url: brandingConfig.logo_url || ""
       });
     }
   }, [brandingConfig]);
 
   const saveBrandingMutation = useMutation({
     mutationFn: async (data) => {
+      const payload = {
+        config_key: 'branding',
+        value: JSON.stringify(data),
+        description: 'Configuración de Marca y Apariencia',
+        updated_by: currentUser?.email,
+        updated_by_name: currentUser?.full_name
+      };
+
       if (brandingConfig?.id) {
-        return await base44.entities.AppConfig.update(brandingConfig.id, data);
+        return await base44.entities.AppConfig.update(brandingConfig.id, payload);
       } else {
-        return await base44.entities.AppConfig.create({ ...data, config_key: 'branding' });
+        return await base44.entities.AppConfig.create(payload);
       }
     },
     onSuccess: () => {
       toast.success("Configuración de marca guardada correctamente");
       queryClient.invalidateQueries({ queryKey: ['appConfig'] });
+      queryClient.invalidateQueries({ queryKey: ['brandingConfig'] }); // Invalidar DataProvider también
     },
     onError: (error) => {
       toast.error(`Error al guardar: ${error.message}`);
@@ -101,6 +125,9 @@ export default function BrandingConfig() {
         updated_by_name: currentUser?.full_name
       });
 
+      // Actualizar estado local también
+      setFormData(prev => ({ ...prev, logo_url: file_url }));
+
       toast.success("Logo actualizado correctamente");
       setLogoFile(null);
       setLogoPreview(null);
@@ -114,7 +141,6 @@ export default function BrandingConfig() {
   const handleSaveConfig = () => {
     saveBrandingMutation.mutate({
       ...formData,
-      logo_url: brandingConfig?.logo_url || "",
       updated_by: currentUser?.email,
       updated_by_name: currentUser?.full_name
     });
@@ -142,9 +168,9 @@ export default function BrandingConfig() {
             <div className="space-y-4">
               <Label>Logo Actual</Label>
               <div className="p-4 border-2 border-dashed rounded-lg bg-slate-50 dark:bg-slate-800 h-32 flex items-center justify-center">
-                {brandingConfig?.logo_url ? (
+                {formData.logo_url ? (
                   <img 
-                    src={brandingConfig.logo_url} 
+                    src={formData.logo_url} 
                     alt="Logo actual" 
                     className="max-h-24 max-w-full object-contain"
                   />
