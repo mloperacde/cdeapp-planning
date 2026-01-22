@@ -10,7 +10,7 @@ import {
   Plus, Trash2, Edit, Save, X, Users, Briefcase, 
   ChevronRight, ChevronDown, Building2, UserCircle,
   FolderTree, Layout, Search, ArrowRight, Settings2,
-  MoreHorizontal, GripVertical
+  MoreHorizontal, GripVertical, RefreshCw, CheckCircle2, AlertCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -48,6 +49,7 @@ export default function DepartmentPositionManager() {
   const [editingPos, setEditingPos] = useState(null);
   const [expandedDepts, setExpandedDepts] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   // Queries
   const { data: departments = [] } = useQuery({
@@ -192,6 +194,112 @@ export default function DepartmentPositionManager() {
     setIsPosDialogOpen(true);
   };
 
+  // Analysis Logic for Sync
+  const analysisResult = useMemo(() => {
+    if (!isSyncDialogOpen) return null;
+
+    const deptMap = new Map();
+    const normalize = (s) => (s || "").trim().toUpperCase();
+
+    // 1. Scan Employees
+    employees.forEach(emp => {
+      // Skip if marked as deleted or inactive if needed, but usually we want to see all structure
+      const dNameRaw = emp.departamento || "Sin Departamento";
+      const pNameRaw = emp.puesto || "Sin Puesto";
+      
+      // Skip "Sin Departamento" for structure creation usually, but show it for info
+      if (!emp.departamento) return; 
+
+      const dKey = normalize(dNameRaw);
+      const pKey = normalize(pNameRaw);
+
+      if (!deptMap.has(dKey)) {
+        const existingDept = departments.find(d => normalize(d.name) === dKey);
+        deptMap.set(dKey, {
+          name: dNameRaw, // Use first found casing
+          key: dKey,
+          count: 0,
+          positions: new Map(),
+          existingId: existingDept?.id,
+          isNew: !existingDept
+        });
+      }
+      const deptEntry = deptMap.get(dKey);
+      deptEntry.count++;
+
+      if (!deptEntry.positions.has(pKey)) {
+        // We can only check for existing position if we have a department ID
+        // If department is new, position is definitely new (or needs linking)
+        const existingPos = deptEntry.existingId 
+          ? positions.find(p => normalize(p.name) === pKey && p.department_id === deptEntry.existingId)
+          : null;
+
+        deptEntry.positions.set(pKey, {
+          name: pNameRaw,
+          key: pKey,
+          count: 0,
+          existingId: existingPos?.id,
+          isNew: !existingPos
+        });
+      }
+      deptEntry.positions.get(pKey).count++;
+    });
+
+    return Array.from(deptMap.values()).map(d => ({
+        ...d,
+        positions: Array.from(d.positions.values()).sort((a, b) => b.count - a.count)
+    })).sort((a, b) => b.count - a.count);
+
+  }, [employees, departments, positions, isSyncDialogOpen]);
+
+  const [syncing, setSyncing] = useState(false);
+
+  const performSync = async () => {
+    if (!analysisResult) return;
+    setSyncing(true);
+    try {
+      let createdDepts = 0;
+      let createdPos = 0;
+
+      for (const deptData of analysisResult) {
+        let deptId = deptData.existingId;
+
+        // Create Department if missing
+        if (!deptId) {
+          const newDept = await base44.entities.Department.create({
+            name: deptData.name,
+            code: deptData.name.substring(0, 3).toUpperCase(),
+            color: "#64748b" // Default slate
+          });
+          deptId = newDept.id;
+          createdDepts++;
+        }
+
+        // Create Positions
+        for (const posData of deptData.positions) {
+          if (!posData.existingId) {
+            await base44.entities.Position.create({
+              name: posData.name,
+              department_id: deptId,
+              max_headcount: posData.count, // Set initial headcount to current employee count
+              level: "Mid"
+            });
+            createdPos++;
+          }
+        }
+      }
+
+      await queryClient.invalidateQueries();
+      toast.success(`Sincronización completada: ${createdDepts} dept. y ${createdPos} puestos creados.`);
+      setIsSyncDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Error durante la sincronización");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // Forms State
   const [deptForm, setDeptForm] = useState({
     name: "", code: "", parent_id: "root", manager_id: "", color: "#3b82f6"
@@ -230,6 +338,16 @@ export default function DepartmentPositionManager() {
     const isExpanded = expandedDepts.has(dept.id);
     const isSelected = selectedDeptId === dept.id;
 
+    // Calculate actual headcount for this department (recursive?)
+    // Or just direct assignment if we had it. 
+    // Currently employees are not linked by ID, but by string name often.
+    // Let's try to match by name for the badge count if possible, 
+    // or just use the positions count we have.
+    // For the tree, let's stick to structural children count or position count.
+    
+    // If we want "Actual Employee Count" we need to do the name matching logic here or pre-calculate it.
+    // Let's stick to simple "Positions" count for now in the tree to avoid perf issues.
+
     return (
       <div className="select-none">
         <div 
@@ -251,7 +369,7 @@ export default function DepartmentPositionManager() {
           
           <div className="w-2 h-8 rounded-full mr-1 shrink-0" style={{ backgroundColor: dept.color }}></div>
           
-          <div className="flex-1 truncate">
+          <div className="flex-1 truncate flex items-center justify-between">
             <span className="font-medium">{dept.name}</span>
             {dept.code && <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{dept.code}</span>}
           </div>
@@ -321,6 +439,16 @@ export default function DepartmentPositionManager() {
             </Button>
           </div>
         </div>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="ml-auto text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          onClick={() => setIsSyncDialogOpen(true)}
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Sincronizar desde Empleados
+        </Button>
       </div>
 
       {viewMode === "editor" ? (
@@ -604,6 +732,91 @@ export default function DepartmentPositionManager() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPosDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => posMutation.mutate(posForm)} disabled={!posForm.name}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sync Dialog */}
+      <Dialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-indigo-600" />
+              Sincronizar Estructura desde Empleados
+            </DialogTitle>
+            <DialogDescription>
+              Analiza la base de datos de empleados para detectar departamentos y puestos no registrados en la estructura.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden border rounded-md bg-slate-50">
+            {analysisResult ? (
+              <ScrollArea className="h-full">
+                <div className="p-4 space-y-6">
+                  {analysisResult.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500">
+                      No se encontraron datos de empleados para analizar.
+                    </div>
+                  ) : (
+                    analysisResult.map(dept => (
+                      <div key={dept.key} className="bg-white border rounded-lg overflow-hidden shadow-sm">
+                        <div className="p-3 bg-slate-50 border-b flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            {dept.isNew ? (
+                              <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600">Nuevo Dept.</Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                <CheckCircle2 className="w-3 h-3 mr-1" /> Existente
+                              </Badge>
+                            )}
+                            <span className="font-bold text-slate-800">{dept.name}</span>
+                          </div>
+                          <Badge variant="secondary">{dept.count} empleados</Badge>
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                          {dept.positions.map(pos => (
+                            <div key={pos.key} className="p-3 pl-8 flex justify-between items-center hover:bg-slate-50">
+                              <div className="flex items-center gap-2">
+                                {pos.isNew ? (
+                                  <div className="w-2 h-2 rounded-full bg-amber-400" title="Nuevo Puesto" />
+                                ) : (
+                                  <div className="w-2 h-2 rounded-full bg-green-400" title="Existente" />
+                                )}
+                                <span className="text-sm text-slate-700">{pos.name}</span>
+                              </div>
+                              <span className="text-xs text-slate-400 font-mono">{pos.count} emp.</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="flex items-center justify-center h-40">
+                <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4 gap-2">
+             <div className="flex-1 text-xs text-slate-500 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                Se crearán las entidades marcadas como "Nuevo".
+             </div>
+             <Button variant="outline" onClick={() => setIsSyncDialogOpen(false)}>Cancelar</Button>
+             <Button onClick={performSync} disabled={syncing} className="bg-indigo-600 hover:bg-indigo-700">
+               {syncing ? (
+                 <>
+                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Procesando...
+                 </>
+               ) : (
+                 <>
+                   <Save className="w-4 h-4 mr-2" /> Generar Estructura
+                 </>
+               )}
+             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
