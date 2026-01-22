@@ -58,7 +58,5 @@ export const MENU_STRUCTURE = [
   { name: 'ArticleManagement', icon: FileText, path: '/ArticleManagement', category: 'Revisión de páginas' },
   { name: 'MachineAssignments', icon: Users, path: '/MachineAssignments', category: 'Revisión de páginas' },
   { name: 'PerformanceManagement', icon: FileText, path: '/PerformanceManagement', category: 'Revisión de páginas' },
-  { name: 'SupportManagement1415', icon: FileText, path: '/SupportManagement1415', category: 'Revisión de páginas' },
-  { name: 'Timeline', icon: Calendar, path: '/Timeline', category: 'Revisión de páginas' },
-  { name: 'Breaks', icon: Calendar, path: '/Breaks', category: 'Revisión de páginas' },
+
 ];
