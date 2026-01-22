@@ -488,7 +488,6 @@ export default function DepartmentPositionManager() {
                 flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-all group
                 ${isSelected ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100 text-slate-700"}
                 ${isDragOver ? "bg-indigo-50 border-2 border-indigo-500 border-dashed" : "border-2 border-transparent"}
-                ${level > 0 ? "ml-6" : ""}
                 ${draggedItem?.id === dept.id ? "opacity-50" : ""}
               `}
               onClick={() => setSelectedDeptId(dept.id)}
@@ -564,7 +563,7 @@ export default function DepartmentPositionManager() {
         </ContextMenu>
         
         {isExpanded && hasChildren && (
-          <div className="mt-1">
+          <div className="mt-1 ml-3 pl-3 border-l border-slate-200">
             {children.map(child => (
               <DeptTreeItem key={child.id} dept={child} level={level + 1} />
             ))}
@@ -676,9 +675,14 @@ export default function DepartmentPositionManager() {
                         </div>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => handleEditDept(selectedDept)}>
-                      <Edit className="w-4 h-4 mr-2" /> Editar Detalles
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleCreateDept(selectedDept.id)}>
+                        <Plus className="w-4 h-4 mr-2" /> Nuevo Sub-dept.
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleEditDept(selectedDept)}>
+                        <Edit className="w-4 h-4 mr-2" /> Editar Detalles
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="flex gap-6 text-sm">
