@@ -21,6 +21,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ import {
   ChevronUp
 } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
+import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineDisplayVerification from "../components/verification/MachineDisplayVerification";
 
@@ -107,6 +109,10 @@ export default function MasterEmployeeDatabasePage() {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   
+  // Bulk actions state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
+
   // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState(() => {
     try {
@@ -229,6 +235,25 @@ export default function MasterEmployeeDatabasePage() {
     return result;
   }, [masterEmployees, filters]);
 
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const allIds = filteredEmployees.map(e => e.id);
+      setSelectedIds(new Set(allIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id, checked) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
   const stats = useMemo(() => {
     if (!masterEmployees) return { total: 0, active: 0, absent: 0, departments: 0, employeesPerDept: [] };
     
@@ -349,6 +374,34 @@ export default function MasterEmployeeDatabasePage() {
           />
         </div>
         
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-900 text-white text-xs px-3 py-2 rounded-md font-medium flex items-center gap-2">
+              <span className="bg-slate-700 px-1.5 py-0.5 rounded text-[10px]">{selectedIds.size}</span>
+              <span>seleccionados</span>
+            </div>
+            <Button 
+              size="sm" 
+              variant="secondary"
+              className="h-9 bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200"
+              onClick={() => setBulkEditDialogOpen(true)}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Cambiar Dept.
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              className="h-9 w-9 p-0 text-slate-500 hover:text-slate-700"
+              onClick={() => setSelectedIds(new Set())}
+              title="Limpiar selección"
+            >
+              <UserX className="w-4 h-4" />
+            </Button>
+            <div className="w-px h-6 bg-slate-300 mx-1"></div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <Button
             variant="outline"
@@ -431,6 +484,14 @@ export default function MasterEmployeeDatabasePage() {
             <Table>
               <TableHeader className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-950 shadow-sm">
                 <TableRow className="hover:bg-transparent border-b-slate-200 dark:border-b-slate-800 h-8">
+                  <TableHead className="w-[40px] px-3 bg-slate-50 dark:bg-slate-950">
+                    <Checkbox 
+                      checked={filteredEmployees.length > 0 && selectedIds.size === filteredEmployees.length}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all"
+                      className="translate-y-[2px]"
+                    />
+                  </TableHead>
                   {Object.keys(ALL_COLUMNS).map(key => 
                     visibleColumns[key] && (
                       <TableHead 
@@ -450,9 +511,17 @@ export default function MasterEmployeeDatabasePage() {
                     className={`
                       border-b-slate-100 dark:border-b-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors h-8 group
                       ${emp.disponibilidad === 'Ausente' ? 'bg-red-50/40 hover:bg-red-50 dark:bg-red-950/10 dark:hover:bg-red-950/20' : ''}
-                    `}
-                  >
-                    {visibleColumns.codigo_empleado && (
+                  `}
+                >
+                  <TableCell className="py-0.5 px-3 w-[40px]">
+                    <Checkbox 
+                      checked={selectedIds.has(emp.id)}
+                      onCheckedChange={(checked) => handleSelectOne(emp.id, checked)}
+                      aria-label={`Select ${emp.nombre}`}
+                      className="translate-y-[2px]"
+                    />
+                  </TableCell>
+                  {visibleColumns.codigo_empleado && (
                       <TableCell className="py-0.5 px-3 text-[10px] font-mono text-slate-600 dark:text-slate-400">
                         {emp.codigo_empleado || '-'}
                       </TableCell>
@@ -661,6 +730,15 @@ export default function MasterEmployeeDatabasePage() {
             </div>
           )}
         </>
+      )}
+
+      {bulkEditDialogOpen && (
+        <MasterEmployeeBulkEditDialog
+          selectedIds={Array.from(selectedIds)}
+          open={bulkEditDialogOpen}
+          onClose={() => setBulkEditDialogOpen(false)}
+          onSuccess={() => setSelectedIds(new Set())}
+        />
       )}
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
