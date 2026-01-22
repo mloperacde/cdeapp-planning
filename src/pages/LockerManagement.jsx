@@ -126,6 +126,22 @@ export default function LockerManagementPage() {
     return false;
   };
 
+  const handleQuickUnassign = async (employeeId) => {
+    try {
+      const updates = [{
+        employeeId,
+        requiere_taquilla: false,
+        vestuario: "",
+        numero_taquilla_actual: "",
+        motivo: "Liberación rápida"
+      }];
+      await saveAssignments(updates);
+      toast.success("Taquilla liberada correctamente");
+    } catch (error) {
+      toast.error("Error al liberar taquilla: " + error.message);
+    }
+  };
+
   const handleSaveAll = async () => {
     const updates = [];
     const errores = [];

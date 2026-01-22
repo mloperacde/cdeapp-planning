@@ -26,11 +26,7 @@ import {
 } from "@/components/ui/select";
 import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigationHistory } from "../utils/useNavigationHistory";
-import { useEntityMutation } from "../utils/useEntityMutation";
 import { useMemo } from "react";
-
-const EMPTY_ARRAY = [];
 
 export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions }) {
   const [activeTab, setActiveTab] = useState("personal");
