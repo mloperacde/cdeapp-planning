@@ -108,7 +108,7 @@ export default function RulesAndTemplates() {
                     <Bell className="w-16 h-16 mb-4 text-slate-200" />
                     <h3 className="text-lg font-medium text-slate-900">Configuración de Notificaciones</h3>
                     <p className="max-w-md text-center mt-2">
-                      Este módulo permitirá definir reglas como "Enviar email al supervisor cuando una ausencia sea > 3 días".
+                      Este módulo permitirá definir reglas como "Enviar email al supervisor cuando una ausencia sea &gt; 3 días".
                     </p>
                     <Button className="mt-6" variant="outline">
                       <Plus className="w-4 h-4 mr-2" />
