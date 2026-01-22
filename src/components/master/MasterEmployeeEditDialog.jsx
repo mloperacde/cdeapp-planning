@@ -73,6 +73,24 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     staleTime: 0, // Forzar recarga cada vez
   });
 
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => base44.entities.Department.list(),
+  });
+
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions'],
+    queryFn: () => base44.entities.Position.list(),
+  });
+
+  // Derived state for filtering positions based on selected department
+  const filteredPositions = useMemo(() => {
+    if (!formData.departamento) return [];
+    const selectedDept = departments.find(d => d.name === formData.departamento);
+    if (!selectedDept) return [];
+    return positions.filter(p => p.department_id === selectedDept.id);
+  }, [formData.departamento, departments, positions]);
+
   // Query para obtener datos frescos del empleado individual al abrir el diálogo
   // Esto asegura que veamos los saldos actualizados aunque la lista padre esté cacheada
   const { data: freshEmployeeData } = useQuery({
@@ -579,13 +597,15 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                       <SelectValue placeholder="Seleccionar departamento" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="FABRICACION">FABRICACION</SelectItem>
-                      <SelectItem value="MANTENIMIENTO">MANTENIMIENTO</SelectItem>
-                      <SelectItem value="ALMACEN">ALMACEN</SelectItem>
-                      <SelectItem value="CALIDAD">CALIDAD</SelectItem>
-                      <SelectItem value="OFICINA">OFICINA</SelectItem>
-                      <SelectItem value="PLANIFICACION">PLANIFICACION</SelectItem>
-                      <SelectItem value="LIMPIEZA">LIMPIEZA</SelectItem>
+                      {departments.length > 0 ? (
+                        departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.name}>
+                            {dept.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-sm text-muted-foreground">No hay departamentos creados</div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -595,56 +615,24 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <Select
                     value={formData.puesto || ""}
                     onValueChange={(value) => setFormData({ ...formData, puesto: value })}
+                    disabled={!formData.departamento}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar puesto" />
                     </SelectTrigger>
                     <SelectContent>
-                      {formData.departamento === "FABRICACION" && (
-                        <>
-                          <SelectItem value="OPERARIA DE LINEA">OPERARIA DE LINEA</SelectItem>
-                          <SelectItem value="RESPONSABLE DE LINEA">RESPONSABLE DE LINEA</SelectItem>
-                          <SelectItem value="SEGUNDA DE LINEA">SEGUNDA DE LINEA</SelectItem>
-                          <SelectItem value="JEFE DE TURNO">JEFE DE TURNO</SelectItem>
-                          <SelectItem value="OPERARIO FABRICACION">OPERARIO FABRICACION</SelectItem>
-                          <SelectItem value="RESPONSABLE FABRICACION">RESPONSABLE FABRICACION</SelectItem>
-                        </>
-                      )}
-                      {formData.departamento === "MANTENIMIENTO" && (
-                        <>
-                          <SelectItem value="MECANICO">MECANICO</SelectItem>
-                          <SelectItem value="MANT. DE INSTALACIONES">MANT. DE INSTALACIONES</SelectItem>
-                          <SelectItem value="OPERARIO MANTENIMIENTO">OPERARIO MANTENIMIENTO</SelectItem>
-                          <SelectItem value="RESP. TURNO MECANICOS">RESP. TURNO MECANICOS</SelectItem>
-                          <SelectItem value="RESPONSABLE DE MANTENIMIENTO">RESPONSABLE DE MANTENIMIENTO</SelectItem>
-                        </>
-                      )}
-                      {formData.departamento === "ALMACEN" && (
-                        <>
-                          <SelectItem value="CARRETILLERO">CARRETILLERO</SelectItem>
-                          <SelectItem value="RESPONSABLE DE ALMACEN">RESPONSABLE DE ALMACEN</SelectItem>
-                          <SelectItem value="TECNICO DE CALIDAD ALMACEN">TECNICO DE CALIDAD ALMACEN</SelectItem>
-                        </>
-                      )}
-                      {formData.departamento === "CALIDAD" && (
-                        <SelectItem value="TECNICO DE CALIDAD">TECNICO DE CALIDAD</SelectItem>
-                      )}
-                      {(formData.departamento === "OFICINA" || formData.departamento === "PLANIFICACION") && (
-                        <>
-                          <SelectItem value="AUX. ADMINISTRATIVO">AUX. ADMINISTRATIVO</SelectItem>
-                          <SelectItem value="AYUDANTE DE PLANIFICACION">AYUDANTE DE PLANIFICACION</SelectItem>
-                          <SelectItem value="DIR. PROJECT MANAGER/COMPRAS">DIR. PROJECT MANAGER/COMPRAS</SelectItem>
-                          <SelectItem value="DIRECCION PLANIFICACION">DIRECCION PLANIFICACION</SelectItem>
-                          <SelectItem value="OPERACIONES">OPERACIONES</SelectItem>
-                          <SelectItem value="RESPONSABLE COMERCIAL">RESPONSABLE COMERCIAL</SelectItem>
-                          <SelectItem value="RESPONSABLE COMPRAS">RESPONSABLE COMPRAS</SelectItem>
-                          <SelectItem value="RESPONSABLE PACKAGING">RESPONSABLE PACKAGING</SelectItem>
-                          <SelectItem value="RR.HH">RR.HH</SelectItem>
-                          <SelectItem value="TECNICO DE PLANIFICACION">TECNICO DE PLANIFICACION</SelectItem>
-                        </>
-                      )}
-                      {formData.departamento === "LIMPIEZA" && (
-                        <SelectItem value="OPERARIA LIMPIEZA">OPERARIA LIMPIEZA</SelectItem>
+                       {filteredPositions.length > 0 ? (
+                        filteredPositions.map((pos) => (
+                          <SelectItem key={pos.id} value={pos.name}>
+                            {pos.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-sm text-muted-foreground">
+                           {formData.departamento 
+                             ? "No hay puestos en este departamento" 
+                             : "Selecciona un departamento"}
+                        </div>
                       )}
                     </SelectContent>
                   </Select>
