@@ -1,22 +1,22 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   Plus, Trash2, Edit, Save, X, Users, Briefcase, 
-  ChevronRight, ChevronDown, Building2, UserCircle 
+  ChevronRight, ChevronDown, Building2, UserCircle,
+  FolderTree, Layout, Search, ArrowRight, Settings2,
+  MoreHorizontal, GripVertical
 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -26,35 +26,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import OrganizationalChart from "../hr/OrganizationalChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 export default function DepartmentPositionManager() {
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState("editor"); // editor | chart
-  const [editingDept, setEditingDept] = useState(null);
-  const [editingPos, setEditingPos] = useState(null);
+  const [selectedDeptId, setSelectedDeptId] = useState(null);
   const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false);
   const [isPosDialogOpen, setIsPosDialogOpen] = useState(false);
-
-  // Department State
-  const [deptForm, setDeptForm] = useState({
-    name: "",
-    code: "",
-    parent_id: "root", // Use "root" for top level
-    manager_id: "",
-    color: "#3b82f6"
-  });
-
-  // Position State
-  const [posForm, setPosForm] = useState({
-    name: "",
-    department_id: "",
-    max_headcount: 1,
-    level: "Mid",
-    description: ""
-  });
+  const [editingPos, setEditingPos] = useState(null);
+  const [expandedDepts, setExpandedDepts] = useState(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Queries
   const { data: departments = [] } = useQuery({
@@ -72,22 +65,38 @@ export default function DepartmentPositionManager() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
   });
 
+  // Derived State
+  const selectedDept = useMemo(() => 
+    departments.find(d => d.id === selectedDeptId), 
+  [departments, selectedDeptId]);
+
+  const deptPositions = useMemo(() => 
+    positions.filter(p => p.department_id === selectedDeptId),
+  [positions, selectedDeptId]);
+
+  // Expand root departments by default
+  useEffect(() => {
+    if (departments.length > 0 && expandedDepts.size === 0) {
+      const roots = departments.filter(d => !d.parent_id).map(d => d.id);
+      setExpandedDepts(new Set(roots));
+    }
+  }, [departments]);
+
   // Mutations
   const deptMutation = useMutation({
     mutationFn: async (data) => {
       const payload = { ...data };
       if (payload.parent_id === "root") payload.parent_id = null;
       
-      if (editingDept) {
-        return base44.entities.Department.update(editingDept.id, payload);
+      if (data.id) {
+        return base44.entities.Department.update(data.id, payload);
       }
       return base44.entities.Department.create(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success("Departamento guardado correctamente");
       setIsDeptDialogOpen(false);
-      resetDeptForm();
-      toast.success(editingDept ? "Departamento actualizado" : "Departamento creado");
     }
   });
 
@@ -96,21 +105,21 @@ export default function DepartmentPositionManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       toast.success("Departamento eliminado");
+      if (selectedDeptId) setSelectedDeptId(null);
     }
   });
 
   const posMutation = useMutation({
     mutationFn: async (data) => {
-      if (editingPos) {
-        return base44.entities.Position.update(editingPos.id, data);
+      if (data.id) {
+        return base44.entities.Position.update(data.id, data);
       }
       return base44.entities.Position.create(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
       setIsPosDialogOpen(false);
-      resetPosForm();
-      toast.success(editingPos ? "Puesto actualizado" : "Puesto creado");
+      toast.success("Puesto guardado");
     }
   });
 
@@ -122,20 +131,32 @@ export default function DepartmentPositionManager() {
     }
   });
 
-  // Helpers
-  const resetDeptForm = () => {
-    setDeptForm({ name: "", code: "", parent_id: "root", manager_id: "", color: "#3b82f6" });
-    setEditingDept(null);
+  // Handlers
+  const toggleExpand = (deptId) => {
+    const newSet = new Set(expandedDepts);
+    if (newSet.has(deptId)) {
+      newSet.delete(deptId);
+    } else {
+      newSet.add(deptId);
+    }
+    setExpandedDepts(newSet);
   };
 
-  const resetPosForm = () => {
-    setPosForm({ name: "", department_id: "", max_headcount: 1, level: "Mid", description: "" });
-    setEditingPos(null);
+  const handleCreateDept = (parentId = null) => {
+    // We'll use the form state in the dialog
+    setDeptForm({
+      name: "",
+      code: "",
+      parent_id: parentId || "root",
+      manager_id: "",
+      color: "#3b82f6"
+    });
+    setIsDeptDialogOpen(true);
   };
 
   const handleEditDept = (dept) => {
-    setEditingDept(dept);
     setDeptForm({
+      id: dept.id,
       name: dept.name,
       code: dept.code,
       parent_id: dept.parent_id || "root",
@@ -145,222 +166,386 @@ export default function DepartmentPositionManager() {
     setIsDeptDialogOpen(true);
   };
 
-  const handleAddPos = (deptId) => {
-    resetPosForm();
-    setPosForm(prev => ({ ...prev, department_id: deptId }));
+  const handleCreatePos = () => {
+    if (!selectedDeptId) return;
+    setPosForm({
+      name: "",
+      department_id: selectedDeptId,
+      max_headcount: 1,
+      level: "Mid",
+      description: ""
+    });
+    setEditingPos(null);
     setIsPosDialogOpen(true);
   };
 
   const handleEditPos = (pos) => {
-    setEditingPos(pos);
     setPosForm({
+      id: pos.id,
       name: pos.name,
       department_id: pos.department_id,
       max_headcount: pos.max_headcount || 1,
       level: pos.level || "Mid",
       description: pos.description || ""
     });
+    setEditingPos(pos);
     setIsPosDialogOpen(true);
   };
 
-  const getDeptPositions = (deptId) => positions.filter(p => p.department_id === deptId);
+  // Forms State
+  const [deptForm, setDeptForm] = useState({
+    name: "", code: "", parent_id: "root", manager_id: "", color: "#3b82f6"
+  });
 
-  // Render recursive department tree
-  const renderDepartmentTree = (parentId = null, level = 0) => {
-    const currentDepts = departments.filter(d => (d.parent_id || null) === parentId);
+  const [posForm, setPosForm] = useState({
+    name: "", department_id: "", max_headcount: 1, level: "Mid", description: ""
+  });
+
+  // Recursive Tree Item Component
+  const DeptTreeItem = ({ dept, level = 0 }) => {
+    const children = departments.filter(d => d.parent_id === dept.id);
+    const hasChildren = children.length > 0;
     
-    if (currentDepts.length === 0) return null;
+    // Search logic
+    const matchesSearch = (d) => d.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const hasMatchingDescendant = (d) => {
+      const directChildren = departments.filter(child => child.parent_id === d.id);
+      return directChildren.some(child => matchesSearch(child) || hasMatchingDescendant(child));
+    };
+
+    const isMatch = matchesSearch(dept);
+    const hasMatchingChildrenRes = hasMatchingDescendant(dept);
+    
+    // Auto-expand if searching and has matching children
+    useEffect(() => {
+      if (searchTerm && hasMatchingChildrenRes) {
+        setExpandedDepts(prev => new Set([...prev, dept.id]));
+      }
+    }, [searchTerm, hasMatchingChildrenRes, dept.id]);
+
+    if (searchTerm && !isMatch && !hasMatchingChildrenRes) {
+      return null;
+    }
+
+    const isExpanded = expandedDepts.has(dept.id);
+    const isSelected = selectedDeptId === dept.id;
 
     return (
-      <div className={`space-y-4 ${level > 0 ? "ml-8 mt-4 border-l-2 border-slate-200 pl-4" : ""}`}>
-        {currentDepts.map(dept => {
-          const deptPositions = getDeptPositions(dept.id);
-          const totalHeadcount = deptPositions.reduce((acc, pos) => acc + (pos.max_headcount || 0), 0);
+      <div className="select-none">
+        <div 
+          className={`
+            flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-colors
+            ${isSelected ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100 text-slate-700"}
+            ${level > 0 ? "ml-6" : ""}
+          `}
+          onClick={() => setSelectedDeptId(dept.id)}
+        >
+          <div 
+            className="p-1 rounded-sm hover:bg-slate-200 text-slate-400"
+            onClick={(e) => { e.stopPropagation(); toggleExpand(dept.id); }}
+          >
+            {hasChildren ? (
+              isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+            ) : <div className="w-4 h-4" />}
+          </div>
           
-          return (
-            <Card key={dept.id} className="border-l-4" style={{ borderLeftColor: dept.color }}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg text-slate-900">{dept.name}</h3>
-                      <Badge variant="outline" className="text-xs">{dept.code}</Badge>
-                      {dept.manager_id && (
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 flex items-center gap-1">
-                          <UserCircle className="w-3 h-3" />
-                          {employees.find(e => e.id === dept.manager_id)?.nombre || "Manager"}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Briefcase className="w-4 h-4" />
-                        {deptPositions.length} Puestos definidos
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        Total Headcount: {totalHeadcount}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditDept(dept)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-600 hover:bg-red-50"
-                      onClick={() => {
-                        if(confirm('¿Eliminar departamento?')) deleteDeptMutation.mutate(dept.id);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+          <div className="w-2 h-8 rounded-full mr-1 shrink-0" style={{ backgroundColor: dept.color }}></div>
+          
+          <div className="flex-1 truncate">
+            <span className="font-medium">{dept.name}</span>
+            {dept.code && <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{dept.code}</span>}
+          </div>
 
-                {/* Positions Grid */}
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {deptPositions.map(pos => (
-                    <div key={pos.id} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200 hover:border-blue-300 transition-colors">
-                      <div>
-                        <div className="font-medium text-sm text-slate-900">{pos.name}</div>
-                        <div className="text-xs text-slate-500 flex items-center gap-2">
-                          <Badge variant="secondary" className="text-[10px] h-5">{pos.level}</Badge>
-                          <span>Max: {pos.max_headcount}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditPos(pos)}>
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 text-red-500 hover:text-red-700"
-                          onClick={() => {
-                            if(confirm('¿Eliminar puesto?')) deletePosMutation.mutate(pos.id);
-                          }}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <Button 
-                    variant="outline" 
-                    className="h-auto border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400"
-                    onClick={() => handleAddPos(dept.id)}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Añadir Puesto
-                  </Button>
-                </div>
-
-                {/* Render children recursively */}
-                {renderDepartmentTree(dept.id, level + 1)}
-              </CardContent>
-            </Card>
-          );
-        })}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCreateDept(dept.id); }}>
+                <Plus className="w-4 h-4 mr-2" /> Añadir Sub-departamento
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditDept(dept); }}>
+                <Edit className="w-4 h-4 mr-2" /> Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-600 focus:text-red-600" 
+                onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar departamento?')) deleteDeptMutation.mutate(dept.id); }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        
+        {isExpanded && hasChildren && (
+          <div className="mt-1">
+            {children.map(child => (
+              <DeptTreeItem key={child.id} dept={child} level={level + 1} />
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-blue-50 p-4 rounded-lg border border-blue-100">
+    <div className="space-y-6 h-[calc(100vh-200px)] min-h-[600px] flex flex-col">
+      <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
         <div>
-          <h2 className="text-lg font-semibold text-blue-900">Estructura Organizativa</h2>
-          <p className="text-sm text-blue-700">Define departamentos, jerarquías y puestos con límites de personal.</p>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Settings2 className="w-5 h-5 text-indigo-600" />
+            Gestor de Estructura
+          </h2>
+          <p className="text-sm text-slate-500">Configura departamentos y puestos de forma jerárquica</p>
         </div>
         <div className="flex gap-2">
-           <Tabs value={viewMode} onValueChange={setViewMode} className="w-auto">
-            <TabsList>
-              <TabsTrigger value="editor">Editor</TabsTrigger>
-              <TabsTrigger value="chart">Organigrama Visual</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button onClick={() => { resetDeptForm(); setIsDeptDialogOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Departamento
-          </Button>
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+            <Button 
+              variant={viewMode === "editor" ? "white" : "ghost"} 
+              size="sm" 
+              className={`h-8 ${viewMode === "editor" ? "bg-white shadow-sm" : ""}`}
+              onClick={() => setViewMode("editor")}
+            >
+              <Layout className="w-4 h-4 mr-2" /> Editor
+            </Button>
+            <Button 
+              variant={viewMode === "chart" ? "white" : "ghost"} 
+              size="sm"
+              className={`h-8 ${viewMode === "chart" ? "bg-white shadow-sm" : ""}`}
+              onClick={() => setViewMode("chart")}
+            >
+              <FolderTree className="w-4 h-4 mr-2" /> Organigrama
+            </Button>
+          </div>
         </div>
       </div>
 
       {viewMode === "editor" ? (
-        <div className="space-y-4">
-          {departments.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 border-2 border-dashed rounded-lg">
-              No hay estructura definida. Comienza creando un departamento.
+        <div className="flex-1 flex gap-6 overflow-hidden">
+          {/* Left Sidebar: Tree View */}
+          <Card className="w-1/3 min-w-[300px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+            <div className="p-4 border-b border-slate-100 flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Input 
+                  placeholder="Buscar departamento..." 
+                  className="pl-9 h-9 bg-slate-50"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => handleCreateDept(null)}>
+                <Plus className="w-4 h-4 text-indigo-600" />
+              </Button>
             </div>
-          ) : (
-            renderDepartmentTree(null)
-          )}
+            <ScrollArea className="flex-1 p-3">
+              <div className="space-y-1">
+                {departments
+                  .filter(d => !d.parent_id) // Roots
+                  .map(dept => (
+                    <DeptTreeItem key={dept.id} dept={dept} />
+                  ))}
+                
+                {departments.length === 0 && (
+                  <div className="text-center py-10 text-slate-400 text-sm">
+                    No hay departamentos.<br/>Crea el primero para empezar.
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </Card>
+
+          {/* Right Panel: Details & Positions */}
+          <Card className="flex-1 flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full overflow-hidden">
+            {selectedDept ? (
+              <div className="flex flex-col h-full">
+                {/* Header Info */}
+                <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm" style={{ backgroundColor: selectedDept.color }}>
+                        <Building2 className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-slate-900">{selectedDept.name}</h3>
+                        <div className="flex items-center gap-2 text-slate-500 text-sm">
+                          <Badge variant="outline" className="bg-white">{selectedDept.code || "N/A"}</Badge>
+                          {selectedDept.parent_id && (
+                            <>
+                              <ArrowRight className="w-3 h-3" />
+                              <span>{departments.find(d => d.id === selectedDept.parent_id)?.name}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleEditDept(selectedDept)}>
+                      <Edit className="w-4 h-4 mr-2" /> Editar Detalles
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-6 text-sm">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <UserCircle className="w-4 h-4 text-slate-400" />
+                      <span className="font-medium">Responsable:</span>
+                      {selectedDept.manager_id 
+                        ? <span className="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">{employees.find(e => e.id === selectedDept.manager_id)?.nombre}</span>
+                        : <span className="text-slate-400 italic">Sin asignar</span>
+                      }
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Briefcase className="w-4 h-4 text-slate-400" />
+                      <span className="font-medium">Puestos:</span>
+                      <span>{deptPositions.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Users className="w-4 h-4 text-slate-400" />
+                      <span className="font-medium">Headcount Total:</span>
+                      <span>{deptPositions.reduce((acc, p) => acc + (p.max_headcount || 0), 0)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Positions Grid */}
+                <div className="flex-1 p-6 overflow-hidden flex flex-col">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                      <Briefcase className="w-5 h-5 text-slate-500" />
+                      Puestos Definidos
+                    </h4>
+                    <Button size="sm" onClick={handleCreatePos} className="bg-indigo-600 hover:bg-indigo-700">
+                      <Plus className="w-4 h-4 mr-2" /> Añadir Puesto
+                    </Button>
+                  </div>
+
+                  <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col">
+                    <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <div className="col-span-4">Nombre del Puesto</div>
+                      <div className="col-span-2">Nivel</div>
+                      <div className="col-span-2 text-center">Headcount</div>
+                      <div className="col-span-3">Descripción</div>
+                      <div className="col-span-1 text-right">Acciones</div>
+                    </div>
+                    
+                    <ScrollArea className="flex-1">
+                      {deptPositions.length > 0 ? (
+                        <div className="divide-y divide-slate-100">
+                          {deptPositions.map(pos => (
+                            <div key={pos.id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors group">
+                              <div className="col-span-4 font-medium text-slate-900">{pos.name}</div>
+                              <div className="col-span-2">
+                                <Badge variant="secondary" className="font-normal text-xs bg-slate-100 text-slate-600">
+                                  {pos.level || "Mid"}
+                                </Badge>
+                              </div>
+                              <div className="col-span-2 text-center">
+                                <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs">{pos.max_headcount || 1}</span>
+                              </div>
+                              <div className="col-span-3 text-sm text-slate-500 truncate" title={pos.description}>
+                                {pos.description || "-"}
+                              </div>
+                              <div className="col-span-1 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditPos(pos)}>
+                                  <Edit className="w-3.5 h-3.5 text-slate-500" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => deletePosMutation.mutate(pos.id)}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
+                          <Briefcase className="w-8 h-8 mb-2 opacity-20" />
+                          <p>No hay puestos definidos en este departamento.</p>
+                          <Button variant="link" onClick={handleCreatePos}>Crear el primero</Button>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                <div className="bg-slate-50 p-6 rounded-full mb-4">
+                  <Building2 className="w-12 h-12 text-slate-300" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-600">Selecciona un departamento</h3>
+                <p className="max-w-xs text-center mt-2 text-sm">
+                  Haz clic en un departamento de la lista izquierda para ver sus detalles y gestionar sus puestos.
+                </p>
+              </div>
+            )}
+          </Card>
         </div>
       ) : (
         <OrganizationalChart />
       )}
 
-      {/* Department Dialog */}
+      {/* Dialogs reused and simplified */}
       <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingDept ? "Editar Departamento" : "Nuevo Departamento"}</DialogTitle>
+            <DialogTitle>{deptForm.id ? "Editar Departamento" : "Nuevo Departamento"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nombre</Label>
                 <Input value={deptForm.name} onChange={e => setDeptForm({...deptForm, name: e.target.value})} />
               </div>
               <div className="space-y-2">
-                <Label>Código (ej: IT, HR)</Label>
-                <Input value={deptForm.code} onChange={e => setDeptForm({...deptForm, code: e.target.value})} />
+                <Label>Código</Label>
+                <Input value={deptForm.code} onChange={e => setDeptForm({...deptForm, code: e.target.value})} placeholder="Ej: IT, HR" />
               </div>
             </div>
             
-            <div className="space-y-2">
-              <Label>Departamento Padre</Label>
-              <Select value={deptForm.parent_id} onValueChange={val => setDeptForm({...deptForm, parent_id: val})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="root">-- Raíz (Sin padre) --</SelectItem>
-                  {departments
-                    .filter(d => d.id !== editingDept?.id) // Prevent self-parenting loop
-                    .map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Responsable (Manager)</Label>
-              <Select value={deptForm.manager_id} onValueChange={val => setDeptForm({...deptForm, manager_id: val})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar responsable..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map(e => (
-                    <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Padre</Label>
+                <Select value={deptForm.parent_id} onValueChange={val => setDeptForm({...deptForm, parent_id: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Raíz" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="root">-- Raíz --</SelectItem>
+                    {departments
+                      .filter(d => d.id !== deptForm.id)
+                      .map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Responsable</Label>
+                <Select value={deptForm.manager_id} onValueChange={val => setDeptForm({...deptForm, manager_id: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-[200px]">
+                      {employees.map(e => (
+                        <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label>Color Identificativo</Label>
-              <div className="flex gap-2">
-                {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'].map(color => (
+              <div className="flex gap-2 flex-wrap">
+                {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e'].map(color => (
                   <button
                     key={color}
                     type="button"
-                    className={`w-8 h-8 rounded-full border-2 ${deptForm.color === color ? 'border-slate-900 scale-110' : 'border-transparent'}`}
+                    className={`w-8 h-8 rounded-full border-2 transition-transform ${deptForm.color === color ? 'border-slate-900 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
                     style={{ backgroundColor: color }}
                     onClick={() => setDeptForm({...deptForm, color})}
                   />
@@ -375,13 +560,12 @@ export default function DepartmentPositionManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Position Dialog */}
       <Dialog open={isPosDialogOpen} onOpenChange={setIsPosDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingPos ? "Editar Puesto" : "Nuevo Puesto"}</DialogTitle>
+            <DialogTitle>{posForm.id ? "Editar Puesto" : "Nuevo Puesto"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Nombre del Puesto</Label>
               <Input value={posForm.name} onChange={e => setPosForm({...posForm, name: e.target.value})} />
