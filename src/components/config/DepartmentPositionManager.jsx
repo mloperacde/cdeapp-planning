@@ -207,7 +207,7 @@ export default function DepartmentPositionManager() {
     const hasChildren = children.length > 0;
     
     // Search logic
-    const matchesSearch = (d) => d.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (d) => (d.name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const hasMatchingDescendant = (d) => {
       const directChildren = departments.filter(child => child.parent_id === d.id);
       return directChildren.some(child => matchesSearch(child) || hasMatchingDescendant(child));
