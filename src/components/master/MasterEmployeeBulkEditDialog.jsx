@@ -19,22 +19,48 @@ export default function MasterEmployeeBulkEditDialog({ selectedIds, open, onClos
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ ids, newDept }) => {
-      // Execute updates in parallel (or batched if API supported it)
-      const promises = ids.map(id => 
-        base44.entities.EmployeeMasterDatabase.update(id, { departamento: newDept })
-      );
-      return Promise.all(promises);
+      console.log("Iniciando actualización masiva:", { ids, newDept });
+      
+      // Process in batches of 5 to avoid rate limiting
+      const BATCH_SIZE = 5;
+      const results = [];
+      
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const batch = ids.slice(i, i + BATCH_SIZE);
+        console.log(`Procesando lote ${i / BATCH_SIZE + 1} de ${Math.ceil(ids.length / BATCH_SIZE)}`);
+        
+        const batchPromises = batch.map(async (id) => {
+          try {
+            return await base44.entities.EmployeeMasterDatabase.update(id, { departamento: newDept });
+          } catch (err) {
+            console.error(`Error actualizando empleado ${id}:`, err);
+            throw err; // Re-throw to trigger mutation error
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+      }
+      
+      return results;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Actualización masiva completada:", data);
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      
+      // Force a slight delay to ensure backend consistency before UI refresh (optional but helpful)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      }, 500);
+
       toast.success(`Se han actualizado ${selectedIds.length} empleados correctamente`);
       if (onSuccess) onSuccess();
       onClose();
     },
     onError: (error) => {
       console.error("Error updating employees:", error);
-      toast.error("Error al actualizar los empleados. Revisa la consola.");
+      toast.error(`Error al actualizar los empleados: ${error.message || "Error desconocido"}`);
     }
   });
 
