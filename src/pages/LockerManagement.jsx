@@ -5,6 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -22,7 +31,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KeyRound, Save, ArrowLeft, Bell, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, ArrowUpDown, Database, UserX, FileSpreadsheet, Filter, ExternalLink, XCircle, History, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { KeyRound, Save, ArrowLeft, Bell, Settings, CheckCircle2, AlertCircle, BarChart3, Users, Upload, ArrowUpDown, Database, UserX, FileSpreadsheet, Filter, ExternalLink, XCircle, History, Trash2, Search, ChevronDown, ChevronUp, Columns, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl, cleanLockerNumber } from "@/utils";
 import {
@@ -47,6 +62,7 @@ const EMPTY_ARRAY = [];
 
 export default function LockerManagementPage() {
   const [searchFilters, setSearchFilters] = useState({});
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     vestuario: "all",
     numeroTaquilla: ""
@@ -679,6 +695,40 @@ export default function LockerManagementPage() {
           </div>
         </div>
 
+        <div className="flex flex-col sm:flex-row gap-4 shrink-0 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Input
+              placeholder="Buscar por nombre, código, departamento..."
+              className="pl-9 h-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+              value={searchFilters.searchTerm || ""}
+              onChange={(e) => setSearchFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`h-10 px-4 ${showFilters ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">{showFilters ? 'Ocultar Filtros' : 'Filtros'}</span>
+              {showFilters ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+            </Button>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="mb-6">
+            <AdvancedSearch
+              filters={searchFilters}
+              setFilters={setSearchFilters}
+              options={searchFilterOptions}
+              onClose={() => setShowFilters(false)}
+            />
+          </div>
+        )}
+
         {hasChanges && (
           <Card className="mb-6 bg-amber-50 border-2 border-amber-300">
             <CardContent className="p-4">
@@ -739,43 +789,7 @@ export default function LockerManagementPage() {
           </TabsList>
 
           <TabsContent value="estadisticas">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-blue-700 font-medium">Empleados con Taquilla</p>
-                      <p className="text-2xl font-bold text-blue-900">{stats.conTaquilla}</p>
-                    </div>
-                    <CheckCircle2 className="w-8 h-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
 
-              <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-slate-700 font-medium">Empleados sin Taquilla</p>
-                      <p className="text-2xl font-bold text-slate-900">{stats.sinTaquilla}</p>
-                    </div>
-                    <AlertCircle className="w-8 h-8 text-slate-400" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-orange-700 font-medium">Pendientes Notificación</p>
-                      <p className="text-2xl font-bold text-orange-900">{stats.pendientesNotificacion}</p>
-                    </div>
-                    <Bell className="w-8 h-8 text-orange-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
 
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100 dark:border-slate-800">
@@ -988,67 +1002,106 @@ export default function LockerManagementPage() {
           </TabsContent>
 
           <TabsContent value="asignaciones">
-            <Card className="mb-6 shadow-lg border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                <CardTitle className="flex items-center gap-2 dark:text-slate-100">
-                  <Filter className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  Búsqueda y Filtros
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <AdvancedSearch
-                  data={employees}
-                  onFilterChange={setSearchFilters}
-                  searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto']}
-                  filterOptions={searchFilterOptions}
-                  placeholder="Buscar por nombre, código, departamento o puesto..."
+            {/* Unified Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+                <Input
+                  placeholder="Buscar por nombre, código, departamento..."
+                  className="pl-9 h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                  value={searchFilters.searchTerm || ""}
+                  onChange={(e) => setSearchFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
                 />
+              </div>
+              
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`h-9 px-3 ${showFilters ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">{showFilters ? 'Ocultar Filtros' : 'Filtros'}</span>
+                  {showFilters ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+                </Button>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">ID Taquilla</Label>
-                    <Input
-                      placeholder="Filtrar por identificador..."
-                      value={filters.numeroTaquilla}
-                      onChange={(e) => setFilters({...filters, numeroTaquilla: e.target.value})}
-                      className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
-                    />
-                  </div>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 px-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                        <Columns className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Columnas</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                       <DropdownMenuCheckboxItem checked disabled>
+                          Funcionalidad pendiente
+                       </DropdownMenuCheckboxItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Vestuario</Label>
-                    <Select value={filters.vestuario} onValueChange={(value) => setFilters({...filters, vestuario: value})}>
-                      <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
-                        <SelectItem value="all" className="dark:text-slate-200">Todos</SelectItem>
-                        <SelectItem value="Vestuario Femenino Planta Baja" className="dark:text-slate-200">Femenino P. Baja</SelectItem>
-                        <SelectItem value="Vestuario Femenino Planta Alta" className="dark:text-slate-200">Femenino P. Alta</SelectItem>
-                        <SelectItem value="Vestuario Masculino Planta Baja" className="dark:text-slate-200">Masculino P. Baja</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-100">
-                <div className="flex justify-between items-center">
-                  <CardTitle>Lista de Empleados ({filteredAndSortedEmployees.length})</CardTitle>
-                  {hasChanges && (
+                 {hasChanges && (
                     <Button
                       onClick={handleSaveAll}
                       disabled={isSaving}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-green-700 h-9 px-3"
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      {isSaving ? "Guardando..." : "Guardar Cambios"}
+                      <span className="hidden sm:inline">{isSaving ? "Guardando..." : "Guardar Cambios"}</span>
                     </Button>
                   )}
-                </div>
-              </CardHeader>
+              </div>
+            </div>
+
+            {showFilters && (
+              <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm shrink-0 mb-4 animate-in slide-in-from-top-2 duration-200">
+                 <div className="space-y-4">
+                    <AdvancedSearch
+                      data={employees}
+                      onFilterChange={setSearchFilters}
+                      searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto']}
+                      filterOptions={searchFilterOptions}
+                      placeholder="Buscar..."
+                      enableSearch={false}
+                      currentSearchTerm={searchFilters.searchTerm || ""}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium dark:text-slate-300">ID Taquilla</Label>
+                        <Input
+                          placeholder="Filtrar por identificador..."
+                          value={filters.numeroTaquilla}
+                          onChange={(e) => setFilters({...filters, numeroTaquilla: e.target.value})}
+                          className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium dark:text-slate-300">Vestuario</Label>
+                        <Select value={filters.vestuario} onValueChange={(value) => setFilters({...filters, vestuario: value})}>
+                          <SelectTrigger className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                            <SelectItem value="all" className="dark:text-slate-200">Todos</SelectItem>
+                            <SelectItem value="Vestuario Femenino Planta Baja" className="dark:text-slate-200">Femenino P. Baja</SelectItem>
+                            <SelectItem value="Vestuario Femenino Planta Alta" className="dark:text-slate-200">Femenino P. Alta</SelectItem>
+                            <SelectItem value="Vestuario Masculino Planta Baja" className="dark:text-slate-200">Masculino P. Baja</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                 </div>
+              </Card>
+            )}
+
+            <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+               <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Lista de Empleados ({filteredAndSortedEmployees.length})
+                  </span>
+               </div>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>

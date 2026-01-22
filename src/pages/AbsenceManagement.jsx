@@ -212,32 +212,37 @@ export default function AbsenceManagementPage() {
 
         </div>
 
-        <div className="flex justify-between items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <UserX className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
-              Gestión Integral de Ausencias
-            </h1>
-            <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 mt-1">
-              {isShiftManager ? "Gestión de equipo y reportes de turno" : "Control centralizado de RRHH"}
-            </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <UserX className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                Gestión Integral de Ausencias
+              </h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                {isShiftManager ? "Gestión de equipo y reportes de turno" : "Control centralizado de RRHH"}
+              </p>
+            </div>
           </div>
           
           {!isShiftManager && (
             <div className="flex items-center gap-2">
               <Button
                 type="button"
-                variant="outline"
-                className="gap-2 text-slate-700 border-slate-200 hover:bg-slate-50"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-2"
                 onClick={() => handleTabChange("reports")}
               >
-                <BarChart3 className="w-4 h-4" />
+                <BarChart3 className="w-3 h-3" />
                 Informes
               </Button>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 text-purple-700 border-purple-200 hover:bg-purple-50">
-                    <Brain className="w-4 h-4" />
+                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-2 text-purple-700 hover:text-purple-800 hover:bg-purple-50">
+                    <Brain className="w-3 h-3" />
                     Análisis IA
                   </Button>
                 </DialogTrigger>
@@ -266,67 +271,74 @@ export default function AbsenceManagementPage() {
 
           <TabsContent value="dashboard" className="space-y-4 md:space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-red-700 font-medium">Ausencias activas</p>
-                      <p className="text-2xl font-bold text-red-900">{activeAbsences.length}</p>
+              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Ausencias activas</p>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      {activeAbsences.length}
                     </div>
-                    <UserX className="w-8 h-8 text-red-600" />
+                  </div>
+                  <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                    <UserX className="w-5 h-5 text-red-600 dark:text-red-400" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-blue-700 font-medium">Departamentos con ausencias</p>
-                      <p className="text-2xl font-bold text-blue-900">{departmentsWithActiveAbsencesCount}</p>
+              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Departamentos con ausencias</p>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      {departmentsWithActiveAbsencesCount}
                     </div>
-                    <BarChart3 className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-emerald-700 font-medium">Absentismo global</p>
-                      <p className="text-2xl font-bold text-emerald-900">
-                        {dailyGlobalAbsenteeism.rate.toFixed(2)}%
-                      </p>
-                      <p className="text-xs text-emerald-700 mt-1">
-                        Mes actual: {monthlyGlobalAbsenteeism.rate.toFixed(2)}%
-                      </p>
+              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Absentismo global</p>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      {dailyGlobalAbsenteeism.rate.toFixed(2)}%
                     </div>
-                    <Activity className="w-8 h-8 text-emerald-600" />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Mes actual: {monthlyGlobalAbsenteeism.rate.toFixed(2)}%
+                    </p>
+                  </div>
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                    <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-orange-700 font-medium">Absentismo por departamento</p>
-                      <p className="text-2xl font-bold text-orange-900">
-                        {topDeptToday ? topDeptToday.rate.toFixed(2) : "0.00"}%
-                      </p>
-                      {topDeptToday && (
-                        <p className="text-xs text-orange-700 mt-1">
-                          Hoy: {topDeptToday.dept}
-                        </p>
-                      )}
-                      {topDeptMonth && (
-                        <p className="text-xs text-orange-700">
-                          Mes: {topDeptMonth.dept} ({topDeptMonth.rate.toFixed(2)}%)
-                        </p>
-                      )}
+              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Absentismo por departamento</p>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      {topDeptToday ? topDeptToday.rate.toFixed(2) : "0.00"}%
                     </div>
-                    <BarChart3 className="w-8 h-8 text-orange-600" />
+                    {(topDeptToday || topDeptMonth) && (
+                      <div className="mt-1 space-y-0.5">
+                        {topDeptToday && (
+                          <p className="text-[10px] text-slate-500">
+                            Hoy: {topDeptToday.dept}
+                          </p>
+                        )}
+                        {topDeptMonth && (
+                          <p className="text-[10px] text-slate-500">
+                            Mes: {topDeptMonth.dept} ({topDeptMonth.rate.toFixed(2)}%)
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                    <BarChart3 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   </div>
                 </CardContent>
               </Card>
