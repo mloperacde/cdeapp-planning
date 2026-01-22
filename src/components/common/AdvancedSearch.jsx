@@ -28,9 +28,11 @@ export default function AdvancedSearch({
   filterOptions = {},
   sortOptions = [],
   placeholder = "Buscar...",
-  pageId = null // Identificador para guardar filtros
+  pageId = null, // Identificador para guardar filtros
+  enableSearch = true,
+  currentSearchTerm = ""
 }) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(currentSearchTerm);
   const debouncedSearchTerm = useDebounce(searchTerm, 400); // 400ms delay
   const [filters, setFilters] = useState({});
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -155,12 +157,22 @@ export default function AdvancedSearch({
 
   // Effect to trigger search update when debounce changes
   React.useEffect(() => {
-    applyFilters({ ...filters, search: debouncedSearchTerm });
-  }, [debouncedSearchTerm]);
+    if (enableSearch) {
+      applyFilters({ ...filters, search: debouncedSearchTerm });
+    }
+  }, [debouncedSearchTerm, enableSearch]);
+
+  // Sync internal search term with prop if search is disabled (external control)
+  React.useEffect(() => {
+    if (!enableSearch) {
+      setSearchTerm(currentSearchTerm);
+    }
+  }, [currentSearchTerm, enableSearch]);
 
   // Autocompletado inteligente usando el término NO debounced para feedback rápido, 
   // o debounced si se prefiere no saturar. Usaremos debounced para consistencia.
   const suggestions = useMemo(() => {
+    if (!enableSearch) return [];
     if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
     
     const lowerSearch = searchTerm.toLowerCase();
@@ -176,9 +188,10 @@ export default function AdvancedSearch({
     });
     
     return Array.from(matches).slice(0, 8);
-  }, [debouncedSearchTerm, data, searchFields]);
+  }, [debouncedSearchTerm, data, searchFields, enableSearch, searchTerm]);
 
   const handleSearchChange = (value) => {
+    if (!enableSearch) return;
     setSearchTerm(value);
     setShowSuggestions(value.length >= 2);
     // Removemos la llamada directa a applyFilters para usar el debounce effect
@@ -187,7 +200,9 @@ export default function AdvancedSearch({
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    applyFilters({ ...newFilters, search: debouncedSearchTerm }); // Mantener search actual
+    // If search is disabled, use the prop value immediately
+    const searchToUse = enableSearch ? debouncedSearchTerm : currentSearchTerm;
+    applyFilters({ ...newFilters, search: searchToUse }); 
   };
 
   const applyFilters = (currentFilters, currentSort = sortField, currentDirection = sortDirection) => {
@@ -206,20 +221,30 @@ export default function AdvancedSearch({
       if (newDirection === "") {
         setSortField("");
         setSortDirection("asc");
+        // If search is disabled, use the prop value immediately
+        const searchToUse = enableSearch ? debouncedSearchTerm : currentSearchTerm;
         applyFilters(filters, "", "asc");
         return;
       }
     }
     setSortField(field);
     setSortDirection(newDirection);
+    // If search is disabled, use the prop value immediately
+    const searchToUse = enableSearch ? debouncedSearchTerm : currentSearchTerm;
     applyFilters(filters, field, newDirection);
   };
 
   const clearFilters = () => {
-    setSearchTerm("");
+    if (enableSearch) {
+      setSearchTerm("");
+    }
     setFilters({});
     setSortField("");
     setSortDirection("asc");
+    // If search is disabled, we keep the current external search term? 
+    // Usually "Clear Filters" means clear everything including search.
+    // But if search is external, maybe we should clear it too?
+    // Let's assume clearFilters clears everything.
     onFilterChange({ searchTerm: "" });
   };
 
@@ -245,6 +270,7 @@ export default function AdvancedSearch({
       )}
 
       {/* Search Bar */}
+      {enableSearch && (
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
         <Input
@@ -284,6 +310,7 @@ export default function AdvancedSearch({
           </div>
         )}
       </div>
+      )}
 
       {/* Filtros visibles */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
