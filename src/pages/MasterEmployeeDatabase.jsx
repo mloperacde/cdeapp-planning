@@ -282,24 +282,27 @@ export default function MasterEmployeeDatabasePage() {
           </Card>
 
           <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 border-emerald-200 dark:border-emerald-800 shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Distribución por departamento</p>
-                  <p className="text-sm text-emerald-900 dark:text-emerald-100">
+                  <h3 className="text-base font-bold text-emerald-900 dark:text-emerald-100">Distribución por Departamento</h3>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
                     Visión rápida de dónde están tus equipos
                   </p>
                 </div>
-                <User className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-2 bg-emerald-200/50 dark:bg-emerald-800/50 rounded-lg">
+                    <User className="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
+                </div>
               </div>
-              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {employeesByDepartment.map(dept => (
-                  <div key={dept.name} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700 dark:text-slate-200 truncate max-w-[70%]" title={dept.name}>
-                      {dept.name}
-                    </span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  <div key={dept.name} className="flex flex-col p-3 rounded-lg bg-white/60 dark:bg-black/20 border border-emerald-100 dark:border-emerald-800/50 hover:bg-white/80 dark:hover:bg-black/30 transition-colors">
+                    <span className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">
                       {dept.count}
+                    </span>
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 truncate" title={dept.name}>
+                      {dept.name}
                     </span>
                   </div>
                 ))}
