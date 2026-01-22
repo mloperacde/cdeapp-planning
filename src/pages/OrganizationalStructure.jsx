@@ -14,7 +14,7 @@ import {
   ClipboardList,
   Clock
 } from "lucide-react";
-import AdminOnly from "../components/auth/AdminOnly";
+import AdminOnly from "@/components/security/AdminOnly";
 import DepartmentPositionManager from "../components/config/DepartmentPositionManager";
 import TeamManagementConfig from "../components/config/TeamManagementConfig";
 import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
