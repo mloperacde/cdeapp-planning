@@ -10,6 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, isSameDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
+import ThemeToggle from "../components/common/ThemeToggle";
 
 const EMPTY_ARRAY = [];
 
