@@ -31,8 +31,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Database, Trash2, User, Columns, LayoutGrid, List, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, Phone, MapPin } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineDisplayVerification from "../components/verification/MachineDisplayVerification";
@@ -96,6 +105,11 @@ export default function MasterEmployeeDatabasePage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   
+  // Estados para vista y paginación
+  const [viewMode, setViewMode] = useState("grid");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem("masterEmployeeColumns");
     if (saved) {
@@ -234,6 +248,25 @@ export default function MasterEmployeeDatabasePage() {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
   }, [masterEmployees]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+  const getInitials = (name) => {
+    return name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase() || "EM";
+  };
 
   if (!isHrModuleAllowed) {
     return (
@@ -392,7 +425,14 @@ export default function MasterEmployeeDatabasePage() {
                   </TableHeader>
                   <TableBody>
                     {filteredEmployees.map((emp) => (
-                      <TableRow key={emp.id} className="dark:border-slate-800 dark:hover:bg-slate-800/50">
+                      <TableRow 
+                        key={emp.id} 
+                        className={`dark:border-slate-800 dark:hover:bg-slate-800/50 ${
+                          emp.disponibilidad === 'Ausente' 
+                            ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20' 
+                            : ''
+                        }`}
+                      >
                         {visibleColumns.codigo_empleado && (
                           <TableCell className="font-mono text-xs dark:text-slate-300">
                             {emp.codigo_empleado || '-'}
@@ -508,7 +548,15 @@ export default function MasterEmployeeDatabasePage() {
                           <TableCell className="text-xs dark:text-slate-300">{emp.taquilla_numero || '-'}</TableCell>
                         )}
                         {visibleColumns.disponibilidad && (
-                          <TableCell className="text-xs dark:text-slate-300">{emp.disponibilidad || '-'}</TableCell>
+                          <TableCell className="text-xs dark:text-slate-300">
+                            {emp.disponibilidad === 'Ausente' ? (
+                              <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300">
+                                Ausente
+                              </Badge>
+                            ) : (
+                              emp.disponibilidad || '-'
+                            )}
+                          </TableCell>
                         )}
                         {visibleColumns.estado_sincronizacion && (
                           <TableCell>

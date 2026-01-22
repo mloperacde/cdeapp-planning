@@ -221,15 +221,18 @@ export default function MachineExperienceManager() {
               const assignedCount = currentConfig.filter(m => m).length;
               
               return (
-                <Card key={employee.id} className="bg-slate-50 border-slate-200">
-                  <CardHeader className="pb-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                <Card key={employee.id} className={`${employee.disponibilidad === "Ausente" ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200"}`}>
+                  <CardHeader className={`pb-3 cursor-pointer transition-colors ${employee.disponibilidad === "Ausente" ? "hover:bg-red-100" : "hover:bg-slate-100"}`}>
                     <div 
                       className="flex justify-between items-center"
                       onClick={() => setExpandedEmployee(isExpanded ? null : employee.id)}
                     >
                       <div className="flex items-center gap-4">
                         <div>
-                          <div className="font-bold text-slate-900">{employee.nombre}</div>
+                          <div className="font-bold text-slate-900 flex items-center gap-2">
+                             <span className={employee.disponibilidad === "Ausente" ? "text-red-700" : ""}>{employee.nombre}</span>
+                             {employee.disponibilidad === "Ausente" && <Badge variant="destructive" className="text-[10px] h-5 bg-red-600">Ausente</Badge>}
+                          </div>
                           <div className="text-sm text-slate-600">
                             {employee.puesto} • {employee.departamento}
                           </div>

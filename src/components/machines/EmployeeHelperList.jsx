@@ -87,10 +87,13 @@ export default function EmployeeHelperList({ employees, currentTeam, machines })
                                     </h3>
                                     <div className="space-y-2">
                                         {emps.map(emp => (
-                                            <div key={emp.id} className="text-sm border rounded-lg p-2 hover:bg-slate-50 transition-colors">
-                                                <div className="font-medium flex justify-between">
-                                                    <span>{emp.nombre}</span>
-                                                    {emp.equipo && <Badge variant="outline" className="text-[10px] h-5">{emp.equipo}</Badge>}
+                                            <div key={emp.id} className={`text-sm border rounded-lg p-2 hover:bg-slate-50 transition-colors ${emp.disponibilidad === "Ausente" ? "bg-red-50 border-red-200" : ""}`}>
+                                                <div className="font-medium flex justify-between items-start">
+                                                    <span className={emp.disponibilidad === "Ausente" ? "text-red-700" : ""}>{emp.nombre}</span>
+                                                    <div className="flex gap-1 flex-wrap justify-end">
+                                                        {emp.disponibilidad === "Ausente" && <Badge variant="destructive" className="text-[10px] h-5 bg-red-600">Ausente</Badge>}
+                                                        {emp.equipo && <Badge variant="outline" className="text-[10px] h-5">{emp.equipo}</Badge>}
+                                                    </div>
                                                 </div>
                                                 <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-1">
                                                     <Wrench className="w-3 h-3 mt-0.5" />

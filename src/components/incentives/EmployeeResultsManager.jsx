@@ -298,9 +298,14 @@ export default function EmployeeResultsManager() {
             </CardHeader>
             <CardContent className="space-y-2 max-h-64 overflow-y-auto">
               {employeesInPlan.map(emp => (
-                <div key={emp.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                <div key={emp.id} className={`flex items-center justify-between p-3 bg-white rounded border ${emp.disponibilidad === "Ausente" ? "bg-red-50 border-red-200" : ""}`}>
                   <div>
-                    <span className="font-semibold text-slate-900">{emp.nombre}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-semibold ${emp.disponibilidad === "Ausente" ? "text-red-700" : "text-slate-900"}`}>{emp.nombre}</span>
+                      {emp.disponibilidad === "Ausente" && (
+                        <Badge variant="destructive" className="text-[10px] h-5 bg-red-600">Ausente</Badge>
+                      )}
+                    </div>
                     <div className="flex gap-2 mt-1">
                       <Badge variant="outline" className="text-xs">{emp.departamento}</Badge>
                       {emp.puesto && <Badge variant="outline" className="text-xs">{emp.puesto}</Badge>}
