@@ -34,6 +34,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+} from "@/components/ui/context-menu";
 import { toast } from "sonner";
 import OrganizationalChart from "../hr/OrganizationalChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,6 +60,8 @@ export default function DepartmentPositionManager() {
   const [expandedDepts, setExpandedDepts] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [deptToMove, setDeptToMove] = useState(null);
 
   // Queries
   const { data: departments = [] } = useQuery({
@@ -130,6 +142,21 @@ export default function DepartmentPositionManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
       toast.success("Puesto eliminado");
+    }
+  });
+
+  const moveDeptMutation = useMutation({
+    mutationFn: async ({ id, newParentId }) => {
+      // Prevent moving to self or own descendant (simple check)
+      // Ideally we check descendants here, but for now we rely on UI filtering
+      const payload = { parent_id: newParentId === "root" ? null : newParentId };
+      return base44.entities.Department.update(id, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success("Departamento movido correctamente");
+      setIsMoveDialogOpen(false);
+      setDeptToMove(null);
     }
   });
 
@@ -309,6 +336,26 @@ export default function DepartmentPositionManager() {
     name: "", department_id: "", max_headcount: 1, level: "Mid", description: ""
   });
 
+  // Helper to prevent cycles when moving
+  const getDescendantIds = (deptId, allDepts) => {
+    const descendants = new Set();
+    const stack = [deptId];
+    while (stack.length > 0) {
+      const currentId = stack.pop();
+      const children = allDepts.filter(d => d.parent_id === currentId);
+      children.forEach(child => {
+        descendants.add(child.id);
+        stack.push(child.id);
+      });
+    }
+    return descendants;
+  };
+
+  const invalidMoveTargets = useMemo(() => {
+    if (!deptToMove) return new Set();
+    return getDescendantIds(deptToMove.id, departments);
+  }, [deptToMove, departments]);
+
   // Recursive Tree Item Component
   const DeptTreeItem = ({ dept, level = 0 }) => {
     const children = departments.filter(d => d.parent_id === dept.id);
@@ -350,53 +397,85 @@ export default function DepartmentPositionManager() {
 
     return (
       <div className="select-none">
-        <div 
-          className={`
-            flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-colors
-            ${isSelected ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100 text-slate-700"}
-            ${level > 0 ? "ml-6" : ""}
-          `}
-          onClick={() => setSelectedDeptId(dept.id)}
-        >
-          <div 
-            className="p-1 rounded-sm hover:bg-slate-200 text-slate-400"
-            onClick={(e) => { e.stopPropagation(); toggleExpand(dept.id); }}
-          >
-            {hasChildren ? (
-              isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-            ) : <div className="w-4 h-4" />}
-          </div>
-          
-          <div className="w-2 h-8 rounded-full mr-1 shrink-0" style={{ backgroundColor: dept.color }}></div>
-          
-          <div className="flex-1 truncate flex items-center justify-between">
-            <span className="font-medium">{dept.name}</span>
-            {dept.code && <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{dept.code}</span>}
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCreateDept(dept.id); }}>
-                <Plus className="w-4 h-4 mr-2" /> Añadir Sub-departamento
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditDept(dept); }}>
-                <Edit className="w-4 h-4 mr-2" /> Editar
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-red-600 focus:text-red-600" 
-                onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar departamento?')) deleteDeptMutation.mutate(dept.id); }}
+        <ContextMenu>
+          <ContextMenuTrigger>
+            <div 
+              className={`
+                flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-colors group
+                ${isSelected ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100 text-slate-700"}
+                ${level > 0 ? "ml-6" : ""}
+              `}
+              onClick={() => setSelectedDeptId(dept.id)}
+            >
+              <div 
+                className="p-1 rounded-sm hover:bg-slate-200 text-slate-400"
+                onClick={(e) => { e.stopPropagation(); toggleExpand(dept.id); }}
               >
-                <Trash2 className="w-4 h-4 mr-2" /> Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                {hasChildren ? (
+                  isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+                ) : <div className="w-4 h-4" />}
+              </div>
+              
+              <div className="w-2 h-8 rounded-full mr-1 shrink-0" style={{ backgroundColor: dept.color }}></div>
+              
+              <div className="flex-1 truncate flex items-center justify-between">
+                <span className="font-medium">{dept.name}</span>
+                {dept.code && <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{dept.code}</span>}
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCreateDept(dept.id); }}>
+                    <Plus className="w-4 h-4 mr-2" /> Añadir Sub-departamento
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditDept(dept); }}>
+                    <Edit className="w-4 h-4 mr-2" /> Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setDeptToMove(dept); 
+                    setIsMoveDialogOpen(true); 
+                  }}>
+                    <ArrowRight className="w-4 h-4 mr-2" /> Mover a...
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="text-red-600 focus:text-red-600" 
+                    onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar departamento?')) deleteDeptMutation.mutate(dept.id); }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onClick={() => handleCreateDept(dept.id)}>
+              <Plus className="w-4 h-4 mr-2" /> Añadir Sub-departamento
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleEditDept(dept)}>
+              <Edit className="w-4 h-4 mr-2" /> Editar
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => {
+               setDeptToMove(dept); 
+               setIsMoveDialogOpen(true);
+            }}>
+              <ArrowRight className="w-4 h-4 mr-2" /> Mover a...
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem 
+              className="text-red-600 focus:text-red-600"
+              onClick={() => { if(confirm('¿Eliminar departamento?')) deleteDeptMutation.mutate(dept.id); }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
         
         {isExpanded && hasChildren && (
           <div className="mt-1">
@@ -716,8 +795,16 @@ export default function DepartmentPositionManager() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["Junior", "Mid", "Senior", "Lead", "Manager", "Director", "Executive"].map(l => (
-                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    {[
+                      { val: "Junior", label: "Junior" },
+                      { val: "Mid", label: "Intermedio" },
+                      { val: "Senior", label: "Senior" },
+                      { val: "Lead", label: "Líder de Equipo" },
+                      { val: "Manager", label: "Gerente / Manager" },
+                      { val: "Director", label: "Director" },
+                      { val: "Executive", label: "Ejecutivo" }
+                    ].map(opt => (
+                      <SelectItem key={opt.val} value={opt.val}>{opt.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -732,6 +819,43 @@ export default function DepartmentPositionManager() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPosDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => posMutation.mutate(posForm)} disabled={!posForm.name}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Department Dialog */}
+      <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mover Departamento</DialogTitle>
+            <DialogDescription>
+              Mover <strong>{deptToMove?.name}</strong> a un nuevo departamento padre.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+             <div className="p-3 bg-amber-50 text-amber-800 text-sm rounded-md border border-amber-200">
+                <p>Al mover este departamento, todos sus sub-departamentos y puestos se moverán con él.</p>
+             </div>
+             <div className="space-y-2">
+                <Label>Nuevo Departamento Padre</Label>
+                <Select onValueChange={(val) => moveDeptMutation.mutate({ id: deptToMove.id, newParentId: val })}>
+                  <SelectTrigger>
+                     <SelectValue placeholder="Selecciona nuevo padre..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="root" className="font-semibold text-indigo-600">-- Convertir en Departamento Raíz --</SelectItem>
+                      {departments
+                          .filter(d => d.id !== deptToMove?.id && !invalidMoveTargets.has(d.id)) // Prevent self and descendants
+                          .map(d => (
+                             <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                          ))
+                      }
+                  </SelectContent>
+                </Select>
+             </div>
+          </div>
+          <DialogFooter>
+             <Button variant="outline" onClick={() => setIsMoveDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
