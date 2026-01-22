@@ -690,7 +690,16 @@ export default function DepartmentPositionManager() {
           </Card>
         </div>
       ) : (
-        <OrganizationalChart />
+        <OrganizationalChart 
+          data={{ departments, positions, employees }}
+          onEdit={handleEditDept}
+          onAddChild={handleCreateDept}
+          onDelete={(id) => deleteDeptMutation.mutate(id)}
+          onMove={(dept) => {
+            setDeptToMove(dept);
+            setIsMoveDialogOpen(true);
+          }}
+        />
       )}
 
       {/* Dialogs reused and simplified */}

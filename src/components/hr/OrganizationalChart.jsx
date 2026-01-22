@@ -3,23 +3,47 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  Users, UserCircle, MoreHorizontal, Plus, Edit, Trash2, ArrowRight 
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 
-export default function OrganizationalChart() {
-  const { data: departments = [] } = useQuery({
+export default function OrganizationalChart({ 
+  data, 
+  onEdit, 
+  onAddChild, 
+  onDelete, 
+  onMove 
+}) {
+  // Use props data if available, otherwise fetch
+  const { data: fetchedDepts = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: () => base44.entities.Department.list(),
+    enabled: !data?.departments
   });
 
-  const { data: positions = [] } = useQuery({
+  const { data: fetchedPos = [] } = useQuery({
     queryKey: ['positions'],
     queryFn: () => base44.entities.Position.list(),
+    enabled: !data?.positions
   });
 
-  const { data: employees = [] } = useQuery({
+  const { data: fetchedEmps = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
+    enabled: !data?.employees
   });
+
+  const departments = data?.departments || fetchedDepts;
+  const positions = data?.positions || fetchedPos;
+  const employees = data?.employees || fetchedEmps;
 
   // Recursive component for tree branch
   const OrgNode = ({ dept }) => {
@@ -30,50 +54,108 @@ export default function OrganizationalChart() {
 
     return (
       <li className="flex flex-col items-center">
-        <Card className="w-64 border-t-4 shadow-md z-10 relative bg-white" style={{ borderTopColor: dept.color || '#3b82f6' }}>
-          <CardContent className="p-3">
-            <div className="text-center mb-2">
-              <h4 className="font-bold text-slate-800 text-sm">{dept.name}</h4>
-              <Badge variant="outline" className="text-[10px] mt-1">{dept.code}</Badge>
-            </div>
-            
-            {manager && (
-              <div className="flex items-center justify-center gap-1.5 mb-2 bg-blue-50 p-1 rounded">
-                <UserCircle className="w-3 h-3 text-blue-600" />
-                <span className="text-xs font-medium text-blue-800 truncate max-w-[150px]">
-                  {manager.nombre}
-                </span>
+        <div className="relative group">
+          <Card 
+            className="w-64 border-t-4 shadow-md z-10 relative bg-white hover:shadow-lg transition-shadow cursor-default" 
+            style={{ borderTopColor: dept.color || '#3b82f6' }}
+          >
+            <CardContent className="p-3">
+              <div className="flex justify-between items-start absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                {(onEdit || onAddChild) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 bg-white/50 hover:bg-white shadow-sm">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {onAddChild && (
+                        <DropdownMenuItem onClick={() => onAddChild(dept.id)}>
+                          <Plus className="w-4 h-4 mr-2" /> Añadir Sub-departamento
+                        </DropdownMenuItem>
+                      )}
+                      {onEdit && (
+                        <DropdownMenuItem onClick={() => onEdit(dept)}>
+                          <Edit className="w-4 h-4 mr-2" /> Editar
+                        </DropdownMenuItem>
+                      )}
+                      {onMove && (
+                        <DropdownMenuItem onClick={() => onMove(dept)}>
+                          <ArrowRight className="w-4 h-4 mr-2" /> Mover a...
+                        </DropdownMenuItem>
+                      )}
+                      {onDelete && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-red-600 focus:text-red-600" 
+                            onClick={() => { if(confirm('¿Eliminar departamento?')) onDelete(dept.id); }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
-            )}
 
-            <div className="space-y-1 bg-slate-50 p-2 rounded text-xs border border-slate-100">
-              {deptPositions.length > 0 ? (
-                deptPositions.slice(0, 3).map(pos => (
-                  <div key={pos.id} className="flex justify-between items-center">
-                    <span className="truncate max-w-[100px]" title={pos.name}>{pos.name}</span>
-                    <Badge variant="secondary" className="text-[9px] h-4 px-1">{pos.max_headcount || 1}</Badge>
-                  </div>
-                ))
-              ) : (
-                <div className="text-slate-400 italic text-center">Sin puestos</div>
+              <div className="text-center mb-2 mt-1">
+                <h4 className="font-bold text-slate-800 text-sm">{dept.name}</h4>
+                <Badge variant="outline" className="text-[10px] mt-1">{dept.code}</Badge>
+              </div>
+              
+              {manager && (
+                <div className="flex items-center justify-center gap-1.5 mb-2 bg-blue-50 p-1 rounded">
+                  <UserCircle className="w-3 h-3 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-800 truncate max-w-[150px]">
+                    {manager.nombre}
+                  </span>
+                </div>
               )}
-              {deptPositions.length > 3 && (
-                <div className="text-[10px] text-center text-slate-400">+{deptPositions.length - 3} más</div>
-              )}
-            </div>
 
-            <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 flex justify-between">
-              <span>HC Planificado:</span>
-              <span className="font-bold">{totalHeadcount}</span>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="space-y-1 bg-slate-50 p-2 rounded text-xs border border-slate-100">
+                {deptPositions.length > 0 ? (
+                  deptPositions.slice(0, 3).map(pos => (
+                    <div key={pos.id} className="flex justify-between items-center">
+                      <span className="truncate max-w-[100px]" title={pos.name}>{pos.name}</span>
+                      <Badge variant="secondary" className="text-[9px] h-4 px-1">{pos.max_headcount || 1}</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-slate-400 italic text-center">Sin puestos</div>
+                )}
+                {deptPositions.length > 3 && (
+                  <div className="text-[10px] text-center text-slate-400">+{deptPositions.length - 3} más</div>
+                )}
+              </div>
+
+              <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 flex justify-between">
+                <span>HC Planificado:</span>
+                <span className="font-bold">{totalHeadcount}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Add Child Button visual shortcut */}
+          {onAddChild && (
+             <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+               <Button 
+                 size="icon" 
+                 className="h-6 w-6 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-md border-2 border-white"
+                 onClick={() => onAddChild(dept.id)}
+                 title="Añadir hijo"
+               >
+                 <Plus className="w-3 h-3 text-white" />
+               </Button>
+             </div>
+          )}
+        </div>
 
         {children.length > 0 && (
           <>
             <div className="w-px h-6 bg-slate-300"></div>
             <ul className="flex justify-center gap-4 pt-4 border-t border-slate-300 relative">
-              {/* Connector logic handled by flex/border trick or custom CSS */}
               {children.map(child => (
                 <div key={child.id} className="relative px-2">
                   <div className="absolute -top-4 left-1/2 w-px h-4 bg-slate-300 -translate-x-1/2"></div>
