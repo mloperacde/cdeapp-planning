@@ -173,7 +173,7 @@ class Base44DataService {
       return {
         ...assignment,
         machine_id: machineId,
-        machine_name: machine ? machine.name : 'Desconocida',
+        machine_name: machine ? (machine.descripcion || machine.name || machine.nombre) : 'Desconocida',
         machine_details: machine,
         priority: assignment.priority || assignment.prioridad || 1,
         _enriched: true

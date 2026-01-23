@@ -33,6 +33,7 @@ export default function MachineExperienceManager() {
       return list.map(m => ({
         id: m.id,
         nombre: m.nombre || '',
+        descripcion: m.descripcion || '',
         codigo: m.codigo_maquina || m.codigo || '',
         orden: m.orden_visualizacion || 999,
         tipo: m.tipo || '',
@@ -284,7 +285,7 @@ export default function MachineExperienceManager() {
                                   <SelectItem value={null}>Sin asignar</SelectItem>
                                   {machines.map(machine => (
                                     <SelectItem key={machine.id} value={machine.id}>
-                                      {machine.nombre} ({machine.codigo})
+                                      {machine.descripcion || machine.nombre} ({machine.codigo})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>

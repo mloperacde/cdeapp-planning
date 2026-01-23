@@ -198,7 +198,8 @@ export default function ReportsPage() {
   };
 
   const getMachineName = (id) => {
-    return machines.find(m => m.id === id)?.nombre || "Desconocida";
+    const machine = machines.find(m => m.id === id);
+    return machine ? (machine.descripcion || machine.nombre) : "Desconocida";
   };
 
   const getTeamName = (key) => {

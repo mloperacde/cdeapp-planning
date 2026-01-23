@@ -35,6 +35,7 @@ export default function MachineSkillsView() {
                 id: m.id,
                 nombre: m.nombre,
                 codigo: m.codigo_maquina,
+                descripcion: m.descripcion,
                 orden: m.orden_visualizacion || 999
             })).sort((a, b) => a.orden - b.orden);
         },
@@ -223,7 +224,11 @@ export default function MachineSkillsView() {
     const filteredMachines = useMemo(() => {
         if (!searchTerm) return machines;
         const lower = searchTerm.toLowerCase();
-        return machines.filter(m => m.nombre.toLowerCase().includes(lower) || m.codigo?.toLowerCase().includes(lower));
+        return machines.filter(m => 
+            m.descripcion?.toLowerCase().includes(lower) || 
+            m.nombre.toLowerCase().includes(lower) || 
+            m.codigo?.toLowerCase().includes(lower)
+        );
     }, [machines, searchTerm]);
 
     return (
@@ -235,7 +240,7 @@ export default function MachineSkillsView() {
                         <div className="relative">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input 
-                                placeholder="Nombre o código..." 
+                                placeholder="Nombre, descripción o código..." 
                                 className="pl-8 bg-white" 
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
@@ -278,7 +283,10 @@ export default function MachineSkillsView() {
                             return (
                                 <TableRow key={machine.id} className="hover:bg-slate-50">
                                     <TableCell>
-                                        <div className="font-medium">{machine.nombre}</div>
+                                        <div className="font-medium">{machine.descripcion || machine.nombre}</div>
+                                        {machine.descripcion && machine.descripcion !== machine.nombre && (
+                                            <div className="text-xs text-slate-500">{machine.nombre}</div>
+                                        )}
                                         <div className="text-xs text-slate-500 font-mono">{machine.codigo}</div>
                                     </TableCell>
                                     <TableCell className="align-top">

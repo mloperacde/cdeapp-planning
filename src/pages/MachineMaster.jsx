@@ -86,6 +86,7 @@ export default function MachineMasterPage() {
     let result = machines.filter(m => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
+        m.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -159,6 +160,7 @@ export default function MachineMasterPage() {
                   orden: machines.length + 1,
                   estado_produccion: "Sin Producción",
                   estado_disponibilidad: "Disponible",
+                  descripcion: "",
                   imagenes: [],
                   archivos_adjuntos: []
                 });
@@ -190,7 +192,7 @@ export default function MachineMasterPage() {
               <AdvancedSearch
                 data={machines}
                 onFilterChange={setFilters}
-                searchFields={['nombre', 'codigo', 'ubicacion']}
+                searchFields={['descripcion', 'nombre', 'codigo', 'ubicacion']}
                 filterOptions={{
                   tipo: {
                     label: 'Tipo',
@@ -198,12 +200,13 @@ export default function MachineMasterPage() {
                   }
                 }}
                 sortOptions={[
+                  { field: 'descripcion', label: 'Descripción' },
                   { field: 'nombre', label: 'Nombre' },
                   { field: 'codigo', label: 'Código' },
                   { field: 'ubicacion', label: 'Ubicación' },
                   { field: 'orden', label: 'Orden' }
                 ]}
-                placeholder="Buscar por nombre, código o ubicación..."
+                placeholder="Buscar por descripción, nombre, código..."
                 pageId="machine_master"
               />
             </div>
@@ -218,8 +221,8 @@ export default function MachineMasterPage() {
                 <table className="w-full">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b">
                     <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-1/3">Descripción</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Código</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nombre</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tipo</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ubicación</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Marca/Modelo</th>
@@ -231,10 +234,13 @@ export default function MachineMasterPage() {
                     {paginatedItems.map((machine) => (
                       <tr key={machine.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td className="px-4 py-3">
-                          <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">{machine.codigo}</span>
+                          <span className="font-semibold text-slate-900 dark:text-slate-100">{machine.descripcion || machine.nombre}</span>
+                          {machine.descripcion && machine.descripcion !== machine.nombre && (
+                            <div className="text-xs text-slate-500 mt-0.5">{machine.nombre}</div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-semibold text-slate-900 dark:text-slate-100">{machine.nombre}</span>
+                          <span className="font-mono text-slate-600 dark:text-slate-400">{machine.codigo}</span>
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant="outline">{machine.tipo || '-'}</Badge>

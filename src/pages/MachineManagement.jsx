@@ -26,6 +26,7 @@ export default function MachineManagement() {
       const normalized = Array.isArray(data) ? data.map(m => ({
         id: m.id,
         nombre: m.nombre || '',
+        descripcion: m.descripcion || '',
         codigo_maquina: m.codigo_maquina || m.codigo || '',
         tipo: m.tipo || '',
         ubicacion: m.ubicacion || '',
@@ -45,6 +46,7 @@ export default function MachineManagement() {
     let result = machines.filter(m => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
+        m.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.codigo_maquina?.toLowerCase().includes(searchTerm.toLowerCase());
       
@@ -173,7 +175,7 @@ export default function MachineManagement() {
               <AdvancedSearch
                 data={machines}
                 onFilterChange={setFilters}
-                searchFields={['nombre', 'codigo_maquina']}
+                searchFields={['descripcion', 'nombre', 'codigo_maquina']}
                 filterOptions={{
                   disponibilidad: {
                     label: 'Disponibilidad',
@@ -194,11 +196,12 @@ export default function MachineManagement() {
                 }}
                 sortOptions={[
                   { field: 'orden_visualizacion', label: 'Orden' },
+                  { field: 'descripcion', label: 'Descripción' },
                   { field: 'nombre', label: 'Nombre' },
                   { field: 'codigo_maquina', label: 'Código' },
                   { field: 'estado_disponibilidad', label: 'Disponibilidad' }
                 ]}
-                placeholder="Buscar por nombre o código..."
+                placeholder="Buscar por descripción, nombre o código..."
                 pageId="machine_management"
               />
             </div>

@@ -56,7 +56,8 @@ export default function EmployeeHelperList({ employees, currentTeam, machines })
     }, [filteredEmployees]);
 
     const getMachineName = (id) => {
-        return machines.find(m => m.id === id)?.nombre || id;
+        const machine = machines.find(m => m.id === id);
+        return machine ? (machine.descripcion || machine.nombre) : id;
     };
 
     return (

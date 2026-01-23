@@ -79,7 +79,7 @@ export default function MachineOrderManager() {
           >
             <GripVertical className="w-5 h-5 text-slate-400" />
             <div className="flex-1">
-              <div className="font-medium">{machine.nombre}</div>
+              <div className="font-medium">{machine.descripcion || machine.nombre}</div>
               <div className="text-xs text-slate-500">{machine.codigo_maquina || machine.codigo}</div>
             </div>
             <div className="text-sm font-semibold text-slate-600 bg-white px-2 py-1 rounded">{index + 1}</div>

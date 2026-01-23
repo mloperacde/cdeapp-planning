@@ -138,7 +138,7 @@ export default function MaintenanceTrackingPage() {
 
   const getMachineName = (machineId) => {
     const machine = machines.find(m => m.id === machineId);
-    return machine?.nombre || "Desconocida";
+    return machine ? (machine.descripcion || machine.nombre) : "Desconocida";
   };
 
   const getEmployeeName = (employeeId) => {

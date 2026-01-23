@@ -117,9 +117,9 @@ export default function MachineDisplayVerification({ employeeId }) {
             ) : (
               <div className="space-y-1">
                 {machinesFromSkills.map(m => (
-                  <div key={m.priority} className="flex items-center gap-2 text-xs">
+                  <div key={m.id} className="flex items-center gap-2 text-xs p-1 hover:bg-slate-50 rounded">
                     <Badge variant="outline" className="w-6 justify-center">{m.priority}</Badge>
-                    <span>{m.nombre} ({m.codigo})</span>
+                    <span>{m.descripcion || m.nombre} ({m.codigo})</span>
                     <Badge className="bg-blue-100 text-blue-800 text-[10px]">
                       {m.skill.nivel_habilidad || 'N/A'}
                     </Badge>
