@@ -267,7 +267,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
 
           // Fields
           const priorityStr = getValue(row, 'priority');
-          let priority = null;
+          let priority = 5; // Default to 5 (Lowest standard) if missing, as field is required
           if (priorityStr && priorityStr.trim() !== '') {
             const parsed = parseInt(priorityStr);
             if (!isNaN(parsed)) {
@@ -296,7 +296,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
             order_number: orderNumber,
             machine_id: machine.id,
             machine_location: getValue(row, 'machine_location'),
-            // priority: priority, // Don't include priority if null, some backends hate explicit nulls for numbers
+            priority: priority, 
             type: getValue(row, 'type'),
             status: status,
             committed_delivery_date: deliveryDate,
@@ -329,9 +329,8 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
             customer_order_reference: getValue(row, 'customer_order_reference'),
           };
 
-          if (priority !== null) {
-            payload.priority = priority;
-          }
+          // Priority already included in payload with default
+
 
           const existing = existingOrderMap.get(orderNumber);
           
