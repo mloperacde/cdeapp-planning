@@ -296,7 +296,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
             order_number: orderNumber,
             machine_id: machine.id,
             machine_location: getValue(row, 'machine_location'),
-            priority: priority,
+            // priority: priority, // Don't include priority if null, some backends hate explicit nulls for numbers
             type: getValue(row, 'type'),
             status: status,
             committed_delivery_date: deliveryDate,
@@ -328,6 +328,10 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
             external_order_reference: getValue(row, 'external_order_reference'),
             customer_order_reference: getValue(row, 'customer_order_reference'),
           };
+
+          if (priority !== null) {
+            payload.priority = priority;
+          }
 
           const existing = existingOrderMap.get(orderNumber);
           
