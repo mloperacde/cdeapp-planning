@@ -39,7 +39,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
           return (
             <div key={machine.id} className="border rounded-lg overflow-hidden">
               <div className="bg-slate-50 px-3 py-2 font-semibold text-sm flex items-center justify-between">
-                <span>{machine.nombre}</span>
+                <span>{machine.descripcion || machine.nombre}</span>
                 <Badge variant="outline">{machineOrders.length} órdenes</Badge>
               </div>
               <div className="divide-y">

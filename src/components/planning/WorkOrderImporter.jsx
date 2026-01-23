@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 const SYSTEM_FIELDS = [
   { key: 'order_number', label: 'Orden (ID)', required: true },
-  { key: 'machine_name', label: 'Máquina (Nombre)', required: true },
+  { key: 'machine_name', label: 'Máquina (Descripción/Nombre)', required: true },
   { key: 'machine_location', label: 'Sala / Ubicación' },
   { key: 'priority', label: 'Prioridad (Pry)' },
   { key: 'product_article_code', label: 'Artículo' },
@@ -163,11 +163,17 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
           if (machineName) {
             const nameLower = machineName.toLowerCase();
             machine = machines.find(m => {
-               // Try exact match on name or code
+               // 1. Try exact match on description (highest priority)
+               if (m.descripcion && m.descripcion.toLowerCase() === nameLower) return true;
+
+               // 2. Try exact match on name
                if (m.nombre.toLowerCase() === nameLower) return true;
+
+               // 3. Try exact match on code
                if (m.codigo && m.codigo.toLowerCase() === nameLower) return true;
                
-               // Try partial match: if DB name/code is contained in CSV string (e.g. "R V-TK-002" in "R V-TK-002 REACTOR...")
+               // 4. Try partial match: if DB description/name/code is contained in CSV string
+               if (m.descripcion && m.descripcion.length > 3 && nameLower.includes(m.descripcion.toLowerCase())) return true;
                if (m.nombre.length > 3 && nameLower.includes(m.nombre.toLowerCase())) return true;
                if (m.codigo && m.codigo.length > 3 && nameLower.includes(m.codigo.toLowerCase())) return true;
                

@@ -44,6 +44,7 @@ export default function ProductionPlanningPage() {
       return data.map(m => ({
         id: m.id,
         nombre: m.nombre,
+        descripcion: m.descripcion,
         codigo: m.codigo_maquina || m.codigo,
         orden: m.orden_visualizacion || 999,
         tipo: m.tipo,
