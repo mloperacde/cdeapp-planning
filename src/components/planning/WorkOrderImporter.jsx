@@ -80,10 +80,48 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleDeleteAll = async () => {
+    if (!confirm("¿Estás seguro de que deseas eliminar TODAS las órdenes de trabajo? Esta acción no se puede deshacer.")) return;
+    
+    try {
+      const orders = await base44.entities.WorkOrder.list();
+      const count = orders.length;
+      if (count === 0) {
+        toast.info("No hay órdenes para eliminar.");
+        return;
+      }
+
+      toast.loading(`Eliminando ${count} órdenes...`, { id: 'delete-all' });
+      
+      // Delete in batches
+      const chunkSize = 20;
+      for (let i = 0; i < orders.length; i += chunkSize) {
+        const batch = orders.slice(i, i + chunkSize);
+        await Promise.all(batch.map(o => base44.entities.WorkOrder.delete(o.id)));
+      }
+      
+      toast.success(`${count} órdenes eliminadas correctamente.`, { id: 'delete-all' });
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+    } catch (err) {
+      toast.error("Error eliminando órdenes: " + err.message, { id: 'delete-all' });
+    }
+  };
+
   const handleFileChange = (event) => {
-    resetState();
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Reset state but keep the file input value for now (or reset it later)
+    setStep('upload');
+    setCsvHeaders([]);
+    setCsvRows([]);
+    setFieldMapping({});
+    setLogs([]);
+    setSummary(null);
+    setIsProcessing(false);
+    
+    // We don't clear fileInputRef.current.value here because we just used it.
+    // It will be cleared when dialog closes or resetState is called explicitly.
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -378,14 +416,23 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
         className="hidden"
         accept=".csv"
       />
-      <Button 
-        variant="outline" 
-        onClick={handleButtonClick}
-        className="gap-2"
-      >
-        <FileUp className="w-4 h-4" />
-        Importar CSV
-      </Button>
+      <div className="flex gap-2">
+        <Button 
+          variant="outline" 
+          onClick={handleDeleteAll}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+        >
+          Limpiar Datos
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={handleButtonClick}
+          className="gap-2"
+        >
+          <FileUp className="w-4 h-4" />
+          Importar CSV
+        </Button>
+      </div>
 
       <Dialog open={isOpen} onOpenChange={(open) => { 
         if (!open) {
