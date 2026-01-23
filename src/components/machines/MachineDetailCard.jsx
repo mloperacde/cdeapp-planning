@@ -41,6 +41,22 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
     archivos_adjuntos: machine.archivos_adjuntos || [],
   });
 
+  // Actualizar descripción automáticamente cuando cambian los campos relacionados
+  useEffect(() => {
+    if (editMode) {
+      const sala = formData.ubicacion || "";
+      const codigo = formData.codigo || "";
+      const nombre = formData.nombre || "";
+      const newDescription = `${sala} ${codigo} - ${nombre}`.trim();
+      
+      // Solo actualizar si la descripción generada es diferente
+      // y si queremos forzar el formato (o si el campo está vacío)
+      if (formData.descripcion !== newDescription) {
+        setFormData(prev => ({ ...prev, descripcion: newDescription }));
+      }
+    }
+  }, [formData.ubicacion, formData.codigo, formData.nombre, editMode]);
+
   const { data: maintenances } = useQuery({
     queryKey: ['maintenances', machine.id],
     queryFn: () => base44.entities.MaintenanceSchedule.filter({ machine_id: machine.id }, '-fecha_programada'),
@@ -232,7 +248,9 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
       <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Ficha Completa de Máquina</span>
+            <span className="truncate max-w-[70%]">
+              {machine.descripcion || machine.nombre || "Ficha de Máquina"}
+            </span>
             {canEdit && (
               <div className="flex gap-2">
                 {!editMode ? (
