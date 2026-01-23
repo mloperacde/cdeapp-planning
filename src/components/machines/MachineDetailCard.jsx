@@ -450,10 +450,19 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                     </div>
                   )}
                 </div>
-              )}
+              </div>
+            )}
             </CardContent>
           </Card>
 
+
+          </TabsContent>
+
+          <TabsContent value="processes">
+            <MachineProcessesTab machine={machine} />
+          </TabsContent>
+
+          <TabsContent value="files" className="space-y-6">
           {/* Imágenes */}
           <Card>
             <CardHeader>
@@ -573,12 +582,8 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
 
           </TabsContent>
 
-          <TabsContent value="processes">
-            <MachineProcessesTab machine={machine} />
-          </TabsContent>
-
-          <TabsContent value="files" className="space-y-6">
-          {/* Imágenes */}
+          <TabsContent value="maintenance" className="space-y-6">
+          {/* Próximos Mantenimientos */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -607,10 +612,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
             </CardContent>
           </Card>
 
-          </TabsContent>
-
-          <TabsContent value="maintenance" className="space-y-6">
-          {/* Próximos Mantenimientos */}
+          {/* Historial de Mantenimientos */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
