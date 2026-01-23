@@ -100,8 +100,22 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
       for (let i = 0; i < orders.length; i += chunkSize) {
         const batch = orders.slice(i, i + chunkSize);
         
-        // Process batch
-        await Promise.all(batch.map(o => base44.entities.WorkOrder.delete(o.id)));
+        // Process batch safely, ignoring 404s
+        await Promise.all(batch.map(async (o) => {
+          try {
+            await base44.entities.WorkOrder.delete(o.id);
+          } catch (error) {
+            // Ignore 404 errors (entity already deleted)
+            // Check both status property and message content for robustness
+            const is404 = error.status === 404 || 
+                          (error.message && error.message.includes('404')) ||
+                          (error.response && error.response.status === 404);
+            
+            if (!is404) {
+              throw error; // Re-throw other errors to be caught by main try/catch
+            }
+          }
+        }));
         
         // Update toast progress
         toast.loading(`Eliminando... (${Math.min(i + chunkSize, count)}/${count})`, { id: 'delete-all' });
