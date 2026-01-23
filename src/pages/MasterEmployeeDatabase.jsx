@@ -346,18 +346,13 @@ export default function MasterEmployeeDatabasePage() {
             <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Por Departamento</span>
             <Database className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-1 no-scrollbar">
-            {stats.employeesPerDept.slice(0, 5).map((dept, i) => (
-              <div key={i} className="flex flex-col min-w-[60px]">
+          <div className="flex flex-wrap gap-4 pb-1">
+            {stats.employeesPerDept.map((dept, i) => (
+              <div key={i} className="flex flex-col min-w-[60px] max-w-[100px]">
                 <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{dept.count}</span>
                 <span className="text-[10px] text-slate-500 truncate w-full" title={dept.name}>{dept.name}</span>
               </div>
             ))}
-             {stats.employeesPerDept.length > 5 && (
-                <div className="flex flex-col justify-center min-w-[40px]">
-                    <span className="text-[10px] text-slate-400">+{stats.employeesPerDept.length - 5}</span>
-                </div>
-             )}
           </div>
         </Card>
       </div>
