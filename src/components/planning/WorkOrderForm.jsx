@@ -31,8 +31,8 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         machine_id: orderToEdit.machine_id,
         process_id: orderToEdit.process_id,
         priority: orderToEdit.priority?.toString() || "3",
-        start_date: orderToEdit.start_date,
-        committed_delivery_date: orderToEdit.committed_delivery_date,
+        start_date: orderToEdit.start_date || "",
+        committed_delivery_date: orderToEdit.committed_delivery_date || "",
         status: orderToEdit.status,
         notes: orderToEdit.notes || ""
       });

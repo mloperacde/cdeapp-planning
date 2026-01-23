@@ -346,7 +346,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
              validPayloads.push({ type: 'update', id: existing.id, data: payload });
              updatedCount++;
           } else {
-             validPayloads.push({ type: 'create', data: { ...payload, start_date: "" } }); 
+             validPayloads.push({ type: 'create', data: { ...payload, start_date: null } }); 
              createdCount++;
           }
 
