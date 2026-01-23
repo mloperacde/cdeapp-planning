@@ -273,10 +273,9 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
           const status = statusRaw || "Pendiente";
           
           const deliveryDate = parseDate(getValue(row, 'committed_delivery_date'));
-          if (!deliveryDate) {
-             addLog('warning', `Fila ${i+1}: Fecha de entrega inválida/faltante. Orden ${orderNumber} omitida.`);
-             errorCount++;
-             continue;
+          // Relaxed validation: Allow missing delivery date
+          if (!deliveryDate && getValue(row, 'committed_delivery_date')) {
+             addLog('warning', `Fila ${i+1}: Fecha de entrega con formato desconocido. Se guardará sin fecha.`);
           }
 
           // Duration Calculation
@@ -407,27 +406,28 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
         }
       }
 
-      setSummary({
-        total: csvRows.length,
-        created: createdCount,
-        updated: updatedCount,
-        errors: errorCount,
-        aborted: abortRef.current
-      });
-      
-      if (abortRef.current) {
-         addLog('warning', 'Importación detenida por el usuario.');
+      // Summary Toast
+      if (createdCount + updatedCount === 0) {
+        if (errorCount > 0) {
+            toast.error(`No se importaron órdenes. ${errorCount} filas omitidas por errores. Revise el log.`);
+        } else {
+            toast.warning("No se encontraron órdenes válidas para importar.");
+        }
       } else {
-         addLog('info', 'Importación finalizada.');
+        toast.success(`Importación completada: ${createdCount} creadas, ${updatedCount} actualizadas.`);
       }
 
-      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
-      onImportSuccess?.();
-      setStep('result');
-
+      setSummary({ created: createdCount, updated: updatedCount, errors: errorCount });
+      
+      if (createdCount > 0 || updatedCount > 0) {
+        onImportSuccess?.();
+        queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+        setTimeout(() => setIsOpen(false), 2000);
+      }
     } catch (err) {
-      addLog('error', `Fallo crítico: ${err.message}`);
-      setStep('result');
+      console.error(err);
+      addLog('error', `Error general: ${err.message}`);
+      toast.error("Error en el proceso de importación");
     } finally {
       setIsProcessing(false);
     }
