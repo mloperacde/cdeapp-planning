@@ -392,11 +392,19 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="font-semibold">Nombre:</span> {machine.nombre}</div>
-                  <div><span className="font-semibold">Código:</span> {machine.codigo}</div>
-                  <div><span className="font-semibold">Marca:</span> {machine.marca || 'N/A'}</div>
-                  <div><span className="font-semibold">Modelo:</span> {machine.modelo || 'N/A'}</div>
+                <div className="space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-lg border dark:bg-slate-800/50">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      {machine.descripcion || machine.nombre}
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {machine.codigo} - {machine.nombre}
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="font-semibold">Marca:</span> {machine.marca || 'N/A'}</div>
+                    <div><span className="font-semibold">Modelo:</span> {machine.modelo || 'N/A'}</div>
                   <div><span className="font-semibold">Número de Serie:</span> {machine.numero_serie || 'N/A'}</div>
                   <div>
                     <span className="font-semibold">Fecha de Compra:</span>{" "}
@@ -418,11 +426,6 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                     <span className="font-semibold">Disponibilidad:</span>{" "}
                     <Badge>{machine.estado_disponibilidad || 'Disponible'}</Badge>
                   </div>
-                  {machine.descripcion && (
-                    <div className="col-span-2">
-                      <span className="font-semibold">Descripción:</span> {machine.descripcion}
-                    </div>
-                  )}
                   {machine.programa_mantenimiento && (
                     <div className="col-span-2">
                       <span className="font-semibold">Programa de Mantenimiento:</span> {machine.programa_mantenimiento}

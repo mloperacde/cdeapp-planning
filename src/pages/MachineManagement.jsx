@@ -222,8 +222,13 @@ export default function MachineManagement() {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
-                            <h3 className="font-bold text-slate-900 dark:text-slate-100">{machine.nombre}</h3>
-                            <p className="text-xs text-slate-600 dark:text-slate-400">{machine.codigo_maquina || machine.codigo}</p>
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg leading-tight">
+                              {machine.descripcion || machine.nombre}
+                            </h3>
+                            {machine.descripcion && machine.descripcion !== machine.nombre && (
+                                <p className="text-xs text-slate-500 mt-1 font-medium">{machine.nombre}</p>
+                            )}
+                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{machine.codigo_maquina || machine.codigo}</p>
                           </div>
                           <div className="flex gap-1">
                             <Button
