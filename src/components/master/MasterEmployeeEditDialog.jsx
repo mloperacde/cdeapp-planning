@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame } from "lucide-react";
+import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo } from "react";
 
