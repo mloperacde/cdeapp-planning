@@ -87,7 +87,10 @@ export default function ProductionPlanningPage() {
 
   // Derived Data
   const filteredOrders = useMemo(() => {
-    return workOrders.filter(order => {
+    const filtered = workOrders.filter(order => {
+      // Filter by Priority (Must exist)
+      if (order.priority === null || order.priority === undefined) return false;
+
       // Filter by Machine
       if (selectedMachine !== "all" && order.machine_id !== selectedMachine) return false;
       
@@ -111,6 +114,9 @@ export default function ProductionPlanningPage() {
       // If no start_date (Backlog), include it so it appears in the "Sin Programar" column
       return true;
     });
+
+    // Sort by Priority (Ascending: 1 is higher than 10)
+    return filtered.sort((a, b) => (a.priority || 999) - (b.priority || 999));
   }, [workOrders, selectedMachine, selectedStatus, dateRange]);
 
   const handleEditOrder = (order) => {

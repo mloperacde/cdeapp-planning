@@ -17,20 +17,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const SYSTEM_FIELDS = [
-  { key: 'order_number', label: 'Orden (ID)', required: true },
-  { key: 'machine_name', label: 'Máquina (Descripción/Nombre)', required: true },
-  { key: 'machine_location', label: 'Sala / Ubicación' },
-  { key: 'priority', label: 'Prioridad (Pry)' },
-  { key: 'product_article_code', label: 'Artículo' },
-  { key: 'product_name', label: 'Nombre Producto' },
-  { key: 'client_name', label: 'Cliente' },
-  { key: 'quantity', label: 'Cantidad', type: 'number' },
-  { key: 'production_cadence', label: 'Cadencia', type: 'number' },
-  { key: 'committed_delivery_date', label: 'Fecha Entrega' },
+  { key: 'priority', label: 'Prioridad' },
+  { key: 'type', label: 'Tipo' },
   { key: 'status', label: 'Estado' },
-  { key: 'notes', label: 'Observaciones' },
-  { key: 'external_order_reference', label: 'Pedido Externo' },
+  { key: 'machine_location', label: 'Sala' },
+  { key: 'machine_name', label: 'Máquina', required: true },
   { key: 'customer_order_reference', label: 'Su Pedido' },
+  { key: 'external_order_reference', label: 'Pedido' },
+  { key: 'order_number', label: 'Orden', required: true },
+  { key: 'product_article_code', label: 'Artículo' },
+  { key: 'product_name', label: 'Nombre' },
+  { key: 'article_status', label: 'Edo. Art.' },
+  { key: 'client_name', label: 'Cliente' },
+  { key: 'material', label: 'Material' },
+  { key: 'product_description', label: 'Producto' },
+  { key: 'missing_components', label: 'Faltas' },
+  { key: 'quantity', label: 'Cantidad', type: 'number' },
+  { key: 'committed_delivery_date', label: 'Fecha Entrega' },
+  { key: 'new_delivery_date', label: 'Nueva Fecha Entrega' },
+  { key: 'delivery_compliance', label: 'Cumplimiento entrega' },
+  { key: 'multi_unit', label: 'MultUnid' },
+  { key: 'multi_quantity', label: 'Mult x Cantidad', type: 'number' },
+  { key: 'production_cadence', label: 'Cadencia', type: 'number' },
+  { key: 'delay_reason', label: 'Motivo Retraso' },
+  { key: 'components_deadline', label: 'Fecha limite componentes' },
+  { key: 'start_deadline', label: 'Fecha Inicio Limite' },
+  { key: 'start_modified', label: 'Fecha Inicio Modificada' },
+  { key: 'end_date', label: 'Fecha Fin' },
+  { key: 'notes', label: 'Observación' },
 ];
 
 export default function WorkOrderImporter({ machines, processes: _processes, onImportSuccess }) {
@@ -93,13 +107,8 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
         const initialMapping = {};
         SYSTEM_FIELDS.forEach(field => {
           const match = headers.find(h => 
-            h.toLowerCase() === field.label.toLowerCase() || 
-            h.toLowerCase() === field.key.toLowerCase() ||
-            (field.key === 'machine_name' && h.toLowerCase() === 'máquina') ||
-            (field.key === 'machine_location' && h.toLowerCase() === 'sala') ||
-            (field.key === 'priority' && h.toLowerCase() === 'pry') ||
-            (field.key === 'product_name' && h.toLowerCase() === 'nombre') ||
-            (field.key === 'order_number' && h.toLowerCase() === 'orden')
+            h.toLowerCase().trim() === field.label.toLowerCase().trim() || 
+            h.toLowerCase().trim() === field.key.toLowerCase().trim()
           );
           if (match) initialMapping[field.key] = match;
         });
@@ -193,10 +202,11 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
           }
 
           // Fields
-          const priority = parseInt(getValue(row, 'priority')) || 3;
+          const priorityStr = getValue(row, 'priority');
+          const priority = (priorityStr && priorityStr.trim() !== '') ? parseInt(priorityStr) : null;
+          
           const statusRaw = getValue(row, 'status');
-          const validStatuses = ["Pendiente", "En Progreso", "Completada", "Retrasada", "Cancelada"];
-          const status = validStatuses.includes(statusRaw) ? statusRaw : "Pendiente";
+          const status = statusRaw || "Pendiente";
           
           const deliveryDate = parseDate(getValue(row, 'committed_delivery_date'));
           if (!deliveryDate) {
@@ -206,8 +216,9 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
           }
 
           // Duration Calculation
-          const quantity = parseInt(getValue(row, 'quantity')) || 0;
+          const quantity = parseFloat((getValue(row, 'quantity') || '0').replace(',', '.'));
           const cadence = parseFloat((getValue(row, 'production_cadence') || '0').replace(',', '.'));
+          const multiQuantity = parseFloat((getValue(row, 'multi_quantity') || '0').replace(',', '.'));
           
           // Duration in HOURS
           const estimatedDuration = (quantity && cadence) ? (quantity / cadence) : 0;
@@ -216,19 +227,37 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
             order_number: orderNumber,
             machine_id: machine.id,
             machine_location: getValue(row, 'machine_location'),
-            priority: Math.min(Math.max(priority, 1), 5),
+            priority: priority,
+            type: getValue(row, 'type'),
             status: status,
             committed_delivery_date: deliveryDate,
+            new_delivery_date: parseDate(getValue(row, 'new_delivery_date')),
+            delivery_compliance: getValue(row, 'delivery_compliance'),
+            
             product_article_code: getValue(row, 'product_article_code'),
             product_name: getValue(row, 'product_name'),
+            article_status: getValue(row, 'article_status'),
             client_name: getValue(row, 'client_name'),
+            material: getValue(row, 'material'),
+            product_description: getValue(row, 'product_description'),
+            missing_components: getValue(row, 'missing_components'),
+            
             quantity: quantity,
             production_cadence: cadence,
+            multi_unit: getValue(row, 'multi_unit'),
+            multi_quantity: multiQuantity,
+            
             estimated_duration: parseFloat(estimatedDuration.toFixed(2)),
+            
+            delay_reason: getValue(row, 'delay_reason'),
+            components_deadline: parseDate(getValue(row, 'components_deadline')),
+            start_deadline: parseDate(getValue(row, 'start_deadline')),
+            start_modified: parseDate(getValue(row, 'start_modified')),
+            end_date: parseDate(getValue(row, 'end_date')),
+            
             notes: getValue(row, 'notes'),
             external_order_reference: getValue(row, 'external_order_reference'),
             customer_order_reference: getValue(row, 'customer_order_reference'),
-            // Flags if mapped? Simplified for now
           };
 
           const existing = existingOrderMap.get(orderNumber);
