@@ -267,7 +267,13 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
 
           // Fields
           const priorityStr = getValue(row, 'priority');
-          const priority = (priorityStr && priorityStr.trim() !== '') ? parseInt(priorityStr) : null;
+          let priority = null;
+          if (priorityStr && priorityStr.trim() !== '') {
+            const parsed = parseInt(priorityStr);
+            if (!isNaN(parsed)) {
+              priority = parsed;
+            }
+          }
           
           const statusRaw = getValue(row, 'status');
           const status = statusRaw || "Pendiente";
