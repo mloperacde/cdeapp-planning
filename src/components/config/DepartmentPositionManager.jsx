@@ -574,32 +574,38 @@ export default function DepartmentPositionManager() {
   };
 
   return (
-    <div className="space-y-6 h-[calc(100vh-200px)] min-h-[600px] flex flex-col">
-      <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Settings2 className="w-5 h-5 text-indigo-600" />
-            Gestor de Estructura
-          </h2>
-          <p className="text-sm text-slate-500">Configura departamentos y puestos de forma jerárquica</p>
+    <div className="h-[calc(100vh-4rem)] flex flex-col p-2 gap-2 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+            <Settings2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              Gestor de Estructura
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Configura departamentos y puestos de forma jerárquica
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
             <Button 
               variant={viewMode === "editor" ? "white" : "ghost"} 
               size="sm" 
-              className={`h-8 ${viewMode === "editor" ? "bg-white shadow-sm" : ""}`}
+              className={`h-7 text-xs ${viewMode === "editor" ? "bg-white shadow-sm" : ""}`}
               onClick={() => setViewMode("editor")}
             >
-              <Layout className="w-4 h-4 mr-2" /> Editor
+              <Layout className="w-3.5 h-3.5 mr-2" /> Editor
             </Button>
             <Button 
               variant={viewMode === "chart" ? "white" : "ghost"} 
               size="sm"
-              className={`h-8 ${viewMode === "chart" ? "bg-white shadow-sm" : ""}`}
+              className={`h-7 text-xs ${viewMode === "chart" ? "bg-white shadow-sm" : ""}`}
               onClick={() => setViewMode("chart")}
             >
-              <FolderTree className="w-4 h-4 mr-2" /> Organigrama
+              <FolderTree className="w-3.5 h-3.5 mr-2" /> Organigrama
             </Button>
           </div>
         </div>
@@ -607,11 +613,11 @@ export default function DepartmentPositionManager() {
         <Button 
           variant="outline" 
           size="sm" 
-          className="ml-auto text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          className="h-8 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 ml-auto md:ml-0"
           onClick={() => setIsSyncDialogOpen(true)}
         >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Sincronizar desde Empleados
+          <RefreshCw className="w-3.5 h-3.5 mr-2" />
+          Sincronizar
         </Button>
       </div>
 
