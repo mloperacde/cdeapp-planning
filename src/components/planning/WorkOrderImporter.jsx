@@ -36,7 +36,9 @@ const SYSTEM_FIELDS = [
 export default function WorkOrderImporter({ machines, processes: _processes, onImportSuccess }) {
   const fileInputRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
+  const abortRef = useRef(false);
   const [step, setStep] = useState('upload'); // upload, mapping, processing, result
+
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [csvRows, setCsvRows] = useState([]);
   const [fieldMapping, setFieldMapping] = useState({});
@@ -65,6 +67,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
   };
 
   const handleFileChange = (event) => {
+    resetState();
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -114,6 +117,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
   const executeImport = async () => {
     setStep('processing');
     setIsProcessing(true);
+    abortRef.current = false;
     setLogs([]);
     setSummary(null);
 
@@ -151,6 +155,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
       };
 
       for (let i = 0; i < csvRows.length; i++) {
+        if (abortRef.current) break;
         const row = csvRows[i];
         try {
           const orderNumber = getValue(row, 'order_number');
@@ -258,6 +263,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
       if (createOps.length > 0) {
         const chunkSize = 20;
         for (let i = 0; i < createOps.length; i += chunkSize) {
+            if (abortRef.current) break;
             try {
                 await base44.entities.WorkOrder.bulkCreate(createOps.slice(i, i + chunkSize));
                 await delay(1000); // 1s delay between creation batches
@@ -274,6 +280,7 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
 
       // Updates strictly sequential with robust backoff strategy
       for (let i = 0; i < updateOps.length; i++) {
+        if (abortRef.current) break;
         const op = updateOps[i];
         let retries = 0;
         const maxRetries = 5; // Increased retries
@@ -311,9 +318,16 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
         total: csvRows.length,
         created: createdCount,
         updated: updatedCount,
-        errors: errorCount
+        errors: errorCount,
+        aborted: abortRef.current
       });
       
+      if (abortRef.current) {
+         addLog('warning', 'Importación detenida por el usuario.');
+      } else {
+         addLog('info', 'Importación finalizada.');
+      }
+
       queryClient.invalidateQueries({ queryKey: ['workOrders'] });
       onImportSuccess?.();
       setStep('result');
@@ -344,7 +358,13 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
         Importar CSV
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!isProcessing) { setIsOpen(open); if (!open) resetState(); } }}>
+      <Dialog open={isOpen} onOpenChange={(open) => { 
+        if (!open) {
+          if (isProcessing) abortRef.current = true;
+          resetState();
+        }
+        setIsOpen(open); 
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Gestor de Importación de Órdenes</DialogTitle>
@@ -447,6 +467,16 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
                 <Save className="w-4 h-4 mr-2" />
                 Procesar e Importar
               </Button>
+            )}
+            {step === 'processing' && (
+              <div className="flex gap-2">
+                 <Button variant="destructive" onClick={() => abortRef.current = true}>
+                   Detener
+                 </Button>
+                 <Button variant="secondary" onClick={() => setIsOpen(false)}>
+                   Cerrar
+                 </Button>
+              </div>
             )}
             {step === 'result' && (
               <Button onClick={() => setIsOpen(false)}>Cerrar</Button>
