@@ -8,15 +8,24 @@ import { es } from "date-fns/locale";
 export default function MachineOrdersList({ machines = [], orders, processes, onEditOrder }) {
   // Machines are already sorted by 'orden' from query - use them directly
 
-  const getPriorityBadge = (priority) => {
-    const colors = {
-      1: "bg-red-500 text-white",
-      2: "bg-orange-500 text-white",
-      3: "bg-blue-500 text-white",
-      4: "bg-green-500 text-white",
-      5: "bg-slate-500 text-white"
-    };
-    return colors[priority] || colors[5];
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 1: return "bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
+      case 2: return "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100";
+      case 3: return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+      case 4: return "bg-green-50 text-green-700 border-green-200 hover:bg-green-100";
+      default: return "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100";
+    }
+  };
+
+  const getPriorityBadgeColor = (priority) => {
+    switch(priority) {
+      case 1: return "bg-red-600 hover:bg-red-700";
+      case 2: return "bg-orange-500 hover:bg-orange-600";
+      case 3: return "bg-blue-500 hover:bg-blue-600";
+      case 4: return "bg-green-500 hover:bg-green-600";
+      default: return "bg-slate-500 hover:bg-slate-600";
+    }
   };
 
   const getMachineOrders = (machineId) => {
@@ -24,95 +33,111 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="py-3 border-b">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Factory className="w-4 h-4" />
-          Órdenes Programadas por Máquina
+    <Card className="h-full flex flex-col shadow-none border-0 bg-transparent">
+      <CardHeader className="py-2 px-0 pb-4">
+        <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <Factory className="w-5 h-5 text-slate-600" />
+          Tablero de Órdenes por Máquina
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto pr-2 pb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {machines.map(machine => {
           const machineOrders = getMachineOrders(machine.id);
-          if (machineOrders.length === 0) return null;
+          // Show machine card even if empty, to visualize capacity/availability
+          // if (machineOrders.length === 0) return null;
 
           return (
-            <div key={machine.id} className="border rounded-lg overflow-hidden">
-              <div className="bg-slate-50 px-3 py-2 font-semibold text-sm flex items-center justify-between">
-                <span>{machine.descripcion || machine.nombre}</span>
-                <Badge variant="outline">{machineOrders.length} órdenes</Badge>
+            <div key={machine.id} className="flex flex-col bg-white dark:bg-slate-950 rounded-lg border shadow-sm h-fit max-h-[600px] flex-shrink-0">
+              {/* Machine Header */}
+              <div className="p-3 border-b bg-slate-50/80 dark:bg-slate-900 sticky top-0 z-10 backdrop-blur-sm rounded-t-lg">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight">
+                    {machine.descripcion || machine.nombre}
+                  </h3>
+                  <Badge variant="secondary" className="bg-white dark:bg-slate-800 shadow-sm border text-xs font-mono shrink-0">
+                    {machineOrders.length}
+                  </Badge>
+                </div>
+                <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                   <span className="truncate max-w-[150px]">{machine.ubicacion || 'Sin ubicación'}</span>
+                </div>
               </div>
-              <div className="divide-y">
-                {machineOrders.map(order => {
-                  const process = processes.find(p => p.id === order.process_id);
-                  const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
-                  
-                  return (
-                    <div key={order.id} className="p-3 hover:bg-slate-50 transition-colors group">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge className={`${getPriorityBadge(order.priority)} text-xs px-2`}>
-                              P{order.priority}
-                            </Badge>
-                            <span className="font-bold text-sm">{order.order_number}</span>
-                            {isLate && (
-                              <div className="flex items-center gap-1 text-red-600">
-                                <AlertCircle className="w-4 h-4" />
-                                <span className="text-xs">Retrasada</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="text-sm text-slate-700 truncate mb-1">
-                            {order.product_name || order.product_article_code || 'Sin nombre'}
-                          </div>
 
-                          <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                            {order.client_name && (
-                              <span>Cliente: {order.client_name}</span>
-                            )}
-                            {order.quantity && (
-                              <span>Cantidad: {order.quantity}</span>
-                            )}
-                            {process && (
-                              <span>Proceso: {process.nombre}</span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-4 mt-2 text-xs">
-                            {order.start_date && (
-                              <div className="flex items-center gap-1 text-blue-600">
-                                <Calendar className="w-3 h-3" />
-                                <span>Inicio: {format(parseISO(order.start_date), 'dd MMM yyyy', { locale: es })}</span>
-                              </div>
-                            )}
-                            {order.committed_delivery_date && (
-                              <div className={`flex items-center gap-1 ${isLate ? 'text-red-600 font-semibold' : 'text-green-600'}`}>
-                                <Calendar className="w-3 h-3" />
-                                <span>Entrega: {format(parseISO(order.committed_delivery_date), 'dd MMM yyyy', { locale: es })}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onEditOrder(order)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
+              {/* Orders List */}
+              <div className="p-2 space-y-2 overflow-y-auto min-h-[100px] custom-scrollbar">
+                {machineOrders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-slate-400 border-2 border-dashed border-slate-100 rounded-md">
+                        <Calendar className="w-8 h-8 mb-2 opacity-20" />
+                        <span className="text-xs">Sin órdenes asignadas</span>
                     </div>
-                  );
-                })}
+                ) : (
+                    machineOrders.map(order => {
+                    const process = processes.find(p => p.id === order.process_id);
+                    const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
+                    
+                    return (
+                        <div 
+                            key={order.id} 
+                            onClick={() => onEditOrder(order)}
+                            className={`
+                                relative p-2.5 rounded-md border cursor-pointer transition-all group
+                                ${getPriorityColor(order.priority)}
+                            `}
+                        >
+                            {/* Header: Priority & Order Number */}
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Badge className={`${getPriorityBadgeColor(order.priority)} text-[10px] px-1.5 py-0 h-4 border-0 text-white`}>
+                                        P{order.priority}
+                                    </Badge>
+                                    <span className="font-bold text-xs truncate select-text" title={order.order_number}>
+                                        {order.order_number}
+                                    </span>
+                                </div>
+                                {isLate && (
+                                    <div className="text-red-600 animate-pulse" title="Retrasada">
+                                        <AlertCircle className="w-3.5 h-3.5" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Product Name */}
+                            <div className="text-xs font-medium text-slate-800 dark:text-slate-200 line-clamp-2 mb-2 leading-snug" title={order.product_name}>
+                                {order.product_name || order.product_article_code || 'Sin nombre'}
+                            </div>
+
+                            {/* Footer: Dates & Info */}
+                            <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-black/5 dark:border-white/5">
+                                <div className="flex flex-col gap-0.5 text-[10px] text-slate-600 dark:text-slate-400">
+                                    {order.quantity && (
+                                        <span className="font-semibold">Cant: {order.quantity}</span>
+                                    )}
+                                    {order.committed_delivery_date && (
+                                        <span className={`flex items-center gap-1 ${isLate ? 'text-red-700 font-bold' : ''}`}>
+                                           {format(parseISO(order.committed_delivery_date), 'dd/MM')}
+                                        </span>
+                                    )}
+                                </div>
+                                
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity -mr-1 -mb-1"
+                                >
+                                    <Edit className="w-3 h-3" />
+                                </Button>
+                            </div>
+                        </div>
+                    );
+                    })
+                )}
               </div>
             </div>
           );
         })}
-      </CardContent>
+        </div>
+      </div>
     </Card>
   );
 }
