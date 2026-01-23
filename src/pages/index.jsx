@@ -264,9 +264,9 @@ function PagesContent() {
                 <Route path="/OrganizationalStructure" element={<OrganizationalStructure />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
-                {/* BrandingConfig already has a route above, but let's ensure it uses the correct component if defined elsewhere */}
-
-
+                <Route path="/AdvancedConfiguration" element={<Configuration />} />
+                <Route path="*" element={<Dashboard />} />
+                
                 </Routes>
         </Layout>
     );

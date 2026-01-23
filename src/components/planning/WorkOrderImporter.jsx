@@ -93,11 +93,23 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
 
       toast.loading(`Eliminando ${count} órdenes...`, { id: 'delete-all' });
       
-      // Delete in batches
-      const chunkSize = 20;
+      // Delete in batches with delay to avoid 429 errors
+      const chunkSize = 5; // Reduced from 20 to 5
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
       for (let i = 0; i < orders.length; i += chunkSize) {
         const batch = orders.slice(i, i + chunkSize);
+        
+        // Process batch
         await Promise.all(batch.map(o => base44.entities.WorkOrder.delete(o.id)));
+        
+        // Update toast progress
+        toast.loading(`Eliminando... (${Math.min(i + chunkSize, count)}/${count})`, { id: 'delete-all' });
+        
+        // Wait between batches to respect API rate limits
+        if (i + chunkSize < orders.length) {
+          await delay(1000); // 1 second delay between batches
+        }
       }
       
       toast.success(`${count} órdenes eliminadas correctamente.`, { id: 'delete-all' });
