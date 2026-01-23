@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +49,11 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
 
   const updateMutation = useMutation({
     mutationFn: (data) => {
+      const sala = data.ubicacion || machine.ubicacion || "";
+      const codigo = data.codigo || machine.codigo || "";
+      const nombre = data.nombre || machine.nombre || "";
+      const generatedDescription = `${sala} ${codigo} - ${nombre}`.trim();
+
       // Siempre actualizar en MachineMasterDatabase
       return base44.entities.MachineMasterDatabase.update(machine.id, {
         ...machine._raw,
@@ -57,7 +62,8 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
         estado_operativo: data.estado || machine.estado,
         estado_produccion: data.estado_produccion || machine.estado_produccion,
         estado_disponibilidad: data.estado_disponibilidad || machine.estado_disponibilidad,
-        orden_visualizacion: data.orden || machine.orden
+        orden_visualizacion: data.orden || machine.orden,
+        descripcion: generatedDescription
       });
     },
     onSuccess: () => {
@@ -364,12 +370,16 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                     </Select>
                   </div>
                   <div className="col-span-2 space-y-2">
-                    <Label>Descripción</Label>
+                    <Label>Descripción (Auto-generada)</Label>
                     <Textarea
                       value={formData.descripcion}
-                      onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                      readOnly
+                      className="bg-slate-100 dark:bg-slate-800 text-slate-500"
                       rows={3}
                     />
+                    <p className="text-xs text-slate-500">
+                      Formato: Sala Código - Nombre (Se actualiza automáticamente)
+                    </p>
                   </div>
                   <div className="col-span-2 space-y-2">
                     <Label>Programa de Mantenimiento</Label>
