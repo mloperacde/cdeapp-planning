@@ -574,8 +574,8 @@ export default function DepartmentPositionManager() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col p-2 gap-2 bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+    <div className="h-full flex flex-col gap-2 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
             <Settings2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />

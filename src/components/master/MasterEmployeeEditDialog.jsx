@@ -73,12 +73,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     staleTime: 0, // Forzar recarga cada vez
   });
 
-  const { data: departments = [] } = useQuery({
+  const { data: departments = [], isLoading: isLoadingDepts } = useQuery({
     queryKey: ['departments'],
     queryFn: () => base44.entities.Department.list(),
   });
 
-  const { data: positions = [] } = useQuery({
+  const { data: positions = [], isLoading: isLoadingPositions } = useQuery({
     queryKey: ['positions'],
     queryFn: () => base44.entities.Position.list(),
   });
@@ -592,12 +592,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <Select
                     value={formData.departamento || ""}
                     onValueChange={(value) => setFormData({ ...formData, departamento: value, puesto: "" })}
+                    disabled={isLoadingDepts}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar departamento" />
+                      <SelectValue placeholder={isLoadingDepts ? "Cargando departamentos..." : "Seleccionar departamento"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.length > 0 ? (
+                      {isLoadingDepts ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : departments.length > 0 ? (
                         departments.map((dept) => (
                           <SelectItem key={dept.id} value={dept.name}>
                             {dept.name}
@@ -615,13 +620,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <Select
                     value={formData.puesto || ""}
                     onValueChange={(value) => setFormData({ ...formData, puesto: value })}
-                    disabled={!formData.departamento}
+                    disabled={!formData.departamento || isLoadingPositions}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar puesto" />
+                      <SelectValue placeholder={isLoadingPositions ? "Cargando puestos..." : "Seleccionar puesto"} />
                     </SelectTrigger>
                     <SelectContent>
-                       {filteredPositions.length > 0 ? (
+                       {isLoadingPositions ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        </div>
+                       ) : filteredPositions.length > 0 ? (
                         filteredPositions.map((pos) => (
                           <SelectItem key={pos.id} value={pos.name}>
                             {pos.name}

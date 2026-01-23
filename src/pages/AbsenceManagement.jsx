@@ -425,8 +425,6 @@ export default function AbsenceManagementPage() {
             <AdvancedReportGenerator />
           </TabsContent>
         </Tabs>
-
-        {/* Form dialog managed by UnifiedAbsenceManager in list tab */}
       </div>
     </div>
   );

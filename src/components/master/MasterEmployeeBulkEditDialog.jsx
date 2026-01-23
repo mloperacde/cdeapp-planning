@@ -24,6 +24,7 @@ export default function MasterEmployeeBulkEditDialog({ selectedIds, open, onClos
       // Process in batches of 5 to avoid rate limiting
       const BATCH_SIZE = 5;
       const results = [];
+      const errors = [];
       
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
@@ -31,15 +32,33 @@ export default function MasterEmployeeBulkEditDialog({ selectedIds, open, onClos
         
         const batchPromises = batch.map(async (id) => {
           try {
-            return await base44.entities.EmployeeMasterDatabase.update(id, { departamento: newDept });
+            const result = await base44.entities.EmployeeMasterDatabase.update(id, { departamento: newDept });
+            return { status: 'fulfilled', value: result, id };
           } catch (err) {
             console.error(`Error actualizando empleado ${id}:`, err);
-            throw err; // Re-throw to trigger mutation error
+            return { status: 'rejected', reason: err, id };
           }
         });
         
         const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
+        
+        batchResults.forEach(res => {
+          if (res.status === 'fulfilled') {
+            results.push(res.value);
+          } else {
+            errors.push({ id: res.id, error: res.reason });
+          }
+        });
+      }
+      
+      if (errors.length > 0) {
+        console.error("Errores en actualización masiva:", errors);
+        // If all failed, throw error
+        if (results.length === 0) {
+           throw new Error(`Fallaron todas las actualizaciones (${errors.length})`);
+        }
+        // If partial failure, we might want to notify but still return success for the ones that worked
+        toast.warning(`Se actualizaron ${results.length} empleados, pero ${errors.length} fallaron.`);
       }
       
       return results;
@@ -54,7 +73,9 @@ export default function MasterEmployeeBulkEditDialog({ selectedIds, open, onClos
         queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       }, 500);
 
-      toast.success(`Se han actualizado ${selectedIds.length} empleados correctamente`);
+      if (data.length > 0) {
+          toast.success(`Se han actualizado ${data.length} empleados correctamente`);
+      }
       if (onSuccess) onSuccess();
       onClose();
     },
