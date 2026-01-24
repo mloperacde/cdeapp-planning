@@ -191,11 +191,23 @@ export default function WorkOrderImporter() {
   const SYSTEM_FIELDS = {
     order_number: { label: 'Número de Orden (Requerido)', required: true },
     machine_name: { label: 'Máquina (Requerido)', required: true },
-    process_name: { label: 'Proceso', required: false },
+    client: { label: 'Cliente', required: false },
+    part_number: { label: 'Artículo / Referencia', required: false },
+    quantity: { label: 'Cantidad / Mult x Cantidad', required: false },
+    description: { label: 'Nombre / Descripción', required: false },
+    part_status: { label: 'Edo. Art.', required: false },
+    material: { label: 'Material', required: false },
+    product: { label: 'Producto', required: false },
+    process_name: { label: 'Tipo / Proceso', required: false },
     priority: { label: 'Prioridad', required: false },
-    start_date: { label: 'Fecha Inicio', required: false },
+    status: { label: 'Estado', required: false },
+    cadence: { label: 'Cadencia', required: false },
+    start_date: { label: 'Fecha Inicio Límite', required: false },
+    modified_start_date: { label: 'Fecha Inicio Modificada', required: false },
     committed_delivery_date: { label: 'Fecha Entrega', required: false },
-    notes: { label: 'Notas', required: false }
+    new_delivery_date: { label: 'Nueva Fecha Entrega', required: false },
+    end_date: { label: 'Fecha Fin', required: false },
+    notes: { label: 'Observación', required: false }
   };
 
   // Validation & Processing State
@@ -290,11 +302,16 @@ export default function WorkOrderImporter() {
       const strategies = {
           order_number: ['orden', 'numero', 'order', 'wo', 'pedido'],
           machine_name: ['maquina', 'machine', 'recurso', 'equipo'],
+          client: ['cliente', 'customer', 'client', 'empresa'],
+          part_number: ['referencia', 'articulo', 'part', 'item', 'codigo'],
+          quantity: ['cantidad', 'qty', 'unidades', 'piezas'],
+          description: ['descripcion', 'description', 'detalle'],
           process_name: ['proceso', 'process', 'operacion'],
           priority: ['prioridad', 'priority', 'urgencia'],
+          status: ['estado', 'status', 'situacion'],
           start_date: ['inicio', 'start', 'fecha', 'comienzo'],
           committed_delivery_date: ['entrega', 'delivery', 'fin', 'compromiso'],
-          notes: ['notas', 'observaciones', 'comentarios', 'descripcion']
+          notes: ['notas', 'observaciones', 'comentarios']
       };
 
       // Invert strategy for header matching
@@ -370,6 +387,16 @@ export default function WorkOrderImporter() {
         }
     }
 
+    // Process Lookup
+    let processId = null;
+    if (mapped.process_name) {
+        const normProcess = mapped.process_name.toLowerCase().trim();
+        const process = processes.find(p => p.nombre.toLowerCase().trim() === normProcess);
+        if (process) {
+            processId = process.id;
+        }
+    }
+
     // Date Parsing
     const parseDate = (val) => {
         if (!val) return null;
@@ -387,10 +414,11 @@ export default function WorkOrderImporter() {
         ...mapped,
         originalIndex: index,
         machineId,
+        processId,
         startDate,
         deliveryDate: parseDate(mapped.committed_delivery_date),
         priority: mapped.priority || '3',
-        status: 'Pendiente',
+        status: mapped.status || 'Pendiente',
         _errors: errors
     };
   };
@@ -483,12 +511,24 @@ export default function WorkOrderImporter() {
                 await base44.entities.WorkOrder.create({
                     order_number: row.order_number,
                     machine_id: row.machineId,
-                    // process_id: TODO: Infer or default? For now left empty or handled by triggers
+                    process_id: row.processId,
+                    client: row.client,
+                    part_number: row.part_number,
+                    quantity: row.quantity,
+                    description: row.description,
                     priority: parseInt(row.priority) || 3,
                     start_date: row.startDate,
                     committed_delivery_date: row.deliveryDate,
                     status: row.status,
-                    notes: row.notes
+                    notes: row.notes,
+                    // New fields
+                    part_status: row.part_status,
+                    material: row.material,
+                    product: row.product,
+                    cadence: row.cadence,
+                    modified_start_date: row.modifiedStartDate,
+                    new_delivery_date: row.newDeliveryDate,
+                    end_date: row.endDate
                 });
                 successCount++;
             } catch (err) {
