@@ -22,17 +22,20 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
     committed_delivery_date: "",
     status: "Pendiente",
     notes: "",
-    client: "",
-    part_number: "",
+    
+    // New Schema Fields
+    client_name: "",
+    product_article_code: "",
     quantity: "",
-    description: "",
-    part_status: "",
-    material: "",
-    product: "",
-    cadence: "",
-    modified_start_date: "",
-    new_delivery_date: "",
-    end_date: ""
+    product_name: "",
+    part_status: "", // Not in schema, keeping in state for UI but will map to notes or special handling if needed? 
+                     // Wait, user provided list has "Edo. Art.", but schema didn't have it. 
+                     // I will keep using 'part_status' in state but map it correctly or keep it if I missed something.
+                     // Actually, I'll stick to the backend keys for the ones I know.
+    material_type: "",
+    product_category: "",
+    production_cadence: "",
+    planned_end_date: ""
   });
 
   useEffect(() => {
@@ -46,17 +49,15 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         committed_delivery_date: orderToEdit.committed_delivery_date || "",
         status: orderToEdit.status,
         notes: orderToEdit.notes || "",
-        client: orderToEdit.client || "",
-        part_number: orderToEdit.part_number || "",
+        
+        client_name: orderToEdit.client_name || orderToEdit.client || "",
+        product_article_code: orderToEdit.product_article_code || orderToEdit.part_number || "",
         quantity: orderToEdit.quantity || "",
-        description: orderToEdit.description || "",
-        part_status: orderToEdit.part_status || "",
-        material: orderToEdit.material || "",
-        product: orderToEdit.product || "",
-        cadence: orderToEdit.cadence || "",
-        modified_start_date: orderToEdit.modified_start_date || "",
-        new_delivery_date: orderToEdit.new_delivery_date || "",
-        end_date: orderToEdit.end_date || ""
+        product_name: orderToEdit.product_name || orderToEdit.description || "",
+        material_type: orderToEdit.material_type || orderToEdit.material || "",
+        product_category: orderToEdit.product_category || orderToEdit.product || "",
+        production_cadence: orderToEdit.production_cadence || orderToEdit.cadence || "",
+        planned_end_date: orderToEdit.planned_end_date || orderToEdit.end_date || ""
       });
     } else {
       setFormData({
@@ -68,17 +69,14 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         committed_delivery_date: "",
         status: "Pendiente",
         notes: "",
-        client: "",
-        part_number: "",
+        client_name: "",
+        product_article_code: "",
         quantity: "",
-        description: "",
-        part_status: "",
-        material: "",
-        product: "",
-        cadence: "",
-        modified_start_date: "",
-        new_delivery_date: "",
-        end_date: ""
+        product_name: "",
+        material_type: "",
+        product_category: "",
+        production_cadence: "",
+        planned_end_date: ""
       });
     }
   }, [orderToEdit, open]);
@@ -114,9 +112,31 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
   const saveMutation = useMutation({
     mutationFn: (data) => {
       const payload = {
-        ...data,
-        priority: parseInt(data.priority)
+        order_number: data.order_number,
+        machine_id: data.machine_id,
+        process_id: data.process_id,
+        priority: parseInt(data.priority),
+        status: data.status,
+        start_date: data.start_date,
+        committed_delivery_date: data.committed_delivery_date,
+        planned_end_date: data.planned_end_date,
+        notes: data.notes,
+        
+        // Backend Schema Fields
+        client_name: data.client_name,
+        product_article_code: data.product_article_code,
+        quantity: data.quantity ? parseInt(data.quantity) : null,
+        product_name: data.product_name,
+        material_type: data.material_type,
+        product_category: data.product_category,
+        production_cadence: data.production_cadence ? parseFloat(data.production_cadence) : null,
       };
+
+      // Append part_status to notes if present and not already there
+      if (data.part_status) {
+         payload.notes = (payload.notes ? payload.notes + '\n' : '') + `Edo. Art.: ${data.part_status}`;
+      }
+
       if (orderToEdit) {
         return base44.entities.WorkOrder.update(orderToEdit.id, payload);
       }
@@ -254,11 +274,11 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Cliente</Label>
-                    <Input value={formData.client} onChange={(e) => setFormData({...formData, client: e.target.value})} />
+                    <Input value={formData.client_name} onChange={(e) => setFormData({...formData, client_name: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                     <Label>Artículo / Referencia</Label>
-                    <Input value={formData.part_number} onChange={(e) => setFormData({...formData, part_number: e.target.value})} />
+                    <Input value={formData.product_article_code} onChange={(e) => setFormData({...formData, product_article_code: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                     <Label>Cantidad</Label>
@@ -266,35 +286,27 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
                 </div>
                 <div className="space-y-2">
                     <Label>Descripción / Nombre</Label>
-                    <Input value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+                    <Input value={formData.product_name} onChange={(e) => setFormData({...formData, product_name: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                    <Label>Estado Artículo</Label>
+                    <Label>Estado Artículo (se agregará a notas)</Label>
                     <Input value={formData.part_status} onChange={(e) => setFormData({...formData, part_status: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                     <Label>Material</Label>
-                    <Input value={formData.material} onChange={(e) => setFormData({...formData, material: e.target.value})} />
+                    <Input value={formData.material_type} onChange={(e) => setFormData({...formData, material_type: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                     <Label>Producto</Label>
-                    <Input value={formData.product} onChange={(e) => setFormData({...formData, product: e.target.value})} />
+                    <Input value={formData.product_category} onChange={(e) => setFormData({...formData, product_category: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                     <Label>Cadencia</Label>
-                    <Input value={formData.cadence} onChange={(e) => setFormData({...formData, cadence: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Inicio Modificado</Label>
-                    <Input type="date" value={formData.modified_start_date} onChange={(e) => setFormData({...formData, modified_start_date: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Nueva Entrega</Label>
-                    <Input type="date" value={formData.new_delivery_date} onChange={(e) => setFormData({...formData, new_delivery_date: e.target.value})} />
+                    <Input value={formData.production_cadence} onChange={(e) => setFormData({...formData, production_cadence: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                     <Label>Fecha Fin</Label>
-                    <Input type="date" value={formData.end_date} onChange={(e) => setFormData({...formData, end_date: e.target.value})} />
+                    <Input type="date" value={formData.planned_end_date} onChange={(e) => setFormData({...formData, planned_end_date: e.target.value})} />
                 </div>
             </div>
           </div>

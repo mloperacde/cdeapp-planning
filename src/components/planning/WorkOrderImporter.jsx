@@ -418,9 +418,10 @@ export default function WorkOrderImporter() {
         
         const strVal = String(val).trim();
 
-        // 2. Handle DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
-        // Supports 2 or 4 digit years
-        const dmyPattern = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/;
+        // 2. Handle DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY (Optional time part supported)
+        // Matches start of string, captures Day, Separator, Month, Separator, Year
+        // Allows optional time part after space (e.g. "26/01/2026 17:00")
+        const dmyPattern = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s.*)?$/;
         const dmyMatch = strVal.match(dmyPattern);
         if (dmyMatch) {
             let day = parseInt(dmyMatch[1]);
@@ -559,26 +560,33 @@ export default function WorkOrderImporter() {
         await Promise.all(batch.map(async (row) => {
             try {
                 await base44.entities.WorkOrder.create({
+                    // Required Standard Fields
                     order_number: row.order_number,
                     machine_id: row.machineId,
                     process_id: row.processId,
-                    client: row.client,
-                    part_number: row.part_number,
-                    quantity: row.quantity,
-                    description: row.description,
                     priority: parseInt(row.priority) || 3,
-                    start_date: row.startDate,
-                    committed_delivery_date: row.deliveryDate,
                     status: row.status,
+                    
+                    // Date Logic: Prefer modified/new dates if available
+                    start_date: row.modifiedStartDate || row.startDate,
+                    committed_delivery_date: row.newDeliveryDate || row.deliveryDate,
+                    planned_end_date: row.endDate,
+                    
+                    // Extended Fields (Backend Schema)
+                    client_name: row.client,
+                    product_article_code: row.part_number,
+                    quantity: row.quantity,
+                    product_name: row.description,
+                    material_type: row.material,
+                    product_category: row.product,
+                    production_cadence: parseQuantity(row.cadence), // Ensure number
+                    
+                    // Notes & Other
                     notes: row.notes,
-                    // New fields
-                    part_status: row.part_status,
-                    material: row.material,
-                    product: row.product,
-                    cadence: row.cadence,
-                    modified_start_date: row.modifiedStartDate,
-                    new_delivery_date: row.newDeliveryDate,
-                    end_date: row.endDate
+                    
+                    // Fields without direct backend match (or complex mapping) -> Append to notes
+                    // "Edo. Art." (part_status)
+                    ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
                 });
                 successCount++;
             } catch (err) {
