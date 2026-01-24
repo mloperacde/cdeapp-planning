@@ -21,7 +21,18 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
     start_date: "",
     committed_delivery_date: "",
     status: "Pendiente",
-    notes: ""
+    notes: "",
+    client: "",
+    part_number: "",
+    quantity: "",
+    description: "",
+    part_status: "",
+    material: "",
+    product: "",
+    cadence: "",
+    modified_start_date: "",
+    new_delivery_date: "",
+    end_date: ""
   });
 
   useEffect(() => {
@@ -34,7 +45,18 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         start_date: orderToEdit.start_date || "",
         committed_delivery_date: orderToEdit.committed_delivery_date || "",
         status: orderToEdit.status,
-        notes: orderToEdit.notes || ""
+        notes: orderToEdit.notes || "",
+        client: orderToEdit.client || "",
+        part_number: orderToEdit.part_number || "",
+        quantity: orderToEdit.quantity || "",
+        description: orderToEdit.description || "",
+        part_status: orderToEdit.part_status || "",
+        material: orderToEdit.material || "",
+        product: orderToEdit.product || "",
+        cadence: orderToEdit.cadence || "",
+        modified_start_date: orderToEdit.modified_start_date || "",
+        new_delivery_date: orderToEdit.new_delivery_date || "",
+        end_date: orderToEdit.end_date || ""
       });
     } else {
       setFormData({
@@ -45,7 +67,18 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         start_date: new Date().toISOString().split('T')[0],
         committed_delivery_date: "",
         status: "Pendiente",
-        notes: ""
+        notes: "",
+        client: "",
+        part_number: "",
+        quantity: "",
+        description: "",
+        part_status: "",
+        material: "",
+        product: "",
+        cadence: "",
+        modified_start_date: "",
+        new_delivery_date: "",
+        end_date: ""
       });
     }
   }, [orderToEdit, open]);
@@ -213,6 +246,56 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
                 onChange={(e) => setFormData({...formData, committed_delivery_date: e.target.value})}
                 required
               />
+            </div>
+          </div>
+
+          <div className="border-t pt-4 mt-4">
+            <h4 className="text-sm font-medium mb-3">Detalles Adicionales</h4>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Cliente</Label>
+                    <Input value={formData.client} onChange={(e) => setFormData({...formData, client: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Artículo / Referencia</Label>
+                    <Input value={formData.part_number} onChange={(e) => setFormData({...formData, part_number: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Cantidad</Label>
+                    <Input type="number" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Descripción / Nombre</Label>
+                    <Input value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Estado Artículo</Label>
+                    <Input value={formData.part_status} onChange={(e) => setFormData({...formData, part_status: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Material</Label>
+                    <Input value={formData.material} onChange={(e) => setFormData({...formData, material: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Producto</Label>
+                    <Input value={formData.product} onChange={(e) => setFormData({...formData, product: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Cadencia</Label>
+                    <Input value={formData.cadence} onChange={(e) => setFormData({...formData, cadence: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Inicio Modificado</Label>
+                    <Input type="date" value={formData.modified_start_date} onChange={(e) => setFormData({...formData, modified_start_date: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Nueva Entrega</Label>
+                    <Input type="date" value={formData.new_delivery_date} onChange={(e) => setFormData({...formData, new_delivery_date: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Fecha Fin</Label>
+                    <Input type="date" value={formData.end_date} onChange={(e) => setFormData({...formData, end_date: e.target.value})} />
+                </div>
             </div>
           </div>
 

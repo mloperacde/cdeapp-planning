@@ -522,32 +522,27 @@ export default function WorkOrderImporter() {
         
         await Promise.all(batch.map(async (row) => {
             try {
-                // Construct extended notes with fields not supported by backend yet
-                const extraFields = [
-                    row.client && `Cliente: ${row.client}`,
-                    row.part_number && `Artículo: ${row.part_number}`,
-                    row.quantity && `Cantidad: ${row.quantity}`,
-                    row.description && `Descripción: ${row.description}`,
-                    row.part_status && `Edo. Art.: ${row.part_status}`,
-                    row.material && `Material: ${row.material}`,
-                    row.product && `Producto: ${row.product}`,
-                    row.cadence && `Cadencia: ${row.cadence}`,
-                    row.modifiedStartDate && `Inicio Modificado: ${row.modifiedStartDate}`,
-                    row.newDeliveryDate && `Nueva Entrega: ${row.newDeliveryDate}`,
-                    row.endDate && `Fecha Fin: ${row.endDate}`
-                ].filter(Boolean).join('\n');
-
-                const finalNotes = [row.notes, extraFields].filter(Boolean).join('\n\n-- Datos Importados --\n');
-
                 await base44.entities.WorkOrder.create({
                     order_number: row.order_number,
                     machine_id: row.machineId,
                     process_id: row.processId,
+                    client: row.client,
+                    part_number: row.part_number,
+                    quantity: row.quantity,
+                    description: row.description,
                     priority: parseInt(row.priority) || 3,
                     start_date: row.startDate,
                     committed_delivery_date: row.deliveryDate,
                     status: row.status,
-                    notes: finalNotes
+                    notes: row.notes,
+                    // New fields
+                    part_status: row.part_status,
+                    material: row.material,
+                    product: row.product,
+                    cadence: row.cadence,
+                    modified_start_date: row.modifiedStartDate,
+                    new_delivery_date: row.newDeliveryDate,
+                    end_date: row.endDate
                 });
                 successCount++;
             } catch (err) {
