@@ -129,7 +129,12 @@ export default function MachineMasterPage() {
     return result;
   }, [machines, filters]);
 
-  const { currentPage, totalPages, paginatedItems, nextPage, prevPage } = usePagination(filteredMachines, 12);
+  // const { currentPage, totalPages, paginatedItems, nextPage, prevPage } = usePagination(filteredMachines, 12);
+  const paginatedItems = filteredMachines;
+  const totalPages = 1;
+  const currentPage = 1;
+  const nextPage = () => {};
+  const prevPage = () => {};
 
   const tiposUnicos = [...new Set(machines.map(m => m.tipo).filter(Boolean))];
 
@@ -255,19 +260,6 @@ export default function MachineMasterPage() {
             <div className="text-xs text-slate-500 font-medium px-2">
                 Total: <span className="text-slate-900 dark:text-slate-200">{filteredMachines.length}</span> máquinas
             </div>
-            {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">Pág {currentPage} de {totalPages}</span>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={prevPage} disabled={currentPage === 1}>
-                        <ChevronDown className="h-3 w-3 rotate-90" />
-                    </Button>
-                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={nextPage} disabled={currentPage === totalPages}>
-                        <ChevronDown className="h-3 w-3 -rotate-90" />
-                    </Button>
-                  </div>
-                </div>
-            )}
         </div>
         <div className="flex-1 overflow-auto">
             {isLoading ? (

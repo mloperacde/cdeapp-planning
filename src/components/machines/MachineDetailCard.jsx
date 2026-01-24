@@ -23,6 +23,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
+    nombre_maquina: machine.nombre_maquina || machine.nombre || "",
     nombre: machine.nombre || "",
     codigo: machine.codigo || "",
     marca: machine.marca || "",
@@ -41,21 +42,30 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
     archivos_adjuntos: machine.archivos_adjuntos || [],
   });
 
-  // Actualizar descripción automáticamente cuando cambian los campos relacionados
+  // Actualizar nombre compuesto y descripción automáticamente cuando cambian los campos relacionados
   useEffect(() => {
     if (editMode) {
       const sala = formData.ubicacion || "";
       const codigo = formData.codigo || "";
-      const nombre = formData.nombre || "";
-      const newDescription = `${sala} ${codigo} - ${nombre}`.trim();
+      const nombreCorto = formData.nombre_maquina || "";
       
-      // Solo actualizar si la descripción generada es diferente
-      // y si queremos forzar el formato (o si el campo está vacío)
-      if (formData.descripcion !== newDescription) {
-        setFormData(prev => ({ ...prev, descripcion: newDescription }));
+      // Formato: [Sala] [Codigo] - [Nombre Corto]
+      // Ejemplo: "Sala 1 M001 - Torno CNC"
+      const parts = [sala, codigo].filter(Boolean);
+      const prefix = parts.join(" ");
+      const newFullName = prefix ? `${prefix} - ${nombreCorto}` : nombreCorto;
+      const cleanName = newFullName.trim();
+      
+      // Actualizar nombre (largo) y descripción si han cambiado
+      if (formData.nombre !== cleanName || formData.descripcion !== cleanName) {
+        setFormData(prev => ({ 
+          ...prev, 
+          nombre: cleanName,
+          descripcion: cleanName
+        }));
       }
     }
-  }, [formData.ubicacion, formData.codigo, formData.nombre, editMode]);
+  }, [formData.ubicacion, formData.codigo, formData.nombre_maquina, editMode]);
 
   const { data: maintenances } = useQuery({
     queryKey: ['maintenances', machine.id],
@@ -65,21 +75,21 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
 
   const updateMutation = useMutation({
     mutationFn: (data) => {
-      const sala = data.ubicacion || machine.ubicacion || "";
-      const codigo = data.codigo || machine.codigo || "";
-      const nombre = data.nombre || machine.nombre || "";
-      const generatedDescription = `${sala} ${codigo} - ${nombre}`.trim();
-
+      // Los campos nombre y descripcion ya vienen calculados del useEffect
+      // pero por seguridad recalculamos si es necesario o confiamos en data
+      
       // Siempre actualizar en MachineMasterDatabase
       return base44.entities.MachineMasterDatabase.update(machine.id, {
         ...machine._raw,
         ...data,
+        nombre_maquina: data.nombre_maquina, // Nuevo campo corto
+        nombre: data.nombre, // Campo largo compuesto
         codigo_maquina: data.codigo || machine.codigo,
         estado_operativo: data.estado || machine.estado,
         estado_produccion: data.estado_produccion || machine.estado_produccion,
         estado_disponibilidad: data.estado_disponibilidad || machine.estado_disponibilidad,
         orden_visualizacion: data.orden || machine.orden,
-        descripcion: generatedDescription
+        descripcion: data.descripcion // Campo largo compuesto
       });
     },
     onSuccess: () => {
@@ -94,7 +104,9 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
     const desiredOrder = Math.max(1, Number(formData.orden || 1));
     if (!machine.id || isNew) {
       base44.entities.MachineMasterDatabase.create({
-        nombre: formData.nombre,
+        nombre_maquina: formData.nombre_maquina,
+        nombre: formData.nombre, // Ya calculado
+        descripcion: formData.descripcion, // Ya calculado
         codigo_maquina: formData.codigo,
         marca: formData.marca || "",
         modelo: formData.modelo || "",
@@ -131,7 +143,9 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
         const newIndex = desiredOrder - 1;
         if (idx >= 0) {
           const [moved] = ordered.splice(idx, 1);
+          moved.nombre_maquina = formData.nombre_maquina;
           moved.nombre = formData.nombre;
+          moved.descripcion = formData.descripcion;
           moved.codigo_maquina = formData.codigo;
           moved.marca = formData.marca || "";
           moved.modelo = formData.modelo || "";
@@ -148,7 +162,9 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
           orden_visualizacion: i + 1 
         })));
         await base44.entities.MachineMasterDatabase.update(machine.id, {
+          nombre_maquina: formData.nombre_maquina,
           nombre: formData.nombre,
+          descripcion: formData.descripcion,
           codigo_maquina: formData.codigo,
           marca: formData.marca || "",
           modelo: formData.modelo || "",
@@ -290,10 +306,11 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
               {editMode ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Nombre</Label>
+                    <Label>Nombre Máquina</Label>
                     <Input
-                      value={formData.nombre}
-                      onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                      value={formData.nombre_maquina}
+                      onChange={(e) => setFormData({ ...formData, nombre_maquina: e.target.value })}
+                      placeholder="Ej: Torno CNC 1"
                     />
                   </div>
                   <div className="space-y-2">
