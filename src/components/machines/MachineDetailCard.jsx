@@ -304,119 +304,128 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
             </CardHeader>
             <CardContent>
               {editMode ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nombre Máquina</Label>
+                <div className="space-y-6">
+                  {/* Identificador Principal - Full Width */}
+                  <div className="space-y-2 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
+                    <Label className="text-base font-semibold text-blue-600 dark:text-blue-400">
+                      Descripción (Identificador Único)
+                    </Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                      Este campo es el identificador principal del sistema y se genera automáticamente: [Ubicación] [Código] - [Nombre Máquina]
+                    </p>
                     <Input
-                      value={formData.nombre_maquina}
-                      onChange={(e) => setFormData({ ...formData, nombre_maquina: e.target.value })}
-                      placeholder="Ej: Torno CNC 1"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Código</Label>
-                    <Input
-                      value={formData.codigo}
-                      onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Marca</Label>
-                    <Input
-                      value={formData.marca}
-                      onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Modelo</Label>
-                    <Input
-                      value={formData.modelo}
-                      onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Número de Serie</Label>
-                    <Input
-                      value={formData.numero_serie}
-                      onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Fecha de Compra</Label>
-                    <Input
-                      type="date"
-                      value={formData.fecha_compra}
-                      onChange={(e) => setFormData({ ...formData, fecha_compra: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <Input
-                      value={formData.tipo}
-                      onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ubicación</Label>
-                    <Input
-                      value={formData.ubicacion}
-                      onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ordenación</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={formData.orden}
-                      onChange={(e) => setFormData({ ...formData, orden: Number(e.target.value || 1) })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Estado de Producción</Label>
-                    <Select
-                      value={formData.estado_produccion}
-                      onValueChange={(v) => setFormData({ ...formData, estado_produccion: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="En cambio">En cambio</SelectItem>
-                        <SelectItem value="En producción">En producción</SelectItem>
-                        <SelectItem value="Pendiente de Inicio">Pendiente de Inicio</SelectItem>
-                        <SelectItem value="Sin Producción">Sin Producción</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Disponibilidad</Label>
-                    <Select
-                      value={formData.estado_disponibilidad}
-                      onValueChange={(v) => setFormData({ ...formData, estado_disponibilidad: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Disponible">Disponible</SelectItem>
-                        <SelectItem value="No disponible">No disponible</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Descripción (Auto-generada)</Label>
-                    <Textarea
                       value={formData.descripcion}
                       readOnly
-                      className="bg-slate-100 dark:bg-slate-800 text-slate-500"
-                      rows={3}
+                      className="bg-white dark:bg-slate-900 font-medium text-lg border-blue-200 dark:border-blue-800 text-slate-700 dark:text-slate-200"
                     />
-                    <p className="text-xs text-slate-500">
-                      Formato: Sala Código - Nombre (Se actualiza automáticamente)
-                    </p>
                   </div>
-                  <div className="col-span-2 space-y-2">
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nombre Máquina</Label>
+                      <Input
+                        value={formData.nombre_maquina}
+                        onChange={(e) => setFormData({ ...formData, nombre_maquina: e.target.value })}
+                        placeholder="Ej: Torno CNC 1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Código</Label>
+                      <Input
+                        value={formData.codigo}
+                        onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                        placeholder="Ej: M001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Ubicación</Label>
+                      <Input
+                        value={formData.ubicacion}
+                        onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
+                        placeholder="Ej: Sala 1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tipo</Label>
+                      <Input
+                        value={formData.tipo}
+                        onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                        placeholder="Ej: Torno"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Marca</Label>
+                      <Input
+                        value={formData.marca}
+                        onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Modelo</Label>
+                      <Input
+                        value={formData.modelo}
+                        onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Número de Serie</Label>
+                      <Input
+                        value={formData.numero_serie}
+                        onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fecha de Compra</Label>
+                      <Input
+                        type="date"
+                        value={formData.fecha_compra}
+                        onChange={(e) => setFormData({ ...formData, fecha_compra: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estado de Producción</Label>
+                      <Select
+                        value={formData.estado_produccion}
+                        onValueChange={(v) => setFormData({ ...formData, estado_produccion: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="En cambio">En cambio</SelectItem>
+                          <SelectItem value="En producción">En producción</SelectItem>
+                          <SelectItem value="Pendiente de Inicio">Pendiente de Inicio</SelectItem>
+                          <SelectItem value="Sin Producción">Sin Producción</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Disponibilidad</Label>
+                      <Select
+                        value={formData.estado_disponibilidad}
+                        onValueChange={(v) => setFormData({ ...formData, estado_disponibilidad: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Disponible">Disponible</SelectItem>
+                          <SelectItem value="No disponible">No disponible</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Ordenación</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={formData.orden}
+                        onChange={(e) => setFormData({ ...formData, orden: Number(e.target.value || 1) })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Programa de Mantenimiento</Label>
                     <Textarea
                       value={formData.programa_mantenimiento}
@@ -427,48 +436,69 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border dark:bg-slate-800/50">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <div className="space-y-6">
+                  <div className="bg-slate-50 p-4 rounded-lg border border-blue-100 dark:bg-slate-800/50 dark:border-slate-700">
+                    <Label className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1 block">
+                      Descripción (Identificador)
+                    </Label>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                       {machine.descripcion || machine.nombre}
                     </h3>
-                    <p className="text-sm text-slate-500 mt-1">
-                      {machine.codigo} - {machine.nombre}
-                    </p>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="font-semibold">Marca:</span> {machine.marca || 'N/A'}</div>
-                    <div><span className="font-semibold">Modelo:</span> {machine.modelo || 'N/A'}</div>
-                  <div><span className="font-semibold">Número de Serie:</span> {machine.numero_serie || 'N/A'}</div>
-                  <div>
-                    <span className="font-semibold">Fecha de Compra:</span>{" "}
-                    {machine.fecha_compra ? format(new Date(machine.fecha_compra), "dd/MM/yyyy", { locale: es }) : 'N/A'}
+                  <div className="grid grid-cols-2 gap-6 text-sm">
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Nombre Máquina</span>
+                      <p className="font-medium">{machine.nombre_maquina || machine.nombre?.split('-').pop()?.trim() || "-"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Código</span>
+                      <p className="font-medium font-mono">{machine.codigo || "-"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Ubicación</span>
+                      <p className="font-medium">{machine.ubicacion || "-"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Tipo</span>
+                      <p className="font-medium">{machine.tipo || "-"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Marca / Modelo</span>
+                      <p className="font-medium">{machine.marca || "-"} {machine.modelo ? `/ ${machine.modelo}` : ""}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Nº Serie</span>
+                      <p className="font-medium font-mono">{machine.numero_serie || "-"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Fecha Compra</span>
+                      <p className="font-medium">
+                        {machine.fecha_compra ? format(new Date(machine.fecha_compra), "dd/MM/yyyy", { locale: es }) : '-'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Estado Producción</span>
+                      <div><Badge variant="outline">{machine.estado_produccion || 'Sin Producción'}</Badge></div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Disponibilidad</span>
+                      <div>
+                        <Badge variant={machine.estado_disponibilidad === 'Disponible' ? 'default' : 'destructive'}>
+                          {machine.estado_disponibilidad || 'Disponible'}
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
-                  <div><span className="font-semibold">Tipo:</span> {machine.tipo || 'N/A'}</div>
-                  <div><span className="font-semibold">Ubicación:</span> {machine.ubicacion || 'N/A'}</div>
-                  <div className="col-span-2">
-                    <span className="font-semibold">Estado:</span>{" "}
-                    <Badge className={machine.estado === "Disponible" ? "bg-green-600" : "bg-red-600"}>
-                      {machine.estado}
-                    </Badge>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="font-semibold">Estado de Producción:</span>{" "}
-                    <Badge>{machine.estado_produccion || 'Sin Producción'}</Badge>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="font-semibold">Disponibilidad:</span>{" "}
-                    <Badge>{machine.estado_disponibilidad || 'Disponible'}</Badge>
-                  </div>
+
                   {machine.programa_mantenimiento && (
-                    <div className="col-span-2">
-                      <span className="font-semibold">Programa de Mantenimiento:</span> {machine.programa_mantenimiento}
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-xs text-slate-500 uppercase font-semibold block mb-1">Programa de Mantenimiento</span>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{machine.programa_mantenimiento}</p>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
             </CardContent>
           </Card>
 

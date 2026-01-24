@@ -29,21 +29,41 @@ function MachineResolverDialog({ open, onOpenChange, machineName, machines, onRe
   const [selectedId, setSelectedId] = useState("");
   
   // Create Form
-  const [newName, setNewName] = useState("");
+  const [newName, setNewName] = useState(""); // This will be "Nombre Máquina" (Short)
   const [newCode, setNewCode] = useState("");
+  const [newLocation, setNewLocation] = useState(""); // Ubicación
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Computed Description Preview
+  const previewDescription = useMemo(() => {
+    const parts = [newLocation, newCode].filter(Boolean);
+    const prefix = parts.join(" ");
+    return prefix ? `${prefix} - ${newName}` : newName;
+  }, [newLocation, newCode, newName]);
 
   useEffect(() => {
     if (open && machineName) {
-        // Auto-fill create form with best guess
-        setNewName(machineName);
-        // Try to extract code if format is "Code - Name"
+        // Try to parse "Location Code - Name" or "Code - Name"
+        // This is a heuristic.
         const parts = machineName.split('-');
-        if (parts.length > 1 && parts[0].trim().length < 10) {
-            setNewCode(parts[0].trim());
-            setNewName(parts.slice(1).join('-').trim());
+        if (parts.length > 1) {
+             // Assume last part is name
+             setNewName(parts[parts.length - 1].trim());
+             
+             // First part might be "Location Code" or just "Code"
+             const prefix = parts.slice(0, parts.length - 1).join('-').trim();
+             const prefixParts = prefix.split(' ');
+             if (prefixParts.length > 1) {
+                 setNewCode(prefixParts[prefixParts.length - 1]);
+                 setNewLocation(prefixParts.slice(0, prefixParts.length - 1).join(' '));
+             } else {
+                 setNewCode(prefix);
+                 setNewLocation("");
+             }
         } else {
-            setNewCode("");
+             setNewName(machineName);
+             setNewCode("");
+             setNewLocation("");
         }
         setMode('select');
         setSelectedId("");
@@ -59,8 +79,13 @@ function MachineResolverDialog({ open, onOpenChange, machineName, machines, onRe
          
          try {
              setIsSubmitting(true);
-             // Call resolve with create data - the parent handles the actual API call
-             await onResolve('create', { name: newName, code: newCode });
+             // Call resolve with create data
+             await onResolve('create', { 
+                 nombre_maquina: newName, 
+                 code: newCode, 
+                 location: newLocation,
+                 descripcion: previewDescription
+             });
          } catch (error) {
              console.error(error);
              toast.error("Error al crear máquina");
@@ -98,7 +123,7 @@ function MachineResolverDialog({ open, onOpenChange, machineName, machines, onRe
                     <ScrollArea className="h-[200px]">
                         {machines.map(m => (
                             <SelectItem key={m.id} value={m.id}>
-                                {m.codigo ? `${m.codigo} - ` : ''}{m.nombre}
+                                {m.descripcion || m.nombre}
                             </SelectItem>
                         ))}
                     </ScrollArea>
@@ -110,14 +135,26 @@ function MachineResolverDialog({ open, onOpenChange, machineName, machines, onRe
           <TabsContent value="create" className="space-y-4 py-4">
              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label>Código</Label>
-                    <Input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="Ej. 123" />
+                    <Label>Ubicación</Label>
+                    <Input value={newLocation} onChange={e => setNewLocation(e.target.value)} placeholder="Ej. Sala 1" />
                 </div>
                 <div className="space-y-2">
-                    <Label>Nombre</Label>
-                    <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nombre de máquina" />
+                    <Label>Código</Label>
+                    <Input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="Ej. M01" />
                 </div>
              </div>
+             <div className="space-y-2">
+                <Label>Nombre Máquina (Corto)</Label>
+                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ej. Torno CNC" />
+             </div>
+             
+             <div className="space-y-2 p-3 bg-slate-50 rounded border">
+                <Label className="text-xs text-muted-foreground">Vista Previa (Identificador Único)</Label>
+                <div className="font-mono text-sm font-medium text-blue-700">
+                    {previewDescription}
+                </div>
+             </div>
+
              <div className="text-xs text-muted-foreground bg-blue-50 p-2 rounded flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-blue-500" />
                 Se creará una nueva máquina activa en el sistema.
@@ -294,17 +331,19 @@ export default function WorkOrderImporter() {
             const normalize = s => s?.toLowerCase().trim();
             const search = normalize(rawMachineName);
             
-            // Search Priority: Description > Code > Name > Composite
+            // Search Priority: Description (Primary ID) > Code > Short Name > Long Name
+            // El usuario especificó que la descripción es el identificador principal para comparar en importaciones.
             let match = machines.find(m => 
                 normalize(m.descripcion) === search ||
                 normalize(m.codigo) === search || 
-                normalize(m.nombre) === search ||
-                normalize(`${m.codigo} - ${m.nombre}`) === search
+                normalize(m.nombre_maquina) === search || 
+                normalize(m.nombre) === search
             );
 
-            // "Code - Name" parsing logic
+            // "Code - Name" parsing logic (Legacy or heuristic)
             if (!match && rawMachineName.includes('-')) {
                 const parts = rawMachineName.split('-');
+                // Try to match the code part (first part)
                 const codePart = normalize(parts[0]);
                 match = machines.find(m => normalize(m.codigo) === codePart);
             }
@@ -371,13 +410,18 @@ export default function WorkOrderImporter() {
         toast.success(`Asignado correctamente`);
         setResolverOpen(false);
     } else {
-        // action === 'create', data is { name, code }
+        // action === 'create', data is { nombre_maquina, code, location, descripcion }
         try {
             const newMachine = await base44.entities.MachineMasterDatabase.create({
-                nombre: data.name,
+                nombre_maquina: data.nombre_maquina,
+                nombre: data.descripcion, // Long name is same as description
                 codigo: data.code,
+                ubicacion: data.location,
                 activo: true,
-                descripcion: "Importado automáticamente"
+                descripcion: data.descripcion,
+                estado_operativo: "Disponible",
+                estado_produccion: "Sin Producción",
+                estado_disponibilidad: "Disponible"
             });
             
             if (newMachine && newMachine.id) {
