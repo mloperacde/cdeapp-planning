@@ -218,10 +218,10 @@ export default function WorkOrderImporter() {
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = utils.sheet_to_json(worksheet, { header: 1 });
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
                 if (jsonData.length > 0) {
                     const headers = jsonData[0];
