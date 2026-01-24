@@ -185,15 +185,18 @@ export default function WorkOrderImporter() {
   const [rawData, setRawData] = useState([]);
   
   // Mapping State
-  const [columnMapping, setColumnMapping] = useState({
-    order_number: '',
-    machine_name: '',
-    process_name: '', // Optional, or derive from machine
-    priority: '',
-    start_date: '',
-    committed_delivery_date: '',
-    notes: ''
-  });
+  // Map file headers to system fields: { "ColumnaArchivo": "system_field_key" }
+  const [columnMapping, setColumnMapping] = useState({});
+
+  const SYSTEM_FIELDS = {
+    order_number: { label: 'Número de Orden (Requerido)', required: true },
+    machine_name: { label: 'Máquina (Requerido)', required: true },
+    process_name: { label: 'Proceso', required: false },
+    priority: { label: 'Prioridad', required: false },
+    start_date: { label: 'Fecha Inicio', required: false },
+    committed_delivery_date: { label: 'Fecha Entrega', required: false },
+    notes: { label: 'Notas', required: false }
+  };
 
   // Validation & Processing State
   const [validatedData, setValidatedData] = useState([]);
@@ -281,7 +284,7 @@ export default function WorkOrderImporter() {
   };
 
   const autoMapColumns = (headers) => {
-      const newMapping = { ...columnMapping };
+      const newMapping = {};
       const normalize = (s) => s?.toLowerCase().replace(/[^a-z0-9]/g, '');
       
       const strategies = {
@@ -294,10 +297,20 @@ export default function WorkOrderImporter() {
           notes: ['notas', 'observaciones', 'comentarios', 'descripcion']
       };
 
-      Object.keys(strategies).forEach(key => {
-          const match = headers.find(h => strategies[key].some(term => normalize(h).includes(term)));
-          if (match) newMapping[key] = match;
+      // Invert strategy for header matching
+      headers.forEach(header => {
+          let bestMatch = 'ignore';
+          const normHeader = normalize(header);
+          
+          for (const [field, terms] of Object.entries(strategies)) {
+              if (terms.some(term => normHeader.includes(term))) {
+                  bestMatch = field;
+                  break; 
+              }
+          }
+          newMapping[header] = bestMatch;
       });
+
       setColumnMapping(newMapping);
   };
 
@@ -307,9 +320,10 @@ export default function WorkOrderImporter() {
     const mapped = {};
     
     // Extract values based on mapping
-    Object.keys(columnMapping).forEach(key => {
-        if (columnMapping[key]) {
-            mapped[key] = row[columnMapping[key]];
+    Object.keys(columnMapping).forEach(header => {
+        const systemField = columnMapping[header];
+        if (systemField && systemField !== 'ignore') {
+            mapped[systemField] = row[header];
         }
     });
 
@@ -561,34 +575,54 @@ export default function WorkOrderImporter() {
                        </div>
                    </div>
 
-                   <div className="grid grid-cols-2 gap-8">
-                       <div className="space-y-4">
-                           <h3 className="font-medium">Campos del Sistema</h3>
-                           {Object.keys(columnMapping).map(field => (
-                               <div key={field} className="flex items-center justify-between h-10">
-                                   <Label className="capitalize">{field.replace(/_/g, ' ')}</Label>
-                               </div>
-                           ))}
+                   <div className="space-y-4">
+                       <div className="flex justify-between items-center">
+                            <h3 className="font-medium">Mapeo de Columnas</h3>
+                            <div className="text-sm text-muted-foreground">
+                                Asigna las columnas de tu archivo a los campos del sistema.
+                            </div>
                        </div>
-                       <div className="space-y-4">
-                           <h3 className="font-medium">Columnas del Archivo</h3>
-                           {Object.keys(columnMapping).map(field => (
-                               <Select 
-                                 key={field} 
-                                 value={columnMapping[field]} 
-                                 onValueChange={(val) => setColumnMapping(prev => ({ ...prev, [field]: val }))}
-                               >
-                                   <SelectTrigger>
-                                       <SelectValue placeholder="Ignorar campo" />
-                                   </SelectTrigger>
-                                   <SelectContent>
-                                       <SelectItem value="ignore">-- Ignorar --</SelectItem>
-                                       {rawHeaders.map(h => (
-                                           <SelectItem key={h} value={h}>{h}</SelectItem>
-                                       ))}
-                                   </SelectContent>
-                               </Select>
-                           ))}
+
+                       <div className="border rounded-lg overflow-hidden">
+                           <Table>
+                               <TableHeader>
+                                   <TableRow>
+                                       <TableHead className="w-[30%]">Columna Archivo</TableHead>
+                                       <TableHead className="w-[30%]">Ejemplo (Fila 1)</TableHead>
+                                       <TableHead className="w-[40%]">Campo Sistema</TableHead>
+                                   </TableRow>
+                               </TableHeader>
+                               <TableBody>
+                                   {rawHeaders.map(header => (
+                                       <TableRow key={header}>
+                                           <TableCell className="font-medium">
+                                               {header}
+                                           </TableCell>
+                                           <TableCell className="text-muted-foreground truncate max-w-[200px]">
+                                               {String(rawData[0]?.[header] || '-')}
+                                           </TableCell>
+                                           <TableCell>
+                                               <Select 
+                                                 value={columnMapping[header] || 'ignore'} 
+                                                 onValueChange={(val) => setColumnMapping(prev => ({ ...prev, [header]: val }))}
+                                               >
+                                                   <SelectTrigger className="w-full">
+                                                       <SelectValue placeholder="Ignorar" />
+                                                   </SelectTrigger>
+                                                   <SelectContent>
+                                                       <SelectItem value="ignore" className="text-muted-foreground font-medium">-- Ignorar --</SelectItem>
+                                                       {Object.entries(SYSTEM_FIELDS).map(([key, config]) => (
+                                                           <SelectItem key={key} value={key}>
+                                                               {config.label}
+                                                           </SelectItem>
+                                                       ))}
+                                                   </SelectContent>
+                                               </Select>
+                                           </TableCell>
+                                       </TableRow>
+                                   ))}
+                               </TableBody>
+                           </Table>
                        </div>
                    </div>
                </div>
