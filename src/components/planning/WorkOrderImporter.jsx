@@ -174,6 +174,64 @@ function MachineResolverDialog({ open, onOpenChange, machineName, machines, onRe
   );
 }
 
+// --- Helper Functions ---
+// Date Parsing
+const parseDate = (val) => {
+    if (!val) return null;
+    
+    // 1. Handle Excel Serial Date (Number)
+    // Excel serial dates are days since Dec 30, 1899
+    if (typeof val === 'number') {
+            // Heuristic: Serial dates for relevant years (1990-2050) are roughly between 32000 and 60000
+            if (val > 30000 && val < 70000) {
+                const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                // Adjust for timezone to ensure we get the correct calendar day
+                // This adds the timezone offset to treat the UTC time as local time
+                const adjustedDate = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
+                return adjustedDate.toISOString().split('T')[0];
+            }
+    }
+
+    if (val instanceof Date) return val.toISOString().split('T')[0];
+    
+    const strVal = String(val).trim();
+
+    // 2. Handle DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY (Optional time part supported)
+    // Matches start of string, captures Day, Separator, Month, Separator, Year
+    // Allows optional time part after space (e.g. "26/01/2026 17:00")
+    const dmyPattern = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s.*)?$/;
+    const dmyMatch = strVal.match(dmyPattern);
+    if (dmyMatch) {
+        let day = parseInt(dmyMatch[1]);
+        let month = parseInt(dmyMatch[2]);
+        let year = parseInt(dmyMatch[3]);
+        
+        // Handle 2-digit year (assume 20xx)
+        if (year < 100) year += 2000;
+        
+        // Validate month/day ranges slightly
+        if (month > 12 || day > 31) return null;
+
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+
+    // 3. Try standard Date parsing (Handles YYYY-MM-DD, MM/DD/YYYY, etc.)
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    
+    return null;
+};
+
+// Quantity Parsing
+const parseQuantity = (val) => {
+    if (!val) return 0;
+    if (typeof val === 'number') return Math.round(val);
+    // Remove thousands separator (,) and convert to number
+    const clean = String(val).replace(/,/g, '');
+    const num = parseFloat(clean);
+    return isNaN(num) ? 0 : Math.round(num);
+};
+
 // --- Main Component ---
 export default function WorkOrderImporter() {
   console.log("WorkOrderImporter loaded");
@@ -396,63 +454,6 @@ export default function WorkOrderImporter() {
             processId = process.id;
         }
     }
-
-    // Date Parsing
-    const parseDate = (val) => {
-        if (!val) return null;
-        
-        // 1. Handle Excel Serial Date (Number)
-        // Excel serial dates are days since Dec 30, 1899
-        if (typeof val === 'number') {
-             // Heuristic: Serial dates for relevant years (1990-2050) are roughly between 32000 and 60000
-             if (val > 30000 && val < 70000) {
-                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
-                 // Adjust for timezone to ensure we get the correct calendar day
-                 // This adds the timezone offset to treat the UTC time as local time
-                 const adjustedDate = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
-                 return adjustedDate.toISOString().split('T')[0];
-             }
-        }
-
-        if (val instanceof Date) return val.toISOString().split('T')[0];
-        
-        const strVal = String(val).trim();
-
-        // 2. Handle DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY (Optional time part supported)
-        // Matches start of string, captures Day, Separator, Month, Separator, Year
-        // Allows optional time part after space (e.g. "26/01/2026 17:00")
-        const dmyPattern = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s.*)?$/;
-        const dmyMatch = strVal.match(dmyPattern);
-        if (dmyMatch) {
-            let day = parseInt(dmyMatch[1]);
-            let month = parseInt(dmyMatch[2]);
-            let year = parseInt(dmyMatch[3]);
-            
-            // Handle 2-digit year (assume 20xx)
-            if (year < 100) year += 2000;
-            
-            // Validate month/day ranges slightly
-            if (month > 12 || day > 31) return null;
-
-            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        }
-
-        // 3. Try standard Date parsing (Handles YYYY-MM-DD, MM/DD/YYYY, etc.)
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        
-        return null;
-    };
-
-    // Quantity Parsing
-    const parseQuantity = (val) => {
-        if (!val) return 0;
-        if (typeof val === 'number') return Math.round(val);
-        // Remove thousands separator (,) and convert to number
-        const clean = String(val).replace(/,/g, '');
-        const num = parseFloat(clean);
-        return isNaN(num) ? 0 : Math.round(num);
-    };
 
     const startDate = parseDate(mapped.start_date);
     if (!startDate && mapped.start_date) errors.push("Formato de fecha de inicio inválido");
