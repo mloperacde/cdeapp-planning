@@ -270,7 +270,7 @@ export default function WorkOrderImporter() {
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -400,10 +400,46 @@ export default function WorkOrderImporter() {
     // Date Parsing
     const parseDate = (val) => {
         if (!val) return null;
+        
+        // 1. Handle Excel Serial Date (Number)
+        // Excel serial dates are days since Dec 30, 1899
+        if (typeof val === 'number') {
+             // Heuristic: Serial dates for relevant years (1990-2050) are roughly between 32000 and 60000
+             if (val > 30000 && val < 70000) {
+                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                 // Adjust for timezone to ensure we get the correct calendar day
+                 // This adds the timezone offset to treat the UTC time as local time
+                 const adjustedDate = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
+                 return adjustedDate.toISOString().split('T')[0];
+             }
+        }
+
         if (val instanceof Date) return val.toISOString().split('T')[0];
-        // Try common formats
+        
+        const strVal = String(val).trim();
+
+        // 2. Handle DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+        // Supports 2 or 4 digit years
+        const dmyPattern = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/;
+        const dmyMatch = strVal.match(dmyPattern);
+        if (dmyMatch) {
+            let day = parseInt(dmyMatch[1]);
+            let month = parseInt(dmyMatch[2]);
+            let year = parseInt(dmyMatch[3]);
+            
+            // Handle 2-digit year (assume 20xx)
+            if (year < 100) year += 2000;
+            
+            // Validate month/day ranges slightly
+            if (month > 12 || day > 31) return null;
+
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        // 3. Try standard Date parsing (Handles YYYY-MM-DD, MM/DD/YYYY, etc.)
         const d = new Date(val);
         if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        
         return null;
     };
 
