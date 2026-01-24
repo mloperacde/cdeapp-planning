@@ -325,7 +325,8 @@ export default function WorkOrderImporter() {
     accept: {
       'text/csv': ['.csv'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls']
+      'application/vnd.ms-excel': ['.xls'],
+      'application/json': ['.json']
     },
     maxFiles: 1
   });
@@ -345,6 +346,25 @@ export default function WorkOrderImporter() {
             },
             error: (err) => toast.error("Error al leer CSV: " + err.message)
         });
+    } else if (file.name.endsWith('.json')) {
+        reader.onload = (e) => {
+            try {
+                const json = JSON.parse(e.target.result);
+                if (Array.isArray(json) && json.length > 0) {
+                    const headers = Object.keys(json[0]);
+                    setRawHeaders(headers);
+                    setRawData(json);
+                    autoMapColumns(headers);
+                    setStep(2);
+                    toast.success(`Cargados ${json.length} registros desde JSON`);
+                } else {
+                    toast.error("El JSON debe ser una lista de objetos");
+                }
+            } catch (err) {
+                toast.error("Error al parsear JSON: " + err.message);
+            }
+        };
+        reader.readAsText(file);
     } else {
         reader.onload = (e) => {
             try {
