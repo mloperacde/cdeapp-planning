@@ -240,23 +240,29 @@ export default function WorkOrderImporter({ machines, processes: _processes, onI
           
           if (machineName) {
             const nameLower = machineName.toLowerCase();
-            machine = machines.find(m => {
-               // 1. Try exact match on description (highest priority)
-               if (m.descripcion && m.descripcion.toLowerCase() === nameLower) return true;
+            
+            // Prioritize exact match on description first, as requested
+            machine = machines.find(m => m.descripcion && m.descripcion.toLowerCase() === nameLower);
 
-               // 2. Try exact match on name
-               if (m.nombre.toLowerCase() === nameLower) return true;
+            // If not found, try code
+            if (!machine) {
+                 machine = machines.find(m => m.codigo && m.codigo.toLowerCase() === nameLower);
+            }
+            
+            // If still not found, try name
+            if (!machine) {
+                 machine = machines.find(m => m.nombre && m.nombre.toLowerCase() === nameLower);
+            }
 
-               // 3. Try exact match on code
-               if (m.codigo && m.codigo.toLowerCase() === nameLower) return true;
-               
-               // 4. Try partial match: if DB description/name/code is contained in CSV string
-               if (m.descripcion && m.descripcion.length > 3 && nameLower.includes(m.descripcion.toLowerCase())) return true;
-               if (m.nombre.length > 3 && nameLower.includes(m.nombre.toLowerCase())) return true;
-               if (m.codigo && m.codigo.length > 3 && nameLower.includes(m.codigo.toLowerCase())) return true;
-               
-               return false;
-            });
+            // Fallback: Partial matches (risky but sometimes needed)
+            if (!machine) {
+                machine = machines.find(m => {
+                   if (m.descripcion && m.descripcion.length > 3 && nameLower.includes(m.descripcion.toLowerCase())) return true;
+                   // Avoid partial match on short codes to prevent false positives
+                   if (m.codigo && m.codigo.length > 4 && nameLower.includes(m.codigo.toLowerCase())) return true;
+                   return false;
+                });
+            }
           }
           
           if (!machine) {
