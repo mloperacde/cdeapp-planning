@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import *  omXLSX'xlsx';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -60,7 +60,7 @@ function MachineResolverDialog({ open, onOpenChange, machineName, machines, onRe
          try {
              setIsSubmitting(true);
              // Call resolve with create data - the parent handles the actual API call
-             await onResolve('create', { nombre: newName, codigo: newCode });
+             await onResolve('create', { name: newName, code: newCode });
          } catch (error) {
              console.error(error);
              toast.error("Error al crear máquina");
@@ -139,6 +139,7 @@ function MachineResolverDialog({ open, onOpenChange, machineName, machines, onRe
 
 // --- Main Component ---
 export default function WorkOrderImporter() {
+  console.log("WorkOrderImporter loaded");
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1); // 1: Upload, 2: Map, 3: Preview/Validate, 4: Result
@@ -217,10 +218,10 @@ export default function WorkOrderImporter() {
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const jsonData = utils.sheet_to_json(worksheet, { header: 1 });
                 
                 if (jsonData.length > 0) {
                     const headers = jsonData[0];
