@@ -4,6 +4,7 @@ import { FileUp, Settings2, Save, AlertTriangle, CheckCircle, XCircle, ArrowRigh
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import Papa from 'papaparse';
+import { read, utils } from 'xlsx';
 import {
   Dialog,
   DialogContent,
@@ -89,37 +90,83 @@ export default function WorkOrderImporter({ machines, onImportSuccess }) {
     setLogs(prev => [...prev, { type, message, timestamp: new Date() }]);
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     resetState(); // Reset previous state
     setIsOpen(true);
 
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    
+    if (isExcel) {
+      processExcelFile(file);
+      return;
+    }
+
+    // Check for "fake" CSV (Excel renamed)
+    try {
+      const buffer = await file.slice(0, 4).arrayBuffer();
+      const header = new Uint8Array(buffer);
+      const isZip = header[0] === 0x50 && header[1] === 0x4B; // PK
+
+      if (isZip) {
+        toast.info("Detectado archivo Excel con extensión .csv. Procesando como Excel...");
+        processExcelFile(file);
+      } else {
+        processCsvFile(file);
+      }
+    } catch (e) {
+      console.warn("Error checking file signature, falling back to CSV", e);
+      processCsvFile(file);
+    }
+  };
+
+  const processExcelFile = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+        
+        if (!jsonData || jsonData.length === 0) {
+            toast.error("El archivo está vacío");
+            return;
+        }
+
+        // sheet_to_json with header:1 returns array of arrays. 
+        // Row 0 is headers.
+        const headers = jsonData[0].map(h => String(h).trim()).filter(h => h);
+        const rows = jsonData.slice(1).map(row => {
+            const rowObj = {};
+            headers.forEach((h, i) => {
+                rowObj[h] = row[i] !== undefined ? String(row[i]) : '';
+            });
+            return rowObj;
+        });
+
+        processParsedData(rows, headers);
+
+      } catch (error) {
+        console.error(error);
+        toast.error("Error al leer archivo Excel: " + error.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const processCsvFile = (file) => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      encoding: "UTF-8", // Force UTF-8 usually works best
+      encoding: "UTF-8", 
       complete: (results) => {
         if (results.data && results.data.length > 0) {
           const headers = results.meta.fields || Object.keys(results.data[0]);
-          setCsvHeaders(headers);
-          setCsvData(results.data);
-          
-          // Auto-map fields
-          const initialMapping = {};
-          SYSTEM_FIELDS.forEach(field => {
-            // Try exact match
-            let match = headers.find(h => h.toLowerCase().trim() === field.key.toLowerCase().trim());
-            // Try label match
-            if (!match) match = headers.find(h => h.toLowerCase().trim() === field.label.toLowerCase().trim());
-            // Try loose match
-            if (!match) match = headers.find(h => h.toLowerCase().includes(field.label.toLowerCase()) || h.toLowerCase().includes(field.key.toLowerCase()));
-            
-            if (match) initialMapping[field.key] = match;
-          });
-          setFieldMapping(initialMapping);
-          setStep('mapping');
+          processParsedData(results.data, headers);
         } else {
           toast.error("El archivo CSV parece estar vacío o no tiene formato válido.");
         }
@@ -128,6 +175,26 @@ export default function WorkOrderImporter({ machines, onImportSuccess }) {
         toast.error(`Error al leer CSV: ${error.message}`);
       }
     });
+  };
+
+  const processParsedData = (data, headers) => {
+    setCsvHeaders(headers);
+    setCsvData(data);
+    
+    // Auto-map fields
+    const initialMapping = {};
+    SYSTEM_FIELDS.forEach(field => {
+      // Try exact match
+      let match = headers.find(h => h.toLowerCase().trim() === field.key.toLowerCase().trim());
+      // Try label match
+      if (!match) match = headers.find(h => h.toLowerCase().trim() === field.label.toLowerCase().trim());
+      // Try loose match
+      if (!match) match = headers.find(h => h.toLowerCase().includes(field.label.toLowerCase()) || h.toLowerCase().includes(field.key.toLowerCase()));
+      
+      if (match) initialMapping[field.key] = match;
+    });
+    setFieldMapping(initialMapping);
+    setStep('mapping');
   };
 
   // --- Validation Logic ---
@@ -408,7 +475,7 @@ export default function WorkOrderImporter({ machines, onImportSuccess }) {
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".csv,.txt"
+        accept=".csv,.txt,.xlsx,.xls"
       />
       
       <div className="flex gap-2">
