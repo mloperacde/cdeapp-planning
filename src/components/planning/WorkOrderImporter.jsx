@@ -407,6 +407,16 @@ export default function WorkOrderImporter() {
         return null;
     };
 
+    // Quantity Parsing
+    const parseQuantity = (val) => {
+        if (!val) return 0;
+        if (typeof val === 'number') return Math.round(val);
+        // Remove thousands separator (,) and convert to number
+        const clean = String(val).replace(/,/g, '');
+        const num = parseFloat(clean);
+        return isNaN(num) ? 0 : Math.round(num);
+    };
+
     const startDate = parseDate(mapped.start_date);
     if (!startDate && mapped.start_date) errors.push("Formato de fecha de inicio inválido");
 
@@ -417,8 +427,12 @@ export default function WorkOrderImporter() {
         processId,
         startDate,
         deliveryDate: parseDate(mapped.committed_delivery_date),
+        modifiedStartDate: parseDate(mapped.modified_start_date),
+        newDeliveryDate: parseDate(mapped.new_delivery_date),
+        endDate: parseDate(mapped.end_date),
         priority: mapped.priority || '3',
         status: mapped.status || 'Pendiente',
+        quantity: parseQuantity(mapped.quantity),
         _errors: errors
     };
   };
