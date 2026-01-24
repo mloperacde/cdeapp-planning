@@ -398,7 +398,13 @@ export default function WorkOrderImporter() {
     Object.keys(columnMapping).forEach(header => {
         const systemField = columnMapping[header];
         if (systemField && systemField !== 'ignore') {
-            mapped[systemField] = row[header];
+            let val = row[header];
+            // Convert to string for text fields that might be numeric in Excel
+            if (val !== null && val !== undefined && 
+                ['order_number', 'part_number', 'client', 'description', 'material', 'product', 'part_status'].includes(systemField)) {
+                val = String(val);
+            }
+            mapped[systemField] = val;
         }
     });
 
