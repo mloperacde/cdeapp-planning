@@ -94,7 +94,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8 h-full overflow-auto">
       <div className="max-w-7xl mx-auto">
         
         <div className="mb-8">

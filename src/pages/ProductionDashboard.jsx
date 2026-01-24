@@ -16,14 +16,13 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { subDays } from "date-fns";
-import Breadcrumbs from "../components/common/Breadcrumbs";
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
+
 import { createPageUrl } from "@/utils";
 
 export default function ProductionDashboardPage() {
   const [dateRange, setDateRange] = useState("7days");
   const [selectedMachine, setSelectedMachine] = useState("all");
-  const { goBack } = useNavigationHistory();
+
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
@@ -156,11 +155,7 @@ export default function ProductionDashboardPage() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-4 md:space-y-6">
-      <Breadcrumbs items={[
-        { label: "Producción", url: createPageUrl("ProductionDashboard") },
-        { label: "Dashboard" }
-      ]} showBack={true} onBack={goBack} />
+    <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-4 md:space-y-6 h-full overflow-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">

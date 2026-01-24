@@ -221,10 +221,10 @@ export default function Layout({ children, currentPageName }) {
         {/* Contenido de la página */}
         {hasAccess ? (
           <div className="h-full flex flex-col">
-            <div className="px-6 pt-6 md:px-8 md:pt-8 pb-0">
+            <div className="px-2 pt-2 pb-0">
                <Breadcrumbs auto={true} />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
                {children}
             </div>
           </div>

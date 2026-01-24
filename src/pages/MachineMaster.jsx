@@ -4,17 +4,35 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Cog, Plus, Edit2, Trash2, Eye, ArrowLeft, ArrowUpDown } from "lucide-react";
+import { 
+  Cog, 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Eye, 
+  ArrowLeft, 
+  ArrowUpDown, 
+  Search, 
+  ChevronDown, 
+  ChevronUp,
+  Columns
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
 import MachineOrderManager from "../components/machines/MachineOrderManager";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import { usePagination } from "../components/utils/usePagination";
-import Breadcrumbs from "../components/common/Breadcrumbs";
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
+
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const EMPTY_ARRAY = [];
 
@@ -24,6 +42,7 @@ export default function MachineMasterPage() {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedMachineEditMode, setSelectedMachineEditMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: rawMachines = EMPTY_ARRAY, isLoading, error } = useQuery({
@@ -113,39 +132,41 @@ export default function MachineMasterPage() {
   const { currentPage, totalPages, paginatedItems, nextPage, prevPage } = usePagination(filteredMachines, 12);
 
   const tiposUnicos = [...new Set(machines.map(m => m.tipo).filter(Boolean))];
-  const { goBack } = useNavigationHistory();
+
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <Breadcrumbs showBack={true} onBack={goBack} />
-        <div className="mb-6">
-          <Link to={createPageUrl("Configuration")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Configuración
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mb-8 flex justify-between items-start">
+    <div className="h-full flex flex-col p-2 gap-2 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Header Section Compact */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Cog className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <Cog className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Archivo Maestro de Máquinas
             </h1>
-            <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Gestión completa del catálogo de máquinas
             </p>
           </div>
-          <div className="flex gap-2">
+        </div>
+        
+        <div className="flex gap-2">
+            <Link to={createPageUrl("Configuration")}>
+              <Button variant="ghost" size="sm" className="h-8">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Configuración
+              </Button>
+            </Link>
             <Button
               onClick={() => setShowOrderManager(true)}
               variant="outline"
-              className="flex items-center gap-2"
+              size="sm"
+              className="h-8 flex items-center gap-2"
             >
-              <ArrowUpDown className="w-4 h-4" />
-              Ordenar Máquinas
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              Ordenar
             </Button>
             <Button
               onClick={() => {
@@ -166,129 +187,174 @@ export default function MachineMasterPage() {
                 });
                 setSelectedMachineEditMode(true);
               }}
-              className="bg-blue-600 hover:bg-blue-700"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 h-8"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-3.5 h-3.5 mr-2" />
               Nueva Máquina
             </Button>
-          </div>
+        </div>
+      </div>
+
+      {/* Toolbar Section */}
+      <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+          <Input
+            placeholder="Buscar máquina por descripción, nombre, código..."
+            className="pl-9 h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+            value={filters.searchTerm || ""}
+            onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+          />
         </div>
 
-        <Card className="shadow-lg mb-6">
-          <CardHeader className="border-b">
-            <div className="flex justify-between items-center">
-              <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
-              {totalPages > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`h-9 px-3 ${showFilters ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">{showFilters ? 'Ocultar Filtros' : 'Filtros'}</span>
+            {showFilters ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+          </Button>
+        </div>
+      </div>
+
+      {showFilters && (
+        <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm shrink-0 animate-in slide-in-from-top-2 duration-200">
+          <AdvancedSearch
+            data={machines}
+            onFilterChange={setFilters}
+            searchFields={['descripcion', 'nombre', 'codigo', 'ubicacion']}
+            filterOptions={{
+              tipo: {
+                label: 'Tipo',
+                options: tiposUnicos.map(t => ({ value: t, label: t }))
+              }
+            }}
+            sortOptions={[
+              { field: 'descripcion', label: 'Descripción' },
+              { field: 'nombre', label: 'Nombre' },
+              { field: 'codigo', label: 'Código' },
+              { field: 'ubicacion', label: 'Ubicación' },
+              { field: 'orden', label: 'Orden' }
+            ]}
+            placeholder="Buscar..."
+            pageId="machine_master"
+            enableSearch={false}
+            currentSearchTerm={filters.searchTerm || ""}
+          />
+        </Card>
+      )}
+
+      {/* Main Content Area */}
+      <Card className="flex-1 flex flex-col min-h-0 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+        <div className="flex items-center justify-between p-2 border-b border-slate-100 dark:border-slate-800/50">
+            <div className="text-xs text-slate-500 font-medium px-2">
+                Total: <span className="text-slate-900 dark:text-slate-200">{filteredMachines.length}</span> máquinas
+            </div>
+            {totalPages > 1 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Página {currentPage} de {totalPages}</span>
+                  <span className="text-xs text-slate-500">Pág {currentPage} de {totalPages}</span>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={prevPage} disabled={currentPage === 1}>Anterior</Button>
-                    <Button size="sm" variant="outline" onClick={nextPage} disabled={currentPage === totalPages}>Siguiente</Button>
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={prevPage} disabled={currentPage === 1}>
+                        <ChevronDown className="h-3 w-3 rotate-90" />
+                    </Button>
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={nextPage} disabled={currentPage === totalPages}>
+                        <ChevronDown className="h-3 w-3 -rotate-90" />
+                    </Button>
                   </div>
                 </div>
-              )}
-            </div>
-            <div className="mt-4">
-              <AdvancedSearch
-                data={machines}
-                onFilterChange={setFilters}
-                searchFields={['descripcion', 'nombre', 'codigo', 'ubicacion']}
-                filterOptions={{
-                  tipo: {
-                    label: 'Tipo',
-                    options: tiposUnicos.map(t => ({ value: t, label: t }))
-                  }
-                }}
-                sortOptions={[
-                  { field: 'descripcion', label: 'Descripción' },
-                  { field: 'nombre', label: 'Nombre' },
-                  { field: 'codigo', label: 'Código' },
-                  { field: 'ubicacion', label: 'Ubicación' },
-                  { field: 'orden', label: 'Orden' }
-                ]}
-                placeholder="Buscar por descripción, nombre, código..."
-                pageId="machine_master"
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-12 text-center text-slate-500">Cargando máquinas...</div>
-            ) : error ? (
-              <div className="p-12 text-center text-red-500">Error: {error.message}</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-800 border-b">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-1/3">Descripción</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Código</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tipo</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ubicación</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Marca/Modelo</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Orden</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {paginatedItems.map((machine) => (
-                      <tr key={machine.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-4 py-3">
-                          <span className="font-semibold text-slate-900 dark:text-slate-100">{machine.descripcion || machine.nombre}</span>
-                          {machine.descripcion && machine.descripcion !== machine.nombre && (
-                            <div className="text-xs text-slate-500 mt-0.5">{machine.nombre}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="font-mono text-slate-600 dark:text-slate-400">{machine.codigo}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline">{machine.tipo || '-'}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{machine.ubicacion || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                          {machine.marca && machine.modelo ? `${machine.marca} ${machine.modelo}` : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge className="bg-slate-600">{machine.orden || 0}</Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => { setSelectedMachine(machine); setSelectedMachineEditMode(false); }}
-                              title="Ver ficha completa"
-                            >
-                              <Eye className="w-4 h-4 text-blue-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => { setSelectedMachine(machine); setSelectedMachineEditMode(true); }}
-                              title="Editar"
-                            >
-                              <Edit2 className="w-4 h-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setShowDeleteConfirm(machine)}
-                              title="Eliminar"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+        </div>
+        <div className="flex-1 overflow-auto">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full text-slate-500">
+                <div className="flex flex-col items-center gap-2">
+                   <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                   <p className="text-xs">Cargando máquinas...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-full text-red-500">
+                  <p>Error: {error.message}</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 shadow-sm">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider w-1/3">Descripción</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Código</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ubicación</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Marca/Modelo</th>
+                    <th className="px-4 py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Orden</th>
+                    <th className="px-4 py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                  {paginatedItems.map((machine) => (
+                    <tr key={machine.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="px-4 py-2">
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">{machine.descripcion || machine.nombre}</span>
+                        {machine.descripcion && machine.descripcion !== machine.nombre && (
+                          <span className="text-[10px] text-slate-500 block mt-0.5">{machine.nombre}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span className="text-xs font-mono text-slate-600 dark:text-slate-400">{machine.codigo}</span>
+                      </td>
+                      <td className="px-4 py-2">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">{machine.tipo || '-'}</Badge>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-slate-600 dark:text-slate-400">{machine.ubicacion || '-'}</td>
+                      <td className="px-4 py-2 text-xs text-slate-600 dark:text-slate-400">
+                        {machine.marca && machine.modelo ? `${machine.marca} ${machine.modelo}` : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono">{machine.orden || 0}</Badge>
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => { setSelectedMachine(machine); setSelectedMachineEditMode(false); }}
+                            title="Ver ficha completa"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => { setSelectedMachine(machine); setSelectedMachineEditMode(true); }}
+                            title="Editar"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setShowDeleteConfirm(machine)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+        </div>
+      </Card>
+
 
       {/* Dialog de Confirmación de Eliminación */}
       {showDeleteConfirm && (

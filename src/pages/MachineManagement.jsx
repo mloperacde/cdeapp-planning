@@ -4,20 +4,31 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Cog, CheckCircle2, Package, ArrowLeft, Eye } from "lucide-react";
+import { 
+  Cog, 
+  CheckCircle2, 
+  Package, 
+  ArrowLeft, 
+  Eye, 
+  Search, 
+  ChevronDown, 
+  ChevronUp 
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { usePagination } from "@/components/utils/usePagination";
 import AdvancedSearch from "@/components/common/AdvancedSearch";
 import MachineDetailCard from "@/components/machines/MachineDetailCard";
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
-import Breadcrumbs from "../components/common/Breadcrumbs";
+
+import { Input } from "@/components/ui/input";
+
 const EMPTY_ARRAY = [];
 
 export default function MachineManagement() {
   const [filters, setFilters] = useState({});
   const [selectedMachine, setSelectedMachine] = useState(null);
-  const { goBack } = useNavigationHistory();
+  const [showFilters, setShowFilters] = useState(false);
+
 
   const { data: machines = EMPTY_ARRAY, isLoading: loadingMachines } = useQuery({
     queryKey: ['machines'],
@@ -88,129 +99,155 @@ export default function MachineManagement() {
   const ordenesCount = filteredMachines.filter(m => m.estado_produccion !== "Sin Producción").length;
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <Breadcrumbs
-          items={[
-            { label: "Producción", url: createPageUrl("ProductionDashboard") },
-            { label: "Consulta de Máquinas" }
-          ]}
-          showBack={true}
-          onBack={goBack}
-        />
-        <div className="mb-6">
-          <Link to={createPageUrl("Configuration")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Configuración
-            </Button>
-          </Link>
+    <div className="h-full flex flex-col p-2 gap-2 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Header Section Compact */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Cog className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Consulta de Máquinas
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Vista de estado y disponibilidad
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+            <Link to={createPageUrl("Configuration")}>
+              <Button variant="ghost" size="sm" className="h-8">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Configuración
+              </Button>
+            </Link>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 shrink-0">
+        <Card className="p-3 flex items-center justify-between bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <div>
+                <p className="text-xs text-blue-700 dark:text-blue-200 font-medium">Total</p>
+                <p className="text-xl font-bold text-blue-900 dark:text-blue-100">{filteredMachines.length}</p>
+            </div>
+            <Cog className="w-6 h-6 text-blue-600" />
+        </Card>
+
+        <Card className="p-3 flex items-center justify-between bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <div>
+                <p className="text-xs text-green-700 dark:text-green-200 font-medium">Disponibles</p>
+                <p className="text-xl font-bold text-green-900 dark:text-green-100">{availableCount}</p>
+            </div>
+            <CheckCircle2 className="w-6 h-6 text-green-600" />
+        </Card>
+
+        <Card className="p-3 flex items-center justify-between bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <div>
+                <p className="text-xs text-orange-700 dark:text-orange-200 font-medium">Con Órdenes</p>
+                <p className="text-xl font-bold text-orange-900 dark:text-orange-100">{ordenesCount}</p>
+            </div>
+            <Package className="w-6 h-6 text-orange-600" />
+        </Card>
+      </div>
+
+      {/* Toolbar Section */}
+      <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+          <Input
+            placeholder="Buscar máquina por descripción, nombre, código..."
+            className="pl-9 h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+            value={filters.searchTerm || ""}
+            onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+          />
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <Cog className="w-8 h-8 text-blue-600" />
-            Consulta de Máquinas
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Vista de estado y disponibilidad de máquinas (Solo lectura)
-          </p>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`h-9 px-3 ${showFilters ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">{showFilters ? 'Ocultar Filtros' : 'Filtros'}</span>
+            {showFilters ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+          </Button>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-blue-700 dark:text-blue-200 font-medium">Total Máquinas</p>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{filteredMachines.length}</p>
-                </div>
-                <Cog className="w-8 h-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
+      {showFilters && (
+        <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm shrink-0 animate-in slide-in-from-top-2 duration-200">
+          <AdvancedSearch
+            data={machines}
+            onFilterChange={setFilters}
+            searchFields={['descripcion', 'nombre', 'codigo_maquina']}
+            filterOptions={{
+              disponibilidad: {
+                label: 'Disponibilidad',
+                options: [
+                  { value: 'Disponible', label: 'Disponible' },
+                  { value: 'No disponible', label: 'No disponible' }
+                ]
+              },
+              produccion: {
+                label: 'Estado Producción',
+                options: [
+                  { value: 'En cambio', label: 'En cambio' },
+                  { value: 'En producción', label: 'En producción' },
+                  { value: 'Pendiente de Inicio', label: 'Pendiente de Inicio' },
+                  { value: 'Sin Producción', label: 'Sin Producción' }
+                ]
+              }
+            }}
+            sortOptions={[
+              { field: 'orden_visualizacion', label: 'Orden' },
+              { field: 'descripcion', label: 'Descripción' },
+              { field: 'nombre', label: 'Nombre' },
+              { field: 'codigo_maquina', label: 'Código' },
+              { field: 'estado_disponibilidad', label: 'Disponibilidad' }
+            ]}
+            placeholder="Buscar por descripción, nombre o código..."
+            pageId="machine_management"
+            enableSearch={false}
+            currentSearchTerm={filters.searchTerm || ""}
+          />
+        </Card>
+      )}
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-green-700 dark:text-green-200 font-medium">Disponibles</p>
-                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{availableCount}</p>
-                </div>
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-orange-700 dark:text-orange-200 font-medium">Con Órdenes</p>
-                  <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{ordenesCount}</p>
-                </div>
-                <Package className="w-8 h-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="shadow-lg mb-6">
-          <CardHeader className="border-b">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <CardTitle>Máquinas ({filteredMachines.length})</CardTitle>
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Página {currentPage} de {totalPages}</span>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="outline" onClick={prevPage} disabled={currentPage === 1}>Anterior</Button>
-                      <Button size="sm" variant="outline" onClick={nextPage} disabled={currentPage === totalPages}>Siguiente</Button>
-                    </div>
+      {/* Main Content Area */}
+      <Card className="flex-1 flex flex-col min-h-0 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+        <div className="flex items-center justify-between p-2 border-b border-slate-100 dark:border-slate-800/50">
+            <div className="text-xs text-slate-500 font-medium px-2">
+                Total: <span className="text-slate-900 dark:text-slate-200">{filteredMachines.length}</span> máquinas
+            </div>
+            {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Pág {currentPage} de {totalPages}</span>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={prevPage} disabled={currentPage === 1}>
+                        <ChevronDown className="h-3 w-3 rotate-90" />
+                    </Button>
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={nextPage} disabled={currentPage === totalPages}>
+                        <ChevronDown className="h-3 w-3 -rotate-90" />
+                    </Button>
                   </div>
-                )}
-              </div>
-            </div>
-            <div className="mt-4">
-              <AdvancedSearch
-                data={machines}
-                onFilterChange={setFilters}
-                searchFields={['descripcion', 'nombre', 'codigo_maquina']}
-                filterOptions={{
-                  disponibilidad: {
-                    label: 'Disponibilidad',
-                    options: [
-                      { value: 'Disponible', label: 'Disponible' },
-                      { value: 'No disponible', label: 'No disponible' }
-                    ]
-                  },
-                  produccion: {
-                    label: 'Estado Producción',
-                    options: [
-                      { value: 'En cambio', label: 'En cambio' },
-                      { value: 'En producción', label: 'En producción' },
-                      { value: 'Pendiente de Inicio', label: 'Pendiente de Inicio' },
-                      { value: 'Sin Producción', label: 'Sin Producción' }
-                    ]
-                  }
-                }}
-                sortOptions={[
-                  { field: 'orden_visualizacion', label: 'Orden' },
-                  { field: 'descripcion', label: 'Descripción' },
-                  { field: 'nombre', label: 'Nombre' },
-                  { field: 'codigo_maquina', label: 'Código' },
-                  { field: 'estado_disponibilidad', label: 'Disponibilidad' }
-                ]}
-                placeholder="Buscar por descripción, nombre o código..."
-                pageId="machine_management"
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
+                </div>
+            )}
+        </div>
+        <div className="flex-1 overflow-auto p-4">
             {loadingMachines ? (
-              <div className="p-12 text-center text-slate-500 dark:text-slate-400">Cargando...</div>
+              <div className="flex items-center justify-center h-full text-slate-500">
+                 <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-xs">Cargando...</p>
+                 </div>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {paginatedItems.map(machine => {
                   const isAvailable = machine.estado_disponibilidad === "Disponible";
                   const prodStatus = machine.estado_produccion;
@@ -222,61 +259,56 @@ export default function MachineManagement() {
                         isAvailable ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : 'border-red-300 bg-red-50 dark:bg-red-900/20'
                       }`}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg leading-tight">
+                      <CardContent className="p-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate" title={machine.descripcion || machine.nombre}>
                               {machine.descripcion || machine.nombre}
                             </h3>
                             {machine.descripcion && machine.descripcion !== machine.nombre && (
-                                <p className="text-xs text-slate-500 mt-1 font-medium">{machine.nombre}</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5 font-medium truncate">{machine.nombre}</p>
                             )}
-                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{machine.codigo_maquina || machine.codigo}</p>
+                            <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 font-mono">{machine.codigo_maquina || machine.codigo}</p>
                           </div>
-                          <div className="flex gap-1">
-                            <Button
+                          <Button
                               variant="ghost"
                               size="icon"
+                              className="h-6 w-6 shrink-0"
                               onClick={() => setSelectedMachine(machine)}
                               title="Ver ficha completa"
                             >
-                              <Eye className="w-5 h-5 text-blue-600" />
+                              <Eye className="w-3.5 h-3.5 text-blue-600" />
                             </Button>
-
-                          </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-600 dark:text-slate-400">Disponibilidad</span>
-                            <Badge className={isAvailable ? "bg-green-600" : "bg-red-600"}>
+                            <span className="text-[10px] text-slate-600 dark:text-slate-400">Disponibilidad</span>
+                            <Badge className={`text-[10px] h-4 px-1 ${isAvailable ? "bg-green-600" : "bg-red-600"}`}>
                               {machine.estado_disponibilidad}
                             </Badge>
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-600 dark:text-slate-400">Producción</span>
-                            <Badge variant="outline" className={
+                            <span className="text-[10px] text-slate-600 dark:text-slate-400">Producción</span>
+                            <Badge variant="outline" className={`text-[9px] h-4 px-1 max-w-[120px] truncate ${
                               prodStatus === "En producción" ? "bg-blue-100 text-blue-800" :
                               prodStatus === "Pendiente de Inicio" ? "bg-purple-100 text-purple-800" :
                               prodStatus === "En cambio" ? "bg-amber-100 text-amber-800" :
                               "bg-slate-100 text-slate-600 dark:text-slate-400"
-                            }>
+                            }`}>
                               {prodStatus}
                             </Badge>
                           </div>
                         </div>
-
-
                       </CardContent>
                     </Card>
                   );
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+        </div>
+      </Card>
 
       {selectedMachine && (
         <MachineDetailCard 

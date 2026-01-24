@@ -614,7 +614,7 @@ export default function IdealAssignmentView() {
       </Button>
       </div>
 
-      <div className="h-[calc(100vh-280px)] overflow-y-auto pr-2 pb-10">
+      <div className="h-full overflow-y-auto pr-2 pb-10">
         <div className="grid grid-cols-1 gap-6">
             <div className="grid gap-6">
                 {machines.map(machine => {

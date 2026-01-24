@@ -32,7 +32,7 @@ import {
  
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
-import Breadcrumbs from "../components/common/Breadcrumbs";
+
 
 const EMPTY_ARRAY = [];
 const SEARCH_FIELDS = ['nombre', 'codigo_empleado', 'puesto', 'email', 'telefono_movil'];
@@ -208,11 +208,8 @@ export default function EmployeesShiftManagerPage() {
   }, [effectiveEmployees]);
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8 h-full overflow-auto">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Breadcrumbs />
-        </div>
         <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">

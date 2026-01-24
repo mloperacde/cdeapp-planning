@@ -17,11 +17,10 @@ import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Breadcrumbs from "../components/common/Breadcrumbs";
-import { useNavigationHistory } from "../components/utils/useNavigationHistory";
+
 
 export default function ProductionPlanningPage() {
-  const { goBack } = useNavigationHistory();
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [dropDialogData, setDropDialogData] = useState(null);
@@ -152,10 +151,7 @@ export default function ProductionPlanningPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 flex flex-col h-screen overflow-hidden">
-      <div className="mb-4 flex-shrink-0">
-        <Breadcrumbs showBack={true} onBack={goBack} />
-      </div>
+    <div className="p-6 md:p-8 flex flex-col h-full overflow-hidden">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
