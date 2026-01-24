@@ -294,8 +294,9 @@ export default function WorkOrderImporter() {
             const normalize = s => s?.toLowerCase().trim();
             const search = normalize(rawMachineName);
             
-            // Exact code match or Exact Name match
+            // Search Priority: Description > Code > Name > Composite
             let match = machines.find(m => 
+                normalize(m.descripcion) === search ||
                 normalize(m.codigo) === search || 
                 normalize(m.nombre) === search ||
                 normalize(`${m.codigo} - ${m.nombre}`) === search
