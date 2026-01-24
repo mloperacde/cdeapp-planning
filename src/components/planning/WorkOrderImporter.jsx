@@ -232,6 +232,27 @@ const parseQuantity = (val) => {
     return isNaN(num) ? 0 : Math.round(num);
 };
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const retryOperation = async (operation, maxRetries = 3, delay = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await operation();
+        } catch (error) {
+            const isRateLimit = error?.message?.includes('Rate limit') || 
+                                error?.message?.includes('429') || 
+                                error?.status === 429;
+                                
+            if (isRateLimit && i < maxRetries - 1) {
+                // Exponential backoff: 1s, 2s, 3s
+                await sleep(delay * (i + 1)); 
+                continue;
+            }
+            throw error;
+        }
+    }
+};
+
 // --- Main Component ---
 export default function WorkOrderImporter() {
   console.log("WorkOrderImporter loaded");
@@ -559,41 +580,43 @@ export default function WorkOrderImporter() {
     let successCount = 0;
     let failedCount = 0;
     const errors = [];
-    const batchSize = 10;
+    const batchSize = 5; // Reduced to avoid rate limits
     
     for (let i = 0; i < validRows.length; i += batchSize) {
         const batch = validRows.slice(i, i + batchSize);
         
         await Promise.all(batch.map(async (row) => {
             try {
-                await base44.entities.WorkOrder.create({
-                    // Required Standard Fields
-                    order_number: row.order_number,
-                    machine_id: row.machineId,
-                    process_id: row.processId,
-                    priority: parseInt(row.priority) || 3,
-                    status: row.status,
-                    
-                    // Date Logic: Prefer modified/new dates if available
-                    start_date: row.modifiedStartDate || row.startDate,
-                    committed_delivery_date: row.newDeliveryDate || row.deliveryDate,
-                    planned_end_date: row.endDate,
-                    
-                    // Extended Fields (Backend Schema)
-                    client_name: row.client,
-                    product_article_code: row.part_number,
-                    quantity: row.quantity,
-                    product_name: row.description,
-                    material_type: row.material,
-                    product_category: row.product,
-                    production_cadence: parseQuantity(row.cadence), // Ensure number
-                    
-                    // Notes & Other
-                    notes: row.notes,
-                    
-                    // Fields without direct backend match (or complex mapping) -> Append to notes
-                    // "Edo. Art." (part_status)
-                    ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
+                await retryOperation(async () => {
+                    await base44.entities.WorkOrder.create({
+                        // Required Standard Fields
+                        order_number: row.order_number,
+                        machine_id: row.machineId,
+                        process_id: row.processId,
+                        priority: parseInt(row.priority) || 3,
+                        status: row.status,
+                        
+                        // Date Logic: Prefer modified/new dates if available
+                        start_date: row.modifiedStartDate || row.startDate,
+                        committed_delivery_date: row.newDeliveryDate || row.deliveryDate,
+                        planned_end_date: row.endDate,
+                        
+                        // Extended Fields (Backend Schema)
+                        client_name: row.client,
+                        product_article_code: row.part_number,
+                        quantity: row.quantity,
+                        product_name: row.description,
+                        material_type: row.material,
+                        product_category: row.product,
+                        production_cadence: parseQuantity(row.cadence), // Ensure number
+                        
+                        // Notes & Other
+                        notes: row.notes,
+                        
+                        // Fields without direct backend match (or complex mapping) -> Append to notes
+                        // "Edo. Art." (part_status)
+                        ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
+                    });
                 });
                 successCount++;
             } catch (err) {
@@ -603,6 +626,10 @@ export default function WorkOrderImporter() {
             }
         }));
         
+        if (i + batchSize < validRows.length) {
+            await sleep(500); // Small delay between batches
+        }
+
         setProgress(Math.round(((i + batch.length) / validRows.length) * 100));
     }
 
