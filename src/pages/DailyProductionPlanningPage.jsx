@@ -4,12 +4,25 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Save, Calendar as CalendarIcon, Filter, AlertTriangle } from "lucide-react";
-import { format, parseISO, startOfWeek, addDays, getISOWeek } from "date-fns";
+import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Check, ChevronsUpDown } from "lucide-react";
+import { format, startOfWeek } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export default function DailyProductionPlanningPage() {
   const { toast } = useToast();
@@ -18,6 +31,7 @@ export default function DailyProductionPlanningPage() {
   // --- Local State ---
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTeam, setSelectedTeam] = useState(""); 
+  const [openCombobox, setOpenCombobox] = useState(false);
 
   // --- Queries ---
 
@@ -25,7 +39,7 @@ export default function DailyProductionPlanningPage() {
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    staleTime: Infinity, // Config is stable
+    staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -56,7 +70,7 @@ export default function DailyProductionPlanningPage() {
       
       return Array.from(uniqueMap.values()).sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
-    staleTime: Infinity, // Machines are stable
+    staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -70,20 +84,17 @@ export default function DailyProductionPlanningPage() {
       team_key: selectedTeam 
     }),
     enabled: !!selectedDate && !!selectedTeam,
-    staleTime: 5 * 60 * 1000, // 5 min cache for current planning
+    staleTime: 5 * 60 * 1000,
   });
 
   // 4. Fetch Shift Schedule to determine Shift
   const { data: shiftSchedule } = useQuery({
     queryKey: ['teamWeekSchedules', selectedDate],
     queryFn: async () => {
-      // Logic to find shift from schedule
-      // Assuming we can list and filter locally or via API
-      // For simplicity, we list all and filter. Optimized in real backend.
       const allSchedules = await base44.entities.TeamWeekSchedule.list(undefined, 2000);
       return allSchedules;
     },
-    staleTime: Infinity, // Schedules are stable
+    staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -101,14 +112,10 @@ export default function DailyProductionPlanningPage() {
 
   const currentShift = useMemo(() => {
     if (!shiftSchedule) return "Desconocido";
-    // Simple logic: Find schedule entry for this team/date
-    // Note: The schema for TeamWeekSchedule usually has week_start_date, team_key, and day_x_shift
-    // We need to match the date to the week
     const dateObj = new Date(selectedDate);
-    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 }); // Monday start
+    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
     
-    // Find the schedule for this team and week
     const schedule = shiftSchedule.find(s => 
       s.team_key === selectedTeam && 
       s.week_start_date === weekStartStr
@@ -116,11 +123,7 @@ export default function DailyProductionPlanningPage() {
 
     if (!schedule) return "Sin Asignar";
 
-    // Map day index (0-6) to field name (day_1_shift, etc.)
-    // date-fns getDay: 0=Sunday, 1=Monday...
-    // Our schema likely: day_1_shift = Monday
-    let dayIndex = dateObj.getDay(); // 0..6
-    // Adjust so 1=Monday... 7=Sunday
+    let dayIndex = dateObj.getDay();
     if (dayIndex === 0) dayIndex = 7;
     
     const fieldName = `day_${dayIndex}_shift`;
@@ -130,13 +133,34 @@ export default function DailyProductionPlanningPage() {
   const activePlanningsMap = useMemo(() => {
     const map = new Map();
     plannings.forEach(p => {
-        // Only consider plannings for this team/date (already filtered by query, but good to be safe)
         if (p.team_key === selectedTeam && p.fecha_planificacion === selectedDate) {
             map.set(String(p.machine_id), p);
         }
     });
     return map;
   }, [plannings, selectedTeam, selectedDate]);
+
+  const plannedMachines = useMemo(() => {
+    const list = [];
+    activePlanningsMap.forEach(planning => {
+        const machine = machines.find(m => String(m.id) === String(planning.machine_id));
+        if (machine) {
+            list.push({ ...machine, planning });
+        } else {
+            list.push({ 
+                id: planning.machine_id, 
+                nombre: planning.machine_nombre || "Desconocida", 
+                codigo_maquina: planning.machine_codigo || "N/A", 
+                planning 
+            });
+        }
+    });
+    return list.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
+  }, [activePlanningsMap, machines]);
+
+  const availableMachines = useMemo(() => {
+    return machines.filter(m => !activePlanningsMap.has(String(m.id)));
+  }, [machines, activePlanningsMap]);
 
   const availableOperators = useMemo(() => {
     const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
@@ -160,13 +184,11 @@ export default function DailyProductionPlanningPage() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
-    // Optimistic Update
     onMutate: async (newData) => {
         await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
         const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
 
         queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
-            // Fake ID for UI immediate response
             const tempPlanning = { ...newData, id: 'temp-' + Date.now() };
             return [...old, tempPlanning];
         });
@@ -175,10 +197,9 @@ export default function DailyProductionPlanningPage() {
     },
     onError: (err, newData, context) => {
         queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
-        toast({ title: "Error", description: "No se pudo crear la planificación", variant: "destructive" });
+        toast({ title: "Error", description: "No se pudo añadir la máquina", variant: "destructive" });
     },
     onSettled: () => {
-        // Only refetch if absolutely necessary, or let staled data expire naturally
         // queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]); 
     }
   });
@@ -197,10 +218,7 @@ export default function DailyProductionPlanningPage() {
     },
     onError: (err, id, context) => {
         queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
-        toast({ title: "Error", description: "No se pudo eliminar la planificación", variant: "destructive" });
-    },
-    onSettled: () => {
-         // queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+        toast({ title: "Error", description: "No se pudo eliminar la máquina", variant: "destructive" });
     }
   });
 
@@ -219,15 +237,11 @@ export default function DailyProductionPlanningPage() {
     onError: (err, vars, context) => {
         queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
         toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
-    },
-    onSettled: () => {
-        // queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
     }
   });
 
   const clearMutation = useMutation({
     mutationFn: async () => {
-        // Delete all plannings for this team/date
         const promises = plannings.map(p => base44.entities.MachinePlanning.delete(p.id));
         await Promise.all(promises);
     },
@@ -250,28 +264,26 @@ export default function DailyProductionPlanningPage() {
 
   // --- Handlers ---
 
-  const handleToggle = (machine, isChecked) => {
+  const handleAddMachine = (machine) => {
     const machineIdStr = String(machine.id);
-    const existingPlanning = activePlanningsMap.get(machineIdStr);
+    if (activePlanningsMap.has(machineIdStr)) return;
 
-    if (isChecked) {
-        if (existingPlanning) return; // Already exists
-        
-        createMutation.mutate({
-            machine_id: machine.id,
-            machine_nombre: machine.nombre,
-            machine_codigo: machine.codigo_maquina,
-            fecha_planificacion: selectedDate,
-            team_key: selectedTeam,
-            operadores_necesarios: 1,
-            activa_planning: true,
-            turno: currentShift,
-            process_id: null
-        });
-    } else {
-        if (!existingPlanning) return; // Already gone
-        deleteMutation.mutate(existingPlanning.id);
-    }
+    createMutation.mutate({
+        machine_id: machine.id,
+        machine_nombre: machine.nombre,
+        machine_codigo: machine.codigo_maquina,
+        fecha_planificacion: selectedDate,
+        team_key: selectedTeam,
+        operadores_necesarios: 1,
+        activa_planning: true,
+        turno: currentShift,
+        process_id: null
+    });
+    setOpenCombobox(false);
+  };
+
+  const handleDeletePlanning = (planningId) => {
+    deleteMutation.mutate(planningId);
   };
 
   const handleOperatorChange = (planningId, val) => {
@@ -388,47 +400,88 @@ export default function DailyProductionPlanningPage() {
         </Card>
       </div>
 
-      {/* Main Table */}
+      {/* Machine Selection & List */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Listado de Máquinas</CardTitle>
+            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCombobox}
+                        className="w-[250px] justify-between"
+                    >
+                        <span className="truncate">
+                             Añadir Máquina...
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                    <Command>
+                        <CommandInput placeholder="Buscar máquina..." />
+                        <CommandList>
+                            <CommandEmpty>No se encontraron máquinas.</CommandEmpty>
+                            <CommandGroup>
+                                {availableMachines.map((machine) => (
+                                    <CommandItem
+                                        key={machine.id}
+                                        value={`${machine.nombre} ${machine.codigo_maquina || ''}`}
+                                        onSelect={() => handleAddMachine(machine)}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span>{machine.nombre}</span>
+                                            {machine.codigo_maquina && (
+                                                <span className="text-xs text-slate-500">{machine.codigo_maquina}</span>
+                                            )}
+                                        </div>
+                                        <Check
+                                            className={cn(
+                                                "ml-auto h-4 w-4",
+                                                activePlanningsMap.has(String(machine.id)) ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
         </CardHeader>
         <CardContent>
             <div className="overflow-x-auto">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[100px] text-center">Estado</TableHead>
-                        <TableHead>Máquina</TableHead>
-                        <TableHead>Código</TableHead>
-                        <TableHead className="w-[150px]">Operarios</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {machines.map(machine => {
-                        const machineIdStr = String(machine.id);
-                        const planning = activePlanningsMap.get(machineIdStr);
-                        const isPlanned = !!planning;
-
-                        return (
-                            <TableRow key={machineIdStr} className={isPlanned ? "bg-blue-50" : ""}>
-                                <TableCell className="text-center">
-                                    <Switch 
-                                        checked={isPlanned}
-                                        onCheckedChange={(checked) => handleToggle(machine, checked)}
-                                    />
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                    {machine.nombre}
-                                    {machine.descripcion && machine.descripcion !== machine.nombre && (
-                                        <div className="text-xs text-slate-500">{machine.descripcion}</div>
-                                    )}
-                                </TableCell>
-                                <TableCell className="font-mono text-sm text-slate-500">
-                                    {machine.codigo_maquina}
-                                </TableCell>
-                                <TableCell>
-                                    {isPlanned ? (
+            {plannedMachines.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                    <p>No hay máquinas planificadas para este día.</p>
+                    <p className="text-sm">Utiliza el botón "Añadir Máquina" para comenzar.</p>
+                </div>
+            ) : (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Máquina</TableHead>
+                            <TableHead>Código</TableHead>
+                            <TableHead className="w-[150px]">Operarios</TableHead>
+                            <TableHead className="w-[100px] text-center">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {plannedMachines.map(item => {
+                            const { planning } = item;
+                            return (
+                                <TableRow key={planning.id}>
+                                    <TableCell className="font-medium">
+                                        {item.nombre}
+                                        {item.descripcion && item.descripcion !== item.nombre && (
+                                            <div className="text-xs text-slate-500">{item.descripcion}</div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm text-slate-500">
+                                        {item.codigo_maquina}
+                                    </TableCell>
+                                    <TableCell>
                                         <Input 
                                             type="number" 
                                             min="1" 
@@ -439,15 +492,23 @@ export default function DailyProductionPlanningPage() {
                                                 if(e.key === 'Enter') handleOperatorChange(planning.id, e.currentTarget.value);
                                             }}
                                         />
-                                    ) : (
-                                        <span className="text-slate-400 text-sm">-</span>
-                                    )}
-                                </TableCell>
-                            </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => handleDeletePlanning(planning.id)}
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            )}
             </div>
         </CardContent>
       </Card>
