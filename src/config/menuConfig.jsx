@@ -31,6 +31,7 @@ export const MENU_STRUCTURE = [
   // Fabricación
   { name: 'Config. Fabricación', icon: Factory, path: '/OrganizationalStructure?tab=manufacturing', category: 'Fabricación' },
   { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Fabricación' },
+  { name: 'Asignación de Turno', icon: Users, path: '/ShiftAssignmentsPage', category: 'Fabricación' },
   { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Fabricación' },
   { name: 'Control Calidad', icon: ClipboardCheck, path: '/QualityControl', category: 'Fabricación' },
   { name: 'Config. Procesos', icon: Cog, path: '/ProcessConfiguration', category: 'Fabricación' },
