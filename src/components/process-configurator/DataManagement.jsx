@@ -23,7 +23,8 @@ import {
   Activity,
   Layers,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from "lucide-react";
 
 // const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`; // Removed API constant
@@ -61,13 +62,21 @@ export default function DataManagement() {
       const processes = await localDataService.fetchApiProcesses();
       
       toast.success(
-        `Sincronización completa: ${activities.length} actividades, ${processes.length} procesos`
+        `Sincronización (API/Local): ${activities.length} actividades, ${processes.length} procesos`
       );
       fetchData();
     } catch (error) {
-      toast.error("Error al sincronizar con API");
+      toast.error("Error al sincronizar");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearData = () => {
+    if (confirm("¿Estás seguro de borrar todos los datos locales? Esto eliminará actividades, procesos y artículos guardados en el navegador.")) {
+        localDataService.clearAll();
+        fetchData();
+        toast.success("Datos locales eliminados correctamente");
     }
   };
 
@@ -164,6 +173,14 @@ export default function DataManagement() {
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Recargar Local
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleClearData}
+            data-testid="clear-btn"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Borrar Datos
           </Button>
         </div>
       </div>

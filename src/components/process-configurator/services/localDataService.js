@@ -559,5 +559,11 @@ export const localDataService = {
               time_difference_seconds: maxTime - minTime
           }
       };
+  },
+
+  clearAll() {
+    localStorage.removeItem(STORAGE_KEYS.ACTIVITIES);
+    localStorage.removeItem(STORAGE_KEYS.PROCESSES);
+    localStorage.removeItem(STORAGE_KEYS.ARTICLES);
   }
 };
