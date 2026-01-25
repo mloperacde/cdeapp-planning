@@ -60,12 +60,14 @@ export const localDataService = {
         const response = await fetch(`${API_URL}/processes`);
         if (!response.ok) throw new Error('Failed to fetch processes from API');
         const apiProcesses = await response.json();
+        console.log("API Processes raw:", apiProcesses);
 
         // Convert API format to internal format
         const convertedProcesses = apiProcesses.map(p => {
             const activityRefs = p.activity_numbers || [];
             const procActivities = [];
             let totalTime = 0;
+            const pCode = String(p.code || '');
 
             activityRefs.forEach(num => {
                 const act = activityMap.get(num.toString());
@@ -76,9 +78,9 @@ export const localDataService = {
             });
 
             return {
-                id: `proc_${p.code.replace(/\s+/g, '_')}`,
-                code: p.code,
-                name: p.name || p.code,
+                id: `proc_${pCode.replace(/\s+/g, '_')}`,
+                code: pCode,
+                name: p.name || pCode,
                 activity_numbers: activityRefs,
                 total_time_seconds: totalTime,
                 activities_count: procActivities.length,
@@ -88,13 +90,18 @@ export const localDataService = {
 
         // Merge with local processes
         const localProcesses = await this.getProcesses();
-        const existingCodes = new Set(localProcesses.map(p => p.code));
+        // Normalize codes to strings for comparison
+        const existingCodes = new Set(localProcesses.map(p => String(p.code)));
         
+        let addedCount = 0;
         convertedProcesses.forEach(proc => {
             if (!existingCodes.has(proc.code)) {
                 localProcesses.push(proc);
+                addedCount++;
             }
         });
+        
+        console.log(`Added ${addedCount} new processes from API`);
 
         localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(localProcesses));
         return localProcesses;
