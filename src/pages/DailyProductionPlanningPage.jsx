@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Check, ChevronsUpDown } from "lucide-react";
+import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Check, ChevronsUpDown, Save } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Command,
   CommandEmpty,
@@ -124,13 +125,17 @@ export default function DailyProductionPlanningPage() {
 
   const currentShift = useMemo(() => {
     if (!shiftSchedule) return "Desconocido";
-    const dateObj = new Date(selectedDate);
+    
+    // Parse YYYY-MM-DD as local date to avoid timezone shifts
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    
     const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
     
     const schedule = shiftSchedule.find(s => 
       s.team_key === selectedTeam && 
-      s.week_start_date === weekStartStr
+      s.fecha_inicio_semana === weekStartStr
     );
 
     if (!schedule) return "Sin Asignar";
@@ -321,6 +326,23 @@ export default function DailyProductionPlanningPage() {
     }
   };
 
+  const handleSavePlanning = () => {
+      const deficit = totalRequiredOperators - availableOperators;
+      if (deficit > 0) {
+          toast({
+              title: "Planificación Guardada (Con Advertencias)",
+              description: `Se ha registrado la planificación, pero existe un déficit de ${deficit} operadores.`,
+              variant: "destructive"
+          });
+      } else {
+          toast({
+              title: "Planificación Guardada",
+              description: "La configuración de producción ha sido confirmada correctamente.",
+              className: "bg-green-600 text-white border-green-700"
+          });
+      }
+  };
+
   // --- Render ---
 
   return (
@@ -335,14 +357,24 @@ export default function DailyProductionPlanningPage() {
                 Configure la planificación de máquinas y operadores para el día seleccionado.
             </p>
         </div>
-        <Button 
-            variant="destructive" 
-            onClick={handleClearAll}
-            disabled={activePlanningsMap.size === 0 || clearMutation.isPending}
-            className="w-full md:w-auto"
-        >
-            {clearMutation.isPending ? "Limpiando..." : "Limpiar Planificación"}
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+            <Button 
+                variant="outline" 
+                onClick={handleSavePlanning}
+                className="flex-1 md:flex-none gap-2 border-green-600 text-green-700 hover:bg-green-50"
+            >
+                <Save className="w-4 h-4" />
+                Guardar
+            </Button>
+            <Button 
+                variant="destructive" 
+                onClick={handleClearAll}
+                disabled={activePlanningsMap.size === 0 || clearMutation.isPending}
+                className="flex-1 md:flex-none"
+            >
+                {clearMutation.isPending ? "Limpiando..." : "Limpiar"}
+            </Button>
+        </div>
       </div>
 
       {/* Controls */}
@@ -418,6 +450,18 @@ export default function DailyProductionPlanningPage() {
             </CardContent>
         </Card>
       </div>
+
+      {/* Deficit Alert */}
+      {availableOperators < totalRequiredOperators && (
+        <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Déficit de Operadores</AlertTitle>
+            <AlertDescription>
+                Se requieren {totalRequiredOperators} operadores pero solo hay {availableOperators} disponibles.
+                Por favor, revise la asignación de personal.
+            </AlertDescription>
+        </Alert>
+      )}
 
       {/* Machine Selection & List */}
       <Card>
