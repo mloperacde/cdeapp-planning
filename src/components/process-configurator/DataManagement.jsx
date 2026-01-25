@@ -393,11 +393,12 @@ export default function DataManagement() {
           <div className="flex gap-4">
             <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <div className="space-y-2">
-              <h4 className="font-semibold">Formato esperado del Excel</h4>
+              <h4 className="font-semibold">Lógica de Importación y Formato</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Columnas de actividades con: Número, Nombre, Tiempo (segundos)</li>
-                <li>• Columnas de procesos con formato "PROCESO A", "PROCESO B", etc.</li>
-                <li>• Referencias de actividades en cada proceso (ej: "1-3-5-9-18")</li>
+                <li>• <span className="font-medium text-foreground">Actividades:</span> Deben estar nombradas con <strong>NÚMEROS</strong> (ej: 1, 10, 25).</li>
+                <li>• <span className="font-medium text-foreground">Procesos:</span> Deben estar nombrados con <strong>LETRAS</strong> o combinaciones de letras (ej: A, B, AA, Proceso A).</li>
+                <li>• Un proceso se define como un <strong>conjunto único de actividades</strong>.</li>
+                <li>• El sistema detectará automáticamente si la hoja es un listado o una matriz.</li>
               </ul>
             </div>
           </div>

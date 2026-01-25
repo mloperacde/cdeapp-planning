@@ -271,7 +271,7 @@ export const localDataService = {
 
     // Detect headers
     const headers = jsonData[0] || [];
-    // Flexible matching for headers
+    // Flexible matching for headers, but favoring "numero" or just assuming if it looks like data
     const activityNumIdx = headers.findIndex(h => h && /n[uú]mero|c[oó]digo|id/i.test(h.toString()));
     const activityNameIdx = headers.findIndex(h => h && /actividad|descripci[oó]n|nombre/i.test(h.toString()));
     const activityTimeIdx = headers.findIndex(h => h && /tiempo|segundos|duraci[oó]n/i.test(h.toString()));
@@ -293,9 +293,20 @@ export const localDataService = {
       if (!row || row.length === 0) continue;
 
       // Ensure we have at least a number/code
-      const number = activityNumIdx !== -1 ? row[activityNumIdx] : row[0]; // Fallback to col 0
+      const numberRaw = activityNumIdx !== -1 ? row[activityNumIdx] : row[0]; // Fallback to col 0
       
-      if (number) {
+      // LOGIC: Activities are named with numbers.
+      // We accept strings that look like numbers (e.g. "1", "10")
+      if (numberRaw !== undefined && numberRaw !== null) {
+         // Check if it's a valid number (strict check)
+         // parseFloat parses "1A" as 1, which is bad. We want strict numbers.
+         const strVal = numberRaw.toString().trim();
+         const isNumeric = !isNaN(Number(strVal)) && strVal !== "";
+         
+         if (!isNumeric) continue; // Skip if not a strict number
+
+         const number = Number(strVal);
+
         const name = activityNameIdx !== -1 ? row[activityNameIdx] : (row[1] || `Actividad ${number}`);
         const timeVal = activityTimeIdx !== -1 ? row[activityTimeIdx] : row[2];
         const time = parseFloat(timeVal) || 0;
@@ -332,22 +343,31 @@ export const localDataService = {
       const row = jsonData[i];
       if (!row || row.length === 0) continue;
 
-      const name = processNameIdx !== -1 ? row[processNameIdx] : null;
+      const name = processNameIdx !== -1 ? row[processNameIdx] : row[0]; // Fallback to col 0
       
-      // Only add if it looks like a process definition
-      if (name && typeof name === 'string' && (name.toUpperCase().includes('PROCESO') || processNameIdx !== -1)) {
-        const activityRefsRaw = processActivitiesIdx !== -1 ? row[processActivitiesIdx] : null;
+      // LOGIC: Processes are named with letters or combinations of letters.
+      // We validate that the name contains letters.
+      if (name && typeof name === 'string') {
+        // Simple check: should have at least one letter and preferably not just numbers
+        // But user said "Letters or combinations of letters", so "A", "AB" are valid. "1" is not.
+        const isLetterBased = /[a-zA-Z]/.test(name) && !/^\d+$/.test(name);
         
-        const activityRefs = activityRefsRaw 
-          ? activityRefsRaw.toString().split(/[\s,-]+/).filter(Boolean)
-          : [];
-        
-        processes.push({
-          id: `proc_${name.replace(/\s+/g, '_')}`,
-          code: name,
-          name: name,
-          activity_numbers: activityRefs,
-        });
+        if (isLetterBased || (processNameIdx !== -1)) { // Trust explicit header if present
+            const activityRefsRaw = processActivitiesIdx !== -1 ? row[processActivitiesIdx] : (row[1] || "");
+            
+            const activityRefs = activityRefsRaw 
+            ? activityRefsRaw.toString().split(/[\s,-]+/).filter(token => !isNaN(parseFloat(token))) // Filter only numbers for activities
+            : [];
+            
+            if (activityRefs.length > 0 || isLetterBased) {
+                processes.push({
+                id: `proc_${name.replace(/\s+/g, '_')}`,
+                code: name,
+                name: name,
+                activity_numbers: activityRefs,
+                });
+            }
+        }
       }
     }
     return processes;
@@ -357,59 +377,70 @@ export const localDataService = {
     const processes = [];
     if (!jsonData || jsonData.length === 0) return processes;
 
-    // Find the header row by scanning the first few rows
+    // LOGIC: Activities are Numbers (Headers). Processes are Letters (Row Labels).
+
+    // 1. Find Header Row: The row that contains mostly Numbers.
     let headerRowIndex = -1;
-    let maxMatches = 0;
-    const activityMap = new Map(knownActivities.map(a => [a.number.toString(), a]));
+    let maxNumberMatches = 0;
 
-    // Check first 5 rows for the best header candidate
-    for (let r = 0; r < Math.min(5, jsonData.length); r++) {
+    for (let r = 0; r < Math.min(10, jsonData.length); r++) {
         const row = jsonData[r];
-        if (!row || row.length < 2) continue; // Skip empty or single-column rows (titles)
+        if (!row || row.length < 2) continue;
 
-        let matches = 0;
-        for (let c = 1; c < row.length; c++) {
+        let numberCount = 0;
+        let totalCells = 0;
+        for (let c = 1; c < row.length; c++) { // Skip first column (Process names)
             const cell = row[c];
-            if (cell !== undefined && cell !== null) {
-                const cellStr = cell.toString().trim();
-                if (knownActivities.length > 0) {
-                    if (activityMap.has(cellStr)) matches++;
-                } else {
-                    if (cellStr) matches++;
+            if (cell !== undefined && cell !== null && cell !== "") {
+                totalCells++;
+                // Check if cell is a number (Activity ID)
+                if (!isNaN(parseFloat(cell))) {
+                    numberCount++;
                 }
             }
         }
         
-        // We prefer rows with more matches. 
-        // If we have known activities, we want at least some matches.
-        if (matches > maxMatches) {
-            maxMatches = matches;
+        // If this row has significant numeric content, it's likely the header
+        if (numberCount > maxNumberMatches && numberCount > 0) {
+            maxNumberMatches = numberCount;
             headerRowIndex = r;
         }
     }
 
-    // If no good header found, fallback to row 0 if it has multiple cols, otherwise fail
     if (headerRowIndex === -1) {
-        if (jsonData[0] && jsonData[0].length > 5) headerRowIndex = 0;
-        else return [];
+        // Fallback: If we have known activities, try to match them
+         if (knownActivities.length > 0) {
+             const activityMap = new Map(knownActivities.map(a => [a.number.toString(), a]));
+             let maxMatches = 0;
+             for (let r = 0; r < Math.min(5, jsonData.length); r++) {
+                const row = jsonData[r];
+                if (!row) continue;
+                let matches = 0;
+                for (let c = 1; c < row.length; c++) {
+                    if (row[c] && activityMap.has(row[c].toString())) matches++;
+                }
+                if (matches > maxMatches) {
+                    maxMatches = matches;
+                    headerRowIndex = r;
+                }
+             }
+         }
     }
+
+    if (headerRowIndex === -1) return [];
 
     const headers = jsonData[headerRowIndex];
     const activityCols = []; 
 
-    // Identify Activity Columns in the chosen Header
+    // Identify Activity Columns (Must be numbers)
     for (let i = 1; i < headers.length; i++) {
         const headerVal = headers[i];
         if (headerVal !== undefined && headerVal !== null) {
              const headerStr = headerVal.toString().trim();
-             if (knownActivities.length > 0) {
-                 if (activityMap.has(headerStr)) {
-                     activityCols.push({ index: i, activityNumber: headerStr });
-                 }
-             } else {
-                 if (headerStr) {
-                    activityCols.push({ index: i, activityNumber: headerStr });
-                 }
+             // Strict check: Header must be a number (Activity ID)
+             // Using Number() instead of parseFloat() to avoid "1A" -> 1
+             if (!isNaN(Number(headerStr)) && headerStr !== "") {
+                 activityCols.push({ index: i, activityNumber: headerStr });
              }
         }
     }
@@ -422,15 +453,24 @@ export const localDataService = {
         if (!row || !row[0]) continue; 
 
         const processName = row[0].toString().trim();
-        // Skip if processName looks like a header row (redundant check but safe)
-        const isHeaderRow = /^(proceso|nombre|c[oó]digo|descripci[oó]n)$/i.test(processName);
-        if (isHeaderRow) continue;
+        
+        // LOGIC: Processes are Letters.
+        // Skip if it looks like a number (likely misinterpretation or just data)
+        if (/^\d+$/.test(processName)) continue;
+        // Must contain letters
+        if (!/[a-zA-Z]/.test(processName)) continue;
+
+        // Skip obvious header repetitions
+        if (/^(proceso|nombre|c[oó]digo|descripci[oó]n)$/i.test(processName)) continue;
 
         const processActivities = [];
 
         activityCols.forEach(col => {
              const cellValue = row[col.index];
-             if (cellValue !== undefined && cellValue !== null && cellValue !== "" && cellValue !== 0 && cellValue !== "0") {
+             // In matrix, existence of value usually means "contains activity"
+             // Or sometimes it's the time. 
+             // We assume if cell is not empty/null/0, it's part of the process.
+             if (cellValue !== undefined && cellValue !== null && cellValue !== "" && cellValue != 0) {
                  processActivities.push(col.activityNumber);
              }
         });
@@ -445,7 +485,7 @@ export const localDataService = {
         }
     }
     return processes;
-  },
+  },,
 
   // --- Activities & Processes ---
 
