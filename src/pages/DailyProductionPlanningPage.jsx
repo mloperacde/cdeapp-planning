@@ -196,27 +196,32 @@ export default function DailyProductionPlanningPage() {
   }, [availableMachines, machineSearch]);
 
   const availableOperators = useMemo(() => {
-    const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
-    if (!teamName) return 0;
+    const teamObj = teams.find(t => t.team_key === selectedTeam);
+    if (!teamObj) return 0;
     
+    // Normalization helper for robust comparison
+    const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+    const targetTeam = normalize(teamObj.team_name);
+
     return employees.filter(e => {
-        // 1. Team Match
-        if (e.equipo !== teamName) return false;
+        // 1. Team Match (Robust)
+        if (normalize(e.equipo) !== targetTeam) return false;
 
-        // 2. Availability (Must be "Disponible")
-        if (e.disponibilidad !== "Disponible") return false;
+        // 2. Availability (Must be "Disponible" - Robust)
+        if (normalize(e.disponibilidad) !== "disponible") return false;
 
-        // 3. Department: 'Fabricación' (Case insensitive)
-        if (!e.departamento || e.departamento.toLowerCase() !== 'fabricación') return false;
+        // 3. Department: 'Fabricación' (Robust)
+        const dept = normalize(e.departamento);
+        if (dept !== 'fabricacion') return false;
 
-        // 4. Role (Puesto) in allowed list
-        const currentPuesto = (e.puesto || "").toLowerCase().trim();
+        // 4. Role (Puesto) in allowed list (Robust)
+        const currentPuesto = normalize(e.puesto);
         const allowedRoles = [
             'responsable de linea', 
             'segunda de linea', 
             'operario de linea',
             'operaria de linea'
-        ];
+        ].map(normalize);
         
         if (!allowedRoles.includes(currentPuesto)) return false;
 
