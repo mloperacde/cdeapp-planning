@@ -162,17 +162,46 @@ export const localDataService = {
             // Parse LISTADO DE PROCESOS sheet
              if (sheetListadoProcesos) {
                 const data = XLSX.utils.sheet_to_json(sheetListadoProcesos, { header: 1 });
-                // Try standard parsing first
-                let foundProcesses = this._parseProcessesFromData(data);
                 
-                // If standard parsing failed or found nothing, and data is wide, try Matrix parsing
-                if (foundProcesses.length === 0 && data.length > 0 && data[0].length > 5) {
+                // Determine strategy based on shape
+                // If it has many columns (>5), it's likely a Matrix
+                const isLikelyMatrix = data.length > 0 && (data[0].length > 5 || (data[1] && data[1].length > 5));
+                
+                let foundProcesses = [];
+                
+                if (isLikelyMatrix) {
+                    // Try Matrix parsing FIRST for wide sheets
                     foundProcesses = this._parseProcessesFromMatrix(data, activities);
+                    
+                    // If successful, we might need to backfill activities that don't exist yet
+                    if (foundProcesses.length > 0) {
+                        const existingActivityNums = new Set(activities.map(a => a.number.toString()));
+                        const usedActivityNums = new Set();
+                        
+                        foundProcesses.forEach(p => {
+                            p.activity_numbers.forEach(num => usedActivityNums.add(num));
+                        });
+                        
+                        usedActivityNums.forEach(num => {
+                            if (!existingActivityNums.has(num.toString())) {
+                                activities.push({
+                                    id: `act_${num}`,
+                                    number: num,
+                                    name: `Actividad ${num}`,
+                                    time_seconds: 0
+                                });
+                            }
+                        });
+                    }
                 }
 
-                // If we found processes, append them (avoid duplicates based on code if needed)
+                // If Matrix parsing found nothing, try Standard parsing
+                if (foundProcesses.length === 0) {
+                    foundProcesses = this._parseProcessesFromData(data);
+                }
+
+                // Append found processes
                 if (foundProcesses.length > 0) {
-                    // Filter out duplicates if any
                     const existingCodes = new Set(processes.map(p => p.code));
                     foundProcesses.forEach(p => {
                         if (!existingCodes.has(p.code)) {
