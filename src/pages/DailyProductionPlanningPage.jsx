@@ -7,23 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Check, ChevronsUpDown, Save } from "lucide-react";
+import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function DailyProductionPlanningPage() {
   const { toast } = useToast();
@@ -32,7 +20,7 @@ export default function DailyProductionPlanningPage() {
   // --- Local State ---
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTeam, setSelectedTeam] = useState(""); 
-  const [openCombobox, setOpenCombobox] = useState(false);
+  const [machineSearch, setMachineSearch] = useState("");
 
   // --- Queries ---
 
@@ -138,13 +126,7 @@ export default function DailyProductionPlanningPage() {
       s.fecha_inicio_semana === weekStartStr
     );
 
-    if (!schedule) return "Sin Asignar";
-
-    let dayIndex = dateObj.getDay();
-    if (dayIndex === 0) dayIndex = 7;
-    
-    const fieldName = `day_${dayIndex}_shift`;
-    return schedule[fieldName] || "Libre";
+    return schedule?.turno || "Sin Asignar";
   }, [shiftSchedule, selectedDate, selectedTeam]);
 
   const activePlanningsMap = useMemo(() => {
@@ -178,6 +160,15 @@ export default function DailyProductionPlanningPage() {
   const availableMachines = useMemo(() => {
     return machines.filter(m => !activePlanningsMap.has(String(m.id)));
   }, [machines, activePlanningsMap]);
+
+  const filteredAvailableMachines = useMemo(() => {
+      if (!machineSearch.trim()) return availableMachines;
+      const lower = machineSearch.toLowerCase();
+      return availableMachines.filter(m => 
+          m.nombre?.toLowerCase().includes(lower) || 
+          m.codigo_maquina?.toLowerCase().includes(lower)
+      );
+  }, [availableMachines, machineSearch]);
 
   const availableOperators = useMemo(() => {
     const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
@@ -303,7 +294,6 @@ export default function DailyProductionPlanningPage() {
         turno: currentShift,
         process_id: null
     });
-    setOpenCombobox(false);
   };
 
   const handleDeletePlanning = (planningId) => {
@@ -463,119 +453,136 @@ export default function DailyProductionPlanningPage() {
         </Alert>
       )}
 
-      {/* Machine Selection & List */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Listado de Máquinas</CardTitle>
-            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openCombobox}
-                        className="w-[250px] justify-between"
-                    >
-                        <span className="truncate">
-                             Añadir Máquina...
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                    <Command>
-                        <CommandInput placeholder="Buscar máquina..." />
-                        <CommandList>
-                            <CommandEmpty>No se encontraron máquinas.</CommandEmpty>
-                            <CommandGroup>
-                                {availableMachines.map((machine) => (
-                                    <CommandItem
-                                        key={machine.id}
-                                        value={`${machine.nombre} ${machine.codigo_maquina || ''}`}
-                                        onSelect={() => handleAddMachine(machine)}
-                                    >
-                                        <div className="flex flex-col">
-                                            <span>{machine.nombre}</span>
-                                            {machine.codigo_maquina && (
-                                                <span className="text-xs text-slate-500">{machine.codigo_maquina}</span>
-                                            )}
-                                        </div>
-                                        <Check
-                                            className={cn(
-                                                "ml-auto h-4 w-4",
-                                                activePlanningsMap.has(String(machine.id)) ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
-            </Popover>
-        </CardHeader>
-        <CardContent>
-            <div className="overflow-x-auto">
-            {plannedMachines.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                    <p>No hay máquinas planificadas para este día.</p>
-                    <p className="text-sm">Utiliza el botón "Añadir Máquina" para comenzar.</p>
+      {/* Main Split Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-350px)] min-h-[600px]">
+          
+          {/* Left Column: Machine Catalog */}
+          <Card className="flex flex-col h-full border-slate-200 shadow-sm">
+            <CardHeader className="pb-3 border-b bg-slate-50/50">
+               <CardTitle className="text-base font-semibold flex items-center gap-2">
+                 <Factory className="w-4 h-4 text-slate-500" />
+                 Catálogo de Máquinas
+               </CardTitle>
+               <div className="relative mt-2">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                  <Input 
+                     placeholder="Buscar por nombre o código..." 
+                     className="pl-9 bg-white" 
+                     value={machineSearch}
+                     onChange={(e) => setMachineSearch(e.target.value)}
+                  />
+               </div>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30">
+                <ScrollArea className="h-full">
+                   <div className="p-3 space-y-2">
+                      {filteredAvailableMachines.map(machine => (
+                          <div key={machine.id} className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200">
+                              <div className="flex flex-col overflow-hidden mr-2">
+                                  <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
+                                  {machine.codigo_maquina && <span className="text-xs text-slate-500">{machine.codigo_maquina}</span>}
+                              </div>
+                              <Button 
+                                  size="icon" 
+                                  variant="ghost"
+                                  onClick={() => handleAddMachine(machine)}
+                                  className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-full"
+                                  title="Añadir a planificación"
+                              >
+                                  <Plus className="h-4 w-4" />
+                              </Button>
+                          </div>
+                      ))}
+                      {filteredAvailableMachines.length === 0 && (
+                          <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center">
+                              <Search className="w-8 h-8 mb-2 opacity-20" />
+                              <p className="text-sm">No se encontraron máquinas disponibles con ese criterio.</p>
+                          </div>
+                      )}
+                   </div>
+                </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Right Column: Planning Table */}
+          <Card className="lg:col-span-2 flex flex-col h-full border-slate-200 shadow-sm">
+            <CardHeader className="pb-3 border-b">
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold">
+                        Máquinas Planificadas <span className="text-slate-400 font-normal ml-1">({plannedMachines.length})</span>
+                    </CardTitle>
                 </div>
-            ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Máquina</TableHead>
-                            <TableHead>Código</TableHead>
-                            <TableHead className="w-[150px]">Operarios</TableHead>
-                            <TableHead className="w-[100px] text-center">Acciones</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {plannedMachines.map(item => {
-                            const { planning } = item;
-                            return (
-                                <TableRow key={planning.id}>
-                                    <TableCell className="font-medium">
-                                        {item.nombre}
-                                        {item.descripcion && item.descripcion !== item.nombre && (
-                                            <div className="text-xs text-slate-500">{item.descripcion}</div>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="font-mono text-sm text-slate-500">
-                                        {item.codigo_maquina}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Input 
-                                            type="number" 
-                                            min="1" 
-                                            className="w-20 h-8"
-                                            defaultValue={planning.operadores_necesarios}
-                                            disabled={String(planning.id).startsWith('temp-')}
-                                            onBlur={(e) => handleOperatorChange(planning.id, e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if(e.key === 'Enter') handleOperatorChange(planning.id, e.currentTarget.value);
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            onClick={() => handleDeletePlanning(planning.id)}
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            )}
-            </div>
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden p-0">
+                <ScrollArea className="h-full">
+                    <div className="min-w-[600px]">
+                        {plannedMachines.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                                <Factory className="w-12 h-12 mb-3 text-slate-200" />
+                                <p className="font-medium">No hay máquinas planificadas</p>
+                                <p className="text-sm mt-1">Seleccione máquinas del catálogo para comenzar</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader className="bg-slate-50 sticky top-0 z-10">
+                                    <TableRow>
+                                        <TableHead className="pl-6">Máquina</TableHead>
+                                        <TableHead>Código</TableHead>
+                                        <TableHead className="w-[150px]">Operarios</TableHead>
+                                        <TableHead className="w-[100px] text-center pr-6">Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {plannedMachines.map(item => {
+                                        const { planning } = item;
+                                        return (
+                                            <TableRow key={planning.id} className="hover:bg-slate-50/50">
+                                                <TableCell className="pl-6 font-medium">
+                                                    {item.nombre}
+                                                    {item.descripcion && item.descripcion !== item.nombre && (
+                                                        <div className="text-xs text-slate-500">{item.descripcion}</div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm text-slate-500">
+                                                    {item.codigo_maquina}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <Users className="w-4 h-4 text-slate-400" />
+                                                        <Input 
+                                                            type="number" 
+                                                            min="1" 
+                                                            className="w-20 h-8"
+                                                            defaultValue={planning.operadores_necesarios}
+                                                            disabled={String(planning.id).startsWith('temp-')}
+                                                            onBlur={(e) => handleOperatorChange(planning.id, e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if(e.key === 'Enter') handleOperatorChange(planning.id, e.currentTarget.value);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center pr-6">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        onClick={() => handleDeletePlanning(planning.id)}
+                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </div>
+                </ScrollArea>
+            </CardContent>
+          </Card>
+      </div>
     </div>
   );
 }
