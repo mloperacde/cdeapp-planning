@@ -226,25 +226,45 @@ export const localDataService = {
             processes = this._parseProcessesFromData(data);
           }
 
-          // Calculate process totals
+          // Calculate process totals and Deduplicate by Activity Combination
           const activityMap = new Map(activities.map(a => [a.number.toString(), a]));
+          const uniqueSignatureMap = new Map();
           
           processes.forEach(proc => {
             let totalTime = 0;
             const procActivities = [];
             
-            proc.activity_numbers.forEach(num => {
-              const act = activityMap.get(num.toString());
-              if (act) {
-                totalTime += act.time_seconds;
-                procActivities.push(act);
-              }
-            });
+            if (proc.activity_numbers && Array.isArray(proc.activity_numbers)) {
+                proc.activity_numbers.forEach(num => {
+                  const act = activityMap.get(num.toString());
+                  if (act) {
+                    totalTime += act.time_seconds;
+                    procActivities.push(act);
+                  }
+                });
+            }
             
-            proc.total_time_seconds = totalTime;
-            proc.activities_count = procActivities.length;
-            proc.activity_ids = procActivities.map(a => a.id);
+            // LOGIC: Each process is a set of activities.
+            // Different combinations of activities = different process.
+            // Therefore, we deduplicate by activity combination.
+            if (procActivities.length > 0) {
+                // Create unique signature based on sorted activity numbers
+                const signature = procActivities
+                    .map(a => a.number)
+                    .sort((a, b) => a - b)
+                    .join('|');
+
+                proc.total_time_seconds = totalTime;
+                proc.activities_count = procActivities.length;
+                proc.activity_ids = procActivities.map(a => a.id);
+                
+                // Store in map (Last one wins, effectively merging/updating if duplicate)
+                uniqueSignatureMap.set(signature, proc);
+            }
           });
+
+          // Replace processes list with unique ones
+          processes = Array.from(uniqueSignatureMap.values());
 
           // Save to localStorage
           if (activities.length > 0) localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
@@ -355,9 +375,21 @@ export const localDataService = {
         if (isLetterBased || (processNameIdx !== -1)) { // Trust explicit header if present
             const activityRefsRaw = processActivitiesIdx !== -1 ? row[processActivitiesIdx] : (row[1] || "");
             
-            const activityRefs = activityRefsRaw 
-            ? activityRefsRaw.toString().split(/[\s,-]+/).filter(token => !isNaN(parseFloat(token))) // Filter only numbers for activities
-            : [];
+            let activityRefs = [];
+            if (activityRefsRaw) {
+                // Split by common separators, filter numbers, convert to Number type
+                const tokens = activityRefsRaw.toString().split(/[\s,-]+/);
+                const numberSet = new Set();
+                
+                tokens.forEach(token => {
+                     const trimmed = token.trim();
+                     if (!isNaN(Number(trimmed)) && trimmed !== "") {
+                         numberSet.add(Number(trimmed));
+                     }
+                });
+                // Sort to ensure consistent signature (Set logic)
+                activityRefs = Array.from(numberSet).sort((a, b) => a - b);
+            }
             
             if (activityRefs.length > 0 || isLetterBased) {
                 processes.push({
@@ -471,16 +503,19 @@ export const localDataService = {
              // Or sometimes it's the time. 
              // We assume if cell is not empty/null/0, it's part of the process.
              if (cellValue !== undefined && cellValue !== null && cellValue !== "" && cellValue != 0) {
-                 processActivities.push(col.activityNumber);
+                 processActivities.push(Number(col.activityNumber));
              }
         });
 
-        if (processActivities.length > 0) {
+        // Ensure unique and sorted (Set logic)
+        const uniqueActivities = Array.from(new Set(processActivities)).sort((a, b) => a - b);
+
+        if (uniqueActivities.length > 0) {
             processes.push({
                 id: `proc_${processName.replace(/[^a-zA-Z0-9]/g, '_')}_${i}`,
                 code: processName,
                 name: processName,
-                activity_numbers: processActivities
+                activity_numbers: uniqueActivities
             });
         }
     }
