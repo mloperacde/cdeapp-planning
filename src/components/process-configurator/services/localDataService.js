@@ -9,7 +9,7 @@ const STORAGE_KEYS = {
 // Helper to simulate async delay
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
-const API_URL = (import.meta.env.VITE_BACKEND_URL || '') + '/api';
+const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000') + '/api';
 
 export const localDataService = {
   // --- Data Management (Excel Parsing) ---

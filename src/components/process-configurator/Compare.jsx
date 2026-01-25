@@ -38,8 +38,8 @@ export default function Compare() {
 
   const fetchArticles = async () => {
     try {
-      const response = await axios.get(`${API}/articles`);
-      setArticles(Array.isArray(response.data) ? response.data : []);
+      const response = await localDataService.getArticles();
+      setArticles(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error("Error fetching articles:", error);
       toast.error("Error al cargar los artículos");
@@ -69,8 +69,8 @@ export default function Compare() {
 
     setComparing(true);
     try {
-      const response = await axios.post(`${API}/compare`, selectedIds);
-      setComparison(response.data);
+      const response = await localDataService.compareArticles(selectedIds);
+      setComparison(response);
     } catch (error) {
       console.error("Error comparing:", error);
       toast.error("Error al comparar artículos");
