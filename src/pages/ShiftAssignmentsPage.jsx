@@ -135,6 +135,24 @@ export default function ShiftAssignmentsPage() {
       });
   }, [productionPlan, machines]);
 
+  // --- HELPERS (Moved up for useEffect usage) ---
+  const getEmployeeById = (id) => employees.find(e => String(e.id) === String(id));
+
+  // Helper to find employee by ID or Fallback to Name (if ID fails in Ideal Assignment)
+  const resolveEmployee = (identifier) => {
+      if (!identifier) return null;
+      // 1. Try exact ID match
+      const byId = employees.find(e => String(e.id) === String(identifier));
+      if (byId) return byId.id;
+      
+      // 2. Fallback: Try Name Match (Robust)
+      const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+      const targetName = normalize(identifier);
+      const byName = employees.find(e => normalize(e.nombre) === targetName);
+      
+      return byName ? byName.id : identifier;
+  };
+
   // Initialize local assignments when data loads
   useEffect(() => {
     // 1. Reset State completely when team changes to avoid stale data ghosts
@@ -170,16 +188,16 @@ export default function ShiftAssignmentsPage() {
 
              loaded[ma.machine_id] = {
                 // No ID yet (new record)
-                responsable_linea: getVal(ma.responsable_linea),
-                segunda_linea: getVal(ma.segunda_linea),
-                operador_1: ma.operador_1,
-                operador_2: ma.operador_2,
-                operador_3: ma.operador_3,
-                operador_4: ma.operador_4,
-                operador_5: ma.operador_5,
-                operador_6: ma.operador_6,
-                operador_7: ma.operador_7,
-                operador_8: ma.operador_8,
+                responsable_linea: resolveEmployee(getVal(ma.responsable_linea)),
+                segunda_linea: resolveEmployee(getVal(ma.segunda_linea)),
+                operador_1: resolveEmployee(ma.operador_1),
+                operador_2: resolveEmployee(ma.operador_2),
+                operador_3: resolveEmployee(ma.operador_3),
+                operador_4: resolveEmployee(ma.operador_4),
+                operador_5: resolveEmployee(ma.operador_5),
+                operador_6: resolveEmployee(ma.operador_6),
+                operador_7: resolveEmployee(ma.operador_7),
+                operador_8: resolveEmployee(ma.operador_8),
             };
         });
         setLocalAssignments(loaded);
@@ -188,29 +206,13 @@ export default function ShiftAssignmentsPage() {
              // Toast suppressed...
         }
     } 
-  }, [existingStaffing, machineAssignments, selectedTeam]);
+  }, [existingStaffing, machineAssignments, selectedTeam, employees]); // Added employees dependency
 
   // --- HELPERS ---
-
+  
   const getMachineDetails = (machineId) => machines.find(m => String(m.id) === String(machineId));
-  const getEmployeeById = (id) => employees.find(e => String(e.id) === String(id));
-
-  // Helper to find employee by ID or Fallback to Name (if ID fails in Ideal Assignment)
-  const resolveEmployee = (identifier) => {
-      if (!identifier) return null;
-      // 1. Try exact ID match
-      const byId = employees.find(e => String(e.id) === String(identifier));
-      if (byId) return byId.id;
-      
-      // 2. Fallback: Try Name Match (Robust)
-      // This handles cases where MachineAssignments stored names instead of IDs or IDs changed
-      const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
-      const targetName = normalize(identifier);
-      const byName = employees.find(e => normalize(e.nombre) === targetName);
-      
-      return byName ? byName.id : identifier; // Return resolved ID or original if not found
-  };
-
+  // getEmployeeById and resolveEmployee moved up
+  
   const checkEmployeeSkill = (employeeId, machineId) => {
     const emp = getEmployeeById(employeeId);
     if (!emp) return false;
