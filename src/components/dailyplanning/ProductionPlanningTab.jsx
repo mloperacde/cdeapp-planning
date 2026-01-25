@@ -48,6 +48,9 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     enabled: machines.length > 0, // Stagger: Wait for Machines
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: machines = [] } = useQuery({
@@ -78,27 +81,39 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       
       return Array.from(uniqueMachines.values()).sort((a, b) => a.orden - b.orden);
     },
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: Infinity, // Forever
+    gcTime: Infinity,
     enabled: teams.length > 0, // Stagger: Wait for Teams
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: Infinity, // Forever
+    gcTime: Infinity,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: Infinity, // Forever
+    gcTime: Infinity,
     enabled: machines.length > 0, // Stagger: Wait for Machines
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const [openCombobox, setOpenCombobox] = useState(false);
@@ -171,14 +186,26 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
   const createPlanningMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
-    onSuccess: (newPlanning) => {
-      // Optimistic update: Add to cache without refetching
-      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
-        return [...oldData, newPlanning];
-      });
-      queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
+    onMutate: async (newData) => {
+        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+
+        const tempId = `temp-${Date.now()}`;
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
+            return [...oldData, { ...newData, id: tempId, created_at: new Date().toISOString() }];
+        });
+
+        return { previousPlannings, tempId };
     },
-    onError: (err) => {
+    onSuccess: (newPlanning, variables, context) => {
+      // Replace temp item with real item
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
+        return oldData.map(p => p.id === context.tempId ? newPlanning : p);
+      });
+      // NO INVALIDATION to avoid 429
+    },
+    onError: (err, newData, context) => {
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
       console.error("Error creating planning:", err);
       toast({
         title: "Error",

@@ -43,6 +43,7 @@ export default function DailyProductionPlanningPage() {
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // Set default team
@@ -75,6 +76,7 @@ export default function DailyProductionPlanningPage() {
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
@@ -104,6 +106,7 @@ export default function DailyProductionPlanningPage() {
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // 5. Fetch Employees for Availability
@@ -197,19 +200,26 @@ export default function DailyProductionPlanningPage() {
         await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
         const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
 
+        const tempId = 'temp-' + Date.now();
         queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
-            const tempPlanning = { ...newData, id: 'temp-' + Date.now() };
-            return [...old, tempPlanning];
+            return [...old, { ...newData, id: tempId }];
         });
 
-        return { previousPlannings };
+        return { previousPlannings, tempId };
     },
     onError: (err, newData, context) => {
         queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
-        toast({ title: "Error", description: "No se pudo añadir la máquina", variant: "destructive" });
+        toast({
+            title: "Error al crear",
+            description: err.message,
+            variant: "destructive"
+        });
     },
-    onSettled: () => {
-        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]); 
+    onSuccess: (newPlanning, variables, context) => {
+        // Replace temp item with real item
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
+            return old.map(p => p.id === context.tempId ? newPlanning : p);
+        });
     }
   });
 
