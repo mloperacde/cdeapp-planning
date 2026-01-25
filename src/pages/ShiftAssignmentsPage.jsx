@@ -181,10 +181,13 @@ export default function ShiftAssignmentsPage() {
         setLocalAssignments(loaded);
         
         if (teamAssignments.length > 0) {
+            // Toast suppressed as per user request to be less invasive
+            /* 
             toast({
                 title: "Configuración Ideal Cargada",
                 description: "Se han precargado las asignaciones predeterminadas para este equipo.",
             });
+            */
         }
     } else {
         setLocalAssignments({});
@@ -194,7 +197,7 @@ export default function ShiftAssignmentsPage() {
   // --- HELPERS ---
 
   const getMachineDetails = (machineId) => machines.find(m => String(m.id) === String(machineId));
-  const getEmployeeById = (id) => employees.find(e => e.id === id);
+  const getEmployeeById = (id) => employees.find(e => String(e.id) === String(id));
 
   const checkEmployeeSkill = (employeeId, machineId) => {
     const emp = getEmployeeById(employeeId);
@@ -223,28 +226,31 @@ export default function ShiftAssignmentsPage() {
              if (val && (typeof val === 'string' || typeof val === 'number')) assignedIds.add(String(val));
         });
     });
+    
+    // Normalization helper
+    const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+    const teamObj = teams.find(t => t.team_key === selectedTeam);
+    const targetTeam = teamObj ? normalize(teamObj.team_name) : "";
 
     // Basic Filtering
     let list = employees.filter(e => {
-        // 1. Team Match
-        const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
-        if (e.equipo !== teamName) return false;
+        // 1. Team Match (Robust)
+        if (targetTeam && normalize(e.equipo) !== targetTeam) return false;
 
-        // 2. Availability (Must be "Disponible" - implies no active absence)
-        if (e.disponibilidad !== "Disponible") return false;
+        // 2. Availability (Must be "Disponible" - Robust)
+        if (normalize(e.disponibilidad) !== "disponible") return false;
 
-        // 3. Department: 'Fabricación' (Case insensitive)
-        if (!e.departamento || e.departamento.toLowerCase() !== 'fabricación') return false;
+        // 3. Department: 'Fabricación' (Robust)
+        if (normalize(e.departamento) !== 'fabricacion') return false;
 
-        // 4. Role (Puesto) in allowed list (Strictly these 3 roles)
-        // Normalizing to lowercase for comparison
-        const currentPuesto = (e.puesto || "").toLowerCase().trim();
+        // 4. Role (Puesto) in allowed list (Robust)
+        const currentPuesto = normalize(e.puesto);
         const allowedRoles = [
             'responsable de linea', 
             'segunda de linea', 
             'operario de linea',
-            'operaria de linea' // Adding female variant as requested
-        ];
+            'operaria de linea'
+        ].map(normalize);
         
         if (!allowedRoles.includes(currentPuesto)) return false;
 
@@ -253,8 +259,8 @@ export default function ShiftAssignmentsPage() {
         
         // Filter by search
         if (searchTerm) {
-            const lower = searchTerm.toLowerCase();
-            return e.nombre?.toLowerCase().includes(lower) || e.codigo_empleado?.toLowerCase().includes(lower);
+            const lower = normalize(searchTerm);
+            return normalize(e.nombre).includes(lower) || normalize(e.codigo_empleado).includes(lower);
         }
 
         return true;
