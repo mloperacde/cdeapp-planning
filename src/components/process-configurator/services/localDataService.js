@@ -17,8 +17,16 @@ export const localDataService = {
   // New method to fetch master activities from API
   async fetchApiActivities() {
       try {
-          const response = await fetch(`${API_URL}/activities`);
-          if (!response.ok) throw new Error('Failed to fetch from API');
+          const response = await fetch(`${API_URL}/activities`).catch(err => {
+              console.warn("API not reachable, using local data only:", err);
+              return null;
+          });
+          
+          if (!response || !response.ok) {
+              console.warn('Failed to fetch from API or offline');
+              return this.getActivities();
+          }
+          
           const apiActivities = await response.json();
           
           // Merge with local data
@@ -47,7 +55,8 @@ export const localDataService = {
           return merged;
       } catch (error) {
           console.error("Error syncing with API:", error);
-          throw error;
+          // Return local data on error instead of throwing
+          return this.getActivities();
       }
   },
 
@@ -57,8 +66,16 @@ export const localDataService = {
         const activities = await this.getActivities();
         const activityMap = new Map(activities.map(a => [a.number.toString(), a]));
 
-        const response = await fetch(`${API_URL}/processes`);
-        if (!response.ok) throw new Error('Failed to fetch processes from API');
+        const response = await fetch(`${API_URL}/processes`).catch(err => {
+             console.warn("API not reachable, using local data only:", err);
+             return null;
+        });
+
+        if (!response || !response.ok) {
+            console.warn('Failed to fetch processes from API or offline');
+            return this.getProcesses();
+        }
+
         const apiProcesses = await response.json();
         console.log("API Processes raw:", apiProcesses);
 
@@ -107,7 +124,7 @@ export const localDataService = {
         return localProcesses;
     } catch (error) {
         console.error("Error syncing processes with API:", error);
-        throw error;
+        return this.getProcesses();
     }
   },
 
@@ -346,8 +363,10 @@ export const localDataService = {
         if (!row || !row[0]) continue; 
 
         const processName = row[0].toString().trim();
-        // Skip if processName looks like a header (e.g. contains "Proceso")
-        if (/proceso|nombre|c[oó]digo/i.test(processName) && i < 5) continue;
+        // Skip if processName looks like a header row (exact match on common header terms)
+        // AND we are in the first few rows.
+        const isHeaderRow = /^(proceso|nombre|c[oó]digo|descripci[oó]n)$/i.test(processName);
+        if (isHeaderRow && i < 5) continue;
 
         const processActivities = [];
 
