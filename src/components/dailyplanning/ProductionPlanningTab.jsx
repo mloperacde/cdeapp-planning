@@ -85,6 +85,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   });
 
   const deletingIdsRef = React.useRef(new Set());
+  const [showSummary, setShowSummary] = useState(false);
 
   // Auto-cleanup for duplicate plannings in DB
   useEffect(() => {
