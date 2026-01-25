@@ -328,27 +328,56 @@ export const localDataService = {
     const processes = [];
     if (!jsonData || jsonData.length === 0) return processes;
 
-    const headers = jsonData[0] || [];
-    // If first row is empty, try second
-    if (headers.length === 0 && jsonData.length > 1) {
-        return this._parseProcessesFromMatrix(jsonData.slice(1), knownActivities);
+    // Find the header row by scanning the first few rows
+    let headerRowIndex = -1;
+    let maxMatches = 0;
+    const activityMap = new Map(knownActivities.map(a => [a.number.toString(), a]));
+
+    // Check first 5 rows for the best header candidate
+    for (let r = 0; r < Math.min(5, jsonData.length); r++) {
+        const row = jsonData[r];
+        if (!row || row.length < 2) continue; // Skip empty or single-column rows (titles)
+
+        let matches = 0;
+        for (let c = 1; c < row.length; c++) {
+            const cell = row[c];
+            if (cell !== undefined && cell !== null) {
+                const cellStr = cell.toString().trim();
+                if (knownActivities.length > 0) {
+                    if (activityMap.has(cellStr)) matches++;
+                } else {
+                    if (cellStr) matches++;
+                }
+            }
+        }
+        
+        // We prefer rows with more matches. 
+        // If we have known activities, we want at least some matches.
+        if (matches > maxMatches) {
+            maxMatches = matches;
+            headerRowIndex = r;
+        }
     }
 
-    const activityMap = new Map(knownActivities.map(a => [a.number.toString(), a]));
+    // If no good header found, fallback to row 0 if it has multiple cols, otherwise fail
+    if (headerRowIndex === -1) {
+        if (jsonData[0] && jsonData[0].length > 5) headerRowIndex = 0;
+        else return [];
+    }
+
+    const headers = jsonData[headerRowIndex];
     const activityCols = []; 
 
-    // Identify Activity Columns in Header
+    // Identify Activity Columns in the chosen Header
     for (let i = 1; i < headers.length; i++) {
         const headerVal = headers[i];
         if (headerVal !== undefined && headerVal !== null) {
              const headerStr = headerVal.toString().trim();
-             // If we have known activities, strict match
              if (knownActivities.length > 0) {
                  if (activityMap.has(headerStr)) {
                      activityCols.push({ index: i, activityNumber: headerStr });
                  }
              } else {
-                 // If no known activities, assume any non-empty header is an activity code
                  if (headerStr) {
                     activityCols.push({ index: i, activityNumber: headerStr });
                  }
@@ -358,15 +387,15 @@ export const localDataService = {
 
     if (activityCols.length === 0) return [];
 
-    for (let i = 1; i < jsonData.length; i++) {
+    // Process rows starting AFTER the header row
+    for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
         const row = jsonData[i];
         if (!row || !row[0]) continue; 
 
         const processName = row[0].toString().trim();
-        // Skip if processName looks like a header row (exact match on common header terms)
-        // AND we are in the first few rows.
+        // Skip if processName looks like a header row (redundant check but safe)
         const isHeaderRow = /^(proceso|nombre|c[oó]digo|descripci[oó]n)$/i.test(processName);
-        if (isHeaderRow && i < 5) continue;
+        if (isHeaderRow) continue;
 
         const processActivities = [];
 
