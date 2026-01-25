@@ -54,6 +54,19 @@ export default function DataManagement() {
     }
   };
 
+  const handleSyncApi = async () => {
+    setLoading(true);
+    try {
+      const result = await localDataService.fetchApiActivities();
+      toast.success(`${result.length} actividades sincronizadas desde API`);
+      fetchData();
+    } catch (error) {
+      toast.error("Error al sincronizar con API");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUpload = async (file) => {
     if (!file) return;
     
@@ -131,14 +144,24 @@ export default function DataManagement() {
             Carga y gestiona los datos de procesos y actividades desde Excel
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={fetchData}
-          data-testid="refresh-btn"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSyncApi}
+            data-testid="sync-api-btn"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sincronizar API
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={fetchData}
+            data-testid="refresh-btn"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Recargar Local
+          </Button>
+        </div>
       </div>
 
       {/* Upload Section */}

@@ -9,9 +9,48 @@ const STORAGE_KEYS = {
 // Helper to simulate async delay
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
+const API_URL = (import.meta.env.VITE_BACKEND_URL || '') + '/api';
+
 export const localDataService = {
   // --- Data Management (Excel Parsing) ---
   
+  // New method to fetch master activities from API
+  async fetchApiActivities() {
+      try {
+          const response = await fetch(`${API_URL}/activities`);
+          if (!response.ok) throw new Error('Failed to fetch from API');
+          const apiActivities = await response.json();
+          
+          // Merge with local data
+          const localActivities = await this.getActivities();
+          const localMap = new Map(localActivities.map(a => [a.number.toString(), a]));
+          
+          const merged = apiActivities.map(apiAct => {
+              const local = localMap.get(apiAct.number.toString());
+              return {
+                  id: `act_${apiAct.number}`,
+                  number: apiAct.number,
+                  name: apiAct.name, // API is source of truth for names
+                  time_seconds: local?.time_seconds || apiAct.time_seconds || 0 // Local is source of truth for time (if > 0)
+              };
+          });
+
+          // Add local-only activities (from Excel) that are not in API
+          const apiNumbers = new Set(apiActivities.map(a => a.number.toString()));
+          localActivities.forEach(local => {
+              if (!apiNumbers.has(local.number.toString())) {
+                  merged.push(local);
+              }
+          });
+          
+          localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(merged));
+          return merged;
+      } catch (error) {
+          console.error("Error syncing with API:", error);
+          throw error;
+      }
+  },
+
   async processExcel(file) {
     await delay(500);
     return new Promise((resolve, reject) => {
@@ -22,56 +61,63 @@ export const localDataService = {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
           
-          // Assume first sheet contains the data
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          let activities = [];
+          let processes = [];
           
-          // Parse Logic:
-          // Look for "ACTIVIDADES" and "PROCESOS" sections or columns
-          // This is a simplified parser based on the user description
+          // --- Strategy 1: Look for specific sheets ---
+          const sheetActivities = workbook.Sheets['ACTIVIDADES'];
+          const sheetProcesses = workbook.Sheets['PROCESOS'];
+          const sheetListadoProcesos = workbook.Sheets['LISTADO DE PROCESOS'];
           
-          const activities = [];
-          const processes = [];
-          
-          // Header detection
-          const headers = jsonData[0] || [];
-          const activityNumIdx = headers.findIndex(h => h?.toString().toLowerCase().includes('número') || h?.toString().toLowerCase().includes('numero'));
-          const activityNameIdx = headers.findIndex(h => h?.toString().toLowerCase().includes('actividad'));
-          const activityTimeIdx = headers.findIndex(h => h?.toString().toLowerCase().includes('tiempo'));
-          
-          const processNameIdx = headers.findIndex(h => h?.toString().toLowerCase().includes('proceso'));
-          const processActivitiesIdx = headers.findIndex(h => h?.toString().toLowerCase().includes('referencias'));
-
-          // Iterate rows
-          for (let i = 1; i < jsonData.length; i++) {
-            const row = jsonData[i];
-            if (!row || row.length === 0) continue;
-
-            // Extract Activity
-            if (activityNumIdx !== -1 && row[activityNumIdx]) {
-              activities.push({
-                id: `act_${row[activityNumIdx]}`,
-                number: row[activityNumIdx],
-                name: row[activityNameIdx] || `Actividad ${row[activityNumIdx]}`,
-                time_seconds: parseFloat(row[activityTimeIdx]) || 0
-              });
+          if (sheetActivities || sheetProcesses || sheetListadoProcesos) {
+            // Parse ACTIVIDADES sheet
+            if (sheetActivities) {
+              const data = XLSX.utils.sheet_to_json(sheetActivities, { header: 1 });
+              activities = this._parseActivitiesFromData(data);
+            }
+            
+            // Parse PROCESOS sheet
+            if (sheetProcesses) {
+              const data = XLSX.utils.sheet_to_json(sheetProcesses, { header: 1 });
+              processes = this._parseProcessesFromData(data);
             }
 
-            // Extract Process
-            if (processNameIdx !== -1 && row[processNameIdx]) {
-              const activityRefs = row[processActivitiesIdx] 
-                ? row[processActivitiesIdx].toString().split(/[\s,-]+/).filter(Boolean)
-                : [];
-              
-              processes.push({
-                id: `proc_${row[processNameIdx].replace(/\s+/g, '_')}`,
-                code: row[processNameIdx],
-                name: row[processNameIdx],
-                activity_numbers: activityRefs,
-                // We will calculate totals later based on activities
-              });
-            }
+            // Parse LISTADO DE PROCESOS sheet
+             if (sheetListadoProcesos) {
+                const data = XLSX.utils.sheet_to_json(sheetListadoProcesos, { header: 1 });
+                // Try standard parsing first
+                let foundProcesses = this._parseProcessesFromData(data);
+                
+                // If standard parsing failed or found nothing, and data is wide, try Matrix parsing
+                if (foundProcesses.length === 0 && data.length > 0 && data[0].length > 5) {
+                    foundProcesses = this._parseProcessesFromMatrix(data, activities);
+                }
+
+                // If we found processes, append them (avoid duplicates based on code if needed)
+                if (foundProcesses.length > 0) {
+                    // Filter out duplicates if any
+                    const existingCodes = new Set(processes.map(p => p.code));
+                    foundProcesses.forEach(p => {
+                        if (!existingCodes.has(p.code)) {
+                            processes.push(p);
+                        }
+                    });
+                }
+             }
+            
+            // If we have activities but no processes, maybe processes are in the same sheet? 
+            // Or maybe the user only uploaded activities.
+            // If we have processes but no activities, we might have an issue linking them.
+            
+          } else {
+            // --- Strategy 2: Fallback to first sheet containing everything ---
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            
+            // Try to extract both from same sheet
+            activities = this._parseActivitiesFromData(data);
+            processes = this._parseProcessesFromData(data);
           }
 
           // Calculate process totals
@@ -95,8 +141,8 @@ export const localDataService = {
           });
 
           // Save to localStorage
-          localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
-          localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(processes));
+          if (activities.length > 0) localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+          if (processes.length > 0) localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(processes));
 
           resolve({
             activities_count: activities.length,
@@ -111,6 +157,157 @@ export const localDataService = {
       reader.onerror = () => reject(new Error("Error al leer el archivo."));
       reader.readAsArrayBuffer(file);
     });
+  },
+
+  _parseActivitiesFromData(jsonData) {
+    const activities = [];
+    if (!jsonData || jsonData.length === 0) return activities;
+
+    // Detect headers
+    const headers = jsonData[0] || [];
+    // Flexible matching for headers
+    const activityNumIdx = headers.findIndex(h => h && /n[uú]mero|c[oó]digo|id/i.test(h.toString()));
+    const activityNameIdx = headers.findIndex(h => h && /actividad|descripci[oó]n|nombre/i.test(h.toString()));
+    const activityTimeIdx = headers.findIndex(h => h && /tiempo|segundos|duraci[oó]n/i.test(h.toString()));
+
+    // If headers not found in first row, try second row (index 1)
+    let startRow = 1;
+    if (activityNumIdx === -1 && jsonData.length > 1) {
+        const headers2 = jsonData[1] || [];
+        const numIdx2 = headers2.findIndex(h => h && /n[uú]mero|c[oó]digo|id/i.test(h.toString()));
+        if (numIdx2 !== -1) {
+             // Found headers in row 1
+             return this._parseActivitiesFromData(jsonData.slice(1));
+        }
+    }
+
+    // Iterate rows
+    for (let i = startRow; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (!row || row.length === 0) continue;
+
+      // Ensure we have at least a number/code
+      const number = activityNumIdx !== -1 ? row[activityNumIdx] : row[0]; // Fallback to col 0
+      
+      if (number) {
+        const name = activityNameIdx !== -1 ? row[activityNameIdx] : (row[1] || `Actividad ${number}`);
+        const timeVal = activityTimeIdx !== -1 ? row[activityTimeIdx] : row[2];
+        const time = parseFloat(timeVal) || 0;
+
+        activities.push({
+          id: `act_${number}`,
+          number: number,
+          name: name,
+          time_seconds: time
+        });
+      }
+    }
+    return activities;
+  },
+
+  _parseProcessesFromData(jsonData) {
+    const processes = [];
+    if (!jsonData || jsonData.length === 0) return processes;
+
+    const headers = jsonData[0] || [];
+    const processNameIdx = headers.findIndex(h => h && /proceso|nombre/i.test(h.toString()));
+    const processActivitiesIdx = headers.findIndex(h => h && /referencias|actividades|secuencia/i.test(h.toString()));
+
+    // If headers not found in first row, try second row
+    let startRow = 1;
+    if (processNameIdx === -1 && jsonData.length > 1) {
+         const headers2 = jsonData[1] || [];
+         if (headers2.some(h => h && /proceso/i.test(h.toString()))) {
+             return this._parseProcessesFromData(jsonData.slice(1));
+         }
+    }
+
+    for (let i = startRow; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (!row || row.length === 0) continue;
+
+      const name = processNameIdx !== -1 ? row[processNameIdx] : null;
+      
+      // Only add if it looks like a process definition
+      if (name && typeof name === 'string' && (name.toUpperCase().includes('PROCESO') || processNameIdx !== -1)) {
+        const activityRefsRaw = processActivitiesIdx !== -1 ? row[processActivitiesIdx] : null;
+        
+        const activityRefs = activityRefsRaw 
+          ? activityRefsRaw.toString().split(/[\s,-]+/).filter(Boolean)
+          : [];
+        
+        processes.push({
+          id: `proc_${name.replace(/\s+/g, '_')}`,
+          code: name,
+          name: name,
+          activity_numbers: activityRefs,
+        });
+      }
+    }
+    return processes;
+  },
+
+  _parseProcessesFromMatrix(jsonData, knownActivities = []) {
+    const processes = [];
+    if (!jsonData || jsonData.length === 0) return processes;
+
+    const headers = jsonData[0] || [];
+    // If first row is empty, try second
+    if (headers.length === 0 && jsonData.length > 1) {
+        return this._parseProcessesFromMatrix(jsonData.slice(1), knownActivities);
+    }
+
+    const activityMap = new Map(knownActivities.map(a => [a.number.toString(), a]));
+    const activityCols = []; 
+
+    // Identify Activity Columns in Header
+    for (let i = 1; i < headers.length; i++) {
+        const headerVal = headers[i];
+        if (headerVal !== undefined && headerVal !== null) {
+             const headerStr = headerVal.toString().trim();
+             // If we have known activities, strict match
+             if (knownActivities.length > 0) {
+                 if (activityMap.has(headerStr)) {
+                     activityCols.push({ index: i, activityNumber: headerStr });
+                 }
+             } else {
+                 // If no known activities, assume any non-empty header is an activity code
+                 if (headerStr) {
+                    activityCols.push({ index: i, activityNumber: headerStr });
+                 }
+             }
+        }
+    }
+
+    if (activityCols.length === 0) return [];
+
+    for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || !row[0]) continue; 
+
+        const processName = row[0].toString().trim();
+        // Skip if processName looks like a header (e.g. contains "Proceso")
+        if (/proceso|nombre|c[oó]digo/i.test(processName) && i < 5) continue;
+
+        const processActivities = [];
+
+        activityCols.forEach(col => {
+             const cellValue = row[col.index];
+             if (cellValue !== undefined && cellValue !== null && cellValue !== "" && cellValue !== 0 && cellValue !== "0") {
+                 processActivities.push(col.activityNumber);
+             }
+        });
+
+        if (processActivities.length > 0) {
+            processes.push({
+                id: `proc_${processName.replace(/[^a-zA-Z0-9]/g, '_')}_${i}`,
+                code: processName,
+                name: processName,
+                activity_numbers: processActivities
+            });
+        }
+    }
+    return processes;
   },
 
   // --- Activities & Processes ---
