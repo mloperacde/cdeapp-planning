@@ -7,10 +7,24 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Factory, Eye, AlertTriangle, Users, Save, CheckCircle, X } from "lucide-react";
+import { Factory, Eye, AlertTriangle, Users, Save, CheckCircle, X, ChevronsUpDown, Check, Trash2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -76,62 +90,82 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const deletingIdsRef = React.useRef(new Set());
+  const [openCombobox, setOpenCombobox] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const deletingIdsRef = React.useRef(new Set());
 
-  // Auto-cleanup for duplicate plannings in DB
-  useEffect(() => {
-    if (!plannings || plannings.length === 0) return;
+  // --- Derived State ---
 
-    const seen = new Set();
-    const duplicates = [];
-
-    // Identify duplicates (Same Machine + Same Date + Same Team)
-    // Sort by creation date descending (newest first) to keep the latest
+  const activePlanningsMap = useMemo(() => {
+    const map = new Map();
+    // Sort by created_at desc to keep latest
     const sortedPlannings = [...plannings]
-      .filter(p => p.team_key === selectedTeam && p.fecha_planificacion === selectedDate)
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        .filter(p => p.team_key === selectedTeam && p.fecha_planificacion === selectedDate)
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-    // Fix: Ensure we don't accidentally mark valid machines as duplicates due to bad logic
-    // The previous logic was: if seen.has(id), then it's a duplicate.
-    // That is correct for deduplicating BY ID.
-    // But if "activeMachines" in the UI uses a different logic, we might have a mismatch.
-    
-    // Let's align with the UI logic:
-    // We only want ONE planning per machine_id per day per team.
-    
     sortedPlannings.forEach(p => {
-      if (seen.has(p.machine_id)) {
-        duplicates.push(p.id);
-      } else {
-        seen.add(p.machine_id);
-      }
+        if (!map.has(String(p.machine_id))) {
+            map.set(String(p.machine_id), p);
+        }
     });
-
-    // Clean up duplicates if found
-    const idsToDelete = duplicates.filter(id => !deletingIdsRef.current.has(id));
-    
-    if (idsToDelete.length > 0) {
-      console.log("Cleaning up duplicate plannings:", idsToDelete);
-      idsToDelete.forEach(id => {
-        deletingIdsRef.current.add(id);
-        deletePlanningMutation.mutate({ id, silent: true });
-      });
-    }
+    return map;
   }, [plannings, selectedTeam, selectedDate]);
 
-  // Mutations
+  const plannedMachines = useMemo(() => {
+    const list = [];
+    activePlanningsMap.forEach(planning => {
+        const machine = machines.find(m => String(m.id) === String(planning.machine_id));
+        if (machine) {
+            list.push({ ...machine, planning });
+        } else {
+            // Fallback if machine not found in master list
+            list.push({ 
+                id: planning.machine_id, 
+                nombre: planning.machine_nombre || "Desconocida", 
+                codigo_maquina: planning.machine_codigo || "N/A", 
+                descripcion: "",
+                planning 
+            });
+        }
+    });
+    return list.sort((a, b) => (a.orden || 999) - (b.orden || 999));
+  }, [activePlanningsMap, machines]);
+
+  const availableMachines = useMemo(() => {
+    return machines.filter(m => !activePlanningsMap.has(String(m.id)));
+  }, [machines, activePlanningsMap]);
+
+  const totalOperators = useMemo(() => {
+    let total = 0;
+    activePlanningsMap.forEach(p => {
+        total += (Number(p.operadores_necesarios) || 0);
+    });
+    return total;
+  }, [activePlanningsMap]);
+
+  const availableOperators = useMemo(() => {
+    const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+    if (!teamName) return 0;
+
+    return employees.filter(emp => 
+      emp.equipo === teamName && 
+      emp.disponibilidad === "Disponible" &&
+      emp.incluir_en_planning !== false
+    ).length;
+  }, [employees, selectedTeam, teams]);
+
+  const operatorsDeficit = totalOperators - availableOperators;
+
+  // --- Mutations ---
+
   const createPlanningMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
     onSuccess: (newPlanning) => {
-      console.log("Planning created successfully:", newPlanning);
       // Optimistic update: Add to cache without refetching
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
         return [...oldData, newPlanning];
       });
-      // Invalidate specific query only to ensure consistency without aggressive refetching
       queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
-      // Removed toast to prevent UI clutter
     },
     onError: (err) => {
       console.error("Error creating planning:", err);
@@ -150,9 +184,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
         return oldData.map(p => p.id === updatedPlanning.id ? updatedPlanning : p);
       });
-      // Invalidate specific query only
       queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
-      // Removed toast to prevent UI clutter
     },
     onError: (err) => {
       toast({
@@ -165,130 +197,56 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
   const deletePlanningMutation = useMutation({
     mutationFn: ({ id }) => base44.entities.MachinePlanning.delete(id),
-    onSuccess: (deletedId, { id, silent }) => {
-      // Remove from tracking ref
-      deletingIdsRef.current.delete(id);
-
+    onSuccess: (deletedId, { id }) => {
       // Optimistic update: Remove from cache without refetching
       const idToDelete = typeof deletedId === 'object' ? deletedId?.id : id;
       
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
         return oldData.filter(p => p.id !== idToDelete && p.id !== id);
       });
-      // Invalidate specific query only
       queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
     },
-    onError: (err, { id, silent }) => {
-      // Remove from tracking ref even on error
-      deletingIdsRef.current.delete(id);
-      
-      // Only show toast if not silent (background cleanup)
-      if (!silent) {
-        toast({
-          title: "Error",
-          description: "Error al eliminar: " + err.message,
-          variant: "destructive"
-        });
-      } else {
-        console.warn(`Background deletion failed for ${id} (likely already deleted):`, err);
-      }
+    onError: (err) => {
+      toast({
+        title: "Error",
+        description: "Error al eliminar: " + err.message,
+        variant: "destructive"
+      });
     }
   });
 
-  const activeMachines = useMemo(() => {
-    // Deduplicate plannings by machine_id to fix multiple selection issue
-    const uniquePlannings = [];
-    const seenMachineIds = new Set();
-    
-    // Sort by id descending to keep the latest one if duplicates exist
-    const sortedPlannings = [...plannings]
-      .filter(p => p.activa_planning && p.team_key === selectedTeam && p.fecha_planificacion === selectedDate)
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  // --- Handlers ---
 
-    for (const p of sortedPlannings) {
-      if (!seenMachineIds.has(p.machine_id)) {
-        seenMachineIds.add(p.machine_id);
-        uniquePlannings.push(p);
-      }
-    }
-    
-    return uniquePlannings;
-  }, [plannings, selectedTeam, selectedDate]);
+  const handleAddMachine = (machine) => {
+    const machineIdStr = String(machine.id);
+    if (activePlanningsMap.has(machineIdStr)) return;
 
-  const totalOperators = useMemo(() => {
-    return activeMachines.reduce((sum, p) => sum + (Number(p.operadores_necesarios) || 0), 0);
-  }, [activeMachines]);
-
-  const availableOperators = useMemo(() => {
-    const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
-    if (!teamName) return 0;
-
-    return employees.filter(emp => 
-      emp.equipo === teamName && 
-      emp.disponibilidad === "Disponible" &&
-      emp.incluir_en_planning !== false
-    ).length;
-  }, [employees, selectedTeam, teams]);
-
-  const operatorsDeficit = totalOperators - availableOperators;
-
-  // Handlers
-  const handleToggleMachine = (machine, isChecked) => {
-    // Safety check: Don't create if already exists (prevent duplicates)
-    // Don't delete if already gone
-    const existingPlanning = activeMachines.find(p => String(p.machine_id) === String(machine.id));
-
-    if (isChecked) {
-      if (existingPlanning) {
-        console.warn("Machine already planned, skipping create:", machine.nombre);
-        return;
-      }
-      
-      // Create new planning
-      createPlanningMutation.mutate({
+    createPlanningMutation.mutate({
         machine_id: machine.id,
         machine_nombre: machine.nombre,
-        machine_codigo: machine.codigo,
+        machine_codigo: machine.codigo_maquina, // Ensure correct field mapping from machine object
         fecha_planificacion: selectedDate,
         team_key: selectedTeam,
-        operadores_necesarios: 1, // Default to 1
-        process_id: null, // Bypassing process selection as requested
+        operadores_necesarios: 1,
         activa_planning: true,
-        turno: selectedShift
-      });
-    } else {
-      if (!existingPlanning && plannings.length > 0) {
-         // Double check against raw plannings just in case activeMachines is out of sync
-         const rawExists = plannings.some(p => String(p.machine_id) === String(machine.id) && p.team_key === selectedTeam && p.fecha_planificacion === selectedDate);
-         if (!rawExists) {
-             console.warn("Machine not planned, skipping delete:", machine.nombre);
-             return;
-         }
-      }
-
-      // Find ALL plannings for this machine to clean up potential duplicates in DB
-      const planningsToDelete = plannings.filter(
-        p => String(p.machine_id) === String(machine.id) && // Strict string comparison
-             p.team_key === selectedTeam && 
-             p.fecha_planificacion === selectedDate
-      );
-      
-      if (planningsToDelete.length > 0) {
-        planningsToDelete.forEach(p => {
-          deletePlanningMutation.mutate({ id: p.id });
-        });
-      }
-    }
+        turno: selectedShift,
+        process_id: null
+    });
+    setOpenCombobox(false);
   };
 
-  const handleOperatorsChange = (planningId, newValue) => {
-    const val = parseInt(newValue);
-    if (isNaN(val) || val < 1) return;
+  const handleDeletePlanning = (planningId) => {
+    deletePlanningMutation.mutate({ id: planningId });
+  };
 
-    updatePlanningMutation.mutate({
-      id: planningId,
-      data: { operadores_necesarios: val }
-    });
+  const handleOperatorChange = (planningId, val) => {
+    const num = parseInt(val);
+    if (!isNaN(num) && num > 0) {
+        updatePlanningMutation.mutate({
+            id: planningId,
+            data: { operadores_necesarios: num }
+        });
+    }
   };
 
   return (
@@ -317,7 +275,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-blue-700 font-medium">Máquinas Activas</p>
-                    <p className="text-2xl font-bold text-blue-900">{activeMachines.length}</p>
+                    <p className="text-2xl font-bold text-blue-900">{plannedMachines.length}</p>
                   </div>
                   <Factory className="w-8 h-8 text-blue-600" />
                 </div>
@@ -384,83 +342,125 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
             </Card>
           )}
 
-          {/* Nueva Tabla de Configuración de Máquinas */}
+          {/* Machine Selection & List */}
           <div className="mt-8">
-            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Factory className="w-5 h-5 text-blue-600" />
-              Configuración de Máquinas (Modo Temporal Manual)
-            </h3>
-            {/* Debug Info Hidden */}
-            {/* <div className="text-xs text-gray-400 mb-2">Total Máquinas Listadas: {machines.length} | Planificadas: {activeMachines.length}</div> */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <Factory className="w-5 h-5 text-blue-600" />
+                    Planificación de Máquinas
+                </h3>
+                <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openCombobox}
+                            className="w-full sm:w-[300px] justify-between"
+                        >
+                            <span className="truncate">
+                                Añadir Máquina...
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0">
+                        <Command>
+                            <CommandInput placeholder="Buscar máquina..." />
+                            <CommandList>
+                                <CommandEmpty>No se encontraron máquinas.</CommandEmpty>
+                                <CommandGroup>
+                                    {availableMachines.map((machine) => (
+                                        <CommandItem
+                                            key={machine.id}
+                                            value={`${machine.nombre} ${machine.codigo_maquina || ''}`}
+                                            onSelect={() => handleAddMachine(machine)}
+                                        >
+                                            <div className="flex flex-col">
+                                                <span>{machine.nombre}</span>
+                                                {machine.codigo_maquina && (
+                                                    <span className="text-xs text-slate-500">{machine.codigo_maquina}</span>
+                                                )}
+                                            </div>
+                                            <Plus className="ml-auto h-4 w-4 opacity-50" />
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+            </div>
             
-            <div className="border rounded-lg overflow-hidden bg-white">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="w-[100px] text-center">Planificar</TableHead>
-                    <TableHead>Máquina</TableHead>
-                    <TableHead>Código</TableHead>
-                    <TableHead className="w-[200px]">Operadores Necesarios</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {machines.map((machine) => {
-                    // FIX: Ensure strict type matching for ID comparison
-                    const planning = activeMachines.find(p => String(p.machine_id) === String(machine.id));
-                    const isPlanned = !!planning;
-                    
-                    return (
-                      <TableRow key={machine.id} className={isPlanned ? "bg-blue-50/50" : ""}>
-                        <TableCell className="text-center">
-                          <Switch
-                            checked={isPlanned}
-                            onCheckedChange={(checked) => handleToggleMachine(machine, checked)}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium text-slate-900">
-                          <div className="flex flex-col">
-                            <span>{machine.nombre}</span>
-                            {machine.descripcion && machine.descripcion !== machine.nombre && (
-                              <span className="text-xs text-slate-500">{machine.descripcion}</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-slate-500 font-mono text-xs">
-                          {machine.codigo}
-                        </TableCell>
-                        <TableCell>
-                          {isPlanned ? (
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4 text-slate-400" />
-                              <Input
-                                type="number"
-                                min="1"
-                                className="w-24 h-8"
-                                defaultValue={planning.operadores_necesarios || 1}
-                                onBlur={(e) => handleOperatorsChange(planning.id, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleOperatorsChange(planning.id, e.currentTarget.value);
-                                    e.currentTarget.blur();
-                                  }
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 text-sm italic">No planificada</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+            <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                {plannedMachines.length === 0 ? (
+                    <div className="text-center py-12 text-slate-500 bg-slate-50">
+                        <Factory className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                        <p className="font-medium">No hay máquinas planificadas para este turno.</p>
+                        <p className="text-sm mt-1">Utiliza el buscador arriba para añadir máquinas.</p>
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-slate-50">
+                                <TableHead>Máquina</TableHead>
+                                <TableHead>Código</TableHead>
+                                <TableHead className="w-[180px]">Operarios</TableHead>
+                                <TableHead className="w-[100px] text-center">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {plannedMachines.map(item => {
+                                const { planning } = item;
+                                return (
+                                    <TableRow key={planning.id} className="hover:bg-slate-50/50">
+                                        <TableCell className="font-medium text-slate-900">
+                                            <div className="flex flex-col">
+                                                <span>{item.nombre}</span>
+                                                {item.descripcion && item.descripcion !== item.nombre && (
+                                                    <div className="text-xs text-slate-500">{item.descripcion}</div>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="font-mono text-sm text-slate-500">
+                                            {item.codigo_maquina}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Users className="w-4 h-4 text-slate-400" />
+                                                <Input 
+                                                    type="number" 
+                                                    min="1" 
+                                                    className="w-20 h-8"
+                                                    defaultValue={planning.operadores_necesarios}
+                                                    onBlur={(e) => handleOperatorChange(planning.id, e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if(e.key === 'Enter') handleOperatorChange(planning.id, e.currentTarget.value);
+                                                    }}
+                                                />
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => handleDeletePlanning(planning.id)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                )}
             </div>
           </div>
 
           {/* Botón de Guardar / Validación */}
           <div className="mt-8 flex justify-end border-t pt-6">
-            {activeMachines.length > 0 && operatorsDeficit <= 0 ? (
+            {plannedMachines.length > 0 && operatorsDeficit <= 0 ? (
               <Button 
                 onClick={() => setShowSummary(true)}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-8 text-lg rounded-xl shadow-lg transition-all flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4"
@@ -511,7 +511,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
               </div>
               <div className="bg-slate-50 p-3 rounded-lg">
                 <p className="text-sm text-slate-500">Total Máquinas</p>
-                <p className="font-bold">{activeMachines.length}</p>
+                <p className="font-bold">{plannedMachines.length}</p>
               </div>
               <div className="bg-slate-50 p-3 rounded-lg">
                 <p className="text-sm text-slate-500">Total Operadores</p>
@@ -524,11 +524,11 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                 Detalle por Máquina
               </div>
               <div className="divide-y max-h-60 overflow-y-auto">
-                {activeMachines.map(planning => (
-                  <div key={planning.id} className="flex justify-between items-center px-4 py-2 text-sm">
-                    <span className="font-medium">{planning.machine_nombre}</span>
+                {plannedMachines.map(item => (
+                  <div key={item.planning.id} className="flex justify-between items-center px-4 py-2 text-sm">
+                    <span className="font-medium">{item.nombre}</span>
                     <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
-                      {planning.operadores_necesarios} op.
+                      {item.planning.operadores_necesarios} op.
                     </span>
                   </div>
                 ))}
