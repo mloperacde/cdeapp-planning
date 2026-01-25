@@ -200,7 +200,7 @@ export default function DailyProductionPlanningPage() {
         toast({ title: "Error", description: "No se pudo añadir la máquina", variant: "destructive" });
     },
     onSettled: () => {
-        // queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]); 
+        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]); 
     }
   });
 
@@ -487,6 +487,7 @@ export default function DailyProductionPlanningPage() {
                                             min="1" 
                                             className="w-20 h-8"
                                             defaultValue={planning.operadores_necesarios}
+                                            disabled={String(planning.id).startsWith('temp-')}
                                             onBlur={(e) => handleOperatorChange(planning.id, e.target.value)}
                                             onKeyDown={(e) => {
                                                 if(e.key === 'Enter') handleOperatorChange(planning.id, e.currentTarget.value);
