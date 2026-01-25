@@ -17,7 +17,10 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
   const { data: plannings = [] } = useQuery({
     queryKey: ['machinePlannings', selectedDate, selectedTeam],
-    queryFn: () => base44.entities.MachinePlanning.list(),
+    queryFn: () => base44.entities.MachinePlanning.filter({ 
+      fecha_planificacion: selectedDate, 
+      team_key: selectedTeam 
+    }),
     initialData: [],
   });
 
@@ -32,26 +35,29 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
         orden: m.orden_visualizacion || 999
       })).sort((a, b) => a.orden - b.orden);
     },
-    staleTime: 15 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    staleTime: 15 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
-    staleTime: 15 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   // Mutations
   const createPlanningMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['machinePlannings']);
+    onSuccess: (newPlanning) => {
+      // Optimistic update: Add to cache without refetching
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
+        return [...oldData, newPlanning];
+      });
       toast.success("Máquina añadida a la planificación");
     },
     onError: (err) => {
@@ -61,8 +67,11 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
   const updatePlanningMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.MachinePlanning.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['machinePlannings']);
+    onSuccess: (updatedPlanning) => {
+      // Optimistic update: Update item in cache without refetching
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
+        return oldData.map(p => p.id === updatedPlanning.id ? updatedPlanning : p);
+      });
       toast.success("Planificación actualizada");
     },
     onError: (err) => {
@@ -72,8 +81,15 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
   const deletePlanningMutation = useMutation({
     mutationFn: (id) => base44.entities.MachinePlanning.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['machinePlannings']);
+    onSuccess: (deletedId, variables) => {
+      // Optimistic update: Remove from cache without refetching
+      // Note: delete usually returns the deleted object or ID. 
+      // If it returns object, we use its ID. If void, we use variables (the ID passed to mutate).
+      const idToDelete = typeof deletedId === 'object' ? deletedId?.id : variables;
+      
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
+        return oldData.filter(p => p.id !== idToDelete && p.id !== variables);
+      });
       toast.success("Máquina eliminada de la planificación");
     },
     onError: (err) => {
@@ -82,6 +98,8 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   });
 
   const activeMachines = useMemo(() => {
+    // With filter() query, plannings should already be filtered, but we keep this for safety
+    // if the cache key matches but data is from elsewhere (unlikely with specific key)
     return plannings.filter(
       p => p.activa_planning && 
       p.team_key === selectedTeam && 
