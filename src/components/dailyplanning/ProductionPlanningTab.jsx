@@ -58,10 +58,20 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
         return [...oldData, newPlanning];
       });
-      toast.success("Máquina añadida a la planificación");
+      // Invalidate specific query only to ensure consistency without aggressive refetching
+      queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
+      toast({
+        title: "Máquina añadida",
+        description: "Se ha añadido la máquina a la planificación.",
+        className: "bg-green-50 border-green-200"
+      });
     },
     onError: (err) => {
-      toast.error("Error al añadir máquina: " + err.message);
+      toast({
+        title: "Error",
+        description: "Error al añadir máquina: " + err.message,
+        variant: "destructive"
+      });
     }
   });
 
@@ -72,10 +82,20 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
         return oldData.map(p => p.id === updatedPlanning.id ? updatedPlanning : p);
       });
-      toast.success("Planificación actualizada");
+      // Invalidate specific query only
+      queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
+      toast({
+        title: "Planificación actualizada",
+        description: "Se han guardado los cambios correctamente.",
+        className: "bg-blue-50 border-blue-200"
+      });
     },
     onError: (err) => {
-      toast.error("Error al actualizar: " + err.message);
+      toast({
+        title: "Error",
+        description: "Error al actualizar: " + err.message,
+        variant: "destructive"
+      });
     }
   });
 
@@ -83,17 +103,24 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     mutationFn: (id) => base44.entities.MachinePlanning.delete(id),
     onSuccess: (deletedId, variables) => {
       // Optimistic update: Remove from cache without refetching
-      // Note: delete usually returns the deleted object or ID. 
-      // If it returns object, we use its ID. If void, we use variables (the ID passed to mutate).
       const idToDelete = typeof deletedId === 'object' ? deletedId?.id : variables;
       
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
         return oldData.filter(p => p.id !== idToDelete && p.id !== variables);
       });
-      toast.success("Máquina eliminada de la planificación");
+      // Invalidate specific query only
+      queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
+      toast({
+        title: "Máquina eliminada",
+        description: "Se ha eliminado la máquina de la planificación.",
+      });
     },
     onError: (err) => {
-      toast.error("Error al eliminar: " + err.message);
+      toast({
+        title: "Error",
+        description: "Error al eliminar: " + err.message,
+        variant: "destructive"
+      });
     }
   });
 
