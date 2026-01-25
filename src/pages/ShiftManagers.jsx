@@ -113,7 +113,7 @@ export default function ShiftManagersPage() {
 
   const { data: teamSchedules = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamWeekSchedules'],
-    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
   });
 
   const { data: swapRequests = EMPTY_ARRAY } = useQuery({

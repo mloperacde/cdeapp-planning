@@ -246,7 +246,8 @@ function RotationCalendarConfig() {
 
   const { data: schedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules', selectedYear],
-    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
+  }); 500),
   });
 
   // Generate weeks for the selected year

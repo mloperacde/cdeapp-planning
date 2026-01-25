@@ -32,17 +32,25 @@ export default function DailyPlanningPage() {
 
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
-    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
     initialData: [],
   });
+
+  // Debug logging
+  console.log('DailyPlanning: Loaded schedules:', teamSchedules.length);
+  console.log('DailyPlanning: Selected Date:', selectedDate);
+
 
   // Get shift for selected date and team
   const selectedShift = useMemo(() => {
     const team = teams.find(t => t.team_key === selectedTeam);
     if (!team) return null;
 
-    const weekStart = new Date(selectedDate);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekStart.getDay() === 0 ? -6 : 1));
+    // Parse date explicitly to avoid timezone issues with Mondays
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    
+    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
 
     const schedule = teamSchedules.find(

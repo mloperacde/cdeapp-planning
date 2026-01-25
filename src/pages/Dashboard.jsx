@@ -205,7 +205,7 @@ function TimelineSection() {
 
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
-    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 500),
     initialData: [],
   });
 

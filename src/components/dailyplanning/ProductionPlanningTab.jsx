@@ -347,7 +347,13 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
           <div className="mt-8 flex justify-end border-t pt-6">
             {activeMachines.length > 0 && operatorsDeficit <= 0 ? (
               <Button 
-                onClick={() => toast.success("Planificación verificada y guardada correctamente")}
+                onClick={() => {
+                  toast({
+                    title: "Planificación Guardada",
+                    description: "La planificación ha sido verificada y guardada correctamente.",
+                    className: "bg-green-600 text-white border-none"
+                  });
+                }}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-8 text-lg rounded-xl shadow-lg transition-all flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4"
               >
                 <Save className="w-6 h-6" />
