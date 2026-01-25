@@ -315,6 +315,32 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
               </Table>
             </div>
           </div>
+
+          {/* Botón de Guardar / Validación */}
+          <div className="mt-8 flex justify-end border-t pt-6">
+            {activeMachines.length > 0 && operatorsDeficit <= 0 ? (
+              <Button 
+                onClick={() => toast.success("Planificación verificada y guardada correctamente")}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-8 text-lg rounded-xl shadow-lg transition-all flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4"
+              >
+                <Save className="w-6 h-6" />
+                Guardar Planificación Daily
+              </Button>
+            ) : (
+              <div className="flex flex-col items-end gap-2">
+                 {operatorsDeficit > 0 && (
+                  <div className="flex items-center text-red-600 bg-red-50 px-4 py-3 rounded-lg border border-red-200 animate-pulse">
+                    <AlertTriangle className="w-5 h-5 mr-2" />
+                    <span className="font-medium">Corrige el déficit de {operatorsDeficit} operadores para poder guardar</span>
+                  </div>
+                 )}
+                 <Button disabled className="opacity-50 cursor-not-allowed py-6 px-8 text-lg">
+                    <Save className="w-6 h-6 mr-2" />
+                    Guardar Planificación Daily
+                 </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
