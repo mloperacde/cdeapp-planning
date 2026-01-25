@@ -61,11 +61,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       });
       // Invalidate specific query only to ensure consistency without aggressive refetching
       queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
-      toast({
-        title: "Máquina añadida",
-        description: "Se ha añadido la máquina a la planificación.",
-        className: "bg-green-50 border-green-200"
-      });
+      // Removed toast to prevent UI clutter
     },
     onError: (err) => {
       toast({
@@ -85,11 +81,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       });
       // Invalidate specific query only
       queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
-      toast({
-        title: "Planificación actualizada",
-        description: "Se han guardado los cambios correctamente.",
-        className: "bg-blue-50 border-blue-200"
-      });
+      // Removed toast to prevent UI clutter
     },
     onError: (err) => {
       toast({
@@ -111,10 +103,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       });
       // Invalidate specific query only
       queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
-      toast({
-        title: "Máquina eliminada",
-        description: "Se ha eliminado la máquina de la planificación.",
-      });
+      // Removed toast to prevent UI clutter
     },
     onError: (err) => {
       toast({
@@ -309,7 +298,12 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                           />
                         </TableCell>
                         <TableCell className="font-medium text-slate-900">
-                          {machine.nombre}
+                          <div className="flex flex-col">
+                            <span>{machine.nombre}</span>
+                            {machine.descripcion && machine.descripcion !== machine.nombre && (
+                              <span className="text-xs text-slate-500">{machine.descripcion}</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-slate-500 font-mono text-xs">
                           {machine.codigo}
