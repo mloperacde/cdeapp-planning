@@ -158,10 +158,16 @@ export default function ShiftAssignmentsPage() {
   const getIdealAssignments = () => {
       const ideal = {};
       if (machineAssignments.length > 0 && selectedTeam) {
-          const teamAssignments = machineAssignments.filter(ma => String(ma.team_key) === String(selectedTeam));
+          // Normalize team key comparison
+          const normalizeKey = (k) => k ? String(k).trim().toLowerCase() : "";
+          const targetKey = normalizeKey(selectedTeam);
+
+          const teamAssignments = machineAssignments.filter(ma => normalizeKey(ma.team_key) === targetKey);
           
           teamAssignments.forEach(ma => {
               const getVal = (val) => Array.isArray(val) ? val[0] : val;
+              
+              // Ensure we don't crash if fields are missing
               ideal[ma.machine_id] = {
                   responsable_linea: resolveEmployee(getVal(ma.responsable_linea)),
                   segunda_linea: resolveEmployee(getVal(ma.segunda_linea)),
@@ -189,22 +195,41 @@ export default function ShiftAssignmentsPage() {
 
     if (existingStaffing.length > 0) {
         // Overlay existing staffing on top of ideal
-        // This ensures that if we have a saved plan, it takes precedence, 
-        // but if a machine was missing in saved plan (but exists in ideal), it gets filled.
         existingStaffing.forEach(ds => {
-            finalAssignments[ds.machine_id] = {
-                id: ds.id, 
-                responsable_linea: ds.responsable_linea,
-                segunda_linea: ds.segunda_linea,
-                operador_1: ds.operador_1,
-                operador_2: ds.operador_2,
-                operador_3: ds.operador_3,
-                operador_4: ds.operador_4,
-                operador_5: ds.operador_5,
-                operador_6: ds.operador_6,
-                operador_7: ds.operador_7,
-                operador_8: ds.operador_8,
-            };
+            // Check if this existing record actually has any assignments
+            const hasActualAssignments = [
+                ds.responsable_linea, ds.segunda_linea, 
+                ds.operador_1, ds.operador_2, ds.operador_3, ds.operador_4
+            ].some(Boolean);
+
+            // If existing record is "empty" (just created but no people), 
+            // AND we have an Ideal assignment for this machine, 
+            // PREFER the Ideal assignment.
+            // This fixes the case where a user opens the page, auto-save creates empty records, 
+            // and then they lose their ideal configuration.
+            if (!hasActualAssignments && ideal[ds.machine_id]) {
+                // Keep the ID so we update the record, but use Ideal data
+                finalAssignments[ds.machine_id] = {
+                    ...ideal[ds.machine_id],
+                    id: ds.id
+                };
+            } else {
+                // Otherwise, respect the saved state (even if null/empty, if user explicitly cleared it)
+                // OR if it has data.
+                finalAssignments[ds.machine_id] = {
+                    id: ds.id, 
+                    responsable_linea: ds.responsable_linea,
+                    segunda_linea: ds.segunda_linea,
+                    operador_1: ds.operador_1,
+                    operador_2: ds.operador_2,
+                    operador_3: ds.operador_3,
+                    operador_4: ds.operador_4,
+                    operador_5: ds.operador_5,
+                    operador_6: ds.operador_6,
+                    operador_7: ds.operador_7,
+                    operador_8: ds.operador_8,
+                };
+            }
         });
     }
     
@@ -790,6 +815,24 @@ export default function ShiftAssignmentsPage() {
 
       </div>
       </DragDropContext>
+      {/* DEBUG PANEL (Temporary) */}
+      <details className="mt-4 p-4 bg-slate-100 dark:bg-slate-900 rounded-lg border text-xs font-mono overflow-auto max-h-40">
+        <summary className="font-bold mb-2 cursor-pointer">Debug Info (Click to Expand)</summary>
+        <div className="grid grid-cols-2 gap-4">
+            <div>
+                <p>Selected Team: {selectedTeam}</p>
+                <p>Date: {format(selectedDate, 'yyyy-MM-dd')}</p>
+                <p>Total Machines: {machines.length}</p>
+                <p>Total Employees: {employees.length}</p>
+            </div>
+            <div>
+                <p>Ideal Assignments Loaded: {machineAssignments.length}</p>
+                <p>Assignments for Team ({selectedTeam}): {machineAssignments.filter(ma => String(ma.team_key) === String(selectedTeam)).length}</p>
+                <p>Existing Staffing Records: {existingStaffing.length}</p>
+                <p>Local Assignments Keys: {Object.keys(localAssignments).length}</p>
+            </div>
+        </div>
+      </details>
     </div>
   );
 }
