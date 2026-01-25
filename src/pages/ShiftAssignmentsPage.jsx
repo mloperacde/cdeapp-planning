@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,16 +20,18 @@ import {
   AlertTriangle,
   CheckCircle2,
   Filter,
-  ArrowRight
+  ArrowRight,
+  Factory
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ThemeToggle from "../components/common/ThemeToggle";
 
 export default function ShiftAssignmentsPage() {
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedMachineId, setSelectedMachineId] = useState(null);
@@ -40,7 +41,38 @@ export default function ShiftAssignmentsPage() {
   const [localAssignments, setLocalAssignments] = useState({});
   
   const queryClient = useQueryClient();
-  const { employees = [], teams = [], machines = [] } = useAppData();
+  // const { employees = [], teams = [], machines = [] } = useAppData(); // DataProvider returns empty in local!
+
+  // --- MASTER DATA QUERIES ---
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    staleTime: Infinity,
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employeeMasterDatabase'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const { data: machines = [] } = useQuery({
+    queryKey: ['machines', 'strict_dedup'],
+    queryFn: async () => {
+      const rawMachines = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
+      const uniqueMap = new Map();
+      rawMachines.forEach(m => {
+        if (!m.id) return;
+        const id = String(m.id);
+        if (!uniqueMap.has(id)) {
+          uniqueMap.set(id, m);
+        }
+      });
+      return Array.from(uniqueMap.values()).sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
+    },
+    staleTime: Infinity,
+  });
 
   // Set default team
   useEffect(() => {
@@ -217,11 +249,19 @@ export default function ShiftAssignmentsPage() {
     },
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['dailyMachineStaffing'] });
-        toast.success("Asignaciones guardadas correctamente");
+        toast({
+            title: "Éxito",
+            description: "Asignaciones guardadas correctamente",
+            duration: 3000,
+        });
     },
     onError: (err) => {
         console.error(err);
-        toast.error("Error al guardar asignaciones");
+        toast({
+            title: "Error",
+            description: "Error al guardar asignaciones",
+            variant: "destructive",
+        });
     }
   });
 
