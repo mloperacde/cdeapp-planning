@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Factory, Wrench, Package, ClipboardCheck, Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import ProductionPlanningTab from "../components/dailyplanning/ProductionPlanningTab";
 import MaintenancePlanningTab from "../components/dailyplanning/MaintenancePlanningTab";

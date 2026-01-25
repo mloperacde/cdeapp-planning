@@ -10,9 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Factory, Eye, AlertTriangle, Users, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ProductionPlanningTab({ selectedDate, selectedTeam, selectedShift }) {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: plannings = [] } = useQuery({
