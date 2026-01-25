@@ -367,30 +367,15 @@ export default function DataManagement() {
                           </div>
                         </div>
                         
-                        {/* Activities List */}
-                        <div className="pl-2 space-y-1">
-                          {processActivities.length > 0 ? (
-                            processActivities.map((activity, idx) => (
-                              <div 
-                                key={`${process.id}-${activity.id}-${idx}`}
-                                className="flex justify-between text-sm py-1.5 px-2 bg-muted/40 rounded-sm"
-                              >
-                                <span className="flex items-center gap-2">
-                                  <span className="font-mono text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                    {activity.number}
-                                  </span>
-                                  <span>{activity.name}</span>
-                                </span>
-                                <span className="font-mono text-muted-foreground text-xs">
-                                  {activity.time_seconds}s
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-sm text-muted-foreground py-2">
-                              Sin actividades asignadas
-                            </p>
-                          )}
+                        {/* Activities List - Compact Text View */}
+                        <div className="mt-3 pl-3 border-l-2 border-muted">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {processActivities.length > 0 ? (
+                              processActivities.map((a) => `${a.number}-${a.name}`).join(", ")
+                            ) : (
+                              <span className="italic">Sin actividades asignadas</span>
+                            )}
+                          </p>
                         </div>
                       </div>
                     );
