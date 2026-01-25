@@ -18,8 +18,8 @@ export function DataProvider({ children }) {
   const userQuery = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => isLocal ? Promise.resolve(null) : base44.auth.me().catch(() => null),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hora
+    gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1,
   });
@@ -33,8 +33,8 @@ export function DataProvider({ children }) {
       return emps.find(e => e.email === userQuery.data.email) || null;
     },
     enabled: !!userQuery.data?.email,
-    staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hora
+    gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -55,8 +55,8 @@ export function DataProvider({ children }) {
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hora (estables)
+    gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchInterval: false, // NUNCA hacer polling automático
     retry: 1, // Reducir reintentos
@@ -66,8 +66,8 @@ export function DataProvider({ children }) {
   const absencesQuery = useQuery({
     queryKey: ['absences'],
     queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Absence.list('-fecha_inicio', 500),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 min
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -75,8 +75,8 @@ export function DataProvider({ children }) {
   const absenceTypesQuery = useQuery({
     queryKey: ['absenceTypes'],
     queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.AbsenceType.list('orden', 200),
-    staleTime: 15 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: Infinity, // Config is stable
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
   });
 
@@ -84,8 +84,8 @@ export function DataProvider({ children }) {
   const teamsQuery = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.TeamConfig.list(),
-    staleTime: 15 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: Infinity, // Config is stable
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
   });
 
@@ -93,8 +93,8 @@ export function DataProvider({ children }) {
   const vacationsQuery = useQuery({
     queryKey: ['vacations'],
     queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Vacation.list(),
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hora
+    gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -102,8 +102,8 @@ export function DataProvider({ children }) {
   const holidaysQuery = useQuery({
     queryKey: ['holidays'],
     queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Holiday.list(),
-    staleTime: 60 * 60 * 1000,
-    gcTime: 2 * 60 * 60 * 1000,
+    staleTime: Infinity, // Annual data
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
   });
 
@@ -136,8 +136,8 @@ export function DataProvider({ children }) {
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hora (estables)
+    gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchInterval: false,
     retry: 1,
@@ -155,8 +155,8 @@ export function DataProvider({ children }) {
         return [];
       }
     },
-    staleTime: 10 * 60 * 1000,
-    gcTime: 20 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 min
+    gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1,
   });
@@ -165,8 +165,8 @@ export function DataProvider({ children }) {
   const processesQuery = useQuery({
     queryKey: ['processes'],
     queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Process.list('codigo', 200),
-    staleTime: 15 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: Infinity, // Config is stable
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
   });
 
@@ -182,8 +182,8 @@ export function DataProvider({ children }) {
         return [];
       }
     },
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
+    staleTime: Infinity, // Config is stable
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
     retry: 0,
   });

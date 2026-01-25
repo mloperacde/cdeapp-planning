@@ -25,7 +25,10 @@ export default function DailyProductionPlanningPage() {
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    staleTime: 60 * 60 * 1000,
+    staleTime: Infinity, // Config is stable
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Set default team
@@ -53,7 +56,10 @@ export default function DailyProductionPlanningPage() {
       
       return Array.from(uniqueMap.values()).sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
-    staleTime: 60 * 60 * 1000,
+    staleTime: Infinity, // Machines are stable
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // 3. Fetch Plannings for Date/Team
@@ -64,6 +70,7 @@ export default function DailyProductionPlanningPage() {
       team_key: selectedTeam 
     }),
     enabled: !!selectedDate && !!selectedTeam,
+    staleTime: 5 * 60 * 1000, // 5 min cache for current planning
   });
 
   // 4. Fetch Shift Schedule to determine Shift
@@ -76,7 +83,10 @@ export default function DailyProductionPlanningPage() {
       const allSchedules = await base44.entities.TeamWeekSchedule.list(undefined, 2000);
       return allSchedules;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity, // Schedules are stable
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // 5. Fetch Employees for Availability
@@ -84,6 +94,7 @@ export default function DailyProductionPlanningPage() {
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
     staleTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // --- Derived State ---
@@ -149,22 +160,68 @@ export default function DailyProductionPlanningPage() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
-    onSuccess: () => {
-        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+    // Optimistic Update
+    onMutate: async (newData) => {
+        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
+            // Fake ID for UI immediate response
+            const tempPlanning = { ...newData, id: 'temp-' + Date.now() };
+            return [...old, tempPlanning];
+        });
+
+        return { previousPlannings };
+    },
+    onError: (err, newData, context) => {
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
+        toast({ title: "Error", description: "No se pudo crear la planificación", variant: "destructive" });
+    },
+    onSettled: () => {
+        // Only refetch if absolutely necessary, or let staled data expire naturally
+        // queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]); 
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MachinePlanning.delete(id),
-    onSuccess: () => {
-        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+    onMutate: async (id) => {
+        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
+            return old.filter(p => p.id !== id);
+        });
+
+        return { previousPlannings };
+    },
+    onError: (err, id, context) => {
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
+        toast({ title: "Error", description: "No se pudo eliminar la planificación", variant: "destructive" });
+    },
+    onSettled: () => {
+         // queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({id, data}) => base44.entities.MachinePlanning.update(id, data),
-    onSuccess: () => {
-        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+    onMutate: async ({id, data}) => {
+        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
+            return old.map(p => p.id === id ? { ...p, ...data } : p);
+        });
+
+        return { previousPlannings };
+    },
+    onError: (err, vars, context) => {
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
+        toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
+    },
+    onSettled: () => {
+        // queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
     }
   });
 
