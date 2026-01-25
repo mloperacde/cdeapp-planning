@@ -45,6 +45,9 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       team_key: selectedTeam 
     }),
     initialData: [],
+    enabled: machines.length > 0, // Stagger: Wait for Machines
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const { data: machines = [] } = useQuery({
@@ -76,18 +79,26 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       return Array.from(uniqueMachines.values()).sort((a, b) => a.orden - b.orden);
     },
     staleTime: 60 * 60 * 1000, // 1 hour
+    enabled: teams.length > 0, // Stagger: Wait for Teams
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
     staleTime: 60 * 60 * 1000, // 1 hour
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
     staleTime: 60 * 60 * 1000, // 1 hour
+    enabled: machines.length > 0, // Stagger: Wait for Machines
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const [openCombobox, setOpenCombobox] = useState(false);

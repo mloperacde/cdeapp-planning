@@ -70,10 +70,13 @@ export default function DailyProductionPlanningPage() {
       
       return Array.from(uniqueMap.values()).sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
+    enabled: teams.length > 0, // Stagger: Wait for Teams
     staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // 3. Fetch Plannings for Date/Team
@@ -83,8 +86,10 @@ export default function DailyProductionPlanningPage() {
       fecha_planificacion: selectedDate, 
       team_key: selectedTeam 
     }),
-    enabled: !!selectedDate && !!selectedTeam,
+    enabled: !!selectedDate && !!selectedTeam && machines.length > 0, // Stagger: Wait for Machines
     staleTime: 5 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // 4. Fetch Shift Schedule to determine Shift
@@ -94,6 +99,7 @@ export default function DailyProductionPlanningPage() {
       const allSchedules = await base44.entities.TeamWeekSchedule.list(undefined, 2000);
       return allSchedules;
     },
+    enabled: teams.length > 0, // Stagger: Wait for Teams
     staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
@@ -104,8 +110,11 @@ export default function DailyProductionPlanningPage() {
   const { data: employees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
+    enabled: machines.length > 0, // Stagger: Wait for Machines (Splitting heavy loads)
     staleTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // --- Derived State ---
