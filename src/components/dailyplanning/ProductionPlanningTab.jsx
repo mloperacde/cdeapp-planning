@@ -34,7 +34,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   });
 
   const { data: machines = [] } = useQuery({
-    queryKey: ['machines'],
+    queryKey: ['machines', 'v2_deduplicated'], // Changed key to force cache refresh
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
       
