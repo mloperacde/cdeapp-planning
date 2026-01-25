@@ -1,17 +1,20 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, RefreshCw, Filter, LayoutDashboard } from "lucide-react";
+import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, ArrowLeft, Filter } from "lucide-react";
 import { format, startOfWeek, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ThemeToggle from "../components/common/ThemeToggle";
 import {
   Dialog,
   DialogContent,
@@ -465,6 +468,9 @@ export default function DailyProductionPlanningPage() {
                 Configure la planificación de máquinas y operadores para el día seleccionado.
               </p>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+             <ThemeToggle />
           </div>
       </div>
 
