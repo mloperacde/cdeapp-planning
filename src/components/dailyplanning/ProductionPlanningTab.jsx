@@ -38,18 +38,19 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
       
-      // Deduplicate machines by ID and Name to avoid ghost machines
+      // Deduplicate machines by ID ONLY to ensure strictly unique rows
+      // The user reported "selecting one marks 4", which implies duplicate rows rendering
       const uniqueMachines = new Map();
       
       data.forEach(m => {
-        // Use a composite key or prefer ID.
-        // If we have same name, we treat it as same machine for UI purposes if ID is different
-        // But to be safe, let's just deduplicate by ID first, then by Name if ID is different
+        if (!m.id) return; // Skip invalid
+        const id = String(m.id); // Normalize ID
         
-        // Priority 1: ID
-        if (!uniqueMachines.has(m.id)) {
-           uniqueMachines.set(m.id, {
-             id: m.id,
+        // If we haven't seen this ID, add it.
+        // If we HAVE seen it, we ignore duplicates (first wins)
+        if (!uniqueMachines.has(id)) {
+           uniqueMachines.set(id, {
+             id: m.id, // Keep original type if needed by backend, or normalize? usually keeping original is safer but for comparison we use String
              nombre: m.nombre,
              codigo: m.codigo_maquina,
              descripcion: m.descripcion,
@@ -58,16 +59,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
         }
       });
       
-      // Secondary Deduplication by Name (keep the one with lower ID or existing logic)
-      const uniqueByName = new Map();
-      Array.from(uniqueMachines.values()).forEach(m => {
-          const key = (m.nombre || '').trim().toLowerCase();
-          if (!uniqueByName.has(key)) {
-              uniqueByName.set(key, m);
-          }
-      });
-
-      return Array.from(uniqueByName.values()).sort((a, b) => a.orden - b.orden);
+      return Array.from(uniqueMachines.values()).sort((a, b) => a.orden - b.orden);
     },
     staleTime: 60 * 60 * 1000, // 1 hour
   });
@@ -132,6 +124,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   const createPlanningMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
     onSuccess: (newPlanning) => {
+      console.log("Planning created successfully:", newPlanning);
       // Optimistic update: Add to cache without refetching
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
         return [...oldData, newPlanning];
@@ -141,6 +134,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       // Removed toast to prevent UI clutter
     },
     onError: (err) => {
+      console.error("Error creating planning:", err);
       toast({
         title: "Error",
         description: "Error al añadir máquina: " + err.message,
@@ -240,7 +234,16 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
   // Handlers
   const handleToggleMachine = (machine, isChecked) => {
+    // Safety check: Don't create if already exists (prevent duplicates)
+    // Don't delete if already gone
+    const existingPlanning = activeMachines.find(p => String(p.machine_id) === String(machine.id));
+
     if (isChecked) {
+      if (existingPlanning) {
+        console.warn("Machine already planned, skipping create:", machine.nombre);
+        return;
+      }
+      
       // Create new planning
       createPlanningMutation.mutate({
         machine_id: machine.id,
@@ -254,9 +257,18 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
         turno: selectedShift
       });
     } else {
+      if (!existingPlanning && plannings.length > 0) {
+         // Double check against raw plannings just in case activeMachines is out of sync
+         const rawExists = plannings.some(p => String(p.machine_id) === String(machine.id) && p.team_key === selectedTeam && p.fecha_planificacion === selectedDate);
+         if (!rawExists) {
+             console.warn("Machine not planned, skipping delete:", machine.nombre);
+             return;
+         }
+      }
+
       // Find ALL plannings for this machine to clean up potential duplicates in DB
       const planningsToDelete = plannings.filter(
-        p => p.machine_id === machine.id && 
+        p => String(p.machine_id) === String(machine.id) && // Strict string comparison
              p.team_key === selectedTeam && 
              p.fecha_planificacion === selectedDate
       );
@@ -378,6 +390,9 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
               <Factory className="w-5 h-5 text-blue-600" />
               Configuración de Máquinas (Modo Temporal Manual)
             </h3>
+            {/* Debug Info Hidden */}
+            {/* <div className="text-xs text-gray-400 mb-2">Total Máquinas Listadas: {machines.length} | Planificadas: {activeMachines.length}</div> */}
+            
             <div className="border rounded-lg overflow-hidden bg-white">
               <Table>
                 <TableHeader>
