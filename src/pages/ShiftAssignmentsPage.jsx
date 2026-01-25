@@ -117,6 +117,16 @@ export default function ShiftAssignmentsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // 4. Fetch Machine Assignments (Ideal Configuration)
+  const { data: machineAssignments = [] } = useQuery({
+    queryKey: ['machineAssignments', selectedTeam],
+    queryFn: () => {
+        if (!selectedTeam) return [];
+        return base44.entities.MachineAssignment.list();
+    },
+    enabled: !!selectedTeam,
+  });
+
   // --- DERIVED STATE ---
 
   const sortedProductionPlan = useMemo(() => {
@@ -148,10 +158,41 @@ export default function ShiftAssignmentsPage() {
             };
         });
         setLocalAssignments(loaded);
+    } else if (machineAssignments.length > 0 && selectedTeam) {
+        // Load from Ideal Configuration (MachineAssignments)
+        const loaded = {};
+        const teamAssignments = machineAssignments.filter(ma => ma.team_key === selectedTeam);
+        
+        teamAssignments.forEach(ma => {
+             // Handle potential array fields (based on IdealAssignmentView usage)
+             const getVal = (val) => Array.isArray(val) ? val[0] : val;
+
+             loaded[ma.machine_id] = {
+                // No ID yet (new record)
+                responsable_linea: getVal(ma.responsable_linea),
+                segunda_linea: getVal(ma.segunda_linea),
+                operador_1: ma.operador_1,
+                operador_2: ma.operador_2,
+                operador_3: ma.operador_3,
+                operador_4: ma.operador_4,
+                operador_5: ma.operador_5,
+                operador_6: ma.operador_6,
+                operador_7: ma.operador_7,
+                operador_8: ma.operador_8,
+            };
+        });
+        setLocalAssignments(loaded);
+        
+        if (teamAssignments.length > 0) {
+            toast({
+                title: "Configuración Ideal Cargada",
+                description: "Se han precargado las asignaciones predeterminadas para este equipo.",
+            });
+        }
     } else {
         setLocalAssignments({});
     }
-  }, [existingStaffing]);
+  }, [existingStaffing, machineAssignments, selectedTeam]);
 
   // --- HELPERS ---
 
