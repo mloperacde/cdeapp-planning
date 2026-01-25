@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   Filter,
   ArrowRight,
-  Factory
+  Factory,
+  Sparkles
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -116,7 +117,16 @@ export default function ShiftAssignmentsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // --- INITIALIZATION ---
+  // --- DERIVED STATE ---
+
+  const sortedProductionPlan = useMemo(() => {
+      if (!productionPlan) return [];
+      return [...productionPlan].sort((a, b) => {
+          const machA = machines.find(m => String(m.id) === String(a.machine_id));
+          const machB = machines.find(m => String(m.id) === String(b.machine_id));
+          return (machA?.orden_visualizacion || 999) - (machB?.orden_visualizacion || 999);
+      });
+  }, [productionPlan, machines]);
 
   // Initialize local assignments when data loads
   useEffect(() => {
@@ -167,45 +177,55 @@ export default function ShiftAssignmentsPage() {
     return hasLegacySkill;
   };
 
-  const getAvailableEmployees = (machineIdForSkillCheck = null) => {
-    // Get all assigned employee IDs across all machines
+  const getAvailableEmployees = (machineId) => {
+    // Get all assigned employee IDs across all machines to prevent double booking
     const assignedIds = new Set();
     Object.values(localAssignments).forEach(a => {
         Object.values(a).forEach(val => {
-             // Skip non-ID values if any
-             if (typeof val === 'string' || typeof val === 'number') assignedIds.add(String(val));
+             if (val && (typeof val === 'string' || typeof val === 'number')) assignedIds.add(String(val));
         });
     });
 
-    return employees.filter(e => {
-        // Filter by Team
-        if (selectedTeam) {
-            const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
-            if (e.equipo !== teamName) return false;
-        }
+    // Basic Filtering
+    let list = employees.filter(e => {
+        // 1. Team Match
+        const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+        if (e.equipo !== teamName) return false;
 
-        // Filter by Availability
+        // 2. Availability
         if (e.disponibilidad !== "Disponible") return false;
 
-        // Filter if already assigned
-        if (assignedIds.has(String(e.id))) return false;
+        // 3. Department: 'Fabricación' (Case insensitive)
+        if (!e.departamento || e.departamento.toLowerCase() !== 'fabricación') return false;
 
-        // Filter by Search
+        // 4. Role (Puesto) in allowed list
+        const allowedRoles = ['Responsable de linea', 'Segunda de linea', 'Operario de linea'];
+        if (!e.puesto || !allowedRoles.includes(e.puesto)) return false;
+
+        // 5. Exclude already assigned
+        if (assignedIds.has(String(e.id))) return false;
+        
+        // Filter by search
         if (searchTerm) {
-            return e.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+            const lower = searchTerm.toLowerCase();
+            return e.nombre?.toLowerCase().includes(lower) || e.codigo_empleado?.toLowerCase().includes(lower);
         }
 
         return true;
-    }).sort((a, b) => {
-        // Sort by Skill for the selected machine
-        if (machineIdForSkillCheck) {
-            const aSkill = checkEmployeeSkill(a.id, machineIdForSkillCheck);
-            const bSkill = checkEmployeeSkill(b.id, machineIdForSkillCheck);
-            if (aSkill && !bSkill) return -1;
-            if (!aSkill && bSkill) return 1;
-        }
-        return a.nombre.localeCompare(b.nombre);
     });
+
+    // Sort by Skill Priority
+    if (machineId) {
+        list.sort((a, b) => {
+            const skillA = checkEmployeeSkill(a.id, machineId);
+            const skillB = checkEmployeeSkill(b.id, machineId);
+            if (skillA && !skillB) return -1;
+            if (!skillA && skillB) return 1;
+            return 0;
+        });
+    }
+
+    return list;
   };
 
   // --- MUTATIONS ---
@@ -316,6 +336,39 @@ export default function ShiftAssignmentsPage() {
     }
   };
 
+  const handleAutoAssign = async () => {
+    toast({
+        title: "Iniciando Agente IA",
+        description: "Analizando habilidades y preferencias...",
+    });
+    
+    try {
+        // Try to invoke the cloud function
+        const response = await base44.functions.invoke('suggest_daily_staffing', {
+            date: format(selectedDate, 'yyyy-MM-dd'),
+            team_key: selectedTeam
+        });
+
+        if (response?.data?.staffing) {
+            // Apply suggestions
+            setLocalAssignments(response.data.staffing);
+            toast({
+                title: "Asignación Completada",
+                description: "El agente ha generado una propuesta.",
+            });
+        } else {
+            throw new Error("No se recibieron datos del agente");
+        }
+    } catch (error) {
+        console.error("AI Agent Error:", error);
+        toast({
+            title: "Modo Manual",
+            description: "El agente no está disponible en este entorno. Por favor, realice la asignación manual utilizando los filtros inteligentes.",
+            variant: "destructive" // Or default, depending on how intrusive we want to be
+        });
+    }
+  };
+
   // --- RENDER ---
 
   const selectedMachinePlan = productionPlan.find(p => String(p.machine_id) === String(selectedMachineId));
@@ -373,6 +426,24 @@ export default function ShiftAssignmentsPage() {
               <ThemeToggle />
         </div>
       </div>
+      
+      {/* TOOLBAR */}
+      <div className="flex items-center justify-between gap-4 shrink-0 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-4">
+         <div className="flex items-center gap-2">
+            <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50 dark:border-purple-900 dark:text-purple-400 dark:hover:bg-purple-900/20"
+                onClick={handleAutoAssign}
+            >
+                <Sparkles className="w-4 h-4" />
+                Sugerir Asignación (IA)
+            </Button>
+         </div>
+         <div className="text-xs text-slate-500">
+            {productionPlan.length} máquinas • {employees.length} empleados
+         </div>
+      </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden min-h-0">
@@ -388,14 +459,14 @@ export default function ShiftAssignmentsPage() {
             </div>
             
             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                {productionPlan.length === 0 ? (
+                {sortedProductionPlan.length === 0 ? (
                     <div className="text-center py-10 text-slate-400">
                         <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p>No hay planificación para este día/equipo.</p>
                         <p className="text-xs">Configure primero la Planificación Diaria.</p>
                     </div>
                 ) : (
-                    productionPlan.map(plan => {
+                    sortedProductionPlan.map(plan => {
                         const machine = getMachineDetails(plan.machine_id);
                         const assignment = localAssignments[plan.machine_id] || {};
                         
