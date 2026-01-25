@@ -223,6 +223,7 @@ const parseDate = (val) => {
 };
 
 // Quantity Parsing
+// Ensure this function is available in module scope for use in both validateRow and executeImport
 const parseQuantity = (val) => {
     if (!val) return 0;
     if (typeof val === 'number') return Math.round(val);

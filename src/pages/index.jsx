@@ -231,6 +231,7 @@ function PagesContent() {
 
                 
                 <Route path="/ProcessConfiguration" element={<ProcessConfiguration />} />
+                <Route path="/NewProcessConfigurator" element={<NewProcessConfigurator />} />
                 <Route path="/ProductionDashboard" element={<ProductionDashboard />} />
                 <Route path="/ProductionPlanning" element={<ProductionPlanning />} />
                 <Route path="/QualityControl" element={<QualityControl />} />
