@@ -7,11 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save } from "lucide-react";
-import { format, startOfWeek } from "date-fns";
+import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, RefreshCw } from "lucide-react";
+import { format, startOfWeek, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function DailyProductionPlanningPage() {
   const { toast } = useToast();
@@ -21,6 +30,19 @@ export default function DailyProductionPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTeam, setSelectedTeam] = useState(""); 
   const [machineSearch, setMachineSearch] = useState("");
+  
+  // Import Dialog State
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importDate, setImportDate] = useState("");
+  const [importTeam, setImportTeam] = useState("");
+
+  // Update import defaults when main selection changes
+  React.useEffect(() => {
+    if (isImportDialogOpen) {
+        if (!importDate) setImportDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'));
+        if (!importTeam) setImportTeam(selectedTeam);
+    }
+  }, [isImportDialogOpen, selectedDate, selectedTeam]);
 
   // --- Queries ---
 
@@ -277,6 +299,86 @@ export default function DailyProductionPlanningPage() {
     }
   });
 
+  const importMutation = useMutation({
+    mutationFn: async ({ sourceDate, sourceTeam }) => {
+        // 1. Fetch Source Plannings
+        const sourcePlannings = await base44.entities.MachinePlanning.filter({ 
+            fecha_planificacion: sourceDate, 
+            team_key: sourceTeam 
+        });
+
+        if (!sourcePlannings || sourcePlannings.length === 0) {
+            throw new Error("No hay planificación en la fecha/equipo seleccionados.");
+        }
+
+        // 2. Filter out duplicates (already present in current planning)
+        // We use activePlanningsMap from closure, but for safety in async, we should probably fetch current or trust the user knows.
+        // We will skip machines that are already planned for the TARGET date/team.
+        
+        const addedCount = 0;
+        const promises = [];
+
+        for (const p of sourcePlannings) {
+            // Check if machine is already planned in current view
+            // Note: We access the latest 'activePlanningsMap' via closure or queryClient, 
+            // but simpler is to check against the Set of IDs we know are currently loaded.
+            const isAlreadyPlanned = activePlanningsMap.has(String(p.machine_id));
+            
+            if (!isAlreadyPlanned) {
+                // Create new planning
+                const newPlanning = {
+                    machine_id: p.machine_id,
+                    machine_nombre: p.machine_nombre,
+                    machine_codigo: p.machine_codigo,
+                    fecha_planificacion: selectedDate, // Target Date
+                    team_key: selectedTeam,            // Target Team
+                    operadores_necesarios: p.operadores_necesarios,
+                    activa_planning: true,
+                    turno: currentShift,               // Target Shift
+                    process_id: p.process_id
+                };
+                
+                // Add to promise list (sequential or batched is better for rate limits, but let's try parallel with small delay if needed)
+                // To be safe against 429, we'll await them sequentially or in small chunks.
+                promises.push(() => base44.entities.MachinePlanning.create(newPlanning));
+            }
+        }
+
+        if (promises.length === 0) {
+            throw new Error("Todas las máquinas de origen ya están en la planificación actual.");
+        }
+
+        // Execute sequentially to avoid 429
+        for (const createFn of promises) {
+            await createFn();
+            await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+        }
+
+        return promises.length;
+    },
+    onMutate: async () => {
+        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+        setIsImportDialogOpen(false); // Close dialog immediately
+    },
+    onSuccess: (count) => {
+        toast({
+            title: "Importación Exitosa",
+            description: `Se han importado ${count} máquinas correctamente.`,
+            className: "bg-green-600 text-white border-green-700",
+            duration: 3000
+        });
+        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+    },
+    onError: (err) => {
+        toast({
+            title: "Error al importar",
+            description: err.message,
+            variant: "destructive",
+            duration: 5000
+        });
+    }
+  });
+
   // --- Handlers ---
 
   const handleAddMachine = (machine) => {
@@ -335,6 +437,16 @@ export default function DailyProductionPlanningPage() {
       }
   };
 
+  const handleCopyPreviousDay = () => {
+      const prevDate = format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd');
+      importMutation.mutate({ sourceDate: prevDate, sourceTeam: selectedTeam });
+  };
+
+  const handleImportCustom = () => {
+      if (!importDate || !importTeam) return;
+      importMutation.mutate({ sourceDate: importDate, sourceTeam: importTeam });
+  };
+
   // --- Render ---
 
   return (
@@ -350,6 +462,79 @@ export default function DailyProductionPlanningPage() {
             </p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogTrigger asChild>
+                     <Button variant="outline" className="flex-1 md:flex-none gap-2">
+                        <Copy className="w-4 h-4" />
+                        <span className="hidden md:inline">Importar</span>
+                     </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Importar Planificación</DialogTitle>
+                        <DialogDescription>
+                            Copie la configuración de máquinas de otro día o equipo.
+                            Las máquinas se añadirán a la planificación actual.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                         <Button 
+                            variant="secondary" 
+                            className="w-full justify-start gap-3" 
+                            onClick={handleCopyPreviousDay}
+                            disabled={importMutation.isPending}
+                        >
+                            <Repeat className="w-4 h-4" />
+                            <div className="flex flex-col items-start">
+                                <span className="font-medium">Repetir Día Anterior</span>
+                                <span className="text-xs text-slate-500">Mismo equipo, fecha ayer</span>
+                            </div>
+                         </Button>
+                         
+                         <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">O personalizar</span>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium">Fecha Origen</label>
+                            <Input 
+                                type="date" 
+                                value={importDate}
+                                onChange={(e) => setImportDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium">Equipo Origen</label>
+                            <Select value={importTeam} onValueChange={setImportTeam}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar equipo..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {teams.map(t => (
+                                        <SelectItem key={t.team_key} value={t.team_key}>
+                                            {t.team_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button 
+                            onClick={handleImportCustom} 
+                            disabled={!importDate || !importTeam || importMutation.isPending}
+                        >
+                            {importMutation.isPending ? "Importando..." : "Importar Selección"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <Button 
                 variant="outline" 
                 onClick={handleSavePlanning}
