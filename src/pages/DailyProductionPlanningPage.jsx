@@ -225,6 +225,29 @@ export default function DailyProductionPlanningPage() {
     }
   });
 
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+        // Delete all plannings for this team/date
+        const promises = plannings.map(p => base44.entities.MachinePlanning.delete(p.id));
+        await Promise.all(promises);
+    },
+    onMutate: async () => {
+        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], []);
+
+        return { previousPlannings };
+    },
+    onError: (err, _, context) => {
+        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
+        toast({ title: "Error", description: "No se pudo limpiar la planificación", variant: "destructive" });
+    },
+    onSettled: () => {
+         queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+    }
+  });
+
   // --- Handlers ---
 
   const handleToggle = (machine, isChecked) => {
@@ -261,15 +284,34 @@ export default function DailyProductionPlanningPage() {
     }
   };
 
+  const handleClearAll = () => {
+    if (confirm("¿Estás seguro de que deseas borrar TODA la planificación para este día y equipo? Esta acción no se puede deshacer.")) {
+        clearMutation.mutate();
+    }
+  };
+
   // --- Render ---
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-          <CalendarIcon className="w-8 h-8 text-blue-600" />
-          Planificación Diaria de Producción (V2)
-        </h1>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <CalendarIcon className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+            Planificación Diaria de Producción
+            </h1>
+            <p className="text-slate-500 mt-1">
+                Configure la planificación de máquinas y operadores para el día seleccionado.
+            </p>
+        </div>
+        <Button 
+            variant="destructive" 
+            onClick={handleClearAll}
+            disabled={activePlanningsMap.size === 0 || clearMutation.isPending}
+            className="w-full md:w-auto"
+        >
+            {clearMutation.isPending ? "Limpiando..." : "Limpiar Planificación"}
+        </Button>
       </div>
 
       {/* Controls */}
@@ -352,6 +394,7 @@ export default function DailyProductionPlanningPage() {
             <CardTitle>Listado de Máquinas</CardTitle>
         </CardHeader>
         <CardContent>
+            <div className="overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -405,6 +448,7 @@ export default function DailyProductionPlanningPage() {
                     })}
                 </TableBody>
             </Table>
+            </div>
         </CardContent>
       </Card>
     </div>
