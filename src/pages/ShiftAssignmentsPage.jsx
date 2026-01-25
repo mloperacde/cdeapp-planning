@@ -22,7 +22,8 @@ import {
   Filter,
   ArrowRight,
   Factory,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -153,16 +154,45 @@ export default function ShiftAssignmentsPage() {
       return byName ? byName.id : identifier;
   };
 
+  // Helper to get Ideal Assignments for current team
+  const getIdealAssignments = () => {
+      const ideal = {};
+      if (machineAssignments.length > 0 && selectedTeam) {
+          const teamAssignments = machineAssignments.filter(ma => String(ma.team_key) === String(selectedTeam));
+          
+          teamAssignments.forEach(ma => {
+              const getVal = (val) => Array.isArray(val) ? val[0] : val;
+              ideal[ma.machine_id] = {
+                  responsable_linea: resolveEmployee(getVal(ma.responsable_linea)),
+                  segunda_linea: resolveEmployee(getVal(ma.segunda_linea)),
+                  operador_1: resolveEmployee(ma.operador_1),
+                  operador_2: resolveEmployee(ma.operador_2),
+                  operador_3: resolveEmployee(ma.operador_3),
+                  operador_4: resolveEmployee(ma.operador_4),
+                  operador_5: resolveEmployee(ma.operador_5),
+                  operador_6: resolveEmployee(ma.operador_6),
+                  operador_7: resolveEmployee(ma.operador_7),
+                  operador_8: resolveEmployee(ma.operador_8),
+              };
+          });
+      }
+      return ideal;
+  };
+
   // Initialize local assignments when data loads
   useEffect(() => {
     // 1. Reset State completely when team changes to avoid stale data ghosts
     setLocalAssignments({}); 
 
+    const ideal = getIdealAssignments();
+    let finalAssignments = { ...ideal };
+
     if (existingStaffing.length > 0) {
-        // ... (Existing logic for loading saved staffing)
-        const loaded = {};
+        // Overlay existing staffing on top of ideal
+        // This ensures that if we have a saved plan, it takes precedence, 
+        // but if a machine was missing in saved plan (but exists in ideal), it gets filled.
         existingStaffing.forEach(ds => {
-            loaded[ds.machine_id] = {
+            finalAssignments[ds.machine_id] = {
                 id: ds.id, 
                 responsable_linea: ds.responsable_linea,
                 segunda_linea: ds.segunda_linea,
@@ -176,37 +206,47 @@ export default function ShiftAssignmentsPage() {
                 operador_8: ds.operador_8,
             };
         });
-        setLocalAssignments(loaded);
-    } else if (machineAssignments.length > 0 && selectedTeam) {
-        // Load from Ideal Configuration (MachineAssignments)
-        const loaded = {};
-        // Strict filtering by Team Key to prevent cross-contamination
-        const teamAssignments = machineAssignments.filter(ma => String(ma.team_key) === String(selectedTeam));
-        
-        teamAssignments.forEach(ma => {
-             const getVal = (val) => Array.isArray(val) ? val[0] : val;
+    }
+    
+    setLocalAssignments(finalAssignments);
+  }, [existingStaffing, machineAssignments, selectedTeam, employees]); 
 
-             loaded[ma.machine_id] = {
-                // No ID yet (new record)
-                responsable_linea: resolveEmployee(getVal(ma.responsable_linea)),
-                segunda_linea: resolveEmployee(getVal(ma.segunda_linea)),
-                operador_1: resolveEmployee(ma.operador_1),
-                operador_2: resolveEmployee(ma.operador_2),
-                operador_3: resolveEmployee(ma.operador_3),
-                operador_4: resolveEmployee(ma.operador_4),
-                operador_5: resolveEmployee(ma.operador_5),
-                operador_6: resolveEmployee(ma.operador_6),
-                operador_7: resolveEmployee(ma.operador_7),
-                operador_8: resolveEmployee(ma.operador_8),
-            };
-        });
-        setLocalAssignments(loaded);
-        
-        if (teamAssignments.length > 0) {
-             // Toast suppressed...
-        }
-    } 
-  }, [existingStaffing, machineAssignments, selectedTeam, employees]); // Added employees dependency
+  const handleRestoreIdeal = () => {
+      const ideal = getIdealAssignments();
+      // We keep the IDs of existing records if they exist, to perform updates instead of creates
+      // But we overwrite the content with Ideal
+      
+      setLocalAssignments(prev => {
+          const restored = { ...ideal };
+          // Preserve record IDs from previous state to ensure we UPDATE existing records, not create duplicates
+          Object.keys(prev).forEach(machineId => {
+              if (prev[machineId]?.id && restored[machineId]) {
+                  restored[machineId].id = prev[machineId].id;
+              } else if (prev[machineId]?.id && !restored[machineId]) {
+                  // If machine not in ideal but was in prev, keep it? Or clear it?
+                  // Better to keep it but maybe clear assignments?
+                  // Let's just keep the prev record but with nulls if not in ideal
+                  restored[machineId] = { ...prev[machineId] }; // Keep as is? Or clear?
+                  // If "Restore Ideal", we probably want to set to Ideal. 
+                  // If Ideal is empty for this machine, we might want to clear it.
+              }
+          });
+          
+          // Also check existingStaffing to get IDs if not in local state yet
+          existingStaffing.forEach(ds => {
+              if (restored[ds.machine_id]) {
+                  restored[ds.machine_id].id = ds.id;
+              }
+          });
+          
+          return restored;
+      });
+
+      toast({
+          title: "Configuración Ideal Restaurada",
+          description: "Se han aplicado las asignaciones predefinidas para este equipo.",
+      });
+  };
 
   // --- HELPERS ---
   
@@ -504,6 +544,17 @@ export default function ShiftAssignmentsPage() {
             >
                 <Sparkles className="w-4 h-4" />
                 Sugerir Asignación (IA)
+            </Button>
+
+            <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                onClick={handleRestoreIdeal}
+                title="Cargar configuración ideal de máquinas para este turno"
+            >
+                <RefreshCw className="w-4 h-4" />
+                Restaurar Config. Ideal
             </Button>
          </div>
          <div className="text-xs text-slate-500">
