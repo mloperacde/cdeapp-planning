@@ -100,6 +100,14 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       .filter(p => p.team_key === selectedTeam && p.fecha_planificacion === selectedDate)
       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
+    // Fix: Ensure we don't accidentally mark valid machines as duplicates due to bad logic
+    // The previous logic was: if seen.has(id), then it's a duplicate.
+    // That is correct for deduplicating BY ID.
+    // But if "activeMachines" in the UI uses a different logic, we might have a mismatch.
+    
+    // Let's align with the UI logic:
+    // We only want ONE planning per machine_id per day per team.
+    
     sortedPlannings.forEach(p => {
       if (seen.has(p.machine_id)) {
         duplicates.push(p.id);
@@ -382,7 +390,8 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                 </TableHeader>
                 <TableBody>
                   {machines.map((machine) => {
-                    const planning = activeMachines.find(p => p.machine_id === machine.id);
+                    // FIX: Ensure strict type matching for ID comparison
+                    const planning = activeMachines.find(p => String(p.machine_id) === String(machine.id));
                     const isPlanned = !!planning;
                     
                     return (
