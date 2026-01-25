@@ -119,11 +119,8 @@ export default function ShiftAssignmentsPage() {
 
   // 4. Fetch Machine Assignments (Ideal Configuration)
   const { data: machineAssignments = [] } = useQuery({
-    queryKey: ['machineAssignments', selectedTeam],
-    queryFn: () => {
-        if (!selectedTeam) return [];
-        return base44.entities.MachineAssignment.list();
-    },
+    queryKey: ['machineAssignments'],
+    queryFn: () => base44.entities.MachineAssignment.list(),
     enabled: !!selectedTeam,
   });
 
