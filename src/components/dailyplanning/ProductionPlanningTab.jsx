@@ -36,13 +36,24 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   const { data: machines = [] } = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
-      return data.map(m => ({
-        id: m.id,
-        nombre: m.nombre,
-        codigo: m.codigo_maquina,
-        orden: m.orden_visualizacion || 999
-      })).sort((a, b) => a.orden - b.orden);
+      const data = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
+      
+      // Deduplicate machines by ID immediately after fetching
+      const uniqueMachines = new Map();
+      
+      data.forEach(m => {
+        if (!uniqueMachines.has(m.id)) {
+          uniqueMachines.set(m.id, {
+            id: m.id,
+            nombre: m.nombre,
+            codigo: m.codigo_maquina,
+            descripcion: m.descripcion,
+            orden: m.orden_visualizacion || 999
+          });
+        }
+      });
+
+      return Array.from(uniqueMachines.values()).sort((a, b) => a.orden - b.orden);
     },
     staleTime: 60 * 60 * 1000, // 1 hour
   });
@@ -145,7 +156,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   }, [plannings, selectedTeam, selectedDate]);
 
   const totalOperators = useMemo(() => {
-    return activeMachines.reduce((sum, p) => sum + (p.operadores_necesarios || 0), 0);
+    return activeMachines.reduce((sum, p) => sum + (Number(p.operadores_necesarios) || 0), 0);
   }, [activeMachines]);
 
   const availableOperators = useMemo(() => {
@@ -177,10 +188,17 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
         turno: selectedShift
       });
     } else {
-      // Find and delete planning
-      const planning = activeMachines.find(p => p.machine_id === machine.id);
-      if (planning) {
-        deletePlanningMutation.mutate(planning.id);
+      // Find ALL plannings for this machine to clean up potential duplicates in DB
+      const planningsToDelete = plannings.filter(
+        p => p.machine_id === machine.id && 
+             p.team_key === selectedTeam && 
+             p.fecha_planificacion === selectedDate
+      );
+      
+      if (planningsToDelete.length > 0) {
+        planningsToDelete.forEach(p => {
+          deletePlanningMutation.mutate(p.id);
+        });
       }
     }
   };
