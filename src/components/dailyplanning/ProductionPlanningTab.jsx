@@ -1,17 +1,21 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Factory, Eye, AlertTriangle, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Factory, Eye, AlertTriangle, Users, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { toast } from "sonner";
 
 export default function ProductionPlanningTab({ selectedDate, selectedTeam, selectedShift }) {
   const queryClient = useQueryClient();
 
-  const { data: plannings } = useQuery({
+  const { data: plannings = [] } = useQuery({
     queryKey: ['machinePlannings', selectedDate, selectedTeam],
     queryFn: () => base44.entities.MachinePlanning.list(),
     initialData: [],
@@ -31,12 +35,6 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     staleTime: 15 * 60 * 1000,
   });
 
-  const { data: processes = [] } = useQuery({
-    queryKey: ['processes'],
-    queryFn: () => base44.entities.Process.list('codigo', 200),
-    staleTime: 15 * 60 * 1000,
-  });
-
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
@@ -47,6 +45,40 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 500),
     staleTime: 15 * 60 * 1000,
+  });
+
+  // Mutations
+  const createPlanningMutation = useMutation({
+    mutationFn: (data) => base44.entities.MachinePlanning.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['machinePlannings']);
+      toast.success("Máquina añadida a la planificación");
+    },
+    onError: (err) => {
+      toast.error("Error al añadir máquina: " + err.message);
+    }
+  });
+
+  const updatePlanningMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.MachinePlanning.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['machinePlannings']);
+      toast.success("Planificación actualizada");
+    },
+    onError: (err) => {
+      toast.error("Error al actualizar: " + err.message);
+    }
+  });
+
+  const deletePlanningMutation = useMutation({
+    mutationFn: (id) => base44.entities.MachinePlanning.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['machinePlannings']);
+      toast.success("Máquina eliminada de la planificación");
+    },
+    onError: (err) => {
+      toast.error("Error al eliminar: " + err.message);
+    }
   });
 
   const activeMachines = useMemo(() => {
@@ -74,9 +106,38 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
   const operatorsDeficit = totalOperators - availableOperators;
 
-  const getProcessName = (processId) => {
-    const process = processes.find(p => p.id === processId);
-    return process?.nombre || "Sin proceso";
+  // Handlers
+  const handleToggleMachine = (machine, isChecked) => {
+    if (isChecked) {
+      // Create new planning
+      createPlanningMutation.mutate({
+        machine_id: machine.id,
+        machine_nombre: machine.nombre,
+        machine_codigo: machine.codigo,
+        fecha_planificacion: selectedDate,
+        team_key: selectedTeam,
+        operadores_necesarios: 1, // Default to 1
+        process_id: null, // Bypassing process selection as requested
+        activa_planning: true,
+        turno: selectedShift
+      });
+    } else {
+      // Find and delete planning
+      const planning = activeMachines.find(p => p.machine_id === machine.id);
+      if (planning) {
+        deletePlanningMutation.mutate(planning.id);
+      }
+    }
+  };
+
+  const handleOperatorsChange = (planningId, newValue) => {
+    const val = parseInt(newValue);
+    if (isNaN(val) || val < 1) return;
+
+    updatePlanningMutation.mutate({
+      id: planningId,
+      data: { operadores_necesarios: val }
+    });
   };
 
   return (
@@ -88,12 +149,13 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
               <Factory className="w-6 h-6" />
               Planificación de Producción - {selectedShift || 'Sin turno'}
             </CardTitle>
-            <Link to={createPageUrl("MachinePlanning")}>
+            {/* Link removed temporarily as per user request to inline the config */}
+            {/* <Link to={createPageUrl("MachinePlanning")}>
               <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
                 <Eye className="w-4 h-4 mr-2" />
                 Planificación de Máquinas
               </Button>
-            </Link>
+            </Link> */}
           </div>
         </CardHeader>
         <CardContent className="p-6">
@@ -163,7 +225,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                       ⚠️ Déficit de Operadores: Faltan {operatorsDeficit} operador{operatorsDeficit !== 1 ? 'es' : ''}
                     </p>
                     <p className="text-sm text-red-800">
-                      Ve a "Planificación de Máquinas" para ajustar las máquinas activas.
+                      Ajusta la planificación abajo para equilibrar la carga.
                     </p>
                   </div>
                 </div>
@@ -171,43 +233,70 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
             </Card>
           )}
 
-          {/* Lista de Máquinas Activas */}
-          {activeMachines.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <Factory className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p>No hay máquinas planificadas para esta fecha</p>
-              <p className="text-sm mt-2">Haz clic en "Planificación de Máquinas" para configurar</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeMachines.map((planning) => {
-                const machine = machines.find(m => m.id === planning.machine_id);
-                return (
-                  <Card key={planning.id} className="bg-green-50 border-green-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-slate-900">{machine?.nombre}</h3>
-                          <p className="text-xs text-slate-600 mt-1">{machine?.codigo}</p>
-                          <div className="mt-3 space-y-1">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                              {getProcessName(planning.process_id)}
-                            </Badge>
-                            <div className="flex items-center gap-1 mt-2">
-                              <Users className="w-3 h-3 text-purple-600" />
-                              <span className="text-sm font-semibold text-purple-900">
-                                {planning.operadores_necesarios} operadores
-                              </span>
+          {/* Nueva Tabla de Configuración de Máquinas */}
+          <div className="mt-8">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Factory className="w-5 h-5 text-blue-600" />
+              Configuración de Máquinas (Modo Temporal Manual)
+            </h3>
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead className="w-[100px] text-center">Planificar</TableHead>
+                    <TableHead>Máquina</TableHead>
+                    <TableHead>Código</TableHead>
+                    <TableHead className="w-[200px]">Operadores Necesarios</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {machines.map((machine) => {
+                    const planning = activeMachines.find(p => p.machine_id === machine.id);
+                    const isPlanned = !!planning;
+                    
+                    return (
+                      <TableRow key={machine.id} className={isPlanned ? "bg-blue-50/50" : ""}>
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={isPlanned}
+                            onCheckedChange={(checked) => handleToggleMachine(machine, checked)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-900">
+                          {machine.nombre}
+                        </TableCell>
+                        <TableCell className="text-slate-500 font-mono text-xs">
+                          {machine.codigo}
+                        </TableCell>
+                        <TableCell>
+                          {isPlanned ? (
+                            <div className="flex items-center gap-2">
+                              <Users className="w-4 h-4 text-slate-400" />
+                              <Input
+                                type="number"
+                                min="1"
+                                className="w-24 h-8"
+                                defaultValue={planning.operadores_necesarios || 1}
+                                onBlur={(e) => handleOperatorsChange(planning.id, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleOperatorsChange(planning.id, e.currentTarget.value);
+                                    e.currentTarget.blur();
+                                  }
+                                }}
+                              />
                             </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                          ) : (
+                            <span className="text-slate-400 text-sm italic">No planificada</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>
