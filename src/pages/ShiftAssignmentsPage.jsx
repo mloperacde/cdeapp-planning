@@ -195,6 +195,22 @@ export default function ShiftAssignmentsPage() {
   const getMachineDetails = (machineId) => machines.find(m => String(m.id) === String(machineId));
   const getEmployeeById = (id) => employees.find(e => String(e.id) === String(id));
 
+  // Helper to find employee by ID or Fallback to Name (if ID fails in Ideal Assignment)
+  const resolveEmployee = (identifier) => {
+      if (!identifier) return null;
+      // 1. Try exact ID match
+      const byId = employees.find(e => String(e.id) === String(identifier));
+      if (byId) return byId.id;
+      
+      // 2. Fallback: Try Name Match (Robust)
+      // This handles cases where MachineAssignments stored names instead of IDs or IDs changed
+      const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+      const targetName = normalize(identifier);
+      const byName = employees.find(e => normalize(e.nombre) === targetName);
+      
+      return byName ? byName.id : identifier; // Return resolved ID or original if not found
+  };
+
   const checkEmployeeSkill = (employeeId, machineId) => {
     const emp = getEmployeeById(employeeId);
     if (!emp) return false;
