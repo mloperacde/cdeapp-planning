@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { localDataService } from "./services/localDataService";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,6 @@ import {
   AlertTriangle,
   Building2
 } from "lucide-react";
-
-const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
 
 export default function Configurator() {
   const { articleId } = useParams();
@@ -66,33 +64,34 @@ export default function Configurator() {
 
   const fetchData = async () => {
     try {
-      const [activitiesRes, processesRes] = await Promise.all([
-        axios.get(`${API}/activities`),
-        axios.get(`${API}/processes`)
+      const [activitiesData, processesData] = await Promise.all([
+        localDataService.getActivities(),
+        localDataService.getProcesses()
       ]);
       
-      setActivities(Array.isArray(activitiesRes.data) ? activitiesRes.data : []);
-      setProcesses(Array.isArray(processesRes.data) ? processesRes.data : []);
+      setActivities(Array.isArray(activitiesData) ? activitiesData : []);
+      setProcesses(Array.isArray(processesData) ? processesData : []);
 
       if (articleId) {
-        const articleRes = await axios.get(`${API}/articles/${articleId}`);
-        const article = articleRes.data;
-        setFormData({
-          code: article.code || "",
-          name: article.name || "",
-          description: article.description || "",
-          client: article.client || "",
-          reference: article.reference || "",
-          process_code: article.process_code || null,
-          selected_activities: article.selected_activities || [],
-          operators_required: article.operators_required || 1
-        });
-        setCalculatedTime(article.total_time_seconds || 0);
-        setSelectedActivitiesDetail(article.activities_detail || []);
-        
-        // Check if article needs process assignment
-        if (!article.process_code && article.selected_activities?.length === 0) {
-          setNeedsProcess(true);
+        const article = await localDataService.getArticle(articleId);
+        if (article) {
+          setFormData({
+            code: article.code || "",
+            name: article.name || "",
+            description: article.description || "",
+            client: article.client || "",
+            reference: article.reference || "",
+            process_code: article.process_code || null,
+            selected_activities: article.selected_activities || [],
+            operators_required: article.operators_required || 1
+          });
+          setCalculatedTime(article.total_time_seconds || 0);
+          setSelectedActivitiesDetail(article.activities_detail || []);
+          
+          // Check if article needs process assignment
+          if (!article.process_code && (!article.selected_activities || article.selected_activities.length === 0)) {
+            setNeedsProcess(true);
+          }
         }
       }
     } catch (error) {
@@ -111,9 +110,9 @@ export default function Configurator() {
     }
 
     try {
-      const response = await axios.post(`${API}/calculate-time`, activityIds);
-      setCalculatedTime(response.data.total_time_seconds);
-      setSelectedActivitiesDetail(response.data.activities);
+      const result = await localDataService.calculateTime(activityIds);
+      setCalculatedTime(result.total_time_seconds);
+      setSelectedActivitiesDetail(result.activities);
     } catch (error) {
       console.error("Error calculating time:", error);
     }
@@ -147,8 +146,7 @@ export default function Configurator() {
     }
 
     try {
-      const response = await axios.get(`${API}/processes/${processCode}`);
-      const process = response.data;
+      const process = await localDataService.getProcess(processCode);
       
       setFormData(prev => ({
         ...prev,
@@ -174,12 +172,12 @@ export default function Configurator() {
     setSaving(true);
     try {
       if (isEditing) {
-        await axios.put(`${API}/articles/${articleId}`, formData);
+        await localDataService.updateArticle(articleId, formData);
         toast.success("Artículo actualizado correctamente");
       } else {
-        const response = await axios.post(`${API}/articles`, formData);
+        const newArticle = await localDataService.createArticle(formData);
         toast.success("Artículo creado correctamente");
-        navigate(`/NewProcessConfigurator/configurator/${response.data.id}`);
+        navigate(`/NewProcessConfigurator/configurator/${newArticle.id}`);
       }
     } catch (error) {
       console.error("Error saving article:", error);
@@ -193,7 +191,7 @@ export default function Configurator() {
     if (!window.confirm("¿Estás seguro de eliminar este artículo?")) return;
     
     try {
-      await axios.delete(`${API}/articles/${articleId}`);
+      await localDataService.deleteArticle(articleId);
       toast.success("Artículo eliminado");
       navigate("/NewProcessConfigurator/articles");
     } catch (error) {
@@ -203,29 +201,7 @@ export default function Configurator() {
   };
 
   const handleExport = async (format) => {
-    if (!articleId) {
-      toast.error("Guarda el artículo primero para exportar");
-      return;
-    }
-
-    try {
-      const response = await axios.get(`${API}/export/${format}/${articleId}`, {
-        responseType: 'blob'
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `articulo_${formData.name}.${format === 'excel' ? 'xlsx' : 'pdf'}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      toast.success(`Exportado a ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error("Error exporting:", error);
-      toast.error("Error al exportar");
-    }
+    toast.info("La exportación no está disponible en modo local");
   };
 
   const formatTime = (seconds) => {

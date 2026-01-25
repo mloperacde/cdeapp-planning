@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+// import axios from "axios"; // Removed axios
+import { localDataService } from "./services/localDataService";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
   RefreshCw
 } from "lucide-react";
 
-const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
+// const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`; // Removed API constant
 
 export default function DataManagement() {
   const [activities, setActivities] = useState([]);
@@ -40,12 +41,12 @@ export default function DataManagement() {
 
   const fetchData = async () => {
     try {
-      const [activitiesRes, processesRes] = await Promise.all([
-        axios.get(`${API}/activities`),
-        axios.get(`${API}/processes`)
+      const [activitiesData, processesData] = await Promise.all([
+        localDataService.getActivities(),
+        localDataService.getProcesses()
       ]);
-      setActivities(Array.isArray(activitiesRes.data) ? activitiesRes.data : []);
-      setProcesses(Array.isArray(processesRes.data) ? processesRes.data : []);
+      setActivities(Array.isArray(activitiesData) ? activitiesData : []);
+      setProcesses(Array.isArray(processesData) ? processesData : []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -62,21 +63,19 @@ export default function DataManagement() {
     }
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    // const formData = new FormData();
+    // formData.append('file', file);
 
     try {
-      const response = await axios.post(`${API}/upload-excel`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const result = await localDataService.processExcel(file);
       
       toast.success(
-        `Excel procesado: ${response.data.activities_count} actividades, ${response.data.processes_count} procesos`
+        `Excel procesado: ${result.activities_count} actividades, ${result.processes_count} procesos`
       );
       fetchData();
     } catch (error) {
       console.error("Error uploading:", error);
-      toast.error(error.response?.data?.detail || "Error al procesar el archivo Excel");
+      toast.error(error.message || "Error al procesar el archivo Excel");
     } finally {
       setUploading(false);
     }

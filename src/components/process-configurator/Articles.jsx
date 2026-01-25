@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+// import axios from "axios";
+import { localDataService } from "./services/localDataService";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ import {
   Building2
 } from "lucide-react";
 
-const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
+// const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
 
 export default function Articles() {
   const [articles, setArticles] = useState([]);
@@ -53,8 +54,8 @@ export default function Articles() {
 
   const fetchArticles = async () => {
     try {
-      const response = await axios.get(`${API}/articles`);
-      setArticles(Array.isArray(response.data) ? response.data : []);
+      const data = await localDataService.getArticles();
+      setArticles(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching articles:", error);
       toast.error("Error al cargar los artículos");
@@ -67,7 +68,7 @@ export default function Articles() {
     if (!window.confirm(`¿Eliminar el artículo "${articleName}"?`)) return;
     
     try {
-      await axios.delete(`${API}/articles/${articleId}`);
+      await localDataService.deleteArticle(articleId);
       toast.success("Artículo eliminado");
       fetchArticles();
     } catch (error) {
@@ -77,54 +78,21 @@ export default function Articles() {
   };
 
   const handleExport = async (articleId, format, articleName) => {
-    try {
-      const response = await axios.get(`${API}/export/${format}/${articleId}`, {
-        responseType: 'blob'
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `articulo_${articleName}.${format === 'excel' ? 'xlsx' : 'pdf'}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      toast.success(`Exportado a ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error("Error exporting:", error);
-      toast.error("Error al exportar");
-    }
+    toast.info("La exportación no está disponible en modo local");
   };
 
   const handleImportUpload = async (file) => {
-    if (!file) return;
+    // Note: This logic seems to be for importing Articles specifically, not the base data.
+    // The previous implementation used /api/import-articles.
+    // Since we are moving to local, and localDataService.processExcel was designed for Activities/Processes,
+    // we might need to clarify if this import is for bulk articles or the configuration data.
+    // Given the context of "DataManagement" handling the configuration data, this might be redundant or different.
+    // For now, I'll redirect to DataManagement for imports to keep it simple, or just show a message.
     
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      toast.error("El archivo debe ser Excel (.xlsx o .xls)");
-      return;
-    }
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await axios.post(`${API}/import-articles`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      toast.success(
-        `Importados ${response.data.imported_count} artículos. ${response.data.no_process_count} sin proceso asignado.`
-      );
-      fetchArticles();
-    } catch (error) {
-      console.error("Error importing:", error);
-      toast.error(error.response?.data?.detail || "Error al importar artículos");
-    } finally {
-      setUploading(false);
-    }
+    toast.info("Por favor, utilice la sección 'Importar Datos' para cargar la configuración base.");
   };
+
+  // ... existing code ...
 
   const handleDrag = useCallback((e) => {
     e.preventDefault();

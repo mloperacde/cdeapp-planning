@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { localDataService } from "./services/localDataService";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,6 @@ import {
   ArrowRight
 } from "lucide-react";
 
-const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
 
 export default function Compare() {
   const [articles, setArticles] = useState([]);
