@@ -19,6 +19,7 @@ export const MENU_STRUCTURE = [
 
   // Dirección
   { name: 'Dirección - Habilidades', icon: Award, path: '/DireccionSkills', category: 'Dirección' },
+  { name: 'Nuevo Conf. Procesos', icon: Cog, path: '/NewProcessConfigurator', category: 'Dirección' },
   
   // Planificación
   { name: 'Personal Fabricación', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Planificación' },
