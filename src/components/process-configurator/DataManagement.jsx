@@ -44,8 +44,8 @@ export default function DataManagement() {
         axios.get(`${API}/activities`),
         axios.get(`${API}/processes`)
       ]);
-      setActivities(activitiesRes.data);
-      setProcesses(processesRes.data);
+      setActivities(Array.isArray(activitiesRes.data) ? activitiesRes.data : []);
+      setProcesses(Array.isArray(processesRes.data) ? processesRes.data : []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {

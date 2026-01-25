@@ -40,7 +40,7 @@ export default function Compare() {
   const fetchArticles = async () => {
     try {
       const response = await axios.get(`${API}/articles`);
-      setArticles(response.data);
+      setArticles(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching articles:", error);
       toast.error("Error al cargar los artículos");

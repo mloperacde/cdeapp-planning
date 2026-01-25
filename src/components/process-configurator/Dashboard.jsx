@@ -32,7 +32,10 @@ export default function Dashboard() {
   const fetchStats = async () => {
     try {
       const response = await axios.get(`${API}/stats`);
-      setStats(response.data);
+      setStats(prev => ({
+        ...prev,
+        ...(response.data || {})
+      }));
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {
@@ -191,7 +194,7 @@ export default function Dashboard() {
             <CardDescription>Últimas configuraciones creadas</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats.recent_articles.length === 0 ? (
+            {(stats.recent_articles || []).length === 0 ? (
               <div className="empty-state py-8">
                 <Package className="h-12 w-12 text-muted-foreground/50 mb-3" />
                 <p className="text-muted-foreground">No hay artículos configurados</p>
@@ -201,7 +204,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {stats.recent_articles.map((article) => (
+                {(stats.recent_articles || []).map((article) => (
                   <Link
                     key={article.id}
                     to={`/NewProcessConfigurator/configurator/${article.id}`}

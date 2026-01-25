@@ -71,8 +71,8 @@ export default function Configurator() {
         axios.get(`${API}/processes`)
       ]);
       
-      setActivities(activitiesRes.data);
-      setProcesses(processesRes.data);
+      setActivities(Array.isArray(activitiesRes.data) ? activitiesRes.data : []);
+      setProcesses(Array.isArray(processesRes.data) ? processesRes.data : []);
 
       if (articleId) {
         const articleRes = await axios.get(`${API}/articles/${articleId}`);
