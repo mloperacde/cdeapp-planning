@@ -51,6 +51,59 @@ export const localDataService = {
       }
   },
 
+  async fetchApiProcesses() {
+    try {
+        // Ensure activities are synced first to have proper linking
+        const activities = await this.getActivities();
+        const activityMap = new Map(activities.map(a => [a.number.toString(), a]));
+
+        const response = await fetch(`${API_URL}/processes`);
+        if (!response.ok) throw new Error('Failed to fetch processes from API');
+        const apiProcesses = await response.json();
+
+        // Convert API format to internal format
+        const convertedProcesses = apiProcesses.map(p => {
+            const activityRefs = p.activity_numbers || [];
+            const procActivities = [];
+            let totalTime = 0;
+
+            activityRefs.forEach(num => {
+                const act = activityMap.get(num.toString());
+                if (act) {
+                    totalTime += act.time_seconds;
+                    procActivities.push(act);
+                }
+            });
+
+            return {
+                id: `proc_${p.code.replace(/\s+/g, '_')}`,
+                code: p.code,
+                name: p.name || p.code,
+                activity_numbers: activityRefs,
+                total_time_seconds: totalTime,
+                activities_count: procActivities.length,
+                activity_ids: procActivities.map(a => a.id)
+            };
+        });
+
+        // Merge with local processes
+        const localProcesses = await this.getProcesses();
+        const existingCodes = new Set(localProcesses.map(p => p.code));
+        
+        convertedProcesses.forEach(proc => {
+            if (!existingCodes.has(proc.code)) {
+                localProcesses.push(proc);
+            }
+        });
+
+        localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(localProcesses));
+        return localProcesses;
+    } catch (error) {
+        console.error("Error syncing processes with API:", error);
+        throw error;
+    }
+  },
+
   async processExcel(file) {
     await delay(500);
     return new Promise((resolve, reject) => {

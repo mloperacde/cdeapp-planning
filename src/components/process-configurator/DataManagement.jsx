@@ -57,8 +57,12 @@ export default function DataManagement() {
   const handleSyncApi = async () => {
     setLoading(true);
     try {
-      const result = await localDataService.fetchApiActivities();
-      toast.success(`${result.length} actividades sincronizadas desde API`);
+      const activities = await localDataService.fetchApiActivities();
+      const processes = await localDataService.fetchApiProcesses();
+      
+      toast.success(
+        `Sincronización completa: ${activities.length} actividades, ${processes.length} procesos`
+      );
       fetchData();
     } catch (error) {
       toast.error("Error al sincronizar con API");
