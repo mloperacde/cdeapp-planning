@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, RefreshCw } from "lucide-react";
+import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, RefreshCw, Filter, LayoutDashboard } from "lucide-react";
 import { format, startOfWeek, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -450,21 +450,69 @@ export default function DailyProductionPlanningPage() {
   // --- Render ---
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <CalendarIcon className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
-            Planificación Diaria de Producción
-            </h1>
-            <p className="text-slate-500 mt-1">
+    <div className="p-6 md:p-8 w-full max-w-full space-y-6">
+      {/* Header Compacto */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                Planificación Diaria de Producción
+              </h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
                 Configure la planificación de máquinas y operadores para el día seleccionado.
-            </p>
+              </p>
+            </div>
+          </div>
+      </div>
+
+      {/* Toolbar Unificada */}
+      <div className="flex flex-col xl:flex-row gap-4 shrink-0 mb-6 justify-between items-start xl:items-center">
+        {/* Left: Filters */}
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full xl:w-auto">
+                <div className="flex items-center px-2 border-r border-slate-200 dark:border-slate-800">
+                    <Filter className="w-4 h-4 text-slate-500 mr-2" />
+                    <span className="text-sm font-medium text-slate-700">Filtros</span>
+                </div>
+                
+                <Input 
+                    type="date" 
+                    value={selectedDate} 
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="border-0 shadow-none focus-visible:ring-0 w-full sm:w-auto h-8"
+                />
+                
+                <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+                
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                    <SelectTrigger className="w-full sm:w-[200px] border-0 shadow-none focus:ring-0 h-8">
+                        <SelectValue placeholder="Seleccionar Equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {teams.map(t => (
+                            <SelectItem key={t.team_key} value={t.team_key}>
+                                {t.team_name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+
+                <div className="px-3 text-sm font-medium text-slate-600 whitespace-nowrap flex items-center gap-2">
+                    Turno: <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">{currentShift}</span>
+                </div>
+            </div>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
+
+        {/* Right: Actions */}
+        <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
             <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                 <DialogTrigger asChild>
-                     <Button variant="outline" className="flex-1 md:flex-none gap-2">
+                     <Button variant="outline" size="sm" className="h-9 gap-2 bg-white border-slate-200">
                         <Copy className="w-4 h-4" />
                         <span className="hidden md:inline">Importar</span>
                      </Button>
@@ -537,58 +585,24 @@ export default function DailyProductionPlanningPage() {
 
             <Button 
                 variant="outline" 
+                size="sm"
                 onClick={handleSavePlanning}
-                className="flex-1 md:flex-none gap-2 border-green-600 text-green-700 hover:bg-green-50"
+                className="h-9 gap-2 border-green-600 text-green-700 hover:bg-green-50 bg-white"
             >
                 <Save className="w-4 h-4" />
                 Guardar
             </Button>
             <Button 
                 variant="destructive" 
+                size="sm"
                 onClick={handleClearAll}
                 disabled={activePlanningsMap.size === 0 || clearMutation.isPending}
-                className="flex-1 md:flex-none"
+                className="h-9"
             >
                 {clearMutation.isPending ? "Limpiando..." : "Limpiar"}
             </Button>
         </div>
       </div>
-
-      {/* Controls */}
-      <Card>
-        <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Fecha</label>
-            <Input 
-                type="date" 
-                value={selectedDate} 
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Equipo</label>
-            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar Equipo" />
-                </SelectTrigger>
-                <SelectContent>
-                    {teams.map(t => (
-                        <SelectItem key={t.team_key} value={t.team_key}>
-                            {t.team_name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Turno (Automático)</label>
-            <div className="px-3 py-2 bg-slate-100 rounded-md border font-medium text-slate-700">
-                {currentShift}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
