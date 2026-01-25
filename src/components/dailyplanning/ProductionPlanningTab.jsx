@@ -38,22 +38,36 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
       
-      // Deduplicate machines by ID immediately after fetching
+      // Deduplicate machines by ID and Name to avoid ghost machines
       const uniqueMachines = new Map();
       
       data.forEach(m => {
+        // Use a composite key or prefer ID.
+        // If we have same name, we treat it as same machine for UI purposes if ID is different
+        // But to be safe, let's just deduplicate by ID first, then by Name if ID is different
+        
+        // Priority 1: ID
         if (!uniqueMachines.has(m.id)) {
-          uniqueMachines.set(m.id, {
-            id: m.id,
-            nombre: m.nombre,
-            codigo: m.codigo_maquina,
-            descripcion: m.descripcion,
-            orden: m.orden_visualizacion || 999
-          });
+           uniqueMachines.set(m.id, {
+             id: m.id,
+             nombre: m.nombre,
+             codigo: m.codigo_maquina,
+             descripcion: m.descripcion,
+             orden: m.orden_visualizacion || 999
+           });
         }
       });
+      
+      // Secondary Deduplication by Name (keep the one with lower ID or existing logic)
+      const uniqueByName = new Map();
+      Array.from(uniqueMachines.values()).forEach(m => {
+          const key = (m.nombre || '').trim().toLowerCase();
+          if (!uniqueByName.has(key)) {
+              uniqueByName.set(key, m);
+          }
+      });
 
-      return Array.from(uniqueMachines.values()).sort((a, b) => a.orden - b.orden);
+      return Array.from(uniqueByName.values()).sort((a, b) => a.orden - b.orden);
     },
     staleTime: 60 * 60 * 1000, // 1 hour
   });
@@ -71,6 +85,34 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   });
 
   const [showSummary, setShowSummary] = useState(false);
+
+  // Auto-cleanup for duplicate plannings in DB
+  useEffect(() => {
+    if (!plannings || plannings.length === 0) return;
+
+    const seen = new Set();
+    const duplicates = [];
+
+    // Identify duplicates (Same Machine + Same Date + Same Team)
+    // Sort by creation date descending (newest first) to keep the latest
+    const sortedPlannings = [...plannings]
+      .filter(p => p.team_key === selectedTeam && p.fecha_planificacion === selectedDate)
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    sortedPlannings.forEach(p => {
+      if (seen.has(p.machine_id)) {
+        duplicates.push(p.id);
+      } else {
+        seen.add(p.machine_id);
+      }
+    });
+
+    // Clean up duplicates if found
+    if (duplicates.length > 0) {
+      console.log("Cleaning up duplicate plannings:", duplicates);
+      duplicates.forEach(id => deletePlanningMutation.mutate(id));
+    }
+  }, [plannings, selectedTeam, selectedDate]);
 
   // Mutations
   const createPlanningMutation = useMutation({
