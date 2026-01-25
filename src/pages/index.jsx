@@ -29,6 +29,7 @@ import MaintenanceTracking from "./MaintenanceTracking";
 import MasterEmployeeDatabase from "./MasterEmployeeDatabase";
 import PerformanceManagement from "./PerformanceManagement";
 import ProcessConfiguration from "./ProcessConfiguration";
+import NewProcessConfigurator from "./NewProcessConfigurator";
 import ProductionDashboard from "./ProductionDashboard";
 import ProductionPlanning from "./ProductionPlanning";
 import QualityControl from "./QualityControl";
