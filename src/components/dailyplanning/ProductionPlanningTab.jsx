@@ -84,7 +84,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const [showSummary, setShowSummary] = useState(false);
+  const deletingIdsRef = React.useRef(new Set());
 
   // Auto-cleanup for duplicate plannings in DB
   useEffect(() => {
@@ -108,9 +108,14 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     });
 
     // Clean up duplicates if found
-    if (duplicates.length > 0) {
-      console.log("Cleaning up duplicate plannings:", duplicates);
-      duplicates.forEach(id => deletePlanningMutation.mutate(id));
+    const idsToDelete = duplicates.filter(id => !deletingIdsRef.current.has(id));
+    
+    if (idsToDelete.length > 0) {
+      console.log("Cleaning up duplicate plannings:", idsToDelete);
+      idsToDelete.forEach(id => {
+        deletingIdsRef.current.add(id);
+        deletePlanningMutation.mutate({ id, silent: true });
+      });
     }
   }, [plannings, selectedTeam, selectedDate]);
 
@@ -156,24 +161,34 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   });
 
   const deletePlanningMutation = useMutation({
-    mutationFn: (id) => base44.entities.MachinePlanning.delete(id),
-    onSuccess: (deletedId, variables) => {
+    mutationFn: ({ id }) => base44.entities.MachinePlanning.delete(id),
+    onSuccess: (deletedId, { id, silent }) => {
+      // Remove from tracking ref
+      deletingIdsRef.current.delete(id);
+
       // Optimistic update: Remove from cache without refetching
-      const idToDelete = typeof deletedId === 'object' ? deletedId?.id : variables;
+      const idToDelete = typeof deletedId === 'object' ? deletedId?.id : id;
       
       queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (oldData = []) => {
-        return oldData.filter(p => p.id !== idToDelete && p.id !== variables);
+        return oldData.filter(p => p.id !== idToDelete && p.id !== id);
       });
       // Invalidate specific query only
       queryClient.invalidateQueries({ queryKey: ['machinePlannings', selectedDate, selectedTeam] });
-      // Removed toast to prevent UI clutter
     },
-    onError: (err) => {
-      toast({
-        title: "Error",
-        description: "Error al eliminar: " + err.message,
-        variant: "destructive"
-      });
+    onError: (err, { id, silent }) => {
+      // Remove from tracking ref even on error
+      deletingIdsRef.current.delete(id);
+      
+      // Only show toast if not silent (background cleanup)
+      if (!silent) {
+        toast({
+          title: "Error",
+          description: "Error al eliminar: " + err.message,
+          variant: "destructive"
+        });
+      } else {
+        console.warn(`Background deletion failed for ${id} (likely already deleted):`, err);
+      }
     }
   });
 
@@ -239,7 +254,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
       
       if (planningsToDelete.length > 0) {
         planningsToDelete.forEach(p => {
-          deletePlanningMutation.mutate(p.id);
+          deletePlanningMutation.mutate({ id: p.id });
         });
       }
     }
