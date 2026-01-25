@@ -198,11 +198,30 @@ export default function DailyProductionPlanningPage() {
   const availableOperators = useMemo(() => {
     const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
     if (!teamName) return 0;
-    return employees.filter(e => 
-        e.equipo === teamName && 
-        e.disponibilidad === "Disponible" &&
-        e.incluir_en_planning !== false
-    ).length;
+    
+    return employees.filter(e => {
+        // 1. Team Match
+        if (e.equipo !== teamName) return false;
+
+        // 2. Availability (Must be "Disponible")
+        if (e.disponibilidad !== "Disponible") return false;
+
+        // 3. Department: 'Fabricación' (Case insensitive)
+        if (!e.departamento || e.departamento.toLowerCase() !== 'fabricación') return false;
+
+        // 4. Role (Puesto) in allowed list
+        const currentPuesto = (e.puesto || "").toLowerCase().trim();
+        const allowedRoles = [
+            'responsable de linea', 
+            'segunda de linea', 
+            'operario de linea',
+            'operaria de linea'
+        ];
+        
+        if (!allowedRoles.includes(currentPuesto)) return false;
+
+        return true;
+    }).length;
   }, [employees, teams, selectedTeam]);
 
   const totalRequiredOperators = useMemo(() => {

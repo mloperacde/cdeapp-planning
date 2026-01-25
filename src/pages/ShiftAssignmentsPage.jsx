@@ -233,15 +233,23 @@ export default function ShiftAssignmentsPage() {
         const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
         if (e.equipo !== teamName) return false;
 
-        // 2. Availability
+        // 2. Availability (Must be "Disponible" - implies no active absence)
         if (e.disponibilidad !== "Disponible") return false;
 
         // 3. Department: 'Fabricación' (Case insensitive)
         if (!e.departamento || e.departamento.toLowerCase() !== 'fabricación') return false;
 
-        // 4. Role (Puesto) in allowed list
-        const allowedRoles = ['Responsable de linea', 'Segunda de linea', 'Operario de linea'];
-        if (!e.puesto || !allowedRoles.includes(e.puesto)) return false;
+        // 4. Role (Puesto) in allowed list (Strictly these 3 roles)
+        // Normalizing to lowercase for comparison
+        const currentPuesto = (e.puesto || "").toLowerCase().trim();
+        const allowedRoles = [
+            'responsable de linea', 
+            'segunda de linea', 
+            'operario de linea',
+            'operaria de linea' // Adding female variant as requested
+        ];
+        
+        if (!allowedRoles.includes(currentPuesto)) return false;
 
         // 5. Exclude already assigned
         if (assignedIds.has(String(e.id))) return false;
