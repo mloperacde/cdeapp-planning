@@ -485,7 +485,7 @@ export const localDataService = {
         }
     }
     return processes;
-  },,
+  },
 
   // --- Activities & Processes ---
 
