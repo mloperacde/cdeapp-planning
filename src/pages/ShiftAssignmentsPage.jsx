@@ -137,11 +137,15 @@ export default function ShiftAssignmentsPage() {
 
   // Initialize local assignments when data loads
   useEffect(() => {
+    // 1. Reset State completely when team changes to avoid stale data ghosts
+    setLocalAssignments({}); 
+
     if (existingStaffing.length > 0) {
+        // ... (Existing logic for loading saved staffing)
         const loaded = {};
         existingStaffing.forEach(ds => {
             loaded[ds.machine_id] = {
-                id: ds.id, // Keep ID for updates
+                id: ds.id, 
                 responsable_linea: ds.responsable_linea,
                 segunda_linea: ds.segunda_linea,
                 operador_1: ds.operador_1,
@@ -158,10 +162,10 @@ export default function ShiftAssignmentsPage() {
     } else if (machineAssignments.length > 0 && selectedTeam) {
         // Load from Ideal Configuration (MachineAssignments)
         const loaded = {};
-        const teamAssignments = machineAssignments.filter(ma => ma.team_key === selectedTeam);
+        // Strict filtering by Team Key to prevent cross-contamination
+        const teamAssignments = machineAssignments.filter(ma => String(ma.team_key) === String(selectedTeam));
         
         teamAssignments.forEach(ma => {
-             // Handle potential array fields (based on IdealAssignmentView usage)
              const getVal = (val) => Array.isArray(val) ? val[0] : val;
 
              loaded[ma.machine_id] = {
@@ -181,17 +185,9 @@ export default function ShiftAssignmentsPage() {
         setLocalAssignments(loaded);
         
         if (teamAssignments.length > 0) {
-            // Toast suppressed as per user request to be less invasive
-            /* 
-            toast({
-                title: "Configuración Ideal Cargada",
-                description: "Se han precargado las asignaciones predeterminadas para este equipo.",
-            });
-            */
+             // Toast suppressed...
         }
-    } else {
-        setLocalAssignments({});
-    }
+    } 
   }, [existingStaffing, machineAssignments, selectedTeam]);
 
   // --- HELPERS ---
@@ -640,7 +636,9 @@ export default function ShiftAssignmentsPage() {
                             />
 
                             {/* Dynamic Operators based on Plan */}
-                            {Array.from({ length: Number(selectedMachinePlan?.operadores_necesarios) || 4 }).map((_, idx) => (
+                            {/* Calculation: Total Operators Needed - Fixed Roles (2: Resp + 2nd) */}
+                            {/* If needs 4 operators total, show 2 slots (Op1, Op2) because Resp and 2nd are already shown */}
+                            {Array.from({ length: Math.max(0, (Number(selectedMachinePlan?.operadores_necesarios) || 0) - 2) }).map((_, idx) => (
                                 <Slot 
                                     key={idx}
                                     id={`machine-${selectedMachineId}-operador_${idx + 1}`}
