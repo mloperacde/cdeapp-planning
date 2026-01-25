@@ -163,36 +163,31 @@ export const localDataService = {
              if (sheetListadoProcesos) {
                 const data = XLSX.utils.sheet_to_json(sheetListadoProcesos, { header: 1 });
                 
-                // Determine strategy based on shape
-                // If it has many columns (>5), it's likely a Matrix
-                const isLikelyMatrix = data.length > 0 && (data[0].length > 5 || (data[1] && data[1].length > 5));
-                
                 let foundProcesses = [];
                 
-                if (isLikelyMatrix) {
-                    // Try Matrix parsing FIRST for wide sheets
-                    foundProcesses = this._parseProcessesFromMatrix(data, activities);
+                // Try Matrix parsing FIRST
+                // We don't restrict by column count anymore to support small matrices
+                foundProcesses = this._parseProcessesFromMatrix(data, activities);
+                
+                // If successful, we might need to backfill activities that don't exist yet
+                if (foundProcesses.length > 0) {
+                    const existingActivityNums = new Set(activities.map(a => a.number.toString()));
+                    const usedActivityNums = new Set();
                     
-                    // If successful, we might need to backfill activities that don't exist yet
-                    if (foundProcesses.length > 0) {
-                        const existingActivityNums = new Set(activities.map(a => a.number.toString()));
-                        const usedActivityNums = new Set();
-                        
-                        foundProcesses.forEach(p => {
-                            p.activity_numbers.forEach(num => usedActivityNums.add(num));
-                        });
-                        
-                        usedActivityNums.forEach(num => {
-                            if (!existingActivityNums.has(num.toString())) {
-                                activities.push({
-                                    id: `act_${num}`,
-                                    number: num,
-                                    name: `Actividad ${num}`,
-                                    time_seconds: 0
-                                });
-                            }
-                        });
-                    }
+                    foundProcesses.forEach(p => {
+                        p.activity_numbers.forEach(num => usedActivityNums.add(num));
+                    });
+                    
+                    usedActivityNums.forEach(num => {
+                        if (!existingActivityNums.has(num.toString())) {
+                            activities.push({
+                                id: `act_${num}`,
+                                number: num,
+                                name: `Actividad ${num}`,
+                                time_seconds: 0
+                            });
+                        }
+                    });
                 }
 
                 // If Matrix parsing found nothing, try Standard parsing
@@ -221,9 +216,43 @@ export const localDataService = {
             const sheet = workbook.Sheets[sheetName];
             const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
             
-            // Try to extract both from same sheet
+            // Try to extract both from same sheet (Standard List Format)
             activities = this._parseActivitiesFromData(data);
             processes = this._parseProcessesFromData(data);
+
+            // Check if we found valid linked processes. 
+            // If not, it might be a Matrix format where activities are headers.
+            const processesHaveActivities = processes.some(p => p.activity_numbers && p.activity_numbers.length > 0);
+            
+            if (!processesHaveActivities || activities.length === 0) {
+                 console.log("Standard parsing yielded poor results. Attempting Matrix parsing...");
+                 const matrixProcesses = this._parseProcessesFromMatrix(data, activities);
+                 
+                 if (matrixProcesses.length > 0) {
+                     console.log(`Matrix parsing found ${matrixProcesses.length} processes.`);
+                     // Use matrix processes
+                     processes = matrixProcesses;
+                     
+                     // Backfill activities from Matrix headers (since they weren't in rows)
+                     const existingActivityNums = new Set(activities.map(a => a.number.toString()));
+                     const usedActivityNums = new Set();
+                     
+                     matrixProcesses.forEach(p => {
+                         p.activity_numbers.forEach(num => usedActivityNums.add(num));
+                     });
+                     
+                     usedActivityNums.forEach(num => {
+                         if (!existingActivityNums.has(num.toString())) {
+                             activities.push({
+                                 id: `act_${num}`,
+                                 number: num,
+                                 name: `Actividad ${num}`,
+                                 time_seconds: 0
+                             });
+                         }
+                     });
+                 }
+            }
           }
 
           // Calculate process totals and Deduplicate by Activity Combination
