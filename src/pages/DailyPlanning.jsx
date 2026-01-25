@@ -34,6 +34,8 @@ export default function DailyPlanningPage() {
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
     initialData: [],
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true,
   });
 
   // Debug logging

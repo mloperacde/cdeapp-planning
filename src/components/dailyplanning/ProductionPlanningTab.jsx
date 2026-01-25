@@ -51,6 +51,8 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
+  const [showSummary, setShowSummary] = useState(false);
+
   // Mutations
   const createPlanningMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
@@ -115,13 +117,23 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   });
 
   const activeMachines = useMemo(() => {
-    // With filter() query, plannings should already be filtered, but we keep this for safety
-    // if the cache key matches but data is from elsewhere (unlikely with specific key)
-    return plannings.filter(
-      p => p.activa_planning && 
-      p.team_key === selectedTeam && 
-      p.fecha_planificacion === selectedDate
-    );
+    // Deduplicate plannings by machine_id to fix multiple selection issue
+    const uniquePlannings = [];
+    const seenMachineIds = new Set();
+    
+    // Sort by id descending to keep the latest one if duplicates exist
+    const sortedPlannings = [...plannings]
+      .filter(p => p.activa_planning && p.team_key === selectedTeam && p.fecha_planificacion === selectedDate)
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    for (const p of sortedPlannings) {
+      if (!seenMachineIds.has(p.machine_id)) {
+        seenMachineIds.add(p.machine_id);
+        uniquePlannings.push(p);
+      }
+    }
+    
+    return uniquePlannings;
   }, [plannings, selectedTeam, selectedDate]);
 
   const totalOperators = useMemo(() => {
@@ -342,13 +354,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
           <div className="mt-8 flex justify-end border-t pt-6">
             {activeMachines.length > 0 && operatorsDeficit <= 0 ? (
               <Button 
-                onClick={() => {
-                  toast({
-                    title: "Planificación Guardada",
-                    description: "La planificación ha sido verificada y guardada correctamente.",
-                    className: "bg-green-600 text-white border-none"
-                  });
-                }}
+                onClick={() => setShowSummary(true)}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-8 text-lg rounded-xl shadow-lg transition-all flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4"
               >
                 <Save className="w-6 h-6" />
@@ -371,6 +377,79 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
           </div>
         </CardContent>
       </Card>
+
+      {/* Resumen Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl text-green-700">
+              <CheckCircle className="w-6 h-6" />
+              Resumen de Planificación
+            </DialogTitle>
+            <DialogDescription>
+              Revisa el resumen de la planificación antes de confirmar.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-500">Fecha</p>
+                <p className="font-bold">{selectedDate}</p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-500">Turno</p>
+                <p className="font-bold">{selectedShift || 'Sin turno'}</p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-500">Total Máquinas</p>
+                <p className="font-bold">{activeMachines.length}</p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-500">Total Operadores</p>
+                <p className="font-bold">{totalOperators}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-slate-100 px-4 py-2 font-semibold text-sm text-slate-700">
+                Detalle por Máquina
+              </div>
+              <div className="divide-y max-h-60 overflow-y-auto">
+                {activeMachines.map(planning => (
+                  <div key={planning.id} className="flex justify-between items-center px-4 py-2 text-sm">
+                    <span className="font-medium">{planning.machine_nombre}</span>
+                    <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+                      {planning.operadores_necesarios} op.
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-between">
+            <Button variant="outline" onClick={() => setShowSummary(false)}>
+              <X className="w-4 h-4 mr-2" />
+              Seguir Editando
+            </Button>
+            <Button 
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                setShowSummary(false);
+                toast({
+                  title: "Planificación Confirmada",
+                  description: "La planificación ha sido guardada exitosamente.",
+                  className: "bg-green-600 text-white border-none"
+                });
+              }}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Confirmar y Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
