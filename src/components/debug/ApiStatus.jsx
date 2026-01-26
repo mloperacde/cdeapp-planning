@@ -60,7 +60,7 @@ export default function ApiStatus() {
     checkEntity('EmployeeMasterDatabase', 'employees');
     checkEntity('BreakShift', 'breaks');
     checkEntity('EmergencyTeamMember', 'emergency');
-    checkEntity('EmergencyTeamMembers', 'emergencyPlural'); // Try plural
+    // checkEntity('EmergencyTeamMembers', 'emergencyPlural'); // Removed as it causes 404
     checkEntity('UnionHoursRecord', 'union');
   };
 

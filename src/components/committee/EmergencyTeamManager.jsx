@@ -183,6 +183,17 @@ export default function EmergencyTeamManager({ employees = [] }) {
     return emp?.nombre || `Desconocido (ID: ${employeeId})`;
   };
 
+  // Diagnostic Info Component
+  const DiagnosticInfo = () => (
+    <div className="mt-4 p-4 bg-slate-100 rounded text-xs font-mono text-slate-600">
+      <p><strong>Diagnóstico de Empleados:</strong></p>
+      <p>Total Empleados Cargados: {employees.length}</p>
+      {employees.length > 0 && (
+        <p>Ejemplo Empleado [0]: ID="{employees[0].id}" Nombre="{employees[0].nombre || employees[0].name}"</p>
+      )}
+    </div>
+  );
+
   const handleAdd = (role) => {
     setSelectedRole(role);
     setShowForm(true);
