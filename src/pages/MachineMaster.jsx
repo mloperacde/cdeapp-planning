@@ -74,6 +74,8 @@ export default function MachineMasterPage() {
           (m.codigo_maquina === apiMachine.codigo)
         );
 
+        console.log(`[Sync] Processing ${apiMachine.codigo} - Found existing: ${!!existing}`);
+
         // MAPEO ESTRICTO: Solo actualizamos identificación, ubicación y datos técnicos básicos.
         // Se preservan explícitamente: Mantenimiento, Imágenes, Archivos, Notas, etc.
         const machineData = {
@@ -134,6 +136,10 @@ export default function MachineMasterPage() {
           return [];
         }
         console.log('✅ Cargadas', masterData.length, 'máquinas desde MachineMasterDatabase');
+        if (masterData.length > 0) {
+            console.log('🔍 Schema Check - Keys of first machine:', Object.keys(masterData[0]));
+            console.log('🔍 Sample id_base44:', masterData[0].id_base44);
+        }
         return masterData.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
       } catch (err) {
         console.error('❌ Error cargando máquinas:', err);
@@ -445,15 +451,15 @@ export default function MachineMasterPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirmar Eliminación</DialogTitle>
+              <div className="py-4">
+                <p className="text-slate-600 dark:text-slate-400">
+                  ¿Estás seguro de que quieres eliminar la máquina <strong>{showDeleteConfirm.nombre}</strong>?
+                </p>
+                <p className="text-sm text-red-600 mt-2">
+                  Esta acción no se puede deshacer.
+                </p>
+              </div>
             </DialogHeader>
-            <div className="py-4">
-              <p className="text-slate-600 dark:text-slate-400">
-                ¿Estás seguro de que quieres eliminar la máquina <strong>{showDeleteConfirm.nombre}</strong>?
-              </p>
-              <p className="text-sm text-red-600 mt-2">
-                Esta acción no se puede deshacer.
-              </p>
-            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowDeleteConfirm(null)}>
                 Cancelar
