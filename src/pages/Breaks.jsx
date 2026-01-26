@@ -39,9 +39,18 @@ export default function BreaksPage() {
     activo: true,
   });
 
-  const { data: breakShifts, isLoading, error } = useQuery({
+  const { data: breakShifts, isLoading, error, isError } = useQuery({
     queryKey: ['breakShifts'],
-    queryFn: () => base44.entities.BreakShift.list(),
+    queryFn: async () => {
+      try {
+        const data = await base44.entities.BreakShift.list();
+        console.log("BreakShifts fetched:", data);
+        return data;
+      } catch (err) {
+        console.error("Error fetching BreakShifts:", err);
+        throw err;
+      }
+    },
     initialData: [],
   });
 

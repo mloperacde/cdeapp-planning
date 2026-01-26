@@ -2,9 +2,20 @@ import { createClient } from '@base44/sdk';
 
 const host = typeof window !== 'undefined' ? window.location.hostname : '';
 
-// Configuración para el flujo de trabajo: Desarrollo Local contra Backend Real
-// Por defecto usamos la API real. Solo usamos el mock si se especifica explícitamente VITE_USE_MOCK=true
-const useMockApi = import.meta.env.VITE_USE_MOCK === 'true';
+// Configuración de entorno
+const forceMock = import.meta.env.VITE_USE_MOCK === 'true';
+const forceReal = import.meta.env.VITE_USE_REAL_API === 'true';
+
+// Determinar modo: 
+// - Por defecto usamos API REAL.
+// - Solo usamos Mock si se especifica explícitamente VITE_USE_MOCK=true
+const useMockApi = forceMock;
+
+if (typeof window !== 'undefined') {
+  console.log(`[Base44] Initializing Client...`);
+  console.log(`[Base44] Mode: ${useMockApi ? 'MOCK (Local Data)' : 'REAL (Backend Connection)'}`);
+  if (forceReal) console.log(`[Base44] Real API forced via VITE_USE_REAL_API`);
+}
 
 // Simple UUID generator
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

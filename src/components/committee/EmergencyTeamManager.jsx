@@ -59,13 +59,37 @@ export default function EmergencyTeamManager({ employees = [] }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: emergencyMembers = [] } = useQuery({
+  const { data: emergencyMembers = [], error, isError } = useQuery({
     queryKey: ['emergencyTeamMembers'],
-    queryFn: () => base44.entities.EmergencyTeamMember.list(),
+    queryFn: async () => {
+      console.log("Fetching EmergencyTeamMembers...");
+      try {
+        const data = await base44.entities.EmergencyTeamMember.list();
+        console.log("EmergencyTeamMembers fetched:", data);
+        return data;
+      } catch (err) {
+        console.error("Error fetching EmergencyTeamMembers:", err);
+        throw err;
+      }
+    },
     initialData: [],
     staleTime: 10 * 60 * 1000, // Cache por 10 minutos
     retry: 1, // Solo 1 reintento
   });
+
+  if (isError) {
+    return (
+      <div className="p-4 border border-red-200 bg-red-50 text-red-700 rounded-md">
+        <h3 className="font-bold flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" /> Error cargando datos
+        </h3>
+        <p className="text-sm mt-1">{error.message}</p>
+        <p className="text-xs mt-2 text-slate-500 font-mono">
+          Verifica que la entidad 'EmergencyTeamMember' exista en Base44 y tengas permisos de lectura.
+        </p>
+      </div>
+    );
+  }
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.EmergencyTeamMember.delete(id),
@@ -79,8 +103,11 @@ export default function EmergencyTeamManager({ employees = [] }) {
     const grouped = {};
     rolesEmergencia.forEach(role => {
       grouped[role.rol] = emergencyMembers.filter(m => {
-        // Normalización y validación robusta
-        const roleMatch = m.rol_emergencia === role.rol;
+        // Normalización y validación robusta (Case insensitive y trim)
+        const dbRole = (m.rol_emergencia || "").trim().toLowerCase();
+        const configRole = role.rol.trim().toLowerCase();
+        const roleMatch = dbRole === configRole;
+        
         // Si activo es undefined o null, asumimos true para no ocultar datos por error de migración
         const isActive = m.activo !== false; 
         return roleMatch && isActive;
