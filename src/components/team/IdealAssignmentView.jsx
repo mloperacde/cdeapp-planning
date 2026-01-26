@@ -50,7 +50,7 @@ export default function IdealAssignmentView() {
 
   const { data: machineAssignments = EMPTY_ARRAY } = useQuery({
     queryKey: ['machineAssignments'],
-    queryFn: () => base44.entities.MachineAssignment.list(),
+    queryFn: () => base44.entities.MachineAssignment.list(undefined, 2000),
   });
 
   const { data: teams = EMPTY_ARRAY } = useQuery({
