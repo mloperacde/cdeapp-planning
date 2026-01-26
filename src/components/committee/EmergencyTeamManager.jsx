@@ -65,8 +65,23 @@ export default function EmergencyTeamManager({ employees = [] }) {
       console.log("Fetching EmergencyTeamMembers...");
       try {
         const data = await base44.entities.EmergencyTeamMember.list();
-        console.log("EmergencyTeamMembers fetched:", data);
-        return data;
+        console.log("EmergencyTeamMembers fetched RAW:", data);
+        
+        // Handle various response structures
+        let rawArray = [];
+        if (Array.isArray(data)) {
+          rawArray = data;
+        } else if (data && Array.isArray(data.data)) {
+          rawArray = data.data;
+        } else if (data && Array.isArray(data.items)) {
+          rawArray = data.items;
+        } else if (typeof data === 'object' && data !== null) {
+           // If it's an object but not an array, maybe it's keyed by ID?
+           rawArray = Object.values(data).filter(item => typeof item === 'object');
+        }
+        
+        console.log("EmergencyTeamMembers Normalized:", rawArray);
+        return rawArray;
       } catch (err) {
         console.error("Error fetching EmergencyTeamMembers:", err);
         throw err;

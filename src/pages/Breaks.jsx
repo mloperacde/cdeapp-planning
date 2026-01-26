@@ -44,13 +44,26 @@ export default function BreaksPage() {
     queryFn: async () => {
       try {
         const data = await base44.entities.BreakShift.list();
-        console.log("BreakShifts fetched:", data);
+        console.log("BreakShifts fetched RAW:", data);
         
-        // Ensure data is an array
-        const safeData = Array.isArray(data) ? data : (data?.data || []);
-        
+        // Handle various response structures
+        let rawArray = [];
+        if (Array.isArray(data)) {
+          rawArray = data;
+        } else if (data && Array.isArray(data.data)) {
+          rawArray = data.data; // Some APIs wrap in { data: [...] }
+        } else if (data && Array.isArray(data.items)) {
+          rawArray = data.items; // Some wrap in { items: [...] }
+        } else if (typeof data === 'object' && data !== null) {
+           // If it's an object but not an array, maybe it's keyed by ID?
+           // Try to convert values to array
+           rawArray = Object.values(data).filter(item => typeof item === 'object');
+        }
+
+        console.log("BreakShifts Normalized Array:", rawArray);
+
         // Validate items have an ID (if not, generate a temp one for display)
-        return safeData.map((item, idx) => ({
+        return rawArray.map((item, idx) => ({
              ...item,
              id: item.id || `temp_id_${idx}`
         }));
