@@ -4,16 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Factory, Clock, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Factory, Clock, RefreshCw, GripVertical, Pencil, X } from "lucide-react";
 import { cdeApi } from "@/services/cdeApi";
 import { toast } from "sonner";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
 export function StructureConfig({ config, setConfig }) {
-  const [newArea, setNewArea] = useState("");
-  const [newRoom, setNewRoom] = useState({ areaId: "", name: "" });
+  const [newAreaName, setNewAreaName] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [editingArea, setEditingArea] = useState(null); // { id, name }
+  const [editingRoom, setEditingRoom] = useState(null); // { areaId, roomId, name }
+  const [isAddingRoom, setIsAddingRoom] = useState(null); // areaId
 
   const handleSyncRooms = async () => {
     try {
@@ -29,50 +41,71 @@ export function StructureConfig({ config, setConfig }) {
       const apiRooms = response.data;
       
       setConfig(prev => {
-        // Find or create "Planta Principal" area
-        let targetAreaId = prev.areas.find(a => a.name === "Planta Principal")?.id;
-        let areas = [...prev.areas];
-        
-        if (!targetAreaId) {
-            targetAreaId = generateId();
-            areas.push({
-                id: targetAreaId,
-                name: "Planta Principal",
-                rooms: []
-            });
-        }
+        let areas = [...(prev.areas || [])];
+        const allExistingRooms = new Map(); // id -> areaId
 
-        const newRooms = apiRooms.map(r => ({
-            id: String(r.external_id),
-            name: r.nombre
-        }));
-        
-        areas = areas.map(area => {
-            if (area.id === targetAreaId) {
-                const existingRooms = area.rooms || [];
-                const mergedRooms = [...existingRooms];
-                
-                newRooms.forEach(newRoom => {
-                    // Check if room exists by ID (external_id) or Name
-                    const index = mergedRooms.findIndex(r => r.id === newRoom.id || r.name === newRoom.name);
-                    if (index >= 0) {
-                         // Update
-                         mergedRooms[index] = { ...mergedRooms[index], ...newRoom, id: newRoom.id };
-                    } else {
-                         // Add
-                         mergedRooms.push(newRoom);
-                    }
-                });
-                
-                return { ...area, rooms: mergedRooms };
-            }
-            return area;
+        // Map existing rooms to preserve their location
+        areas.forEach(area => {
+            area.rooms?.forEach(room => {
+                allExistingRooms.set(String(room.id), area.id);
+            });
         });
 
+        // Find or create default area for new rooms
+        let defaultAreaId = areas.find(a => a.name === "Sin Asignar" || a.name === "Planta Principal")?.id;
+        
+        if (!defaultAreaId) {
+             if (areas.length > 0) {
+                 defaultAreaId = areas[0].id; // Fallback to first area
+             } else {
+                 defaultAreaId = generateId();
+                 areas.push({
+                     id: defaultAreaId,
+                     name: "Planta Principal",
+                     rooms: []
+                 });
+             }
+        }
+
+        let newCount = 0;
+        let updateCount = 0;
+
+        apiRooms.forEach(apiRoom => {
+            const roomId = String(apiRoom.external_id);
+            const roomName = apiRoom.nombre;
+            const existingAreaId = allExistingRooms.get(roomId);
+
+            if (existingAreaId) {
+                // Update existing room in its CURRENT area
+                const areaIndex = areas.findIndex(a => a.id === existingAreaId);
+                if (areaIndex >= 0) {
+                    const roomIndex = areas[areaIndex].rooms.findIndex(r => String(r.id) === roomId);
+                    if (roomIndex >= 0) {
+                         // Update name if changed, preserve other props if any
+                         if (areas[areaIndex].rooms[roomIndex].name !== roomName) {
+                            areas[areaIndex].rooms[roomIndex] = { ...areas[areaIndex].rooms[roomIndex], name: roomName };
+                            updateCount++;
+                         }
+                    }
+                }
+            } else {
+                // Add new room to default area
+                const areaIndex = areas.findIndex(a => a.id === defaultAreaId);
+                if (areaIndex >= 0) {
+                    areas[areaIndex].rooms.push({ id: roomId, name: roomName });
+                    newCount++;
+                }
+            }
+        });
+
+        if (newCount > 0 || updateCount > 0) {
+            toast.success(`Sincronización completada: ${newCount} nuevas, ${updateCount} actualizadas.`);
+        } else {
+            toast.success("Sincronización completada: Todo está actualizado.");
+        }
+        
         return { ...prev, areas };
       });
-
-      toast.success(`Sincronizadas ${apiRooms.length} salas en "Planta Principal"`);
 
     } catch (error) {
       console.error("Sync error:", error);
@@ -83,12 +116,12 @@ export function StructureConfig({ config, setConfig }) {
   };
 
   const addArea = () => {
-    if (!newArea.trim()) return;
+    if (!newAreaName.trim()) return;
     setConfig(prev => ({
       ...prev,
-      areas: [...prev.areas, { id: generateId(), name: newArea, rooms: [] }]
+      areas: [...prev.areas, { id: generateId(), name: newAreaName, rooms: [] }]
     }));
-    setNewArea("");
+    setNewAreaName("");
   };
 
   const deleteArea = (id) => {
@@ -98,21 +131,30 @@ export function StructureConfig({ config, setConfig }) {
     }));
   };
 
-  const addRoom = (areaId) => {
-    if (!newRoom.name.trim()) return;
+  const updateAreaName = () => {
+    if (!editingArea || !editingArea.name.trim()) return;
+    setConfig(prev => ({
+      ...prev,
+      areas: prev.areas.map(a => a.id === editingArea.id ? { ...a, name: editingArea.name } : a)
+    }));
+    setEditingArea(null);
+  };
+
+  const addRoom = (areaId, name) => {
+    if (!name.trim()) return;
     setConfig(prev => ({
       ...prev,
       areas: prev.areas.map(area => {
         if (area.id === areaId) {
           return {
             ...area,
-            rooms: [...(area.rooms || []), { id: generateId(), name: newRoom.name }]
+            rooms: [...(area.rooms || []), { id: generateId(), name: name }]
           };
         }
         return area;
       })
     }));
-    setNewRoom({ areaId: "", name: "" });
+    setIsAddingRoom(null);
   };
 
   const deleteRoom = (areaId, roomId) => {
@@ -130,94 +172,213 @@ export function StructureConfig({ config, setConfig }) {
     }));
   };
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="space-y-1">
-            <CardTitle>Áreas de Fabricación</CardTitle>
-            <CardDescription>Define las áreas principales de la fábrica</CardDescription>
-          </div>
-          <Button
-            onClick={handleSyncRooms}
-            disabled={isSyncing}
-            variant="outline"
-            size="sm"
-            className="h-8 flex items-center gap-2 border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700"
-            title="Importar salas desde cdeapp.es"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Importar Salas</span>
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input 
-              placeholder="Nombre del Área (ej. Envasado Cosmética)" 
-              value={newArea}
-              onChange={(e) => setNewArea(e.target.value)}
-            />
-            <Button onClick={addArea} variant="outline"><Plus className="w-4 h-4" /></Button>
-          </div>
-          <div className="space-y-2">
-            {config.areas.map(area => (
-              <div key={area.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border">
-                <span className="font-medium">{area.name}</span>
-                <Button variant="ghost" size="sm" onClick={() => deleteArea(area.id)} className="text-red-500 hover:text-red-700">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-            {config.areas.length === 0 && <p className="text-sm text-slate-500 italic">No hay áreas definidas</p>}
-          </div>
-        </CardContent>
-      </Card>
+  const onDragEnd = (result) => {
+    const { source, destination } = result;
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Salas por Área</CardTitle>
-          <CardDescription>Asigna salas a las áreas creadas</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {config.areas.map(area => (
-            <div key={area.id} className="space-y-2">
-              <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <Factory className="w-3 h-3" /> {area.name}
-              </h3>
-              <div className="flex gap-2 mb-2">
+    // Dropped outside the list
+    if (!destination) {
+      return;
+    }
+
+    // Dropped in the same place
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+      return;
+    }
+
+    setConfig(prev => {
+        const newAreas = [...prev.areas];
+        const sourceAreaIndex = newAreas.findIndex(a => a.id === source.droppableId);
+        const destAreaIndex = newAreas.findIndex(a => a.id === destination.droppableId);
+
+        if (sourceAreaIndex === -1 || destAreaIndex === -1) return prev;
+
+        const sourceArea = { ...newAreas[sourceAreaIndex] };
+        const destArea = { ...newAreas[destAreaIndex] };
+        
+        // Remove from source
+        const [movedRoom] = sourceArea.rooms.splice(source.index, 1);
+
+        // Add to destination
+        if (source.droppableId === destination.droppableId) {
+            // Same list reorder
+            sourceArea.rooms.splice(destination.index, 0, movedRoom);
+            newAreas[sourceAreaIndex] = sourceArea;
+        } else {
+            // Move between lists
+            destArea.rooms.splice(destination.index, 0, movedRoom);
+            newAreas[sourceAreaIndex] = sourceArea;
+            newAreas[destAreaIndex] = destArea;
+        }
+
+        return { ...prev, areas: newAreas };
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Distribución de Salas</h2>
+            <p className="text-sm text-slate-500">Arrastra las salas para organizarlas en áreas.</p>
+        </div>
+        <div className="flex gap-2 w-full md:w-auto">
+            <div className="flex gap-2 flex-1 md:flex-none">
                 <Input 
-                  placeholder={`Nueva sala en ${area.name}`}
-                  value={newRoom.areaId === area.id ? newRoom.name : ""}
-                  onChange={(e) => setNewRoom({ areaId: area.id, name: e.target.value })}
-                  className="h-8 text-sm"
+                placeholder="Nueva Área..." 
+                value={newAreaName}
+                onChange={(e) => setNewAreaName(e.target.value)}
+                className="w-full md:w-64"
                 />
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => addRoom(area.id)}
-                  disabled={newRoom.areaId !== area.id || !newRoom.name.trim()}
-                >
-                  <Plus className="w-3 h-3" />
+                <Button onClick={addArea} disabled={!newAreaName.trim()}>
+                    <Plus className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Crear Área</span>
                 </Button>
-              </div>
-              <div className="pl-4 space-y-1">
-                {area.rooms?.map(room => (
-                  <div key={room.id} className="flex items-center justify-between text-sm p-2 bg-slate-50 dark:bg-slate-800/50 rounded border border-dashed">
-                    <span>{room.name}</span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => deleteRoom(area.id, room.id)}>
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
-                {(!area.rooms || area.rooms.length === 0) && (
-                  <p className="text-xs text-slate-400 italic">Sin salas asignadas</p>
-                )}
-              </div>
             </div>
-          ))}
-          {config.areas.length === 0 && <p className="text-sm text-slate-500">Crea áreas primero para añadir salas.</p>}
-        </CardContent>
-      </Card>
+            <Button
+                onClick={handleSyncRooms}
+                disabled={isSyncing}
+                variant="outline"
+                className="border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 whitespace-nowrap"
+            >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                Sincronizar
+            </Button>
+        </div>
+      </div>
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
+            {config.areas.map(area => (
+                <Card key={area.id} className="bg-slate-50/50 dark:bg-slate-900/50">
+                    <CardHeader className="p-4 pb-2 space-y-0">
+                        <div className="flex items-center justify-between">
+                            {editingArea?.id === area.id ? (
+                                <div className="flex gap-2 w-full">
+                                    <Input 
+                                        value={editingArea.name} 
+                                        onChange={(e) => setEditingArea({...editingArea, name: e.target.value})}
+                                        className="h-8 text-sm"
+                                        autoFocus
+                                    />
+                                    <Button size="icon" className="h-8 w-8" onClick={updateAreaName}>
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <>
+                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                        <Factory className="w-4 h-4 text-slate-500" />
+                                        {area.name}
+                                        <span className="text-xs font-normal text-slate-400">({area.rooms?.length || 0})</span>
+                                    </CardTitle>
+                                    <div className="flex gap-1">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-slate-400 hover:text-blue-600"
+                                            onClick={() => setEditingArea({ id: area.id, name: area.name })}
+                                        >
+                                            <Pencil className="w-3 h-3" />
+                                        </Button>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-slate-400 hover:text-red-600"
+                                            onClick={() => deleteArea(area.id)}
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-2">
+                        <Droppable droppableId={area.id}>
+                            {(provided, snapshot) => (
+                                <div
+                                    {...provided.droppableProps}
+                                    ref={provided.innerRef}
+                                    className={`space-y-2 min-h-[100px] p-2 rounded-lg transition-colors ${
+                                        snapshot.isDraggingOver ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200' : 'bg-slate-100/50 dark:bg-slate-800/50'
+                                    }`}
+                                >
+                                    {area.rooms?.map((room, index) => (
+                                        <Draggable key={room.id} draggableId={room.id} index={index}>
+                                            {(provided, snapshot) => (
+                                                <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    {...provided.dragHandleProps}
+                                                    className={`
+                                                        group flex items-center gap-2 p-2 rounded border bg-white dark:bg-slate-800 shadow-sm
+                                                        ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500 rotate-2' : 'hover:border-blue-300'}
+                                                    `}
+                                                    style={provided.draggableProps.style}
+                                                >
+                                                    <GripVertical className="w-4 h-4 text-slate-300 group-hover:text-slate-500 cursor-grab active:cursor-grabbing" />
+                                                    <span className="text-sm font-medium flex-1 truncate">{room.name}</span>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-6 w-6 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        onClick={() => deleteRoom(area.id, room.id)}
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                    
+                                    {isAddingRoom === area.id ? (
+                                        <div className="flex gap-2 mt-2">
+                                            <Input 
+                                                id={`new-room-${area.id}`}
+                                                placeholder="Nombre..." 
+                                                className="h-8 text-sm bg-white"
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') addRoom(area.id, e.currentTarget.value);
+                                                    if (e.key === 'Escape') setIsAddingRoom(null);
+                                                }}
+                                            />
+                                            <Button 
+                                                size="icon" 
+                                                className="h-8 w-8" 
+                                                onClick={() => addRoom(area.id, document.getElementById(`new-room-${area.id}`).value)}
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="w-full text-xs text-slate-400 hover:text-slate-600 border border-dashed border-slate-300 hover:border-slate-400 mt-2"
+                                            onClick={() => setIsAddingRoom(area.id)}
+                                        >
+                                            <Plus className="w-3 h-3 mr-1" /> Añadir Sala
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                        </Droppable>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+      </DragDropContext>
+      {config.areas.length === 0 && (
+          <div className="text-center py-12 border-2 border-dashed rounded-xl bg-slate-50">
+              <Factory className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900">No hay áreas configuradas</h3>
+              <p className="text-slate-500 mb-4">Crea un área o sincroniza para empezar.</p>
+              <Button onClick={handleSyncRooms} variant="outline">
+                  <RefreshCw className="w-4 h-4 mr-2" /> Sincronizar con cdeapp.es
+              </Button>
+          </div>
+      )}
     </div>
   );
 }
