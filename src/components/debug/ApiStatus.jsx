@@ -28,9 +28,19 @@ export default function ApiStatus() {
       setStatus(prev => ({ ...prev, auth: { status: 'error', data: null, error: e.message || "Auth Failed" } }));
     }
 
+    // Helper to normalize data
+    const normalizeData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.data)) return data.data;
+        if (data && Array.isArray(data.items)) return data.items;
+        if (typeof data === 'object' && data !== null) return Object.values(data).filter(item => typeof item === 'object');
+        return [];
+    };
+
     // Check BreakShift
     try {
-      const breaks = await base44.entities.BreakShift.list();
+      const rawBreaks = await base44.entities.BreakShift.list();
+      const breaks = normalizeData(rawBreaks);
       setStatus(prev => ({ ...prev, breaks: { status: 'success', count: breaks.length, error: null } }));
     } catch (e) {
       console.error("BreakShift Check Failed", e);
@@ -39,13 +49,25 @@ export default function ApiStatus() {
 
     // Check EmergencyTeamMember
     try {
-      const members = await base44.entities.EmergencyTeamMember.list();
+      const rawMembers = await base44.entities.EmergencyTeamMember.list();
+      const members = normalizeData(rawMembers);
       setStatus(prev => ({ ...prev, emergency: { status: 'success', count: members.length, error: null } }));
     } catch (e) {
       console.error("EmergencyTeamMember Check Failed", e);
       setStatus(prev => ({ ...prev, emergency: { status: 'error', count: 0, error: e.message || "Fetch Failed" } }));
     }
   };
+
+  // Auto-expand on error or zero counts
+  useEffect(() => {
+    const hasError = Object.values(status).some(s => s.status === 'error');
+    const hasZeroData = (status.breaks.status === 'success' && status.breaks.count === 0) || 
+                        (status.emergency.status === 'success' && status.emergency.count === 0);
+    
+    if (hasError || hasZeroData) {
+        setMinimized(false);
+    }
+  }, [status]);
 
   useEffect(() => {
     checkConnection();
