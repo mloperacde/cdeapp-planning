@@ -406,7 +406,8 @@ export default function EmergencyTeamManager({ employees = [] }) {
             Ver datos crudos de EmergencyTeamMember (Diagnóstico)
           </summary>
           <div className="bg-slate-100 p-4 rounded-md overflow-auto max-h-60">
-            <p className="mb-2 font-semibold">Total registros encontrados: {emergencyMembers.length}</p>
+            <DiagnosticInfo />
+            <p className="mb-2 font-semibold mt-4">Total registros encontrados: {emergencyMembers.length}</p>
             {emergencyMembers.length > 0 ? (
               <pre>{JSON.stringify(emergencyMembers, null, 2)}</pre>
             ) : (

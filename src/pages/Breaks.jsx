@@ -74,6 +74,8 @@ export default function BreaksPage() {
       }
     },
     initialData: [],
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Safe header extraction
