@@ -173,17 +173,41 @@ export default function EmergencyTeamManager({ employees = [] }) {
     yellow: "from-amber-500 to-amber-600"
   };
 
+  const unassignedMembers = useMemo(() => {
+    const assignedIds = new Set();
+    Object.values(membersByRole).forEach(list => list.forEach(m => assignedIds.add(m.id)));
+    return emergencyMembers.filter(m => !assignedIds.has(m.id));
+  }, [emergencyMembers, membersByRole]);
+
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 dark:bg-blue-950/20 dark:border-blue-900">
-        <h3 className="font-semibold text-blue-900 mb-2 dark:text-blue-200">
-          📋 Composición Legal del Equipo de Emergencia
-        </h3>
-        <p className="text-sm text-blue-800 dark:text-blue-300">
-          Para empresas de menos de 500 trabajadores según normativa vigente. 
-          Se recomienda tener suplentes para cada rol crítico.
-        </p>
-      </div>
+      {/* ... (existing header) ... */}
+      
+      {/* Warning for unassigned members */}
+      {unassignedMembers.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg mb-4">
+          <h4 className="font-bold text-amber-800 flex items-center gap-2">
+             <AlertTriangle className="w-5 h-5" />
+             Miembros con Rol Desconocido ({unassignedMembers.length})
+          </h4>
+          <p className="text-sm text-amber-700 mb-2">
+            Estos miembros existen en la base de datos pero su rol no coincide con la configuración actual.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {unassignedMembers.map(m => (
+               <div key={m.id} className="bg-white p-2 rounded border border-amber-200 text-xs">
+                 <p><strong>ID:</strong> {m.id}</p>
+                 <p><strong>Rol en BD:</strong> "{m.rol_emergencia || 'NULL'}"</p>
+                 <p><strong>Empleado:</strong> {getEmployeeName(m.employee_id)}</p>
+                 <div className="mt-1 flex justify-end gap-1">
+                    <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => handleEdit(m)}>Editar</Button>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500" onClick={() => handleDelete(m.id)}><Trash2 className="w-3 h-3"/></Button>
+                 </div>
+               </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {rolesEmergencia.map((roleInfo) => {

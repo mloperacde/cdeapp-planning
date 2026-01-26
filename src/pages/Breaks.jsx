@@ -277,41 +277,32 @@ export default function BreaksPage() {
           </CardContent>
         </Card>
 
-        {/* Diagnostic View - To ensure database data is visible regardless of field names */}
+        {/* Diagnostic View - Always Visible if data exists but main table is empty */}
+        {(breakShifts.length > 0) && (
         <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4 text-slate-800">Vista de Datos Crudos (Base de Datos)</h2>
-          <Card className="shadow-sm border border-slate-200">
-             <CardContent className="p-0 overflow-x-auto">
-               <Table>
-                 <TableHeader>
-                   <TableRow>
-                     {dataStructure.map(key => (
-                       <TableHead key={key} className="whitespace-nowrap font-bold text-slate-700">{key}</TableHead>
-                     ))}
-                   </TableRow>
-                 </TableHeader>
-                 <TableBody>
-                   {breakShifts.map((item, idx) => (
-                     <TableRow key={item.id || idx}>
-                       {dataStructure.map(key => (
-                         <TableCell key={key} className="whitespace-nowrap">
-                           {typeof item[key] === 'object' ? JSON.stringify(item[key]) : String(item[key])}
-                         </TableCell>
-                       ))}
-                     </TableRow>
-                   ))}
-                   {breakShifts.length === 0 && (
-                     <TableRow>
-                       <TableCell colSpan={dataStructure.length || 1} className="text-center py-8 text-slate-500">
-                         No hay registros crudos encontrados en base44.entities.BreakShift
-                       </TableCell>
-                     </TableRow>
-                   )}
-                 </TableBody>
-               </Table>
-             </CardContent>
-          </Card>
+          <h2 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-600" />
+            Vista de Datos Crudos (Base de Datos)
+          </h2>
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 overflow-auto">
+             <p className="mb-2 font-mono text-xs text-slate-500">Total Registros: {breakShifts.length}</p>
+             <div className="grid gap-2">
+                {breakShifts.map((item, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded shadow-sm border border-slate-200 font-mono text-xs">
+                        {Object.entries(item).map(([k, v]) => (
+                            <div key={k} className="flex gap-2 border-b border-slate-50 last:border-0 py-1">
+                                <span className="font-bold text-slate-700 min-w-[120px]">{k}:</span>
+                                <span className="text-slate-600 break-all">
+                                    {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                ))}
+             </div>
+          </div>
         </div>
+        )}
       </div>
 
       {showForm && (
