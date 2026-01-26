@@ -45,7 +45,15 @@ export default function BreaksPage() {
       try {
         const data = await base44.entities.BreakShift.list();
         console.log("BreakShifts fetched:", data);
-        return data;
+        
+        // Ensure data is an array
+        const safeData = Array.isArray(data) ? data : (data?.data || []);
+        
+        // Validate items have an ID (if not, generate a temp one for display)
+        return safeData.map((item, idx) => ({
+             ...item,
+             id: item.id || `temp_id_${idx}`
+        }));
       } catch (err) {
         console.error("Error fetching BreakShifts:", err);
         throw err;
@@ -54,8 +62,10 @@ export default function BreaksPage() {
     initialData: [],
   });
 
-  // Debug: Log data structure to help identify field mismatches
-  const dataStructure = breakShifts.length > 0 ? Object.keys(breakShifts[0]) : [];
+  // Safe header extraction
+  const dataStructure = breakShifts && breakShifts.length > 0 
+    ? Object.keys(breakShifts[0]) 
+    : ['id', 'nombre', 'hora_inicio', 'duracion_minutos', 'personas_por_turno', 'activo'];
   
   const saveMutation = useMutation({
     mutationFn: (data) => {
@@ -188,19 +198,19 @@ export default function BreaksPage() {
                     {breakShifts.map((breakShift) => (
                       <TableRow key={breakShift.id} className="hover:bg-slate-50">
                         <TableCell>
-                          <span className="font-semibold text-slate-900">{breakShift.nombre}</span>
+                          <span className="font-semibold text-slate-900">{breakShift.nombre || breakShift.name || "Sin nombre"}</span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4 text-blue-600" />
-                            {breakShift.hora_inicio}
+                            {breakShift.hora_inicio || breakShift.start_time || "--:--"}
                           </div>
                         </TableCell>
-                        <TableCell>{breakShift.duracion_minutos} min</TableCell>
+                        <TableCell>{breakShift.duracion_minutos || breakShift.duration || 0} min</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4 text-green-600" />
-                            {breakShift.personas_por_turno}
+                            {breakShift.personas_por_turno || breakShift.people_per_shift || 0}
                           </div>
                         </TableCell>
                         <TableCell>

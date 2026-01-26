@@ -103,10 +103,19 @@ export default function EmergencyTeamManager({ employees = [] }) {
     const grouped = {};
     rolesEmergencia.forEach(role => {
       grouped[role.rol] = emergencyMembers.filter(m => {
-        // Normalización y validación robusta (Case insensitive y trim)
-        const dbRole = (m.rol_emergencia || "").trim().toLowerCase();
-        const configRole = role.rol.trim().toLowerCase();
-        const roleMatch = dbRole === configRole;
+        // Normalización y validación robusta (Case insensitive, trim y eliminación de acentos básicos)
+        const normalize = (str) => (str || "")
+          .trim()
+          .toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Eliminar acentos
+        
+        const dbRole = normalize(m.rol_emergencia);
+        const configRole = normalize(role.rol);
+        
+        // Comparación flexible: coincidencia exacta normalizada O inclusión
+        const roleMatch = dbRole === configRole || 
+                         (dbRole.includes("jefe de emergencias") && configRole.includes("jefe de emergencias")) ||
+                         (dbRole.includes("jefe de intervencion") && configRole.includes("jefe de intervencion"));
         
         // Si activo es undefined o null, asumimos true para no ocultar datos por error de migración
         const isActive = m.activo !== false; 
