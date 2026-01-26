@@ -177,10 +177,10 @@ export default function EmergencyTeamManager({ employees = [] }) {
   }, [emergencyMembers]);
 
   const getEmployeeName = (employeeId) => {
-    if (!employees || !Array.isArray(employees)) return "Desconocido";
+    if (!employees || !Array.isArray(employees)) return `Desconocido (ID: ${employeeId})`;
     // Comparación robusta de IDs (String vs Number)
     const emp = employees.find(e => String(e.id) === String(employeeId));
-    return emp?.nombre || "Desconocido";
+    return emp?.nombre || `Desconocido (ID: ${employeeId})`;
   };
 
   const handleAdd = (role) => {
@@ -261,17 +261,22 @@ export default function EmergencyTeamManager({ employees = [] }) {
             Estos miembros existen en la base de datos pero su rol no coincide con la configuración actual.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {unassignedMembers.map(m => (
+            {unassignedMembers.map(m => {
+                 const normalize = (str) => (str || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                 const normalizedRole = normalize(m.rol_emergencia);
+                 return (
                <div key={m.id} className="bg-white p-2 rounded border border-amber-200 text-xs">
                  <p><strong>ID:</strong> {m.id}</p>
                  <p><strong>Rol en BD:</strong> "{m.rol_emergencia || 'NULL'}"</p>
+                 <p><strong>Norm:</strong> "{normalizedRole}"</p>
                  <p><strong>Empleado:</strong> {getEmployeeName(m.employee_id)}</p>
                  <div className="mt-1 flex justify-end gap-1">
                     <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => handleEdit(m)}>Editar</Button>
                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500" onClick={() => handleDelete(m.id)}><Trash2 className="w-3 h-3"/></Button>
                  </div>
                </div>
-            ))}
+               );
+            })}
           </div>
         </div>
       )}

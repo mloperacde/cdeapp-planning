@@ -39,7 +39,7 @@ export default function CommitteeManagementPage() {
     queryKey: ['employees'],
     queryFn: async () => {
       try {
-        return await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
+        return await base44.entities.EmployeeMasterDatabase.list('nombre', 5000);
       } catch (err) {
         console.warn('Error loading employees:', err);
         return [];

@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 export default function BreaksPage() {
   const [showForm, setShowForm] = useState(false);
@@ -149,6 +150,28 @@ export default function BreaksPage() {
     }
   };
 
+  const testCreateMutation = useMutation({
+    mutationFn: async () => {
+        const testBreak = {
+            nombre: "Descanso Test " + new Date().toLocaleTimeString(),
+            hora_inicio: "10:00",
+            duracion_minutos: 15,
+            personas_por_turno: 5,
+            aplica_turno_manana: true,
+            aplica_turno_tarde: false,
+            activo: true
+        };
+        return await base44.entities.BreakShift.create(testBreak);
+    },
+    onSuccess: () => {
+        toast.success("Descanso de prueba creado. ¡Escritura funciona!");
+        queryClient.invalidateQueries({ queryKey: ['breakShifts'] });
+    },
+    onError: (err) => {
+        toast.error(`Error creando registro: ${err.message}`);
+    }
+  });
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -163,6 +186,15 @@ export default function BreaksPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={() => testCreateMutation.mutate()}
+              disabled={testCreateMutation.isPending}
+              variant="outline"
+              className="bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {testCreateMutation.isPending ? "Creando..." : "Crear Test"}
+            </Button>
             <Button
               onClick={handleCallAgent}
               disabled={isCalling}
@@ -285,10 +317,6 @@ export default function BreaksPage() {
                 Diagnóstico de Datos Crudos (Siempre visible para debug)
              </summary>
              <div className="bg-slate-100 p-4 rounded-md overflow-auto max-h-96">
-                <div className="mb-4 pb-4 border-b border-slate-200">
-                    <p className="font-bold text-slate-700">Respuesta Original de API:</p>
-                    <pre className="text-xs">{JSON.stringify(rawResponse, null, 2)}</pre>
-                </div>
                 <div>
                     <p className="font-bold text-slate-700">Datos Normalizados (Array):</p>
                     <p className="text-xs mb-2">Total registros: {breakShifts.length}</p>
