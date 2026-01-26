@@ -948,12 +948,12 @@ export default function ShiftAssignmentsPage() {
                   
                   return (
                       <div className="mt-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-yellow-800">
-                          <p className="font-bold">⚠️ Data Integrity Warning</p>
-                          <p>Found {dups.length} machines with duplicate assignments in {dups[0]?.[0]?.split('-')[0]}.</p>
+                          <p className="font-bold">⚠️ Advertencia de Integridad de Datos</p>
+                          <p>Se encontraron {dups.length} máquinas con asignaciones duplicadas en {dups[0]?.[0]?.split('-')[0]}.</p>
                           <p className="text-xs mt-1">
-                              <strong>Auto-Recovery Active:</strong> We are displaying the hidden data. 
+                              <strong>Auto-Recuperación Activa:</strong> Se están mostrando los datos ocultos recuperados. 
                               <br/>
-                              Please click <span className="font-bold text-green-700">Guardar Todo</span> to permanently fix this issue.
+                              Por favor haga clic en <span className="font-bold text-green-700">Guardar Todo</span> para corregir este problema permanentemente.
                           </p>
                       </div>
                   );
