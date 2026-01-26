@@ -366,8 +366,21 @@ export default function EmergencyTeamManager({ employees = [] }) {
                       <p className="text-xs font-semibold text-slate-700 mb-1 dark:text-slate-300">Titulares:</p>
                       {titulares.map(member => (
                         <div key={member.id} className="flex items-center justify-between bg-white p-2 rounded border mb-1 dark:bg-slate-800 dark:border-slate-700">
-                          <span className="text-xs font-medium dark:text-slate-200">{getEmployeeName(member.employee_id)}</span>
+                          <span className={`text-xs font-medium ${getEmployeeName(member.employee_id).startsWith("Desconocido") ? "text-red-500 font-bold" : "dark:text-slate-200"}`}>
+                              {getEmployeeName(member.employee_id)}
+                          </span>
                           <div className="flex gap-1">
+                            {getEmployeeName(member.employee_id).startsWith("Desconocido") && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleEdit(member)}
+                                  className="h-6 text-[10px] px-2"
+                                  title="Reasignar empleado"
+                                >
+                                  Reasignar
+                                </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
