@@ -146,17 +146,13 @@ export default function ShiftAssignmentsPage() {
       });
   }, [productionPlan, machines]);
 
-  // --- HELPERS (Moved up for useEffect usage) ---
   const getEmployeeById = (id) => employees.find(e => String(e.id) === String(id));
 
-  // Helper to find employee by ID or Fallback to Name (if ID fails in Ideal Assignment)
   const resolveEmployee = (identifier) => {
       if (!identifier) return null;
-      // 1. Try exact ID match
       const byId = employees.find(e => String(e.id) === String(identifier));
       if (byId) return byId.id;
       
-      // 2. Fallback: Try Name Match (Robust)
       const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
       const targetName = normalize(identifier);
       const byName = employees.find(e => normalize(e.nombre) === targetName);
@@ -164,108 +160,95 @@ export default function ShiftAssignmentsPage() {
       return byName ? byName.id : identifier;
   };
 
+  const getEmployeeTeamKey = (employee) => {
+      if (!employee) return null;
+      const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+      const empTeam = normalize(employee.equipo);
+      const team = teams.find(t => normalize(t.team_name) === empTeam);
+      return team ? team.team_key : null;
+  };
+
   // Helper to get Ideal Assignments for current team
   const getIdealAssignments = () => {
       const ideal = {};
       if (machineAssignments.length > 0 && selectedTeam) {
-          // Normalize team key comparison
           const normalizeKey = (k) => k ? String(k).trim().toLowerCase() : "";
           const targetKey = normalizeKey(selectedTeam);
 
-          // Find the Team Config object to get alternative names (e.g. team_name)
           const teamConfig = teams.find(t => normalizeKey(t.team_key) === targetKey);
           const targetName = teamConfig ? normalizeKey(teamConfig.team_name) : "";
           const targetId = teamConfig ? normalizeKey(teamConfig.id) : "";
 
-          // Filter assignments that match Key OR Name OR ID
           let teamAssignments = machineAssignments.filter(ma => {
               const maKey = normalizeKey(ma.team_key);
               
-              // Direct Match
               if (maKey === targetKey) return true;
               
-              // Name Match (e.g. "Turno 2" vs "team_2")
               if (targetName && maKey === targetName) return true;
               
-              // ID Match
               if (targetId && maKey === targetId) return true;
               
-              // Special Case: "team_2" often saved as "Turno 2" or vice versa
               if (targetKey === "team_2" && maKey.includes("turno") && maKey.includes("2")) return true;
               if (targetKey === "team_1" && maKey.includes("turno") && maKey.includes("1")) return true;
 
               return false;
           });
 
-          // SMART RECOVERY: If no assignments found for Team 2, look for mislabeled duplicates in Team 1
-          if (teamAssignments.length === 0 && (targetKey === 'team_2' || targetName.includes('2'))) {
-             // Find duplicates in team_1
-             const candidates = machineAssignments.filter(ma => normalizeKey(ma.team_key) === 'team_1');
-             const machineCounts = {};
-             candidates.forEach(c => machineCounts[c.machine_id] = (machineCounts[c.machine_id] || 0) + 1);
-             
-             const potentialLostRecords = candidates.filter(c => {
-                 // It's a duplicate if we have > 1 record for this machine in team_1
-                 if (machineCounts[c.machine_id] > 1) {
-                     // Check if this specific record has employees from Team 2
-                     const getIds = (val) => Array.isArray(val) ? val : [val];
-                     const ids = [
-                        ...getIds(c.responsable_linea), ...getIds(c.segunda_linea), 
-                        c.operador_1, c.operador_2, c.operador_3, c.operador_4
-                     ].filter(Boolean);
-                     
-                     if (ids.length === 0) return false; 
-                     
-                     // Check if ANY assigned employee is in Team 2
-                     const hasTeam2Emp = ids.some(id => {
-                         const emp = employees.find(e => String(e.id) === String(id));
-                         if (!emp) return false;
-                         const eq = String(emp.equipo || "").toLowerCase();
-                         return eq.includes('turno 2') || eq.includes('team 2') || eq.includes('2');
-                     });
+          if (teamAssignments.length === 0) {
+              const allKeys = [...new Set(machineAssignments.map(ma => normalizeKey(ma.team_key)))];
+              if (allKeys.length === 1) {
+                  const groupedByMachine = {};
+                  machineAssignments.forEach(ma => {
+                      const mid = ma.machine_id;
+                      if (!groupedByMachine[mid]) groupedByMachine[mid] = [];
+                      groupedByMachine[mid].push(ma);
+                  });
 
-                     // Strategy 2: Process of Elimination
-                     // If we haven't confirmed it's Team 2, check if it's DEFINITELY Team 1
-                     // If it's NOT Team 1, and the OTHER duplicate IS Team 1, then this one is Team 2.
-                     if (!hasTeam2Emp) {
-                        const isTeam1 = ids.some(id => {
-                            const emp = employees.find(e => String(e.id) === String(id));
-                            if (!emp) return false;
-                            const eq = String(emp.equipo || "").toLowerCase();
-                            return eq.includes('turno 1') || eq.includes('team 1') || eq.includes('1');
-                        });
-                        
-                        // If it's definitely Team 1, reject it
-                        if (isTeam1) return false;
+                  const recovered = [];
+                  Object.values(groupedByMachine).forEach(list => {
+                      let best = null;
+                      let bestScore = 0;
 
-                        // If it's not Team 1, and it's a duplicate...
-                        // We need to check the sibling. But here we are filtering individually.
-                        // Let's just be permissive: if it's NOT Team 1, and we are desperate (teamAssignments=0), maybe take it?
-                        // Better: Check if it has assignments. If it has assignments and they are NOT Team 1, take it.
-                        if (ids.length > 0 && !isTeam1) return true;
-                        
-                        // If it has NO assignments, we can't tell easily. 
-                        // But if we return true, we might pick up the empty Team 1 record too?
-                        // No, because we only want *one* record per machine.
-                        // We will handle deduplication later? No, this filter returns a list.
-                        // If we return multiple records for the same machine, the last one overwrites in the `ideal` object construction.
-                        // So if we return BOTH, the last one wins.
-                        // Since `candidates` is likely ordered by ID or creation, this is flaky.
-                        
-                        // Let's try to be smart about "the other one".
-                        // But for now, let's assume if it has assignments and not Team 1, it's ours.
-                        return false; 
-                     }
-                     
-                     return hasTeam2Emp;
-                 }
-                 return false;
-             });
-             
-             if (potentialLostRecords.length > 0) {
-                 console.log("Recovered mislabeled records for Team 2:", potentialLostRecords.length);
-                 teamAssignments = potentialLostRecords;
-             }
+                      list.forEach(c => {
+                          const getIds = (val) => Array.isArray(val) ? val : [val];
+                          const ids = [
+                              ...getIds(c.responsable_linea),
+                              ...getIds(c.segunda_linea),
+                              c.operador_1,
+                              c.operador_2,
+                              c.operador_3,
+                              c.operador_4,
+                              c.operador_5,
+                              c.operador_6,
+                              c.operador_7,
+                              c.operador_8,
+                          ].filter(Boolean);
+
+                          if (ids.length === 0) return;
+
+                          let score = 0;
+                          ids.forEach(id => {
+                              const emp = getEmployeeById(id);
+                              const empTeamKey = getEmployeeTeamKey(emp);
+                              if (empTeamKey && normalizeKey(empTeamKey) === targetKey) {
+                                  score += 1;
+                              }
+                          });
+
+                          if (score > bestScore) {
+                              bestScore = score;
+                              best = c;
+                          }
+                      });
+
+                      if (best) recovered.push(best);
+                  });
+
+                  if (recovered.length > 0) {
+                      console.log("Recovered assignments for team via employee teams:", recovered.length);
+                      teamAssignments = recovered;
+                  }
+              }
           }
           
           teamAssignments.forEach(ma => {
