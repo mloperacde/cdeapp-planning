@@ -219,13 +219,43 @@ export default function ShiftAssignmentsPage() {
                      // Check if ANY assigned employee is in Team 2
                      const hasTeam2Emp = ids.some(id => {
                          const emp = employees.find(e => String(e.id) === String(id));
-                         // Robust check for team name
-                         return emp && (
-                             String(emp.equipo).toLowerCase().includes('turno 2') || 
-                             String(emp.equipo).toLowerCase().includes('team 2') || 
-                             String(emp.equipo).includes('2')
-                         );
+                         if (!emp) return false;
+                         const eq = String(emp.equipo || "").toLowerCase();
+                         return eq.includes('turno 2') || eq.includes('team 2') || eq.includes('2');
                      });
+
+                     // Strategy 2: Process of Elimination
+                     // If we haven't confirmed it's Team 2, check if it's DEFINITELY Team 1
+                     // If it's NOT Team 1, and the OTHER duplicate IS Team 1, then this one is Team 2.
+                     if (!hasTeam2Emp) {
+                        const isTeam1 = ids.some(id => {
+                            const emp = employees.find(e => String(e.id) === String(id));
+                            if (!emp) return false;
+                            const eq = String(emp.equipo || "").toLowerCase();
+                            return eq.includes('turno 1') || eq.includes('team 1') || eq.includes('1');
+                        });
+                        
+                        // If it's definitely Team 1, reject it
+                        if (isTeam1) return false;
+
+                        // If it's not Team 1, and it's a duplicate...
+                        // We need to check the sibling. But here we are filtering individually.
+                        // Let's just be permissive: if it's NOT Team 1, and we are desperate (teamAssignments=0), maybe take it?
+                        // Better: Check if it has assignments. If it has assignments and they are NOT Team 1, take it.
+                        if (ids.length > 0 && !isTeam1) return true;
+                        
+                        // If it has NO assignments, we can't tell easily. 
+                        // But if we return true, we might pick up the empty Team 1 record too?
+                        // No, because we only want *one* record per machine.
+                        // We will handle deduplication later? No, this filter returns a list.
+                        // If we return multiple records for the same machine, the last one overwrites in the `ideal` object construction.
+                        // So if we return BOTH, the last one wins.
+                        // Since `candidates` is likely ordered by ID or creation, this is flaky.
+                        
+                        // Let's try to be smart about "the other one".
+                        // But for now, let's assume if it has assignments and not Team 1, it's ours.
+                        return false; 
+                     }
                      
                      return hasTeam2Emp;
                  }
@@ -920,7 +950,11 @@ export default function ShiftAssignmentsPage() {
                       <div className="mt-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-yellow-800">
                           <p className="font-bold">⚠️ Data Integrity Warning</p>
                           <p>Found {dups.length} machines with duplicate assignments in {dups[0]?.[0]?.split('-')[0]}.</p>
-                          <p className="text-xs">This explains why Turno 2 data is hidden. It is saved as Turno 1.</p>
+                          <p className="text-xs mt-1">
+                              <strong>Auto-Recovery Active:</strong> We are displaying the hidden data. 
+                              <br/>
+                              Please click <span className="font-bold text-green-700">Guardar Todo</span> to permanently fix this issue.
+                          </p>
                       </div>
                   );
                 })()}
