@@ -58,13 +58,16 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
 
   const getEmployeeName = (employeeId) => {
     if (!employees || !Array.isArray(employees)) return "Desconocido";
-    const emp = employees.find(e => e.id === employeeId);
+    const emp = employees.find(e => String(e.id) === String(employeeId));
     return emp?.nombre || "Desconocido";
   };
 
-  const activeMembersWithHours = (committeeMembers || []).filter(m => 
-    m.activo && m.horas_sindicales_mensuales > 0
-  );
+  const activeMembersWithHours = (committeeMembers || []).filter(m => {
+    // Si activo es undefined, asumimos true. Solo filtramos si es explícitamente false
+    const isActive = m.activo !== false;
+    const hasHours = (Number(m.horas_sindicales_mensuales) || 0) > 0;
+    return isActive && hasHours;
+  });
 
   return (
     <div className="space-y-6">
@@ -90,7 +93,7 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
                   <Select
                     value={formData.committee_member_id}
                     onValueChange={(value) => {
-                      const member = activeMembersWithHours.find(m => m.id === value);
+                      const member = activeMembersWithHours.find(m => String(m.id) === String(value));
                       setFormData({ 
                         ...formData, 
                         committee_member_id: value,
@@ -177,9 +180,10 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {activeMembersWithHours.map((member) => {
-              const memberRecords = hoursRecords.filter(r => r.committee_member_id === member.id);
+              const memberRecords = hoursRecords.filter(r => String(r.committee_member_id) === String(member.id));
               const thisMonth = new Date();
               const monthlyRecords = memberRecords.filter(r => {
+                if (!r.fecha) return false;
                 const recordDate = new Date(r.fecha);
                 return recordDate.getMonth() === thisMonth.getMonth() && 
                        recordDate.getFullYear() === thisMonth.getFullYear();
@@ -243,6 +247,32 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
           </div>
         </CardContent>
       </Card>
+
+      {/* Sección de Diagnóstico de Datos */}
+      <div className="mt-8 border-t pt-4">
+        <details className="text-sm text-slate-500">
+          <summary className="cursor-pointer font-medium mb-2 hover:text-slate-700">
+            Ver datos crudos de UnionHoursRecord (Diagnóstico)
+          </summary>
+          <div className="bg-slate-100 p-4 rounded-md overflow-auto max-h-60">
+            <p className="mb-2 font-semibold">Total registros encontrados: {hoursRecords.length}</p>
+            {hoursRecords.length > 0 ? (
+              <pre>{JSON.stringify(hoursRecords, null, 2)}</pre>
+            ) : (
+              <p>No se encontraron registros en base44.entities.UnionHoursRecord</p>
+            )}
+            <div className="mt-4 pt-4 border-t border-slate-300">
+              <p className="mb-2 font-semibold">Miembros con horas (calculado):</p>
+              <pre>{JSON.stringify(activeMembersWithHours.map(m => ({
+                id: m.id,
+                employee_id: m.employee_id,
+                nombre: getEmployeeName(m.employee_id),
+                horas_sindicales_mensuales: m.horas_sindicales_mensuales
+              })), null, 2)}</pre>
+            </div>
+          </div>
+        </details>
+      </div>
     </div>
   );
 }

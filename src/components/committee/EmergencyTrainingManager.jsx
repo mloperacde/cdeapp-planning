@@ -30,7 +30,8 @@ export default function EmergencyTrainingManager({ employees = [] }) {
 
     emergencyMembers.forEach(member => {
       if (!employees || !Array.isArray(employees)) return;
-      const employee = employees.find(e => e.id === member.employee_id);
+      // Robust ID comparison
+      const employee = employees.find(e => String(e.id) === String(member.employee_id));
       if (!employee) return;
 
       (member.formacion_recibida || []).forEach(formacion => {

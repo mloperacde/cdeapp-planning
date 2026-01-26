@@ -78,16 +78,21 @@ export default function EmergencyTeamManager({ employees = [] }) {
   const membersByRole = useMemo(() => {
     const grouped = {};
     rolesEmergencia.forEach(role => {
-      grouped[role.rol] = emergencyMembers.filter(m => 
-        m.rol_emergencia === role.rol && m.activo
-      );
+      grouped[role.rol] = emergencyMembers.filter(m => {
+        // Normalización y validación robusta
+        const roleMatch = m.rol_emergencia === role.rol;
+        // Si activo es undefined o null, asumimos true para no ocultar datos por error de migración
+        const isActive = m.activo !== false; 
+        return roleMatch && isActive;
+      });
     });
     return grouped;
   }, [emergencyMembers]);
 
   const getEmployeeName = (employeeId) => {
     if (!employees || !Array.isArray(employees)) return "Desconocido";
-    const emp = employees.find(e => e.id === employeeId);
+    // Comparación robusta de IDs (String vs Number)
+    const emp = employees.find(e => String(e.id) === String(employeeId));
     return emp?.nombre || "Desconocido";
   };
 
@@ -246,6 +251,23 @@ export default function EmergencyTeamManager({ employees = [] }) {
           }}
         />
       )}
+
+      {/* Sección de Diagnóstico de Datos */}
+      <div className="mt-8 border-t pt-4">
+        <details className="text-sm text-slate-500">
+          <summary className="cursor-pointer font-medium mb-2 hover:text-slate-700">
+            Ver datos crudos de EmergencyTeamMember (Diagnóstico)
+          </summary>
+          <div className="bg-slate-100 p-4 rounded-md overflow-auto max-h-60">
+            <p className="mb-2 font-semibold">Total registros encontrados: {emergencyMembers.length}</p>
+            {emergencyMembers.length > 0 ? (
+              <pre>{JSON.stringify(emergencyMembers, null, 2)}</pre>
+            ) : (
+              <p>No se encontraron registros en base44.entities.EmergencyTeamMember</p>
+            )}
+          </div>
+        </details>
+      </div>
     </div>
   );
 }
