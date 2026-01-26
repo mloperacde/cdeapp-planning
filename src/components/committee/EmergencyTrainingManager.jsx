@@ -30,9 +30,20 @@ export default function EmergencyTrainingManager({ employees = [] }) {
 
     emergencyMembers.forEach(member => {
       if (!employees || !Array.isArray(employees)) return;
-      // Robust ID comparison
-      const employee = employees.find(e => String(e.id) === String(member.employee_id));
-      if (!employee) return;
+      
+      const target = String(member.employee_id);
+      // Robust ID comparison including code and email
+      let employee = employees.find(e => {
+         return String(e.id) === target || 
+                (e.legacy_id && String(e.legacy_id) === target) ||
+                (e.codigo_empleado && String(e.codigo_empleado) === target) ||
+                (e.email && e.email === target);
+      });
+
+      // If employee not found, create a placeholder so we don't lose the training record alert
+      if (!employee) {
+          employee = { nombre: "Desconocido", id: member.employee_id };
+      }
 
       (member.formacion_recibida || []).forEach(formacion => {
         if (!formacion.fecha_caducidad) return;

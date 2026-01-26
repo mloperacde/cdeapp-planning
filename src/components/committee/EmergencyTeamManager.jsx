@@ -183,9 +183,10 @@ export default function EmergencyTeamManager({ employees = [] }) {
 
     const emp = employees.find((e) => {
       const idMatch = String(e.id) === target;
+      const legacyMatch = e.legacy_id && String(e.legacy_id) === target;
       const codeMatch = e.codigo_empleado && String(e.codigo_empleado) === target;
       const emailMatch = e.email && e.email === target;
-      return idMatch || codeMatch || emailMatch;
+      return idMatch || legacyMatch || codeMatch || emailMatch;
     });
 
     if (!emp) return `Desconocido (ID: ${employeeId})`;
@@ -199,6 +200,7 @@ export default function EmergencyTeamManager({ employees = [] }) {
         const target = String(id);
         return !employees.find(e => 
             String(e.id) === target || 
+            (e.legacy_id && String(e.legacy_id) === target) ||
             (e.codigo_empleado && String(e.codigo_empleado) === target) ||
             (e.email && e.email === target)
         );
