@@ -51,8 +51,19 @@ export default function MachineSkillsView() {
         queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
     });
 
+    // Robust ID matching helper
+    const getMachineIdentifiers = (machineId) => {
+        const machine = machines.find(m => String(m.id) === String(machineId));
+        return machine ? [
+            String(machine.id),
+            machine.codigo ? String(machine.codigo) : null
+        ].filter(Boolean) : [String(machineId)];
+    };
+
     // Helper to get employees for a machine grouped by role and ordered by preference
     const getMachineStaff = (machineId, roleType) => {
+        const identifiers = getMachineIdentifiers(machineId);
+        
         const candidates = employees.filter(e => {
             if (e.departamento !== "FABRICACION") return false;
             
@@ -60,7 +71,7 @@ export default function MachineSkillsView() {
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
 
             const defaultMachines = getEmployeeDefaultMachineExperience(e, employeeSkills);
-            if (!defaultMachines.includes(machineId)) return false;
+            if (!defaultMachines.some(dm => identifiers.includes(String(dm)))) return false;
 
             const puesto = (e.puesto || "").toUpperCase();
             if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) return true;
@@ -77,7 +88,10 @@ export default function MachineSkillsView() {
                 );
                 if (skill?.orden_preferencia) return skill.orden_preferencia;
                 // Fallback to legacy
-                for(let i=1; i<=10; i++) if(emp[`maquina_${i}`] === machineId) return i;
+                for(let i=1; i<=10; i++) {
+                     const val = emp[`maquina_${i}`];
+                     if (val && identifiers.includes(String(val))) return i;
+                }
                 return 99;
             };
             return getSlot(a) - getSlot(b);
@@ -88,6 +102,8 @@ export default function MachineSkillsView() {
 
     // Helper to get potential candidates (who match role but don't have machine)
     const getPotentialCandidates = (machineId, roleType) => {
+         const identifiers = getMachineIdentifiers(machineId);
+
          return employees.filter(e => {
             if (e.departamento !== "FABRICACION") return false;
             if ((e.estado_empleado || "Alta") !== "Alta") return false;
@@ -96,7 +112,7 @@ export default function MachineSkillsView() {
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;
 
             const defaultMachines = getEmployeeDefaultMachineExperience(e, employeeSkills);
-            if (defaultMachines.includes(machineId)) return false;
+            if (defaultMachines.some(dm => identifiers.includes(String(dm)))) return false;
 
             return true;
         }).map(e => {
@@ -287,7 +303,12 @@ export default function MachineSkillsView() {
                                         {machine.descripcion && machine.descripcion !== machine.nombre && (
                                             <div className="text-xs text-slate-500">{machine.nombre}</div>
                                         )}
-                                        <div className="text-xs text-slate-500 font-mono">{machine.codigo}</div>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <div className="text-xs text-slate-500 font-mono bg-slate-100 px-1 rounded">{machine.codigo}</div>
+                                            {machine.ubicacion && (
+                                                <div className="text-xs text-slate-400">• {machine.ubicacion}</div>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">

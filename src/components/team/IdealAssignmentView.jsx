@@ -94,8 +94,15 @@ export default function IdealAssignmentView() {
     if (skill?.orden_preferencia) return skill.orden_preferencia;
     
     // Fallback to legacy fields
+    const machine = machines.find(m => String(m.id) === String(machineId));
+    const identifiers = machine ? [
+        String(machine.id),
+        machine.codigo ? String(machine.codigo) : null
+    ].filter(Boolean) : [String(machineId)];
+
     for (let i = 1; i <= 10; i++) {
-        if (emp[`maquina_${i}`] === machineId) return i;
+        const val = emp[`maquina_${i}`];
+        if (val && identifiers.includes(String(val))) return i;
     }
     return 999;
   };
@@ -122,35 +129,26 @@ export default function IdealAssignmentView() {
 
         const puesto = (emp.puesto || "").toUpperCase();
         
+        const slot = getExperienceSlot(emp, machineId);
+
         if (roleType === "RESPONSABLE") {
             if (!puesto.includes("RESPONSABLE DE LINEA") && !puesto.includes("RESPONSABLE DE LÍNEA")) return false;
-            // Strict experience: orden_preferencia 1 in EmployeeMachineSkill or maquina_1
-            const skill = employeeSkills.find(s => 
-                s.employee_id === emp.id && s.machine_id === machineId && s.orden_preferencia === 1
-            );
-            if (!skill && emp.maquina_1 !== machineId) return false;
+            // Strict experience: orden_preferencia 1
+            if (slot !== 1) return false;
             return true;
         }
 
         if (roleType === "SEGUNDA") {
             if (!puesto.includes("SEGUNDA") && !puesto.includes("2ª")) return false;
             // Strict experience: ANY orden_preferencia or legacy field
-            const hasSkill = employeeSkills.some(s => 
-                s.employee_id === emp.id && s.machine_id === machineId
-            );
-            const hasExpLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
-            if (!hasSkill && !hasExpLegacy) return false;
+            if (slot === 999) return false;
             return true;
         }
 
         if (roleType === "OPERARIO") {
             if (!puesto.includes("OPERARI") && !puesto.includes("OPERARIO") && !puesto.includes("OPERARIA")) return false;
             // Strict experience check
-            const hasSkill = employeeSkills.some(s => 
-                s.employee_id === emp.id && s.machine_id === machineId
-            );
-            const hasExpLegacy = [1,2,3,4,5,6,7,8,9,10].some(i => emp[`maquina_${i}`] === machineId);
-            if (!hasSkill && !hasExpLegacy) return false;
+            if (slot === 999) return false;
             return true; 
         }
 

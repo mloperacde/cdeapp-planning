@@ -265,7 +265,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span className="truncate max-w-[70%]">
-              {machine.descripcion || machine.nombre || "Ficha de Máquina"}
+              {machine.nombre_maquina || machine.nombre || "Ficha de Máquina"}
             </span>
             {canEdit && (
               <div className="flex gap-2">
@@ -338,7 +338,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Ubicación</Label>
+                      <Label>Sala / Ubicación</Label>
                       <Input
                         value={formData.ubicacion}
                         onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
@@ -439,11 +439,29 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                 <div className="space-y-6">
                   <div className="bg-slate-50 p-4 rounded-lg border border-blue-100 dark:bg-slate-800/50 dark:border-slate-700">
                     <Label className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1 block">
-                      Descripción (Identificador)
+                      Información de la Máquina
                     </Label>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                      {machine.descripcion || machine.nombre}
-                    </h3>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                        {machine.nombre_maquina || machine.nombre}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm mt-1">
+                        {machine.ubicacion && (
+                          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                            <span className="font-semibold">Sala:</span>
+                            <span className="bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                              {machine.ubicacion}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                          <span className="font-semibold">Código:</span>
+                          <span className="font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                            {machine.codigo || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {(machine.id_base44 || machine.estado_sincronizacion === 'Sincronizado') && (
@@ -479,7 +497,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                       <p className="font-medium font-mono">{machine.codigo || "-"}</p>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-xs text-slate-500 uppercase font-semibold">Ubicación</span>
+                      <span className="text-xs text-slate-500 uppercase font-semibold">Sala / Ubicación</span>
                       <p className="font-medium">{machine.ubicacion || "-"}</p>
                     </div>
                     <div className="space-y-1">

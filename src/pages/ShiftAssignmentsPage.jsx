@@ -377,9 +377,19 @@ export default function ShiftAssignmentsPage() {
     if (hasSkill) return true;
 
     // 2. Check Legacy Columns (maquina_1 ... maquina_10)
-    const hasLegacySkill = [1,2,3,4,5,6,7,8,9,10].some(i => 
-        String(emp[`maquina_${i}`]) === String(machineId)
-    );
+    // Legacy columns might contain ID, Code, or Name. We check all.
+    const machine = getMachineDetails(machineId);
+    const identifiers = machine ? [
+        String(machine.id),
+        machine.codigo_maquina ? String(machine.codigo_maquina) : null,
+        machine.id_base44 ? String(machine.id_base44) : null,
+        // machine.nombre ? String(machine.nombre) : null // Optional: matches by name too?
+    ].filter(Boolean) : [String(machineId)];
+
+    const hasLegacySkill = [1,2,3,4,5,6,7,8,9,10].some(i => {
+        const val = emp[`maquina_${i}`];
+        return val && identifiers.includes(String(val));
+    });
     
     return hasLegacySkill;
   };

@@ -132,6 +132,9 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold text-slate-900">{machine.nombre}</span>
+                        {machine.ubicacion && (
+                          <div className="text-xs text-slate-500">{machine.ubicacion}</div>
+                        )}
                       </TableCell>
                       <TableCell className="text-slate-600">{machine.tipo || '-'}</TableCell>
                       <TableCell className="text-center">

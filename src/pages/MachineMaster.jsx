@@ -346,7 +346,7 @@ export default function MachineMasterPage() {
               { field: 'descripcion', label: 'Descripción' },
               { field: 'nombre', label: 'Nombre' },
               { field: 'codigo', label: 'Código' },
-              { field: 'ubicacion', label: 'Ubicación' },
+              { field: 'ubicacion', label: 'Sala' },
               { field: 'orden', label: 'Orden' }
             ]}
             placeholder="Buscar..."
@@ -380,10 +380,10 @@ export default function MachineMasterPage() {
               <table className="w-full">
                 <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 shadow-sm">
                   <tr>
-                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider w-1/3">Descripción</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider w-1/3">Máquina</th>
                     <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Código</th>
                     <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ubicación</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sala</th>
                     <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Marca/Modelo</th>
                     <th className="px-4 py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Orden</th>
                     <th className="px-4 py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
@@ -393,9 +393,9 @@ export default function MachineMasterPage() {
                   {paginatedItems.map((machine) => (
                     <tr key={machine.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td className="px-4 py-2">
-                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">{machine.descripcion || machine.nombre}</span>
-                        {machine.descripcion && machine.descripcion !== machine.nombre && (
-                          <span className="text-[10px] text-slate-500 block mt-0.5">{machine.nombre}</span>
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">{machine.nombre_maquina || machine.nombre}</span>
+                        {machine.descripcion && machine.descripcion !== (machine.nombre_maquina || machine.nombre) && (
+                          <span className="text-[10px] text-slate-500 block mt-0.5 truncate max-w-[200px]" title={machine.descripcion}>{machine.descripcion}</span>
                         )}
                       </td>
                       <td className="px-4 py-2">

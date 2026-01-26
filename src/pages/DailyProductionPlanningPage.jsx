@@ -711,7 +711,15 @@ export default function DailyProductionPlanningPage() {
                           <div key={machine.id} className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200">
                               <div className="flex flex-col overflow-hidden mr-2">
                                   <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
-                                  {machine.codigo_maquina && <span className="text-xs text-slate-500">{machine.codigo_maquina}</span>}
+                                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                                    {machine.codigo_maquina && <span>{machine.codigo_maquina}</span>}
+                                    {machine.ubicacion && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{machine.ubicacion}</span>
+                                      </>
+                                    )}
+                                  </div>
                               </div>
                               <Button 
                                   size="icon" 
@@ -769,10 +777,16 @@ export default function DailyProductionPlanningPage() {
                                         return (
                                             <TableRow key={planning.id} className="hover:bg-slate-50/50">
                                                 <TableCell className="pl-6 font-medium">
-                                                    {item.nombre}
-                                                    {item.descripcion && item.descripcion !== item.nombre && (
-                                                        <div className="text-xs text-slate-500">{item.descripcion}</div>
-                                                    )}
+                                                    <div>{item.nombre}</div>
+                                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                        {item.ubicacion && <span>{item.ubicacion}</span>}
+                                                        {item.descripcion && item.descripcion !== item.nombre && (
+                                                            <>
+                                                                {item.ubicacion && <span>•</span>}
+                                                                <span className="truncate max-w-[200px]" title={item.descripcion}>{item.descripcion}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="font-mono text-sm text-slate-500">
                                                     {item.codigo_maquina}

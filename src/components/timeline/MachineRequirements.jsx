@@ -132,7 +132,10 @@ export default function MachineRequirements() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <div className="font-semibold text-slate-900">{machine.nombre}</div>
-                    <div className="text-xs text-slate-500 font-mono">{machine.codigo}</div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span className="font-mono">{machine.codigo}</span>
+                      {machine.ubicacion && <span>• {machine.ubicacion}</span>}
+                    </div>
                   </div>
                   <Cog className="w-5 h-5 text-blue-600" />
                 </div>

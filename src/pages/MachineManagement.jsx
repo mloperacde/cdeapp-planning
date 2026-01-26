@@ -268,7 +268,16 @@ export default function MachineManagement() {
                             {machine.descripcion && machine.descripcion !== machine.nombre && (
                                 <p className="text-[10px] text-slate-500 mt-0.5 font-medium truncate">{machine.nombre}</p>
                             )}
-                            <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 font-mono">{machine.codigo_maquina || machine.codigo}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <p className="text-[10px] text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">
+                                  {machine.codigo_maquina || machine.codigo}
+                                </p>
+                                {machine.ubicacion && (
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-500">
+                                    • {machine.ubicacion}
+                                  </p>
+                                )}
+                            </div>
                           </div>
                           <Button
                               variant="ghost"
