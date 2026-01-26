@@ -1,22 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { base44, APP_ID } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw, Database, User } from "lucide-react";
 
 export default function ApiStatus() {
   const [status, setStatus] = useState({
     auth: { status: 'pending', data: null, error: null },
+    employees: { status: 'pending', count: 0, error: null },
     breaks: { status: 'pending', count: 0, error: null },
     emergency: { status: 'pending', count: 0, error: null },
+    emergencyPlural: { status: 'pending', count: 0, error: null }, // Test plural
+    union: { status: 'pending', count: 0, error: null },
   });
   const [minimized, setMinimized] = useState(false);
 
   const checkConnection = async () => {
     setStatus(prev => ({ ...prev, 
       auth: { status: 'loading', data: null, error: null },
+      employees: { status: 'loading', count: 0, error: null },
       breaks: { status: 'loading', count: 0, error: null },
-      emergency: { status: 'loading', count: 0, error: null }
+      emergency: { status: 'loading', count: 0, error: null },
+      emergencyPlural: { status: 'loading', count: 0, error: null },
+      union: { status: 'loading', count: 0, error: null }
     }));
 
     // Check Auth
@@ -37,34 +43,33 @@ export default function ApiStatus() {
         return [];
     };
 
-    // Check BreakShift
-    try {
-      const rawBreaks = await base44.entities.BreakShift.list();
-      const breaks = normalizeData(rawBreaks);
-      setStatus(prev => ({ ...prev, breaks: { status: 'success', count: breaks.length, error: null } }));
-    } catch (e) {
-      console.error("BreakShift Check Failed", e);
-      setStatus(prev => ({ ...prev, breaks: { status: 'error', count: 0, error: e.message || "Fetch Failed" } }));
-    }
+    const checkEntity = async (entityName, key, sort = undefined) => {
+        try {
+            // Dynamically access entity. If property doesn't exist, it might throw or return undefined if using Proxy
+            // base44.entities is a Proxy, so accessing any prop returns an object with methods.
+            const data = await base44.entities[entityName].list(sort);
+            const normalized = normalizeData(data);
+            setStatus(prev => ({ ...prev, [key]: { status: 'success', count: normalized.length, error: null } }));
+        } catch (e) {
+            console.error(`${entityName} Check Failed`, e);
+            setStatus(prev => ({ ...prev, [key]: { status: 'error', count: 0, error: e.message || "Fetch Failed" } }));
+        }
+    };
 
-    // Check EmergencyTeamMember
-    try {
-      const rawMembers = await base44.entities.EmergencyTeamMember.list();
-      const members = normalizeData(rawMembers);
-      setStatus(prev => ({ ...prev, emergency: { status: 'success', count: members.length, error: null } }));
-    } catch (e) {
-      console.error("EmergencyTeamMember Check Failed", e);
-      setStatus(prev => ({ ...prev, emergency: { status: 'error', count: 0, error: e.message || "Fetch Failed" } }));
-    }
+    // Parallel checks
+    checkEntity('EmployeeMasterDatabase', 'employees');
+    checkEntity('BreakShift', 'breaks');
+    checkEntity('EmergencyTeamMember', 'emergency');
+    checkEntity('EmergencyTeamMembers', 'emergencyPlural'); // Try plural
+    checkEntity('UnionHoursRecord', 'union');
   };
 
-  // Auto-expand on error or zero counts
+  // Auto-expand on error or zero counts (except plural which might be 0)
   useEffect(() => {
     const hasError = Object.values(status).some(s => s.status === 'error');
-    const hasZeroData = (status.breaks.status === 'success' && status.breaks.count === 0) || 
-                        (status.emergency.status === 'success' && status.emergency.count === 0);
+    const hasZeroCritical = (status.employees.status === 'success' && status.employees.count === 0);
     
-    if (hasError || hasZeroData) {
+    if (hasError || hasZeroCritical) {
         setMinimized(false);
     }
   }, [status]);
@@ -95,57 +100,96 @@ export default function ApiStatus() {
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 w-80 z-50 shadow-2xl border-2 border-slate-200 bg-white/95 backdrop-blur animate-in slide-in-from-bottom-5">
+    <Card className="fixed bottom-4 right-4 w-96 z-50 shadow-2xl border-2 border-slate-200 bg-white/95 backdrop-blur animate-in slide-in-from-bottom-5">
       <CardHeader className="py-2 px-3 border-b bg-slate-50 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-xs font-mono flex items-center gap-2">
-          <StatusIcon status={Object.values(status).some(s => s.status === 'error') ? 'error' : 'success'} />
-          Base44 Connection
+          <Database className="w-3 h-3" />
+          API Diagnostics
         </CardTitle>
-        <div className="flex gap-1">
-            <Button size="icon" variant="ghost" onClick={checkConnection} className="h-5 w-5">
-            <RefreshCw className={`w-3 h-3 ${Object.values(status).some(s => s.status === 'loading') ? 'animate-spin' : ''}`} />
+        <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={checkConnection}>
+                <RefreshCw className="w-3 h-3" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={() => setMinimized(true)} className="h-5 w-5">
-            <span className="text-xs">_</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setMinimized(true)}>
+                <span className="text-xs">_</span>
             </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-3 space-y-2 text-xs">
+      <CardContent className="p-3 space-y-3 text-xs">
         
+        {/* Environment Info */}
+        <div className="bg-slate-100 p-2 rounded space-y-1">
+            <div className="flex justify-between">
+                <span className="text-slate-500">App ID:</span>
+                <span className="font-mono font-bold">{APP_ID}</span>
+            </div>
+            <div className="flex justify-between">
+                <span className="text-slate-500">Mode:</span>
+                <span className={`font-bold ${import.meta.env.VITE_USE_MOCK === 'true' ? 'text-amber-600' : 'text-blue-600'}`}>
+                    {import.meta.env.VITE_USE_MOCK === 'true' ? 'MOCK' : 'REAL API'}
+                </span>
+            </div>
+        </div>
+
         {/* Auth Status */}
-        <div className="flex items-center justify-between p-1 rounded hover:bg-slate-50">
-          <span className="font-medium text-slate-600">Auth</span>
-          <div className="flex items-center gap-2">
-            <StatusIcon status={status.auth.status} />
-            {status.auth.status === 'success' && <span className="text-green-700 truncate max-w-[100px]">{status.auth.data?.email || 'OK'}</span>}
-            {status.auth.status === 'error' && <span className="text-red-600 truncate max-w-[100px]" title={status.auth.error}>{status.auth.error}</span>}
-          </div>
+        <div className="flex items-center justify-between p-2 bg-slate-50 rounded border">
+            <div className="flex items-center gap-2">
+                <User className="w-3 h-3 text-slate-400" />
+                <span>Auth</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="text-slate-500 truncate max-w-[150px]">
+                    {status.auth.data ? status.auth.data.email : status.auth.error || 'Checking...'}
+                </span>
+                <StatusIcon status={status.auth.status} />
+            </div>
         </div>
 
-        {/* BreakShift Status */}
-        <div className="flex items-center justify-between p-1 rounded hover:bg-slate-50">
-          <span className="font-medium text-slate-600">BreakShift</span>
-          <div className="flex items-center gap-2">
-            <StatusIcon status={status.breaks.status} />
-            {status.breaks.status === 'success' && <span className="text-slate-900 font-bold">{status.breaks.count} recs</span>}
-            {status.breaks.status === 'error' && <span className="text-red-600 truncate max-w-[100px]" title={status.breaks.error}>{status.breaks.error}</span>}
-          </div>
+        {/* Entities */}
+        <div className="space-y-1">
+            <div className="font-semibold text-slate-500 px-1">Entities</div>
+            
+            <div className="flex justify-between items-center px-2 py-1 hover:bg-slate-50 rounded">
+                <span>EmployeeMasterDatabase</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono">{status.employees.count}</span>
+                    <StatusIcon status={status.employees.status} />
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center px-2 py-1 hover:bg-slate-50 rounded">
+                <span>EmergencyTeamMember</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono">{status.emergency.count}</span>
+                    <StatusIcon status={status.emergency.status} />
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center px-2 py-1 hover:bg-slate-50 rounded">
+                <span>EmergencyTeamMembers (Plural)</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono">{status.emergencyPlural.count}</span>
+                    <StatusIcon status={status.emergencyPlural.status} />
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center px-2 py-1 hover:bg-slate-50 rounded">
+                <span>BreakShift</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono">{status.breaks.count}</span>
+                    <StatusIcon status={status.breaks.status} />
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center px-2 py-1 hover:bg-slate-50 rounded">
+                <span>UnionHoursRecord</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono">{status.union.count}</span>
+                    <StatusIcon status={status.union.status} />
+                </div>
+            </div>
         </div>
 
-        {/* EmergencyTeamMember Status */}
-        <div className="flex items-center justify-between p-1 rounded hover:bg-slate-50">
-          <span className="font-medium text-slate-600">EmergencyTeam</span>
-          <div className="flex items-center gap-2">
-            <StatusIcon status={status.emergency.status} />
-            {status.emergency.status === 'success' && <span className="text-slate-900 font-bold">{status.emergency.count} recs</span>}
-            {status.emergency.status === 'error' && <span className="text-red-600 truncate max-w-[100px]" title={status.emergency.error}>{status.emergency.error}</span>}
-          </div>
-        </div>
-
-        <div className="pt-2 border-t text-[10px] text-slate-400 text-center flex justify-between">
-            <span>Mode: {import.meta.env.VITE_USE_MOCK === 'true' ? 'MOCK' : 'REAL'}</span>
-            <span>AppID: ...97c8</span>
-        </div>
       </CardContent>
     </Card>
   );

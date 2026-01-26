@@ -29,7 +29,28 @@ export default function UnionHoursTracker({ committeeMembers = [], employees = [
 
   const { data: hoursRecords } = useQuery({
     queryKey: ['unionHoursRecords'],
-    queryFn: () => base44.entities.UnionHoursRecord.list('-fecha'),
+    queryFn: async () => {
+      try {
+        const data = await base44.entities.UnionHoursRecord.list('-fecha');
+        console.log("UnionHoursRecord RAW:", data);
+        
+        // Normalization logic
+        let rawArray = [];
+        if (Array.isArray(data)) {
+          rawArray = data;
+        } else if (data && Array.isArray(data.data)) {
+          rawArray = data.data;
+        } else if (data && Array.isArray(data.items)) {
+          rawArray = data.items;
+        } else if (typeof data === 'object' && data !== null) {
+           rawArray = Object.values(data).filter(item => typeof item === 'object');
+        }
+        return rawArray;
+      } catch (err) {
+        console.error("Error fetching UnionHoursRecord:", err);
+        throw err;
+      }
+    },
     initialData: [],
   });
 

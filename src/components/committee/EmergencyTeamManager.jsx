@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Users, AlertTriangle, Shield } from "lucide-react";
+import { Plus, Edit, Trash2, Users, AlertTriangle, Shield, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import EmergencyTeamMemberForm from "./EmergencyTeamMemberForm";
 
@@ -59,10 +59,10 @@ export default function EmergencyTeamManager({ employees = [] }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: emergencyMembers = [], error, isError } = useQuery({
+  const { data: emergencyMembers = [], error, isError, refetch } = useQuery({
     queryKey: ['emergencyTeamMembers'],
     queryFn: async () => {
-      console.log("Fetching EmergencyTeamMembers...");
+      console.log("Fetching EmergencyTeamMembers (QueryFn)...");
       try {
         const data = await base44.entities.EmergencyTeamMember.list();
         console.log("EmergencyTeamMembers fetched RAW:", data);
@@ -76,7 +76,6 @@ export default function EmergencyTeamManager({ employees = [] }) {
         } else if (data && Array.isArray(data.items)) {
           rawArray = data.items;
         } else if (typeof data === 'object' && data !== null) {
-           // If it's an object but not an array, maybe it's keyed by ID?
            rawArray = Object.values(data).filter(item => typeof item === 'object');
         }
         
@@ -88,8 +87,9 @@ export default function EmergencyTeamManager({ employees = [] }) {
       }
     },
     initialData: [],
-    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
-    retry: 1, // Solo 1 reintento
+    staleTime: 0, // No cachear para asegurar datos frescos
+    refetchOnMount: 'always', // Forzar recarga al montar
+    refetchOnWindowFocus: true
   });
 
   if (isError) {
@@ -181,7 +181,38 @@ export default function EmergencyTeamManager({ employees = [] }) {
 
   return (
     <div className="space-y-6">
-      {/* ... (existing header) ... */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Shield className="w-6 h-6 text-red-600" />
+            Equipo de Emergencia
+            </h2>
+            <p className="text-sm text-slate-500">Gestión de roles y asignaciones de emergencia</p>
+        </div>
+        <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => refetch()} title="Recargar datos">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Recargar
+            </Button>
+            {emergencyMembers.length === 0 && (
+                <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={() => testCreateMutation.mutate()} 
+                    disabled={testCreateMutation.isPending}
+                >
+                    {testCreateMutation.isPending ? "Creando..." : "Crear Registro Test"}
+                </Button>
+            )}
+            <Button onClick={() => {
+            setEditingMember(null);
+            setShowForm(true);
+            }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Añadir Miembro
+            </Button>
+        </div>
+      </div>
       
       {/* Warning for unassigned members */}
       {unassignedMembers.length > 0 && (

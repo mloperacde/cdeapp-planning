@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users, RefreshCw } from "lucide-react";
 
 export default function BreaksPage() {
   const [showForm, setShowForm] = useState(false);

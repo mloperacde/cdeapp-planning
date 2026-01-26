@@ -219,9 +219,11 @@ function createMockBase44() {
   return { auth, entities, appLogs, query };
 }
 
+export const APP_ID = "690cdd4205782920ba2297c8";
+
 export const base44 = useMockApi
   ? createMockBase44()
   : createClient({
-      appId: "690cdd4205782920ba2297c8",
+      appId: APP_ID,
       requiresAuth: true
     });
