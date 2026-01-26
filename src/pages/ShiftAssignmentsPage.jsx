@@ -196,7 +196,9 @@ export default function ShiftAssignmentsPage() {
 
           if (teamAssignments.length === 0) {
               const allKeys = [...new Set(machineAssignments.map(ma => normalizeKey(ma.team_key)))];
-              if (allKeys.length === 1) {
+              // Recovery Strategy: If we found only one key family (e.g. only team_1) but we want another team
+              // This handles the case where team_2 data was saved under team_1 key (duplicates)
+              if (allKeys.length === 1 && allKeys[0] !== targetKey) {
                   const groupedByMachine = {};
                   machineAssignments.forEach(ma => {
                       const mid = ma.machine_id;
@@ -207,7 +209,7 @@ export default function ShiftAssignmentsPage() {
                   const recovered = [];
                   Object.values(groupedByMachine).forEach(list => {
                       let best = null;
-                      let bestScore = 0;
+                      let bestScore = -Infinity;
 
                       list.forEach(c => {
                           const getIds = (val) => Array.isArray(val) ? val : [val];
@@ -224,14 +226,27 @@ export default function ShiftAssignmentsPage() {
                               c.operador_8,
                           ].filter(Boolean);
 
-                          if (ids.length === 0) return;
+                          // If no people assigned, score is 0 (neutral). 
+                          // Better than a mismatch (negative), worse than a match (positive).
+                          if (ids.length === 0) {
+                              const score = 0;
+                              if (score > bestScore) {
+                                  bestScore = score;
+                                  best = c;
+                              }
+                              return;
+                          }
 
                           let score = 0;
                           ids.forEach(id => {
                               const emp = getEmployeeById(id);
                               const empTeamKey = getEmployeeTeamKey(emp);
-                              if (empTeamKey && normalizeKey(empTeamKey) === targetKey) {
-                                  score += 1;
+                              if (empTeamKey) {
+                                  if (normalizeKey(empTeamKey) === targetKey) {
+                                      score += 10; // Strong signal: Employee belongs to target team
+                                  } else {
+                                      score -= 10; // Negative signal: Employee belongs to other team
+                                  }
                               }
                           });
 
@@ -241,11 +256,15 @@ export default function ShiftAssignmentsPage() {
                           }
                       });
 
-                      if (best) recovered.push(best);
+                      // If bestScore is non-negative, it means it's either empty (0) or has matching employees (>0).
+                      // If it's negative, it means it's populated but exclusively by other teams' employees.
+                      if (best && bestScore >= 0) {
+                           recovered.push(best);
+                      }
                   });
 
                   if (recovered.length > 0) {
-                      console.log("Recovered assignments for team via employee teams:", recovered.length);
+                      console.log("Recovered assignments for team via employee teams/neutral slots:", recovered.length);
                       teamAssignments = recovered;
                   }
               }
@@ -738,9 +757,16 @@ export default function ShiftAssignmentsPage() {
                                         <h3 className="font-medium text-slate-900 dark:text-slate-100">
                                             {machine?.nombre || `Máquina ${plan.machine_id}`}
                                         </h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {machine?.codigo}
-                                        </p>
+                                        <div className="flex flex-col gap-0.5 mt-1">
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                                {machine?.codigo}
+                                            </p>
+                                            {machine?.ubicacion && (
+                                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                                    {machine.ubicacion}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                     {isComplete ? (
                                         <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -769,9 +795,16 @@ export default function ShiftAssignmentsPage() {
                                 <Cog className="w-6 h-6 text-slate-700 dark:text-slate-300" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold">
-                                    {getMachineDetails(selectedMachineId)?.nombre || "Máquina Desconocida"}
-                                </h2>
+                                <div className="flex items-baseline gap-2">
+                                    <h2 className="text-lg font-bold">
+                                        {getMachineDetails(selectedMachineId)?.nombre || "Máquina Desconocida"}
+                                    </h2>
+                                    {getMachineDetails(selectedMachineId)?.ubicacion && (
+                                        <Badge variant="outline" className="text-xs font-normal bg-blue-50 text-blue-700 border-blue-200">
+                                            {getMachineDetails(selectedMachineId)?.ubicacion}
+                                        </Badge>
+                                    )}
+                                </div>
                                 <p className="text-sm text-slate-500">
                                     Arrastre empleados a las posiciones requeridas
                                 </p>
