@@ -92,6 +92,27 @@ export default function EmergencyTeamManager({ employees = [] }) {
     refetchOnWindowFocus: true
   });
 
+  const testCreateMutation = useMutation({
+    mutationFn: async () => {
+        const testMember = {
+            employee_id: employees[0]?.id, // Use first employee if available
+            rol_emergencia: "Equipo Alarma y Evacuación (EAE)",
+            activo: true,
+            zona_asignada: "TEST ZONE",
+            es_suplente: false,
+            fecha_nombramiento: new Date().toISOString()
+        };
+        return await base44.entities.EmergencyTeamMember.create(testMember);
+    },
+    onSuccess: () => {
+        toast.success("Registro de prueba creado. ¡Escritura funciona!");
+        refetch();
+    },
+    onError: (err) => {
+        toast.error(`Error creando registro: ${err.message}`);
+    }
+  });
+
   if (isError) {
     return (
       <div className="p-4 border border-red-200 bg-red-50 text-red-700 rounded-md">
