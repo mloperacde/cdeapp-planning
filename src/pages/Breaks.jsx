@@ -45,7 +45,6 @@ export default function BreaksPage() {
     queryFn: async () => {
       try {
         const data = await base44.entities.BreakShift.list();
-        console.log("BreakShifts fetched RAW:", data);
         
         // Handle various response structures
         let rawArray = [];
@@ -60,8 +59,6 @@ export default function BreaksPage() {
            // Try to convert values to array
            rawArray = Object.values(data).filter(item => typeof item === 'object');
         }
-
-        console.log("BreakShifts Normalized Array:", rawArray);
 
         // Validate items have an ID (if not, generate a temp one for display)
         return rawArray.map((item, idx) => ({
@@ -152,28 +149,6 @@ export default function BreaksPage() {
     }
   };
 
-  const testCreateMutation = useMutation({
-    mutationFn: async () => {
-        const testBreak = {
-            nombre: "Descanso Test " + new Date().toLocaleTimeString(),
-            hora_inicio: "10:00",
-            duracion_minutos: 15,
-            personas_por_turno: 5,
-            aplica_turno_manana: true,
-            aplica_turno_tarde: false,
-            activo: true
-        };
-        return await base44.entities.BreakShift.create(testBreak);
-    },
-    onSuccess: () => {
-        toast.success("Descanso de prueba creado. ¡Escritura funciona!");
-        queryClient.invalidateQueries({ queryKey: ['breakShifts'] });
-    },
-    onError: (err) => {
-        toast.error(`Error creando registro: ${err.message}`);
-    }
-  });
-
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -188,15 +163,6 @@ export default function BreaksPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => testCreateMutation.mutate()}
-              disabled={testCreateMutation.isPending}
-              variant="outline"
-              className="bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {testCreateMutation.isPending ? "Creando..." : "Crear Test"}
-            </Button>
             <Button
               onClick={handleCallAgent}
               disabled={isCalling}
@@ -310,23 +276,6 @@ export default function BreaksPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Diagnostic View - Always Visible if data exists but main table is empty */}
-        <div className="mt-8 border-t pt-4">
-          <details open={breakShifts.length === 0} className="text-sm text-slate-500">
-             <summary className="cursor-pointer font-bold mb-2 flex items-center gap-2 hover:text-slate-700">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                Diagnóstico de Datos Crudos (Siempre visible para debug)
-             </summary>
-             <div className="bg-slate-100 p-4 rounded-md overflow-auto max-h-96">
-                <div>
-                    <p className="font-bold text-slate-700">Datos Normalizados (Array):</p>
-                    <p className="text-xs mb-2">Total registros: {breakShifts.length}</p>
-                    <pre className="text-xs">{JSON.stringify(breakShifts, null, 2)}</pre>
-                </div>
-             </div>
-          </details>
-        </div>
       </div>
 
       {showForm && (

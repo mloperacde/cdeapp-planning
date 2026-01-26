@@ -62,10 +62,8 @@ export default function EmergencyTeamManager({ employees = [] }) {
   const { data: emergencyMembers = [], error, isError, refetch } = useQuery({
     queryKey: ['emergencyTeamMembers'],
     queryFn: async () => {
-      console.log("Fetching EmergencyTeamMembers (QueryFn)...");
       try {
         const data = await base44.entities.EmergencyTeamMember.list();
-        console.log("EmergencyTeamMembers fetched RAW:", data);
         
         // Handle various response structures
         let rawArray = [];
@@ -79,7 +77,6 @@ export default function EmergencyTeamManager({ employees = [] }) {
            rawArray = Object.values(data).filter(item => typeof item === 'object');
         }
         
-        console.log("EmergencyTeamMembers Normalized:", rawArray);
         return rawArray;
       } catch (err) {
         console.error("Error fetching EmergencyTeamMembers:", err);
@@ -90,27 +87,6 @@ export default function EmergencyTeamManager({ employees = [] }) {
     staleTime: 0, // No cachear para asegurar datos frescos
     refetchOnMount: 'always', // Forzar recarga al montar
     refetchOnWindowFocus: true
-  });
-
-  const testCreateMutation = useMutation({
-    mutationFn: async () => {
-        const testMember = {
-            employee_id: employees[0]?.id, // Use first employee if available
-            rol_emergencia: "Equipo Alarma y Evacuación (EAE)",
-            activo: true,
-            zona_asignada: "TEST ZONE",
-            es_suplente: false,
-            fecha_nombramiento: new Date().toISOString()
-        };
-        return await base44.entities.EmergencyTeamMember.create(testMember);
-    },
-    onSuccess: () => {
-        toast.success("Registro de prueba creado. ¡Escritura funciona!");
-        refetch();
-    },
-    onError: (err) => {
-        toast.error(`Error creando registro: ${err.message}`);
-    }
   });
 
   if (isError) {
@@ -193,45 +169,6 @@ export default function EmergencyTeamManager({ employees = [] }) {
     return emp.nombre || emp.full_name || `Sin nombre (ID: ${employeeId})`;
   };
 
-  const orphanedIds = useMemo(() => {
-    if (!emergencyMembers.length || !employees.length) return [];
-    const uniqueIds = [...new Set(emergencyMembers.map(m => m.employee_id))];
-    return uniqueIds.filter(id => {
-        const target = String(id);
-        return !employees.find(e => 
-            String(e.id) === target || 
-            (e.legacy_id && String(e.legacy_id) === target) ||
-            (e.codigo_empleado && String(e.codigo_empleado) === target) ||
-            (e.email && e.email === target)
-        );
-    });
-  }, [emergencyMembers, employees]);
-
-  // Diagnostic Info Component
-  const DiagnosticInfo = () => (
-    <div className="mt-4 p-4 bg-slate-100 rounded text-xs font-mono text-slate-600">
-      <p><strong>Diagnóstico de Empleados:</strong></p>
-      <p>Total Empleados Cargados: {employees.length}</p>
-      <p className={orphanedIds.length > 0 ? "text-red-600 font-bold" : "text-green-600"}>
-        IDs sin coincidencia en empleados: {orphanedIds.length}
-      </p>
-      {orphanedIds.length > 0 && (
-        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-            <p className="font-bold mb-1">IDs Huérfanos (Ejemplos):</p>
-            <ul className="list-disc pl-4">
-                {orphanedIds.slice(0, 10).map(id => (
-                    <li key={id}>{id}</li>
-                ))}
-            </ul>
-            <p className="mt-2 italic">Use el botón "Reasignar" (rojo) en la lista para corregir estos registros.</p>
-        </div>
-      )}
-      {employees.length > 0 && (
-        <p className="mt-2">Ejemplo Empleado [0]: ID="{employees[0].id}" Nombre="{employees[0].nombre || employees[0].name}"</p>
-      )}
-    </div>
-  );
-
   const handleAdd = (role) => {
     setSelectedRole(role);
     setShowForm(true);
@@ -279,16 +216,6 @@ export default function EmergencyTeamManager({ employees = [] }) {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Recargar
             </Button>
-            {emergencyMembers.length === 0 && (
-                <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    onClick={() => testCreateMutation.mutate()} 
-                    disabled={testCreateMutation.isPending}
-                >
-                    {testCreateMutation.isPending ? "Creando..." : "Crear Registro Test"}
-                </Button>
-            )}
             <Button onClick={() => {
             setEditingMember(null);
             setShowForm(true);
@@ -478,24 +405,6 @@ export default function EmergencyTeamManager({ employees = [] }) {
           }}
         />
       )}
-
-      {/* Sección de Diagnóstico de Datos */}
-      <div className="mt-8 border-t pt-4">
-        <details className="text-sm text-slate-500">
-          <summary className="cursor-pointer font-medium mb-2 hover:text-slate-700">
-            Ver datos crudos de EmergencyTeamMember (Diagnóstico)
-          </summary>
-          <div className="bg-slate-100 p-4 rounded-md overflow-auto max-h-60">
-            <DiagnosticInfo />
-            <p className="mb-2 font-semibold mt-4">Total registros encontrados: {emergencyMembers.length}</p>
-            {emergencyMembers.length > 0 ? (
-              <pre>{JSON.stringify(emergencyMembers, null, 2)}</pre>
-            ) : (
-              <p>No se encontraron registros en base44.entities.EmergencyTeamMember</p>
-            )}
-          </div>
-        </details>
-      </div>
     </div>
   );
 }
