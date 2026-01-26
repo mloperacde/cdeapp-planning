@@ -148,14 +148,29 @@ export default function EmergencyTeamManager({ employees = [] }) {
         const dbRole = normalize(m.rol_emergencia);
         const configRole = normalize(role.rol);
         
-        // Comparación flexible: coincidencia exacta normalizada O inclusión
-        const roleMatch = dbRole === configRole || 
-                         (dbRole.includes("jefe de emergencias") && configRole.includes("jefe de emergencias")) ||
-                         (dbRole.includes("jefe de intervencion") && configRole.includes("jefe de intervencion"));
+        // Comparación flexible usando palabras clave específicas para cada rol
+        let isMatch = false;
+
+        if (configRole.includes("jefe de emergencias")) {
+            isMatch = dbRole.includes("jefe de emergencias") || dbRole.includes("emergencias");
+        } else if (configRole.includes("jefe de intervencion")) {
+            isMatch = dbRole.includes("jefe de intervencion") || dbRole.includes("intervencion");
+        } else if (configRole.includes("primera intervencion") || configRole.includes("(epi)")) {
+            isMatch = dbRole.includes("primera intervencion") || dbRole.includes("epi");
+        } else if (configRole.includes("segunda intervencion") || configRole.includes("(esi)")) {
+            isMatch = dbRole.includes("segunda intervencion") || dbRole.includes("esi");
+        } else if (configRole.includes("primeros auxilios") || configRole.includes("(epa)")) {
+            isMatch = dbRole.includes("primeros auxilios") || dbRole.includes("epa") || dbRole.includes("sanitario");
+        } else if (configRole.includes("alarma") || configRole.includes("evacuacion") || configRole.includes("(eae)")) {
+            isMatch = dbRole.includes("alarma") || dbRole.includes("evacuacion") || dbRole.includes("eae");
+        } else {
+            // Fallback a coincidencia exacta normalizada
+            isMatch = dbRole === configRole;
+        }
         
         // Si activo es undefined o null, asumimos true para no ocultar datos por error de migración
         const isActive = m.activo !== false; 
-        return roleMatch && isActive;
+        return isMatch && isActive;
       });
     });
     return grouped;

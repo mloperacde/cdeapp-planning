@@ -278,31 +278,25 @@ export default function BreaksPage() {
         </Card>
 
         {/* Diagnostic View - Always Visible if data exists but main table is empty */}
-        {(breakShifts.length > 0) && (
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-600" />
-            Vista de Datos Crudos (Base de Datos)
-          </h2>
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 overflow-auto">
-             <p className="mb-2 font-mono text-xs text-slate-500">Total Registros: {breakShifts.length}</p>
-             <div className="grid gap-2">
-                {breakShifts.map((item, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded shadow-sm border border-slate-200 font-mono text-xs">
-                        {Object.entries(item).map(([k, v]) => (
-                            <div key={k} className="flex gap-2 border-b border-slate-50 last:border-0 py-1">
-                                <span className="font-bold text-slate-700 min-w-[120px]">{k}:</span>
-                                <span className="text-slate-600 break-all">
-                                    {typeof v === 'object' ? JSON.stringify(v) : String(v)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                ))}
+        <div className="mt-8 border-t pt-4">
+          <details open={breakShifts.length === 0} className="text-sm text-slate-500">
+             <summary className="cursor-pointer font-bold mb-2 flex items-center gap-2 hover:text-slate-700">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                Diagnóstico de Datos Crudos (Siempre visible para debug)
+             </summary>
+             <div className="bg-slate-100 p-4 rounded-md overflow-auto max-h-96">
+                <div className="mb-4 pb-4 border-b border-slate-200">
+                    <p className="font-bold text-slate-700">Respuesta Original de API:</p>
+                    <pre className="text-xs">{JSON.stringify(rawResponse, null, 2)}</pre>
+                </div>
+                <div>
+                    <p className="font-bold text-slate-700">Datos Normalizados (Array):</p>
+                    <p className="text-xs mb-2">Total registros: {breakShifts.length}</p>
+                    <pre className="text-xs">{JSON.stringify(breakShifts, null, 2)}</pre>
+                </div>
              </div>
-          </div>
+          </details>
         </div>
-        )}
       </div>
 
       {showForm && (
