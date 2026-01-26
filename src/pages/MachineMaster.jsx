@@ -89,6 +89,10 @@ export default function MachineMasterPage() {
           // cadencia: apiMachine.cadencia,
           // estado_operativo: ...
           // nozzle: ...
+          
+          // Metadatos de sincronización (Campos existentes en DB)
+          ultimo_sincronizado: new Date().toISOString(),
+          estado_sincronizacion: 'Sincronizado'
         };
 
         if (existing) {
@@ -173,6 +177,8 @@ export default function MachineMasterPage() {
     imagenes: m.imagenes || [],
     archivos_adjuntos: m.archivos_adjuntos || [],
     procesos_configurados: m.procesos_configurados || [],
+    estado_sincronizacion: m.estado_sincronizacion || '',
+    ultimo_sincronizado: m.ultimo_sincronizado || '',
     _raw: m
   }));
 

@@ -446,18 +446,25 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                     </h3>
                   </div>
 
-                  {machine.id_base44 && (
+                  {(machine.id_base44 || machine.estado_sincronizacion === 'Sincronizado') && (
                     <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 dark:bg-orange-900/10 dark:border-orange-900/50">
                       <Label className="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-1 block">
-                        ID Importado (Sincronización)
+                        Sincronización Externa
                       </Label>
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-black/20 px-2 py-1 rounded border border-orange-200 dark:border-orange-800">
-                          {machine.id_base44}
-                        </code>
-                        <span className="text-[10px] text-orange-600/70 dark:text-orange-400/70">
-                          Vinculado con cdeapp.es
-                        </span>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-black/20 px-2 py-1 rounded border border-orange-200 dark:border-orange-800">
+                            {machine.id_base44 || machine.codigo || 'N/A'}
+                          </code>
+                          <span className="text-[10px] text-orange-600/70 dark:text-orange-400/70">
+                            {machine.id_base44 ? 'ID Externo (Vinculado)' : 'Vinculado por Código'}
+                          </span>
+                        </div>
+                        {machine.ultimo_sincronizado && (
+                           <span className="text-[10px] text-slate-400">
+                             Última act: {new Date(machine.ultimo_sincronizado).toLocaleString()}
+                           </span>
+                        )}
                       </div>
                     </div>
                   )}
