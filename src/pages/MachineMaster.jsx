@@ -148,6 +148,7 @@ export default function MachineMasterPage() {
   // Transformar datos para vista
   const machines = rawMachines.map(m => ({
     id: m.id,
+    id_base44: m.id_base44 || '',
     nombre: m.nombre || '',
     codigo: m.codigo_maquina || '',
     marca: m.marca || '',

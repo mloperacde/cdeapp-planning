@@ -445,6 +445,22 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                       {machine.descripcion || machine.nombre}
                     </h3>
                   </div>
+
+                  {machine.id_base44 && (
+                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 dark:bg-orange-900/10 dark:border-orange-900/50">
+                      <Label className="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-1 block">
+                        ID Importado (Sincronización)
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <code className="text-sm font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-black/20 px-2 py-1 rounded border border-orange-200 dark:border-orange-800">
+                          {machine.id_base44}
+                        </code>
+                        <span className="text-[10px] text-orange-600/70 dark:text-orange-400/70">
+                          Vinculado con cdeapp.es
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 gap-6 text-sm">
                     <div className="space-y-1">
