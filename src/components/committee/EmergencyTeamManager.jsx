@@ -178,9 +178,18 @@ export default function EmergencyTeamManager({ employees = [] }) {
 
   const getEmployeeName = (employeeId) => {
     if (!employees || !Array.isArray(employees)) return `Desconocido (ID: ${employeeId})`;
-    // Comparación robusta de IDs (String vs Number)
-    const emp = employees.find(e => String(e.id) === String(employeeId));
-    return emp?.nombre || `Desconocido (ID: ${employeeId})`;
+
+    const target = String(employeeId);
+
+    const emp = employees.find((e) => {
+      const idMatch = String(e.id) === target;
+      const codeMatch = e.codigo_empleado && String(e.codigo_empleado) === target;
+      const emailMatch = e.email && e.email === target;
+      return idMatch || codeMatch || emailMatch;
+    });
+
+    if (!emp) return `Desconocido (ID: ${employeeId})`;
+    return emp.nombre || emp.full_name || `Sin nombre (ID: ${employeeId})`;
   };
 
   // Diagnostic Info Component
