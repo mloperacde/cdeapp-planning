@@ -178,7 +178,7 @@ export default function ShiftAssignmentsPage() {
           const targetId = teamConfig ? normalizeKey(teamConfig.id) : "";
 
           // Filter assignments that match Key OR Name OR ID
-          const teamAssignments = machineAssignments.filter(ma => {
+          let teamAssignments = machineAssignments.filter(ma => {
               const maKey = normalizeKey(ma.team_key);
               
               // Direct Match
@@ -196,6 +196,47 @@ export default function ShiftAssignmentsPage() {
 
               return false;
           });
+
+          // SMART RECOVERY: If no assignments found for Team 2, look for mislabeled duplicates in Team 1
+          if (teamAssignments.length === 0 && (targetKey === 'team_2' || targetName.includes('2'))) {
+             // Find duplicates in team_1
+             const candidates = machineAssignments.filter(ma => normalizeKey(ma.team_key) === 'team_1');
+             const machineCounts = {};
+             candidates.forEach(c => machineCounts[c.machine_id] = (machineCounts[c.machine_id] || 0) + 1);
+             
+             const potentialLostRecords = candidates.filter(c => {
+                 // It's a duplicate if we have > 1 record for this machine in team_1
+                 if (machineCounts[c.machine_id] > 1) {
+                     // Check if this specific record has employees from Team 2
+                     const getIds = (val) => Array.isArray(val) ? val : [val];
+                     const ids = [
+                        ...getIds(c.responsable_linea), ...getIds(c.segunda_linea), 
+                        c.operador_1, c.operador_2, c.operador_3, c.operador_4
+                     ].filter(Boolean);
+                     
+                     if (ids.length === 0) return false; 
+                     
+                     // Check if ANY assigned employee is in Team 2
+                     const hasTeam2Emp = ids.some(id => {
+                         const emp = employees.find(e => String(e.id) === String(id));
+                         // Robust check for team name
+                         return emp && (
+                             String(emp.equipo).toLowerCase().includes('turno 2') || 
+                             String(emp.equipo).toLowerCase().includes('team 2') || 
+                             String(emp.equipo).includes('2')
+                         );
+                     });
+                     
+                     return hasTeam2Emp;
+                 }
+                 return false;
+             });
+             
+             if (potentialLostRecords.length > 0) {
+                 console.log("Recovered mislabeled records for Team 2:", potentialLostRecords.length);
+                 teamAssignments = potentialLostRecords;
+             }
+          }
           
           teamAssignments.forEach(ma => {
               const getVal = (val) => Array.isArray(val) ? val[0] : val;
@@ -864,6 +905,25 @@ export default function ShiftAssignmentsPage() {
                 <p>Existing Staffing Records: {existingStaffing.length}</p>
                 <p>Local Assignments Keys: {Object.keys(localAssignments).length}</p>
                 <p className="mt-2 font-bold text-red-500">Available Keys (RAW): {JSON.stringify([...new Set(machineAssignments.map(ma => ma.team_key))])}</p>
+                
+                {(() => {
+                  const counts = {};
+                  machineAssignments.forEach(ma => {
+                      const key = `${ma.team_key}-${ma.machine_id}`;
+                      if (!counts[key]) counts[key] = [];
+                      counts[key].push(ma);
+                  });
+                  const dups = Object.entries(counts).filter(([k, v]) => v.length > 1);
+                  if (dups.length === 0) return null;
+                  
+                  return (
+                      <div className="mt-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-yellow-800">
+                          <p className="font-bold">⚠️ Data Integrity Warning</p>
+                          <p>Found {dups.length} machines with duplicate assignments in {dups[0]?.[0]?.split('-')[0]}.</p>
+                          <p className="text-xs">This explains why Turno 2 data is hidden. It is saved as Turno 1.</p>
+                      </div>
+                  );
+                })()}
             </div>
         </div>
       </details>
