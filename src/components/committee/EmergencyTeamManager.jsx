@@ -192,13 +192,40 @@ export default function EmergencyTeamManager({ employees = [] }) {
     return emp.nombre || emp.full_name || `Sin nombre (ID: ${employeeId})`;
   };
 
+  const orphanedIds = useMemo(() => {
+    if (!emergencyMembers.length || !employees.length) return [];
+    const uniqueIds = [...new Set(emergencyMembers.map(m => m.employee_id))];
+    return uniqueIds.filter(id => {
+        const target = String(id);
+        return !employees.find(e => 
+            String(e.id) === target || 
+            (e.codigo_empleado && String(e.codigo_empleado) === target) ||
+            (e.email && e.email === target)
+        );
+    });
+  }, [emergencyMembers, employees]);
+
   // Diagnostic Info Component
   const DiagnosticInfo = () => (
     <div className="mt-4 p-4 bg-slate-100 rounded text-xs font-mono text-slate-600">
       <p><strong>Diagnóstico de Empleados:</strong></p>
       <p>Total Empleados Cargados: {employees.length}</p>
+      <p className={orphanedIds.length > 0 ? "text-red-600 font-bold" : "text-green-600"}>
+        IDs sin coincidencia en empleados: {orphanedIds.length}
+      </p>
+      {orphanedIds.length > 0 && (
+        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+            <p className="font-bold mb-1">IDs Huérfanos (Ejemplos):</p>
+            <ul className="list-disc pl-4">
+                {orphanedIds.slice(0, 10).map(id => (
+                    <li key={id}>{id}</li>
+                ))}
+            </ul>
+            <p className="mt-2 italic">Use el botón "Reasignar" (rojo) en la lista para corregir estos registros.</p>
+        </div>
+      )}
       {employees.length > 0 && (
-        <p>Ejemplo Empleado [0]: ID="{employees[0].id}" Nombre="{employees[0].nombre || employees[0].name}"</p>
+        <p className="mt-2">Ejemplo Empleado [0]: ID="{employees[0].id}" Nombre="{employees[0].nombre || employees[0].name}"</p>
       )}
     </div>
   );
@@ -366,8 +393,26 @@ export default function EmergencyTeamManager({ employees = [] }) {
                       <p className="text-xs font-semibold text-slate-700 mb-1 dark:text-slate-300">Suplentes:</p>
                       {suplentes.map(member => (
                         <div key={member.id} className="flex items-center justify-between bg-slate-100 p-2 rounded border mb-1 dark:bg-slate-800/50 dark:border-slate-700">
-                          <span className="text-xs dark:text-slate-300">{getEmployeeName(member.employee_id)}</span>
+                          <div className="flex flex-col">
+                             <span className={`text-xs ${getEmployeeName(member.employee_id).startsWith("Desconocido") ? "text-red-500 font-bold" : "dark:text-slate-300"}`}>
+                                {getEmployeeName(member.employee_id)}
+                             </span>
+                             {member.zona_asignada && (
+                                <span className="text-[10px] text-slate-500">{member.zona_asignada}</span>
+                             )}
+                          </div>
                           <div className="flex gap-1">
+                            {getEmployeeName(member.employee_id).startsWith("Desconocido") && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleEdit(member)}
+                                  className="h-6 text-[10px] px-2"
+                                  title="Reasignar empleado"
+                                >
+                                  Reasignar
+                                </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
