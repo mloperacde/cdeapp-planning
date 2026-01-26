@@ -15,16 +15,19 @@ import {
   Search, 
   ChevronDown, 
   ChevronUp,
-  Columns
+  Columns,
+  RefreshCw,
+  Download
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
 import MachineOrderManager from "../components/machines/MachineOrderManager";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import { usePagination } from "../components/utils/usePagination";
+import { cdeApi } from "@/services/cdeApi";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -43,7 +46,82 @@ export default function MachineMasterPage() {
   const [selectedMachineEditMode, setSelectedMachineEditMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const queryClient = useQueryClient();
+
+  const handleSyncMachines = async () => {
+    try {
+      setIsSyncing(true);
+      toast.info("Conectando con cdeapp.es...");
+      
+      const response = await cdeApi.getMachines();
+      
+      if (!response.success || !Array.isArray(response.data)) {
+        throw new Error("Respuesta inválida de la API");
+      }
+
+      const apiMachines = response.data;
+      let created = 0;
+      let updated = 0;
+      
+      toast.loading(`Procesando ${apiMachines.length} máquinas...`, { id: 'sync-machines' });
+
+      // Process sequentially to avoid overwhelming the backend
+      for (const apiMachine of apiMachines) {
+        // Match by id_base44 (external_id) or codigo
+        const existing = rawMachines.find(m => 
+          (m.id_base44 && String(m.id_base44) === String(apiMachine.external_id)) || 
+          (m.codigo_maquina === apiMachine.codigo)
+        );
+
+        // MAPEO ESTRICTO: Solo actualizamos identificación, ubicación y datos técnicos básicos.
+        // Se preservan explícitamente: Mantenimiento, Imágenes, Archivos, Notas, etc.
+        const machineData = {
+          id_base44: apiMachine.external_id,      // ID Externo
+          codigo_maquina: apiMachine.codigo,      // Código
+          nombre: apiMachine.nombre,              // Nombre / Denominación
+          tipo: apiMachine.tipo,                  // Tipo de Máquina
+          cadencia: apiMachine.cadencia,          // Velocidad
+          ubicacion: apiMachine.sala,             // Sala / Ubicación
+          
+          // Mapeo de estados simple
+          estado_operativo: apiMachine.estado === 'Activo' ? 'Disponible' : 'Inactivo',
+          nozzle: apiMachine.nozzle,
+        };
+
+        if (existing) {
+          // UPDATE: Al usar .update(), Base44 solo modifica los campos enviados.
+          // El resto de campos (mantenimiento, imagenes, etc.) permanecen INTACTOS.
+          await base44.entities.MachineMasterDatabase.update(existing.id, machineData);
+          updated++;
+        } else {
+          // CREATE: Solo para nuevas máquinas, establecemos valores por defecto seguros
+          await base44.entities.MachineMasterDatabase.create({
+             ...machineData,
+             descripcion: apiMachine.nombre, // Descripción inicial igual al nombre
+             orden_visualizacion: 999,
+             estado_produccion: 'Sin Producción',
+             estado_disponibilidad: 'Disponible',
+             imagenes: [],
+             archivos_adjuntos: [],
+             programa_mantenimiento: ''
+          });
+          created++;
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
+      toast.dismiss('sync-machines');
+      toast.success(`Sincronización: ${created} creadas, ${updated} actualizadas`);
+
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast.dismiss('sync-machines');
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const { data: rawMachines = EMPTY_ARRAY, isLoading, error } = useQuery({
     queryKey: ['machineMasterDatabase'],
@@ -158,6 +236,17 @@ export default function MachineMasterPage() {
         </div>
         
         <div className="flex gap-2">
+            <Button
+              onClick={handleSyncMachines}
+              disabled={isSyncing}
+              variant="outline"
+              size="sm"
+              className="h-8 flex items-center gap-2 border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700"
+              title="Sincronizar con cdeapp.es"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sincronizar</span>
+            </Button>
             <Link to={createPageUrl("Configuration")}>
               <Button variant="ghost" size="sm" className="h-8">
                 <ArrowLeft className="w-4 h-4 mr-2" />

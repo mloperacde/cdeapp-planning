@@ -4,13 +4,83 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Factory, Clock } from "lucide-react";
+import { Plus, Trash2, Factory, Clock, RefreshCw } from "lucide-react";
+import { cdeApi } from "@/services/cdeApi";
+import { toast } from "sonner";
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
 export function StructureConfig({ config, setConfig }) {
   const [newArea, setNewArea] = useState("");
   const [newRoom, setNewRoom] = useState({ areaId: "", name: "" });
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncRooms = async () => {
+    try {
+      setIsSyncing(true);
+      toast.info("Conectando con cdeapp.es...");
+      
+      const response = await cdeApi.getRooms();
+      
+      if (!response.success || !Array.isArray(response.data)) {
+        throw new Error("Respuesta inválida de la API");
+      }
+
+      const apiRooms = response.data;
+      
+      setConfig(prev => {
+        // Find or create "Planta Principal" area
+        let targetAreaId = prev.areas.find(a => a.name === "Planta Principal")?.id;
+        let areas = [...prev.areas];
+        
+        if (!targetAreaId) {
+            targetAreaId = generateId();
+            areas.push({
+                id: targetAreaId,
+                name: "Planta Principal",
+                rooms: []
+            });
+        }
+
+        const newRooms = apiRooms.map(r => ({
+            id: String(r.external_id),
+            name: r.nombre
+        }));
+        
+        areas = areas.map(area => {
+            if (area.id === targetAreaId) {
+                const existingRooms = area.rooms || [];
+                const mergedRooms = [...existingRooms];
+                
+                newRooms.forEach(newRoom => {
+                    // Check if room exists by ID (external_id) or Name
+                    const index = mergedRooms.findIndex(r => r.id === newRoom.id || r.name === newRoom.name);
+                    if (index >= 0) {
+                         // Update
+                         mergedRooms[index] = { ...mergedRooms[index], ...newRoom, id: newRoom.id };
+                    } else {
+                         // Add
+                         mergedRooms.push(newRoom);
+                    }
+                });
+                
+                return { ...area, rooms: mergedRooms };
+            }
+            return area;
+        });
+
+        return { ...prev, areas };
+      });
+
+      toast.success(`Sincronizadas ${apiRooms.length} salas en "Planta Principal"`);
+
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const addArea = () => {
     if (!newArea.trim()) return;
@@ -63,9 +133,22 @@ export function StructureConfig({ config, setConfig }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Áreas de Fabricación</CardTitle>
-          <CardDescription>Define las áreas principales de la fábrica</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle>Áreas de Fabricación</CardTitle>
+            <CardDescription>Define las áreas principales de la fábrica</CardDescription>
+          </div>
+          <Button
+            onClick={handleSyncRooms}
+            disabled={isSyncing}
+            variant="outline"
+            size="sm"
+            className="h-8 flex items-center gap-2 border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700"
+            title="Importar salas desde cdeapp.es"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Importar Salas</span>
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
