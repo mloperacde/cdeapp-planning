@@ -77,16 +77,16 @@ export default function MachineMasterPage() {
         // MAPEO ESTRICTO: Solo actualizamos identificación, ubicación y datos técnicos básicos.
         // Se preservan explícitamente: Mantenimiento, Imágenes, Archivos, Notas, etc.
         const machineData = {
-          id_base44: apiMachine.external_id,      // ID Externo
+          id_base44: apiMachine.external_id,      // ID Externo (Vinculación)
           codigo_maquina: apiMachine.codigo,      // Código
           nombre: apiMachine.nombre,              // Nombre / Denominación
-          tipo: apiMachine.tipo,                  // Tipo de Máquina
-          cadencia: apiMachine.cadencia,          // Velocidad
           ubicacion: apiMachine.sala,             // Sala / Ubicación
           
-          // Mapeo de estados simple
-          estado_operativo: apiMachine.estado === 'Activo' ? 'Disponible' : 'Inactivo',
-          nozzle: apiMachine.nozzle,
+          // ELIMINADOS DE LA SINCRONIZACIÓN (Se gestionan solo localmente):
+          // tipo: apiMachine.tipo,
+          // cadencia: apiMachine.cadencia,
+          // estado_operativo: ...
+          // nozzle: ...
         };
 
         if (existing) {
@@ -99,6 +99,7 @@ export default function MachineMasterPage() {
           await base44.entities.MachineMasterDatabase.create({
              ...machineData,
              descripcion: apiMachine.nombre, // Descripción inicial igual al nombre
+             tipo: apiMachine.tipo || 'General', // Solo al crear
              orden_visualizacion: 999,
              estado_produccion: 'Sin Producción',
              estado_disponibilidad: 'Disponible',
