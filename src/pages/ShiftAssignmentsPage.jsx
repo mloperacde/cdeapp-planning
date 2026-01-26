@@ -121,7 +121,17 @@ export default function ShiftAssignmentsPage() {
   // 4. Fetch Machine Assignments (Ideal Configuration)
   const { data: machineAssignments = [] } = useQuery({
     queryKey: ['machineAssignments'],
-    queryFn: () => base44.entities.MachineAssignment.list(undefined, 2000),
+    queryFn: async () => {
+        // Fetch ALL pages of assignments manually because .list(undefined, 2000) might not be working as expected or hitting a hard limit
+        // Or simply to be 100% sure we get everything.
+        // Actually, let's just log what we get.
+        console.log("Fetching machine assignments...");
+        const all = await base44.entities.MachineAssignment.list(undefined, 2000);
+        console.log("Fetched assignments count:", all.length);
+        console.log("Sample assignment:", all[0]);
+        console.log("Unique team keys:", [...new Set(all.map(a => a.team_key))]);
+        return all;
+    },
     enabled: !!selectedTeam,
   });
 
@@ -170,9 +180,21 @@ export default function ShiftAssignmentsPage() {
           // Filter assignments that match Key OR Name OR ID
           const teamAssignments = machineAssignments.filter(ma => {
               const maKey = normalizeKey(ma.team_key);
-              return maKey === targetKey || 
-                     (targetName && maKey === targetName) || 
-                     (targetId && maKey === targetId);
+              
+              // Direct Match
+              if (maKey === targetKey) return true;
+              
+              // Name Match (e.g. "Turno 2" vs "team_2")
+              if (targetName && maKey === targetName) return true;
+              
+              // ID Match
+              if (targetId && maKey === targetId) return true;
+              
+              // Special Case: "team_2" often saved as "Turno 2" or vice versa
+              if (targetKey === "team_2" && maKey.includes("turno") && maKey.includes("2")) return true;
+              if (targetKey === "team_1" && maKey.includes("turno") && maKey.includes("1")) return true;
+
+              return false;
           });
           
           teamAssignments.forEach(ma => {
@@ -841,7 +863,7 @@ export default function ShiftAssignmentsPage() {
                 <p>Assignments for Team ({selectedTeam}): {Object.keys(getIdealAssignments()).length}</p>
                 <p>Existing Staffing Records: {existingStaffing.length}</p>
                 <p>Local Assignments Keys: {Object.keys(localAssignments).length}</p>
-                <p className="mt-2 font-bold text-red-500">Available Keys: {[...new Set(machineAssignments.map(ma => ma.team_key))].join(', ')}</p>
+                <p className="mt-2 font-bold text-red-500">Available Keys (RAW): {JSON.stringify([...new Set(machineAssignments.map(ma => ma.team_key))])}</p>
             </div>
         </div>
       </details>
