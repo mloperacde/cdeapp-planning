@@ -39,12 +39,15 @@ export default function BreaksPage() {
     activo: true,
   });
 
-  const { data: breakShifts, isLoading } = useQuery({
+  const { data: breakShifts, isLoading, error } = useQuery({
     queryKey: ['breakShifts'],
     queryFn: () => base44.entities.BreakShift.list(),
     initialData: [],
   });
 
+  // Debug: Log data structure to help identify field mismatches
+  const dataStructure = breakShifts.length > 0 ? Object.keys(breakShifts[0]) : [];
+  
   const saveMutation = useMutation({
     mutationFn: (data) => {
       if (editingBreak?.id) {
@@ -241,6 +244,42 @@ export default function BreaksPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Diagnostic View - To ensure database data is visible regardless of field names */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4 text-slate-800">Vista de Datos Crudos (Base de Datos)</h2>
+          <Card className="shadow-sm border border-slate-200">
+             <CardContent className="p-0 overflow-x-auto">
+               <Table>
+                 <TableHeader>
+                   <TableRow>
+                     {dataStructure.map(key => (
+                       <TableHead key={key} className="whitespace-nowrap font-bold text-slate-700">{key}</TableHead>
+                     ))}
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {breakShifts.map((item, idx) => (
+                     <TableRow key={item.id || idx}>
+                       {dataStructure.map(key => (
+                         <TableCell key={key} className="whitespace-nowrap">
+                           {typeof item[key] === 'object' ? JSON.stringify(item[key]) : String(item[key])}
+                         </TableCell>
+                       ))}
+                     </TableRow>
+                   ))}
+                   {breakShifts.length === 0 && (
+                     <TableRow>
+                       <TableCell colSpan={dataStructure.length || 1} className="text-center py-8 text-slate-500">
+                         No hay registros crudos encontrados en base44.entities.BreakShift
+                       </TableCell>
+                     </TableRow>
+                   )}
+                 </TableBody>
+               </Table>
+             </CardContent>
+          </Card>
+        </div>
       </div>
 
       {showForm && (

@@ -321,7 +321,7 @@ export default function ShiftAssignmentsPage() {
     }
     
     setLocalAssignments(finalAssignments);
-  }, [existingStaffing, machineAssignments, selectedTeam, employees]); 
+  }, [existingStaffing, machineAssignments, selectedTeam, employees, teams]); 
 
   const handleRestoreIdeal = () => {
       const ideal = getIdealAssignments();
