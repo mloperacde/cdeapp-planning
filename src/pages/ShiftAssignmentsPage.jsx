@@ -162,7 +162,18 @@ export default function ShiftAssignmentsPage() {
           const normalizeKey = (k) => k ? String(k).trim().toLowerCase() : "";
           const targetKey = normalizeKey(selectedTeam);
 
-          const teamAssignments = machineAssignments.filter(ma => normalizeKey(ma.team_key) === targetKey);
+          // Find the Team Config object to get alternative names (e.g. team_name)
+          const teamConfig = teams.find(t => normalizeKey(t.team_key) === targetKey);
+          const targetName = teamConfig ? normalizeKey(teamConfig.team_name) : "";
+          const targetId = teamConfig ? normalizeKey(teamConfig.id) : "";
+
+          // Filter assignments that match Key OR Name OR ID
+          const teamAssignments = machineAssignments.filter(ma => {
+              const maKey = normalizeKey(ma.team_key);
+              return maKey === targetKey || 
+                     (targetName && maKey === targetName) || 
+                     (targetId && maKey === targetId);
+          });
           
           teamAssignments.forEach(ma => {
               const getVal = (val) => Array.isArray(val) ? val[0] : val;
@@ -827,9 +838,10 @@ export default function ShiftAssignmentsPage() {
             </div>
             <div>
                 <p>Ideal Assignments Loaded: {machineAssignments.length}</p>
-                <p>Assignments for Team ({selectedTeam}): {machineAssignments.filter(ma => String(ma.team_key) === String(selectedTeam)).length}</p>
+                <p>Assignments for Team ({selectedTeam}): {Object.keys(getIdealAssignments()).length}</p>
                 <p>Existing Staffing Records: {existingStaffing.length}</p>
                 <p>Local Assignments Keys: {Object.keys(localAssignments).length}</p>
+                <p className="mt-2 font-bold text-red-500">Available Keys: {[...new Set(machineAssignments.map(ma => ma.team_key))].join(', ')}</p>
             </div>
         </div>
       </details>
