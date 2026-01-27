@@ -74,6 +74,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
              nombre: m.nombre,
              codigo: m.codigo_maquina,
              descripcion: m.descripcion,
+             ubicacion: m.ubicacion,
              orden: m.orden_visualizacion || 999
            });
         }
@@ -453,7 +454,14 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                                     <TableRow key={planning.id} className="hover:bg-slate-50/50">
                                         <TableCell className="font-medium text-slate-900">
                                             <div className="flex flex-col">
-                                                <span>{item.nombre}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{item.nombre}</span>
+                                                    {item.ubicacion && (
+                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-slate-50 font-normal text-slate-500 border-slate-200">
+                                                            {item.ubicacion}
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                                 {item.descripcion && item.descripcion !== item.nombre && (
                                                     <div className="text-xs text-slate-500">{item.descripcion}</div>
                                                 )}

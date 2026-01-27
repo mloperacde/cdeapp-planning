@@ -36,6 +36,7 @@ export default function MachineSkillsView() {
                 nombre: m.nombre,
                 codigo: m.codigo_maquina,
                 descripcion: m.descripcion,
+                ubicacion: m.ubicacion,
                 orden: m.orden_visualizacion || 999
             })).sort((a, b) => a.orden - b.orden);
         },

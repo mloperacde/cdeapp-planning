@@ -475,7 +475,12 @@ export default function ShiftPlanningPage() {
                             <Cog className="w-5 h-5 text-blue-600" />
                             <div>
                               <CardTitle className="text-lg">{machine.nombre}</CardTitle>
-                              <div className="text-xs text-slate-500">{machine.codigo}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <div className="text-xs text-slate-500">{machine.codigo}</div>
+                                {machine.ubicacion && (
+                                  <div className="text-xs text-slate-400">• {machine.ubicacion}</div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </CardHeader>

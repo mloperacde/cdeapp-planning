@@ -117,6 +117,7 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
           id: m.id,
           nombre: m.nombre || '',
           codigo: m.codigo_maquina || m.codigo || '',
+          ubicacion: m.ubicacion || '',
           orden: m.orden_visualizacion || 999
         }))
         .sort((a, b) => (a.orden || 999) - (b.orden || 999));
@@ -584,8 +585,11 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
                                 <h4 className="font-semibold text-slate-900">
                                   {machine?.nombre || "Máquina no encontrada"}
                                 </h4>
-                                {machine?.codigo_maquina && (
-                                  <p className="text-xs text-slate-500 font-mono">{machine.codigo_maquina}</p>
+                                {machine?.codigo && (
+                                  <p className="text-xs text-slate-500 font-mono">{machine.codigo}</p>
+                                )}
+                                {machine?.ubicacion && (
+                                  <p className="text-xs text-blue-600 font-medium">{machine.ubicacion}</p>
                                 )}
                               </div>
                             </div>

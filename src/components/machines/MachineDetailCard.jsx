@@ -264,9 +264,17 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
       <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span className="truncate max-w-[70%]">
-              {machine.nombre_maquina || machine.nombre || "Ficha de Máquina"}
-            </span>
+            <div className="flex flex-col overflow-hidden max-w-[70%]">
+              <span className="truncate text-lg">
+                {machine.nombre_maquina || machine.nombre || "Ficha de Máquina"}
+              </span>
+              {machine.ubicacion && (
+                <span className="text-xs text-slate-500 font-normal flex items-center gap-1">
+                  {machine.ubicacion}
+                  {machine.codigo && <span className="bg-slate-100 px-1 rounded text-slate-600 font-mono">{machine.codigo}</span>}
+                </span>
+              )}
+            </div>
             {canEdit && (
               <div className="flex gap-2">
                 {!editMode ? (

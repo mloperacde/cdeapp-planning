@@ -95,6 +95,7 @@ export default function MachinePlanningSelector({
                       <div className="flex items-center gap-2">
                         <Cog className="w-3 h-3" />
                         {machine.nombre} ({machine.codigo})
+                        {machine.ubicacion && <span className="text-xs text-slate-400">• {machine.ubicacion}</span>}
                       </div>
                     </SelectItem>
                   ))}

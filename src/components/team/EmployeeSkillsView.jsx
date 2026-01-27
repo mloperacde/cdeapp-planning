@@ -36,6 +36,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
                 id: m.id,
                 nombre: m.nombre,
                 codigo: m.codigo_maquina,
+                ubicacion: m.ubicacion,
                 orden: m.orden_visualizacion || 999
             })).sort((a, b) => a.orden - b.orden);
         },
@@ -344,13 +345,27 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                                    >
                                                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-slate-100 focus:ring-0">
                                                            <SelectValue>
-                                                               {selectedMachine ? selectedMachine.nombre : "-"}
+                                                               {selectedMachine ? (
+                                                                   <span>
+                                                                       {selectedMachine.nombre}
+                                                                       {selectedMachine.ubicacion && (
+                                                                           <span className="ml-1 text-[10px] text-slate-400">({selectedMachine.ubicacion})</span>
+                                                                       )}
+                                                                   </span>
+                                                               ) : "-"}
                                                            </SelectValue>
                                                        </SelectTrigger>
                                                        <SelectContent>
                                                            <SelectItem value="none">- Sin asignar -</SelectItem>
                                                            {machines.map(m => (
-                                                               <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                                                               <SelectItem key={m.id} value={m.id}>
+                                                                   <div className="flex flex-col">
+                                                                       <span>{m.nombre}</span>
+                                                                       {m.ubicacion && (
+                                                                           <span className="text-[10px] text-slate-400">{m.ubicacion}</span>
+                                                                       )}
+                                                                   </div>
+                                                               </SelectItem>
                                                            ))}
                                                        </SelectContent>
                                                    </Select>
