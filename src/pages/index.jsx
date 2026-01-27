@@ -51,6 +51,7 @@ import RolesConfig from "./RolesConfig";
 import MessagingConfiguration from "./MessagingConfiguration";
 import RulesAndTemplates from "./RulesAndTemplates";
 import OrganizationalStructure from "./OrganizationalStructure";
+import MigrationDashboard from "../components/config/MigrationDashboard";
 import DireccionSkills from "./DireccionSkills";
 import PlanificacionSkills from "./PlanificacionSkills";
 import FabricacionSkills from "./FabricacionSkills";

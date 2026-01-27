@@ -31,9 +31,11 @@ import { es } from "date-fns/locale";
 import { useToast } from "@/components/ui/use-toast";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ThemeToggle from "../components/common/ThemeToggle";
+import { useNavigate } from "react-router-dom";
 
 export default function ShiftAssignmentsPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedMachineId, setSelectedMachineId] = useState(null);
@@ -136,6 +138,17 @@ export default function ShiftAssignmentsPage() {
   });
 
   // --- DERIVED STATE ---
+
+  const legacyEmployeesCount = useMemo(() => {
+      return employees.filter(e => {
+          for(let i=1; i<=10; i++) {
+              if (e[`maquina_${i}`] && !employeeSkills.some(s => s.employee_id === e.id && s.orden_preferencia === i)) {
+                  return true;
+              }
+          }
+          return false;
+      }).length;
+  }, [employees, employeeSkills]);
 
   const sortedProductionPlan = useMemo(() => {
       if (!productionPlan) return [];
@@ -627,6 +640,26 @@ export default function ShiftAssignmentsPage() {
   return (
     <div className="h-full flex flex-col p-4 gap-4 bg-slate-50 dark:bg-slate-950 overflow-hidden w-full max-w-full">
       
+      {legacyEmployeesCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 shrink-0 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <span className="text-sm text-amber-800">
+                    Se detectaron {legacyEmployeesCount} empleados con habilidades en formato antiguo (Legacy).
+                    Esto puede causar errores en la asignación automática.
+                </span>
+            </div>
+            <Button 
+                size="sm" 
+                variant="outline" 
+                className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                onClick={() => navigate('/MigrationDashboard')}
+            >
+                Ir al Panel de Migración
+            </Button>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">

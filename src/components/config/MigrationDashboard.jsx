@@ -261,6 +261,10 @@ function TeamsMigrationPanel() {
   const [migrating, setMigrating] = useState(false);
   const [analysis, setAnalysis] = useState(null);
 
+  useEffect(() => {
+    analyzeTeams();
+  }, []);
+
   const analyzeTeams = async () => {
     setAnalyzing(true);
     try {
