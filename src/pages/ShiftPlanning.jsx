@@ -130,17 +130,51 @@ export default function ShiftPlanningPage() {
     return true; // For now, show all teams
   };
 
+  const { data: teamSchedules = [] } = useQuery({
+    queryKey: ['teamWeekSchedules'],
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
+  });
+
+  // Helper to determine team for current date/shift if "all" is selected
+  const inferTeamForShift = (date, shift) => {
+      const defaultTeam = teams.length > 0 ? teams[0].team_key : "team_1";
+      if (!teamSchedules.length) return defaultTeam; // Fallback
+      
+      const startOfWeekDate = new Date(date);
+      const day = startOfWeekDate.getDay();
+      const diff = startOfWeekDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
+      startOfWeekDate.setDate(diff);
+      const weekStartStr = format(startOfWeekDate, 'yyyy-MM-dd');
+
+      const schedule = teamSchedules.find(s => 
+          s.fecha_inicio_semana === weekStartStr && 
+          s.turno === shift
+      );
+      
+      return schedule ? schedule.team_key : defaultTeam;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const promises = [];
 
+      // Infer team once if "all" is selected to ensure consistency for this batch
+      const inferredTeam = selectedTeam !== "all" ? selectedTeam : inferTeamForShift(selectedDate, selectedShift);
+
       for (const [machineId, data] of Object.entries(assignments)) {
         const existing = dailyStaffing.find(ds => ds.machine_id === machineId);
         
-        // Determinar team_key basado en el filtro o encontrar del empleado
-        let teamKey = selectedTeam !== "all" ? selectedTeam : "team_1";
+        // Determinar team_key
+        let teamKey = inferredTeam;
         
+        // If existing record has a team_key, maybe we should respect it? 
+        // But if we are overwriting, we might want to update the team too if it was wrong?
+        // Usually, for a specific date/shift, the team is fixed.
+        if (existing && existing.team_key) {
+            teamKey = existing.team_key;
+        }
+
         const payload = {
           date: dateStr,
           shift: selectedShift,

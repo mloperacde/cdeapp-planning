@@ -286,6 +286,7 @@ export default function MachineSkillsView() {
                     <TableHeader className="bg-slate-50 sticky top-0 z-10">
                         <TableRow>
                             <TableHead className="w-[200px]">Máquina</TableHead>
+                            <TableHead className="w-[100px]">Sala</TableHead>
                             <TableHead className="w-[30%]">Responsables de Línea</TableHead>
                             <TableHead className="w-[30%]">Segundas de Línea</TableHead>
                             <TableHead className="w-[30%]">Operarios</TableHead>
@@ -300,16 +301,15 @@ export default function MachineSkillsView() {
                             return (
                                 <TableRow key={machine.id} className="hover:bg-slate-50">
                                     <TableCell>
-                                        <div className="font-medium">{machine.descripcion || machine.nombre}</div>
-                                        {machine.descripcion && machine.descripcion !== machine.nombre && (
-                                            <div className="text-xs text-slate-500">{machine.nombre}</div>
+                                        <div className="font-medium">{machine.nombre}</div>
+                                        <div className="text-sm text-slate-500">{machine.descripcion}</div>
+                                    </TableCell>
+                                    <TableCell>
+                                        {machine.ubicacion && (
+                                            <Badge variant="outline" className="bg-slate-100 text-slate-700 whitespace-nowrap">
+                                                {machine.ubicacion}
+                                            </Badge>
                                         )}
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <div className="text-xs text-slate-500 font-mono bg-slate-100 px-1 rounded">{machine.codigo}</div>
-                                            {machine.ubicacion && (
-                                                <div className="text-xs text-slate-400">• {machine.ubicacion}</div>
-                                            )}
-                                        </div>
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">

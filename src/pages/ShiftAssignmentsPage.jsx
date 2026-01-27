@@ -188,8 +188,10 @@ export default function ShiftAssignmentsPage() {
               
               if (targetId && maKey === targetId) return true;
               
-              if (targetKey === "team_2" && maKey.includes("turno") && maKey.includes("2")) return true;
-              if (targetKey === "team_1" && maKey.includes("turno") && maKey.includes("1")) return true;
+              // Dynamic number matching for legacy keys
+              const targetNum = targetKey.replace(/\D/g, '');
+              const maNum = maKey.replace(/\D/g, '');
+              if (targetNum && maNum && targetNum === maNum && maKey.includes("turno")) return true;
 
               return false;
           });
@@ -388,7 +390,8 @@ export default function ShiftAssignmentsPage() {
     const emp = getEmployeeById(employeeId);
     if (!emp) return false;
 
-    // 1. Check Skill Matrix
+    // 1. Check Skill Matrix (EmployeeMachineSkill)
+    // employeeSkills is now EmployeeMachineSkill list
     const hasSkill = employeeSkills.some(es => 
         es.employee_id === employeeId && 
         String(es.machine_id) === String(machineId)

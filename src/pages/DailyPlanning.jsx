@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import QualityPlanningTab from "../components/dailyplanning/QualityPlanningTab";
 
 export default function DailyPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedTeam, setSelectedTeam] = useState('team_1');
+  const [selectedTeam, setSelectedTeam] = useState('');
   const [activeTab, setActiveTab] = useState('production');
   const [isCalling, setIsCalling] = useState(false);
 
@@ -29,6 +29,13 @@ export default function DailyPlanningPage() {
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
+
+  // Set default team when teams are loaded
+  useEffect(() => {
+    if (teams.length > 0 && !selectedTeam) {
+        setSelectedTeam(teams[0].team_key);
+    }
+  }, [teams, selectedTeam]);
 
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],

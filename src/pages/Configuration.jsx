@@ -119,6 +119,13 @@ export default function ConfigurationPage() {
           color: "blue"
         },
         {
+          title: "Diagnóstico y Migración",
+          description: "Herramientas de salud de datos y migración legacy",
+          icon: Activity,
+          url: "/MigrationDashboard",
+          color: "red"
+        },
+        {
           title: "Reglas y Plantillas",
           description: "Reglas de negocio, notificaciones y plantillas",
           icon: Gavel,

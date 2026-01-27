@@ -3,9 +3,10 @@ import { format, isWithinInterval, startOfWeek } from "date-fns";
 import TimeSlot from "./TimeSlot";
 import { AlertCircle, Clock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SHIFTS, WORK_SCHEDULES, WORKING_HOURS } from "@/constants/shifts";
 
-const WORKING_DAY_START = 7 * 60;
-const WORKING_DAY_END = 22 * 60;
+const WORKING_DAY_START = WORKING_HOURS.START_MINUTES;
+const WORKING_DAY_END = WORKING_HOURS.END_MINUTES;
 
 export default function TimelineView({
   startDate,
@@ -69,23 +70,20 @@ export default function TimelineView({
     }
 
     // Filtro por equipo
-    if (selectedTeam === 'team_1') {
-      const teamName = getTeamName('team_1');
-      filteredEmployees = filteredEmployees.filter((emp) => emp?.equipo === teamName);
-    } else if (selectedTeam === 'team_2') {
-      const teamName = getTeamName('team_2');
-      filteredEmployees = filteredEmployees.filter((emp) => emp?.equipo === teamName);
+    if (selectedTeam !== 'all') {
+      const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === selectedTeam) : null;
+      const teamName = team?.team_name || '';
+      if (teamName) {
+        filteredEmployees = filteredEmployees.filter((emp) => emp?.equipo === teamName);
+      }
     }
 
     stats.totalEmployees = filteredEmployees.length;
 
     const getEmployeeTeamKey = (employee) => {
-      const team1 = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_1') : null;
-      const team2 = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_2') : null;
-
-      if (team1 && employee?.equipo === team1.team_name) return 'team_1';
-      if (team2 && employee?.equipo === team2.team_name) return 'team_2';
-      return null;
+      if (!employee?.equipo) return null;
+      const foundTeam = Array.isArray(teams) ? teams.find((t) => t.team_name === employee.equipo) : null;
+      return foundTeam ? foundTeam.team_key : null;
     };
 
     const getTeamScheduleForWeek = (teamKey, date) => {
@@ -110,20 +108,20 @@ export default function TimelineView({
     });
 
     const getEmployeeShift = (employee, date, teamKey) => {
-      if (!employee) return "Mañana";
-      if (employee.tipo_turno === "Fijo Mañana") return "Mañana";
-      if (employee.tipo_turno === "Fijo Tarde") return "Tarde";
+      if (!employee) return SHIFTS.MORNING;
+      if (employee.tipo_turno === SHIFTS.FIXED_MORNING) return SHIFTS.MORNING;
+      if (employee.tipo_turno === SHIFTS.FIXED_AFTERNOON) return SHIFTS.AFTERNOON;
 
-      if (employee.tipo_turno === "Rotativo" && teamKey) {
+      if (employee.tipo_turno === SHIFTS.ROTATING && teamKey) {
         const schedule = getTeamScheduleForWeek(teamKey, date);
-        return schedule?.turno || "Mañana";
+        return schedule?.turno || SHIFTS.MORNING;
       }
 
-      return "Mañana";
+      return SHIFTS.MORNING;
     };
 
     const getEmployeeSchedule = (employee, shift) => {
-      if (!employee) return { start: 7 * 60, end: 15 * 60 };
+      if (!employee) return { start: WORK_SCHEDULES.MORNING.startHour * 60, end: WORK_SCHEDULES.MORNING.endHour * 60 };
 
       if (employee.tipo_jornada === "Reducida" && employee.horario_personalizado_inicio && employee.horario_personalizado_fin) {
         const [startH, startM] = employee.horario_personalizado_inicio.split(':').map(Number);
@@ -131,13 +129,13 @@ export default function TimelineView({
         return { start: startH * 60 + startM, end: endH * 60 + endM };
       }
 
-      if (shift === "Mañana") {
-        return { start: 7 * 60, end: 15 * 60 };
+      if (shift === SHIFTS.MORNING) {
+        return { start: WORK_SCHEDULES.MORNING.startHour * 60, end: WORK_SCHEDULES.MORNING.endHour * 60 };
       } else {
         if (employee.tipo_jornada === "Completa 40h") {
-          return { start: 14 * 60, end: 22 * 60 };
+          return { start: WORK_SCHEDULES.AFTERNOON_40H.startHour * 60, end: WORK_SCHEDULES.AFTERNOON_40H.endHour * 60 };
         } else {
-          return { start: 15 * 60, end: 22 * 60 };
+          return { start: WORK_SCHEDULES.AFTERNOON.startHour * 60, end: WORK_SCHEDULES.AFTERNOON.endHour * 60 };
         }
       }
     };
@@ -223,13 +221,9 @@ export default function TimelineView({
   const avgEmployees = (workingIntervals.reduce((sum, i) => sum + (i?.availableEmployees || 0), 0) / workingIntervals.length).toFixed(1);
 
   const getTeamColor = () => {
-    if (selectedTeam === 'team_1') {
-      const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_1') : null;
-      return team?.color || '#8B5CF6';
-    }
-    if (selectedTeam === 'team_2') {
-      const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === 'team_2') : null;
-      return team?.color || '#EC4899';
+    if (selectedTeam !== 'all') {
+      const team = Array.isArray(teams) ? teams.find((t) => t?.team_key === selectedTeam) : null;
+      return team?.color || '#3B82F6';
     }
     return '#3B82F6';
   };

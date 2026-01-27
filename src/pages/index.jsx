@@ -270,6 +270,7 @@ function PagesContent() {
                 <Route path="/MessagingConfiguration" element={<MessagingConfiguration />} />
                 <Route path="/RulesAndTemplates" element={<RulesAndTemplates />} />
                 <Route path="/OrganizationalStructure" element={<OrganizationalStructure />} />
+                <Route path="/MigrationDashboard" element={<MigrationDashboard />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />
