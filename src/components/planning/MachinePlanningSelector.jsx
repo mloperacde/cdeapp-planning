@@ -58,6 +58,7 @@ export default function MachinePlanningSelector({
       machine_id: machine.id,
       machine_nombre: machine.nombre,
       machine_codigo: machine.codigo,
+      machine_ubicacion: machine.ubicacion,
       process_id: process.id,
       process_nombre: process.nombre,
       operadores_requeridos: process.operadores_requeridos || 1,

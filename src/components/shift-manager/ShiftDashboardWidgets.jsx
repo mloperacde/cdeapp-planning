@@ -7,7 +7,7 @@ import {
     CheckCircle2, UserX, RefreshCw, KeyRound, Clock, 
     Sunrise, Sunset, Users, 
     UserCog, UsersRound, TrendingUp,
-    MessageSquare, ArrowLeftRight, Coffee, Cake, Calendar, AlertTriangle
+    MessageSquare, ArrowLeftRight, Coffee, Cake, Calendar, AlertTriangle, MapPin
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -74,7 +74,42 @@ export function KPIWidget({ employees, activeAbsencesToday, pendingSwaps, locker
 }
 
 // Widget: Team Status
-export function TeamStatusWidget({ teamStats, absencesByTeam }) {
+export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailyStaffing, employees }) {
+
+    const getTeamSalas = (teamName) => {
+        if (!dailyStaffing?.length || !machines?.length || !employees?.length) return [];
+        
+        const teamEmployeeIds = new Set(
+            employees
+                .filter(e => e.equipo === teamName)
+                .map(e => e.id)
+        );
+        
+        const STAFF_FIELDS = [
+            'responsable_linea', 'segunda_linea',
+            'operador_1', 'operador_2', 'operador_3', 'operador_4',
+            'operador_5', 'operador_6', 'operador_7', 'operador_8'
+        ];
+
+        const activeSalas = new Set();
+        
+        dailyStaffing.forEach(assignment => {
+            const hasTeamMember = STAFF_FIELDS.some(field => {
+                const empId = assignment[field];
+                return empId && teamEmployeeIds.has(empId);
+            });
+            
+            if (hasTeamMember) {
+                const machine = machines.find(m => m.id === assignment.machine_id);
+                if (machine?.ubicacion) {
+                    activeSalas.add(machine.ubicacion);
+                }
+            }
+        });
+        
+        return Array.from(activeSalas).sort();
+    };
+
     return (
         <Card className="mb-6 shadow-lg border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800">
@@ -85,7 +120,9 @@ export function TeamStatusWidget({ teamStats, absencesByTeam }) {
             </CardHeader>
             <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {teamStats.map((team) => (
+                    {teamStats.map((team) => {
+                        const activeSalas = getTeamSalas(team.team_name);
+                        return (
                         <div 
                             key={team.team_key} 
                             className="border-2 rounded-lg p-4"
@@ -94,7 +131,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam }) {
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{team.team_name}</h3>
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                         {team.shift === "Mañana" && (
                                             <Badge className="bg-amber-100 text-amber-800">
                                                 <Sunrise className="w-3 h-3 mr-1" />
@@ -111,6 +148,18 @@ export function TeamStatusWidget({ teamStats, absencesByTeam }) {
                                             <Badge variant="outline" className="bg-slate-100">
                                                 Sin asignar
                                             </Badge>
+                                        )}
+                                        {activeSalas.length > 0 && (
+                                            <div className="flex items-center gap-1 ml-1 border-l pl-2 border-slate-200">
+                                                <MapPin className="w-3 h-3 text-slate-400" />
+                                                <div className="flex gap-1 flex-wrap">
+                                                    {activeSalas.map(sala => (
+                                                        <Badge key={sala} variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-slate-50 text-slate-600 border-slate-200">
+                                                            {sala}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -151,7 +200,8 @@ export function TeamStatusWidget({ teamStats, absencesByTeam }) {
                                 </div>
                             )}
                         </div>
-                    ))}
+                    );
+                    })}
                 </div>
             </CardContent>
         </Card>

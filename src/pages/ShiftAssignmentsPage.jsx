@@ -202,9 +202,16 @@ export default function ShiftAssignmentsPage() {
               if (targetId && maKey === targetId) return true;
               
               // Dynamic number matching for legacy keys
-              const targetNum = targetKey.replace(/\D/g, '');
-              const maNum = maKey.replace(/\D/g, '');
-              if (targetNum && maNum && targetNum === maNum && maKey.includes("turno")) return true;
+          const targetNum = targetKey.replace(/\D/g, '');
+          const maNum = maKey.replace(/\D/g, '');
+          
+          // Strict number matching if both have numbers
+          if (targetNum && maNum && targetNum === maNum) {
+             // Allow 'turno', 'team', 'equipo' prefixes, or if keys are just numbers
+             if (maKey.includes("turno") || maKey.includes("team") || maKey.includes("equipo") || /^\d+$/.test(maKey)) {
+                 return true;
+             }
+          }
 
               return false;
           });
@@ -848,7 +855,7 @@ export default function ShiftAssignmentsPage() {
                         </>
                     ) : (
                         <div className="flex items-center gap-2 text-slate-500">
-                            <ArrowRight className="w-5 h-5 animate-pulse" />
+                            <Factory className="w-5 h-5 animate-pulse" />
                             <span>Seleccione una máquina de la lista para comenzar</span>
                         </div>
                     )}

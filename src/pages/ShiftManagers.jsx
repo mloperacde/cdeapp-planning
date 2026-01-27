@@ -131,6 +131,21 @@ export default function ShiftManagersPage() {
     queryFn: () => base44.entities.Absence.list(),
   });
 
+  const { data: machines = EMPTY_ARRAY } = useQuery({
+      queryKey: ['machines_master'],
+      queryFn: () => base44.entities.MachineMasterDatabase.list(),
+      staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: dailyStaffing = EMPTY_ARRAY } = useQuery({
+      queryKey: ['daily_staffing_today'],
+      queryFn: () => {
+          const today = format(new Date(), 'yyyy-MM-dd');
+          return base44.entities.DailyMachineStaffing.filter({ date: today });
+      },
+      refetchInterval: 60000,
+  });
+
   // Active absences today
   const activeAbsencesToday = useMemo(() => {
     const now = new Date();
@@ -365,6 +380,8 @@ export default function ShiftManagersPage() {
                         absencesByTeam={absencesByTeam}
                         setActiveView={setActiveView}
                         upcomingBirthdays={upcomingBirthdays}
+                        machines={machines}
+                        dailyStaffing={dailyStaffing}
                     />
                 );
             })}

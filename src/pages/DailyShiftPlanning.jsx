@@ -256,7 +256,16 @@ export default function DailyShiftPlanningPage() {
                                             {machine.nombre}
                                             {hasHighPriority && <Badge variant="destructive" className="text-xs">Prioridad Alta</Badge>}
                                         </CardTitle>
-                                        <div className="text-xs text-slate-500 mt-1">
+                                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 mb-2">
+                                            <span>{machine.codigo}</span>
+                                            {machine.ubicacion && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="font-medium text-slate-600 dark:text-slate-400">{machine.ubicacion}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-slate-500">
                                             {orders.length > 0 ? (
                                                 <div className="flex flex-col gap-1">
                                                     {orders.map(o => (

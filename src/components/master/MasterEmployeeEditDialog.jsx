@@ -48,6 +48,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       id: m.id,
       nombre: m.nombre || 'Sin nombre',
       codigo: m.codigo || '',
+      ubicacion: m.ubicacion || '',
       tipo: m.tipo || '',
       estado: m.estado || 'Disponible',
       orden: m.orden || 999
@@ -1123,14 +1124,30 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                       >
                        <SelectTrigger>
                          <SelectValue placeholder="Sin asignar">
-                           {selectedMachine ? `${selectedMachine.nombre} (${selectedMachine.codigo})` : "Sin asignar"}
+                           {selectedMachine ? (
+                             <div className="flex items-center gap-2">
+                               <span>{selectedMachine.nombre} ({selectedMachine.codigo})</span>
+                               {selectedMachine.ubicacion && (
+                                 <Badge variant="outline" className="h-5 px-1 text-[10px] bg-slate-100 text-slate-700 border-slate-200">
+                                   {selectedMachine.ubicacion}
+                                 </Badge>
+                               )}
+                             </div>
+                           ) : "Sin asignar"}
                          </SelectValue>
                        </SelectTrigger>
                        <SelectContent>
                          <SelectItem value="none">Sin asignar</SelectItem>
                          {allMachines.map((machine) => (
                            <SelectItem key={machine.id} value={machine.id}>
-                             {machine.nombre} ({machine.codigo})
+                             <div className="flex items-center gap-2">
+                               <span>{machine.nombre} ({machine.codigo})</span>
+                               {machine.ubicacion && (
+                                 <Badge variant="outline" className="h-5 px-1 text-[10px] bg-slate-100 text-slate-700 border-slate-200">
+                                   {machine.ubicacion}
+                                 </Badge>
+                               )}
+                             </div>
                            </SelectItem>
                          ))}
                        </SelectContent>
