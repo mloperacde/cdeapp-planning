@@ -56,6 +56,12 @@ export default function ShiftSwapWidget() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
+  // Fetch Team Configs to filter out obsolete teams (e.g. "Equipo Sara")
+  const { data: validTeams = [] } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+  });
+
   const { data: swapRequests = [] } = useQuery({
     queryKey: ['shiftSwapRequests'],
     queryFn: () => base44.entities.ShiftSwapRequest.list('-fecha_solicitud'),
@@ -66,7 +72,17 @@ export default function ShiftSwapWidget() {
     return employees.find(e => e.email === currentUser.email) || null;
   }, [currentUser, employees]);
 
-  const createRequestMutation = useMutation({
+  const validTeamNames = useMemo(() => {
+    if (!validTeams.length) return null; // If loading or empty, might want to show all or none. Let's show all if config is missing to avoid blocking valid data.
+    return new Set(validTeams.map(t => t.team_name));
+  }, [validTeams]);
+
+  // Filter requests: Must be "Publicado" AND belong to a valid team (if validation list is available)
+  const openRequests = swapRequests.filter(req => {
+    if (req.estado !== "Publicado") return false;
+    if (validTeamNames && !validTeamNames.has(req.equipo_solicitante)) return false;
+    return true;
+  });
     mutationFn: (data) => {
       const employee = employees.find(e => e.id === data.employee_id);
       return base44.entities.ShiftSwapRequest.create({
@@ -151,7 +167,6 @@ export default function ShiftSwapWidget() {
     });
   };
 
-  const openRequests = swapRequests.filter(req => req.estado === "Publicado");
   const myRequests = currentEmployee 
     ? swapRequests.filter(req => req.solicitante_id === currentEmployee.id || req.receptor_id === currentEmployee.id)
     : [];
