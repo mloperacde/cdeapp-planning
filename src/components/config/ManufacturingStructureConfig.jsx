@@ -385,7 +385,6 @@ export function StructureConfig({ config, setConfig }) {
 
 export function AssignmentsConfig({ config, setConfig }) {
   // Predefined shift leaders as per request, but allowing dynamic later if needed
-  // "Isa y Carlos Turno 1, Sara e Ivan turno 2"
   
   const updateAssignment = (shift, leaderName, areaId, checked) => {
     setConfig(prev => {
@@ -419,19 +418,19 @@ export function AssignmentsConfig({ config, setConfig }) {
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Turno 1 - Isa y Carlos</CardTitle>
+          <CardTitle>Turno 1 - Responsables</CardTitle>
           <CardDescription>Distribución de áreas para el primer turno</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <LeaderAssignment 
-              leaderName="Isa" 
+              leaderName="Responsable T1-A" 
               shift="shift1" 
               config={config} 
               onToggle={updateAssignment} 
             />
             <LeaderAssignment 
-              leaderName="Carlos" 
+              leaderName="Responsable T1-B" 
               shift="shift1" 
               config={config} 
               onToggle={updateAssignment} 
@@ -442,19 +441,19 @@ export function AssignmentsConfig({ config, setConfig }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Turno 2 - Sara e Ivan</CardTitle>
+          <CardTitle>Turno 2 - Responsables</CardTitle>
           <CardDescription>Distribución de áreas para el segundo turno</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <LeaderAssignment 
-              leaderName="Sara" 
+              leaderName="Responsable T2-A" 
               shift="shift2" 
               config={config} 
               onToggle={updateAssignment} 
             />
             <LeaderAssignment 
-              leaderName="Ivan" 
+              leaderName="Responsable T2-B" 
               shift="shift2" 
               config={config} 
               onToggle={updateAssignment} 

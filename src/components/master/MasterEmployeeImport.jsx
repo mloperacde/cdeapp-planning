@@ -193,7 +193,7 @@ export default function MasterEmployeeImport() {
     const exampleData = [
       'EMP001', 'Juan Pérez García', '1990-01-15', '12345678A', '12-3456789012-34', 
       'Masculino', 'ESPAÑOLA', 'Calle Principal 123', 'juan.perez@empresa.com', '600123456', 'FP Grado Medio',
-      'FABRICACION', 'OPERARIA DE LINEA', 'Categoría 1', 'Turno Isa',
+      'FABRICACION', 'OPERARIA DE LINEA', 'Categoría 1', 'Equipo 1',
       'Jornada Completa', '40', 'Rotativo',
       '07:00', '15:00', '14:00', '22:00',
       'Vestuario Masculino Planta Baja', '101',

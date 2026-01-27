@@ -205,7 +205,7 @@ function GeneralTeamConfig() {
                 <Input 
                   value={team.team_name} 
                   onChange={(e) => handleChange(team.id, 'team_name', e.target.value)}
-                  placeholder="Ej: Equipo 1 (Isa)"
+                  placeholder="Ej: Equipo 1"
                 />
               </div>
               <div className="space-y-2 w-32">
