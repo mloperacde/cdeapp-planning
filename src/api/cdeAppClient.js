@@ -4,8 +4,8 @@ import { toast } from "sonner";
 class CdeAppClient {
   constructor() {
     this.baseUrl = "https://cdeapp.es"; // Default, can be overridden if needed
-    // Prioridad: 1. Variable de Entorno (Secrets), 2. LocalStorage
-    this.apiKey = import.meta.env.VITE_CDEAPP_API_KEY || (typeof localStorage !== 'undefined' ? localStorage.getItem('cdeapp_api_key') : '');
+    // Prioridad: 1. Variable de Entorno (Secrets), 2. Fallback Hardcoded (para evitar reinicios), 3. LocalStorage
+    this.apiKey = import.meta.env.VITE_CDEAPP_API_KEY || '1oeV2Wg9g6gmY8rAGF4qxtBme4DsX7exYoiFFCf4xVQXDKDYp4Xc9CPSlm2ZzxSJ' || (typeof localStorage !== 'undefined' ? localStorage.getItem('cdeapp_api_key') : '');
   }
 
   setApiKey(key) {
