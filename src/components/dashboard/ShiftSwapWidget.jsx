@@ -29,7 +29,7 @@ import {
 import { RefreshCw, Plus, Calendar, ArrowRightLeft } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 
 export default function ShiftSwapWidget() {
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -83,6 +83,8 @@ export default function ShiftSwapWidget() {
     if (validTeamNames && !validTeamNames.has(req.equipo_solicitante)) return false;
     return true;
   });
+
+  const createRequestMutation = useMutation({
     mutationFn: (data) => {
       const employee = employees.find(e => e.id === data.employee_id);
       return base44.entities.ShiftSwapRequest.create({
@@ -108,7 +110,10 @@ export default function ShiftSwapWidget() {
         turno_deseado: "Tarde",
         motivo: "",
       });
-      toast.success("Solicitud publicada correctamente");
+      toast({
+        title: "Solicitud publicada",
+        description: "Tu solicitud ha sido publicada correctamente.",
+      });
     },
   });
 
@@ -123,7 +128,10 @@ export default function ShiftSwapWidget() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shiftSwapRequests'] });
       setInterestedUser(null);
-      toast.success("Has expresado interés en el cambio");
+      toast({
+        title: "Interés registrado",
+        description: "Has expresado interés en el cambio.",
+      });
     },
   });
 
@@ -135,7 +143,11 @@ export default function ShiftSwapWidget() {
   const handleInterest = (request) => {
     if (currentEmployee) {
       if (currentEmployee.equipo === request.equipo_solicitante) {
-        toast.error("No puedes intercambiar turno con alguien de tu mismo equipo.");
+        toast({
+          title: "Error",
+          description: "No puedes intercambiar turno con alguien de tu mismo equipo.",
+          variant: "destructive",
+        });
         return;
       }
       if (window.confirm(`¿Confirmar interés en el cambio de turno para el ${request.fecha_cambio}?`)) {
@@ -156,7 +168,11 @@ export default function ShiftSwapWidget() {
     if (!employee) return;
     
     if (employee.equipo === interestedUser.equipo_solicitante) {
-        toast.error("No puedes intercambiar turno con alguien de tu mismo equipo.");
+        toast({
+          title: "Error",
+          description: "No puedes intercambiar turno con alguien de tu mismo equipo.",
+          variant: "destructive",
+        });
         return;
     }
 
