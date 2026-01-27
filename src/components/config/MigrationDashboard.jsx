@@ -142,7 +142,7 @@ function SkillsMigrationPanel() {
         
         // Process in chunks to avoid overwhelming the API
         const chunks = [];
-        const chunkSize = 10;
+        const chunkSize = 5;
         for (let i = 0; i < total; i += chunkSize) {
             chunks.push(analysis.pending.slice(i, i + chunkSize));
         }
@@ -165,7 +165,7 @@ function SkillsMigrationPanel() {
             }));
             
             // Brief pause
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 1000));
         }
 
         toast.success(`Migración completada: ${successCount} registros creados`);
@@ -341,7 +341,7 @@ function TeamsMigrationPanel() {
 
           // Process in chunks
           const chunks = [];
-          const chunkSize = 20;
+          const chunkSize = 5;
           for (let i = 0; i < updates.length; i += chunkSize) {
               chunks.push(updates.slice(i, i + chunkSize));
           }
@@ -353,7 +353,7 @@ function TeamsMigrationPanel() {
                   });
                   success++;
               }));
-              await new Promise(r => setTimeout(r, 50));
+              await new Promise(r => setTimeout(r, 1000));
           }
           
           toast.success(`Vinculados ${success} empleados a sus Team Keys`);

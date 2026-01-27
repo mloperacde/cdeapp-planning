@@ -151,8 +151,8 @@ function GeneralTeamConfig() {
             );
             
             if (i + BATCH_SIZE < updatesToProcess.length) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-            }
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
           }
           return { updatedCount: updatesToProcess.length };
         } else {

@@ -49,6 +49,11 @@ export default function MasterEmployeeBulkEditDialog({ selectedIds, open, onClos
             errors.push({ id: res.id, error: res.reason });
           }
         });
+
+        // Add delay between batches to respect rate limits
+        if (i + BATCH_SIZE < ids.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
       
       if (errors.length > 0) {
