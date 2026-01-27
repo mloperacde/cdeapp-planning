@@ -17,9 +17,11 @@ import {
   Loader2, 
   Play,
   Users,
-  Wrench
+  Wrench,
+  Globe
 } from "lucide-react";
 import { toast } from "sonner";
+import CdeAppSyncPanel from "./CdeAppSyncPanel";
 
 export default function MigrationDashboard() {
   return (
@@ -34,7 +36,7 @@ export default function MigrationDashboard() {
       </div>
 
       <Tabs defaultValue="skills" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
           <TabsTrigger value="skills">
             <Wrench className="w-4 h-4 mr-2" />
             Habilidades Legacy
@@ -42,6 +44,10 @@ export default function MigrationDashboard() {
           <TabsTrigger value="teams">
             <Users className="w-4 h-4 mr-2" />
             Relación Equipos
+          </TabsTrigger>
+          <TabsTrigger value="external">
+            <Globe className="w-4 h-4 mr-2" />
+            Sincronización Externa
           </TabsTrigger>
         </TabsList>
         
@@ -51,6 +57,10 @@ export default function MigrationDashboard() {
         
         <TabsContent value="teams" className="mt-6">
           <TeamsMigrationPanel />
+        </TabsContent>
+
+        <TabsContent value="external" className="mt-6">
+          <CdeAppSyncPanel />
         </TabsContent>
       </Tabs>
     </div>

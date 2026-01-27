@@ -582,6 +582,12 @@ export const localDataService = {
 
   // --- Articles ---
 
+  async saveArticles(articles) {
+    await delay();
+    localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
+    return articles;
+  },
+
   async getArticles() {
     await delay();
     const data = localStorage.getItem(STORAGE_KEYS.ARTICLES);

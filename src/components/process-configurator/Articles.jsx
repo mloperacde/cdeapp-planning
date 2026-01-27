@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 // import axios from "axios";
 import { localDataService } from "./services/localDataService";
+import { cdeApp } from "../../api/cdeAppClient";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,8 +33,8 @@ import {
   Clock,
   Users,
   Package,
-  Upload,
-  FileSpreadsheet,
+  RefreshCw,
+  DownloadCloud,
   AlertTriangle,
   Building2
 } from "lucide-react";
@@ -45,7 +46,6 @@ export default function Articles() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [filterNoProcess, setFilterNoProcess] = useState(false);
 
   useEffect(() => {
@@ -81,42 +81,81 @@ export default function Articles() {
     toast.info("La exportación no está disponible en modo local");
   };
 
-  const handleImportUpload = async (file) => {
-    // Note: This logic seems to be for importing Articles specifically, not the base data.
-    // The previous implementation used /api/import-articles.
-    // Since we are moving to local, and localDataService.processExcel was designed for Activities/Processes,
-    // we might need to clarify if this import is for bulk articles or the configuration data.
-    // Given the context of "DataManagement" handling the configuration data, this might be redundant or different.
-    // For now, I'll redirect to DataManagement for imports to keep it simple, or just show a message.
-    
-    toast.info("Por favor, utilice la sección 'Importar Datos' para cargar la configuración base.");
-  };
+  const handleSync = async () => {
+    setUploading(true);
+    try {
+      // 1. Obtener artículos actuales para preservar asignaciones manuales
+      const currentArticles = await localDataService.getArticles();
+      const processMap = new Map();
+      currentArticles.forEach(a => {
+        if (a.code && a.process_code) {
+          processMap.set(a.code.trim().toLowerCase(), a.process_code);
+        }
+      });
 
-  // ... existing code ...
+      toast.info("Iniciando sincronización con CDEApp...");
+      const response = await cdeApp.syncArticles();
+      
+      let rows = [];
+      
+      // Normalizar respuesta (Array vs Headers/Data)
+      if (response && response.headers && Array.isArray(response.headers)) {
+          if (Array.isArray(response.data)) {
+               rows = response.data.map(r => {
+                   const obj = {};
+                   response.headers.forEach((h, i) => obj[h] = r[i]);
+                   return obj;
+               });
+          } else if (Array.isArray(response.rows)) { // Alternativa común
+               rows = response.rows;
+          }
+      } else if (Array.isArray(response)) {
+          rows = response;
+      } else if (response && Array.isArray(response.data)) {
+          rows = response.data;
+      }
 
-  const handleDrag = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  }, []);
+      console.log("Artículos recibidos:", rows);
 
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImportUpload(e.dataTransfer.files[0]);
-    }
-  }, []);
+      if (rows.length === 0) {
+        toast.warning("No se recibieron artículos de la API");
+        setUploading(false);
+        return;
+      }
 
-  const handleFileInput = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleImportUpload(e.target.files[0]);
+      // Mapear a estructura interna
+      const mappedArticles = rows.map(r => {
+          const code = String(r.code || r.article_code || r.Codigo || r['Artículo'] || r.Articulo || '').trim();
+          const name = String(r.name || r.article_name || r.Nombre || r['Descripción'] || r.Descripcion || '').trim();
+          
+          // Preservar proceso manual si existe
+          const apiProcess = String(r.process_code || r.process || r.Proceso || '');
+          const existingProcess = processMap.get(code.toLowerCase());
+          const finalProcess = existingProcess || apiProcess;
+
+          return {
+              id: String(r.id || r.article_id || r.Id || r.ID || Math.random().toString(36).substr(2, 9)),
+              code: code,
+              name: name,
+              client: String(r.client || r.client_name || r.Cliente || ''),
+              process_code: finalProcess,
+              reference: String(r.reference || r.Referencia || ''),
+              total_time_seconds: parseFloat(r.total_time_seconds || r.Tiempo || 0)
+          };
+      }).filter(a => a.name || a.code);
+
+      await localDataService.saveArticles(mappedArticles);
+      setArticles(mappedArticles);
+      
+      // Calcular estadísticas
+      const preservedCount = mappedArticles.filter(a => processMap.has(a.code.toLowerCase()) && a.process_code === processMap.get(a.code.toLowerCase())).length;
+      
+      toast.success(`${mappedArticles.length} artículos sincronizados. ${preservedCount} asignaciones de proceso preservadas.`);
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast.error("Error al sincronizar artículos: " + error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -170,55 +209,35 @@ export default function Articles() {
         </div>
       </div>
 
-      {/* Import Section */}
-      <Card data-testid="import-card">
+      {/* Sync Section */}
+      <Card data-testid="sync-card" className="border-blue-200 bg-blue-50/30">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Importar Artículos desde Excel
+          <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
+            <DownloadCloud className="h-5 w-5" />
+            Sincronizar Artículos desde CDEApp
           </CardTitle>
-          <CardDescription>
-            Carga un archivo Excel con la hoja "TODAS" que contenga: ARTÍCULO, ABREVIACIÓN, CLIENTE, PROCESOS
+          <CardDescription className="text-blue-600/80">
+            Descarga la lista actualizada de artículos directamente desde el servidor central.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div
-            className={`dropzone relative border-2 border-dashed rounded-sm p-6 text-center transition-colors ${
-              dragActive 
-                ? 'border-primary bg-primary/5' 
-                : 'border-muted-foreground/25 hover:border-primary/50'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            data-testid="import-dropzone"
-          >
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileInput}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border border-blue-200 rounded-lg bg-white">
+            <div className="p-3 bg-blue-100 rounded-full">
+              <RefreshCw className={`h-6 w-6 text-blue-600 ${uploading ? 'animate-spin' : ''}`} />
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="font-medium text-blue-900">Sincronización Cloud</h3>
+              <p className="text-sm text-blue-600">
+                Se actualizarán los códigos, nombres y clientes. Los procesos asignados manualmente se intentarán preservar si coinciden.
+              </p>
+            </div>
+            <Button 
+              onClick={handleSync} 
               disabled={uploading}
-              data-testid="import-file-input"
-            />
-            
-            {uploading ? (
-              <div className="flex items-center justify-center gap-3">
-                <div className="spinner h-6 w-6 border-3 border-primary border-t-transparent rounded-full" />
-                <p className="text-muted-foreground">Importando artículos...</p>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-4">
-                <FileSpreadsheet className="h-8 w-8 text-primary" />
-                <div className="text-left">
-                  <p className="font-medium">Arrastra tu archivo Excel aquí</p>
-                  <p className="text-sm text-muted-foreground">
-                    o haz clic para seleccionar (.xlsx, .xls)
-                  </p>
-                </div>
-              </div>
-            )}
+              className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px]"
+            >
+              {uploading ? "Sincronizando..." : "Sincronizar Ahora"}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -271,7 +290,7 @@ export default function Articles() {
               <>
                 <h3 className="text-lg font-semibold mb-2">No hay artículos</h3>
                 <p className="text-muted-foreground mb-4">
-                  Importa artículos desde Excel o crea uno nuevo
+                  Sincroniza artículos desde CDEApp o crea uno nuevo
                 </p>
                 <Button asChild>
                   <Link to="/NewProcessConfigurator/configurator">
