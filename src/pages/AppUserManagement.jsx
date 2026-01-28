@@ -191,17 +191,22 @@ export default function AppUserManagement() {
   useEffect(() => {
     // Solo actualizar si NO hay cambios sin guardar (isDirty)
     if (!isDirty) {
+      // Si tenemos rolesConfig remoto, lo usamos
       if (rolesConfig && Object.keys(rolesConfig).length > 0) {
         console.log("AppUserManagement: Loaded remote configuration", rolesConfig);
         setLocalConfig(JSON.parse(JSON.stringify(rolesConfig)));
-      } else if (!rolesConfig) {
-        // Solo usar default si no hay config remota y no estamos cargando
-        // Esperamos un poco antes de asumir default para evitar flash
-        console.log("AppUserManagement: Using default configuration");
+      } 
+      // Si NO tenemos rolesConfig remoto, y NO estamos cargando (userLoading/employeesLoading),
+      // entonces asumimos default. Esto evita flasheos durante la carga inicial.
+      // Pero si localConfig ya tiene algo (quizás default previo), no lo reseteamos a default de nuevo
+      // a menos que sea explícitamente necesario.
+      else if (!rolesConfig && !localConfig) {
+        // Solo usar default si es la primera carga y no hay nada
+        console.log("AppUserManagement: Initializing with default configuration");
         setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
       }
     }
-  }, [rolesConfig, isDirty]);
+  }, [rolesConfig, isDirty]); // Eliminamos localConfig de deps para evitar bucles
 
   // Derived state: Roles keys
   const roleKeys = useMemo(() => {
