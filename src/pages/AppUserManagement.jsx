@@ -189,11 +189,17 @@ export default function AppUserManagement() {
 
   // Inicializar estado local cuando cargan los datos
   useEffect(() => {
-    if (rolesConfig && !isDirty) {
-      // Deep copy para evitar mutaciones directas y referencias compartidas
-      setLocalConfig(JSON.parse(JSON.stringify(rolesConfig)));
-    } else if (!rolesConfig && !isDirty) {
-      setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
+    // Solo actualizar si NO hay cambios sin guardar (isDirty)
+    if (!isDirty) {
+      if (rolesConfig && Object.keys(rolesConfig).length > 0) {
+        console.log("AppUserManagement: Loaded remote configuration", rolesConfig);
+        setLocalConfig(JSON.parse(JSON.stringify(rolesConfig)));
+      } else if (!rolesConfig) {
+        // Solo usar default si no hay config remota y no estamos cargando
+        // Esperamos un poco antes de asumir default para evitar flash
+        console.log("AppUserManagement: Using default configuration");
+        setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
+      }
     }
   }, [rolesConfig, isDirty]);
 
