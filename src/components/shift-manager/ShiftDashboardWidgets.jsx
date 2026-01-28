@@ -74,14 +74,23 @@ export function KPIWidget({ employees, activeAbsencesToday, pendingSwaps, locker
 }
 
 // Widget: Team Status
-export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailyStaffing, employees }) {
+export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailyStaffing, employees, manufacturingConfig }) {
 
     const getTeamSalas = (teamName) => {
         if (!dailyStaffing?.length || !machines?.length || !employees?.length) return [];
         
+        const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+        const targetTeam = normalize(teamName);
+        
         const teamEmployeeIds = new Set(
             employees
-                .filter(e => e.equipo === teamName)
+                .filter(e => {
+                    const empTeam = normalize(e.equipo);
+                    return empTeam === targetTeam || 
+                           empTeam === `equipo ${targetTeam}` || 
+                           targetTeam === `equipo ${empTeam}` ||
+                           (targetTeam === "t2" && (empTeam === "equipo sara" || empTeam === "turno 2" || empTeam.includes("sara") || empTeam.includes("ivan")));
+                })
                 .map(e => e.id)
         );
         
@@ -100,7 +109,8 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
             });
             
             if (hasTeamMember) {
-                const machine = machines.find(m => m.id === assignment.machine_id);
+                // Robust ID matching
+                const machine = machines.find(m => String(m.id) === String(assignment.machine_id));
                 if (machine?.ubicacion) {
                     activeSalas.add(machine.ubicacion);
                 }
@@ -109,6 +119,44 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
         
         return Array.from(activeSalas).sort();
     };
+
+    const getShiftLeaders = (shiftName) => {
+        if (!manufacturingConfig?.assignments || !employees) return [];
+        
+        let shiftKey = null;
+        const normalizedShift = shiftName?.toLowerCase()?.trim() || "";
+        
+        // Robust shift matching
+        if (normalizedShift === "mañana" || normalizedShift.includes("mañana") || 
+            normalizedShift === "turno 1" || normalizedShift === "t1" || normalizedShift === "1") {
+            shiftKey = "shift1";
+        }
+        if (normalizedShift === "tarde" || normalizedShift.includes("tarde") || 
+            normalizedShift === "turno 2" || normalizedShift === "t2" || normalizedShift === "2") {
+            shiftKey = "shift2";
+        }
+        
+        if (!shiftKey || !manufacturingConfig.assignments[shiftKey]?.leaderMap) return [];
+        
+        const leaderMap = manufacturingConfig.assignments[shiftKey].leaderMap;
+        const areasMap = manufacturingConfig.assignments[shiftKey].areas || {};
+        
+        return Object.entries(leaderMap).map(([role, empId]) => {
+            const emp = employees.find(e => String(e.id) === String(empId));
+            const areaIds = areasMap[role] || [];
+            const areaNames = areaIds.map(id => {
+                const area = manufacturingConfig.areas?.find(a => a.id === id);
+                return area?.name;
+            }).filter(Boolean);
+
+            return {
+                    role,
+                    name: emp ? `${emp.nombre} ${emp.apellidos || ''}` : `Empleado ${empId} (No encontrado)`,
+                    id: empId,
+                    areas: areaNames
+                };
+            });
+        };
 
     return (
         <Card className="mb-6 shadow-lg border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
@@ -122,6 +170,8 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {teamStats.map((team) => {
                         const activeSalas = getTeamSalas(team.team_name);
+                        const leaders = getShiftLeaders(team.shift);
+                        
                         return (
                         <div 
                             key={team.team_key} 
@@ -185,6 +235,29 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                                     <div className="text-xs text-red-700 dark:text-red-200">Aus.</div>
                                 </div>
                             </div>
+
+                            {leaders.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-slate-200">
+                                    <p className="text-xs font-semibold text-slate-700 mb-2">Responsables de Turno:</p>
+                                    {leaders.map(l => (
+                                        <div key={l.role} className="mb-2">
+                                            <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
+                                                <span className="text-slate-500">{l.role}:</span>
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">{l.name}</span>
+                                            </div>
+                                            {l.areas && l.areas.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1 pl-2 border-l-2 border-slate-100 ml-1">
+                                                    {l.areas.map(area => (
+                                                        <span key={area} className="text-[10px] text-slate-500 bg-slate-50 px-1 rounded">
+                                                            {area}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {team.absencesCount > 0 && (
                                 <div className="mt-3 pt-3 border-t border-slate-200">

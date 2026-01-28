@@ -106,7 +106,7 @@ export default function MachineSkillsView() {
          const identifiers = getMachineIdentifiers(machineId);
 
          return employees.filter(e => {
-            if (e.departamento !== "FABRICACION") return false;
+            // if (e.departamento !== "FABRICACION") return false; // REMOVED to allow all departments
             if ((e.estado_empleado || "Alta") !== "Alta") return false;
 
             // Filter by Team

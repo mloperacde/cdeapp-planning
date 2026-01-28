@@ -9,6 +9,13 @@ import { cdeApi } from "@/services/cdeApi";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -383,12 +390,12 @@ export function StructureConfig({ config, setConfig }) {
   );
 }
 
-export function AssignmentsConfig({ config, setConfig }) {
+export function AssignmentsConfig({ config, setConfig, employees = [] }) {
   // Predefined shift leaders as per request, but allowing dynamic later if needed
   
   const updateAssignment = (shift, leaderName, areaId, checked) => {
     setConfig(prev => {
-      const shiftConfig = prev.assignments[shift] || { leaders: [], areas: {} };
+      const shiftConfig = prev.assignments[shift] || { leaders: [], areas: {}, leaderMap: {} };
       const currentAreas = shiftConfig.areas?.[leaderName] || [];
       
       let newAreas;
@@ -414,6 +421,25 @@ export function AssignmentsConfig({ config, setConfig }) {
     });
   };
 
+  const updateLeaderMap = (shift, leaderName, employeeId) => {
+    setConfig(prev => {
+        const shiftConfig = prev.assignments[shift] || { leaders: [], areas: {}, leaderMap: {} };
+        return {
+            ...prev,
+            assignments: {
+                ...prev.assignments,
+                [shift]: {
+                    ...shiftConfig,
+                    leaderMap: {
+                        ...(shiftConfig.leaderMap || {}),
+                        [leaderName]: employeeId
+                    }
+                }
+            }
+        };
+    });
+  };
+
   return (
     <div className="space-y-8">
       <Card>
@@ -424,16 +450,20 @@ export function AssignmentsConfig({ config, setConfig }) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <LeaderAssignment 
-              leaderName="Responsable T1-A" 
+              leaderName="Responsable T1 (Isa)" 
               shift="shift1" 
               config={config} 
               onToggle={updateAssignment} 
+              onEmployeeSelect={updateLeaderMap}
+              employees={employees}
             />
             <LeaderAssignment 
-              leaderName="Responsable T1-B" 
+              leaderName="Responsable T1 (Carlos)" 
               shift="shift1" 
               config={config} 
               onToggle={updateAssignment} 
+              onEmployeeSelect={updateLeaderMap}
+              employees={employees}
             />
           </div>
         </CardContent>
@@ -447,16 +477,20 @@ export function AssignmentsConfig({ config, setConfig }) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <LeaderAssignment 
-              leaderName="Responsable T2-A" 
+              leaderName="Responsable T2 (Sara)" 
               shift="shift2" 
               config={config} 
               onToggle={updateAssignment} 
+              onEmployeeSelect={updateLeaderMap}
+              employees={employees}
             />
             <LeaderAssignment 
-              leaderName="Responsable T2-B" 
+              leaderName="Responsable T2 (Ivan)" 
               shift="shift2" 
               config={config} 
               onToggle={updateAssignment} 
+              onEmployeeSelect={updateLeaderMap}
+              employees={employees}
             />
           </div>
         </CardContent>
@@ -465,16 +499,39 @@ export function AssignmentsConfig({ config, setConfig }) {
   );
 }
 
-function LeaderAssignment({ leaderName, shift, config, onToggle }) {
+function LeaderAssignment({ leaderName, shift, config, onToggle, onEmployeeSelect, employees }) {
   const assignedAreas = config.assignments[shift]?.areas?.[leaderName] || [];
+  const assignedEmployeeId = config.assignments[shift]?.leaderMap?.[leaderName] || "";
 
   return (
     <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-          {leaderName.charAt(0)}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold shrink-0">
+            {leaderName.charAt(0)}
+            </div>
+            <h3 className="font-bold text-lg">{leaderName}</h3>
         </div>
-        <h3 className="font-bold text-lg">{leaderName}</h3>
+        
+        {employees && employees.length > 0 && (
+            <div className="w-full">
+                <Select 
+                    value={assignedEmployeeId} 
+                    onValueChange={(val) => onEmployeeSelect(shift, leaderName, val)}
+                >
+                    <SelectTrigger className="w-full bg-white">
+                        <SelectValue placeholder="Asignar empleado..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {employees.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id}>
+                                {emp.nombre} {emp.apellidos}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        )}
       </div>
       
       <div className="space-y-2">

@@ -261,7 +261,7 @@ export default function IdealAssignmentView() {
       const teamName = teamConfig ? teamConfig.team_name : "";
 
       const allTeamEmployees = employees.filter(emp => {
-          if (emp.departamento !== "FABRICACION") return false;
+          // if (emp.departamento !== "FABRICACION") return false; // REMOVED to allow all departments
           
           // Include employees from the team OR fixed shift employees
           const isTeamMember = emp.equipo === teamName || emp.equipo === currentTeam;

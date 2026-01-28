@@ -46,6 +46,22 @@ export default function ShiftManagersPage() {
       enabled: !!currentUser
   });
 
+  const { data: manufacturingConfig } = useQuery({
+    queryKey: ["appConfig", "manufacturing"],
+    queryFn: async () => {
+      const configs = await base44.entities.AppConfig.filter({ config_key: "manufacturing_config" });
+      const record = configs[0] || null;
+      if (record?.value) {
+          try {
+              return typeof record.value === 'string' ? JSON.parse(record.value) : record.value;
+          } catch (e) {
+              return null;
+          }
+      }
+      return null;
+    },
+  });
+
   const activeWidgets = useMemo(() => {
       if (!widgetConfig?.widgets) return DEFAULT_WIDGETS;
       
@@ -101,8 +117,9 @@ export default function ShiftManagersPage() {
     queryKey: ['employees'],
     queryFn: async () => {
       const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
-      // Filtro estricto para Jefes de Turno: solo FABRICACION y Activos
-      return all.filter(e => e.departamento === 'FABRICACION' && e.estado_empleado === 'Alta');
+      // Fetch all employees to ensure we find assigned leaders even if status varies
+      // We can filter for display purposes later if needed
+      return all;
     },
   });
 
@@ -255,7 +272,17 @@ export default function ShiftManagersPage() {
         
         // Disponibles = Total Activos - Ausencias Reales
         const available = Math.max(0, teamEmployees.length - absencesCount);
-        const shift = getTodayShift(team.team_key);
+        let shift = getTodayShift(team.team_key);
+        
+        // Fallback: Infer shift from team name if not found in schedule
+        if (!shift) {
+            const lowerName = team.team_name.toLowerCase();
+            if (lowerName.includes("t2") || lowerName.includes("tarde") || lowerName.includes("turno 2") || lowerName.includes("sara") || lowerName.includes("ivan")) {
+                shift = "Tarde";
+            } else if (lowerName.includes("t1") || lowerName.includes("mañana") || lowerName.includes("turno 1")) {
+                shift = "Mañana";
+            }
+        }
         
         return {
             ...team,
@@ -382,6 +409,7 @@ export default function ShiftManagersPage() {
                         upcomingBirthdays={upcomingBirthdays}
                         machines={machines}
                         dailyStaffing={dailyStaffing}
+                        manufacturingConfig={manufacturingConfig}
                     />
                 );
             })}

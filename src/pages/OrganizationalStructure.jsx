@@ -164,11 +164,26 @@ function ManufacturingConfigWrapper() {
     staleTime: 0,
   });
 
+  // Fetch employees for assignment selection
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees_manufacturing_config'],
+    queryFn: async () => {
+      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
+      // Return all to ensure we can select any employee
+            return all;
+          },
+        });
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teamConfigs_manufacturing'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+  });
+
   const [config, setConfig] = useState({
     areas: [], // { id, name, rooms: [] }
     assignments: {
-      shift1: { leaders: [], areas: {} }, // leaders: [{id, name}], areas: { leaderId: [areaId] }
-      shift2: { leaders: [], areas: {} }
+      shift1: { leaders: [], areas: {}, leaderMap: {} }, // leaderMap: { "Responsable T1-A": employeeId }
+      shift2: { leaders: [], areas: {}, leaderMap: {} }
     },
     tasks: [] // { id, time, description, role }
   });
@@ -241,7 +256,7 @@ function ManufacturingConfigWrapper() {
         </TabsContent>
 
         <TabsContent value="assignments">
-          <AssignmentsConfig config={config} setConfig={setConfig} />
+          <AssignmentsConfig config={config} setConfig={setConfig} employees={employees} />
         </TabsContent>
 
         <TabsContent value="tasks">
