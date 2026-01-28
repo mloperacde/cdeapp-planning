@@ -89,11 +89,15 @@ export default function AppUserManagement() {
               </p>
               <div className="flex justify-between items-center text-xs mt-2">
                 <span>Roles Configurados:</span>
-                <span className="font-bold">{rolesConfig?.roles ? Object.keys(rolesConfig.roles).length : 0}</span>
+                <span className="font-bold">
+                  {rolesConfigLoading ? "..." : configuredRolesCount}
+                </span>
               </div>
               <div className="flex justify-between items-center text-xs mt-1">
                 <span>Usuarios con Rol:</span>
-                <span className="font-bold">{employeesWithRole}</span>
+                <span className="font-bold">
+                  {rolesConfigLoading ? "..." : employeesWithRole}
+                </span>
               </div>
             </CardContent>
           </Card>

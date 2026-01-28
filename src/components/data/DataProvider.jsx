@@ -194,7 +194,9 @@ export function DataProvider({ children }) {
     queryFn: async () => {
       if (isLocal) return null;
       try {
-        const config = await base44.entities.AppConfig.findUnique('roles_config');
+        // Usar list + find por robustez, igual que en RolesConfig.jsx
+        const configs = await base44.entities.AppConfig.list();
+        const config = configs.find(c => c.key === 'roles_config');
         return config?.value ? JSON.parse(config.value) : null;
       } catch (err) {
         console.warn('No roles configuration found, using defaults');

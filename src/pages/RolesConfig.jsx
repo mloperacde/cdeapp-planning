@@ -507,35 +507,162 @@ export default function RolesConfig() {
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>Asignación de Roles a Usuarios</CardTitle>
-              <CardDescription>Asigna roles específicos a los empleados registrados</CardDescription>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Asignación de Roles a Usuarios</CardTitle>
+                  <CardDescription>Asigna roles específicos a los empleados registrados</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                   <Badge variant="outline" className="h-8 px-3">
+                     {employees.filter(e => e.email).length} con Email
+                   </Badge>
+                </div>
+              </div>
+              
+              <div className="flex flex-col md:flex-row gap-3 mt-4 pt-4 border-t">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+                  <Input
+                    placeholder="Buscar por nombre o email..."
+                    className="pl-9"
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                  />
+                  {userSearchTerm && (
+                    <button 
+                      onClick={() => setUserSearchTerm("")}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                
+                <Select value={deptFilter} onValueChange={setDeptFilter}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Filter className="w-3 h-3" />
+                      <span className="truncate">{deptFilter === 'all' ? 'Departamento' : deptFilter}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los Departamentos</SelectItem>
+                    {departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+
+                <Select value={positionFilter} onValueChange={setPositionFilter}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Filter className="w-3 h-3" />
+                      <span className="truncate">{positionFilter === 'all' ? 'Puesto' : positionFilter}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los Puestos</SelectItem>
+                    {positions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Shield className="w-3 h-3" />
+                      <span className="truncate">{roleFilter === 'all' ? 'Rol Asignado' : (localConfig?.roles[roleFilter]?.name || roleFilter)}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los Roles</SelectItem>
+                    <SelectItem value="unassigned">Sin Asignar (Usuario)</SelectItem>
+                    {roleKeys.map(r => (
+                        <SelectItem key={r} value={r}>{localConfig?.roles[r]?.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {(deptFilter !== 'all' || positionFilter !== 'all' || roleFilter !== 'all' || userSearchTerm) && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => {
+                            setDeptFilter('all');
+                            setPositionFilter('all');
+                            setRoleFilter('all');
+                            setUserSearchTerm('');
+                        }}
+                        title="Limpiar filtros"
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
+              <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empleado</TableHead>
+                    <TableHead className="hidden md:table-cell">Detalles</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Rol Asignado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map(employee => {
+                  {employees
+                    .filter(e => {
+                        // Filter Logic
+                        const matchesSearch = !userSearchTerm || 
+                            e.nombre?.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                            e.apellidos?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                            e.email?.toLowerCase().includes(userSearchTerm.toLowerCase());
+                        
+                        const matchesDept = deptFilter === 'all' || e.departamento === deptFilter;
+                        const matchesPos = positionFilter === 'all' || e.puesto === positionFilter;
+                        
+                        // Role filter logic
+                        let matchesRole = true;
+                        if (roleFilter !== 'all') {
+                            const assigned = localConfig.user_assignments[e.email];
+                            if (roleFilter === 'unassigned') {
+                                matchesRole = !assigned;
+                            } else {
+                                matchesRole = assigned === roleFilter;
+                            }
+                        }
+
+                        // Only show employees with email for assignment mostly, but user might want to see all to debug
+                        // Let's show all but highlight missing emails
+                        return matchesSearch && matchesDept && matchesPos && matchesRole;
+                    })
+                    .slice(0, 100) // Limit render for performance
+                    .map(employee => {
                      // Determine current role: check assignment -> fallback to employee role -> fallback to user
                      const assignedRoleId = localConfig.user_assignments[employee.email];
                      // If no assignment, try to match employee.role (from legacy field) to our roles, else 'user'
                      const currentRole = assignedRoleId || (localConfig.roles[employee.role] ? employee.role : 'user');
+                     const hasEmail = !!employee.email;
 
                      return (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.nombre} {employee.apellidos}</TableCell>
-                        <TableCell className="text-slate-500">{employee.email}</TableCell>
+                      <TableRow key={employee.id} className={!hasEmail ? "opacity-50 bg-slate-50" : ""}>
+                        <TableCell className="font-medium">
+                            <div>{employee.nombre} {employee.apellidos}</div>
+                            {!hasEmail && <span className="text-[10px] text-red-500 font-bold">Sin Email</span>}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                            <div className="flex flex-col text-xs text-slate-500">
+                                <span>{employee.departamento || '-'}</span>
+                                <span>{employee.puesto || '-'}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-slate-500 text-sm">{employee.email || '-'}</TableCell>
                         <TableCell>
                           <Select 
                             value={currentRole} 
                             onValueChange={(val) => handleUserAssignment(employee.email, val)}
+                            disabled={!hasEmail}
                           >
-                            <SelectTrigger className="w-[250px]">
+                            <SelectTrigger className="w-[200px] h-8">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -552,13 +679,17 @@ export default function RolesConfig() {
                   })}
                   {employees.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8 text-slate-500">
-                        No hay empleados registrados con email para asignar roles.
+                      <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                        No hay empleados cargados en el sistema.
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 text-center">
+                Mostrando primeros 100 resultados coincidentes. Usa los filtros para refinar.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
