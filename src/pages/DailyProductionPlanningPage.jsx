@@ -231,9 +231,30 @@ export default function DailyProductionPlanningPage() {
         
         if (!allowedRoles.includes(currentPuesto)) return false;
 
+        // 5. Absence Check (Robust)
+        if (e.ausencia_inicio) {
+            const checkDate = new Date(selectedDate);
+            checkDate.setHours(0, 0, 0, 0);
+            
+            const startDate = new Date(e.ausencia_inicio);
+            startDate.setHours(0, 0, 0, 0);
+
+            if (e.ausencia_fin) {
+                const endDate = new Date(e.ausencia_fin);
+                endDate.setHours(0, 0, 0, 0);
+                if (checkDate >= startDate && checkDate <= endDate) return false;
+            } else {
+                // If no end date, assume single day or active? 
+                // Strict check: if checkDate >= startDate, consider absent? 
+                // For now, let's assume if no end date, it's a single day absence or start of long term.
+                // Safest for planning: if checkDate >= startDate, they are absent.
+                if (checkDate >= startDate) return false;
+            }
+        }
+
         return true;
     }).length;
-  }, [employees, teams, selectedTeam]);
+  }, [employees, teams, selectedTeam, selectedDate]);
 
   const totalRequiredOperators = useMemo(() => {
     let total = 0;
@@ -489,17 +510,12 @@ export default function DailyProductionPlanningPage() {
     return (
       <div style={style} className="px-3 py-1">
         <div className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200 h-full">
-            <div className="flex flex-col overflow-hidden mr-2">
-                <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  {machine.codigo_maquina && <span>{machine.codigo_maquina}</span>}
-                  {machine.ubicacion && (
-                    <>
-                      <span>•</span>
-                      <span>{machine.ubicacion}</span>
-                    </>
-                  )}
+            <div className="flex flex-col overflow-hidden mr-2 gap-0.5">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500 uppercase">{machine.ubicacion || "Sin Sala"}</span>
+                    {machine.codigo_maquina && <span className="text-xs font-mono text-slate-400">• {machine.codigo_maquina}</span>}
                 </div>
+                <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
             </div>
             <Button 
                 size="icon" 

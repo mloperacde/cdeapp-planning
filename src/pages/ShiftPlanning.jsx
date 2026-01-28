@@ -284,29 +284,70 @@ export default function ShiftPlanningPage() {
     });
 
     const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+    
+    // Unified Availability Logic
     return employees.filter(e => {
+      // 1. Assigned Check
       if (assignedIds.has(e.id)) return false;
+
+      // 2. Department: Fabricación
       if (normalize(e.departamento) !== "fabricacion") return false;
+
+      // 3. Availability: Disponible
       if (normalize(e.disponibilidad) !== "disponible") return false;
+
+      // 4. Role (Puesto)
+      const currentPuesto = normalize(e.puesto);
+      const allowedRoles = [
+        'responsable de linea', 
+        'segunda de linea', 
+        'operario de linea',
+        'operaria de linea'
+      ].map(normalize);
       
-      // Filtro por equipo
+      // Flexible match (includes) or exact? User said "puestos ...". Let's use includes for safety or exact if normalized.
+      // Given previous logic used includes in DailyPlanning, let's stick to exact match against list for robustness,
+      // or check if any allowed role is contained.
+      // DailyPlanning used exact inclusion in list. I'll do the same.
+      if (!allowedRoles.includes(currentPuesto)) return false;
+
+      // 5. Absence Check
+      if (e.ausencia_inicio) {
+          const checkDate = new Date(selectedDate);
+          checkDate.setHours(0, 0, 0, 0);
+          
+          const startDate = new Date(e.ausencia_inicio);
+          startDate.setHours(0, 0, 0, 0);
+
+          if (e.ausencia_fin) {
+              const endDate = new Date(e.ausencia_fin);
+              endDate.setHours(0, 0, 0, 0);
+              if (checkDate >= startDate && checkDate <= endDate) return false;
+          } else {
+              if (checkDate >= startDate) return false;
+          }
+      }
+
+      // 6. Team Filter
       if (selectedTeam !== "all") {
         const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
         if (teamObj) {
-            // 1. Check strict ID match (New standard)
-            if (e.team_id && String(e.team_id) === String(teamObj.id)) return true;
+            let matchesTeam = false;
+            if (e.team_id && String(e.team_id) === String(teamObj.id)) {
+                matchesTeam = true;
+            } else {
+                const empTeam = normalize(e.equipo);
+                const targetTeam = normalize(teamObj.team_name);
+                if (empTeam && targetTeam && empTeam === targetTeam) {
+                    matchesTeam = true;
+                }
+            }
             
-            // 2. Check legacy string match (Fallback)
-            const empTeam = e.equipo ? e.equipo.trim().toLowerCase() : "";
-            const targetTeam = teamObj.team_name ? teamObj.team_name.trim().toLowerCase() : "";
-            
-            if (empTeam && targetTeam && empTeam === targetTeam) return true;
-            
-            return false;
+            if (!matchesTeam) return false;
         }
       }
       
-      // Filtro por búsqueda
+      // 7. Search Term
       if (searchTerm) {
         const lower = normalize(searchTerm);
         return normalize(e.nombre).includes(lower);
@@ -485,46 +526,51 @@ export default function ShiftPlanningPage() {
                      </p>
                    )}
                   </CardHeader>
-                  <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
-                   <Droppable droppableId="unassigned-pool" type="EMPLOYEE">
+                  <CardContent className="h-[600px] p-0">
+                   <Droppable 
+                      droppableId="unassigned-pool" 
+                      type="EMPLOYEE" 
+                      mode="virtual"
+                      renderClone={(provided, snapshot, rubric) => {
+                        const emp = availableEmployees[rubric.source.index];
+                        return (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="p-3 rounded-lg border bg-white shadow-2xl border-blue-500 scale-105 ring-2 ring-blue-300 z-50"
+                            style={provided.draggableProps.style}
+                          >
+                             <div className="text-sm font-medium truncate">{emp?.nombre}</div>
+                             <div className="text-xs text-slate-500 flex items-center gap-1">
+                               {emp?.puesto && <Badge variant="secondary" className="text-[10px] h-4 px-1">{emp.puesto}</Badge>}
+                               {emp?.equipo && <span>• {emp?.equipo}</span>}
+                            </div>
+                          </div>
+                        );
+                      }}
+                   >
                      {(provided, snapshot) => (
                        <div 
-                         ref={provided.innerRef} 
-                         {...provided.droppableProps} 
-                         className={`space-y-2 min-h-[100px] rounded-lg p-2 transition-all ${
-                           snapshot.isDraggingOver ? 'bg-blue-50/50 ring-2 ring-blue-300 ring-inset' : ''
+                         ref={provided.innerRef}
+                         className={`h-full w-full transition-all ${
+                           snapshot.isDraggingOver ? 'bg-blue-50/50' : ''
                          }`}
                        >
-                         {availableEmployees.map((emp, index) => (
-                           <Draggable key={emp.id} draggableId={emp.id} index={index}>
-                             {(provided, snapshot) => (
-                               <div
-                                 ref={provided.innerRef}
-                                 {...provided.draggableProps}
-                                 {...provided.dragHandleProps}
-                                 className={`p-3 rounded-lg border bg-white cursor-grab active:cursor-grabbing transition-all ${
-                                   snapshot.isDragging 
-                                     ? 'shadow-2xl border-blue-500 scale-105 ring-2 ring-blue-300 z-50' 
-                                     : 'hover:border-blue-300 hover:shadow-md'
-                                 }`}
-                                 style={{
-                                   ...provided.draggableProps.style,
-                                 }}
-                               >
-                                 <div className="text-sm font-medium truncate">{emp.nombre}</div>
-                                 <div className="text-xs text-slate-500 flex items-center gap-1">
-                                   {emp.equipo && (
-                                     <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                       {emp.equipo}
-                                     </Badge>
-                                   )}
-                                   {emp.puesto}
-                                 </div>
-                               </div>
-                             )}
-                           </Draggable>
-                         ))}
-                         {provided.placeholder}
+                        <AutoSizer>
+                          {({ height, width }) => (
+                            <List
+                              height={height}
+                              itemCount={availableEmployees.length}
+                              itemSize={70}
+                              width={width}
+                              outerRef={provided.innerRef}
+                              itemData={availableEmployees}
+                            >
+                              {EmployeeRow}
+                            </List>
+                          )}
+                        </AutoSizer>
                        </div>
                      )}
                    </Droppable>

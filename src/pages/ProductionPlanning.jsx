@@ -250,6 +250,7 @@ export default function ProductionPlanningPage() {
             processes={processes}
             machineProcesses={machineProcesses}
             employees={employees}
+            teams={teams}
             selectedTeam={selectedTeam}
             dateRange={dateRange}
           />

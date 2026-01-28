@@ -48,39 +48,64 @@ export default function ResourceForecast({ orders, processes, machineProcesses, 
 
       // 2. Calculate Supply
       // Count available employees. Filter by team if selected.
-      // Roles considered: "OPERARIO DE LINEA", "OPERARIA DE LINEA", "2ª DE LINEA", "RESPONSABLE DE LINEA"
-      // Status: "Alta" (Active)
-      // Availability: "Disponible" (This is static in DB, for real forecast we'd check absences on that specific day)
-      // NOTE: For 'availability' on a specific future date, we should ideally check the Absences table. 
-      // Simplified here: we check basic "disponibilidad" field + static check. 
-      // Better: Check if `employee.ausencia_inicio` and `ausencia_fin` overlap `day`.
       
-      const targetRoles = ["OPERARIO DE LINEA", "OPERARIA DE LINEA", "2ª DE LINEA", "RESPONSABLE DE LINEA"];
+      const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+      
+      const allowedRoles = [
+        "responsable de linea", 
+        "segunda de linea", 
+        "operario de linea", 
+        "operaria de linea"
+      ].map(normalize);
       
       const availableEmployees = employees.filter(emp => {
         // Status check
         if ((emp.estado_empleado || "Alta") !== "Alta") return false;
         
+        // Department Check
+        if (normalize(emp.departamento) !== "fabricacion") return false;
+        
         // Role check
-        if (!targetRoles.includes(emp.puesto)) return false;
+        const normPuesto = normalize(emp.puesto);
+        if (!allowedRoles.includes(normPuesto)) return false;
         
         // Team check
-        if (selectedTeam !== "all" && emp.equipo !== selectedTeam) return false;
+        if (selectedTeam !== "all") {
+             const teamObj = teams.find(t => t.team_name === selectedTeam); // selectedTeam is name here
+             
+             let matchesTeam = false;
+             
+             if (teamObj && emp.team_id && String(emp.team_id) === String(teamObj.id)) {
+                 matchesTeam = true;
+             } else {
+                 const empTeam = normalize(emp.equipo);
+                 const targetTeam = normalize(selectedTeam);
+                 if (empTeam === targetTeam) matchesTeam = true;
+             }
+             
+             if (!matchesTeam) return false;
+        }
         
         // Availability on this specific day
         // Check if there is an active absence on this day
-        if (emp.ausencia_inicio && emp.ausencia_fin) {
+        if (emp.ausencia_inicio) {
           const absStart = new Date(emp.ausencia_inicio);
-          const absEnd = new Date(emp.ausencia_fin);
-          if (day >= absStart && day <= absEnd) return false;
-        } else if (emp.ausencia_inicio && !emp.ausencia_fin) {
+          absStart.setHours(0,0,0,0);
+          const checkDay = new Date(day);
+          checkDay.setHours(0,0,0,0);
+          
+          if (emp.ausencia_fin) {
+            const absEnd = new Date(emp.ausencia_fin);
+            absEnd.setHours(0,0,0,0);
+            if (checkDay >= absStart && checkDay <= absEnd) return false;
+          } else {
              // Unknown end date -> assume absent
-             const absStart = new Date(emp.ausencia_inicio);
-             if (day >= absStart) return false;
+             if (checkDay >= absStart) return false;
+          }
         }
         
         // Fallback to general flag if dates are missing but status is Ausente (mostly for today)
-        if (isSameDay(day, new Date()) && emp.disponibilidad === "Ausente") return false;
+        if (isSameDay(day, new Date()) && normalize(emp.disponibilidad) === "ausente") return false;
 
         return true;
       });

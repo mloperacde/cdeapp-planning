@@ -229,25 +229,30 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
 
                      return (
                        <div
-                         key={order.id}
-                         onClick={() => onEditOrder(order)}
-                         className={`absolute h-8 rounded shadow-sm border cursor-pointer px-2 py-1 flex items-center gap-2 text-xs transition-all hover:shadow-md hover:z-20 ${getPriorityColor(order.priority)} text-white`}
-                         style={{
-                           left: `${effectiveStartIndex * 128 + 4}px`,
-                           width: `${durationCols * 128 - 8}px`,
-                           top: `${idx * 36 + 4}px`,
-                         }}
-                         title={`${order.order_number} - ${order.product_name || ''}`}
-                       >
-                         <div className="flex items-center gap-1 min-w-0 flex-1">
-                           <span className="font-bold shrink-0">P{order.priority}</span>
-                           <span className="font-medium truncate">{order.order_number}</span>
-                           {isLate && <AlertCircle className="w-3 h-3 text-yellow-300 shrink-0" />}
-                         </div>
-                         <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 shrink-0">
-                           {order.quantity || 0}
-                         </Badge>
-                       </div>
+                        key={order.id}
+                        onClick={() => onEditOrder(order)}
+                        className={`absolute h-8 rounded shadow-sm border cursor-pointer px-2 py-0.5 flex items-center gap-2 text-xs transition-all hover:shadow-md hover:z-20 ${getPriorityColor(order.priority)} text-white`}
+                        style={{
+                          left: `${effectiveStartIndex * 128 + 4}px`,
+                          width: `${durationCols * 128 - 8}px`,
+                          top: `${idx * 36 + 4}px`,
+                        }}
+                        title={`${order.order_number} - ${order.product_name || ''}`}
+                      >
+                        <div className="flex flex-col min-w-0 flex-1 justify-center h-full">
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold shrink-0 text-[10px]">P{order.priority}</span>
+                            <span className="font-medium truncate text-[10px]">{order.order_number}</span>
+                            {isLate && <AlertCircle className="w-3 h-3 text-yellow-300 shrink-0" />}
+                          </div>
+                          {order.product_name || order.product_article_code ? (
+                            <span className="truncate text-[9px] opacity-90 leading-tight">{order.product_name || order.product_article_code}</span>
+                          ) : null}
+                        </div>
+                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 shrink-0 bg-white/20 text-white border-none">
+                          {order.quantity || 0}
+                        </Badge>
+                      </div>
                      );
                    })}
                   </div>
