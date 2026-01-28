@@ -14,9 +14,11 @@ import { format, startOfWeek, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FixedSizeList as List } from 'react-window';
+import ReactWindow from 'react-window';
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import ThemeToggle from "../components/common/ThemeToggle";
+
+const { FixedSizeList: List } = ReactWindow;
 import {
   Dialog,
   DialogContent,
