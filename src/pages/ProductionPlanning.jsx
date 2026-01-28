@@ -12,7 +12,6 @@ import WorkOrderForm from "../components/planning/WorkOrderForm";
 import PlanningGantt from "../components/planning/PlanningGantt";
 import MachineOrdersList from "../components/planning/MachineOrdersList";
 import ResourceForecast from "../components/planning/ResourceForecast";
-import WorkOrderImporter from "../components/planning/WorkOrderImporter";
 import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -151,7 +150,7 @@ export default function ProductionPlanningPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 flex flex-col h-full overflow-hidden">
+    <div className="p-6 md:p-8 flex flex-col min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
@@ -163,7 +162,6 @@ export default function ProductionPlanningPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <WorkOrderImporter />
           <Button type="button" onClick={handleNewOrder} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Orden
@@ -202,7 +200,9 @@ export default function ProductionPlanningPage() {
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
                 {machines.map(m => (
-                  <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.nombre} {m.ubicacion ? `(${m.ubicacion})` : ''}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -242,11 +242,23 @@ export default function ProductionPlanningPage() {
         </CardContent>
       </Card>
 
-      <div className="flex-1 min-h-0 grid grid-rows-[2fr_1fr] gap-6">
+      <div className="flex flex-col gap-6">
+        {/* Resource Forecast */}
+        <div className="min-h-0 flex flex-col">
+          <ResourceForecast 
+            orders={filteredOrders}
+            processes={processes}
+            machineProcesses={machineProcesses}
+            employees={employees}
+            selectedTeam={selectedTeam}
+            dateRange={dateRange}
+          />
+        </div>
+
         {/* Main Planning View */}
         <div className="min-h-0 flex flex-col">
           <Tabs defaultValue="gantt" className="h-full flex flex-col">
-            <TabsList className="flex-shrink-0">
+            <TabsList className="flex-shrink-0 w-fit">
               <TabsTrigger value="gantt" type="button">Vista Gantt</TabsTrigger>
               <TabsTrigger value="list" type="button">Vista Lista por Máquina</TabsTrigger>
             </TabsList>
@@ -263,7 +275,7 @@ export default function ProductionPlanningPage() {
               />
             </TabsContent>
 
-            <TabsContent value="list" className="flex-1 min-h-0 mt-2">
+            <TabsContent value="list" className="flex-1 mt-2">
               <MachineOrdersList 
                 machines={machines}
                 orders={filteredOrders}
@@ -272,18 +284,6 @@ export default function ProductionPlanningPage() {
               />
             </TabsContent>
           </Tabs>
-        </div>
-
-        {/* Resource Forecast */}
-        <div className="min-h-0 flex flex-col">
-          <ResourceForecast 
-            orders={filteredOrders}
-            processes={processes}
-            machineProcesses={machineProcesses}
-            employees={employees}
-            selectedTeam={selectedTeam}
-            dateRange={dateRange}
-          />
         </div>
       </div>
 

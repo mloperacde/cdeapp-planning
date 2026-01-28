@@ -33,14 +33,14 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
   };
 
   return (
-    <Card className="h-full flex flex-col shadow-none border-0 bg-transparent">
+    <Card className="flex flex-col shadow-none border-0 bg-transparent">
       <CardHeader className="py-2 px-0 pb-4">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           <Factory className="w-5 h-5 text-slate-600" />
           Tablero de Órdenes por Máquina
         </CardTitle>
       </CardHeader>
-      <div className="flex-1 overflow-y-auto pr-2 pb-10">
+      <div className="pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {machines.map(machine => {
           const machineOrders = getMachineOrders(machine.id);
@@ -48,7 +48,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
           // if (machineOrders.length === 0) return null;
 
           return (
-            <div key={machine.id} className="flex flex-col bg-white dark:bg-slate-950 rounded-lg border shadow-sm h-fit max-h-[600px] flex-shrink-0">
+            <div key={machine.id} className="flex flex-col bg-white dark:bg-slate-950 rounded-lg border shadow-sm h-fit flex-shrink-0">
               {/* Machine Header */}
               <div className="p-3 border-b bg-slate-50/80 dark:bg-slate-900 sticky top-0 z-10 backdrop-blur-sm rounded-t-lg">
                 <div className="flex items-start justify-between gap-2 mb-1">
@@ -65,7 +65,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
               </div>
 
               {/* Orders List */}
-              <div className="p-2 space-y-2 overflow-y-auto min-h-[100px] custom-scrollbar">
+              <div className="p-2 space-y-2 min-h-[100px]">
                 {machineOrders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-slate-400 border-2 border-dashed border-slate-100 rounded-md">
                         <Calendar className="w-8 h-8 mb-2 opacity-20" />
