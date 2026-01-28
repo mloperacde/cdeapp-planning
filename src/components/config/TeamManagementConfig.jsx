@@ -129,9 +129,14 @@ function GeneralTeamConfig() {
           });
           
           if (change) {
+            const target = Object.values(updatedTeams).find(t => String(t.team_name).trim().toLowerCase() === String(change.newName).trim().toLowerCase());
             updatesToProcess.push({
               id: emp.id,
-              data: { equipo: change.newName.trim() },
+              data: { 
+                equipo: change.newName.trim(),
+                team_key: target ? target.team_key : undefined,
+                team_id: target ? target.id : undefined
+              },
               name: emp.nombre
             });
           }

@@ -176,6 +176,8 @@ export default function ShiftAssignmentsPage() {
   const getEmployeeTeamKey = (employee) => {
       if (!employee) return null;
       const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+      const byId = employee.team_id ? teams.find(t => String(t.id) === String(employee.team_id)) : null;
+      if (byId) return byId.team_key;
       const empTeam = normalize(employee.equipo);
       const team = teams.find(t => normalize(t.team_name) === empTeam);
       return team ? team.team_key : null;
@@ -452,8 +454,9 @@ export default function ShiftAssignmentsPage() {
 
     // Basic Filtering
     let list = employees.filter(e => {
-        // 1. Team Match (Robust)
-        if (targetTeam && normalize(e.equipo) !== targetTeam) return false;
+        const matchesById = e.team_id && teamObj && String(e.team_id) === String(teamObj.id);
+        const matchesByName = targetTeam && normalize(e.equipo) === targetTeam;
+        if (!matchesById && !matchesByName) return false;
 
         // 2. Availability (Must be "Disponible" - Robust)
         if (normalize(e.disponibilidad) !== "disponible") return false;

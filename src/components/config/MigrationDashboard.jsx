@@ -289,7 +289,8 @@ function TeamsMigrationPanel() {
 
         employees.forEach(emp => {
             const currentTeamName = emp.equipo;
-            const currentTeamKey = emp.team_key; // New field we want to populate
+            const currentTeamKey = emp.team_key;
+            const currentTeamId = emp.team_id;
 
             if (!currentTeamName) {
                 unmappedCount++;
@@ -303,15 +304,17 @@ function TeamsMigrationPanel() {
 
             if (match) {
                 mappedCount++;
-                if (currentTeamKey !== match.team_key) {
+                if (currentTeamKey !== match.team_key || String(currentTeamId || "") !== String(match.id)) {
                     needsUpdateCount++;
                     details.push({
                         employee_id: emp.id,
                         name: emp.nombre,
                         current_name: currentTeamName,
                         matched_key: match.team_key,
+                        matched_id: match.id,
                         matched_name: match.team_name,
-                        current_key: currentTeamKey || "(vacío)"
+                        current_key: currentTeamKey || "(vacío)",
+                        current_id: currentTeamId || "(vacío)"
                     });
                 }
             } else {
@@ -346,7 +349,7 @@ function TeamsMigrationPanel() {
       if (!analysis?.details?.length) return;
       setMigrating(true);
       try {
-          const updates = analysis.details.filter(d => d.matched_key);
+          const updates = analysis.details.filter(d => d.matched_key && d.matched_id);
           let success = 0;
 
           // Process in chunks
@@ -359,14 +362,15 @@ function TeamsMigrationPanel() {
           for (const chunk of chunks) {
               await Promise.all(chunk.map(async (item) => {
                   await base44.entities.EmployeeMasterDatabase.update(item.employee_id, {
-                      team_key: item.matched_key
+                      team_key: item.matched_key,
+                      team_id: item.matched_id
                   });
                   success++;
               }));
               await new Promise(r => setTimeout(r, 1000));
           }
           
-          toast.success(`Vinculados ${success} empleados a sus Team Keys`);
+          toast.success(`Vinculados ${success} empleados a sus identificadores de equipo`);
           analyzeTeams();
 
       } catch (e) {
@@ -381,7 +385,7 @@ function TeamsMigrationPanel() {
       <CardHeader>
         <CardTitle>Consolidación de Relación Equipos</CardTitle>
         <CardDescription>
-          Vincula empleados a identificadores únicos (team_key) en lugar de nombres (string), permitiendo renombrar equipos sin romper asignaciones.
+          Vincula empleados a identificadores únicos (team_key y team_id) en lugar de nombres (string), permitiendo renombrar equipos sin romper asignaciones.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -407,7 +411,7 @@ function TeamsMigrationPanel() {
                 <ArrowRightLeft className="h-4 w-4" />
                 <AlertTitle>Actualización Disponible</AlertTitle>
                 <AlertDescription className="flex items-center justify-between mt-2">
-                    <span>{analysis.needsUpdateCount} empleados tienen nombre de equipo válido pero les falta el ID interno (team_key).</span>
+                    <span>{analysis.needsUpdateCount} empleados tienen nombre de equipo válido pero les falta el ID interno (team_key/team_id).</span>
                     <Button onClick={executeTeamLink} disabled={migrating} size="sm">
                         {migrating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Play className="w-4 h-4 mr-2" />}
                         Vincular IDs
@@ -434,7 +438,7 @@ function TeamsMigrationPanel() {
                                 <td className="px-2 py-2">
                                     {item.matched_key ? (
                                         <span className="text-green-600 flex items-center gap-1">
-                                            <ArrowRight className="w-3 h-3" /> Vincular a {item.matched_key}
+                                            <ArrowRight className="w-3 h-3" /> Vincular a {item.matched_key} / {item.matched_id}
                                         </span>
                                     ) : (
                                         <span className="text-red-500">{item.status}</span>
