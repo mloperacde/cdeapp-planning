@@ -250,7 +250,12 @@ export default function AppUserManagement() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      if (!localConfig || Object.keys(localConfig).length === 0) {
+        throw new Error("La configuración local está vacía. No se guardará para evitar pérdida de datos.");
+      }
+
       const configString = JSON.stringify(localConfig);
+      console.log("Preparing to save roles config:", configString);
       
       // Robust Save Logic: Check both key and config_key AND cleanup duplicates
       // 1. Try to find existing config with high limit
@@ -300,6 +305,24 @@ export default function AppUserManagement() {
       // Small delay to allow backend propagation
       await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Verification Step: Verify data was actually persisted
+      let verified = false;
+      try {
+         const verifyConfigs = await base44.entities.AppConfig.list('id', 1000);
+         const savedConfig = verifyConfigs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+         if (savedConfig && savedConfig.value) {
+            // Check content size match roughly
+            if (Math.abs(savedConfig.value.length - configString.length) < 50) {
+                verified = true;
+            } else {
+                console.warn("Saved config size mismatch. Local:", configString.length, "Remote:", savedConfig.value.length);
+            }
+         }
+      } catch (verifyErr) {
+         console.warn("Verification check failed:", verifyErr);
+         // Don't block success just because verification read failed, but log it
+      }
+
       // Invalidar query globalmente para asegurar que DataProvider se entere
       await queryClient.invalidateQueries({ queryKey: ['rolesConfig'] });
       
@@ -309,7 +332,11 @@ export default function AppUserManagement() {
       }
       
       setIsDirty(false);
-      toast.success("Configuración guardada y aplicada correctamente");
+      if (verified) {
+         toast.success("Configuración guardada y VERIFICADA correctamente");
+      } else {
+         toast.warning("Configuración enviada, pero no se pudo verificar inmediatamente. Por favor refresca la página para confirmar.");
+      }
     } catch (error) {
       console.error("Error saving roles config:", error);
       toast.error("Error al guardar: " + error.message);

@@ -222,7 +222,22 @@ export function DataProvider({ children }) {
             }
           }
 
-          return config?.value ? JSON.parse(config.value) : null;
+          if (!config?.value) return null;
+
+          try {
+            return JSON.parse(config.value);
+          } catch (parseError) {
+            console.error("CRITICAL: Error parsing roles_config JSON:", parseError, "Raw value:", config.value);
+            // Intentar recuperar si es un problema de doble stringify
+            try {
+               const doubleParsed = JSON.parse(JSON.parse(config.value));
+               console.warn("Recovered roles_config from double-stringified JSON");
+               return doubleParsed;
+            } catch(e) {
+               // Fallback final: devolver null para evitar crash, pero loguear fuerte
+               return null;
+            }
+          }
         } catch (err) {
           console.error('Error loading roles configuration:', err);
           return null;

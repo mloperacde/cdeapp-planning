@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "@/components/data/DataProvider";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -165,7 +166,8 @@ const DEFAULT_ROLES_CONFIG = {
 };
 
 export default function RolesConfig() {
-  const { rolesConfig, refetchRolesConfig, employees, isLoading } = useAppData();
+  const queryClient = useQueryClient();
+  const { rolesConfig, refetchRolesConfig, user } = useAppData();
   const [localConfig, setLocalConfig] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -305,6 +307,10 @@ export default function RolesConfig() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      if (!localConfig || Object.keys(localConfig).length === 0) {
+         throw new Error("Configuración vacía. Abortando guardado.");
+      }
+
       const configString = JSON.stringify(localConfig);
 
       // Estrategia robusta: Buscar por key usando list para asegurar que encontramos la configuración correcta
@@ -346,6 +352,14 @@ export default function RolesConfig() {
           key: 'roles_config', // Ensure compatibility
           value: configString 
         });
+      }
+
+      // Small delay to allow backend propagation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Invalidar query globalmente
+      if (queryClient) {
+        await queryClient.invalidateQueries({ queryKey: ['rolesConfig'] });
       }
 
       await refetchRolesConfig();

@@ -8,8 +8,8 @@ export async function syncEmployeeVacationProtection(employeeId, preloadedBalanc
     if (preloadedBalances) {
       balances = preloadedBalances;
     } else {
-      // Usar list() en lugar de filter() para asegurar consistencia y evitar problemas de caché
-      balances = await base44.entities.VacationPendingBalance.list();
+      // Usar list() con límite alto y ordenación explícita
+      balances = await base44.entities.VacationPendingBalance.list('id', 5000);
     }
 
     const employeeBalances = balances.filter(b => b.employee_id === employeeId);
@@ -222,7 +222,7 @@ export async function recalculateVacationPendingBalances() {
     }
 
     // Sincronización final masiva: asegurar que todos los saldos se reflejen en las fichas de empleado
-    const allBalances = await base44.entities.VacationPendingBalance.list();
+    const allBalances = await base44.entities.VacationPendingBalance.list('id', 5000);
     const distinctEmployeeIds = new Set(allBalances.map(b => b.employee_id));
     
     console.log(`Sincronizando balances finales para ${distinctEmployeeIds.size} empleados...`);

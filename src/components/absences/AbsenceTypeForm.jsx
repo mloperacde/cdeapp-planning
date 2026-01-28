@@ -35,24 +35,40 @@ export default function AbsenceTypeForm({ type, onClose }) {
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       console.log("Saving absence type:", data);
+      
+      // Validación previa
+      if (!base44?.entities?.AbsenceType) {
+        throw new Error("La entidad AbsenceType no está disponible en el cliente API.");
+      }
+
       try {
+        let result;
         if (type?.id) {
-          return await base44.entities.AbsenceType.update(type.id, data);
+          result = await base44.entities.AbsenceType.update(type.id, data);
+        } else {
+          result = await base44.entities.AbsenceType.create(data);
         }
-        return await base44.entities.AbsenceType.create(data);
+        
+        console.log("Save result:", result);
+        return result;
       } catch (error) {
         console.error("Error saving absence type:", error);
-        throw error;
+        // Extraer mensaje de error útil si es posible
+        const message = error?.message || error?.error || "Error desconocido al guardar";
+        throw new Error(message);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absenceTypes'] });
-      toast.success(type ? "Tipo actualizado" : "Tipo creado");
-      onClose();
+      toast.success(type ? "Tipo actualizado correctamente" : "Tipo creado correctamente");
+      // Forzar cierre con pequeño delay para asegurar UX
+      setTimeout(() => {
+        onClose();
+      }, 100);
     },
     onError: (error) => {
       console.error("Mutation error:", error);
-      toast.error("Error al guardar: " + (error.message || "Error desconocido"));
+      toast.error(`Error al guardar: ${error.message}`);
     }
   });
 
