@@ -198,36 +198,27 @@ export function DataProvider({ children }) {
       if (isLocal) return null;
       try {
         // console.log("DataProvider: Fetching roles configuration...");
-        // Usar list con límite alto para asegurar que no perdemos la configuración por paginación
-          // Usamos 'id' como criterio de ordenación seguro en lugar de null
-          const configs = await base44.entities.AppConfig.list('id', 1000);
+        // 1. Try specific filter first (faster and likely more consistent)
+          let config = null;
+          try {
+             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+             if (f1 && f1.length > 0) config = f1[0];
+          } catch(e) { console.warn("Filter by config_key failed", e); }
           
-          let config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
-          
-          if (config) {
-            // console.log(`DataProvider: Found roles config (ID: ${config.id}, Key: ${config.config_key || config.key})`);
-          } else {
-            console.warn("DataProvider: Roles config NOT found in list");
-          }
-
-          // Fallback: Si no lo encontramos en la lista, intentamos filtrar específicamente
+          // 2. Try filter by alternative key
           if (!config) {
-            try {
-              const filtered = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-              if (filtered && filtered.length > 0) config = filtered[0];
-            } catch (e) {
-              console.warn("Filter not supported or failed", e);
-            }
-          }
-
-          if (!config && !config?.value) {
-             // Segundo intento por key antigua
              try {
-              const filtered = await base44.entities.AppConfig.filter({ key: 'roles_config' });
-              if (filtered && filtered.length > 0) config = filtered[0];
-            } catch (e) {
-              // Ignore
-            }
+                 const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
+                 if (f2 && f2.length > 0) config = f2[0];
+             } catch(e) { console.warn("Filter by key failed", e); }
+          }
+          
+          // 3. Fallback to list (slow but exhaustive)
+          if (!config) {
+             try {
+                const configs = await base44.entities.AppConfig.list('id', 1000) || [];
+                config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+             } catch(e) { console.warn("List fallback failed", e); }
           }
 
           if (!config?.value) return null;

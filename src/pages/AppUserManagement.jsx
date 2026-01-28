@@ -285,11 +285,17 @@ export default function AppUserManagement() {
                       filteredEmployees.map(emp => {
                         const email = emp.email ? emp.email.toLowerCase() : null;
                         const currentRole = email ? (localConfig.user_assignments?.[email] || "none") : "none";
-                        const displayName = emp.nombre || emp.name || emp.Name || "Sin Nombre";
+                        // Robust name retrieval with email fallback
+                        const displayName = emp.nombre || emp.name || emp.Name || emp.email || "Sin Nombre";
                         
                         return (
                           <TableRow key={emp.id}>
-                            <TableCell className="font-medium">{displayName}</TableCell>
+                            <TableCell className="font-medium">
+                              {displayName}
+                              {(!emp.nombre && !emp.name && !emp.Name) && (
+                                <span className="ml-2 text-xs text-amber-500 italic">(Nombre no disponible)</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               {email ? (
                                 <span className="font-mono text-xs">{email}</span>
@@ -474,57 +480,37 @@ export default function AppUserManagement() {
 
         {/* --- PESTAÑA DIAGNÓSTICO --- */}
         <TabsContent value="diagnostics">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-blue-500" /> Resumen de Seguridad
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between p-3 bg-slate-50 rounded">
-                  <span>Roles Definidos</span>
-                  <span className="font-bold">{roleKeys.length}</span>
-                </div>
-                <div className="flex justify-between p-3 bg-slate-50 rounded">
-                  <span>Usuarios con Acceso</span>
-                  <span className="font-bold text-green-600">{stats.withRole}</span>
-                </div>
-                <div className="flex justify-between p-3 bg-slate-50 rounded">
-                  <span>Usuarios Pendientes</span>
-                  <span className={`font-bold ${stats.missingRole > 0 ? "text-amber-600" : "text-slate-600"}`}>
-                    {stats.missingRole}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className={`border-l-4 ${stats.missingRole > 0 ? "border-l-amber-500" : "border-l-green-500"}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" /> Acción Requerida
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {stats.missingRole > 0 ? (
-                  <div className="space-y-3">
-                    <p className="text-amber-700">
-                      Hay <strong>{stats.missingRole} empleados</strong> con email que no tienen rol asignado. 
-                      No podrán acceder a ninguna función.
-                    </p>
-                    <Button size="sm" onClick={() => { setActiveTab("users"); setRoleFilter("none"); }} variant="secondary">
-                      Ir a asignar roles pendientes
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center py-4 text-green-600">
-                    <CheckCircle className="w-10 h-10 mb-2" />
-                    <p>Todos los usuarios tienen acceso configurado.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Diagnóstico de Configuración</CardTitle>
+              <CardDescription>Herramientas para solucionar problemas de acceso</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+               <div className="flex gap-4">
+                  <Button variant="outline" onClick={() => window.location.reload()}>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Recargar Página Completa
+                  </Button>
+                  <Button variant="outline" onClick={() => {
+                     console.log("Volcando configuración local:", localConfig);
+                     alert("Configuración volcada a consola");
+                  }}>
+                     Ver Configuración en Consola
+                  </Button>
+               </div>
+               
+               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-md overflow-auto max-h-[300px]">
+                  <h4 className="font-bold mb-2">Estado de Roles:</h4>
+                  <pre className="text-xs">{JSON.stringify({ 
+                    loaded: !!localConfig,
+                    rolesCount: localConfig?.roles ? Object.keys(localConfig.roles).length : 0,
+                    assignmentsCount: localConfig?.user_assignments ? Object.keys(localConfig.user_assignments).length : 0,
+                    employeesCount: employees?.length || 0,
+                    firstEmployeeSample: employees && employees.length > 0 ? employees[0] : "No employees"
+                  }, null, 2)}</pre>
+               </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

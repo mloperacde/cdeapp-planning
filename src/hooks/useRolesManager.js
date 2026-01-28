@@ -269,7 +269,14 @@ export function useRolesManager() {
       console.log("useRolesManager: Saving config...", configString.length, "chars");
 
       // 1. Encontrar registro existente
-      let allConfigs = await base44.entities.AppConfig.list('id', 1000);
+      let allConfigs = [];
+      try {
+        allConfigs = await base44.entities.AppConfig.list('id', 1000) || [];
+      } catch (e) {
+        console.error("Error listing AppConfig:", e);
+        allConfigs = [];
+      }
+
       let matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
 
       // Fallback filter
@@ -278,49 +285,110 @@ export function useRolesManager() {
              const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
              const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
              matches = [...(f1 || []), ...(f2 || [])];
+             // Deduplicate by ID
              matches = matches.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
          } catch(e) { console.warn("Filter fallback failed", e); }
       }
 
       // 2. Limpiar duplicados y guardar
+      let savedRecordId = null;
+
       if (matches.length > 0) {
         const targetId = matches[0].id;
+        savedRecordId = targetId;
+        
         if (matches.length > 1) {
           console.warn(`Cleaning up ${matches.length - 1} duplicate configs`);
-          await Promise.all(matches.slice(1).map(m => base44.entities.AppConfig.delete(m.id)));
+          try {
+             await Promise.all(matches.slice(1).map(m => base44.entities.AppConfig.delete(m.id)));
+          } catch(e) { console.error("Error cleaning duplicates:", e); }
         }
         
-        await base44.entities.AppConfig.update(targetId, { 
+        console.log(`useRolesManager: Updating existing config ID ${targetId}`);
+        const updateResult = await base44.entities.AppConfig.update(targetId, { 
           config_key: 'roles_config',
           key: 'roles_config',
           value: configString 
         });
+        console.log("Update result:", updateResult);
       } else {
-        await base44.entities.AppConfig.create({ 
+        console.log("useRolesManager: Creating new config record");
+        const createResult = await base44.entities.AppConfig.create({ 
           config_key: 'roles_config', 
           key: 'roles_config',
           value: configString 
         });
+        console.log("Create result:", createResult);
+        if (createResult && createResult.id) savedRecordId = createResult.id;
       }
 
-      // 3. Espera de seguridad
-      await new Promise(r => setTimeout(r, 800));
+      // 3. Espera de seguridad y Verificación INTELIGENTE
+      await new Promise(r => setTimeout(r, 2000)); // Aumentado a 2s
 
-      // 4. Verificación explícita
-      const verifyList = await base44.entities.AppConfig.list('id', 1000) || [];
-      const saved = verifyList.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+      // Intentar leer ESPECÍFICAMENTE el registro guardado si tenemos ID
+      let saved = null;
+      if (savedRecordId) {
+          try {
+              // Intento de lectura directa por filtro de ID (más fiable que list)
+              const direct = await base44.entities.AppConfig.filter({ id: savedRecordId });
+              if (direct && direct.length > 0) {
+                  saved = direct[0];
+              } else {
+                  // Fallback a list si filter falla
+                   const allItems = await base44.entities.AppConfig.list('id', 2000) || [];
+                   saved = allItems.find(i => i.id === savedRecordId);
+              }
+          } catch(e) { 
+              console.warn("Direct read failed", e); 
+              // Last resort list
+              try {
+                  const allItems = await base44.entities.AppConfig.list('id', 2000) || [];
+                  saved = allItems.find(i => i.id === savedRecordId);
+              } catch(ex) { console.error("List fallback failed", ex); }
+          }
+      }
+
+      if (!saved) {
+         // Fallback a búsqueda general por clave
+         try {
+             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+             if (f1 && f1.length > 0) saved = f1[0];
+         } catch(e) {}
+         
+         if (!saved) {
+             const verifyList = await base44.entities.AppConfig.list('id', 1000) || [];
+             saved = verifyList.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+         }
+      }
       
-      const savedValue = saved?.value || "";
+      const savedValue = saved && saved.value ? saved.value : "";
+      const savedId = saved ? saved.id : "unknown";
+      console.log(`Verification: Expected ${configString.length} chars, Got ${savedValue.length} chars. ID: ${savedId}`);
+
       if (!saved || Math.abs(savedValue.length - configString.length) > 50) {
-        console.warn("Verification warning: Saved size mismatch", saved?.value?.length, configString.length);
-        toast.warning("Guardado realizado, pero la verificación detectó posibles inconsistencias. Refresca para confirmar.");
+        console.error("CRITICAL: Save verification failed. Data not persisted correctly.");
+        console.log("Sent length:", configString.length);
+        console.log("Received length:", savedValue.length);
+        
+        // Reintento de emergencia (fuerza bruta)
+        if (savedRecordId) {
+            console.warn("Attempting emergency retry update...");
+            try {
+              await base44.entities.AppConfig.update(savedRecordId, { value: configString });
+            } catch(e) { console.error("Retry failed", e); }
+        }
+        
+        toast.warning("Posible error de sincronización. Por favor espera unos segundos y vuelve a guardar si los cambios no persisten.");
       } else {
         toast.success("Configuración guardada y verificada.");
       }
 
       // 5. Invalidación
       await queryClient.invalidateQueries({ queryKey: ['rolesConfig'] });
-      if (refetchRolesConfig) await refetchRolesConfig();
+      if (refetchRolesConfig) {
+          console.log("Refetching roles config...");
+          await refetchRolesConfig();
+      }
       
       setIsDirty(false);
 
