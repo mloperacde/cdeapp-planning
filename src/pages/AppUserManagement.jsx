@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useAppData } from "@/components/data/DataProvider";
-import { base44 } from "@/api/base44Client";
-import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Shield, Users, Save, Plus, Trash2, AlertTriangle, RotateCcw, Factory, Search, Filter, X, Lock, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
+import { Shield, Users, Save, Plus, Trash2, AlertCircle, RotateCcw, Factory, Search, X, Lock, CheckCircle, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { toast } from "sonner";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
+import { useRolesManager } from '@/hooks/useRolesManager';
 
 // Definición de permisos y sus etiquetas legibles
 const PERMISSION_LABELS = {
@@ -32,149 +30,23 @@ const PERMISSION_LABELS = {
   canConfigureSystem: "Configurar Sistema",
 };
 
-// Roles por defecto (copia de seguridad del sistema anterior)
-const DEFAULT_ROLES_CONFIG = {
-  roles: {
-    admin: {
-      name: "Administrador",
-      permissions: {
-        isAdmin: true,
-        canViewSalary: true,
-        canViewPersonalData: true,
-        canViewBankingData: true,
-        canEditEmployees: true,
-        canApproveAbsences: true,
-        canManageMachines: true,
-        canViewReports: true,
-        canConfigureSystem: true,
-      },
-      isSystem: true
-    },
-    hr_manager: {
-      name: "Gerente RRHH",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: true,
-        canViewPersonalData: true,
-        canViewBankingData: true,
-        canEditEmployees: true,
-        canApproveAbsences: true,
-        canManageMachines: false,
-        canViewReports: true,
-        canConfigureSystem: false,
-      }
-    },
-    shift_manager_production: {
-      name: "Jefe Turno Producción",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: true,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: true,
-        canManageMachines: true,
-        canViewReports: true,
-        canConfigureSystem: false,
-      }
-    },
-    shift_manager_quality: {
-      name: "Jefe Turno Calidad",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: true,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: true,
-        canManageMachines: false,
-        canViewReports: true,
-        canConfigureSystem: false,
-      }
-    },
-    shift_manager_maintenance: {
-      name: "Jefe Turno Mantenimiento",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: true,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: true,
-        canManageMachines: true,
-        canViewReports: true,
-        canConfigureSystem: false,
-      }
-    },
-    prod_supervisor: {
-      name: "Supervisor Producción",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: true,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: true,
-        canManageMachines: true,
-        canViewReports: true,
-        canConfigureSystem: false,
-      }
-    },
-    maintenance_tech: {
-      name: "Técnico Mantenimiento",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: false,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: false,
-        canManageMachines: true,
-        canViewReports: true,
-        canConfigureSystem: false,
-      }
-    },
-    operator: {
-      name: "Operario",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: false,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: false,
-        canManageMachines: false,
-        canViewReports: true,
-        canConfigureSystem: false,
-      }
-    },
-    user: {
-      name: "Usuario Estándar",
-      permissions: {
-        isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: false,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: false,
-        canManageMachines: false,
-        canViewReports: false,
-        canConfigureSystem: false,
-      },
-      isSystem: true
-    },
-  },
-  user_assignments: {} // email -> role_id
-};
-
 export default function AppUserManagement() {
-  const { employees, rolesConfig, refetchRolesConfig } = useAppData();
-  const queryClient = useQueryClient();
+  const { employees } = useAppData();
   
-  // Estado local para edición
-  const [localConfig, setLocalConfig] = useState(null);
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  // Usar el nuevo hook centralizado
+  const {
+    localConfig,
+    isDirty,
+    isSaving,
+    isLoading,
+    updatePermission,
+    updatePagePermission,
+    updateUserAssignment,
+    addRole,
+    deleteRole,
+    saveConfig,
+    resetConfig
+  } = useRolesManager();
   
   // Estados para nuevo rol
   const [isNewRoleOpen, setIsNewRoleOpen] = useState(false);
@@ -186,27 +58,6 @@ export default function AppUserManagement() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("users");
-
-  // Inicializar estado local cuando cargan los datos
-  useEffect(() => {
-    // Solo actualizar si NO hay cambios sin guardar (isDirty)
-    if (!isDirty) {
-      // Si tenemos rolesConfig remoto, lo usamos
-      if (rolesConfig && Object.keys(rolesConfig).length > 0) {
-        console.log("AppUserManagement: Loaded remote configuration", rolesConfig);
-        setLocalConfig(JSON.parse(JSON.stringify(rolesConfig)));
-      } 
-      // Si NO tenemos rolesConfig remoto, y NO estamos cargando (userLoading/employeesLoading),
-      // entonces asumimos default. Esto evita flasheos durante la carga inicial.
-      // Pero si localConfig ya tiene algo (quizás default previo), no lo reseteamos a default de nuevo
-      // a menos que sea explícitamente necesario.
-      else if (!rolesConfig && !localConfig) {
-        // Solo usar default si es la primera carga y no hay nada
-        console.log("AppUserManagement: Initializing with default configuration");
-        setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
-      }
-    }
-  }, [rolesConfig, isDirty]); // Eliminamos localConfig de deps para evitar bucles
 
   // Derived state: Roles keys
   const roleKeys = useMemo(() => {
@@ -225,22 +76,30 @@ export default function AppUserManagement() {
     if (!employees || !localConfig) return [];
     
     return employees.filter(emp => {
+      // Robust name retrieval
+      const empName = emp.nombre || emp.name || emp.Name || "";
+      const empEmail = emp.email || "";
+
       // Search term filter
       const searchMatch = !searchTerm || 
-        (emp.nombre && emp.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (emp.email && emp.email.toLowerCase().includes(searchTerm.toLowerCase()));
+        (empName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (empEmail.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Department filter
       const deptMatch = departmentFilter === "all" || emp.departamento === departmentFilter;
       
       // Role filter
-      const userRole = emp.email ? (localConfig.user_assignments?.[emp.email.toLowerCase()] || "none") : "none";
+      const userRole = empEmail ? (localConfig.user_assignments?.[empEmail.toLowerCase()] || "none") : "none";
       const roleMatch = roleFilter === "all" || 
                        (roleFilter === "none" && (!userRole || userRole === "none")) ||
                        userRole === roleFilter;
 
       return searchMatch && deptMatch && roleMatch;
-    }).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+    }).sort((a, b) => {
+        const nameA = a.nombre || a.name || a.Name || "";
+        const nameB = b.nombre || b.name || b.Name || "";
+        return nameA.localeCompare(nameB);
+    });
   }, [employees, localConfig, searchTerm, departmentFilter, roleFilter]);
 
   // Stats for Diagnostics
@@ -258,214 +117,6 @@ export default function AppUserManagement() {
     };
   }, [employees, localConfig]);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      if (!localConfig || Object.keys(localConfig).length === 0) {
-        throw new Error("La configuración local está vacía. No se guardará para evitar pérdida de datos.");
-      }
-
-      const configString = JSON.stringify(localConfig);
-      console.log("Preparing to save roles config:", configString);
-      
-      // Robust Save Logic: Check both key and config_key AND cleanup duplicates
-      // 1. Try to find existing config with high limit
-      let allConfigs = await base44.entities.AppConfig.list('id', 1000);
-      let matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
-
-      // 2. If not found in list, try specific filter
-      if (matches.length === 0) {
-          try {
-             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-             const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
-             matches = [...(f1 || []), ...(f2 || [])];
-             // Deduplicate by ID
-             matches = matches.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
-          } catch(e) {
-             console.warn("Filter failed during save check", e);
-          }
-      }
-      
-      if (matches.length > 0) {
-        // Use the first one as target
-        const targetId = matches[0].id;
-        
-        // Delete duplicates if any
-        if (matches.length > 1) {
-          console.warn(`Found ${matches.length} duplicate roles_config entries. Cleaning up...`);
-          const deletePromises = matches.slice(1).map(m => base44.entities.AppConfig.delete(m.id));
-          await Promise.all(deletePromises);
-        }
-        
-        // Update target
-        console.log(`Updating AppConfig ${targetId} with size: ${configString.length} chars`);
-        await base44.entities.AppConfig.update(targetId, { 
-          config_key: 'roles_config',
-          key: 'roles_config', // Asegurar compatibilidad
-          value: configString 
-        });
-      } else {
-        console.log(`Creating new AppConfig with size: ${configString.length} chars`);
-        await base44.entities.AppConfig.create({ 
-          config_key: 'roles_config', 
-          key: 'roles_config', // Asegurar compatibilidad
-          value: configString 
-        });
-      }
-
-      // Small delay to allow backend propagation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Verification Step: Verify data was actually persisted
-      let verified = false;
-      try {
-         const verifyConfigs = await base44.entities.AppConfig.list('id', 1000);
-         const savedConfig = verifyConfigs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
-         if (savedConfig && savedConfig.value) {
-            // Check content size match roughly
-            if (Math.abs(savedConfig.value.length - configString.length) < 50) {
-                verified = true;
-            } else {
-                console.warn("Saved config size mismatch. Local:", configString.length, "Remote:", savedConfig.value.length);
-            }
-         }
-      } catch (verifyErr) {
-         console.warn("Verification check failed:", verifyErr);
-         // Don't block success just because verification read failed, but log it
-      }
-
-      // Invalidar query globalmente para asegurar que DataProvider se entere
-      await queryClient.invalidateQueries({ queryKey: ['rolesConfig'] });
-      
-      // Intentar refrescar vía contexto si está disponible
-      if (refetchRolesConfig) {
-        await refetchRolesConfig();
-      }
-      
-      setIsDirty(false);
-      if (verified) {
-         toast.success("Configuración guardada y VERIFICADA correctamente");
-      } else {
-         toast.warning("Configuración enviada, pero no se pudo verificar inmediatamente. Por favor refresca la página para confirmar.");
-      }
-    } catch (error) {
-      console.error("Error saving roles config:", error);
-      toast.error("Error al guardar: " + error.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleReset = () => {
-    if (window.confirm("¿Estás seguro de descartar los cambios no guardados?")) {
-      setLocalConfig(JSON.parse(JSON.stringify(rolesConfig || DEFAULT_ROLES_CONFIG)));
-      setIsDirty(false);
-      toast.info("Cambios descartados");
-    }
-  };
-
-  const handleUserAssignment = (email, roleId) => {
-    if (!email) return;
-    const cleanEmail = email.toLowerCase().trim();
-    
-    setLocalConfig(prev => {
-      const newAssignments = { ...prev.user_assignments };
-      if (roleId === "none") {
-        delete newAssignments[cleanEmail];
-      } else {
-        newAssignments[cleanEmail] = roleId;
-      }
-      return { ...prev, user_assignments: newAssignments };
-    });
-    setIsDirty(true);
-  };
-
-  const handlePermissionChange = (roleId, permKey, checked) => {
-    setLocalConfig(prev => {
-      const role = prev.roles[roleId];
-      return {
-        ...prev,
-        roles: {
-          ...prev.roles,
-          [roleId]: {
-            ...role,
-            permissions: {
-              ...role.permissions,
-              [permKey]: checked
-            }
-          }
-        }
-      };
-    });
-    setIsDirty(true);
-  };
-
-  const handlePagePermissionChange = (roleId, path, checked) => {
-    setLocalConfig(prev => {
-      const role = prev.roles[roleId];
-      return {
-        ...prev,
-        roles: {
-          ...prev.roles,
-          [roleId]: {
-            ...role,
-            page_permissions: {
-              ...(role.page_permissions || {}),
-              [path]: checked
-            }
-          }
-        }
-      };
-    });
-    setIsDirty(true);
-  };
-
-  const handleAddRole = () => {
-    if (!newRoleName || !newRoleId) return;
-    
-    // Clean ID
-    const cleanId = newRoleId.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    
-    if (localConfig.roles[cleanId]) {
-      toast.error("El ID del rol ya existe");
-      return;
-    }
-
-    setLocalConfig(prev => ({
-      ...prev,
-      roles: {
-        ...prev.roles,
-        [cleanId]: {
-          name: newRoleName,
-          permissions: { ...DEFAULT_ROLES_CONFIG.roles.user.permissions },
-          isSystem: false
-        }
-      }
-    }));
-    
-    setIsNewRoleOpen(false);
-    setNewRoleName("");
-    setNewRoleId("");
-    setIsDirty(true);
-    toast.success("Rol creado provisionalmente. Recuerda guardar.");
-  };
-
-  const handleDeleteRole = (roleId) => {
-    if (localConfig.roles[roleId]?.isSystem) {
-      toast.error("No se pueden eliminar roles del sistema");
-      return;
-    }
-
-    if (window.confirm(`¿Estás seguro de eliminar el rol "${localConfig.roles[roleId].name}"?`)) {
-      setLocalConfig(prev => {
-        const newRoles = { ...prev.roles };
-        delete newRoles[roleId];
-        return { ...prev, roles: newRoles };
-      });
-      setIsDirty(true);
-    }
-  };
-
   // Agrupar menú para visualización en pestaña Navegación
   const groupedMenu = useMemo(() => {
     return MENU_STRUCTURE.reduce((acc, item) => {
@@ -476,7 +127,29 @@ export default function AppUserManagement() {
     }, {});
   }, []);
 
-  if (!localConfig) return <div className="p-8 text-center">Cargando configuración...</div>;
+  const handleCreateRole = () => {
+      try {
+          addRole(newRoleName, newRoleId);
+          setIsNewRoleOpen(false);
+          setNewRoleName("");
+          setNewRoleId("");
+          toast.success("Rol creado provisionalmente. Recuerda guardar.");
+      } catch (e) {
+          toast.error(e.message);
+      }
+  };
+
+  const handleDeleteRoleWrapper = (roleId) => {
+      if (window.confirm("¿Seguro que quieres eliminar este rol?")) {
+        try {
+            deleteRole(roleId);
+        } catch (e) {
+            toast.error(e.message);
+        }
+      }
+  };
+
+  if (isLoading || !localConfig) return <div className="p-8 text-center">Cargando configuración...</div>;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -514,12 +187,12 @@ export default function AppUserManagement() {
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (
-            <Button variant="outline" onClick={handleReset} disabled={isSaving} className="text-amber-600 border-amber-200 hover:bg-amber-50">
+            <Button variant="outline" onClick={resetConfig} disabled={isSaving} className="text-amber-600 border-amber-200 hover:bg-amber-50">
               <RotateCcw className="w-4 h-4 mr-2" />
               Descartar Cambios
             </Button>
           )}
-          <Button onClick={handleSave} disabled={!isDirty || isSaving} className={isDirty ? "bg-green-600 hover:bg-green-700" : ""}>
+          <Button onClick={saveConfig} disabled={!isDirty || isSaving} className={isDirty ? "bg-green-600 hover:bg-green-700" : ""}>
             <Save className="w-4 h-4 mr-2" />
             {isSaving ? "Guardando..." : "Guardar Configuración"}
           </Button>
@@ -612,10 +285,11 @@ export default function AppUserManagement() {
                       filteredEmployees.map(emp => {
                         const email = emp.email ? emp.email.toLowerCase() : null;
                         const currentRole = email ? (localConfig.user_assignments?.[email] || "none") : "none";
+                        const displayName = emp.nombre || emp.name || emp.Name || "Sin Nombre";
                         
                         return (
                           <TableRow key={emp.id}>
-                            <TableCell className="font-medium">{emp.nombre}</TableCell>
+                            <TableCell className="font-medium">{displayName}</TableCell>
                             <TableCell>
                               {email ? (
                                 <span className="font-mono text-xs">{email}</span>
@@ -629,7 +303,7 @@ export default function AppUserManagement() {
                             <TableCell>
                               <Select 
                                 value={currentRole} 
-                                onValueChange={(val) => handleUserAssignment(email, val)}
+                                onValueChange={(val) => updateUserAssignment(email, val)}
                                 disabled={!email}
                               >
                                 <SelectTrigger className="w-[200px]">
@@ -681,8 +355,13 @@ export default function AppUserManagement() {
                         <div className="flex flex-col items-center gap-1">
                           <span className="font-bold">{localConfig.roles[roleId].name}</span>
                           {!localConfig.roles[roleId].isSystem && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-600" onClick={() => handleDeleteRole(roleId)}>
-                              <Trash2 className="h-3 w-3" />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 text-red-400 hover:text-red-600"
+                              onClick={() => handleDeleteRoleWrapper(roleId)}
+                            >
+                              <Trash2 className="w-3 h-3" />
                             </Button>
                           )}
                         </div>
@@ -693,20 +372,21 @@ export default function AppUserManagement() {
                 <TableBody>
                   {Object.entries(PERMISSION_LABELS).map(([permKey, label]) => (
                     <TableRow key={permKey}>
-                      <TableCell className="font-medium bg-slate-50 dark:bg-slate-900 sticky left-0 z-10">
+                      <TableCell className="font-medium bg-slate-50 dark:bg-slate-900 sticky left-0 z-10 border-r">
                         {label}
+                        <p className="text-xs text-slate-400 font-normal">{permKey}</p>
                       </TableCell>
                       {roleKeys.map(roleId => {
-                        const role = localConfig.roles[roleId];
-                        const isChecked = role.permissions[permKey];
-                        const isLocked = roleId === 'admin' && permKey === 'isAdmin'; // Prevent locking admin out
-
+                        const isChecked = localConfig.roles[roleId].permissions[permKey];
+                        // Admin role always has all permissions
+                        const isLocked = roleId === 'admin'; 
+                        
                         return (
                           <TableCell key={`${roleId}-${permKey}`} className="text-center">
                             <Checkbox 
-                              checked={isChecked}
+                              checked={isLocked ? true : isChecked}
                               disabled={isLocked}
-                              onCheckedChange={(checked) => handlePermissionChange(roleId, permKey, checked)}
+                              onCheckedChange={(checked) => updatePermission(roleId, permKey, checked)}
                             />
                           </TableCell>
                         );
@@ -760,9 +440,9 @@ export default function AppUserManagement() {
                             const role = localConfig.roles[roleId];
                             
                             // Lógica de visualización del estado actual
+                            // Si page_permissions es undefined, mostramos el valor por defecto (Legacy)
                             let effectiveValue;
                             if (role.page_permissions === undefined) {
-                                // Default legacy behavior
                                 if (roleId === 'admin') effectiveValue = true;
                                 else if (item.category === 'Configuración') effectiveValue = false;
                                 else effectiveValue = true;
@@ -777,7 +457,7 @@ export default function AppUserManagement() {
                                 <Checkbox 
                                   checked={effectiveValue}
                                   disabled={isLocked}
-                                  onCheckedChange={(checked) => handlePagePermissionChange(roleId, item.path, checked)}
+                                  onCheckedChange={(checked) => updatePagePermission(roleId, item.path, checked)}
                                 />
                               </TableCell>
                             );
@@ -815,20 +495,6 @@ export default function AppUserManagement() {
                   <span className={`font-bold ${stats.missingRole > 0 ? "text-amber-600" : "text-slate-600"}`}>
                     {stats.missingRole}
                   </span>
-                </div>
-                <div className="pt-4 border-t">
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full"
-                        onClick={async () => {
-                            toast.info("Refrescando configuración...");
-                            if (refetchRolesConfig) await refetchRolesConfig();
-                            toast.success("Refresco completado");
-                        }}
-                    >
-                        <RotateCcw className="w-4 h-4 mr-2" /> Forzar Recarga de Configuración
-                    </Button>
                 </div>
               </CardContent>
             </Card>
@@ -894,7 +560,7 @@ export default function AppUserManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsNewRoleOpen(false)}>Cancelar</Button>
-            <Button onClick={handleAddRole} disabled={!newRoleName || !newRoleId}>Crear Rol</Button>
+            <Button onClick={handleCreateRole} disabled={!newRoleName || !newRoleId}>Crear Rol</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
