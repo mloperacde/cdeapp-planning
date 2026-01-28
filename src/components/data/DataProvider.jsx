@@ -197,11 +197,19 @@ export function DataProvider({ children }) {
     queryFn: async () => {
       if (isLocal) return null;
       try {
+        console.log("DataProvider: Fetching roles configuration...");
         // Usar list con límite alto para asegurar que no perdemos la configuración por paginación
           // Usamos 'id' como criterio de ordenación seguro en lugar de null
           const configs = await base44.entities.AppConfig.list('id', 1000);
+          
           let config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
           
+          if (config) {
+            console.log(`DataProvider: Found roles config (ID: ${config.id}, Key: ${config.config_key || config.key})`);
+          } else {
+            console.warn("DataProvider: Roles config NOT found in list");
+          }
+
           // Fallback: Si no lo encontramos en la lista, intentamos filtrar específicamente
           if (!config) {
             try {

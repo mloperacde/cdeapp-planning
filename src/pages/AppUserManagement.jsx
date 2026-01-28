@@ -805,6 +805,20 @@ export default function AppUserManagement() {
                     {stats.missingRole}
                   </span>
                 </div>
+                <div className="pt-4 border-t">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={async () => {
+                            toast.info("Refrescando configuración...");
+                            if (refetchRolesConfig) await refetchRolesConfig();
+                            toast.success("Refresco completado");
+                        }}
+                    >
+                        <RotateCcw className="w-4 h-4 mr-2" /> Forzar Recarga de Configuración
+                    </Button>
+                </div>
               </CardContent>
             </Card>
 
