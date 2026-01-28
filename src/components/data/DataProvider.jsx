@@ -12,7 +12,10 @@ const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isLocal = host === 'localhost' || host === '127.0.0.1';
+  // isLocal NO debe impedir cargar datos si estamos usando un mock local o si queremos probar persistencia
+  // El control de "si es local, no hay backend" es demasiado agresivo.
+  // Dejamos que base44Client decida si usa mock o real.
+  const isLocal = false; // Forzamos a false para que intente cargar datos siempre (Mock o Real)
   
   // 1. USUARIO ACTUAL - Cache 5 min
   const userQuery = useQuery({
