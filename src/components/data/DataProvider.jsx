@@ -251,9 +251,9 @@ export function DataProvider({ children }) {
           return null;
         }
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 0, // Desactivar cache para asegurar que siempre se obtenga la última versión
+    gcTime: 0,    // No mantener en memoria basura
+    refetchOnWindowFocus: true, // Refrescar al volver a la ventana
   });
 
   // 14. BRANDING - Cache 1 hora (cambia poco)
