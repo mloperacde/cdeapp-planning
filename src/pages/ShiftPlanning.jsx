@@ -25,7 +25,45 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { FixedSizeList as List } from 'react-window';
+import { AutoSizer } from "react-virtualized-auto-sizer";
  
+
+
+const EmployeeRow = ({ index, style, data }) => {
+  const emp = data[index];
+  if (!emp) return null;
+  
+  return (
+    <Draggable draggableId={emp.id.toString()} index={index} key={emp.id}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          style={{ 
+            ...style, 
+            ...provided.draggableProps.style,
+            left: (style.left || 0) + 4,
+            top: (style.top || 0) + 4,
+            width: (style.width || 0) - 8,
+            height: (style.height || 0) - 8
+          }}
+          className={`p-3 rounded-lg border bg-white hover:border-blue-400 transition-all cursor-grab active:cursor-grabbing ${
+            snapshot.isDragging ? 'shadow-2xl border-blue-500 ring-2 ring-blue-300 z-50' : 'border-slate-200'
+          }`}
+        >
+           <div className="text-sm font-medium truncate">{emp.nombre}</div>
+           <div className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+             {emp.puesto && <Badge variant="secondary" className="text-[10px] h-4 px-1">{emp.puesto}</Badge>}
+             {emp.equipo && <span>• {emp.equipo}</span>}
+             {emp.isSkilled && <Badge variant="outline" className="text-[10px] h-4 px-1 border-yellow-500 text-yellow-600">Skilled</Badge>}
+          </div>
+        </div>
+      )}
+    </Draggable>
+  );
+};
 
 export default function ShiftPlanningPage() {
   const { shifts } = useShiftConfig();
@@ -590,13 +628,11 @@ export default function ShiftPlanningPage() {
                           <div className="flex items-center gap-3">
                             <Cog className="w-5 h-5 text-blue-600" />
                             <div>
-                              <CardTitle className="text-lg">{machine.nombre}</CardTitle>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <div className="text-xs text-slate-500">{machine.codigo}</div>
-                                {machine.ubicacion && (
-                                  <div className="text-xs text-slate-400">• {machine.ubicacion}</div>
-                                )}
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-xs font-bold text-slate-500 uppercase">{machine.ubicacion || "N/A"}</span>
+                                {(machine.codigo_maquina || machine.codigo) && <span className="text-xs text-slate-400 font-mono">• {machine.codigo_maquina || machine.codigo}</span>}
                               </div>
+                              <CardTitle className="text-lg">{machine.nombre}</CardTitle>
                             </div>
                           </div>
                         </CardHeader>

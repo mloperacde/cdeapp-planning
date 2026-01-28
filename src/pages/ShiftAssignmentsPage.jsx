@@ -501,7 +501,7 @@ export default function ShiftAssignmentsPage() {
                         }}
                     >
                         {(provided) => (
-                            <div className="h-full w-full" ref={provided.innerRef}>
+                            <div className="h-full w-full">
                                 <AutoSizer>
                                     {({ height, width }) => (
                                         <List

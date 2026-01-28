@@ -27,6 +27,35 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+
+const MachineRow = ({ index, style, data }) => {
+  const { machines, onAdd } = data;
+  const machine = machines[index];
+  
+  return (
+    <div style={style} className="px-3 py-1">
+      <div className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200 h-full">
+          <div className="flex flex-col overflow-hidden mr-2 gap-0.5">
+              <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase">{machine.ubicacion || "Sin Sala"}</span>
+                  {machine.codigo_maquina && <span className="text-xs font-mono text-slate-400">• {machine.codigo_maquina}</span>}
+              </div>
+              <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
+          </div>
+          <Button 
+              size="icon" 
+              variant="ghost"
+              onClick={() => onAdd(machine)}
+              className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-full"
+              title="Añadir a planificación"
+          >
+              <Plus className="h-4 w-4" />
+          </Button>
+      </div>
+    </div>
+  );
+};
+
 export default function DailyProductionPlanningPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
