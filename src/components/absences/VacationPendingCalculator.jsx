@@ -178,7 +178,9 @@ export async function recalculateVacationPendingBalances() {
       }
 
       // Identificar tipos que generan protección (no consumen vacaciones)
-      if (type.no_consume_vacaciones) {
+      // IMPORTANTE: Default a true si es undefined, coincidiendo con la UI
+      const noConsume = type.no_consume_vacaciones ?? true;
+      if (noConsume) {
         protectionTypeIds.add(type.id);
       }
     }

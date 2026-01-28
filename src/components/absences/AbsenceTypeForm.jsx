@@ -55,12 +55,22 @@ export default function AbsenceTypeForm({ type, onClose }) {
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     if (!formData.nombre || !formData.codigo) {
       toast.error("Nombre y código son obligatorios");
       return;
     }
+
+    if (!base44?.entities?.AbsenceType) {
+      toast.error("Error interno: Entidad AbsenceType no disponible");
+      console.error("base44.entities.AbsenceType is missing", base44);
+      return;
+    }
+
+    toast.info("Guardando...", { duration: 1000 });
     saveMutation.mutate(formData);
   };
 
