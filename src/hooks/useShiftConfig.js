@@ -7,7 +7,10 @@ export const useShiftConfig = () => {
     queryKey: ['appConfig', 'shift_config'],
     queryFn: async () => {
       try {
-        const result = await base44.entities.AppConfig.get('shift_config');
+        // Try to find by key 'shift_config'
+        // We use list/filter because IDs are usually UUIDs and 'shift_config' is likely a key
+        const configs = await base44.entities.AppConfig.list();
+        const result = configs.find(c => c.key === 'shift_config');
         return result?.value || null;
       } catch (error) {
         console.warn("Could not load shift_config, using defaults", error);

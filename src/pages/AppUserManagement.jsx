@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, Shield, Lock, Mail, ExternalLink, CheckCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Users, Shield, Lock, Mail, ExternalLink, CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAppData } from "@/components/data/DataProvider";
