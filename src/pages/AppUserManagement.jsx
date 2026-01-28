@@ -253,8 +253,22 @@ export default function AppUserManagement() {
       const configString = JSON.stringify(localConfig);
       
       // Robust Save Logic: Check both key and config_key AND cleanup duplicates
-      const allConfigs = await base44.entities.AppConfig.list();
-      const matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+      // 1. Try to find existing config with high limit
+      let allConfigs = await base44.entities.AppConfig.list(null, 1000);
+      let matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+
+      // 2. If not found in list, try specific filter
+      if (matches.length === 0) {
+          try {
+             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+             const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
+             matches = [...(f1 || []), ...(f2 || [])];
+             // Deduplicate by ID
+             matches = matches.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+          } catch(e) {
+             console.warn("Filter failed during save check", e);
+          }
+      }
       
       if (matches.length > 0) {
         // Use the first one as target
@@ -268,18 +282,23 @@ export default function AppUserManagement() {
         }
         
         // Update target
+        console.log(`Updating AppConfig ${targetId} with size: ${configString.length} chars`);
         await base44.entities.AppConfig.update(targetId, { 
           config_key: 'roles_config',
           key: 'roles_config', // Asegurar compatibilidad
           value: configString 
         });
       } else {
+        console.log(`Creating new AppConfig with size: ${configString.length} chars`);
         await base44.entities.AppConfig.create({ 
           config_key: 'roles_config', 
           key: 'roles_config', // Asegurar compatibilidad
           value: configString 
         });
       }
+
+      // Small delay to allow backend propagation
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Invalidar query globalmente para asegurar que DataProvider se entere
       await queryClient.invalidateQueries({ queryKey: ['rolesConfig'] });

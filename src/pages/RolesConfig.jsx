@@ -308,9 +308,21 @@ export default function RolesConfig() {
       const configString = JSON.stringify(localConfig);
 
       // Estrategia robusta: Buscar por key usando list para asegurar que encontramos la configuración correcta
-      // findUnique suele requerir ID, y no queremos depender de que la key sea el ID
-      const allConfigs = await base44.entities.AppConfig.list();
-      const matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+      // 1. Try to find existing config with high limit
+      let allConfigs = await base44.entities.AppConfig.list(null, 1000);
+      let matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+
+      // 2. If not found in list, try specific filter
+      if (matches.length === 0) {
+          try {
+             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+             const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
+             matches = [...(f1 || []), ...(f2 || [])];
+             matches = matches.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+          } catch(e) {
+             console.warn("Filter failed during save check", e);
+          }
+      }
       
       if (matches.length > 0) {
         // Use the first one as target

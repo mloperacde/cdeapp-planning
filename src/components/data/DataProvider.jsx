@@ -194,10 +194,31 @@ export function DataProvider({ children }) {
     queryFn: async () => {
       if (isLocal) return null;
       try {
-        // Usar list + find por robustez, igual que en RolesConfig.jsx
-        const configs = await base44.entities.AppConfig.list();
-        const config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
-        return config?.value ? JSON.parse(config.value) : null;
+        // Usar list con límite alto para asegurar que no perdemos la configuración por paginación
+          const configs = await base44.entities.AppConfig.list(null, 1000);
+          let config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+          
+          // Fallback: Si no lo encontramos en la lista, intentamos filtrar específicamente
+          if (!config) {
+            try {
+              const filtered = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+              if (filtered && filtered.length > 0) config = filtered[0];
+            } catch (e) {
+              console.warn("Filter not supported or failed", e);
+            }
+          }
+
+          if (!config && !config?.value) {
+             // Segundo intento por key antigua
+             try {
+              const filtered = await base44.entities.AppConfig.filter({ key: 'roles_config' });
+              if (filtered && filtered.length > 0) config = filtered[0];
+            } catch (e) {
+              // Ignore
+            }
+          }
+
+          return config?.value ? JSON.parse(config.value) : null;
         } catch (err) {
           console.error('Error loading roles configuration:', err);
           return null;
