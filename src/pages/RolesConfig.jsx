@@ -175,6 +175,16 @@ export default function RolesConfig() {
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleId, setNewRoleId] = useState("");
 
+  // Filters state
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [deptFilter, setDeptFilter] = useState("all");
+  const [positionFilter, setPositionFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
+
+  // Derived data for filters
+  const departments = [...new Set(employees.map(e => e.departamento).filter(Boolean))].sort();
+  const positions = [...new Set(employees.map(e => e.puesto).filter(Boolean))].sort();
+
   // Load config on mount or when data changes
   useEffect(() => {
     if (rolesConfig) {
