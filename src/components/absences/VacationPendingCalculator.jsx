@@ -155,76 +155,89 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
 }
 
 export async function recalculateVacationPendingBalances() {
-  const [absences, absenceTypes, vacations, holidays] = await Promise.all([
-    base44.entities.Absence.list("-fecha_inicio", 5000), // Aumentar límite considerablemente
-    base44.entities.AbsenceType.list("orden", 200),
-    base44.entities.Vacation.list(),
-    base44.entities.Holiday.list()
-  ]);
+  console.log("Iniciando recálculo masivo de vacaciones pendientes...");
+  try {
+    const [absences, absenceTypes, vacations, holidays] = await Promise.all([
+      base44.entities.Absence.list("-fecha_inicio", 5000), // Aumentar límite considerablemente
+      base44.entities.AbsenceType.list("orden", 200),
+      base44.entities.Vacation.list(),
+      base44.entities.Holiday.list()
+    ]);
 
-  const typeById = new Map();
-  const vacationTypeIds = new Set();
-  const protectionTypeIds = new Set();
+    console.log(`Datos recuperados: ${absences.length} ausencias, ${absenceTypes.length} tipos, ${vacations.length} vacaciones, ${holidays.length} festivos.`);
 
-  absenceTypes.forEach(type => {
-    if (type && type.id) {
-      typeById.set(type.id, type);
-      
-      // Identificar tipos de vacaciones
-      const nombreLower = (type.nombre || "").toLowerCase();
-      const catLower = (type.categoria_principal || "").toLowerCase();
-      if (nombreLower.includes("vacaciones") || catLower.includes("vacaciones")) {
-        vacationTypeIds.add(type.id);
+    const typeById = new Map();
+    const vacationTypeIds = new Set();
+    const protectionTypeIds = new Set();
+
+    absenceTypes.forEach(type => {
+      if (type && type.id) {
+        typeById.set(type.id, type);
+        
+        // Identificar tipos de vacaciones
+        const nombreLower = (type.nombre || "").toLowerCase();
+        const catLower = (type.categoria_principal || type.categoria || "").toLowerCase();
+        if (nombreLower.includes("vacaciones") || catLower.includes("vacaciones")) {
+          vacationTypeIds.add(type.id);
+        }
+
+        // Identificar tipos que generan protección (no consumen vacaciones)
+        // IMPORTANTE: Default a true si es undefined, coincidiendo con la UI
+        const noConsume = type.no_consume_vacaciones ?? true;
+        if (noConsume) {
+          protectionTypeIds.add(type.id);
+        }
       }
+    });
 
-      // Identificar tipos que generan protección (no consumen vacaciones)
-      // IMPORTANTE: Default a true si es undefined, coincidiendo con la UI
-      const noConsume = type.no_consume_vacaciones ?? true;
-      if (noConsume) {
-        protectionTypeIds.add(type.id);
+    // Agrupar ausencias de vacaciones por empleado
+    const vacationAbsencesByEmployee = new Map();
+    
+    for (const abs of absences) {
+      if (vacationTypeIds.has(abs.absence_type_id)) {
+        const empId = abs.employee_id;
+        if (!vacationAbsencesByEmployee.has(empId)) {
+          vacationAbsencesByEmployee.set(empId, []);
+        }
+        vacationAbsencesByEmployee.get(empId).push(abs);
       }
     }
-  });
 
-  // Agrupar ausencias de vacaciones por empleado
-  const vacationAbsencesByEmployee = new Map();
-  
-  for (const abs of absences) {
-    if (vacationTypeIds.has(abs.absence_type_id)) {
-      const empId = abs.employee_id;
-      if (!vacationAbsencesByEmployee.has(empId)) {
-        vacationAbsencesByEmployee.set(empId, []);
+    // Filtrar solo ausencias que pueden generar días pendientes (OPTIMIZACIÓN CLAVE)
+    const protectionAbsences = absences.filter(abs => 
+      abs.absence_type_id && protectionTypeIds.has(abs.absence_type_id)
+    );
+
+    console.log(`Recalculando protección para ${protectionAbsences.length} ausencias relevantes...`);
+
+    // Procesar secuencialmente pero sin sync individual
+    for (const absence of protectionAbsences) {
+      const absenceType = typeById.get(absence.absence_type_id);
+      if (!absenceType) continue;
+
+      const employeeVacations = vacationAbsencesByEmployee.get(absence.employee_id) || [];
+
+      // SkipSync = true para evitar N llamadas a update de empleado
+      await calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacations, true);
+    }
+
+    // Sincronización final masiva: asegurar que todos los saldos se reflejen en las fichas de empleado
+    const allBalances = await base44.entities.VacationPendingBalance.list();
+    const distinctEmployeeIds = new Set(allBalances.map(b => b.employee_id));
+    
+    console.log(`Sincronizando balances finales para ${distinctEmployeeIds.size} empleados...`);
+
+    for (const empId of distinctEmployeeIds) {
+      if (empId) {
+        await syncEmployeeVacationProtection(empId, allBalances);
       }
-      vacationAbsencesByEmployee.get(empId).push(abs);
     }
-  }
 
-  // Filtrar solo ausencias que pueden generar días pendientes (OPTIMIZACIÓN CLAVE)
-  const protectionAbsences = absences.filter(abs => 
-    abs.absence_type_id && protectionTypeIds.has(abs.absence_type_id)
-  );
-
-  console.log(`Recalculando protección para ${protectionAbsences.length} ausencias relevantes...`);
-
-  // Procesar secuencialmente pero sin sync individual
-  for (const absence of protectionAbsences) {
-    const absenceType = typeById.get(absence.absence_type_id);
-    if (!absenceType) continue;
-
-    const employeeVacations = vacationAbsencesByEmployee.get(absence.employee_id) || [];
-
-    // SkipSync = true para evitar N llamadas a update de empleado
-    await calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacations, true);
-  }
-
-  // Sincronización final masiva: asegurar que todos los saldos se reflejen en las fichas de empleado
-  const allBalances = await base44.entities.VacationPendingBalance.list();
-  const distinctEmployeeIds = new Set(allBalances.map(b => b.employee_id));
-  
-  for (const empId of distinctEmployeeIds) {
-    if (empId) {
-      await syncEmployeeVacationProtection(empId, allBalances);
-    }
+    console.log("Recálculo completado con éxito.");
+    return { success: true, count: protectionAbsences.length };
+  } catch (error) {
+    console.error("Error crítico en recalculateVacationPendingBalances:", error);
+    throw error; // Re-throw para que useMutation capture el error
   }
 }
 

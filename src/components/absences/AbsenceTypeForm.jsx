@@ -14,7 +14,8 @@ export default function AbsenceTypeForm({ type, onClose }) {
   const [formData, setFormData] = useState(type || {
     nombre: "",
     codigo: "",
-    categoria: "Permiso Retribuido",
+    categoria_principal: "Permiso Retribuido",
+    subcategoria: "General",
     descripcion: "",
     remunerada: false,
     no_consume_vacaciones: true,
@@ -108,21 +109,32 @@ export default function AbsenceTypeForm({ type, onClose }) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Categoría</Label>
-            <Select value={formData.categoria} onValueChange={(value) => setFormData({...formData, categoria: value})}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Permiso Retribuido">Permiso Retribuido</SelectItem>
-                <SelectItem value="Permiso No Retribuido">Permiso No Retribuido</SelectItem>
-                <SelectItem value="Vacaciones">Vacaciones</SelectItem>
-                <SelectItem value="Baja Médica">Baja Médica</SelectItem>
-                <SelectItem value="Suspensión Contrato">Suspensión Contrato</SelectItem>
-                <SelectItem value="Otro">Otro</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Categoría Principal</Label>
+              <Select value={formData.categoria_principal} onValueChange={(value) => setFormData({...formData, categoria_principal: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Permiso Retribuido">Permiso Retribuido</SelectItem>
+                  <SelectItem value="Permiso No Retribuido">Permiso No Retribuido</SelectItem>
+                  <SelectItem value="Vacaciones">Vacaciones</SelectItem>
+                  <SelectItem value="Baja Médica">Baja Médica</SelectItem>
+                  <SelectItem value="Suspensión Contrato">Suspensión Contrato</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Subcategoría</Label>
+              <Input
+                value={formData.subcategoria}
+                onChange={(e) => setFormData({...formData, subcategoria: e.target.value})}
+                placeholder="ej. General, Paternidad, etc."
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
