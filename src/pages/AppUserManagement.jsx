@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAppData } from "@/components/data/DataProvider";
 import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,6 +169,7 @@ const DEFAULT_ROLES_CONFIG = {
 
 export default function AppUserManagement() {
   const { employees, rolesConfig, refetchRolesConfig } = useAppData();
+  const queryClient = useQueryClient();
   
   // Estado local para edición
   const [localConfig, setLocalConfig] = useState(null);
@@ -257,16 +259,25 @@ export default function AppUserManagement() {
       if (current) {
         await base44.entities.AppConfig.update(current.id, { 
           config_key: 'roles_config',
+          key: 'roles_config', // Asegurar compatibilidad
           value: configString 
         });
       } else {
         await base44.entities.AppConfig.create({ 
           config_key: 'roles_config', 
+          key: 'roles_config', // Asegurar compatibilidad
           value: configString 
         });
       }
 
-      await refetchRolesConfig();
+      // Invalidar query globalmente para asegurar que DataProvider se entere
+      await queryClient.invalidateQueries({ queryKey: ['rolesConfig'] });
+      
+      // Intentar refrescar vía contexto si está disponible
+      if (refetchRolesConfig) {
+        await refetchRolesConfig();
+      }
+      
       setIsDirty(false);
       toast.success("Configuración guardada y aplicada correctamente");
     } catch (error) {

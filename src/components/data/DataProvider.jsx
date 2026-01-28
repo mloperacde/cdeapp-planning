@@ -291,6 +291,7 @@ export function DataProvider({ children }) {
     
     rolesConfig: rolesConfigQuery.data,
     rolesConfigLoading: rolesConfigQuery.isLoading,
+    refetchRolesConfig: rolesConfigQuery.refetch,
 
     branding: brandingConfigQuery.data,
     brandingConfig: brandingConfigQuery.data, // Alias
