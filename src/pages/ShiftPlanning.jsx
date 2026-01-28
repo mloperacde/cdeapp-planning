@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "../components/data/DataProvider";
+import { useShiftConfig } from "@/hooks/useShiftConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,9 +28,18 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
  
 
 export default function ShiftPlanningPage() {
+  const { shifts } = useShiftConfig();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedShift, setSelectedShift] = useState("Mañana");
+  const [selectedShift, setSelectedShift] = useState("Mañana"); // Will update via effect if needed
   const [selectedTeam, setSelectedTeam] = useState("all");
+
+  // Sync selectedShift with config when loaded
+  useEffect(() => {
+    if (shifts.MORNING && selectedShift === "Mañana" && shifts.MORNING !== "Mañana") {
+        setSelectedShift(shifts.MORNING);
+    }
+  }, [shifts, selectedShift]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [assignments, setAssignments] = useState({});
   const [showHistory, setShowHistory] = useState(false);
@@ -54,7 +64,14 @@ export default function ShiftPlanningPage() {
         shift: selectedShift
       };
       if (selectedTeam !== "all") {
-        filters.team_key = selectedTeam;
+        // Resolve team_key from selectedTeam (which is an ID)
+        const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
+        if (teamObj) {
+            filters.team_key = teamObj.team_key;
+        } else {
+            // Fallback
+            filters.team_key = selectedTeam;
+        }
       }
       return base44.entities.DailyMachineStaffing.filter(filters);
     },
@@ -160,13 +177,19 @@ export default function ShiftPlanningPage() {
       const promises = [];
 
       // Infer team once if "all" is selected to ensure consistency for this batch
-      const inferredTeam = selectedTeam !== "all" ? selectedTeam : inferTeamForShift(selectedDate, selectedShift);
+      let inferredKey = null;
+      if (selectedTeam !== "all") {
+         const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
+         inferredKey = teamObj ? teamObj.team_key : selectedTeam;
+      } else {
+         inferredKey = inferTeamForShift(selectedDate, selectedShift);
+      }
 
       for (const [machineId, data] of Object.entries(assignments)) {
         const existing = dailyStaffing.find(ds => ds.machine_id === machineId);
         
         // Determinar team_key
-        let teamKey = inferredTeam;
+        let teamKey = inferredKey;
         
         // If existing record has a team_key, maybe we should respect it? 
         // But if we are overwriting, we might want to update the team too if it was wrong?
@@ -267,8 +290,19 @@ export default function ShiftPlanningPage() {
       
       // Filtro por equipo
       if (selectedTeam !== "all") {
-        const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
-        if (e.equipo !== teamName) return false;
+        const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
+        if (teamObj) {
+            // 1. Check strict ID match (New standard)
+            if (e.team_id && String(e.team_id) === String(teamObj.id)) return true;
+            
+            // 2. Check legacy string match (Fallback)
+            const empTeam = e.equipo ? e.equipo.trim().toLowerCase() : "";
+            const targetTeam = teamObj.team_name ? teamObj.team_name.trim().toLowerCase() : "";
+            
+            if (empTeam && targetTeam && empTeam === targetTeam) return true;
+            
+            return false;
+        }
       }
       
       // Filtro por búsqueda
@@ -353,9 +387,9 @@ export default function ShiftPlanningPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Mañana">☀️ Mañana</SelectItem>
-                  <SelectItem value="Tarde">🌅 Tarde</SelectItem>
-                  <SelectItem value="Noche">🌙 Noche</SelectItem>
+                  <SelectItem value={shifts.MORNING || "Mañana"}>☀️ {shifts.MORNING || "Mañana"}</SelectItem>
+                  <SelectItem value={shifts.AFTERNOON || "Tarde"}>🌅 {shifts.AFTERNOON || "Tarde"}</SelectItem>
+                  {shifts.NIGHT && <SelectItem value={shifts.NIGHT}>🌙 {shifts.NIGHT}</SelectItem>}
                 </SelectContent>
               </Select>
 
@@ -366,7 +400,7 @@ export default function ShiftPlanningPage() {
                 <SelectContent>
                   <SelectItem value="all">Todos los Equipos</SelectItem>
                   {teams.map(team => (
-                    <SelectItem key={team.team_key} value={team.team_key}>
+                    <SelectItem key={team.id} value={team.id}>
                       {team.team_name}
                     </SelectItem>
                   ))}

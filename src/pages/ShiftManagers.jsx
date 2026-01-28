@@ -11,6 +11,7 @@ import { format, startOfWeek, isSameDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 import ThemeToggle from "../components/common/ThemeToggle";
+import { useShiftConfig } from "@/hooks/useShiftConfig";
 
 const EMPTY_ARRAY = [];
 
@@ -24,6 +25,7 @@ const DEFAULT_WIDGETS = [
 ];
 
 export default function ShiftManagersPage() {
+  const { shifts } = useShiftConfig();
   const [activeView, setActiveView] = React.useState("dashboard");
   const [selectedTeamFilter, setSelectedTeamFilter] = React.useState("all");
   const [customizerOpen, setCustomizerOpen] = React.useState(false);
@@ -278,9 +280,9 @@ export default function ShiftManagersPage() {
         if (!shift) {
             const lowerName = team.team_name.toLowerCase();
             if (lowerName.includes("t2") || lowerName.includes("tarde") || lowerName.includes("turno 2") || lowerName.includes("sara") || lowerName.includes("ivan")) {
-                shift = "Tarde";
+                shift = shifts.AFTERNOON || "Tarde";
             } else if (lowerName.includes("t1") || lowerName.includes("mañana") || lowerName.includes("turno 1")) {
-                shift = "Mañana";
+                shift = shifts.MORNING || "Mañana";
             }
         }
         
@@ -410,6 +412,7 @@ export default function ShiftManagersPage() {
                         machines={machines}
                         dailyStaffing={dailyStaffing}
                         manufacturingConfig={manufacturingConfig}
+                        shifts={shifts}
                     />
                 );
             })}

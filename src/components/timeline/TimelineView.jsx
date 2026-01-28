@@ -3,10 +3,7 @@ import { format, isWithinInterval, startOfWeek } from "date-fns";
 import TimeSlot from "./TimeSlot";
 import { AlertCircle, Clock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SHIFTS, WORK_SCHEDULES, WORKING_HOURS } from "@/constants/shifts";
-
-const WORKING_DAY_START = WORKING_HOURS.START_MINUTES;
-const WORKING_DAY_END = WORKING_HOURS.END_MINUTES;
+import { useShiftConfig } from "@/hooks/useShiftConfig";
 
 export default function TimelineView({
   startDate,
@@ -20,6 +17,11 @@ export default function TimelineView({
   viewMode = 'day',
   selectedDepartment = 'all'
 }) {
+  const { shifts: SHIFTS, schedules: WORK_SCHEDULES, workingHours: WORKING_HOURS } = useShiftConfig();
+  
+  const WORKING_DAY_START = WORKING_HOURS.START_MINUTES;
+  const WORKING_DAY_END = WORKING_HOURS.END_MINUTES;
+
   const { workingIntervals, stats } = useMemo(() => {
     if (!startDate || !endDate) {
       return { workingIntervals: [], stats: { totalEmployees: 0, intervals: 0 } };

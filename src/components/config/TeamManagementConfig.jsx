@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format, startOfWeek, addWeeks, getISOWeek, startOfYear, addDays, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import TeamCompositionConfig from "./TeamCompositionConfig";
+import { useShiftConfig } from "@/hooks/useShiftConfig";
 
 export default function TeamManagementConfig() {
   const [activeTab, setActiveTab] = useState("general");
@@ -240,6 +241,7 @@ function GeneralTeamConfig() {
 }
 
 function RotationCalendarConfig() {
+  const { shifts } = useShiftConfig();
   const queryClient = useQueryClient();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [generatedWeeks, setGeneratedWeeks] = useState([]);
@@ -351,8 +353,8 @@ function RotationCalendarConfig() {
     let isTeam1Morning = true;
 
     generatedWeeks.forEach(week => {
-      const shift1 = isTeam1Morning ? "Mañana" : "Tarde";
-      const shift2 = isTeam1Morning ? "Tarde" : "Mañana";
+      const shift1 = isTeam1Morning ? (shifts.MORNING || "Mañana") : (shifts.AFTERNOON || "Tarde");
+      const shift2 = isTeam1Morning ? (shifts.AFTERNOON || "Tarde") : (shifts.MORNING || "Mañana");
       
       newChanges[`${week.startDate}_${team1.team_key}`] = {
         team_key: team1.team_key,
@@ -426,9 +428,9 @@ function RotationCalendarConfig() {
                         <SelectValue placeholder="-" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Mañana">Mañana</SelectItem>
-                        <SelectItem value="Tarde">Tarde</SelectItem>
-                        <SelectItem value="Noche">Noche</SelectItem>
+                        <SelectItem value={shifts.MORNING || "Mañana"}>{shifts.MORNING || "Mañana"}</SelectItem>
+                        <SelectItem value={shifts.AFTERNOON || "Tarde"}>{shifts.AFTERNOON || "Tarde"}</SelectItem>
+                        {shifts.NIGHT && <SelectItem value={shifts.NIGHT}>{shifts.NIGHT}</SelectItem>}
                         <SelectItem value="Descanso">Descanso</SelectItem>
                       </SelectContent>
                     </Select>

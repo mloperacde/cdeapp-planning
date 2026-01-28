@@ -74,7 +74,7 @@ export function KPIWidget({ employees, activeAbsencesToday, pendingSwaps, locker
 }
 
 // Widget: Team Status
-export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailyStaffing, employees, manufacturingConfig }) {
+export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailyStaffing, employees, manufacturingConfig, shifts }) {
 
     const getTeamSalas = (teamName) => {
         if (!dailyStaffing?.length || !machines?.length || !employees?.length) return [];
@@ -127,11 +127,14 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
         const normalizedShift = shiftName?.toLowerCase()?.trim() || "";
         
         // Robust shift matching
-        if (normalizedShift === "mañana" || normalizedShift.includes("mañana") || 
+        const morningShift = (shifts?.MORNING || "Mañana").toLowerCase();
+        const afternoonShift = (shifts?.AFTERNOON || "Tarde").toLowerCase();
+
+        if (normalizedShift === morningShift || normalizedShift.includes("mañana") || 
             normalizedShift === "turno 1" || normalizedShift === "t1" || normalizedShift === "1") {
             shiftKey = "shift1";
         }
-        if (normalizedShift === "tarde" || normalizedShift.includes("tarde") || 
+        if (normalizedShift === afternoonShift || normalizedShift.includes("tarde") || 
             normalizedShift === "turno 2" || normalizedShift === "t2" || normalizedShift === "2") {
             shiftKey = "shift2";
         }
@@ -182,16 +185,16 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{team.team_name}</h3>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                        {team.shift === "Mañana" && (
+                                        {team.shift === (shifts?.MORNING || "Mañana") && (
                                             <Badge className="bg-amber-100 text-amber-800">
                                                 <Sunrise className="w-3 h-3 mr-1" />
-                                                Mañana (7:00-15:00)
+                                                {shifts?.MORNING || "Mañana"} (7:00-15:00)
                                             </Badge>
                                         )}
-                                        {team.shift === "Tarde" && (
+                                        {team.shift === (shifts?.AFTERNOON || "Tarde") && (
                                             <Badge className="bg-indigo-100 text-indigo-800">
                                                 <Sunset className="w-3 h-3 mr-1" />
-                                                Tarde (14:00/15:00-22:00)
+                                                {shifts?.AFTERNOON || "Tarde"} (14:00/15:00-22:00)
                                             </Badge>
                                         )}
                                         {!team.shift && (

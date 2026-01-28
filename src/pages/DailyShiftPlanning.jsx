@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useShiftConfig } from "@/hooks/useShiftConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +14,17 @@ import { toast } from "sonner";
 import EmployeeSelect from "../components/common/EmployeeSelect";
 
 export default function DailyShiftPlanningPage() {
+    const { shifts } = useShiftConfig();
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [shift, setShift] = useState("Mañana");
+    
+    // Sync shift with config when loaded
+    useEffect(() => {
+        if (shifts.MORNING && shift === "Mañana" && shifts.MORNING !== "Mañana") {
+            setShift(shifts.MORNING);
+        }
+    }, [shifts, shift]);
+
     const [currentTeam, setCurrentTeam] = useState("");
     const [planning, setPlanning] = useState({});
     const [aiSummary, setAiSummary] = useState("");
@@ -200,9 +210,9 @@ export default function DailyShiftPlanningPage() {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Mañana">Mañana</SelectItem>
-                                <SelectItem value="Tarde">Tarde</SelectItem>
-                                <SelectItem value="Noche">Noche</SelectItem>
+                                <SelectItem value={shifts.MORNING || "Mañana"}>{shifts.MORNING || "Mañana"}</SelectItem>
+                                <SelectItem value={shifts.AFTERNOON || "Tarde"}>{shifts.AFTERNOON || "Tarde"}</SelectItem>
+                                {shifts.NIGHT && <SelectItem value={shifts.NIGHT}>{shifts.NIGHT}</SelectItem>}
                             </SelectContent>
                         </Select>
                     </div>
