@@ -307,10 +307,11 @@ export function useRolesManager() {
       await new Promise(r => setTimeout(r, 800));
 
       // 4. Verificación explícita
-      const verifyList = await base44.entities.AppConfig.list('id', 1000);
+      const verifyList = await base44.entities.AppConfig.list('id', 1000) || [];
       const saved = verifyList.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
       
-      if (!saved || Math.abs(saved.value.length - configString.length) > 50) {
+      const savedValue = saved?.value || "";
+      if (!saved || Math.abs(savedValue.length - configString.length) > 50) {
         console.warn("Verification warning: Saved size mismatch", saved?.value?.length, configString.length);
         toast.warning("Guardado realizado, pero la verificación detectó posibles inconsistencias. Refresca para confirmar.");
       } else {
