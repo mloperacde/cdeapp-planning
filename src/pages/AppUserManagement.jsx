@@ -200,7 +200,7 @@ export default function AppUserManagement() {
   // Derived state: Departments list for filter
   const departments = useMemo(() => {
     if (!employees) return [];
-    const depts = new Set(employees.map(e => e.department).filter(Boolean));
+    const depts = new Set(employees.map(e => e.departamento).filter(Boolean));
     return Array.from(depts).sort();
   }, [employees]);
 
@@ -211,11 +211,11 @@ export default function AppUserManagement() {
     return employees.filter(emp => {
       // Search term filter
       const searchMatch = !searchTerm || 
-        (emp.name && emp.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (emp.nombre && emp.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (emp.email && emp.email.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Department filter
-      const deptMatch = departmentFilter === "all" || emp.department === departmentFilter;
+      const deptMatch = departmentFilter === "all" || emp.departamento === departmentFilter;
       
       // Role filter
       const userRole = emp.email ? (localConfig.user_assignments?.[emp.email.toLowerCase()] || "none") : "none";
@@ -224,7 +224,7 @@ export default function AppUserManagement() {
                        userRole === roleFilter;
 
       return searchMatch && deptMatch && roleMatch;
-    }).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    }).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
   }, [employees, localConfig, searchTerm, departmentFilter, roleFilter]);
 
   // Stats for Diagnostics
@@ -510,7 +510,7 @@ export default function AppUserManagement() {
                         
                         return (
                           <TableRow key={emp.id}>
-                            <TableCell className="font-medium">{emp.name}</TableCell>
+                            <TableCell className="font-medium">{emp.nombre}</TableCell>
                             <TableCell>
                               {email ? (
                                 <span className="font-mono text-xs">{email}</span>
@@ -519,7 +519,7 @@ export default function AppUserManagement() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="font-normal">{emp.department || "N/A"}</Badge>
+                              <Badge variant="outline" className="font-normal">{emp.departamento || "N/A"}</Badge>
                             </TableCell>
                             <TableCell>
                               <Select 
