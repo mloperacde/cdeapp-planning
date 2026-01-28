@@ -85,7 +85,7 @@ export default function AbsenceTypeForm({ type, onClose }) {
           <DialogTitle>{type ? "Editar Tipo de Ausencia" : "Nuevo Tipo de Ausencia"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nombre *</Label>
@@ -275,11 +275,11 @@ export default function AbsenceTypeForm({ type, onClose }) {
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending}>
+            <Button type="button" onClick={handleSubmit} disabled={saveMutation.isPending}>
               {saveMutation.isPending ? "Guardando..." : type ? "Actualizar" : "Crear"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
