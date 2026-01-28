@@ -132,11 +132,31 @@ function createMockBase44() {
   };
 
   const entityMethods = (entityName) => ({
-    list: async (orderBy, limit) => {
+    list: async (orderBy, limit, offset = 0) => {
       let data = getEntityData(entityName);
-      // Basic sorting could be implemented if needed
-      // For now returning all data
+      // Basic sorting (Mock)
+      if (orderBy) {
+          const field = orderBy.startsWith('-') ? orderBy.substring(1) : orderBy;
+          const dir = orderBy.startsWith('-') ? -1 : 1;
+          data = [...data].sort((a, b) => {
+              if (a[field] < b[field]) return -1 * dir;
+              if (a[field] > b[field]) return 1 * dir;
+              return 0;
+          });
+      }
+      
+      // Pagination (Mock)
+      if (limit !== undefined) {
+          return data.slice(offset, offset + limit);
+      }
       return data;
+    },
+    count: async (criteria = {}) => {
+       const data = getEntityData(entityName);
+       if (Object.keys(criteria).length === 0) return data.length;
+       return data.filter(item => {
+        return Object.entries(criteria).every(([key, value]) => item[key] == value);
+      }).length;
     },
     filter: async (criteria) => {
       const data = getEntityData(entityName);

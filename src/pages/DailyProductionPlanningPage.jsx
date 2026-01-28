@@ -14,6 +14,8 @@ import { format, startOfWeek, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FixedSizeList as List } from 'react-window';
+import AutoSizer from "react-virtualized-auto-sizer";
 import ThemeToggle from "../components/common/ThemeToggle";
 import {
   Dialog,
@@ -204,8 +206,12 @@ export default function DailyProductionPlanningPage() {
     const targetTeam = normalize(teamObj.team_name);
 
     return employees.filter(e => {
-        // 1. Team Match (Robust)
-        if (normalize(e.equipo) !== targetTeam) return false;
+        // 1. Team Match (Robust with team_id support)
+        if (e.team_id && String(e.team_id) === String(teamObj.id)) {
+            // Match by ID
+        } else if (normalize(e.equipo) !== targetTeam) {
+             return false;
+        }
 
         // 2. Availability (Must be "Disponible" - Robust)
         if (normalize(e.disponibilidad) !== "disponible") return false;
@@ -474,6 +480,41 @@ export default function DailyProductionPlanningPage() {
       importMutation.mutate({ sourceDate: importDate, sourceTeam: importTeam });
   };
 
+  // --- Render Helpers ---
+
+  const MachineRow = ({ index, style, data }) => {
+    const { machines, onAdd } = data;
+    const machine = machines[index];
+    
+    return (
+      <div style={style} className="px-3 py-1">
+        <div className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200 h-full">
+            <div className="flex flex-col overflow-hidden mr-2">
+                <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  {machine.codigo_maquina && <span>{machine.codigo_maquina}</span>}
+                  {machine.ubicacion && (
+                    <>
+                      <span>•</span>
+                      <span>{machine.ubicacion}</span>
+                    </>
+                  )}
+                </div>
+            </div>
+            <Button 
+                size="icon" 
+                variant="ghost"
+                onClick={() => onAdd(machine)}
+                className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-full"
+                title="Añadir a planificación"
+            >
+                <Plus className="h-4 w-4" />
+            </Button>
+        </div>
+      </div>
+    );
+  };
+
   // --- Render ---
 
   return (
@@ -705,41 +746,28 @@ export default function DailyProductionPlanningPage() {
                </div>
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30">
-                <ScrollArea className="h-full">
-                   <div className="p-3 space-y-2">
-                      {filteredAvailableMachines.map(machine => (
-                          <div key={machine.id} className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200">
-                              <div className="flex flex-col overflow-hidden mr-2">
-                                  <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
-                                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                                    {machine.codigo_maquina && <span>{machine.codigo_maquina}</span>}
-                                    {machine.ubicacion && (
-                                      <>
-                                        <span>•</span>
-                                        <span>{machine.ubicacion}</span>
-                                      </>
-                                    )}
-                                  </div>
-                              </div>
-                              <Button 
-                                  size="icon" 
-                                  variant="ghost"
-                                  onClick={() => handleAddMachine(machine)}
-                                  className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-full"
-                                  title="Añadir a planificación"
-                              >
-                                  <Plus className="h-4 w-4" />
-                              </Button>
-                          </div>
-                      ))}
-                      {filteredAvailableMachines.length === 0 && (
-                          <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center">
-                              <Search className="w-8 h-8 mb-2 opacity-20" />
-                              <p className="text-sm">No se encontraron máquinas disponibles con ese criterio.</p>
-                          </div>
+                {filteredAvailableMachines.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center h-full">
+                    <Search className="w-8 h-8 mb-2 opacity-20" />
+                    <p className="text-sm">No se encontraron máquinas disponibles con ese criterio.</p>
+                  </div>
+                ) : (
+                  <div className="h-full">
+                    <AutoSizer>
+                      {({ height, width }) => (
+                        <List
+                          height={height}
+                          width={width}
+                          itemCount={filteredAvailableMachines.length}
+                          itemSize={72}
+                          itemData={{ machines: filteredAvailableMachines, onAdd: handleAddMachine }}
+                        >
+                          {MachineRow}
+                        </List>
                       )}
-                   </div>
-                </ScrollArea>
+                    </AutoSizer>
+                  </div>
+                )}
             </CardContent>
           </Card>
 

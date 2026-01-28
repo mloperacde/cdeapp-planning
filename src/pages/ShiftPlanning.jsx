@@ -283,10 +283,11 @@ export default function ShiftPlanningPage() {
       });
     });
 
+    const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
     return employees.filter(e => {
       if (assignedIds.has(e.id)) return false;
-      if (e.departamento !== "FABRICACION") return false;
-      if (e.disponibilidad !== "Disponible") return false;
+      if (normalize(e.departamento) !== "fabricacion") return false;
+      if (normalize(e.disponibilidad) !== "disponible") return false;
       
       // Filtro por equipo
       if (selectedTeam !== "all") {
@@ -307,7 +308,8 @@ export default function ShiftPlanningPage() {
       
       // Filtro por búsqueda
       if (searchTerm) {
-        return e.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+        const lower = normalize(searchTerm);
+        return normalize(e.nombre).includes(lower);
       }
       
       return true;
@@ -349,7 +351,7 @@ export default function ShiftPlanningPage() {
                   Planificación de Turnos
                 </CardTitle>
                 <p className="text-sm text-slate-500 mt-1">
-                  Asigna empleados a máquinas - {format(selectedDate, "dd/MM/yyyy")} - {selectedShift} - {selectedTeam === "all" ? "Todos" : teams.find(t => t.team_key === selectedTeam)?.team_name}
+                  Asigna empleados a máquinas - {format(selectedDate, "dd/MM/yyyy")} - {selectedShift} - {selectedTeam === "all" ? "Todos" : teams.find(t => String(t.id) === String(selectedTeam))?.team_name}
                 </p>
               </div>
 

@@ -49,20 +49,55 @@ export default function MachineExperienceManager() {
     initialData: [],
   });
 
+  const { data: employeeSkills = [] } = useQuery({
+    queryKey: ['employeeSkills'],
+    queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 2000),
+    initialData: [],
+  });
+
   const saveMutation = useMutation({
     mutationFn: async ({ employeeId, machineOrder }) => {
-      // Crear el objeto con maquina_1 a maquina_10
+      // 1. Update EmployeeMachineSkill (The new source of truth)
+      const currentSkills = employeeSkills.filter(s => s.employee_id === employeeId);
+      
+      for (let i = 0; i < 10; i++) {
+        const machineId = machineOrder[i];
+        const orden = i + 1;
+        const existingSkill = currentSkills.find(s => s.orden_preferencia === orden);
+
+        if (machineId) {
+          if (!existingSkill) {
+            // Create new skill
+            await base44.entities.EmployeeMachineSkill.create({
+              employee_id: employeeId,
+              machine_id: machineId,
+              orden_preferencia: orden,
+              nivel_competencia: 'Intermedio' // Default
+            });
+          } else if (existingSkill.machine_id !== machineId) {
+            // Update existing skill
+            await base44.entities.EmployeeMachineSkill.update(existingSkill.id, {
+              machine_id: machineId
+            });
+          }
+        } else if (existingSkill) {
+          // Remove skill if slot is cleared
+          await base44.entities.EmployeeMachineSkill.delete(existingSkill.id);
+        }
+      }
+
+      // 2. Update Legacy Fields (for backwards compatibility)
+      // TODO: Remove this once all components read from EmployeeMachineSkill
       const machineData = {};
       machineOrder.forEach((machineId, index) => {
-        if (machineId) {
-          machineData[`maquina_${index + 1}`] = machineId;
-        }
+        machineData[`maquina_${index + 1}`] = machineId || null;
       });
 
       return base44.entities.EmployeeMasterDatabase.update(employeeId, machineData);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
       // Limpiar configuración guardada
       setMachineConfigs(prev => {
         const updated = { ...prev };
@@ -73,18 +108,33 @@ export default function MachineExperienceManager() {
     },
   });
 
-  // Inicializar configuración de máquinas desde datos del empleado
+  // Inicializar configuración de máquinas desde EmployeeMachineSkill (Prioridad)
+  // Fallback a legacy fields si no hay skills (durante transición)
   React.useEffect(() => {
     const configs = {};
     employees.forEach(emp => {
-      const machineOrder = [];
-      for (let i = 1; i <= 10; i++) {
-        machineOrder.push(emp[`maquina_${i}`] || "");
+      const empSkills = employeeSkills.filter(s => s.employee_id === emp.id);
+      
+      const machineOrder = Array(10).fill("");
+      
+      if (empSkills.length > 0) {
+        // Load from Skills
+        empSkills.forEach(skill => {
+          if (skill.orden_preferencia >= 1 && skill.orden_preferencia <= 10) {
+            machineOrder[skill.orden_preferencia - 1] = skill.machine_id;
+          }
+        });
+      } else {
+        // Fallback to Legacy
+        for (let i = 1; i <= 10; i++) {
+          machineOrder[i - 1] = emp[`maquina_${i}`] || "";
+        }
       }
+      
       configs[emp.id] = machineOrder;
     });
     setMachineConfigs(configs);
-  }, [employees]);
+  }, [employees, employeeSkills]);
 
   const fabricacionMantenimientoEmployees = useMemo(() => {
     return employees.filter(emp => 

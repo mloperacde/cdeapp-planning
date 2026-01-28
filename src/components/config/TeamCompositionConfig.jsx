@@ -64,8 +64,12 @@ export default function TeamCompositionConfig() {
   }, [employees, teams, departments]);
 
   const updateEmployeeMutation = useMutation({
-    mutationFn: async ({ employeeId, equipo }) => {
-      return base44.entities.EmployeeMasterDatabase.update(employeeId, { equipo });
+    mutationFn: async ({ employeeId, equipo, team_id, team_key }) => {
+      return base44.entities.EmployeeMasterDatabase.update(employeeId, { 
+        equipo,
+        team_id: team_id || null,
+        team_key: team_key || null
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -77,14 +81,18 @@ export default function TeamCompositionConfig() {
   });
 
   const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ employeeIds, newTeam }) => {
+    mutationFn: async ({ employeeIds, newTeam, team_id, team_key }) => {
        // Process in batches of 5 to avoid rate limits
        const BATCH_SIZE = 5;
        const results = [];
        for (let i = 0; i < employeeIds.length; i += BATCH_SIZE) {
          const batch = employeeIds.slice(i, i + BATCH_SIZE);
          const batchResults = await Promise.all(
-           batch.map(id => base44.entities.EmployeeMasterDatabase.update(id, { equipo: newTeam }))
+           batch.map(id => base44.entities.EmployeeMasterDatabase.update(id, { 
+             equipo: newTeam,
+             team_id: team_id || null,
+             team_key: team_key || null
+           }))
          );
          results.push(...batchResults);
          if (i + BATCH_SIZE < employeeIds.length) await new Promise(r => setTimeout(r, 200));
@@ -100,14 +108,28 @@ export default function TeamCompositionConfig() {
     }
   });
 
-  const handleTeamChange = (employeeId, newTeam) => {
-    const teamValue = newTeam === "Sin Equipo" ? "" : newTeam;
-    updateEmployeeMutation.mutate({ employeeId, equipo: teamValue });
+  const handleTeamChange = (employeeId, newTeamName) => {
+    const teamValue = newTeamName === "Sin Equipo" ? "" : newTeamName;
+    const teamObj = teams.find(t => t.team_name === teamValue);
+    
+    updateEmployeeMutation.mutate({ 
+      employeeId, 
+      equipo: teamValue,
+      team_id: teamObj ? teamObj.id : null,
+      team_key: teamObj ? teamObj.team_key : null
+    });
   };
 
-  const handleBulkMove = (employeeIds, newTeam) => {
-     const teamValue = newTeam === "Sin Equipo" ? "" : newTeam;
-     bulkUpdateMutation.mutate({ employeeIds, newTeam: teamValue });
+  const handleBulkMove = (employeeIds, newTeamName) => {
+     const teamValue = newTeamName === "Sin Equipo" ? "" : newTeamName;
+     const teamObj = teams.find(t => t.team_name === teamValue);
+
+     bulkUpdateMutation.mutate({ 
+       employeeIds, 
+       newTeam: teamValue,
+       team_id: teamObj ? teamObj.id : null,
+       team_key: teamObj ? teamObj.team_key : null
+     });
   };
 
   const filteredDepartments = selectedDept === "all" ? departments : [selectedDept];
