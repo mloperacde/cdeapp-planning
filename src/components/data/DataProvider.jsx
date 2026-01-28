@@ -198,10 +198,10 @@ export function DataProvider({ children }) {
         const configs = await base44.entities.AppConfig.list();
         const config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
         return config?.value ? JSON.parse(config.value) : null;
-      } catch (err) {
-        console.warn('No roles configuration found, using defaults');
-        return null;
-      }
+        } catch (err) {
+          console.error('Error loading roles configuration:', err);
+          return null;
+        }
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

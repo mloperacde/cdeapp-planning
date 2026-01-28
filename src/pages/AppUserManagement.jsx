@@ -252,12 +252,23 @@ export default function AppUserManagement() {
     try {
       const configString = JSON.stringify(localConfig);
       
-      // Robust Save Logic: Check both key and config_key
+      // Robust Save Logic: Check both key and config_key AND cleanup duplicates
       const allConfigs = await base44.entities.AppConfig.list();
-      const current = allConfigs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+      const matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
       
-      if (current) {
-        await base44.entities.AppConfig.update(current.id, { 
+      if (matches.length > 0) {
+        // Use the first one as target
+        const targetId = matches[0].id;
+        
+        // Delete duplicates if any
+        if (matches.length > 1) {
+          console.warn(`Found ${matches.length} duplicate roles_config entries. Cleaning up...`);
+          const deletePromises = matches.slice(1).map(m => base44.entities.AppConfig.delete(m.id));
+          await Promise.all(deletePromises);
+        }
+        
+        // Update target
+        await base44.entities.AppConfig.update(targetId, { 
           config_key: 'roles_config',
           key: 'roles_config', // Asegurar compatibilidad
           value: configString 

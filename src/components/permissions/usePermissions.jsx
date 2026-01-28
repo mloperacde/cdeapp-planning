@@ -127,8 +127,10 @@ export function usePermissions() {
     let role = "user"; // Default
 
     // Prioridad A: Asignación explícita en roles_config (si existe)
-    if (rolesConfig?.user_assignments?.[user.email]) {
-      role = rolesConfig.user_assignments[user.email];
+    // Normalizar email para evitar problemas de casing
+    const userEmail = user.email?.toLowerCase();
+    if (rolesConfig?.user_assignments?.[userEmail]) {
+      role = rolesConfig.user_assignments[userEmail];
     }
     // Prioridad B: Rol nativo de Base44
     else if (user.role) {
