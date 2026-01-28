@@ -196,7 +196,7 @@ export function DataProvider({ children }) {
       try {
         // Usar list + find por robustez, igual que en RolesConfig.jsx
         const configs = await base44.entities.AppConfig.list();
-        const config = configs.find(c => c.key === 'roles_config');
+        const config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
         return config?.value ? JSON.parse(config.value) : null;
       } catch (err) {
         console.warn('No roles configuration found, using defaults');

@@ -310,12 +310,18 @@ export default function RolesConfig() {
       // Estrategia robusta: Buscar por key usando list para asegurar que encontramos la configuración correcta
       // findUnique suele requerir ID, y no queremos depender de que la key sea el ID
       const allConfigs = await base44.entities.AppConfig.list();
-      const current = allConfigs.find(c => c.key === 'roles_config');
+      const current = allConfigs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
       
       if (current) {
-        await base44.entities.AppConfig.update(current.id, { value: configString });
+        await base44.entities.AppConfig.update(current.id, { 
+          config_key: 'roles_config',
+          value: configString 
+        });
       } else {
-        await base44.entities.AppConfig.create({ key: 'roles_config', value: configString });
+        await base44.entities.AppConfig.create({ 
+          config_key: 'roles_config', 
+          value: configString 
+        });
       }
 
       await refetchRolesConfig();
