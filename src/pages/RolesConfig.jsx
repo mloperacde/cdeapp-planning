@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users, Save, Plus, Trash2, AlertTriangle, RotateCcw, Factory } from "lucide-react";
+import { Shield, Users, Save, Plus, Trash2, AlertTriangle, RotateCcw, Factory, Search, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { MENU_STRUCTURE } from '@/config/menuConfig';
