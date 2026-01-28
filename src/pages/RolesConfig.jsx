@@ -309,7 +309,7 @@ export default function RolesConfig() {
 
       // Estrategia robusta: Buscar por key usando list para asegurar que encontramos la configuración correcta
       // 1. Try to find existing config with high limit
-      let allConfigs = await base44.entities.AppConfig.list(null, 1000);
+      let allConfigs = await base44.entities.AppConfig.list('id', 1000);
       let matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
 
       // 2. If not found in list, try specific filter

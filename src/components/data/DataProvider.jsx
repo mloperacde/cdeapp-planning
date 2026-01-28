@@ -198,7 +198,8 @@ export function DataProvider({ children }) {
       if (isLocal) return null;
       try {
         // Usar list con límite alto para asegurar que no perdemos la configuración por paginación
-          const configs = await base44.entities.AppConfig.list(null, 1000);
+          // Usamos 'id' como criterio de ordenación seguro en lugar de null
+          const configs = await base44.entities.AppConfig.list('id', 1000);
           let config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
           
           // Fallback: Si no lo encontramos en la lista, intentamos filtrar específicamente
