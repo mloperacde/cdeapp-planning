@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAppData } from "@/components/data/DataProvider";
 
 export default function AppUserManagement() {
-  const { employees, rolesConfig } = useAppData();
+  const { employees, rolesConfig, rolesConfigLoading } = useAppData();
 
   // Calcular estadísticas
   const totalEmployees = employees.length;
@@ -15,6 +15,7 @@ export default function AppUserManagement() {
     const assignedRole = rolesConfig?.user_assignments?.[e.email];
     return !!assignedRole;
   }).length;
+  const configuredRolesCount = rolesConfig?.roles ? Object.keys(rolesConfig.roles).length : 0;
 
   return (
     <div className="p-6 md:p-8 space-y-8">
