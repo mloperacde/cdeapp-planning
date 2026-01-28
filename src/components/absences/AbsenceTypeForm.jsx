@@ -32,16 +32,26 @@ export default function AbsenceTypeForm({ type, onClose }) {
   const queryClient = useQueryClient();
 
   const saveMutation = useMutation({
-    mutationFn: (data) => {
-      if (type?.id) {
-        return base44.entities.AbsenceType.update(type.id, data);
+    mutationFn: async (data) => {
+      console.log("Saving absence type:", data);
+      try {
+        if (type?.id) {
+          return await base44.entities.AbsenceType.update(type.id, data);
+        }
+        return await base44.entities.AbsenceType.create(data);
+      } catch (error) {
+        console.error("Error saving absence type:", error);
+        throw error;
       }
-      return base44.entities.AbsenceType.create(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['absenceTypes'] });
       toast.success(type ? "Tipo actualizado" : "Tipo creado");
       onClose();
+    },
+    onError: (error) => {
+      console.error("Mutation error:", error);
+      toast.error("Error al guardar: " + (error.message || "Error desconocido"));
     }
   });
 

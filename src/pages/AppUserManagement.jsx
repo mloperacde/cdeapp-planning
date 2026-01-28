@@ -11,7 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users, Save, Plus, Trash2, AlertTriangle, RotateCcw, Factory, Search, Filter, X, Lock, AlertCircle, CheckCircle } from "lucide-react";
+import { Shield, Users, Save, Plus, Trash2, AlertTriangle, RotateCcw, Factory, Search, Filter, X, Lock, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
 
@@ -399,13 +401,21 @@ export default function AppUserManagement() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Gestión de Usuarios y Accesos
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Configura roles, permisos y asignaciones de usuarios
-          </p>
+        <div className="flex items-center gap-4">
+          <Link to={createPageUrl("Configuration")}>
+            <Button variant="ghost" size="sm" className="gap-2 text-slate-600">
+              <ArrowLeft className="w-4 h-4" />
+              Volver
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Gestión de Usuarios y Accesos
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              Configura roles, permisos y asignaciones de usuarios
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (

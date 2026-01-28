@@ -25,7 +25,7 @@ export async function syncEmployeeVacationProtection(employeeId, preloadedBalanc
   }
 }
 
-export async function calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacationAbsences = []) {
+export async function calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacationAbsences = [], skipSync = false) {
   const noConsumeVacaciones = absenceType?.no_consume_vacaciones ?? true;
   if (!noConsumeVacaciones) {
     return null;
@@ -131,7 +131,9 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
       detalle_ausencias: detalleAusencias
     });
 
-    await syncEmployeeVacationProtection(absence.employee_id);
+    if (!skipSync) {
+      await syncEmployeeVacationProtection(absence.employee_id);
+    }
 
     return { ...balance, dias_pendientes: totalDiasPendientes, dias_disponibles: diasDisponibles };
   } else {
@@ -144,7 +146,9 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
       detalle_ausencias: [detalleAusencia]
     });
 
-    await syncEmployeeVacationProtection(absence.employee_id);
+    if (!skipSync) {
+      await syncEmployeeVacationProtection(absence.employee_id);
+    }
 
     return newBalance;
   }
@@ -152,7 +156,7 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
 
 export async function recalculateVacationPendingBalances() {
   const [absences, absenceTypes, vacations, holidays] = await Promise.all([
-    base44.entities.Absence.list("-fecha_inicio", 2000), // Aumentar límite por seguridad
+    base44.entities.Absence.list("-fecha_inicio", 5000), // Aumentar límite considerablemente
     base44.entities.AbsenceType.list("orden", 200),
     base44.entities.Vacation.list(),
     base44.entities.Holiday.list()
@@ -160,6 +164,7 @@ export async function recalculateVacationPendingBalances() {
 
   const typeById = new Map();
   const vacationTypeIds = new Set();
+  const protectionTypeIds = new Set();
 
   absenceTypes.forEach(type => {
     if (type && type.id) {
@@ -170,6 +175,11 @@ export async function recalculateVacationPendingBalances() {
       const catLower = (type.categoria_principal || "").toLowerCase();
       if (nombreLower.includes("vacaciones") || catLower.includes("vacaciones")) {
         vacationTypeIds.add(type.id);
+      }
+
+      // Identificar tipos que generan protección (no consumen vacaciones)
+      if (type.no_consume_vacaciones) {
+        protectionTypeIds.add(type.id);
       }
     }
   });
@@ -187,14 +197,22 @@ export async function recalculateVacationPendingBalances() {
     }
   }
 
-  for (const absence of absences) {
-    if (!absence.absence_type_id) continue;
+  // Filtrar solo ausencias que pueden generar días pendientes (OPTIMIZACIÓN CLAVE)
+  const protectionAbsences = absences.filter(abs => 
+    abs.absence_type_id && protectionTypeIds.has(abs.absence_type_id)
+  );
+
+  console.log(`Recalculando protección para ${protectionAbsences.length} ausencias relevantes...`);
+
+  // Procesar secuencialmente pero sin sync individual
+  for (const absence of protectionAbsences) {
     const absenceType = typeById.get(absence.absence_type_id);
     if (!absenceType) continue;
 
     const employeeVacations = vacationAbsencesByEmployee.get(absence.employee_id) || [];
 
-    await calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacations);
+    // SkipSync = true para evitar N llamadas a update de empleado
+    await calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacations, true);
   }
 
   // Sincronización final masiva: asegurar que todos los saldos se reflejen en las fichas de empleado
