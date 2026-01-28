@@ -165,19 +165,27 @@ export default function AppUserManagement() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Diagnóstico de Acceso</CardTitle>
-              <CardDescription>Usuarios con email que aún no tienen rol asignado</CardDescription>
+          <Card className="border-2 border-slate-200 dark:border-slate-700 shadow-lg">
+            <CardHeader className="bg-slate-50 dark:bg-slate-900 border-b">
+              <div className="flex items-center gap-3">
+                 <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <AlertCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                 </div>
+                 <div>
+                    <CardTitle>Diagnóstico de Acceso</CardTitle>
+                    <CardDescription>Detecta automáticamente problemas de permisos</CardDescription>
+                 </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {employees.filter(e => e.email && !rolesConfig?.user_assignments?.[e.email]).length > 0 ? (
                 <div className="space-y-4">
-                  <Alert className="border-amber-200 bg-amber-50">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    <AlertTitle className="text-amber-800">Atención</AlertTitle>
-                    <AlertDescription className="text-amber-700">
-                      Hay empleados con email registrado que no tienen un rol asignado explícitamente. Tendrán acceso básico de "Usuario".
+                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                    <AlertTitle className="text-amber-800 dark:text-amber-400 font-bold">Acción Requerida</AlertTitle>
+                    <AlertDescription className="text-amber-700 dark:text-amber-300">
+                      Hemos detectado <strong>{employees.filter(e => e.email && !rolesConfig?.user_assignments?.[e.email]).length} empleados</strong> con email que no tienen rol asignado.
+                      <br/>Estos usuarios podrán entrar pero verán la pantalla vacía.
                     </AlertDescription>
                   </Alert>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

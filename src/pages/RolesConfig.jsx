@@ -295,24 +295,15 @@ export default function RolesConfig() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Check if config exists to decide update or create
-      // Actually, we can just use AppConfig.create with unique constraint handling or delete/create logic
-      // But Base44 SDK usually has update/upsert or we can just assume it exists if rolesConfig was loaded
-      
-      const exists = !!rolesConfig;
       const configString = JSON.stringify(localConfig);
 
-      if (exists) {
-        // Find the ID of the config to update it, or use the key if supported
-        // The DataProvider used findUnique('roles_config') which implies key lookup
-        // But to update we might need the ID. Let's find it first if we don't have it.
-        // Actually, let's try to find it again to be safe.
-        const current = await base44.entities.AppConfig.findUnique('roles_config');
-        if (current) {
-            await base44.entities.AppConfig.update(current.id, { value: configString });
-        } else {
-            await base44.entities.AppConfig.create({ key: 'roles_config', value: configString });
-        }
+      // Estrategia robusta: Buscar por key usando list para asegurar que encontramos la configuración correcta
+      // findUnique suele requerir ID, y no queremos depender de que la key sea el ID
+      const allConfigs = await base44.entities.AppConfig.list();
+      const current = allConfigs.find(c => c.key === 'roles_config');
+      
+      if (current) {
+        await base44.entities.AppConfig.update(current.id, { value: configString });
       } else {
         await base44.entities.AppConfig.create({ key: 'roles_config', value: configString });
       }
