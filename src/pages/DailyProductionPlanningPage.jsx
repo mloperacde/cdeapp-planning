@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FixedSizeList as List } from 'react-window';
-import AutoSizer from "react-virtualized-auto-sizer";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 import ThemeToggle from "../components/common/ThemeToggle";
 import {
   Dialog,

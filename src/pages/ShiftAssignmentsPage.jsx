@@ -23,7 +23,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { FixedSizeList as List } from 'react-window';
-import AutoSizer from "react-virtualized-auto-sizer";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 
 // --- Subcomponents ---
 
