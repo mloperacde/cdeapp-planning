@@ -317,7 +317,15 @@ export function useRolesManager() {
             
             // DIAGNÓSTICO: Verificar si el registro existente está corrupto
             if (!f1[0].value) {
-                console.warn(`useRolesManager: Registro existente ${existingId} está corrupto (value vacío). Se intentará reparar.`);
+                console.warn(`useRolesManager: Registro existente ${existingId} está IRRECUPERABLE (value vacío). ELIMINANDO para crear uno nuevo.`);
+                try {
+                    await base44.entities.AppConfig.delete(existingId);
+                    console.log("useRolesManager: Registro corrupto eliminado correctamente.");
+                    existingId = null; // Forzamos creación de uno nuevo
+                } catch (delErr) {
+                    console.error("useRolesManager: Falló la eliminación del registro corrupto", delErr);
+                    // Si falla el borrado, intentamos actualizar de todos modos como último recurso
+                }
             }
           }
       } catch(e) { 
