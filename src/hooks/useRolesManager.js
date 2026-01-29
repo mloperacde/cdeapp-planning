@@ -333,21 +333,41 @@ export function useRolesManager() {
       }
 
       // 2. Upsert (Actualizar o Crear)
+      let savedRecord = null;
       if (existingId) {
         console.log(`useRolesManager: Updating ID ${existingId}`);
         // Forzamos update completo asegurando que 'value' vaya lleno
-        await base44.entities.AppConfig.update(existingId, { 
+        savedRecord = await base44.entities.AppConfig.update(existingId, { 
             config_key: 'roles_config',
             key: 'roles_config',
             value: configString 
         });
       } else {
         console.log("useRolesManager: Creating new record");
-        await base44.entities.AppConfig.create({ 
+        savedRecord = await base44.entities.AppConfig.create({ 
           config_key: 'roles_config', 
           key: 'roles_config',
           value: configString 
         });
+      }
+
+      // VERIFICACIÓN INMEDIATA DE ESCRITURA
+      if (savedRecord) {
+          console.log("useRolesManager: Registro guardado. Verificando contenido...", savedRecord.id);
+          // A veces la respuesta del create/update no trae todos los campos, hacemos un fetch explícito
+          const check = await base44.entities.AppConfig.read(savedRecord.id);
+          if (!check.value) {
+              console.error("CRITICAL: El backend devolvió el registro SIN valor después de guardar. Intentando reparación con campo alternativo.");
+              
+              // INTENTO DESESPERADO: Usar campo 'description' como backup si 'value' falla
+              await base44.entities.AppConfig.update(savedRecord.id, {
+                  value: configString,
+                  description: configString // Guardamos copia en description por si acaso
+              });
+              console.log("useRolesManager: Re-intento de guardado dual (value + description) completado.");
+          } else {
+              console.log("useRolesManager: Verificación exitosa. El valor se guardó correctamente.");
+          }
       }
 
       // 3. Actualización Optimista

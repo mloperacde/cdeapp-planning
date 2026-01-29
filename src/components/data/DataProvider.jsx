@@ -226,8 +226,14 @@ export function DataProvider({ children }) {
           }
 
           if (!config?.value) {
-              console.warn("DataProvider: Configuración encontrada pero sin valor (value empty)");
-              return null;
+              console.warn("DataProvider: Configuración encontrada pero sin valor (value empty). Intentando leer desde backup 'description'...");
+              if (config?.description && config.description.startsWith('{')) {
+                  console.log("DataProvider: RECUPERADO desde backup en 'description'.");
+                  config.value = config.description; // Usamos el backup
+              } else {
+                  console.warn("DataProvider: No se pudo recuperar desde backup.");
+                  return null;
+              }
           }
 
           try {
