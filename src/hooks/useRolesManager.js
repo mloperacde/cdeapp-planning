@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppData } from '@/components/data/DataProvider';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -148,6 +148,18 @@ export function useRolesManager() {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Refs para control de concurrencia y seguridad
+  const isMountedRef = useRef(true);
+  const currentSaveIdRef = useRef(0);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Inicialización ÚNICA y CONTROLADA
   useEffect(() => {
@@ -156,12 +168,27 @@ export function useRolesManager() {
     // Si ya tenemos configuración local y está sucia, NO tocarla
     if (localConfig && isDirty) return;
 
+    // GLOBAL GRACE PERIOD using localStorage to survive unmounts/reloads
+    // Check if a save happened recently (across any instance/tab)
+    const lastSaveStr = localStorage.getItem('lastRolesConfigSaveTime');
+    const lastSaveTime = lastSaveStr ? parseInt(lastSaveStr, 10) : 0;
+    const timeSinceSave = Date.now() - lastSaveTime;
+
+    // Increased to 15s to ensure eventual consistency propagates
+    if (timeSinceSave < 15000) {
+        console.log("useRolesManager: Ignoring remote config update due to recent save (Grace Period - Global)");
+        return;
+    }
+
     if (rolesConfig && Object.keys(rolesConfig).length > 0) {
       console.log("useRolesManager: Loaded remote configuration");
       setLocalConfig(JSON.parse(JSON.stringify(rolesConfig)));
     } else {
-      console.log("useRolesManager: Initializing with default configuration");
-      setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
+      // Solo inicializar con defaults si NO tenemos nada local
+      if (!localConfig) {
+          console.log("useRolesManager: Initializing with default configuration");
+          setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
+      }
     }
     setIsLoading(false);
   }, [rolesConfig, isDataLoading]); // Quitamos isDirty y localConfig de deps para evitar bucles
@@ -259,7 +286,13 @@ export function useRolesManager() {
 
   // Acción de Guardado
   const saveConfig = async () => {
+    if (!isMountedRef.current) return;
     setIsSaving(true);
+    
+    // Increment save ID to invalidate previous verification loops
+    currentSaveIdRef.current += 1;
+    const thisSaveId = currentSaveIdRef.current;
+    
     try {
       if (!localConfig || Object.keys(localConfig).length === 0) {
         throw new Error("La configuración local está vacía. No se guardará.");
@@ -271,6 +304,9 @@ export function useRolesManager() {
       const parsedCheck = JSON.parse(configString); 
       
       console.log("useRolesManager: Saving config...", configString.length, "chars");
+
+      // Update Global Grace Period Timestamp immediately
+      localStorage.setItem('lastRolesConfigSaveTime', Date.now().toString());
 
       // 1. Encontrar registro existente (Búsqueda Exhaustiva y Limpieza)
       let matches = [];
@@ -331,6 +367,7 @@ export function useRolesManager() {
       // Actualizar caché INMEDIATAMENTE con los datos que acabamos de enviar.
       // No esperamos a la verificación del servidor para actualizar la vista.
       queryClient.setQueryData(['rolesConfig'], parsedCheck);
+      localStorage.setItem('lastRolesConfigSaveTime', Date.now().toString()); // Update again after success
       setIsDirty(false); 
       toast.success("Configuración guardada.");
 
@@ -342,10 +379,19 @@ export function useRolesManager() {
           const maxAttempts = 5;
 
           while (attempts < maxAttempts && !verified) {
+            // Check if a new save has started or component unmounted, abort if so
+            if (!isMountedRef.current || currentSaveIdRef.current !== thisSaveId) {
+                console.log("Verification aborted due to new save operation or unmount.");
+                return;
+            }
+
             attempts++;
             const waitTime = 1000 + (attempts * 1500); // 2.5s, 4s, 5.5s...
             console.log(`Background Verification attempt ${attempts}/${maxAttempts}...`);
             await new Promise(r => setTimeout(r, waitTime));
+
+            // Check again after wait
+            if (!isMountedRef.current || currentSaveIdRef.current !== thisSaveId) return;
 
             let saved = null;
             try {
@@ -367,6 +413,9 @@ export function useRolesManager() {
             }
           }
 
+          // Check one last time before nuclear
+          if (!isMountedRef.current || currentSaveIdRef.current !== thisSaveId) return;
+
           // 5. ESTRATEGIA DE EMERGENCIA FINAL (NUCLEAR)
           if (!verified) {
             console.error("CRITICAL: Verification failed. Executing NUCLEAR OPTION.");
@@ -387,6 +436,14 @@ export function useRolesManager() {
                 if (newRec?.id) {
                     console.log("Nuclear option success. New ID:", newRec.id);
                     toast.success("Sincronización completada.");
+                    
+                    // CRITICAL: Update cache with new data to prevent reversion
+                    // If we don't do this, next refetch might get empty/old data and overwrite our work
+                    queryClient.setQueryData(['rolesConfig'], parsedCheck);
+                    localStorage.setItem('lastRolesConfigSaveTime', Date.now().toString()); // Extend protection
+                    
+                    // Trigger refetch just to be sure, but we are protected by localStorage
+                    if (refetchRolesConfig) refetchRolesConfig();
                 }
             } catch(e) {
                 console.error("Nuclear option failed", e);
@@ -400,7 +457,7 @@ export function useRolesManager() {
       toast.error("Error al guardar: " + error.message);
       setIsDirty(true); // Permitir reintentar
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) setIsSaving(false);
     }
   };
 
