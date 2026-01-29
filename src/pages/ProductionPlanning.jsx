@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Factory, Plus } from "lucide-react";
+import { Factory, Plus, RefreshCw, DownloadCloud } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import WorkOrderForm from "../components/planning/WorkOrderForm";
 import PlanningGantt from "../components/planning/PlanningGantt";
@@ -16,11 +16,13 @@ import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cdeApp } from "@/api/cdeAppClient";
 
 
 export default function ProductionPlanningPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [dropDialogData, setDropDialogData] = useState(null);
   const queryClient = useQueryClient();
@@ -117,6 +119,119 @@ export default function ProductionPlanningPage() {
     return filtered.sort((a, b) => (a.priority || 999) - (b.priority || 999));
   }, [workOrders, selectedMachine, selectedStatus, dateRange]);
 
+  const handleSyncCdeApp = async () => {
+    setIsSyncing(true);
+    toast.info("Conectando con CDEApp...");
+    
+    try {
+      // 1. Obtener datos externos
+      const response = await cdeApp.syncProductions();
+      
+      // 2. Normalizar respuesta (Headers -> Objetos)
+      let rows = [];
+      if (response.headers && Array.isArray(response.headers)) {
+          if (Array.isArray(response)) {
+             rows = response; 
+          } else if (response.data && Array.isArray(response.data)) {
+             if (response.headers) {
+                 rows = response.data.map(r => {
+                     const obj = {};
+                     response.headers.forEach((h, i) => obj[h] = r[i]);
+                     return obj;
+                 });
+             } else {
+                 rows = response.data;
+             }
+          }
+      } else if (Array.isArray(response)) {
+          rows = response;
+      }
+
+      if (rows.length === 0) {
+        toast.warning("CDEApp devolvió 0 órdenes.");
+        setIsSyncing(false);
+        return;
+      }
+
+      // 3. Preparar mapeo de máquinas
+      const machineMap = new Map();
+      machines.forEach(m => {
+          if (m.codigo) machineMap.set(String(m.codigo).trim(), m.id);
+          if (m.nombre) machineMap.set(m.nombre.toLowerCase().trim(), m.id);
+      });
+
+      // 4. Identificar existentes (para evitar duplicados exactos)
+      const existingOrderNumbers = new Set(workOrders.map(o => String(o.order_number)));
+
+      let created = 0;
+      let skipped = 0;
+
+      // 5. Procesar e Insertar
+      for (const row of rows) {
+          const orderNumber = row['Orden'] || row['production_id'];
+          if (!orderNumber) continue;
+
+          // SKIP si ya existe
+          if (existingOrderNumbers.has(String(orderNumber))) {
+            skipped++;
+            continue;
+          }
+
+          // Resolver Máquina
+          let machineId = null;
+          if (row['Máquina']) {
+              const name = String(row['Máquina']).toLowerCase().trim();
+              if (machineMap.has(name)) machineId = machineMap.get(name);
+          }
+          if (!machineId && row['machine_id']) {
+              const code = String(row['machine_id']).trim();
+              if (machineMap.has(code)) machineId = machineMap.get(code);
+          }
+
+          if (!machineId) {
+              skipped++;
+              continue; // Ignoramos órdenes sin máquina válida
+          }
+
+          const payload = {
+              order_number: String(orderNumber),
+              machine_id: machineId,
+              client_name: row['Cliente'],
+              product_article_code: row['Artículo'],
+              product_name: row['Nombre'] || row['Descripción'],
+              quantity: parseInt(row['Cantidad']) || 0,
+              priority: parseInt(row['Prioridad']) || 3,
+              status: row['Estado'] || 'Pendiente',
+              start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'],
+              committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'],
+              planned_end_date: row['Fecha Fin'],
+              production_cadence: parseFloat(row['Cadencia']) || 0,
+              notes: row['Observación'] || ''
+          };
+
+          try {
+             await base44.entities.WorkOrder.create(payload);
+             created++;
+          } catch (e) {
+             console.error("Error creating order", orderNumber, e);
+          }
+      }
+
+      queryClient.invalidateQueries(['workOrders']);
+      if (created > 0) {
+        toast.success(`Sincronización completada: ${created} nuevas órdenes importadas.`);
+      } else {
+        toast.info("Sincronización completada. No hay nuevas órdenes.");
+      }
+      
+    } catch (error) {
+      console.error(error);
+      toast.error("Error de conexión: " + error.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleEditOrder = (order) => {
     setEditingOrder(order);
     setIsFormOpen(true);
@@ -162,7 +277,20 @@ export default function ProductionPlanningPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button type="button" onClick={handleNewOrder} className="bg-blue-600 hover:bg-blue-700">
+          <Button 
+            onClick={handleSyncCdeApp}
+            className="bg-blue-600 hover:bg-blue-700"
+            disabled={isSyncing}
+            title="Sincronizar con CDEApp"
+          >
+            {isSyncing ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <DownloadCloud className="w-4 h-4" />
+            )}
+            <span className="ml-2 hidden md:inline">Sincronizar</span>
+          </Button>
+          <Button type="button" onClick={handleNewOrder} className="bg-purple-600 hover:bg-purple-700">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Orden
           </Button>

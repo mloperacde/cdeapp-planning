@@ -342,16 +342,23 @@ export function useRolesManager() {
       }
 
       // 2. Upsert (Actualizar o Crear)
-      // INTENTO DE SOLUCIÓN FINAL: Codificar en Base64 para evitar filtros del servidor
-      // A veces los WAF bloquean JSONs con ciertos caracteres. Base64 es solo texto alfanumérico.
+      // ESTRATEGIA DE PERSISTENCIA ROBUSTA:
+      // 1. Base64 para evitar filtros de caracteres.
+      // 2. Guardar en 'value' Y 'description' simultáneamente.
+      // 3. 'description' ha demostrado ser más fiable en este backend.
       const base64Config = btoa(unescape(encodeURIComponent(configString)));
       console.log("useRolesManager: Saving config as Base64...", base64Config.length, "chars");
+
+      // Validar longitud antes de enviar para evitar errores 413 o truncado silencioso
+      if (base64Config.length > 50000) {
+          console.warn("useRolesManager: Configuración muy grande, podría fallar en backend.", base64Config.length);
+      }
 
       const payload = {
           key: 'roles_config',
           config_key: 'roles_config',
-          value: base64Config, // ENVIAMOS BASE64
-          description: base64Config, // BACKUP TAMBIÉN EN BASE64
+          value: base64Config, 
+          description: configString, // Guardamos JSON plano en description como backup legible/robusto
           is_active: true
       };
 
@@ -368,21 +375,24 @@ export function useRolesManager() {
        if (savedRecord) {
            console.log("useRolesManager: Registro guardado. Verificando contenido...", savedRecord.id);
            
-           // Usamos filter por ID ya que .read() no existe
+           // Esperar un momento por consistencia eventual
+           await new Promise(r => setTimeout(r, 500));
+
            const checks = await base44.entities.AppConfig.filter({ id: savedRecord.id });
            const check = checks && checks.length > 0 ? checks[0] : null;
 
-           if (!check || !check.value) {
-               console.error("CRITICAL: El backend devolvió el registro SIN valor después de guardar. Intentando reparación con campo alternativo.");
-               
-               // INTENTO DESESPERADO: Usar campo 'description' como backup si 'value' falla
+           // Verificamos si AL MENOS UNO de los campos se guardó
+           const valueOk = check && check.value && check.value.length > 0;
+           const descOk = check && check.description && check.description.length > 0;
+
+           if (!valueOk && !descOk) {
+               console.error("CRITICAL: Backend rechazó ambos campos (value y description).");
+               // Último intento: Usar Base64 también en description
                await base44.entities.AppConfig.update(savedRecord.id, {
-                   value: configString,
-                   description: configString // Guardamos copia en description por si acaso
+                   description: base64Config
                });
-               console.log("useRolesManager: Re-intento de guardado dual (value + description) completado.");
            } else {
-               console.log("useRolesManager: Verificación exitosa. El valor se guardó correctamente.");
+               console.log(`useRolesManager: Verificación exitosa. Value: ${valueOk ? 'OK' : 'EMPTY'}, Desc: ${descOk ? 'OK' : 'EMPTY'}`);
            }
        }
 

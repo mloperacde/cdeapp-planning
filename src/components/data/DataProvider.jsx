@@ -229,31 +229,32 @@ export function DataProvider({ children }) {
           }
 
           if (!config?.value) {
-              console.warn("DataProvider: Configuración encontrada pero sin valor (value empty). Intentando leer desde backup 'description'...", config);
+              // INFO: Esto es normal si el backend rechaza el payload en 'value' pero lo aceptó en 'description'
+              // No asustar al usuario con warnings si la recuperación es exitosa.
+              const hasDescriptionBackup = config?.description && config.description.startsWith('{');
+              const hasLocalBackup = typeof localStorage !== 'undefined' && localStorage.getItem('roles_config_backup');
               
-              // 1. Intentar recuperar de 'description'
-              if (config?.description && config.description.startsWith('{')) {
-                  console.log("DataProvider: RECUPERADO desde backup en 'description'.");
+              if (hasDescriptionBackup) {
+                  console.log("DataProvider: Recuperando configuración desde backup en 'description'.");
                   config.value = config.description;
               } 
-              // 2. Intentar recuperar de LocalStorage
-              else {
+              else if (hasLocalBackup) {
                   const localBackup = localStorage.getItem('roles_config_backup');
                   if (localBackup && localBackup.startsWith('{')) {
-                       console.log("DataProvider: RECUPERADO desde LocalStorage (Emergency Backup).");
+                       console.log("DataProvider: Recuperando configuración desde LocalStorage (Emergency Backup).");
                        config.value = localBackup;
-                  } else {
-                       console.warn("DataProvider: No se pudo recuperar desde backup ni LocalStorage. Usando configuración por defecto.");
-                       // FALLBACK DE ÚLTIMO RECURSO: Configuración por defecto en memoria
-                       // Esto permite que la app arranque aunque se haya perdido todo, para que el admin pueda volver a guardar.
-                       return {
-                           roles: {
-                               admin: { permissions: { isAdmin: true } },
-                               user: { permissions: { isAdmin: false } }
-                           },
-                           user_assignments: {}
-                       };
                   }
+              }
+              
+              if (!config.value) {
+                   console.warn("DataProvider: Configuración vacía y sin backups. Usando defaults.");
+                   return {
+                       roles: {
+                           admin: { permissions: { isAdmin: true } },
+                           user: { permissions: { isAdmin: false } }
+                       },
+                       user_assignments: {}
+                   };
               }
           }
 
