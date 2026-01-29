@@ -175,7 +175,9 @@ export function useRolesManager() {
     const timeSinceSave = Date.now() - lastSaveTime;
 
     // Increased to 15s to ensure eventual consistency propagates
-    if (timeSinceSave < 15000) {
+    // ONLY if we already have a local config (prevent overwriting user view while typing/editing)
+    // If localConfig is null (initial load), we MUST load whatever we have.
+    if (localConfig && timeSinceSave < 15000) {
         console.log("useRolesManager: Ignoring remote config update due to recent save (Grace Period - Global)");
         return;
     }
