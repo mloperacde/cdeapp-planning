@@ -352,23 +352,26 @@ export function useRolesManager() {
       }
 
       // VERIFICACIÓN INMEDIATA DE ESCRITURA
-      if (savedRecord) {
-          console.log("useRolesManager: Registro guardado. Verificando contenido...", savedRecord.id);
-          // A veces la respuesta del create/update no trae todos los campos, hacemos un fetch explícito
-          const check = await base44.entities.AppConfig.read(savedRecord.id);
-          if (!check.value) {
-              console.error("CRITICAL: El backend devolvió el registro SIN valor después de guardar. Intentando reparación con campo alternativo.");
-              
-              // INTENTO DESESPERADO: Usar campo 'description' como backup si 'value' falla
-              await base44.entities.AppConfig.update(savedRecord.id, {
-                  value: configString,
-                  description: configString // Guardamos copia en description por si acaso
-              });
-              console.log("useRolesManager: Re-intento de guardado dual (value + description) completado.");
-          } else {
-              console.log("useRolesManager: Verificación exitosa. El valor se guardó correctamente.");
-          }
-      }
+       if (savedRecord) {
+           console.log("useRolesManager: Registro guardado. Verificando contenido...", savedRecord.id);
+           
+           // Usamos filter por ID ya que .read() no existe
+           const checks = await base44.entities.AppConfig.filter({ id: savedRecord.id });
+           const check = checks && checks.length > 0 ? checks[0] : null;
+
+           if (!check || !check.value) {
+               console.error("CRITICAL: El backend devolvió el registro SIN valor después de guardar. Intentando reparación con campo alternativo.");
+               
+               // INTENTO DESESPERADO: Usar campo 'description' como backup si 'value' falla
+               await base44.entities.AppConfig.update(savedRecord.id, {
+                   value: configString,
+                   description: configString // Guardamos copia en description por si acaso
+               });
+               console.log("useRolesManager: Re-intento de guardado dual (value + description) completado.");
+           } else {
+               console.log("useRolesManager: Verificación exitosa. El valor se guardó correctamente.");
+           }
+       }
 
       // 3. Actualización Optimista
       queryClient.setQueryData(['rolesConfig'], parsedCheck);
