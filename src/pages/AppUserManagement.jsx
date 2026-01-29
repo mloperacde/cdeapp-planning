@@ -156,11 +156,15 @@ export default function AppUserManagement() {
       <Breadcrumb className="mb-2">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/">Inicio</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Inicio</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href={createPageUrl("Configuration")}>Configuración</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to={createPageUrl("Configuration")}>Configuración</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

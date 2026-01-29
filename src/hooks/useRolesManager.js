@@ -378,17 +378,29 @@ export function useRolesManager() {
       if (!verified) {
         console.error("CRITICAL: All verification attempts failed.");
         console.log("Sent length:", configString.length);
-        console.log("Received length:", savedValue.length);
+        console.log("Received length:", finalSavedValue.length);
         
-        // Reintento de emergencia (fuerza bruta)
+        // Reintento de emergencia (fuerza bruta): Borrar y Crear de nuevo si el update falla
         if (savedRecordId) {
-            console.warn("Attempting emergency retry update...");
-            try {
-              await base44.entities.AppConfig.update(savedRecordId, { value: configString });
-            } catch(e) { console.error("Retry failed", e); }
+             console.warn("Update seems to fail silently. Attempting DELETE + CREATE strategy...");
+             try {
+                await base44.entities.AppConfig.delete(savedRecordId);
+                const newRec = await base44.entities.AppConfig.create({ 
+                    config_key: 'roles_config', 
+                    key: 'roles_config',
+                    value: configString 
+                });
+                console.log("Emergency Re-creation result:", newRec);
+                if (newRec && newRec.value && newRec.value.length > 0) {
+                    toast.success("Configuración recuperada y guardada (Estrategia alternativa).");
+                    verified = true;
+                }
+             } catch(e) { console.error("Emergency strategy failed", e); }
         }
-        
-        toast.warning("Posible error de sincronización. Por favor espera unos segundos y vuelve a guardar si los cambios no persisten.");
+
+        if (!verified) {
+            toast.warning("Error de verificación: Los datos podrían no haberse guardado. Intenta de nuevo.");
+        }
       } else {
         toast.success("Configuración guardada y verificada.");
       }
