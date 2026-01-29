@@ -250,7 +250,21 @@ export function DataProvider({ children }) {
           }
 
           try {
-            const parsed = JSON.parse(config.value);
+            let jsonString = config.value;
+            
+            // DETECCIÓN INTELIGENTE DE FORMATO
+            // Si no parece JSON (no empieza por {), asumimos que es Base64 y decodificamos
+            if (jsonString && !jsonString.trim().startsWith('{')) {
+                try {
+                    console.log("DataProvider: Detectado formato codificado (posible Base64). Decodificando...");
+                    jsonString = decodeURIComponent(escape(atob(jsonString)));
+                    console.log("DataProvider: Decodificación exitosa.");
+                } catch (e) {
+                    console.warn("DataProvider: Falló la decodificación Base64, intentando parsear tal cual...", e);
+                }
+            }
+
+            const parsed = JSON.parse(jsonString);
             console.log(`DataProvider: Configuración parseada correctamente. Roles: ${Object.keys(parsed.roles || {}).length}, Asignaciones: ${Object.keys(parsed.user_assignments || {}).length}`);
             return parsed;
           } catch (parseError) {
