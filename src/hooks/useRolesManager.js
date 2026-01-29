@@ -303,6 +303,15 @@ export function useRolesManager() {
       const parsedCheck = JSON.parse(configString); // Validación simple
       
       console.log("useRolesManager: Saving config (Simple Mode)...", configString.length, "chars");
+
+      // BACKUP DE EMERGENCIA EN LOCALSTORAGE
+      try {
+          localStorage.setItem('roles_config_backup', configString);
+          console.log("useRolesManager: Backup de emergencia guardado en LocalStorage.");
+      } catch (e) {
+          console.warn("useRolesManager: No se pudo guardar backup en LocalStorage", e);
+      }
+
       console.log("useRolesManager: Config payload:", {
           rolesCount: Object.keys(localConfig.roles || {}).length,
           assignmentsCount: Object.keys(localConfig.user_assignments || {}).length

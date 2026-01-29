@@ -226,13 +226,23 @@ export function DataProvider({ children }) {
           }
 
           if (!config?.value) {
-              console.warn("DataProvider: Configuración encontrada pero sin valor (value empty). Intentando leer desde backup 'description'...");
+              console.warn("DataProvider: Configuración encontrada pero sin valor (value empty). Intentando leer desde backup 'description'...", config);
+              
+              // 1. Intentar recuperar de 'description'
               if (config?.description && config.description.startsWith('{')) {
                   console.log("DataProvider: RECUPERADO desde backup en 'description'.");
-                  config.value = config.description; // Usamos el backup
-              } else {
-                  console.warn("DataProvider: No se pudo recuperar desde backup.");
-                  return null;
+                  config.value = config.description;
+              } 
+              // 2. Intentar recuperar de LocalStorage
+              else {
+                  const localBackup = localStorage.getItem('roles_config_backup');
+                  if (localBackup && localBackup.startsWith('{')) {
+                       console.log("DataProvider: RECUPERADO desde LocalStorage (Emergency Backup).");
+                       config.value = localBackup;
+                  } else {
+                       console.warn("DataProvider: No se pudo recuperar desde backup ni LocalStorage.");
+                       return null;
+                  }
               }
           }
 
