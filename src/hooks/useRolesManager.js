@@ -313,7 +313,12 @@ export function useRolesManager() {
       try {
           const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
           if (f1 && f1.length > 0) {
-            existingId = f1[0].id; // Tomamos el primero si hay duplicados, y sobrescribimos
+            existingId = f1[0].id; // Tomamos el primero si hay duplicados
+            
+            // DIAGNÓSTICO: Verificar si el registro existente está corrupto
+            if (!f1[0].value) {
+                console.warn(`useRolesManager: Registro existente ${existingId} está corrupto (value vacío). Se intentará reparar.`);
+            }
           }
       } catch(e) { 
           console.warn("Search failed, assuming create new", e); 
@@ -322,6 +327,7 @@ export function useRolesManager() {
       // 2. Upsert (Actualizar o Crear)
       if (existingId) {
         console.log(`useRolesManager: Updating ID ${existingId}`);
+        // Forzamos update completo asegurando que 'value' vaya lleno
         await base44.entities.AppConfig.update(existingId, { 
             config_key: 'roles_config',
             key: 'roles_config',
