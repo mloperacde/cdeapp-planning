@@ -471,6 +471,72 @@ export function useRolesManager() {
     toast.info("Cambios descartados");
   }, [rolesConfig]);
 
+  const forceCleanup = async () => {
+    if (!isMountedRef.current) return;
+    setIsSaving(true);
+    try {
+        toast.info("Iniciando limpieza de registros obsoletos...");
+        
+        // 1. Buscar todos los registros
+        let matches = [];
+        try {
+            const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+            if (f1 && f1.length > 0) matches = f1;
+            
+            if (matches.length === 0) {
+                const all = await base44.entities.AppConfig.list('id', 2000) || [];
+                matches = all.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+            }
+        } catch(e) { 
+            console.warn("Search failed", e);
+            throw new Error("No se pudieron buscar los registros: " + e.message);
+        }
+
+        if (matches.length <= 1) {
+            toast.info("El sistema está limpio. No se encontraron duplicados.");
+            return;
+        }
+
+        // 2. Ordenar por fecha de creación (o ID si no hay fecha) para conservar el más reciente
+        // Asumimos que ID más alto es más reciente si son autoincrementales, o usamos created_at si existe
+        matches.sort((a, b) => {
+            const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+            const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+            return dateB - dateA; // Descending (newest first)
+        });
+
+        const toKeep = matches[0];
+        const toDelete = matches.slice(1);
+
+        console.log(`Keeping ID ${toKeep.id}, deleting ${toDelete.length} duplicates`);
+        
+        // 3. Borrar
+        let deletedCount = 0;
+        await Promise.all(toDelete.map(async (m) => {
+            try {
+                await base44.entities.AppConfig.delete(m.id);
+                deletedCount++;
+            } catch (e) {
+                console.warn(`Failed to delete ${m.id}`, e);
+            }
+        }));
+
+        if (deletedCount > 0) {
+            toast.success(`Limpieza completada: ${deletedCount} registros eliminados.`);
+            // Refetch to ensure we have the latest data
+            if (refetchRolesConfig) refetchRolesConfig();
+        } else {
+            toast.warning("No se pudieron eliminar los registros duplicados.");
+        }
+
+    } catch (e) {
+        console.error("Cleanup failed", e);
+        toast.error("Error durante la limpieza: " + e.message);
+    } finally {
+        if (isMountedRef.current) setIsSaving(false);
+    }
+  };
+
   return {
     localConfig,
     isDirty,
@@ -482,6 +548,7 @@ export function useRolesManager() {
     addRole,
     deleteRole,
     saveConfig,
-    resetConfig
+    resetConfig,
+    forceCleanup
   };
 }

@@ -501,6 +501,10 @@ export default function AppUserManagement() {
                   }}>
                      Ver Configuración en Consola
                   </Button>
+                  <Button variant="destructive" onClick={forceCleanup} disabled={isSaving}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Purgar Registros Obsoletos
+                  </Button>
                </div>
                
                <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-md overflow-auto max-h-[300px] space-y-4">
@@ -567,4 +571,5 @@ export default function AppUserManagement() {
       </Dialog>
     </div>
   );
+}
 }
