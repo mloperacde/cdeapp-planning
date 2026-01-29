@@ -243,8 +243,16 @@ export function DataProvider({ children }) {
                        console.log("DataProvider: RECUPERADO desde LocalStorage (Emergency Backup).");
                        config.value = localBackup;
                   } else {
-                       console.warn("DataProvider: No se pudo recuperar desde backup ni LocalStorage.");
-                       return null;
+                       console.warn("DataProvider: No se pudo recuperar desde backup ni LocalStorage. Usando configuración por defecto.");
+                       // FALLBACK DE ÚLTIMO RECURSO: Configuración por defecto en memoria
+                       // Esto permite que la app arranque aunque se haya perdido todo, para que el admin pueda volver a guardar.
+                       return {
+                           roles: {
+                               admin: { permissions: { isAdmin: true } },
+                               user: { permissions: { isAdmin: false } }
+                           },
+                           user_assignments: {}
+                       };
                   }
               }
           }
