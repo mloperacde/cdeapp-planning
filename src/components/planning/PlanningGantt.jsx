@@ -132,7 +132,13 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                           {...provided.droppableProps}
                           className="space-y-1 min-h-[20px]"
                         >
-                          {machine.backlog.map((order, index) => (
+                          {machine.backlog.map((order, index) => {
+                             const tooltipText = `P${order.priority} | ${order.order_number}
+Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
+Cli: ${order.client_name || '-'}
+Cant: ${order.quantity || '-'} | Mat: ${order.material_type || '-'}
+Ent: ${order.committed_delivery_date || '-'}`;
+                            return (
                             <Draggable key={order.id} draggableId={order.id} index={index}>
                               {(provided, snapshot) => (
                                 <div
@@ -141,6 +147,7 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                                   {...provided.dragHandleProps}
                                   className={`bg-white dark:bg-slate-800 px-1.5 py-1 rounded border shadow-sm text-[10px] cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${snapshot.isDragging ? 'opacity-80 ring-2 ring-blue-500 z-50' : ''}`}
                                   style={provided.draggableProps.style}
+                                  title={tooltipText}
                                 >
                                   <div className="flex justify-between items-center gap-1">
                                      <span className="font-bold text-blue-700 dark:text-blue-400 text-[11px]">{order.order_number}</span>
@@ -154,7 +161,8 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                                 </div>
                               )}
                             </Draggable>
-                          ))}
+                          );
+                          })}
                           {provided.placeholder}
                         </div>
                       )}
@@ -226,6 +234,13 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                      if (durationCols <= 0) return null;
 
                      const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
+                     
+                     const tooltipText = `P${order.priority} | ${order.order_number}
+Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
+Cli: ${order.client_name || '-'}
+Cant: ${order.quantity || '-'} | Mat: ${order.material_type || '-'}
+Ent: ${order.committed_delivery_date || '-'}
+Ini: ${order.start_date || '-'} | Fin: ${order.planned_end_date || '-'}`;
 
                      return (
                        <div
@@ -237,7 +252,7 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                           width: `${durationCols * 128 - 8}px`,
                           top: `${idx * 36 + 4}px`,
                         }}
-                        title={`${order.order_number} - ${order.product_name || ''}`}
+                        title={tooltipText}
                       >
                         <div className="flex flex-col min-w-0 flex-1 justify-center h-full">
                           <div className="flex items-center gap-1">

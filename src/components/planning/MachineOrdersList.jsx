@@ -81,52 +81,73 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                             key={order.id} 
                             onClick={() => onEditOrder(order)}
                             className={`
-                                relative p-2.5 rounded-md border cursor-pointer transition-all group
+                                relative p-2 rounded-md border cursor-pointer transition-all group hover:shadow-md
                                 ${getPriorityColor(order.priority)}
                             `}
                         >
-                            {/* Header: Priority & Order Number */}
-                            <div className="flex items-center justify-between mb-1.5">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                    <Badge className={`${getPriorityBadgeColor(order.priority)} text-[10px] px-1.5 py-0 h-4 border-0 text-white`}>
-                                        P{order.priority}
-                                    </Badge>
-                                    <span className="font-bold text-xs truncate select-text" title={order.order_number}>
-                                        {order.order_number}
-                                    </span>
-                                </div>
+                            {/* Línea 1: Pry, Orden, Artículo, Nombre, Cliente */}
+                            <div className="flex items-center gap-2 mb-1.5 text-xs overflow-hidden whitespace-nowrap">
+                                <Badge className={`${getPriorityBadgeColor(order.priority)} text-[10px] px-1.5 py-0 h-4 border-0 text-white shrink-0`}>
+                                    P{order.priority}
+                                </Badge>
+                                <span className="font-bold shrink-0">{order.order_number}</span>
+                                {order.product_article_code && (
+                                    <>
+                                        <span className="text-slate-400 shrink-0">|</span>
+                                        <span className="font-medium shrink-0" title="Artículo">{order.product_article_code}</span>
+                                    </>
+                                )}
+                                {order.product_name && (
+                                    <>
+                                        <span className="text-slate-400 shrink-0">|</span>
+                                        <span className="truncate font-medium flex-1" title={order.product_name}>{order.product_name}</span>
+                                    </>
+                                )}
+                                {order.client_name && (
+                                    <>
+                                        <span className="text-slate-400 shrink-0">|</span>
+                                        <span className="italic truncate max-w-[80px]" title={order.client_name}>{order.client_name}</span>
+                                    </>
+                                )}
                                 {isLate && (
-                                    <div className="text-red-600 animate-pulse" title="Retrasada">
+                                    <div className="text-red-600 animate-pulse ml-auto shrink-0" title="Retrasada">
                                         <AlertCircle className="w-3.5 h-3.5" />
                                     </div>
                                 )}
                             </div>
 
-                            {/* Product Name */}
-                            <div className="text-xs font-medium text-slate-800 dark:text-slate-200 line-clamp-2 mb-2 leading-snug" title={order.product_name}>
-                                {order.product_name || order.product_article_code || 'Sin nombre'}
-                            </div>
+                            {/* Línea 2: Cantidad, Materiales, Fechas */}
+                            <div className="flex items-center gap-2 text-[10px] text-slate-600 dark:text-slate-400 overflow-hidden whitespace-nowrap border-t border-black/5 dark:border-white/5 pt-1.5">
+                                <span className="font-semibold shrink-0" title="Cantidad">
+                                    {order.quantity ? `${order.quantity} uds` : 'Sin cantidad'}
+                                </span>
+                                
+                                {order.material_type && (
+                                    <>
+                                        <span className="text-slate-300 shrink-0">•</span>
+                                        <span className="truncate max-w-[100px]" title={`Material: ${order.material_type}`}>{order.material_type}</span>
+                                    </>
+                                )}
 
-                            {/* Footer: Dates & Info */}
-                            <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-black/5 dark:border-white/5">
-                                <div className="flex flex-col gap-0.5 text-[10px] text-slate-600 dark:text-slate-400">
-                                    {order.quantity && (
-                                        <span className="font-semibold">Cant: {order.quantity}</span>
+                                <div className="ml-auto flex items-center gap-2 shrink-0">
+                                    {(order.new_delivery_date || order.committed_delivery_date) && (
+                                        <span className={`flex items-center gap-1 ${isLate ? 'text-red-700 font-bold' : ''}`} title="Fecha Entrega">
+                                           Ent: {format(parseISO(order.new_delivery_date || order.committed_delivery_date), 'dd/MM')}
+                                        </span>
                                     )}
-                                    {order.committed_delivery_date && (
-                                        <span className={`flex items-center gap-1 ${isLate ? 'text-red-700 font-bold' : ''}`}>
-                                           {format(parseISO(order.committed_delivery_date), 'dd/MM')}
+                                    
+                                    {order.start_date && (
+                                        <span className="text-slate-500" title="Fecha Inicio Límite">
+                                           Ini: {format(parseISO(order.start_date), 'dd/MM')}
+                                        </span>
+                                    )}
+
+                                    {order.planned_end_date && (
+                                        <span className="text-slate-500" title="Fecha Fin">
+                                           Fin: {format(parseISO(order.planned_end_date), 'dd/MM')}
                                         </span>
                                     )}
                                 </div>
-                                
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity -mr-1 -mb-1"
-                                >
-                                    <Edit className="w-3 h-3" />
-                                </Button>
                             </div>
                         </div>
                     );
