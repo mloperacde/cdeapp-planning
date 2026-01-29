@@ -197,34 +197,43 @@ export function DataProvider({ children }) {
     queryFn: async () => {
       if (isLocal) return null;
       try {
-        // console.log("DataProvider: Fetching roles configuration...");
-        // 1. Try specific filter first (faster and likely more consistent)
+          console.log("DataProvider: Buscando configuración de roles...");
+          
+          // 1. Intentar filtro directo por config_key
           let config = null;
           try {
              const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-             if (f1 && f1.length > 0) config = f1[0];
+             if (f1 && f1.length > 0) {
+                 config = f1[0];
+                 console.log("DataProvider: Encontrado por config_key", config.id);
+             }
           } catch(e) { console.warn("Filter by config_key failed", e); }
           
-          // 2. Try filter by alternative key
+          // 2. Intentar filtro alternativo por key
           if (!config) {
              try {
                  const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
-                 if (f2 && f2.length > 0) config = f2[0];
+                 if (f2 && f2.length > 0) {
+                     config = f2[0];
+                     console.log("DataProvider: Encontrado por key", config.id);
+                 }
              } catch(e) { console.warn("Filter by key failed", e); }
           }
-          
-          // 3. Fallback to list (slow but exhaustive)
+
           if (!config) {
-             try {
-                const configs = await base44.entities.AppConfig.list('id', 1000) || [];
-                config = configs.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
-             } catch(e) { console.warn("List fallback failed", e); }
+              console.warn("DataProvider: NO se encontró configuración remota (retornando null)");
+              return null;
           }
 
-          if (!config?.value) return null;
+          if (!config?.value) {
+              console.warn("DataProvider: Configuración encontrada pero sin valor (value empty)");
+              return null;
+          }
 
           try {
-            return JSON.parse(config.value);
+            const parsed = JSON.parse(config.value);
+            console.log(`DataProvider: Configuración parseada correctamente. Roles: ${Object.keys(parsed.roles || {}).length}, Asignaciones: ${Object.keys(parsed.user_assignments || {}).length}`);
+            return parsed;
           } catch (parseError) {
             console.error("CRITICAL: Error parsing roles_config JSON:", parseError, "Raw value:", config.value);
             // Intentar recuperar si es un problema de doble stringify
