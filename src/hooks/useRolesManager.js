@@ -90,6 +90,7 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: true,
         canViewReports: true,
         canConfigureSystem: false,
+        canConfigureSystem: false,
       }
     },
     maintenance_tech: {
@@ -149,9 +150,7 @@ export function useRolesManager() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Refs para control de concurrencia y seguridad
   const isMountedRef = useRef(true);
-  const currentSaveIdRef = useRef(0);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -165,22 +164,8 @@ export function useRolesManager() {
   useEffect(() => {
     if (isDataLoading) return;
 
-    // Si ya tenemos configuración local y está sucia, NO tocarla
+    // Si ya tenemos configuración local y está sucia, NO tocarla para no perder trabajo
     if (localConfig && isDirty) return;
-
-    // GLOBAL GRACE PERIOD using localStorage to survive unmounts/reloads
-    // Check if a save happened recently (across any instance/tab)
-    const lastSaveStr = localStorage.getItem('lastRolesConfigSaveTime');
-    const lastSaveTime = lastSaveStr ? parseInt(lastSaveStr, 10) : 0;
-    const timeSinceSave = Date.now() - lastSaveTime;
-
-    // Increased to 15s to ensure eventual consistency propagates
-    // ONLY if we already have a local config (prevent overwriting user view while typing/editing)
-    // If localConfig is null (initial load), we MUST load whatever we have.
-    if (localConfig && timeSinceSave < 15000) {
-        console.log("useRolesManager: Ignoring remote config update due to recent save (Grace Period - Global)");
-        return;
-    }
 
     if (rolesConfig && Object.keys(rolesConfig).length > 0) {
       console.log("useRolesManager: Loaded remote configuration");
@@ -193,7 +178,7 @@ export function useRolesManager() {
       }
     }
     setIsLoading(false);
-  }, [rolesConfig, isDataLoading]); // Quitamos isDirty y localConfig de deps para evitar bucles
+  }, [rolesConfig, isDataLoading]); 
 
   // Acciones de modificación
   const updatePermission = useCallback((roleId, permKey, checked) => {
@@ -286,183 +271,67 @@ export function useRolesManager() {
     setIsDirty(true);
   }, [localConfig]);
 
-  // Acción de Guardado
+  // Acción de Guardado SIMPLIFICADA
   const saveConfig = async () => {
     if (!isMountedRef.current) return;
     setIsSaving(true);
-    
-    // Increment save ID to invalidate previous verification loops
-    currentSaveIdRef.current += 1;
-    const thisSaveId = currentSaveIdRef.current;
     
     try {
       if (!localConfig || Object.keys(localConfig).length === 0) {
         throw new Error("La configuración local está vacía. No se guardará.");
       }
 
-      // IMPORTANTE: Asegurar que el objeto a guardar sea válido y parseable
       const configString = JSON.stringify(localConfig);
-      // Validación simple de integridad
-      const parsedCheck = JSON.parse(configString); 
+      const parsedCheck = JSON.parse(configString); // Validación simple
       
-      console.log("useRolesManager: Saving config...", configString.length, "chars");
-      console.log("useRolesManager: Config payload content:", {
+      console.log("useRolesManager: Saving config (Simple Mode)...", configString.length, "chars");
+      console.log("useRolesManager: Config payload:", {
           rolesCount: Object.keys(localConfig.roles || {}).length,
-          assignmentsCount: Object.keys(localConfig.user_assignments || {}).length,
-          sampleRole: Object.values(localConfig.roles || {})[0]
+          assignmentsCount: Object.keys(localConfig.user_assignments || {}).length
       });
 
-      // Update Global Grace Period Timestamp immediately
-      localStorage.setItem('lastRolesConfigSaveTime', Date.now().toString());
-
-      // 1. Encontrar registro existente (Búsqueda Exhaustiva y Limpieza)
-      let matches = [];
+      // 1. Buscar si ya existe la configuración
+      let existingId = null;
       try {
-          // Intento 1: Filtro directo (Rápido)
           const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-          if (f1 && f1.length > 0) matches = f1;
-          
-          // Intento 2: Fallback a listado si filtro falla o vacío
-          if (matches.length === 0) {
-             const all = await base44.entities.AppConfig.list('id', 2000) || [];
-             matches = all.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+          if (f1 && f1.length > 0) {
+            existingId = f1[0].id; // Tomamos el primero si hay duplicados, y sobrescribimos
           }
-      } catch(e) { console.warn("Search failed", e); }
-
-      // 2. ESTRATEGIA DE LIMPIEZA PREVENTIVA (Agresiva)
-      // Si hay duplicados, borrar TODOS menos uno para sanear la base de datos antes de escribir.
-      if (matches.length > 1) {
-           console.warn(`Cleaning up ${matches.length - 1} duplicate configs BEFORE save`);
-           const toKeep = matches[0]; 
-           const toDelete = matches.slice(1);
-           // Ejecutar borrado en paralelo y capturar errores individuales
-           await Promise.all(toDelete.map(m => base44.entities.AppConfig.delete(m.id).catch(e => console.warn("Delete failed", e))));
-           matches = [toKeep]; 
+      } catch(e) { 
+          console.warn("Search failed, assuming create new", e); 
       }
 
-      let savedRecordId = matches.length > 0 ? matches[0].id : null;
-      let performCreate = false;
-
-      // 3. OPERACIÓN DE ESCRITURA
-      if (savedRecordId) {
-        console.log(`useRolesManager: Updating existing config ID ${savedRecordId}`);
-        try {
-            await base44.entities.AppConfig.update(savedRecordId, { 
-                config_key: 'roles_config',
-                key: 'roles_config',
-                value: configString 
-            });
-        } catch(e) {
-            console.error("Update failed, switching to create strategy", e);
-            performCreate = true; 
-        }
+      // 2. Upsert (Actualizar o Crear)
+      if (existingId) {
+        console.log(`useRolesManager: Updating ID ${existingId}`);
+        await base44.entities.AppConfig.update(existingId, { 
+            config_key: 'roles_config',
+            key: 'roles_config',
+            value: configString 
+        });
       } else {
-        performCreate = true;
-      }
-
-      if (performCreate) {
-        console.log("useRolesManager: Creating new config record");
-        const createResult = await base44.entities.AppConfig.create({ 
+        console.log("useRolesManager: Creating new record");
+        await base44.entities.AppConfig.create({ 
           config_key: 'roles_config', 
           key: 'roles_config',
           value: configString 
         });
-        if (createResult && createResult.id) savedRecordId = createResult.id;
       }
 
-      // --- ACTUALIZACIÓN OPTIMISTA UI ---
-      // Actualizar caché INMEDIATAMENTE con los datos que acabamos de enviar.
-      // No esperamos a la verificación del servidor para actualizar la vista.
+      // 3. Actualización Optimista
       queryClient.setQueryData(['rolesConfig'], parsedCheck);
-      localStorage.setItem('lastRolesConfigSaveTime', Date.now().toString()); // Update again after success
       setIsDirty(false); 
-      toast.success("Configuración guardada.");
-
-      // 4. VERIFICACIÓN SILENCIOSA EN SEGUNDO PLANO
-      // Verificamos persistencia real sin bloquear la UI
-      (async () => {
-          let verified = false;
-          let attempts = 0;
-          const maxAttempts = 5;
-
-          while (attempts < maxAttempts && !verified) {
-            // Check if a new save has started or component unmounted, abort if so
-            if (!isMountedRef.current || currentSaveIdRef.current !== thisSaveId) {
-                console.log("Verification aborted due to new save operation or unmount.");
-                return;
-            }
-
-            attempts++;
-            const waitTime = 1000 + (attempts * 1500); // 2.5s, 4s, 5.5s...
-            console.log(`Background Verification attempt ${attempts}/${maxAttempts}...`);
-            await new Promise(r => setTimeout(r, waitTime));
-
-            // Check again after wait
-            if (!isMountedRef.current || currentSaveIdRef.current !== thisSaveId) return;
-
-            let saved = null;
-            try {
-                if (savedRecordId) {
-                    const direct = await base44.entities.AppConfig.filter({ id: savedRecordId });
-                    if (direct && direct.length > 0) saved = direct[0];
-                }
-                if (!saved) {
-                     const f = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-                     if (f && f.length > 0) saved = f[0];
-                }
-            } catch(e) {}
-
-            const savedValue = saved?.value || "";
-            // Margen de tolerancia pequeño por diferencias de encoding
-            if (saved && Math.abs(savedValue.length - configString.length) <= 50) {
-                verified = true;
-                console.log("Verification SUCCESS");
-            }
-          }
-
-          // Check one last time before nuclear
-          if (!isMountedRef.current || currentSaveIdRef.current !== thisSaveId) return;
-
-          // 5. ESTRATEGIA DE EMERGENCIA FINAL (NUCLEAR)
-          if (!verified) {
-            console.error("CRITICAL: Verification failed. Executing NUCLEAR OPTION.");
-            toast.message("Sincronizando...", { description: "Detectada inconsistencia, re-guardando..." });
-
-            try {
-                // Borrar TODO lo relacionado para asegurar estado limpio
-                const zombies = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-                if (zombies?.length) await Promise.all(zombies.map(z => base44.entities.AppConfig.delete(z.id)));
-                
-                // Crear de nuevo
-                const newRec = await base44.entities.AppConfig.create({ 
-                    config_key: 'roles_config', 
-                    key: 'roles_config',
-                    value: configString 
-                });
-                
-                if (newRec?.id) {
-                    console.log("Nuclear option success. New ID:", newRec.id);
-                    toast.success("Sincronización completada.");
-                    
-                    // CRITICAL: Update cache with new data to prevent reversion
-                    // If we don't do this, next refetch might get empty/old data and overwrite our work
-                    queryClient.setQueryData(['rolesConfig'], parsedCheck);
-                    localStorage.setItem('lastRolesConfigSaveTime', Date.now().toString()); // Extend protection
-                    
-                    // Trigger refetch just to be sure, but we are protected by localStorage
-                    if (refetchRolesConfig) refetchRolesConfig();
-                }
-            } catch(e) {
-                console.error("Nuclear option failed", e);
-                toast.error("Error de sincronización. Por favor recarga la página.");
-            }
-          }
-      })(); // Ejecución asíncrona background
+      toast.success("Configuración guardada correctamente.");
+      
+      // Opcional: Refetch en segundo plano para asegurar consistencia eventual
+      if (refetchRolesConfig) {
+        setTimeout(() => refetchRolesConfig(), 1000);
+      }
 
     } catch (error) {
       console.error("useRolesManager: Save error", error);
       toast.error("Error al guardar: " + error.message);
-      setIsDirty(true); // Permitir reintentar
+      setIsDirty(true);
     } finally {
       if (isMountedRef.current) setIsSaving(false);
     }
@@ -479,68 +348,42 @@ export function useRolesManager() {
   }, [rolesConfig]);
 
   const forceCleanup = async () => {
+    // Versión simplificada de limpieza manual
     if (!isMountedRef.current) return;
+    if (!confirm("Esta acción eliminará duplicados en la base de datos dejando solo el más reciente. ¿Continuar?")) return;
+
     setIsSaving(true);
     try {
-        toast.info("Iniciando limpieza de registros obsoletos...");
+        toast.info("Analizando registros...");
+        const matches = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
         
-        // 1. Buscar todos los registros
-        let matches = [];
-        try {
-            const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-            if (f1 && f1.length > 0) matches = f1;
-            
-            if (matches.length === 0) {
-                const all = await base44.entities.AppConfig.list('id', 2000) || [];
-                matches = all.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
-            }
-        } catch(e) { 
-            console.warn("Search failed", e);
-            throw new Error("No se pudieron buscar los registros: " + e.message);
-        }
-
-        if (matches.length <= 1) {
-            toast.info("El sistema está limpio. No se encontraron duplicados.");
+        if (!matches || matches.length <= 1) {
+            toast.info("No se encontraron duplicados.");
             return;
         }
 
-        // 2. Ordenar por fecha de creación (o ID si no hay fecha) para conservar el más reciente
-        // Asumimos que ID más alto es más reciente si son autoincrementales, o usamos created_at si existe
+        // Ordenar por ID descendente (asumiendo ID más alto = más reciente)
+        // O usar created_at si está disponible
         matches.sort((a, b) => {
-            const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
-            const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
-            return dateB - dateA; // Descending (newest first)
+             const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+             const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+             return dateB - dateA;
         });
 
         const toKeep = matches[0];
         const toDelete = matches.slice(1);
-
-        console.log(`Keeping ID ${toKeep.id}, deleting ${toDelete.length} duplicates`);
         
-        // 3. Borrar
-        let deletedCount = 0;
-        await Promise.all(toDelete.map(async (m) => {
-            try {
-                await base44.entities.AppConfig.delete(m.id);
-                deletedCount++;
-            } catch (e) {
-                console.warn(`Failed to delete ${m.id}`, e);
-            }
-        }));
+        toast.info(`Manteniendo ID: ${toKeep.id}, eliminando ${toDelete.length} duplicados...`);
 
-        if (deletedCount > 0) {
-            toast.success(`Limpieza completada: ${deletedCount} registros eliminados.`);
-            // Refetch to ensure we have the latest data
-            if (refetchRolesConfig) refetchRolesConfig();
-        } else {
-            toast.warning("No se pudieron eliminar los registros duplicados.");
-        }
+        await Promise.all(toDelete.map(m => base44.entities.AppConfig.delete(m.id)));
+        
+        toast.success("Limpieza completada.");
+        if (refetchRolesConfig) refetchRolesConfig();
 
     } catch (e) {
-        console.error("Cleanup failed", e);
-        toast.error("Error durante la limpieza: " + e.message);
+        toast.error("Error en limpieza: " + e.message);
     } finally {
-        if (isMountedRef.current) setIsSaving(false);
+        setIsSaving(false);
     }
   };
 
