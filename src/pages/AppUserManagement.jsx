@@ -289,8 +289,8 @@ export default function AppUserManagement() {
                       filteredEmployees.map(emp => {
                         const email = emp.email ? emp.email.toLowerCase() : null;
                         const currentRole = email ? (localConfig.user_assignments?.[email] || "none") : "none";
-                        // Robust name retrieval with email fallback
-                        const displayName = emp.nombre || emp.name || emp.Name || emp.email || "Sin Nombre";
+                        // Robust name retrieval with email fallback - Expanded to catch more variations
+                        const displayName = emp.nombre || emp.name || emp.Name || emp.fullname || emp.fullName || emp.display_name || emp.email || "Sin Nombre";
                         
                         return (
                           <TableRow key={emp.id}>
@@ -503,15 +503,26 @@ export default function AppUserManagement() {
                   </Button>
                </div>
                
-               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-md overflow-auto max-h-[300px]">
-                  <h4 className="font-bold mb-2">Estado de Roles:</h4>
-                  <pre className="text-xs">{JSON.stringify({ 
-                    loaded: !!localConfig,
-                    rolesCount: localConfig?.roles ? Object.keys(localConfig.roles).length : 0,
-                    assignmentsCount: localConfig?.user_assignments ? Object.keys(localConfig.user_assignments).length : 0,
-                    employeesCount: employees?.length || 0,
-                    firstEmployeeSample: employees && employees.length > 0 ? employees[0] : "No employees"
-                  }, null, 2)}</pre>
+               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-md overflow-auto max-h-[300px] space-y-4">
+                  <div>
+                    <h4 className="font-bold mb-2">Resumen de Estado:</h4>
+                    <pre className="text-xs">{JSON.stringify({ 
+                      loaded: !!localConfig,
+                      rolesCount: localConfig?.roles ? Object.keys(localConfig.roles).length : 0,
+                      assignmentsCount: localConfig?.user_assignments ? Object.keys(localConfig.user_assignments).length : 0,
+                      employeesCount: employees?.length || 0,
+                    }, null, 2)}</pre>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-bold mb-2">Estructura de Datos de Empleado (Ejemplo):</h4>
+                    <p className="text-xs text-slate-500 mb-2">Usa esto para verificar qué campo contiene el nombre real.</p>
+                    <pre className="text-xs bg-slate-200 dark:bg-slate-950 p-2 rounded">
+                      {employees && employees.length > 0 
+                        ? JSON.stringify(employees[0], null, 2) 
+                        : "No hay empleados cargados"}
+                    </pre>
+                  </div>
                </div>
             </CardContent>
           </Card>

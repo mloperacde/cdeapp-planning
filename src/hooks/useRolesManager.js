@@ -265,158 +265,140 @@ export function useRolesManager() {
         throw new Error("La configuración local está vacía. No se guardará.");
       }
 
+      // IMPORTANTE: Asegurar que el objeto a guardar sea válido y parseable
       const configString = JSON.stringify(localConfig);
+      // Validación simple de integridad
+      const parsedCheck = JSON.parse(configString); 
+      
       console.log("useRolesManager: Saving config...", configString.length, "chars");
 
-      // 1. Encontrar registro existente
-      let allConfigs = [];
+      // 1. Encontrar registro existente (Búsqueda Exhaustiva y Limpieza)
+      let matches = [];
       try {
-        allConfigs = await base44.entities.AppConfig.list('id', 1000) || [];
-      } catch (e) {
-        console.error("Error listing AppConfig:", e);
-        allConfigs = [];
+          // Intento 1: Filtro directo (Rápido)
+          const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+          if (f1 && f1.length > 0) matches = f1;
+          
+          // Intento 2: Fallback a listado si filtro falla o vacío
+          if (matches.length === 0) {
+             const all = await base44.entities.AppConfig.list('id', 2000) || [];
+             matches = all.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+          }
+      } catch(e) { console.warn("Search failed", e); }
+
+      // 2. ESTRATEGIA DE LIMPIEZA PREVENTIVA (Agresiva)
+      // Si hay duplicados, borrar TODOS menos uno para sanear la base de datos antes de escribir.
+      if (matches.length > 1) {
+           console.warn(`Cleaning up ${matches.length - 1} duplicate configs BEFORE save`);
+           const toKeep = matches[0]; 
+           const toDelete = matches.slice(1);
+           // Ejecutar borrado en paralelo y capturar errores individuales
+           await Promise.all(toDelete.map(m => base44.entities.AppConfig.delete(m.id).catch(e => console.warn("Delete failed", e))));
+           matches = [toKeep]; 
       }
 
-      let matches = allConfigs.filter(c => c.config_key === 'roles_config' || c.key === 'roles_config');
+      let savedRecordId = matches.length > 0 ? matches[0].id : null;
+      let performCreate = false;
 
-      // Fallback filter
-      if (matches.length === 0) {
-         try {
-             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-             const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
-             matches = [...(f1 || []), ...(f2 || [])];
-             // Deduplicate by ID
-             matches = matches.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
-         } catch(e) { console.warn("Filter fallback failed", e); }
-      }
-
-      // 2. Limpiar duplicados y guardar
-      let savedRecordId = null;
-
-      if (matches.length > 0) {
-        const targetId = matches[0].id;
-        savedRecordId = targetId;
-        
-        if (matches.length > 1) {
-          console.warn(`Cleaning up ${matches.length - 1} duplicate configs`);
-          try {
-             await Promise.all(matches.slice(1).map(m => base44.entities.AppConfig.delete(m.id)));
-          } catch(e) { console.error("Error cleaning duplicates:", e); }
+      // 3. OPERACIÓN DE ESCRITURA
+      if (savedRecordId) {
+        console.log(`useRolesManager: Updating existing config ID ${savedRecordId}`);
+        try {
+            await base44.entities.AppConfig.update(savedRecordId, { 
+                config_key: 'roles_config',
+                key: 'roles_config',
+                value: configString 
+            });
+        } catch(e) {
+            console.error("Update failed, switching to create strategy", e);
+            performCreate = true; 
         }
-        
-        console.log(`useRolesManager: Updating existing config ID ${targetId}`);
-        const updateResult = await base44.entities.AppConfig.update(targetId, { 
-          config_key: 'roles_config',
-          key: 'roles_config',
-          value: configString 
-        });
-        console.log("Update result:", updateResult);
       } else {
+        performCreate = true;
+      }
+
+      if (performCreate) {
         console.log("useRolesManager: Creating new config record");
         const createResult = await base44.entities.AppConfig.create({ 
           config_key: 'roles_config', 
           key: 'roles_config',
           value: configString 
         });
-        console.log("Create result:", createResult);
         if (createResult && createResult.id) savedRecordId = createResult.id;
       }
 
-      // 3. Espera y Verificación con REINTENTOS (Polling)
-      let saved = null;
-      let verified = false;
-      let attempts = 0;
-      const maxAttempts = 5;
+      // --- ACTUALIZACIÓN OPTIMISTA UI ---
+      // Actualizar caché INMEDIATAMENTE con los datos que acabamos de enviar.
+      // No esperamos a la verificación del servidor para actualizar la vista.
+      queryClient.setQueryData(['rolesConfig'], parsedCheck);
+      setIsDirty(false); 
+      toast.success("Configuración guardada.");
 
-      while (attempts < maxAttempts && !verified) {
-        attempts++;
-        const waitTime = 1000 + (attempts * 1000); // 2s, 3s, 4s...
-        console.log(`Verification attempt ${attempts}/${maxAttempts}. Waiting ${waitTime}ms...`);
-        
-        await new Promise(r => setTimeout(r, waitTime));
+      // 4. VERIFICACIÓN SILENCIOSA EN SEGUNDO PLANO
+      // Verificamos persistencia real sin bloquear la UI
+      (async () => {
+          let verified = false;
+          let attempts = 0;
+          const maxAttempts = 5;
 
-        // Intentar leer ESPECÍFICAMENTE el registro guardado si tenemos ID
-        saved = null;
-        if (savedRecordId) {
+          while (attempts < maxAttempts && !verified) {
+            attempts++;
+            const waitTime = 1000 + (attempts * 1500); // 2.5s, 4s, 5.5s...
+            console.log(`Background Verification attempt ${attempts}/${maxAttempts}...`);
+            await new Promise(r => setTimeout(r, waitTime));
+
+            let saved = null;
             try {
-                // Intento de lectura directa por filtro de ID (más fiable que list)
-                const direct = await base44.entities.AppConfig.filter({ id: savedRecordId });
-                if (direct && direct.length > 0) {
-                    saved = direct[0];
-                } else {
-                     // Fallback a list
-                     const allItems = await base44.entities.AppConfig.list('id', 2000) || [];
-                     saved = allItems.find(i => i.id === savedRecordId);
+                if (savedRecordId) {
+                    const direct = await base44.entities.AppConfig.filter({ id: savedRecordId });
+                    if (direct && direct.length > 0) saved = direct[0];
                 }
-            } catch(e) { 
-                console.warn(`Attempt ${attempts}: Direct read failed`, e); 
+                if (!saved) {
+                     const f = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+                     if (f && f.length > 0) saved = f[0];
+                }
+            } catch(e) {}
+
+            const savedValue = saved?.value || "";
+            // Margen de tolerancia pequeño por diferencias de encoding
+            if (saved && Math.abs(savedValue.length - configString.length) <= 50) {
+                verified = true;
+                console.log("Verification SUCCESS");
             }
-        }
+          }
 
-        if (!saved) {
-           // Fallback a búsqueda general por clave
-           try {
-               const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-               if (f1 && f1.length > 0) saved = f1[0];
-           } catch(e) {}
-        }
-        
-        const savedValue = saved && saved.value ? saved.value : "";
-        console.log(`Attempt ${attempts}: Got ${savedValue.length} chars (Expected ~${configString.length})`);
+          // 5. ESTRATEGIA DE EMERGENCIA FINAL (NUCLEAR)
+          if (!verified) {
+            console.error("CRITICAL: Verification failed. Executing NUCLEAR OPTION.");
+            toast.message("Sincronizando...", { description: "Detectada inconsistencia, re-guardando..." });
 
-        if (saved && Math.abs(savedValue.length - configString.length) <= 50) {
-            verified = true;
-            console.log("Verification SUCCESS");
-        } else {
-             console.warn("Verification FAILED or incomplete data. Retrying...");
-        }
-      }
-      
-      const finalSavedValue = saved && saved.value ? saved.value : "";
-      const savedId = saved ? saved.id : "unknown";
-
-      if (!verified) {
-        console.error("CRITICAL: All verification attempts failed.");
-        console.log("Sent length:", configString.length);
-        console.log("Received length:", finalSavedValue.length);
-        
-        // Reintento de emergencia (fuerza bruta): Borrar y Crear de nuevo si el update falla
-        if (savedRecordId) {
-             console.warn("Update seems to fail silently. Attempting DELETE + CREATE strategy...");
-             try {
-                await base44.entities.AppConfig.delete(savedRecordId);
+            try {
+                // Borrar TODO lo relacionado para asegurar estado limpio
+                const zombies = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+                if (zombies?.length) await Promise.all(zombies.map(z => base44.entities.AppConfig.delete(z.id)));
+                
+                // Crear de nuevo
                 const newRec = await base44.entities.AppConfig.create({ 
                     config_key: 'roles_config', 
                     key: 'roles_config',
                     value: configString 
                 });
-                console.log("Emergency Re-creation result:", newRec);
-                if (newRec && newRec.value && newRec.value.length > 0) {
-                    toast.success("Configuración recuperada y guardada (Estrategia alternativa).");
-                    verified = true;
+                
+                if (newRec?.id) {
+                    console.log("Nuclear option success. New ID:", newRec.id);
+                    toast.success("Sincronización completada.");
                 }
-             } catch(e) { console.error("Emergency strategy failed", e); }
-        }
-
-        if (!verified) {
-            toast.warning("Error de verificación: Los datos podrían no haberse guardado. Intenta de nuevo.");
-        }
-      } else {
-        toast.success("Configuración guardada y verificada.");
-      }
-
-      // 5. Invalidación
-      await queryClient.invalidateQueries({ queryKey: ['rolesConfig'] });
-      if (refetchRolesConfig) {
-          console.log("Refetching roles config...");
-          await refetchRolesConfig();
-      }
-      
-      setIsDirty(false);
+            } catch(e) {
+                console.error("Nuclear option failed", e);
+                toast.error("Error de sincronización. Por favor recarga la página.");
+            }
+          }
+      })(); // Ejecución asíncrona background
 
     } catch (error) {
       console.error("useRolesManager: Save error", error);
       toast.error("Error al guardar: " + error.message);
+      setIsDirty(true); // Permitir reintentar
     } finally {
       setIsSaving(false);
     }
