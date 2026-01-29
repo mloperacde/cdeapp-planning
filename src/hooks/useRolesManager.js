@@ -306,6 +306,11 @@ export function useRolesManager() {
       const parsedCheck = JSON.parse(configString); 
       
       console.log("useRolesManager: Saving config...", configString.length, "chars");
+      console.log("useRolesManager: Config payload content:", {
+          rolesCount: Object.keys(localConfig.roles || {}).length,
+          assignmentsCount: Object.keys(localConfig.user_assignments || {}).length,
+          sampleRole: Object.values(localConfig.roles || {})[0]
+      });
 
       // Update Global Grace Period Timestamp immediately
       localStorage.setItem('lastRolesConfigSaveTime', Date.now().toString());
