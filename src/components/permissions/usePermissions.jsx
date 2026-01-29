@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useAppData } from "../data/DataProvider";
+import { useAppData } from "@/components/data/DataProvider";
 
 const ROLE_PERMISSIONS = {
   admin: {

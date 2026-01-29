@@ -11,6 +11,9 @@ import { base44 } from "@/api/base44Client";
 const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
+  // DIAGNOSTIC LOG
+  // console.log("DataProvider: Mounting...");
+
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   // isLocal NO debe impedir cargar datos si estamos usando un mock local o si queremos probar persistencia
   // El control de "si es local, no hay backend" es demasiado agresivo.
@@ -376,6 +379,7 @@ export function DataProvider({ children }) {
 export function useAppData() {
   const context = useContext(DataContext);
   if (!context) {
+    console.error("useAppData: Context is null! DataProvider might not be in tree or duplicated.");
     throw new Error("useAppData debe usarse dentro de DataProvider");
   }
   return context;
