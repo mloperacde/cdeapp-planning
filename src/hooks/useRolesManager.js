@@ -322,51 +322,61 @@ export function useRolesManager() {
         if (createResult && createResult.id) savedRecordId = createResult.id;
       }
 
-      // 3. Espera de seguridad y Verificación INTELIGENTE
-      await new Promise(r => setTimeout(r, 2000)); // Aumentado a 2s
-
-      // Intentar leer ESPECÍFICAMENTE el registro guardado si tenemos ID
+      // 3. Espera y Verificación con REINTENTOS (Polling)
       let saved = null;
-      if (savedRecordId) {
-          try {
-              // Intento de lectura directa por filtro de ID (más fiable que list)
-              const direct = await base44.entities.AppConfig.filter({ id: savedRecordId });
-              if (direct && direct.length > 0) {
-                  saved = direct[0];
-              } else {
-                  // Fallback a list si filter falla
-                   const allItems = await base44.entities.AppConfig.list('id', 2000) || [];
-                   saved = allItems.find(i => i.id === savedRecordId);
-              }
-          } catch(e) { 
-              console.warn("Direct read failed", e); 
-              // Last resort list
-              try {
-                  const allItems = await base44.entities.AppConfig.list('id', 2000) || [];
-                  saved = allItems.find(i => i.id === savedRecordId);
-              } catch(ex) { console.error("List fallback failed", ex); }
-          }
-      }
+      let verified = false;
+      let attempts = 0;
+      const maxAttempts = 5;
 
-      if (!saved) {
-         // Fallback a búsqueda general por clave
-         try {
-             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-             if (f1 && f1.length > 0) saved = f1[0];
-         } catch(e) {}
-         
-         if (!saved) {
-             const verifyList = await base44.entities.AppConfig.list('id', 1000) || [];
-             saved = verifyList.find(c => c.config_key === 'roles_config' || c.key === 'roles_config');
-         }
+      while (attempts < maxAttempts && !verified) {
+        attempts++;
+        const waitTime = 1000 + (attempts * 1000); // 2s, 3s, 4s...
+        console.log(`Verification attempt ${attempts}/${maxAttempts}. Waiting ${waitTime}ms...`);
+        
+        await new Promise(r => setTimeout(r, waitTime));
+
+        // Intentar leer ESPECÍFICAMENTE el registro guardado si tenemos ID
+        saved = null;
+        if (savedRecordId) {
+            try {
+                // Intento de lectura directa por filtro de ID (más fiable que list)
+                const direct = await base44.entities.AppConfig.filter({ id: savedRecordId });
+                if (direct && direct.length > 0) {
+                    saved = direct[0];
+                } else {
+                     // Fallback a list
+                     const allItems = await base44.entities.AppConfig.list('id', 2000) || [];
+                     saved = allItems.find(i => i.id === savedRecordId);
+                }
+            } catch(e) { 
+                console.warn(`Attempt ${attempts}: Direct read failed`, e); 
+            }
+        }
+
+        if (!saved) {
+           // Fallback a búsqueda general por clave
+           try {
+               const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+               if (f1 && f1.length > 0) saved = f1[0];
+           } catch(e) {}
+        }
+        
+        const savedValue = saved && saved.value ? saved.value : "";
+        console.log(`Attempt ${attempts}: Got ${savedValue.length} chars (Expected ~${configString.length})`);
+
+        if (saved && Math.abs(savedValue.length - configString.length) <= 50) {
+            verified = true;
+            console.log("Verification SUCCESS");
+        } else {
+             console.warn("Verification FAILED or incomplete data. Retrying...");
+        }
       }
       
-      const savedValue = saved && saved.value ? saved.value : "";
+      const finalSavedValue = saved && saved.value ? saved.value : "";
       const savedId = saved ? saved.id : "unknown";
-      console.log(`Verification: Expected ${configString.length} chars, Got ${savedValue.length} chars. ID: ${savedId}`);
 
-      if (!saved || Math.abs(savedValue.length - configString.length) > 50) {
-        console.error("CRITICAL: Save verification failed. Data not persisted correctly.");
+      if (!verified) {
+        console.error("CRITICAL: All verification attempts failed.");
         console.log("Sent length:", configString.length);
         console.log("Received length:", savedValue.length);
         

@@ -211,11 +211,17 @@ export async function recalculateVacationPendingBalances() {
     console.log(`Recalculando protección para ${protectionAbsences.length} ausencias relevantes...`);
 
     // Procesar secuencialmente pero sin sync individual
+    let processedCount = 0;
     for (const absence of protectionAbsences) {
       const absenceType = typeById.get(absence.absence_type_id);
       if (!absenceType) continue;
 
       const employeeVacations = vacationAbsencesByEmployee.get(absence.employee_id) || [];
+      
+      if (processedCount % 10 === 0) {
+          console.log(`Procesando ausencia ${absence.id} (${processedCount + 1}/${protectionAbsences.length}). Vacaciones del empleado: ${employeeVacations.length}`);
+      }
+      processedCount++;
 
       // SkipSync = true para evitar N llamadas a update de empleado
       await calculateVacationPendingBalance(absence, absenceType, vacations, holidays, employeeVacations, true);

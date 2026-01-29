@@ -87,7 +87,7 @@ export default function AbsenceTypeForm({ type, onClose }) {
       return;
     }
 
-    toast.info("Guardando...", { duration: 1000 });
+    // toast.info("Guardando...", { duration: 1000 }); // Eliminado para evitar confusión
     saveMutation.mutate(formData);
   };
 
