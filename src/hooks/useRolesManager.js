@@ -168,8 +168,24 @@ export function useRolesManager() {
     if (localConfig && isDirty) return;
 
     if (rolesConfig && Object.keys(rolesConfig).length > 0) {
-      console.log("useRolesManager: Loaded remote configuration");
-      setLocalConfig(JSON.parse(JSON.stringify(rolesConfig)));
+      console.log("useRolesManager: Loaded remote configuration keys:", Object.keys(rolesConfig));
+      
+      // HIDRATACIÓN DEFENSIVA: Asegurar que existan todas las estructuras necesarias
+      // Esto previene que una configuración remota incompleta sobrescriba datos locales válidos
+      const hydratedConfig = {
+          roles: rolesConfig.roles || DEFAULT_ROLES_CONFIG.roles,
+          user_assignments: rolesConfig.user_assignments || {}, 
+          ...rolesConfig 
+      };
+
+      // Doble verificación para user_assignments
+      if (!hydratedConfig.user_assignments) hydratedConfig.user_assignments = {};
+
+      // Verificar asignaciones cargadas
+      const loadedAssignments = Object.keys(hydratedConfig.user_assignments).length;
+      console.log(`useRolesManager: Hydrated config with ${loadedAssignments} assignments.`);
+
+      setLocalConfig(JSON.parse(JSON.stringify(hydratedConfig)));
     } else {
       // Solo inicializar con defaults si NO tenemos nada local
       if (!localConfig) {
