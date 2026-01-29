@@ -45,7 +45,8 @@ export default function AppUserManagement() {
     addRole,
     deleteRole,
     saveConfig,
-    resetConfig
+    resetConfig,
+    forceCleanup
   } = useRolesManager();
   
   // Estados para nuevo rol
