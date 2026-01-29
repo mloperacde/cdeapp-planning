@@ -141,7 +141,9 @@ export const DEFAULT_ROLES_CONFIG = {
 };
 
 export function useRolesManager() {
-  const { rolesConfig, refetchRolesConfig, isLoading: isDataLoading } = useAppData();
+  // CORRECCIÓN CRÍTICA: Extraer la propiedad correcta de carga (rolesConfigLoading)
+  // Antes se extraía 'isLoading' que no existe en useAppData, causando undefined y saltando la espera.
+  const { rolesConfig, refetchRolesConfig, rolesConfigLoading: isDataLoading } = useAppData();
   const queryClient = useQueryClient();
 
   // Estado local
