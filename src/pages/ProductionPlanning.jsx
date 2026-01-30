@@ -181,20 +181,28 @@ export default function ProductionPlanningPage() {
           // Dado el contexto "app de origen no permite ordenes diferentes con misma pry", CDEApp es la fuente de verdad.
           
           // Batch deletion to avoid Rate Limit (429)
-          // "Deleted 497 old orders" -> 497 requests at once is too much.
-          const BATCH_SIZE = 10;
+          // Reduced batch size and increased delay to prevent server blocking
+          const BATCH_SIZE = 5;
           const chunks = [];
           for (let i = 0; i < workOrders.length; i += BATCH_SIZE) {
               chunks.push(workOrders.slice(i, i + BATCH_SIZE));
           }
 
           let deletedCount = 0;
-          for (const chunk of chunks) {
+          for (let i = 0; i < chunks.length; i++) {
+              const chunk = chunks[i];
+              
+              // Optional: Update user on progress for large deletions
+              if (i % 5 === 0 && chunks.length > 5) {
+                  toast.info(`Limpiando órdenes antiguas: ${Math.round((i / chunks.length) * 100)}%...`);
+              }
+
               const promises = chunk.map(o => base44.entities.WorkOrder.delete(o.id));
               await Promise.allSettled(promises);
               deletedCount += promises.length;
-              // Small delay to respect rate limits
-              await new Promise(resolve => setTimeout(resolve, 200));
+              
+              // 1000ms delay between batches = ~300 requests/minute max
+              await new Promise(resolve => setTimeout(resolve, 1000));
           }
           console.log("Deleted", deletedCount, "old orders in batches.");
       }
