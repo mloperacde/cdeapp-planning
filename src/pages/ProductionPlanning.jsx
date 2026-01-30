@@ -377,8 +377,13 @@ export default function ProductionPlanningPage() {
       toast.success(`Sincronización completada. Creadas: ${created}, Saltadas: ${skipped}`, { id: toastId });
       console.log(`[Sync] Finalizado. Creadas: ${created}, Saltadas: ${skipped}`);
       
-      // RECARGAR DATOS
-      await fetchWorkOrders();
+      // La función para recargar los datos en este componente se llama 'fetchData' según el contexto habitual, 
+      // o podemos simplemente recargar la página si es más fácil por ahora.
+      // Como no veo la definición de fetchWorkOrders, la comentaré para evitar el crash.
+      // await fetchWorkOrders(); 
+      
+      // Opción temporal: Recargar la página para ver los cambios
+      setTimeout(() => window.location.reload(), 1500);
 
     } catch (error) {
       console.error('Error en sincronización:', error);
