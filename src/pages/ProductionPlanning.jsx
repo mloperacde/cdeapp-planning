@@ -310,59 +310,52 @@ export default function ProductionPlanningPage() {
               toast.loading(`Importando: ${percent}% (${i}/${totalToCreate})`, { id: toastId });
           }
 
-          const orderNumber = row['Orden'] || row['production_id'];
+          console.log(`Procesando fila ${i}:`, row); // Ver qué tiene cada fila
+
+          // Intenta encontrar el número de orden en varios campos posibles
+          const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'] || row['order'];
           if (!orderNumber) {
               // Solo loguear si no es la cabecera vacía o algo así
-              if (Object.keys(row).length > 2) console.warn("[Sync] Fila sin número de orden:", row);
+              if (Object.keys(row).length > 2) console.warn("[Sync] Fila ignorada (sin ID de orden):", row);
               continue;
           }
 
-          // Resolver Máquina
+          // Resolver Máquina - Intenta varios campos
           let machineId = null;
-          
+          const machineVal = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || row['machine'];
+
           // Estrategia 1: Nombre exacto o 'Máquina' limpia
-          if (row['Máquina']) {
-              const name = String(row['Máquina']).toLowerCase().trim();
+          if (machineVal) {
+              const name = String(machineVal).toLowerCase().trim();
               if (machineMap.has(name)) machineId = machineMap.get(name);
               
               // Estrategia 2: Intentar extraer código de "119 - Nombre"
               if (!machineId) {
-                  const code = normalizeMachineName(row['Máquina']);
+                  const code = normalizeMachineName(machineVal);
                   if (machineMap.has(code)) machineId = machineMap.get(code);
-              }
-          }
-
-          // Estrategia 3: machine_id directo
-          if (!machineId && row['machine_id']) {
-              const code = String(row['machine_id']).trim();
-              if (machineMap.has(code)) machineId = machineMap.get(code);
-              // Estrategia 4: machine_id normalizado
-              if (!machineId) {
-                   const codeNormalized = String(row['machine_id']).toLowerCase().trim();
-                   if (machineMap.has(codeNormalized)) machineId = machineMap.get(codeNormalized);
               }
           }
 
           if (!machineId) {
               skipped++;
-              if (skipped <= 10) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Datos:`, row['Máquina'] || row['machine_id']);
+              if (skipped <= 5) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Valor máquina: "${machineVal}"`);
               continue;
           }
 
           const payload = {
               order_number: String(orderNumber),
               machine_id: machineId,
-              client_name: row['Cliente'],
-              product_article_code: row['Artículo'],
-              product_name: row['Nombre'] || row['Descripción'],
-              quantity: parseInt(row['Cantidad']) || 0,
-              priority: parseInt(row['Prioridad']) || 3,
-              status: row['Estado'] || 'Pendiente',
-              start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'],
-              committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'],
-              planned_end_date: row['Fecha Fin'],
-              production_cadence: parseFloat(row['Cadencia']) || 0,
-              notes: row['Observación'] || ''
+              client_name: row['Cliente'] || row['client_name'] || row['client'],
+              product_article_code: row['Artículo'] || row['product_article_code'] || row['article'],
+              product_name: row['Nombre'] || row['Descripción'] || row['product_name'] || row['description'],
+              quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
+              priority: parseInt(row['Prioridad'] || row['priority']) || 3,
+              status: row['Estado'] || row['status'] || 'Pendiente',
+              start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'] || row['start_date'],
+              committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date'],
+              planned_end_date: row['Fecha Fin'] || row['planned_end_date'] || row['end_date'],
+              production_cadence: parseFloat(row['Cadencia'] || row['production_cadence'] || row['cadence']) || 0,
+              notes: row['Observación'] || row['notes'] || ''
           };
 
           // Debug payload for first few items to check dates
