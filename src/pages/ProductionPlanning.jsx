@@ -181,8 +181,8 @@ export default function ProductionPlanningPage() {
           // Dado el contexto "app de origen no permite ordenes diferentes con misma pry", CDEApp es la fuente de verdad.
           
           // Batch deletion to avoid Rate Limit (429)
-          // Reduced batch size and increased delay to prevent server blocking
-          const BATCH_SIZE = 5;
+          // Reduced batch size to 1 (Sequential) and increased delay to be extremely safe
+          const BATCH_SIZE = 1;
           const chunks = [];
           for (let i = 0; i < workOrders.length; i += BATCH_SIZE) {
               chunks.push(workOrders.slice(i, i + BATCH_SIZE));
@@ -192,19 +192,25 @@ export default function ProductionPlanningPage() {
           for (let i = 0; i < chunks.length; i++) {
               const chunk = chunks[i];
               
-              // Optional: Update user on progress for large deletions
-              if (i % 5 === 0 && chunks.length > 5) {
+              // Update user on progress every 10 items
+              if (i % 10 === 0) {
                   toast.info(`Limpiando órdenes antiguas: ${Math.round((i / chunks.length) * 100)}%...`);
               }
 
-              const promises = chunk.map(o => base44.entities.WorkOrder.delete(o.id));
-              await Promise.allSettled(promises);
-              deletedCount += promises.length;
+              // Process single item
+              try {
+                  await base44.entities.WorkOrder.delete(chunk[0].id);
+                  deletedCount++;
+              } catch (e) {
+                  console.warn("Error deleting order", chunk[0].id, e);
+                  // Continue even if one fails
+              }
               
-              // 1000ms delay between batches = ~300 requests/minute max
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              // 300ms delay per item = ~3 requests/second = 180 requests/minute
+              // This is very safe.
+              await new Promise(resolve => setTimeout(resolve, 300));
           }
-          console.log("Deleted", deletedCount, "old orders in batches.");
+          console.log("Deleted", deletedCount, "old orders sequentially.");
       }
 
       let created = 0;
