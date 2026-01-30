@@ -27,6 +27,7 @@ import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
+import OrderImport from './pages/production/OrderImport';
 import PerformanceManagement from './pages/PerformanceManagement';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionDashboard from './pages/ProductionDashboard';
@@ -73,6 +74,7 @@ export const PAGES = {
     "MachineMaster": MachineMaster,
     "MaintenanceTracking": MaintenanceTracking,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
+    "OrderImport": OrderImport,
     "PerformanceManagement": PerformanceManagement,
     "ProcessConfiguration": ProcessConfiguration,
     "ProductionDashboard": ProductionDashboard,

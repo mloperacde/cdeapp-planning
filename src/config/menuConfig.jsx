@@ -1,6 +1,6 @@
 import { 
   Home, Users, Calendar, Wrench, Settings, FileText, Shield, 
-  DollarSign, Cog, Package, Award, ClipboardCheck, Briefcase, Factory
+  DollarSign, Cog, Package, Award, ClipboardCheck, Briefcase, Factory, Download
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
@@ -26,6 +26,7 @@ export const MENU_STRUCTURE = [
   { name: 'Personal Fabricación', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Planificación' },
   { name: 'Planning Diario', icon: Calendar, path: '/DailyPlanning', category: 'Planificación' },
   { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
+  { name: 'Importar Órdenes', icon: Download, path: '/OrderImport', category: 'Planificación' },
   { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
 
   // Fabricación

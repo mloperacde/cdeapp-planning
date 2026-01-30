@@ -33,6 +33,7 @@ import ProcessConfiguration from "./ProcessConfiguration";
 import NewProcessConfigurator from "./NewProcessConfigurator";
 import ProductionDashboard from "./ProductionDashboard";
 import ProductionPlanning from "./ProductionPlanning";
+import OrderImport from "./production/OrderImport";
 import QualityControl from "./QualityControl";
 import Reports from "./Reports";
 import ShiftHandover from "./ShiftHandover";
@@ -241,6 +242,7 @@ function PagesContent() {
                 <Route path="/NewProcessConfigurator/*" element={<NewProcessConfigurator />} />
                 <Route path="/ProductionDashboard" element={<ProductionDashboard />} />
                 <Route path="/ProductionPlanning" element={<ProductionPlanning />} />
+                <Route path="/OrderImport" element={<OrderImport />} />
                 <Route path="/QualityControl" element={<QualityControl />} />
                 <Route path="/Reports" element={<Reports />} />
                 <Route path="/RolesConfig" element={<RolesConfig />} />
