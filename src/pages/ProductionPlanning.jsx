@@ -19,10 +19,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cdeApp } from "@/api/cdeAppClient";
 
 
+import { Link } from "react-router-dom";
+
 export default function ProductionPlanningPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [dropDialogData, setDropDialogData] = useState(null);
   const queryClient = useQueryClient();
