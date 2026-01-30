@@ -123,71 +123,101 @@ export default function OrderImport() {
   const saveOrders = async () => {
     if (orders.length === 0) return;
     
-    // Filtramos solo las que tienen máquina válida para evitar errores
+    // Filtramos solo las que tienen máquina válida
     const validOrders = orders.filter(order => {
        const machineName = order['Máquina'] || order['machine_id'] || order['machine_name'] || order['maquina'] || '';
        return getMachineId(machineName);
     });
 
-    if (validOrders.length === 0) {
+    const total = orders.length;
+    const valid = validOrders.length;
+    const invalid = total - valid;
+
+    if (valid === 0) {
         toast.error("No hay órdenes válidas para importar (revise las máquinas).");
         return;
     }
 
-    if (!confirm(`Se importarán ${validOrders.length} órdenes. ¿Continuar?`)) return;
+    if (!confirm(`Resumen de Importación:\n\n- Total registros: ${total}\n- Válidos (con máquina): ${valid}\n- Inválidos (sin máquina): ${invalid}\n\n¿Desea importar las ${valid} órdenes válidas?`)) return;
 
     setLoading(true);
-    const toastId = toast.loading(`Importando ${validOrders.length} órdenes...`);
+    const toastId = toast.loading(`Iniciando importación de ${valid} órdenes...`);
     let created = 0;
     let errors = 0;
 
-    // Primero borramos las existentes (opcional, depende de si quieres reemplazo total)
+    // Primero borramos las existentes
     try {
-        await base44.entities.WorkOrder.deleteMany({}); 
+        toast.loading("Borrando órdenes antiguas...", { id: toastId });
+        // Intentamos deleteMany si existe, sino iteramos (fallback seguro)
+        if (base44.entities.WorkOrder.deleteMany) {
+            await base44.entities.WorkOrder.deleteMany({});
+        } else {
+             // Fallback para mock o SDKs antiguos
+             const old = await base44.entities.WorkOrder.list(undefined, 1000);
+             if (old && old.length) {
+                 await Promise.all(old.map(o => base44.entities.WorkOrder.delete(o.id)));
+             }
+        }
     } catch (e) {
         console.error("Error borrando órdenes antiguas", e);
+        // No bloqueamos si falla el borrado, quizás es porque no había nada
     }
 
-    for (const row of validOrders) {
-       const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'];
-       const machineName = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || '';
-       const machineId = getMachineId(machineName);
+    // Procesamiento por lotes para mayor velocidad y estabilidad
+    const BATCH_SIZE = 10;
+    const DELAY_MS = 200; // Pausa entre lotes
 
-       const payload = {
-          order_number: String(orderNumber),
-          machine_id: machineId,
-          client_name: row['Cliente'] || row['client_name'],
-          product_article_code: row['Artículo'] || row['product_article_code'],
-          product_name: row['Nombre'] || row['Descripción'] || row['product_name'],
-          quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
-          priority: parseInt(row['Prioridad'] || row['priority']) || 3,
-          status: 'Pendiente', // Forzamos pendiente al importar
-          // Fechas - asumiendo formato compatible o string ISO
-          start_date: row['Fecha Inicio Limite'] || row['start_date'],
-          committed_delivery_date: row['Fecha Entrega'] || row['committed_delivery_date'],
-          planned_end_date: row['Fecha Fin'] || row['planned_end_date'],
-          production_cadence: parseFloat(row['Cadencia'] || row['production_cadence']) || 0,
-          notes: row['Observación'] || row['notes'] || ''
-      };
+    for (let i = 0; i < validOrders.length; i += BATCH_SIZE) {
+        const batch = validOrders.slice(i, i + BATCH_SIZE);
+        
+        // Procesar lote en paralelo
+        await Promise.all(batch.map(async (row) => {
+            const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'];
+            const machineName = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || '';
+            const machineId = getMachineId(machineName);
 
-      try {
-          await base44.entities.WorkOrder.create(payload);
-          created++;
-      } catch (e) {
-          console.error(`Error importando orden ${orderNumber}`, e);
-          errors++;
-      }
-      // Pequeña pausa para no saturar
-      await new Promise(r => setTimeout(r, 200));
-      
-      // Actualizar progreso cada 5
-      if (created % 5 === 0) {
-           toast.loading(`Importando... ${created}/${validOrders.length}`, { id: toastId });
-      }
+            const payload = {
+                order_number: String(orderNumber),
+                machine_id: machineId,
+                client_name: row['Cliente'] || row['client_name'],
+                product_article_code: row['Artículo'] || row['product_article_code'],
+                product_name: row['Nombre'] || row['Descripción'] || row['product_name'],
+                quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
+                priority: parseInt(row['Prioridad'] || row['priority']) || 3,
+                status: 'Pendiente',
+                start_date: row['Fecha Inicio Limite'] || row['start_date'],
+                committed_delivery_date: row['Fecha Entrega'] || row['committed_delivery_date'],
+                planned_end_date: row['Fecha Fin'] || row['planned_end_date'],
+                production_cadence: parseFloat(row['Cadencia'] || row['production_cadence']) || 0,
+                notes: row['Observación'] || row['notes'] || ''
+            };
+
+            try {
+                await base44.entities.WorkOrder.create(payload);
+                created++;
+            } catch (e) {
+                console.error(`Error importando orden ${orderNumber}`, e);
+                errors++;
+            }
+        }));
+
+        // Actualizar progreso
+        toast.loading(`Importando... ${Math.min(i + BATCH_SIZE, validOrders.length)}/${validOrders.length}`, { id: toastId });
+        
+        // Pequeña pausa para no saturar el servidor/navegador
+        if (i + BATCH_SIZE < validOrders.length) {
+            await new Promise(r => setTimeout(r, DELAY_MS));
+        }
     }
 
     setLoading(false);
-    toast.success(`Importación finalizada. Creadas: ${created}, Errores: ${errors}`, { id: toastId });
+    
+    // Mensaje final detallado
+    if (errors > 0) {
+        toast.error(`Importación finalizada con advertencias.\nCreadas: ${created}\nErrores: ${errors}\nOmitidas (sin máquina): ${invalid}`, { id: toastId, duration: 8000 });
+    } else {
+        toast.success(`Importación exitosa.\nCreadas: ${created}\nOmitidas (sin máquina): ${invalid}`, { id: toastId, duration: 5000 });
+    }
   };
 
   return (
