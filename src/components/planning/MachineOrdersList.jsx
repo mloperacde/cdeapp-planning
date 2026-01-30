@@ -2,11 +2,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Factory, Calendar, AlertCircle, Edit } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function MachineOrdersList({ machines = [], orders, processes, onEditOrder }) {
   // Machines are already sorted by 'orden' from query - use them directly
+
+  const formatDateSafe = (dateStr, fmt = 'dd/MM') => {
+    if (!dateStr) return null;
+    let d = parseISO(dateStr);
+    if (!isValid(d)) {
+        d = new Date(dateStr);
+    }
+    if (!isValid(d)) return null;
+    return format(d, fmt);
+  };
 
   const getPriorityColor = (priority) => {
     switch(priority) {
@@ -139,19 +149,19 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                                 <div className="ml-auto flex items-center gap-2 shrink-0">
                                     {(order.new_delivery_date || order.committed_delivery_date) && (
                                         <span className={`flex items-center gap-1 ${isLate ? 'text-red-700 font-bold' : ''}`} title="Fecha Entrega">
-                                           Ent: {format(parseISO(order.new_delivery_date || order.committed_delivery_date), 'dd/MM')}
+                                           Ent: {formatDateSafe(order.new_delivery_date || order.committed_delivery_date) || '-'}
                                         </span>
                                     )}
                                     
                                     {order.start_date && (
                                         <span className="text-slate-500" title="Fecha Inicio Límite">
-                                           Ini: {format(parseISO(order.start_date), 'dd/MM')}
+                                           Ini: {formatDateSafe(order.start_date) || '-'}
                                         </span>
                                     )}
 
                                     {order.planned_end_date && (
                                         <span className="text-slate-500" title="Fecha Fin">
-                                           Fin: {format(parseISO(order.planned_end_date), 'dd/MM')}
+                                           Fin: {formatDateSafe(order.planned_end_date) || '-'}
                                         </span>
                                     )}
                                 </div>
