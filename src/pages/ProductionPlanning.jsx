@@ -150,7 +150,12 @@ export default function ProductionPlanningPage() {
             console.log("[Sync] Data detected as Arrays. Mapping with headers.");
              rows = response.data.map(r => {
                  const obj = {};
-                 response.headers.forEach((h, i) => obj[h] = r[i]);
+                 // Fix: Ensure headers and data align. If data has more columns than headers, or vice versa, handle gracefully.
+                 response.headers.forEach((h, i) => {
+                    if (r[i] !== undefined) {
+                        obj[h] = r[i];
+                    }
+                 });
                  return obj;
              });
         }
@@ -160,6 +165,15 @@ export default function ProductionPlanningPage() {
         }
       } else if (Array.isArray(response)) {
           rows = response;
+      } else if (typeof response === 'object' && response !== null) {
+           // Fallback for single object or weird structure
+           console.log("[Sync] Response is a single object or unknown structure", response);
+           if (response.data) {
+               if (Array.isArray(response.data)) rows = response.data;
+               else rows = [response.data];
+           } else {
+               rows = [response];
+           }
       }
 
       console.log("[Sync] First row structure:", rows[0]);
