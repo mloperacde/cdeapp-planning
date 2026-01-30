@@ -229,7 +229,8 @@ export default function ProductionPlanningPage() {
 
           // Wait for remaining
           await Promise.all(results);
-          toast.dismiss(toastId);
+          // NO hacemos dismiss aquí para reutilizar el toast en la importación
+          // toast.dismiss(toastId);
 
           const deletedCount = results.filter(r => {
              // Need to await the result if it's not fully resolved in 'results' array?
@@ -248,6 +249,8 @@ export default function ProductionPlanningPage() {
 
       // 5. Procesar e Insertar (Con indicador de progreso)
       const totalToCreate = rows.length;
+      console.log(`[Sync] Iniciando importación de ${totalToCreate} órdenes.`);
+      
       if (toastId) {
           toast.loading(`Importando ${totalToCreate} órdenes...`, { id: toastId });
       } else {
@@ -266,12 +269,17 @@ export default function ProductionPlanningPage() {
           
           // Update progress
           if (i % 5 === 0) {
-              toast.loading(`Importando: ${Math.round(((i * CREATE_BATCH_SIZE) / totalToCreate) * 100)}%`, { id: toastId });
+              const percent = Math.round(((i * CREATE_BATCH_SIZE) / totalToCreate) * 100);
+              toast.loading(`Importando: ${percent}%`, { id: toastId });
+              console.log(`[Sync] Progreso: ${percent}%`);
           }
 
           const promises = chunk.map(async (row) => {
               const orderNumber = row['Orden'] || row['production_id'];
-              if (!orderNumber) return;
+              if (!orderNumber) {
+                  console.warn("[Sync] Fila sin número de orden:", row);
+                  return;
+              }
 
               // Resolver Máquina
               let machineId = null;
@@ -286,6 +294,8 @@ export default function ProductionPlanningPage() {
 
               if (!machineId) {
                   skipped++;
+                  // Loguear solo las primeras 5 fallas para no saturar consola
+                  if (skipped <= 5) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Datos:`, row['Máquina'] || row['machine_id']);
                   return; // Ignoramos órdenes sin máquina válida
               }
 
@@ -318,13 +328,14 @@ export default function ProductionPlanningPage() {
           await new Promise(resolve => setTimeout(resolve, 300));
       }
       
+      console.log(`[Sync] Finalizado. Creadas: ${created}, Saltadas: ${skipped}`);
       if (toastId) toast.dismiss(toastId);
 
       queryClient.invalidateQueries(['workOrders']);
       if (created > 0) {
-        toast.success(`Sincronización completada: ${created} nuevas órdenes importadas.`);
+        toast.success(`Sincronización completada: ${created} nuevas órdenes importadas. (${skipped} saltadas por falta de máquina)`);
       } else {
-        toast.info("Sincronización completada. No hay nuevas órdenes.");
+        toast.warning(`Sincronización completada sin importaciones. ${skipped} órdenes saltadas por no encontrar máquina correspondiente.`);
       }
       
     } catch (error) {
