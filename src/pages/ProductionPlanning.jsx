@@ -243,50 +243,75 @@ export default function ProductionPlanningPage() {
       let created = 0;
       let skipped = 0;
 
-      // 5. Procesar e Insertar
-      for (const row of rows) {
-          const orderNumber = row['Orden'] || row['production_id'];
-          if (!orderNumber) continue;
-
-          // Resolver Máquina
-          let machineId = null;
-          if (row['Máquina']) {
-              const name = String(row['Máquina']).toLowerCase().trim();
-              if (machineMap.has(name)) machineId = machineMap.get(name);
-          }
-          if (!machineId && row['machine_id']) {
-              const code = String(row['machine_id']).trim();
-              if (machineMap.has(code)) machineId = machineMap.get(code);
-          }
-
-          if (!machineId) {
-              skipped++;
-              continue; // Ignoramos órdenes sin máquina válida
-          }
-
-          const payload = {
-              order_number: String(orderNumber),
-              machine_id: machineId,
-              client_name: row['Cliente'],
-              product_article_code: row['Artículo'],
-              product_name: row['Nombre'] || row['Descripción'],
-              quantity: parseInt(row['Cantidad']) || 0,
-              priority: parseInt(row['Prioridad']) || 3,
-              status: row['Estado'] || 'Pendiente',
-              start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'],
-              committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'],
-              planned_end_date: row['Fecha Fin'],
-              production_cadence: parseFloat(row['Cadencia']) || 0,
-              notes: row['Observación'] || ''
-          };
-
-          try {
-             await base44.entities.WorkOrder.create(payload);
-             created++;
-          } catch (e) {
-             console.error("Error creating order", orderNumber, e);
-          }
+      // 5. Procesar e Insertar (Con indicador de progreso)
+      const totalToCreate = rows.length;
+      toast.loading(`Importando ${totalToCreate} órdenes...`, { id: toastId });
+      
+      // Batch creation logic (Sequential batches to avoid 429 on creation too)
+      const CREATE_BATCH_SIZE = 5;
+      const createChunks = [];
+      for (let i = 0; i < rows.length; i += CREATE_BATCH_SIZE) {
+          createChunks.push(rows.slice(i, i + CREATE_BATCH_SIZE));
       }
+
+      for (let i = 0; i < createChunks.length; i++) {
+          const chunk = createChunks[i];
+          
+          // Update progress
+          if (i % 5 === 0) {
+              toast.loading(`Importando: ${Math.round(((i * CREATE_BATCH_SIZE) / totalToCreate) * 100)}%`, { id: toastId });
+          }
+
+          const promises = chunk.map(async (row) => {
+              const orderNumber = row['Orden'] || row['production_id'];
+              if (!orderNumber) return;
+
+              // Resolver Máquina
+              let machineId = null;
+              if (row['Máquina']) {
+                  const name = String(row['Máquina']).toLowerCase().trim();
+                  if (machineMap.has(name)) machineId = machineMap.get(name);
+              }
+              if (!machineId && row['machine_id']) {
+                  const code = String(row['machine_id']).trim();
+                  if (machineMap.has(code)) machineId = machineMap.get(code);
+              }
+
+              if (!machineId) {
+                  skipped++;
+                  return; // Ignoramos órdenes sin máquina válida
+              }
+
+              const payload = {
+                  order_number: String(orderNumber),
+                  machine_id: machineId,
+                  client_name: row['Cliente'],
+                  product_article_code: row['Artículo'],
+                  product_name: row['Nombre'] || row['Descripción'],
+                  quantity: parseInt(row['Cantidad']) || 0,
+                  priority: parseInt(row['Prioridad']) || 3,
+                  status: row['Estado'] || 'Pendiente',
+                  start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'],
+                  committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'],
+                  planned_end_date: row['Fecha Fin'],
+                  production_cadence: parseFloat(row['Cadencia']) || 0,
+                  notes: row['Observación'] || ''
+              };
+
+              try {
+                  await base44.entities.WorkOrder.create(payload);
+                  created++;
+              } catch (e) {
+                  console.error("Error creating order", orderNumber, e);
+              }
+          });
+
+          await Promise.all(promises);
+          // Small delay between creation batches
+          await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      toast.dismiss(toastId);
 
       queryClient.invalidateQueries(['workOrders']);
       if (created > 0) {
