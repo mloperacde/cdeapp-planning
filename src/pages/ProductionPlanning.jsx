@@ -314,13 +314,40 @@ export default function ProductionPlanningPage() {
 
               // Resolver Máquina
               let machineId = null;
+              
+              // Helper para normalizar nombres (extraer código o limpiar texto)
+              const normalizeMachineName = (val) => {
+                  if (!val) return "";
+                  const s = String(val).toLowerCase().trim();
+                  // Si viene formato "119 - Nombre", intentar extraer "119" o "nombre"
+                  if (s.includes(' - ')) {
+                     const parts = s.split(' - ');
+                     return parts[0].trim(); // Retorna el código (ej: 119)
+                  }
+                  return s;
+              };
+
+              // Estrategia 1: Nombre exacto o 'Máquina' limpia
               if (row['Máquina']) {
                   const name = String(row['Máquina']).toLowerCase().trim();
                   if (machineMap.has(name)) machineId = machineMap.get(name);
+                  
+                  // Estrategia 2: Intentar extraer código de "119 - Nombre"
+                  if (!machineId) {
+                      const code = normalizeMachineName(row['Máquina']);
+                      if (machineMap.has(code)) machineId = machineMap.get(code);
+                  }
               }
+
+              // Estrategia 3: machine_id directo
               if (!machineId && row['machine_id']) {
                   const code = String(row['machine_id']).trim();
                   if (machineMap.has(code)) machineId = machineMap.get(code);
+                  // Estrategia 4: machine_id normalizado
+                  if (!machineId) {
+                       const codeNormalized = String(row['machine_id']).toLowerCase().trim();
+                       if (machineMap.has(codeNormalized)) machineId = machineMap.get(codeNormalized);
+                  }
               }
 
               if (!machineId) {
