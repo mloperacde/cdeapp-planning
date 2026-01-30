@@ -51,20 +51,41 @@ export default function OrderImport() {
       if (machines.has(s)) return machines.get(s);
       
       // 2. Intento split "123 - Nombre" (buscar por Código "123")
-      if (s.includes(' - ')) {
-          const parts = s.split(' - ');
-          const code = parts[0].trim();
-          if (machines.has(code)) return machines.get(code);
-          
-          // 3. Intento split (buscar por Nombre "Nombre")
-          if (parts.length > 1) {
-              const namePart = parts.slice(1).join(' - ').trim();
-              if (machines.has(namePart)) return machines.get(namePart);
+      // Probamos con varios separadores: " - ", "-", " : "
+      const separators = [' - ', ' : ', '-', ':'];
+      
+      for (const sep of separators) {
+          if (s.includes(sep)) {
+              const parts = s.split(sep);
+              const code = parts[0].trim();
+              if (machines.has(code)) return machines.get(code);
+              
+              // Intentar sin ceros a la izquierda (ej: "012" -> "12")
+              const codeNoZeros = code.replace(/^0+/, '');
+              if (codeNoZeros && machines.has(codeNoZeros)) return machines.get(codeNoZeros);
+
+              // 3. Intento split (buscar por Nombre "Nombre")
+              if (parts.length > 1) {
+                  const namePart = parts.slice(1).join(sep).trim();
+                  if (machines.has(namePart)) return machines.get(namePart);
+              }
           }
       }
 
       return null;
   }
+
+  const uniqueUnmappedMachines = React.useMemo(() => {
+      if (orders.length === 0) return [];
+      const missing = new Set();
+      orders.forEach(order => {
+          const machineName = order['Máquina'] || order['machine_id'] || order['machine_name'] || order['maquina'] || '';
+          if (machineName && !getMachineId(machineName)) {
+              missing.add(machineName);
+          }
+      });
+      return Array.from(missing);
+  }, [orders, machines]);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -196,6 +217,20 @@ export default function OrderImport() {
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {/* Debug Info - Solo visible si hay datos pero fallan mappings */}
+          {uniqueUnmappedMachines.length > 0 && (
+              <div className="bg-red-50 p-4 border-b border-red-200">
+                  <h3 className="text-red-800 font-bold mb-2">⚠️ Máquinas no encontradas en el sistema ({uniqueUnmappedMachines.length})</h3>
+                  <p className="text-red-600 text-sm mb-2">Las siguientes máquinas del archivo no coinciden con ninguna máquina registrada. Por favor, verifique los nombres o cree las máquinas faltantes.</p>
+                  <div className="flex flex-wrap gap-2">
+                      {uniqueUnmappedMachines.map(m => (
+                          <span key={m} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded border border-red-200 font-mono">
+                              {m}
+                          </span>
+                      ))}
+                  </div>
+              </div>
+          )}
+
           {orders.length > 0 && (
               <details className="p-4 bg-gray-100 text-xs font-mono mb-2">
                   <summary className="cursor-pointer font-bold text-gray-700">Ver Estructura de Datos (Debug)</summary>
