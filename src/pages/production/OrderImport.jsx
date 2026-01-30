@@ -12,11 +12,27 @@ export default function OrderImport() {
   useEffect(() => {
     const loadMachines = async () => {
       try {
-        const res = await base44.entities.Machine.list();
+        // Intentar cargar de MachineMasterDatabase primero (el maestro real)
+        let res = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+        
+        // Fallback a Machine si MachineMasterDatabase falla o está vacío (compatibilidad)
+        if (!res || res.length === 0) {
+            console.log("MachineMasterDatabase vacío, intentando Machine...");
+            const resLegacy = await base44.entities.Machine.list(undefined, 1000);
+            res = resLegacy.items || resLegacy;
+        }
+
+        if (!Array.isArray(res)) res = [];
+
+        console.log(`[OrderImport] Loaded ${res.length} machines`);
+
         const map = new Map();
-        res.items.forEach(m => {
-          map.set(m.name.toLowerCase().trim(), m.id);
+        res.forEach(m => {
+          // Mapeamos por nombre, código y descripción para maximizar hits
+          if (m.nombre) map.set(m.nombre.toLowerCase().trim(), m.id);
+          if (m.codigo_maquina) map.set(m.codigo_maquina.toLowerCase().trim(), m.id);
           if (m.code) map.set(m.code.toLowerCase().trim(), m.id);
+          if (m.descripcion) map.set(m.descripcion.toLowerCase().trim(), m.id);
         });
         setMachines(map);
       } catch (error) {
