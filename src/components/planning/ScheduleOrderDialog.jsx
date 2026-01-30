@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, addDays, isWeekend } from "date-fns";
+import { format, addDays, isWeekend, parseISO } from "date-fns";
 
 export default function ScheduleOrderDialog({ open, onClose, order, dropDate, processes, machineProcesses, onConfirm, holidays = [] }) {
   const [processId, setProcessId] = useState("");
@@ -15,16 +15,11 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
   const calculateEndDate = (startDate, hoursNeeded, holidaysList) => {
     if (!startDate || !hoursNeeded) return startDate;
     
-    // Convert hours to days (assuming 3 shifts = 24h? or standard 8h? 
-    // Manufacturing usually 24h or shifts. Let's assume continuous 24h machine availability 
-    // OR just treat estimated_duration as "hours of work". 
-    // If we assume 24h operation: 
+    // Convert hours to days (assuming 24h operation)
     const daysNeeded = Math.ceil(hoursNeeded / 24); 
-    // If we assume 8h shifts: Math.ceil(hoursNeeded / 8);
-    // Let's assume 24h for now as machines often run continuous, or let user edit.
-    // The prompt says "estimar duración... teniendo en cuenta los días laborables".
     
-    let current = new Date(startDate);
+    // startDate comes as string YYYY-MM-DD
+    let current = parseISO(startDate);
     let daysAdded = 0;
     const holidaySet = new Set(holidaysList.map(h => h.date));
     
@@ -59,7 +54,7 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
     
     // Actually simpler loop:
     let remainingDays = daysNeeded;
-    let resultDate = new Date(startDate);
+    let resultDate = parseISO(startDate);
     
     // If the start date itself is non-working, should we count it? 
     // Usually start date is determined by drop.
@@ -72,7 +67,7 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
     
     // Reset
     remainingDays = daysNeeded;
-    resultDate = new Date(startDate);
+    resultDate = parseISO(startDate);
     
     while (remainingDays > 0) {
         const dStr = format(resultDate, 'yyyy-MM-dd');
@@ -109,8 +104,8 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
   const handleConfirm = () => {
     onConfirm(order.id, {
       process_id: processId,
-      start_date: format(new Date(dropDate), 'yyyy-MM-dd'),
-      committed_delivery_date: endDate // Using this as the Planned End Date per prompt implication
+      start_date: dropDate,
+      planned_end_date: endDate
     });
     onClose();
   };
@@ -165,7 +160,7 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
                 <Label>Fecha Inicio</Label>
-                <Input value={dropDate ? format(new Date(dropDate), 'dd/MM/yyyy') : ''} disabled />
+                <Input value={dropDate ? format(parseISO(dropDate), 'dd/MM/yyyy') : ''} disabled />
              </div>
              <div className="space-y-2">
                 <Label>Fecha Fin (Estimada)</Label>

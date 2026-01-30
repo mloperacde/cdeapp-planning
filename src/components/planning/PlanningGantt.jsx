@@ -196,7 +196,10 @@ Ent: ${order.committed_delivery_date || '-'}`;
                   <div className="absolute inset-0 p-2 space-y-1 overflow-visible">
                    {machine.scheduled.map((order, idx) => {
                      const startDate = parseISO(order.start_date);
-                     const endDate = parseISO(order.committed_delivery_date);
+                     // Usar planned_end_date como fecha fin principal, fallback a committed_delivery_date
+                     const endDate = order.planned_end_date 
+                        ? parseISO(order.planned_end_date) 
+                        : (order.committed_delivery_date ? parseISO(order.committed_delivery_date) : startDate);
 
                      const startIndex = days.findIndex(d => isSameDay(d, startDate));
                      let effectiveStartIndex = startIndex;

@@ -261,6 +261,37 @@ export default function ProductionPlanningPage() {
   });
 
   const handleScheduleConfirm = (id, data) => {
+     // Asprova Logic: Finite Capacity Scheduling Check
+     const orderToUpdate = workOrders.find(o => o.id === id);
+     if (!orderToUpdate) return;
+
+     const machineId = orderToUpdate.machine_id;
+     const newStart = new Date(data.start_date);
+     const newEnd = new Date(data.planned_end_date);
+
+     // Check existing orders on this machine
+     const conflict = workOrders.find(o => {
+        if (o.id === id) return false; // Ignore self
+        if (o.machine_id !== machineId) return false; // Ignore other machines
+        if (!o.start_date) return false; // Ignore unscheduled
+
+        // Existing order dates
+        const oStart = new Date(o.start_date);
+        const oEnd = o.planned_end_date 
+            ? new Date(o.planned_end_date) 
+            : (o.committed_delivery_date ? new Date(o.committed_delivery_date) : oStart);
+
+        // Check overlap: StartA <= EndB && EndA >= StartB
+        return newStart <= oEnd && newEnd >= oStart;
+     });
+
+     if (conflict) {
+         toast.error(`Conflicto de capacidad: Solapa con orden ${conflict.order_number}`, {
+             description: "Principio de Capacidad Finita (Asprova): Una máquina no puede procesar dos órdenes simultáneamente."
+         });
+         return; 
+     }
+
      scheduleMutation.mutate({ id, data });
   };
 
