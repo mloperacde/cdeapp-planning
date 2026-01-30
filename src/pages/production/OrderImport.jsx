@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { cdeAppClient, base44 } from '../../api/client';
+import { cdeApp } from '../../api/cdeAppClient';
+import { base44 } from '../../api/base44Client';
 import { toast } from 'sonner';
 
 export default function OrderImport() {
@@ -44,7 +45,7 @@ export default function OrderImport() {
     setLoading(true);
     const toastId = toast.loading("Obteniendo órdenes...");
     try {
-      const response = await cdeAppClient.syncProductions();
+      const response = await cdeApp.syncProductions();
       let data = [];
       
       // Normalización de respuesta
