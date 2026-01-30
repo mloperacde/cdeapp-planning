@@ -468,18 +468,22 @@ export default function ProductionPlanningPage() {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={handleSyncCdeApp}
-            className="bg-blue-600 hover:bg-blue-700"
-            disabled={isSyncing}
-            title="Sincronizar con CDEApp"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['workOrders'] })}
+            variant="outline"
+            className="border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Recargar datos de la base de datos"
           >
-            {isSyncing ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <DownloadCloud className="w-4 h-4" />
-            )}
-            <span className="ml-2 hidden md:inline">Sincronizar</span>
+            <RefreshCw className="w-4 h-4" />
+            <span className="ml-2 hidden md:inline">Recargar</span>
           </Button>
+          
+          <Link to="/OrderImport">
+             <Button variant="secondary" className="bg-green-600 hover:bg-green-700 text-white border-0">
+                 <DownloadCloud className="w-4 h-4" />
+                 <span className="ml-2 hidden md:inline">Importar / Sincronizar</span>
+             </Button>
+          </Link>
+
           <Button type="button" onClick={handleNewOrder} className="bg-purple-600 hover:bg-purple-700">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Orden
