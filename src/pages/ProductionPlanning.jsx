@@ -288,102 +288,97 @@ export default function ProductionPlanningPage() {
           toastId = toast.loading(`Importando ${totalToCreate} órdenes...`);
       }
       
-      // Batch creation logic (Sequential batches to avoid 429 on creation too)
-      const CREATE_BATCH_SIZE = 5;
-      const createChunks = [];
-      for (let i = 0; i < rows.length; i += CREATE_BATCH_SIZE) {
-          createChunks.push(rows.slice(i, i + CREATE_BATCH_SIZE));
-      }
+      // 5. Procesar e Insertar (Secuencial para evitar Rate Limit)
+      // Helper para normalizar nombres (extraer código o limpiar texto)
+      const normalizeMachineName = (val) => {
+           if (!val) return "";
+           const s = String(val).toLowerCase().trim();
+           // Si viene formato "119 - Nombre", intentar extraer "119" o "nombre"
+           if (s.includes(' - ')) {
+              const parts = s.split(' - ');
+              return parts[0].trim(); // Retorna el código (ej: 119)
+           }
+           return s;
+      };
 
-      for (let i = 0; i < createChunks.length; i++) {
-          const chunk = createChunks[i];
-          
-          // Update progress
+      for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+
+          // Update progress every 5 items
           if (i % 5 === 0) {
-              const percent = Math.round(((i * CREATE_BATCH_SIZE) / totalToCreate) * 100);
-              toast.loading(`Importando: ${percent}%`, { id: toastId });
-              console.log(`[Sync] Progreso: ${percent}%`);
+              const percent = Math.round((i / totalToCreate) * 100);
+              toast.loading(`Importando: ${percent}% (${i}/${totalToCreate})`, { id: toastId });
           }
 
-          const promises = chunk.map(async (row) => {
-              const orderNumber = row['Orden'] || row['production_id'];
-              if (!orderNumber) {
-                  console.warn("[Sync] Fila sin número de orden:", row);
-                  return;
-              }
+          const orderNumber = row['Orden'] || row['production_id'];
+          if (!orderNumber) {
+              // Solo loguear si no es la cabecera vacía o algo así
+              if (Object.keys(row).length > 2) console.warn("[Sync] Fila sin número de orden:", row);
+              continue;
+          }
 
-              // Resolver Máquina
-              let machineId = null;
+          // Resolver Máquina
+          let machineId = null;
+          
+          // Estrategia 1: Nombre exacto o 'Máquina' limpia
+          if (row['Máquina']) {
+              const name = String(row['Máquina']).toLowerCase().trim();
+              if (machineMap.has(name)) machineId = machineMap.get(name);
               
-              // Helper para normalizar nombres (extraer código o limpiar texto)
-              const normalizeMachineName = (val) => {
-                  if (!val) return "";
-                  const s = String(val).toLowerCase().trim();
-                  // Si viene formato "119 - Nombre", intentar extraer "119" o "nombre"
-                  if (s.includes(' - ')) {
-                     const parts = s.split(' - ');
-                     return parts[0].trim(); // Retorna el código (ej: 119)
-                  }
-                  return s;
-              };
-
-              // Estrategia 1: Nombre exacto o 'Máquina' limpia
-              if (row['Máquina']) {
-                  const name = String(row['Máquina']).toLowerCase().trim();
-                  if (machineMap.has(name)) machineId = machineMap.get(name);
-                  
-                  // Estrategia 2: Intentar extraer código de "119 - Nombre"
-                  if (!machineId) {
-                      const code = normalizeMachineName(row['Máquina']);
-                      if (machineMap.has(code)) machineId = machineMap.get(code);
-                  }
-              }
-
-              // Estrategia 3: machine_id directo
-              if (!machineId && row['machine_id']) {
-                  const code = String(row['machine_id']).trim();
-                  if (machineMap.has(code)) machineId = machineMap.get(code);
-                  // Estrategia 4: machine_id normalizado
-                  if (!machineId) {
-                       const codeNormalized = String(row['machine_id']).toLowerCase().trim();
-                       if (machineMap.has(codeNormalized)) machineId = machineMap.get(codeNormalized);
-                  }
-              }
-
+              // Estrategia 2: Intentar extraer código de "119 - Nombre"
               if (!machineId) {
-                  skipped++;
-                  // Loguear solo las primeras 5 fallas para no saturar consola
-                  if (skipped <= 5) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Datos:`, row['Máquina'] || row['machine_id']);
-                  return; // Ignoramos órdenes sin máquina válida
+                  const code = normalizeMachineName(row['Máquina']);
+                  if (machineMap.has(code)) machineId = machineMap.get(code);
               }
+          }
 
-              const payload = {
-                  order_number: String(orderNumber),
-                  machine_id: machineId,
-                  client_name: row['Cliente'],
-                  product_article_code: row['Artículo'],
-                  product_name: row['Nombre'] || row['Descripción'],
-                  quantity: parseInt(row['Cantidad']) || 0,
-                  priority: parseInt(row['Prioridad']) || 3,
-                  status: row['Estado'] || 'Pendiente',
-                  start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'],
-                  committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'],
-                  planned_end_date: row['Fecha Fin'],
-                  production_cadence: parseFloat(row['Cadencia']) || 0,
-                  notes: row['Observación'] || ''
-              };
-
-              try {
-                  await base44.entities.WorkOrder.create(payload);
-                  created++;
-              } catch (e) {
-                  console.error("Error creating order", orderNumber, e);
+          // Estrategia 3: machine_id directo
+          if (!machineId && row['machine_id']) {
+              const code = String(row['machine_id']).trim();
+              if (machineMap.has(code)) machineId = machineMap.get(code);
+              // Estrategia 4: machine_id normalizado
+              if (!machineId) {
+                   const codeNormalized = String(row['machine_id']).toLowerCase().trim();
+                   if (machineMap.has(codeNormalized)) machineId = machineMap.get(codeNormalized);
               }
-          });
+          }
 
-          await Promise.all(promises);
-          // Small delay between creation batches
-          await new Promise(resolve => setTimeout(resolve, 300));
+          if (!machineId) {
+              skipped++;
+              if (skipped <= 10) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Datos:`, row['Máquina'] || row['machine_id']);
+              continue;
+          }
+
+          const payload = {
+              order_number: String(orderNumber),
+              machine_id: machineId,
+              client_name: row['Cliente'],
+              product_article_code: row['Artículo'],
+              product_name: row['Nombre'] || row['Descripción'],
+              quantity: parseInt(row['Cantidad']) || 0,
+              priority: parseInt(row['Prioridad']) || 3,
+              status: row['Estado'] || 'Pendiente',
+              start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'],
+              committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'],
+              planned_end_date: row['Fecha Fin'],
+              production_cadence: parseFloat(row['Cadencia']) || 0,
+              notes: row['Observación'] || ''
+          };
+
+          // Debug payload for first few items to check dates
+          if (created < 3) {
+             console.log(`[Sync] Payload example for ${orderNumber}:`, payload);
+          }
+
+          try {
+              await base44.entities.WorkOrder.create(payload);
+              created++;
+          } catch (e) {
+              console.error(`Error creating order ${orderNumber}:`, e);
+          }
+          
+          // Delay to be gentle with API (200ms)
+          await new Promise(resolve => setTimeout(resolve, 200));
       }
       
       console.log(`[Sync] Finalizado. Creadas: ${created}, Saltadas: ${skipped}`);
