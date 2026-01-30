@@ -120,6 +120,10 @@ export default function OrderImport() {
     }
   };
 
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, active: false });
+
+  // ... (getMachineId y fetchOrders sin cambios)
+
   const saveOrders = async () => {
     if (orders.length === 0) return;
     
@@ -141,6 +145,8 @@ export default function OrderImport() {
     if (!confirm(`Resumen de Importación:\n\n- Total registros: ${total}\n- Válidos (con máquina): ${valid}\n- Inválidos (sin máquina): ${invalid}\n\n¿Desea importar las ${valid} órdenes válidas?`)) return;
 
     setLoading(true);
+    setImportProgress({ current: 0, total: valid, active: true });
+    
     const toastId = toast.loading(`Iniciando importación de ${valid} órdenes...`);
     let created = 0;
     let errors = 0;
@@ -148,26 +154,42 @@ export default function OrderImport() {
     // Primero borramos las existentes
     try {
         toast.loading("Borrando órdenes antiguas...", { id: toastId });
-        // Intentamos deleteMany si existe, sino iteramos (fallback seguro)
-        if (base44.entities.WorkOrder.deleteMany) {
-            await base44.entities.WorkOrder.deleteMany({});
-        } else {
-             // Fallback para mock o SDKs antiguos
-             const old = await base44.entities.WorkOrder.list(undefined, 1000);
-             if (old && old.length) {
-                 await Promise.all(old.map(o => base44.entities.WorkOrder.delete(o.id)));
+        
+        // Usamos un timeout para evitar bloqueos infinitos en deleteMany
+        const deletePromise = new Promise(async (resolve, reject) => {
+             const timer = setTimeout(() => reject(new Error("Timeout borrando órdenes")), 10000);
+             try {
+                 if (base44.entities.WorkOrder.deleteMany) {
+                    await base44.entities.WorkOrder.deleteMany({});
+                 } else {
+                    // Fallback
+                    const old = await base44.entities.WorkOrder.list(undefined, 1000);
+                    if (old && old.length) {
+                        await Promise.all(old.map(o => base44.entities.WorkOrder.delete(o.id)));
+                    }
+                 }
+                 clearTimeout(timer);
+                 resolve();
+             } catch(e) {
+                 clearTimeout(timer);
+                 reject(e);
              }
-        }
+        });
+
+        await deletePromise;
+        console.log("Borrado completado o saltado");
+        
     } catch (e) {
-        console.error("Error borrando órdenes antiguas", e);
-        // No bloqueamos si falla el borrado, quizás es porque no había nada
+        console.error("Advertencia borrando órdenes antiguas (continuando...)", e);
+        toast.warning("No se pudieron borrar todas las órdenes antiguas, continuando...", { id: toastId });
     }
 
     // Procesamiento secuencial con gestión de Rate Limit (429)
-    // Base44 tiene límites estrictos, así que vamos uno a uno con pausas.
-    const DELAY_MS = 250; // ~4 req/sec max en condiciones ideales
+    const DELAY_MS = 250; 
 
     for (let i = 0; i < validOrders.length; i++) {
+        setImportProgress({ current: i + 1, total: valid, active: true });
+        
         const row = validOrders[i];
         const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'];
         const machineName = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || '';
@@ -195,7 +217,20 @@ export default function OrderImport() {
         // Bucle de reintento para errores 429
         while (!success && retries < 3) {
             try {
-                await base44.entities.WorkOrder.create(payload);
+                // Timeout de 5s por petición individual para no colgar
+                const createPromise = new Promise(async (resolve, reject) => {
+                    const t = setTimeout(() => reject(new Error("Timeout creando orden")), 8000);
+                    try {
+                        await base44.entities.WorkOrder.create(payload);
+                        clearTimeout(t);
+                        resolve();
+                    } catch(e) {
+                        clearTimeout(t);
+                        reject(e);
+                    }
+                });
+                
+                await createPromise;
                 created++;
                 success = true;
             } catch (e) {
@@ -203,29 +238,29 @@ export default function OrderImport() {
                 
                 if (isRateLimit) {
                     retries++;
-                    const waitTime = 2000 * retries; // 2s, 4s, 6s
+                    const waitTime = 2000 * retries; 
                     console.warn(`Rate limit (429) en orden ${orderNumber}. Reintentando en ${waitTime}ms...`);
+                    // Actualizar toast para que el usuario sepa que estamos esperando
+                    toast.loading(`Esperando ${waitTime/1000}s por límite de velocidad...`, { id: toastId });
                     await new Promise(r => setTimeout(r, waitTime));
+                    // Restaurar mensaje
+                    toast.loading(`Importando... ${i + 1}/${validOrders.length}`, { id: toastId });
                 } else {
                     console.error(`Error fatal importando orden ${orderNumber}`, e);
                     errors++;
-                    break; // Salir del bucle de reintentos
+                    break; 
                 }
             }
         }
-
-        // Actualizar progreso cada 5 items para no saturar UI
-        if ((i + 1) % 5 === 0) {
-            toast.loading(`Importando... ${i + 1}/${validOrders.length}`, { id: toastId });
-        }
         
-        // Pausa entre iteraciones exitosas para respetar límites
+        // Pausa entre iteraciones
         if (success) {
             await new Promise(r => setTimeout(r, DELAY_MS));
         }
     }
 
     setLoading(false);
+    setImportProgress({ ...importProgress, active: false });
     
     // Mensaje final detallado
     if (errors > 0) {
@@ -237,6 +272,26 @@ export default function OrderImport() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Modal de Progreso */}
+      {importProgress.active && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+                <h3 className="text-lg font-bold mb-4">Importando Órdenes...</h3>
+                <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                    <div 
+                        className="bg-blue-600 h-4 rounded-full transition-all duration-300"
+                        style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                    ></div>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                    <span>{importProgress.current} de {importProgress.total}</span>
+                    <span>{Math.round((importProgress.current / importProgress.total) * 100)}%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-4 text-center">Por favor no cierre esta ventana.</p>
+            </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Importar Órdenes de CDEApp</h1>
         <div className="space-x-4">
