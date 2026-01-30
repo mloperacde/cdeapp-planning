@@ -180,37 +180,64 @@ export default function ProductionPlanningPage() {
           // o simplemente borrar todo si el usuario asume que CDEApp es la fuente de la verdad.
           // Dado el contexto "app de origen no permite ordenes diferentes con misma pry", CDEApp es la fuente de verdad.
           
-          // Batch deletion to avoid Rate Limit (429)
-          // Reduced batch size to 1 (Sequential) and increased delay to be extremely safe
-          const BATCH_SIZE = 1;
-          const chunks = [];
-          for (let i = 0; i < workOrders.length; i += BATCH_SIZE) {
-              chunks.push(workOrders.slice(i, i + BATCH_SIZE));
+          // Delete Strategy: Parallel with Concurrency Limit (p-limit style)
+          // Sequential is too slow (causing timeouts on UI thread or server side perception?)
+          // Rate limit was 429. Now we see 500 Timeouts.
+          // This suggests the server is overwhelmed or the connection is dropping.
+          
+          // Let's try a balanced approach: Concurrency 3, Delay 500ms.
+          // And showing progress explicitly via toast.loading
+
+          const toastId = toast.loading("Iniciando limpieza de órdenes...");
+          const CONCURRENCY_LIMIT = 3;
+          let completed = 0;
+          const total = workOrders.length;
+          
+          // Helper for concurrency
+          const pool = [];
+          const results = [];
+
+          for (const order of workOrders) {
+              const p = base44.entities.WorkOrder.delete(order.id)
+                  .then(() => ({ status: 'fulfilled', id: order.id }))
+                  .catch((e) => ({ status: 'rejected', id: order.id, error: e }));
+
+              // Wrap promise to remove itself from pool when done
+              const wrapped = p.then(r => {
+                  pool.splice(pool.indexOf(wrapped), 1);
+                  completed++;
+                  if (completed % 5 === 0 || completed === total) {
+                      toast.loading(`Limpiando órdenes: ${completed}/${total} (${Math.round(completed/total*100)}%)`, {
+                          id: toastId
+                      });
+                  }
+                  return r;
+              });
+
+              pool.push(wrapped);
+              results.push(wrapped); // Keep track of all results
+
+              if (pool.length >= CONCURRENCY_LIMIT) {
+                  await Promise.race(pool); // Wait for at least one to finish
+                  // Small delay to be nice to server
+                  await new Promise(resolve => setTimeout(resolve, 300));
+              }
           }
 
-          let deletedCount = 0;
-          for (let i = 0; i < chunks.length; i++) {
-              const chunk = chunks[i];
-              
-              // Update user on progress every 10 items
-              if (i % 10 === 0) {
-                  toast.info(`Limpiando órdenes antiguas: ${Math.round((i / chunks.length) * 100)}%...`);
-              }
+          // Wait for remaining
+          await Promise.all(results);
+          toast.dismiss(toastId);
 
-              // Process single item
-              try {
-                  await base44.entities.WorkOrder.delete(chunk[0].id);
-                  deletedCount++;
-              } catch (e) {
-                  console.warn("Error deleting order", chunk[0].id, e);
-                  // Continue even if one fails
-              }
-              
-              // 300ms delay per item = ~3 requests/second = 180 requests/minute
-              // This is very safe.
-              await new Promise(resolve => setTimeout(resolve, 300));
-          }
-          console.log("Deleted", deletedCount, "old orders sequentially.");
+          const deletedCount = results.filter(r => {
+             // Need to await the result if it's not fully resolved in 'results' array?
+             // Actually results array contains promises. We need to await Promise.all(results) first.
+             return true; 
+          }).length; // This count logic is slightly off because we need the values.
+
+          // Correct counting
+          const finalResults = await Promise.all(results);
+          const successCount = finalResults.filter(r => r.status === 'fulfilled').length;
+          console.log("Deleted", successCount, "old orders with concurrency limit.");
       }
 
       let created = 0;
