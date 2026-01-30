@@ -2,14 +2,18 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, TrendingDown, TrendingUp } from "lucide-react";
-import { addDays, format, isSameDay } from "date-fns";
+import { addDays, format, isSameDay, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default function ResourceForecast({ orders, processes, machineProcesses, employees, selectedTeam, dateRange }) {
   // Generate days array
   const days = useMemo(() => {
+    if (!dateRange?.start || !dateRange?.end) return [];
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
+    
+    if (!isValid(start) || !isValid(end)) return [];
+
     const dayList = [];
     let current = start;
     while (current <= end) {

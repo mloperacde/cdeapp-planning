@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { addDays, format, isSameDay, parseISO, isWeekend } from "date-fns";
+import { addDays, format, isSameDay, parseISO, isWeekend, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle, CalendarClock } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -9,8 +9,12 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 export default function PlanningGantt({ orders = [], machines = [], dateRange, onEditOrder, onOrderDrop, holidays = [] }) {
   // 1. Calculate Working Days (Skip weekends and holidays)
   const days = useMemo(() => {
+    if (!dateRange?.start || !dateRange?.end) return [];
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
+    
+    if (!isValid(start) || !isValid(end)) return [];
+
     const dayList = [];
     let current = start;
     
@@ -195,11 +199,16 @@ Ent: ${order.committed_delivery_date || '-'}`;
                   {/* Scheduled Orders - Stacked Compact Cards */}
                   <div className="absolute inset-0 p-2 space-y-1 overflow-visible">
                    {machine.scheduled.map((order, idx) => {
-                     const startDate = parseISO(order.start_date);
+                     let startDate = parseISO(order.start_date);
+                     if (!isValid(startDate)) startDate = new Date(order.start_date);
+                     if (!isValid(startDate)) return null;
+
                      // Usar planned_end_date como fecha fin principal, fallback a committed_delivery_date
-                     const endDate = order.planned_end_date 
-                        ? parseISO(order.planned_end_date) 
-                        : (order.committed_delivery_date ? parseISO(order.committed_delivery_date) : startDate);
+                     let endDateStr = order.planned_end_date || order.committed_delivery_date;
+                     let endDate = endDateStr ? parseISO(endDateStr) : startDate;
+                     
+                     if (!isValid(endDate) && endDateStr) endDate = new Date(endDateStr);
+                     if (!isValid(endDate)) endDate = startDate;
 
                      const startIndex = days.findIndex(d => isSameDay(d, startDate));
                      let effectiveStartIndex = startIndex;
