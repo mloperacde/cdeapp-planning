@@ -30,14 +30,23 @@ export default function OrderImport() {
   const getMachineId = (nameOrCode) => {
       if (!nameOrCode) return null;
       const s = String(nameOrCode).toLowerCase().trim();
+      
+      // 1. Intento directo (Nombre exacto o Código exacto)
       if (machines.has(s)) return machines.get(s);
       
-      // Intentar split "123 - Nombre"
+      // 2. Intento split "123 - Nombre" (buscar por Código "123")
       if (s.includes(' - ')) {
           const parts = s.split(' - ');
           const code = parts[0].trim();
           if (machines.has(code)) return machines.get(code);
+          
+          // 3. Intento split (buscar por Nombre "Nombre")
+          if (parts.length > 1) {
+              const namePart = parts.slice(1).join(' - ').trim();
+              if (machines.has(namePart)) return machines.get(namePart);
+          }
       }
+
       return null;
   }
 
@@ -170,6 +179,22 @@ export default function OrderImport() {
       </div>
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          {/* Debug Info - Solo visible si hay datos pero fallan mappings */}
+          {orders.length > 0 && (
+              <details className="p-4 bg-gray-100 text-xs font-mono mb-2">
+                  <summary className="cursor-pointer font-bold text-gray-700">Ver Estructura de Datos (Debug)</summary>
+                  <div className="mt-2 p-2 bg-gray-800 text-green-400 rounded overflow-auto max-h-40">
+                      Keys encontradas en primera fila: {JSON.stringify(Object.keys(orders[0]))}
+                      <br/>
+                      Ejemplo fila 1: {JSON.stringify(orders[0], null, 2)}
+                      <br/>
+                      Máquinas cargadas (Total): {machines.size}
+                      <br/>
+                      Ejemplos máquinas: {Array.from(machines.entries()).slice(0, 5).map(([k, v]) => `${k} -> ${v}`).join(', ')}
+                  </div>
+              </details>
+          )}
+
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
