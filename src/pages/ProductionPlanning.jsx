@@ -147,6 +147,8 @@ export default function ProductionPlanningPage() {
           rows = response;
       }
 
+      console.log("[Sync] First row structure:", rows[0]);
+
       if (rows.length === 0) {
         toast.warning("CDEApp devolvió 0 órdenes.");
         setIsSyncing(false);
