@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { getEligibleProcessesForMachine, getEligibleMachinesForProcess } from "@/lib/domain/planning";
 
-export default function WorkOrderForm({ open, onClose, orderToEdit, machines, processes, machineProcesses }) {
+export default function WorkOrderForm({ open, onClose, orderToEdit, machines, processes, machineProcesses, existingOrders = [] }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     order_number: "",
@@ -163,6 +163,41 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Asprova Logic: Finite Capacity Scheduling Check
+    if (formData.machine_id && formData.start_date) {
+      const machineId = formData.machine_id;
+      const newStart = new Date(formData.start_date);
+      // Determine end date: planned_end_date > committed_delivery_date > start_date
+      let newEnd = newStart;
+      if (formData.planned_end_date) newEnd = new Date(formData.planned_end_date);
+      else if (formData.committed_delivery_date) newEnd = new Date(formData.committed_delivery_date);
+      
+      // Basic validity check
+      if (!isNaN(newStart.getTime()) && !isNaN(newEnd.getTime())) {
+         const conflict = existingOrders.find(o => {
+            if (orderToEdit && o.id === orderToEdit.id) return false; // Ignore self
+            if (o.machine_id !== machineId) return false; // Ignore other machines
+            if (!o.start_date) return false; // Ignore unscheduled
+
+            const oStart = new Date(o.start_date);
+            const oEnd = o.planned_end_date 
+                ? new Date(o.planned_end_date) 
+                : (o.committed_delivery_date ? new Date(o.committed_delivery_date) : oStart);
+            
+            // Check overlap: StartA <= EndB && EndA >= StartB
+            return newStart <= oEnd && newEnd >= oStart;
+         });
+
+         if (conflict) {
+             toast.error(`Conflicto de capacidad: Solapa con orden ${conflict.order_number}`, {
+                 description: "Principio de Capacidad Finita (Asprova): Una máquina no puede procesar dos órdenes simultáneamente."
+             });
+             return; 
+         }
+      }
+    }
+
     saveMutation.mutate(formData);
   };
 
