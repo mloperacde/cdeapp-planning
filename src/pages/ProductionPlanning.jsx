@@ -128,21 +128,36 @@ export default function ProductionPlanningPage() {
       const response = await cdeApp.syncProductions();
       
       // 2. Normalizar respuesta (Headers -> Objetos)
+      // Robust Normalization: Handle cases where data is already objects OR arrays
       let rows = [];
-      if (response.headers && Array.isArray(response.headers)) {
-          if (Array.isArray(response)) {
-             rows = response; 
-          } else if (response.data && Array.isArray(response.data)) {
-             if (response.headers) {
-                 rows = response.data.map(r => {
-                     const obj = {};
-                     response.headers.forEach((h, i) => obj[h] = r[i]);
-                     return obj;
-                 });
-             } else {
-                 rows = response.data;
-             }
-          }
+      
+      console.log("[Sync] Raw Response Structure:", {
+        headers: response.headers,
+        dataType: response.data ? (Array.isArray(response.data) ? 'Array' : typeof response.data) : 'undefined',
+        firstItemType: response.data && response.data[0] ? typeof response.data[0] : 'undefined',
+        firstItemIsArray: response.data && Array.isArray(response.data[0]),
+        firstItem: response.data && response.data[0]
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        // Case 1: Data is already objects (ignore headers mapping if so)
+        if (response.data.length > 0 && typeof response.data[0] === 'object' && !Array.isArray(response.data[0])) {
+            console.log("[Sync] Data detected as Objects. Using directly.");
+            rows = response.data;
+        } 
+        // Case 2: Data is arrays of values (needs headers mapping)
+        else if (response.headers && Array.isArray(response.headers)) {
+            console.log("[Sync] Data detected as Arrays. Mapping with headers.");
+             rows = response.data.map(r => {
+                 const obj = {};
+                 response.headers.forEach((h, i) => obj[h] = r[i]);
+                 return obj;
+             });
+        }
+        // Case 3: Unknown format, try to use as is
+        else {
+             rows = response.data;
+        }
       } else if (Array.isArray(response)) {
           rows = response;
       }
