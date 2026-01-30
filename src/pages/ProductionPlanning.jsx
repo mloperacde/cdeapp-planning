@@ -162,6 +162,9 @@ export default function ProductionPlanningPage() {
 
       // 4. Limpiar órdenes existentes antes de insertar nuevas (Estrategia "Full Refresh")
       // Esto elimina duplicados, órdenes obsoletas y conflictos de prioridad.
+      
+      let toastId = null;
+
       if (workOrders.length > 0) {
           toast.info("Limpiando órdenes antiguas para evitar duplicados...");
           // No hay endpoint de delete_all, borramos secuencialmente o por lotes si la API lo permite
@@ -188,7 +191,7 @@ export default function ProductionPlanningPage() {
           // Let's try a balanced approach: Concurrency 3, Delay 500ms.
           // And showing progress explicitly via toast.loading
 
-          const toastId = toast.loading("Iniciando limpieza de órdenes...");
+          toastId = toast.loading("Iniciando limpieza de órdenes...");
           const CONCURRENCY_LIMIT = 3;
           let completed = 0;
           const total = workOrders.length;
@@ -245,7 +248,11 @@ export default function ProductionPlanningPage() {
 
       // 5. Procesar e Insertar (Con indicador de progreso)
       const totalToCreate = rows.length;
-      toast.loading(`Importando ${totalToCreate} órdenes...`, { id: toastId });
+      if (toastId) {
+          toast.loading(`Importando ${totalToCreate} órdenes...`, { id: toastId });
+      } else {
+          toastId = toast.loading(`Importando ${totalToCreate} órdenes...`);
+      }
       
       // Batch creation logic (Sequential batches to avoid 429 on creation too)
       const CREATE_BATCH_SIZE = 5;
@@ -311,7 +318,7 @@ export default function ProductionPlanningPage() {
           await new Promise(resolve => setTimeout(resolve, 300));
       }
       
-      toast.dismiss(toastId);
+      if (toastId) toast.dismiss(toastId);
 
       queryClient.invalidateQueries(['workOrders']);
       if (created > 0) {
