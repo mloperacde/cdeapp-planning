@@ -163,49 +163,64 @@ export default function OrderImport() {
         // No bloqueamos si falla el borrado, quizás es porque no había nada
     }
 
-    // Procesamiento por lotes para mayor velocidad y estabilidad
-    const BATCH_SIZE = 10;
-    const DELAY_MS = 200; // Pausa entre lotes
+    // Procesamiento secuencial con gestión de Rate Limit (429)
+    // Base44 tiene límites estrictos, así que vamos uno a uno con pausas.
+    const DELAY_MS = 250; // ~4 req/sec max en condiciones ideales
 
-    for (let i = 0; i < validOrders.length; i += BATCH_SIZE) {
-        const batch = validOrders.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < validOrders.length; i++) {
+        const row = validOrders[i];
+        const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'];
+        const machineName = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || '';
+        const machineId = getMachineId(machineName);
+
+        const payload = {
+            order_number: String(orderNumber),
+            machine_id: machineId,
+            client_name: row['Cliente'] || row['client_name'],
+            product_article_code: row['Artículo'] || row['product_article_code'],
+            product_name: row['Nombre'] || row['Descripción'] || row['product_name'],
+            quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
+            priority: parseInt(row['Prioridad'] || row['priority']) || 3,
+            status: 'Pendiente',
+            start_date: row['Fecha Inicio Limite'] || row['start_date'],
+            committed_delivery_date: row['Fecha Entrega'] || row['committed_delivery_date'],
+            planned_end_date: row['Fecha Fin'] || row['planned_end_date'],
+            production_cadence: parseFloat(row['Cadencia'] || row['production_cadence']) || 0,
+            notes: row['Observación'] || row['notes'] || ''
+        };
+
+        let retries = 0;
+        let success = false;
         
-        // Procesar lote en paralelo
-        await Promise.all(batch.map(async (row) => {
-            const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'];
-            const machineName = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || '';
-            const machineId = getMachineId(machineName);
-
-            const payload = {
-                order_number: String(orderNumber),
-                machine_id: machineId,
-                client_name: row['Cliente'] || row['client_name'],
-                product_article_code: row['Artículo'] || row['product_article_code'],
-                product_name: row['Nombre'] || row['Descripción'] || row['product_name'],
-                quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
-                priority: parseInt(row['Prioridad'] || row['priority']) || 3,
-                status: 'Pendiente',
-                start_date: row['Fecha Inicio Limite'] || row['start_date'],
-                committed_delivery_date: row['Fecha Entrega'] || row['committed_delivery_date'],
-                planned_end_date: row['Fecha Fin'] || row['planned_end_date'],
-                production_cadence: parseFloat(row['Cadencia'] || row['production_cadence']) || 0,
-                notes: row['Observación'] || row['notes'] || ''
-            };
-
+        // Bucle de reintento para errores 429
+        while (!success && retries < 3) {
             try {
                 await base44.entities.WorkOrder.create(payload);
                 created++;
+                success = true;
             } catch (e) {
-                console.error(`Error importando orden ${orderNumber}`, e);
-                errors++;
+                const isRateLimit = e?.status === 429 || (e?.message && (e.message.includes('429') || e.message.includes('Rate limit')));
+                
+                if (isRateLimit) {
+                    retries++;
+                    const waitTime = 2000 * retries; // 2s, 4s, 6s
+                    console.warn(`Rate limit (429) en orden ${orderNumber}. Reintentando en ${waitTime}ms...`);
+                    await new Promise(r => setTimeout(r, waitTime));
+                } else {
+                    console.error(`Error fatal importando orden ${orderNumber}`, e);
+                    errors++;
+                    break; // Salir del bucle de reintentos
+                }
             }
-        }));
+        }
 
-        // Actualizar progreso
-        toast.loading(`Importando... ${Math.min(i + BATCH_SIZE, validOrders.length)}/${validOrders.length}`, { id: toastId });
+        // Actualizar progreso cada 5 items para no saturar UI
+        if ((i + 1) % 5 === 0) {
+            toast.loading(`Importando... ${i + 1}/${validOrders.length}`, { id: toastId });
+        }
         
-        // Pequeña pausa para no saturar el servidor/navegador
-        if (i + BATCH_SIZE < validOrders.length) {
+        // Pausa entre iteraciones exitosas para respetar límites
+        if (success) {
             await new Promise(r => setTimeout(r, DELAY_MS));
         }
     }
