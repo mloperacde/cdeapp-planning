@@ -373,20 +373,18 @@ export default function ProductionPlanningPage() {
           // Delay to be gentle with API (200ms)
           await new Promise(resolve => setTimeout(resolve, 200));
       }
-      
-      console.log(`[Sync] Finalizado. Creadas: ${created}, Saltadas: ${skipped}`);
-      if (toastId) toast.dismiss(toastId);
 
-      queryClient.invalidateQueries(['workOrders']);
-      if (created > 0) {
-        toast.success(`Sincronización completada: ${created} nuevas órdenes importadas. (${skipped} saltadas por falta de máquina)`);
-      } else {
-        toast.warning(`Sincronización completada sin importaciones. ${skipped} órdenes saltadas por no encontrar máquina correspondiente.`);
-      }
+      toast.success(`Sincronización completada. Creadas: ${created}, Saltadas: ${skipped}`, { id: toastId });
+      console.log(`[Sync] Finalizado. Creadas: ${created}, Saltadas: ${skipped}`);
       
+      // RECARGAR DATOS
+      await fetchWorkOrders();
+
     } catch (error) {
-      console.error(error);
-      toast.error("Error de conexión: " + error.message);
+      console.error('Error en sincronización:', error);
+      if (toastId) {
+        toast.error("Error de conexión: " + error.message);
+      }
     } finally {
       setIsSyncing(false);
     }
