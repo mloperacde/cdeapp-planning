@@ -41,11 +41,18 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
         </CardTitle>
       </CardHeader>
       <div className="pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {machines.map(machine => {
           const machineOrders = getMachineOrders(machine.id);
           // Show machine card even if empty, to visualize capacity/availability
           // if (machineOrders.length === 0) return null;
+          
+          // Deduplicate orders by ID to prevent duplicates in the list
+          const uniqueOrders = machineOrders.filter((order, index, self) =>
+              index === self.findIndex((t) => (
+                  t.id === order.id
+              ))
+          );
 
           return (
             <div key={machine.id} className="flex flex-col bg-white dark:bg-slate-950 rounded-lg border shadow-sm h-fit flex-shrink-0">
@@ -56,7 +63,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                     {machine.descripcion || machine.nombre}
                   </h3>
                   <Badge variant="secondary" className="bg-white dark:bg-slate-800 shadow-sm border text-xs font-mono shrink-0">
-                    {machineOrders.length}
+                    {uniqueOrders.length}
                   </Badge>
                 </div>
                 <div className="text-[11px] text-slate-500 flex items-center gap-1">
@@ -66,13 +73,13 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
 
               {/* Orders List */}
               <div className="p-2 space-y-2 min-h-[100px]">
-                {machineOrders.length === 0 ? (
+                {uniqueOrders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-slate-400 border-2 border-dashed border-slate-100 rounded-md">
                         <Calendar className="w-8 h-8 mb-2 opacity-20" />
                         <span className="text-xs">Sin órdenes asignadas</span>
                     </div>
                 ) : (
-                    machineOrders.map(order => {
+                    uniqueOrders.map(order => {
                     const process = processes.find(p => p.id === order.process_id);
                     const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
                     
