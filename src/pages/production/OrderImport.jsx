@@ -183,6 +183,22 @@ export default function OrderImport() {
 
   // ... (getMachineId y fetchOrders sin cambios)
 
+  // Database Preview State
+  const [dbOrders, setDbOrders] = useState([]);
+  const [showDbPreview, setShowDbPreview] = useState(false);
+
+  const fetchDbOrders = async () => {
+    try {
+        const res = await base44.entities.WorkOrder.list(undefined, 100);
+        setDbOrders(res.items || res);
+        setShowDbPreview(true);
+        toast.success("Datos de Base de Datos cargados");
+    } catch (e) {
+        console.error("Error cargando BD", e);
+        toast.error("Error leyendo base de datos");
+    }
+  };
+
   // Helper para extraer valor basado en config o defaults
   const extractValue = (obj, fieldDef) => {
       if (!obj) return undefined;
@@ -399,7 +415,58 @@ export default function OrderImport() {
       // Get headers from first order
       const headers = Object.keys(orders[0]).slice(0, 8); // Show first 8 columns
 
+      // Database Preview Component
+  const DatabasePreview = () => {
+      if (!showDbPreview) return null;
+
+      const headers = SYSTEM_FIELDS.map(f => f.key);
+
       return (
+          <div className="mt-12 border-t-4 border-blue-500 pt-6">
+              <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800">3. Verificación de Base de Datos</h2>
+                  <Button variant="outline" onClick={() => setShowDbPreview(false)} size="sm">Ocultar</Button>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                  Estos son los datos que REALMENTE están guardados en la base de datos (Primeros 100 registros).
+                  Útil para verificar que el mapeo ha funcionado correctamente.
+              </p>
+
+              <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-blue-50">
+                              <tr>
+                                  {headers.map(h => (
+                                      <th key={h} className="px-3 py-2 text-left text-xs font-bold text-blue-800 uppercase tracking-wider whitespace-nowrap">
+                                          {SYSTEM_FIELDS.find(f => f.key === h)?.label || h}
+                                      </th>
+                                  ))}
+                              </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                              {dbOrders.length === 0 ? (
+                                  <tr><td colSpan={headers.length} className="p-4 text-center text-gray-500">Base de datos vacía</td></tr>
+                              ) : (
+                                  dbOrders.map((row, i) => (
+                                      <tr key={i} className="hover:bg-gray-50">
+                                          {headers.map(h => (
+                                              <td key={h} className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap max-w-[150px] truncate border-r border-gray-100 last:border-0">
+                                                  {typeof row[h] === 'object' ? JSON.stringify(row[h]) : String(row[h] !== undefined && row[h] !== null ? row[h] : '')}
+                                              </td>
+                                          ))}
+                                      </tr>
+                                  ))
+                              )}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
+  return (
           <div className="mt-8 mb-4 border rounded-lg overflow-hidden">
               <div className="bg-gray-50 px-4 py-2 border-b font-medium text-sm text-gray-700 flex justify-between items-center">
                   <span>Vista Previa de Datos Recuperados ({orders.length} registros)</span>
@@ -483,6 +550,14 @@ export default function OrderImport() {
                 2. Guardar en Base de Datos
                 </button>
             )}
+
+            <button 
+            onClick={fetchDbOrders} 
+            disabled={loading}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors"
+            >
+            3. Verificar Datos Guardados
+            </button>
         </div>
       </div>
 
@@ -491,6 +566,7 @@ export default function OrderImport() {
       </p>
 
       <OrdersPreview />
+      <DatabasePreview />
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {/* Debug Info - Solo visible si hay datos pero fallan mappings */}
