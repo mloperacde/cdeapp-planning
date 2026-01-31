@@ -271,21 +271,21 @@ export default function OrderImport() {
   }, [orders, mapping, machines]);
 
   const parsePriority = (val) => {
-      if (val === undefined || val === null || val === '') return null; 
+      if (val === undefined || val === null || val === '') return 3; // API requires number, default to 3 (Normal)
       const parsed = parseInt(val);
-      return isNaN(parsed) ? null : parsed;
+      return isNaN(parsed) ? 3 : parsed;
   };
 
   const parseNullableInt = (val) => {
-      if (val === undefined || val === null || val === '') return null;
+      if (val === undefined || val === null || val === '') return 0; // API requires number, default to 0
       const parsed = parseInt(String(val).replace(/,/g, ''));
-      return isNaN(parsed) ? null : parsed;
+      return isNaN(parsed) ? 0 : parsed;
   };
 
   const parseNullableFloat = (val) => {
-      if (val === undefined || val === null || val === '') return null;
+      if (val === undefined || val === null || val === '') return 0; // API requires number, default to 0
       const parsed = parseFloat(String(val).replace(/,/g, ''));
-      return isNaN(parsed) ? null : parsed;
+      return isNaN(parsed) ? 0 : parsed;
   };
 
   const saveOrders = async () => {
