@@ -271,28 +271,39 @@ export default function OrderImport() {
   }, [orders, mapping, machines]);
 
   const parsePriority = (val) => {
-      if (val === undefined || val === null || val === '') return 3; // Default si no hay dato
+      if (val === undefined || val === null || val === '') return null; 
       const parsed = parseInt(val);
-      // Si es un número válido (incluido 0), lo devolvemos. Si es NaN, devolvemos 3.
-      return isNaN(parsed) ? 3 : parsed;
+      return isNaN(parsed) ? null : parsed;
+  };
+
+  const parseNullableInt = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const parsed = parseInt(String(val).replace(/,/g, ''));
+      return isNaN(parsed) ? null : parsed;
+  };
+
+  const parseNullableFloat = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const parsed = parseFloat(String(val).replace(/,/g, ''));
+      return isNaN(parsed) ? null : parsed;
   };
 
   const saveOrders = async () => {
     if (processedOrders.length === 0) return;
     
-    // Filtramos solo las que tienen máquina válida
-    const validOrders = processedOrders.filter(o => o.machine_id_resolved);
+    // Filtramos solo las que tienen máquina válida y número de orden
+    const validOrders = processedOrders.filter(o => o.machine_id_resolved && o.order_number);
 
     const total = processedOrders.length;
     const valid = validOrders.length;
     const invalid = total - valid;
 
     if (valid === 0) {
-        toast.error("No hay órdenes válidas para importar (revise las máquinas).");
+        toast.error("No hay órdenes válidas para importar (revise Máquina y Número de Orden).");
         return;
     }
 
-    if (!confirm(`Resumen de Importación:\n\n- Total registros: ${total}\n- Válidos (con máquina): ${valid}\n- Inválidos (sin máquina): ${invalid}\n\n¿Desea importar las ${valid} órdenes válidas?`)) return;
+    if (!confirm(`Resumen de Importación:\n\n- Total registros: ${total}\n- Válidos (con máquina y orden): ${valid}\n- Inválidos (sin máquina u orden): ${invalid}\n\n¿Desea importar las ${valid} órdenes válidas?`)) return;
 
     setLoading(true);
     setImportProgress({ current: 0, total: valid, active: true });
@@ -374,13 +385,13 @@ export default function OrderImport() {
                     material: row.material,
                     product_family: row.product_family,
                     shortages: row.shortages,
-                    quantity: parseInt(String(row.quantity).replace(/,/g, '')) || 0,
+                    quantity: parseNullableInt(row.quantity),
                     committed_delivery_date: row.committed_delivery_date,
                     new_delivery_date: row.new_delivery_date,
                     delivery_compliance: row.delivery_compliance,
                     multi_unit: row.multi_unit,
-                    multi_qty: row.multi_qty,
-                    production_cadence: parseFloat(row.production_cadence) || 0,
+                    multi_qty: parseNullableFloat(row.multi_qty),
+                    production_cadence: parseNullableFloat(row.production_cadence),
                     delay_reason: row.delay_reason,
                     components_deadline: row.components_deadline,
                     start_date: row.start_date,
