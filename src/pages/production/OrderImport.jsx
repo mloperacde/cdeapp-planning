@@ -9,38 +9,38 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 const SYSTEM_FIELDS = [
-    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID', 'IdProduccion', 'ID Produccion', 'Prod ID', 'id_produccion'] },
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code'] },
-    { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId'] },
-    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia', 'PRIORIDAD', 'Priority'] },
-    { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type', 'TIPO', 'Type', 'Clase'] },
-    { key: 'status_source', label: 'Estado (Origen)', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO', 'Status'] },
-    { key: 'room', label: 'Sala', aliases: ['Sala', 'room', 'SALA', 'Room', 'Nave', 'Zona'] },
-    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente'] },
-    { key: 'internal_order_ref', label: 'Pedido', aliases: ['Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno'] },
-    { key: 'product_article_code', label: 'Artículo', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material'] },
-    { key: 'product_name', label: 'Nombre / Descripción', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation'] },
-    { key: 'article_status', label: 'Edo. Art.', aliases: ['Edo. Art.', 'article_status', 'Estado Articulo'] },
-    { key: 'client_name', label: 'Cliente', aliases: ['Cliente', 'client_name', 'client', 'customer', 'empresa', 'razon_social', 'Customer'] },
-    { key: 'material', label: 'Material', aliases: ['Material', 'material', 'Raw Material', 'Materia Prima'] },
-    { key: 'product_family', label: 'Producto (Familia)', aliases: ['Producto', 'product_family', 'Familia', 'Family'] },
-    { key: 'shortages', label: 'Faltas', aliases: ['Faltas', 'shortages', 'Missing'] },
-    { key: 'quantity', label: 'Cantidad', aliases: ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount'] },
-    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin'] },
-    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['Nueva Fecha Entrega', 'new_delivery_date', 'New Due Date'] },
-    { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['Cumplimiento entrega', 'compliance'] },
+    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID', 'IdProduccion', 'ID Produccion', 'Prod ID', 'id_produccion', 'ID'] },
+    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP', 'OrderNo', 'Order Number', 'Nº Orden'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code', 'Resource', 'W.C.', 'C.T.'] },
+    { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId', 'Machine ID', 'ID Maquina'] },
+    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia', 'PRIORIDAD', 'Priority', 'Rank', 'Ranking', 'Nivel', 'Level', 'Importancia', 'Sequence', 'Secuencia'] },
+    { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type', 'TIPO', 'Type', 'Clase', 'Class', 'Kind', 'Categoria'] },
+    { key: 'status_source', label: 'Estado (Origen)', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO', 'Status', 'State', 'Condition', 'Situación'] },
+    { key: 'room', label: 'Sala', aliases: ['Sala', 'room', 'SALA', 'Room', 'Nave', 'Zona', 'Zone', 'Area', 'Seccion'] },
+    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente', 'Customer Order', 'Ref Cliente', 'Su No. Pedido'] },
+    { key: 'internal_order_ref', label: 'Pedido', aliases: ['Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno', 'Ref Interna', 'Pedido Interno'] },
+    { key: 'product_article_code', label: 'Artículo', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material', 'Part No', 'Part Number', 'Codigo Articulo', 'Referencia'] },
+    { key: 'product_name', label: 'Nombre / Descripción', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation', 'Item Name', 'Descripcion', 'Nombre Articulo'] },
+    { key: 'article_status', label: 'Edo. Art.', aliases: ['Edo. Art.', 'article_status', 'Estado Articulo', 'Status Articulo', 'Item Status'] },
+    { key: 'client_name', label: 'Cliente', aliases: ['Cliente', 'client_name', 'client', 'customer', 'empresa', 'razon_social', 'Customer', 'Client', 'Nombre Cliente'] },
+    { key: 'material', label: 'Material', aliases: ['Material', 'material', 'Raw Material', 'Materia Prima', 'Compuesto', 'Compound'] },
+    { key: 'product_family', label: 'Producto (Familia)', aliases: ['Producto', 'product_family', 'Familia', 'Family', 'Product Family', 'Familia Producto'] },
+    { key: 'shortages', label: 'Faltas', aliases: ['Faltas', 'shortages', 'Missing', 'Faltantes', 'Shortage'] },
+    { key: 'quantity', label: 'Cantidad', aliases: ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount', 'Cant', 'Unidades', 'Pcs'] },
+    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date'] },
+    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['Nueva Fecha Entrega', 'new_delivery_date', 'New Due Date', 'Fecha Reprogramada'] },
+    { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['Cumplimiento entrega', 'compliance', 'Cumplimiento'] },
     { key: 'multi_unit', label: 'MultUnid', aliases: ['MultUnid'] },
     { key: 'multi_qty', label: 'Mult x Cantidad', aliases: ['Mult x Cantidad'] },
-    { key: 'production_cadence', label: 'Cadencia', aliases: ['Cadencia', 'production_cadence', 'cadence', 'ciclo', 'Cycle Time'] },
-    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['Motivo Retraso', 'delay_reason', 'Delay Cause'] },
-    { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['Fecha limite componentes'] },
-    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['Fecha Inicio Limite', 'start_date', 'inicio', 'fecha_inicio', 'Start Date'] },
+    { key: 'production_cadence', label: 'Cadencia', aliases: ['Cadencia', 'production_cadence', 'cadence', 'ciclo', 'Cycle Time', 'Velocidad', 'Speed', 'Rate'] },
+    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['Motivo Retraso', 'delay_reason', 'Delay Cause', 'Reason', 'Causa Retraso'] },
+    { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['Fecha limite componentes', 'Components Deadline'] },
+    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['Fecha Inicio Limite', 'start_date', 'inicio', 'fecha_inicio', 'Start Date', 'Fecha Comienzo'] },
     { key: 'start_date_simple', label: 'Fecha Inicio Limite Simple', aliases: ['Fecha Inicio Limite Simple'] },
     { key: 'modified_start_date', label: 'Fecha Inicio Modificada', aliases: ['Fecha Inicio Modificada'] },
-    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['Fecha Fin', 'planned_end_date', 'end_date', 'fin', 'End Date'] },
+    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['Fecha Fin', 'planned_end_date', 'end_date', 'fin', 'End Date', 'Fecha Finalizacion'] },
     { key: 'end_date_simple', label: 'Fecha Fin Simple', aliases: ['Fecha Fin Simple'] },
-    { key: 'notes', label: 'Observación', aliases: ['Observación', 'notes', 'notas', 'comentarios', 'Remarks', 'Comments'] }
+    { key: 'notes', label: 'Observación', aliases: ['Observación', 'notes', 'notas', 'comentarios', 'Remarks', 'Comments', 'Observaciones', 'Nota'] }
 ];
 
 export default function OrderImport() {
@@ -270,6 +270,13 @@ export default function OrderImport() {
       });
   }, [orders, mapping, machines]);
 
+  const parsePriority = (val) => {
+      if (val === undefined || val === null || val === '') return 3; // Default si no hay dato
+      const parsed = parseInt(val);
+      // Si es un número válido (incluido 0), lo devolvemos. Si es NaN, devolvemos 3.
+      return isNaN(parsed) ? 3 : parsed;
+  };
+
   const saveOrders = async () => {
     if (processedOrders.length === 0) return;
     
@@ -348,13 +355,13 @@ export default function OrderImport() {
                 const orderNumber = row.order_number;
 
                 const payload = {
-                    order_number: String(orderNumber),
+                    order_number: String(orderNumber).trim(),
                     machine_id: row.machine_id_resolved, // Internal Resolved ID
                     
                     // Extended fields
                     production_id: row.production_id,
                     machine_id_source: row.machine_id_source,
-                    priority: parseInt(row.priority) || 3,
+                    priority: parsePriority(row.priority),
                     type: row.type,
                     status_source: row.status_source,
                     room: row.room,
@@ -455,6 +462,9 @@ export default function OrderImport() {
         } else {
             toast.success(`Importación exitosa.\nCreadas: ${created}\nOmitidas (sin máquina): ${invalid}`, { id: toastId, duration: 5000 });
         }
+        
+        // Recargar vista de BD si está abierta
+        if (showDbPreview) fetchDbOrders();
     }
   };
 
