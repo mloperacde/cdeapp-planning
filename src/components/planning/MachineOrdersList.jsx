@@ -20,6 +20,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
 
   const getPriorityColor = (priority) => {
     switch(priority) {
+      case 0: return "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
       case 1: return "bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
       case 2: return "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100";
       case 3: return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
@@ -30,6 +31,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
 
   const getPriorityBadgeColor = (priority) => {
     switch(priority) {
+      case 0: return "bg-gray-500 hover:bg-gray-600";
       case 1: return "bg-red-600 hover:bg-red-700";
       case 2: return "bg-orange-500 hover:bg-orange-600";
       case 3: return "bg-blue-500 hover:bg-blue-600";
@@ -105,7 +107,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                             {/* Línea 1: Pry, Orden, Artículo, Nombre, Cliente */}
                             <div className="flex items-center gap-2 mb-1.5 text-xs overflow-hidden whitespace-nowrap">
                                 <Badge className={`${getPriorityBadgeColor(order.priority)} text-[10px] px-1.5 py-0 h-4 border-0 text-white shrink-0`}>
-                                    P{order.priority}
+                                    {order.priority === 0 ? 'S/P' : `P${order.priority}`}
                                 </Badge>
                                 <span className="font-bold shrink-0">{order.order_number}</span>
                                 {order.product_article_code && (

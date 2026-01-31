@@ -271,9 +271,9 @@ export default function OrderImport() {
   }, [orders, mapping, machines]);
 
   const parsePriority = (val) => {
-      if (val === undefined || val === null || val === '') return 3; // API requires number, default to 3 (Normal)
+      if (val === undefined || val === null || val === '') return 0; // 0 represents "S/P" (Sin Prioridad)
       const parsed = parseInt(val);
-      return isNaN(parsed) ? 3 : parsed;
+      return isNaN(parsed) ? 0 : parsed;
   };
 
   const parseNullableInt = (val) => {
@@ -528,6 +528,12 @@ export default function OrderImport() {
 
       const headers = SYSTEM_FIELDS.map(f => f.key);
 
+      const formatValue = (key, value) => {
+        if (key === 'priority' && value === 0) return 'S/P';
+        if (typeof value === 'object') return JSON.stringify(value);
+        return String(value !== undefined && value !== null ? value : '');
+      };
+
       return (
           <div className="mt-12 border-t-4 border-blue-500 pt-6">
               <div className="flex justify-between items-center mb-4">
@@ -559,7 +565,7 @@ export default function OrderImport() {
                                       <tr key={i} className="hover:bg-gray-50">
                                           {headers.map(h => (
                                               <td key={h} className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap max-w-[150px] truncate border-r border-gray-100 last:border-0">
-                                                  {typeof row[h] === 'object' ? JSON.stringify(row[h]) : String(row[h] !== undefined && row[h] !== null ? row[h] : '')}
+                                                  {formatValue(h, row[h])}
                                               </td>
                                           ))}
                                       </tr>

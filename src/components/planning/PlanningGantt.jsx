@@ -54,6 +54,7 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
 
   const getPriorityColor = (priority) => {
     switch(priority) {
+      case 0: return "bg-gray-500 hover:bg-gray-600 border-gray-700";
       case 1: return "bg-red-500 hover:bg-red-600 border-red-700";
       case 2: return "bg-orange-500 hover:bg-orange-600 border-orange-700";
       case 3: return "bg-blue-500 hover:bg-blue-600 border-blue-700";
@@ -137,7 +138,7 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                           className="space-y-1 min-h-[20px]"
                         >
                           {machine.backlog.map((order, index) => {
-                             const tooltipText = `P${order.priority} | ${order.order_number}
+                             const tooltipText = `${order.priority === 0 ? 'S/P' : `P${order.priority}`} | ${order.order_number}
 Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
 Cli: ${order.client_name || '-'}
 Cant: ${order.quantity || '-'} | Mat: ${order.material_type || '-'}
@@ -155,8 +156,8 @@ Ent: ${order.committed_delivery_date || '-'}`;
                                 >
                                   <div className="flex justify-between items-center gap-1">
                                      <span className="font-bold text-blue-700 dark:text-blue-400 text-[11px]">{order.order_number}</span>
-                                     <Badge variant="outline" className={`h-3 px-1 text-[8px] ${order.priority <= 2 ? 'bg-red-50 text-red-600 border-red-200' : ''}`}>
-                                       P{order.priority}
+                                     <Badge variant="outline" className={`h-3 px-1 text-[8px] ${order.priority === 0 ? 'bg-gray-50 text-gray-600 border-gray-200' : (order.priority <= 2 ? 'bg-red-50 text-red-600 border-red-200' : '')}`}>
+                                       {order.priority === 0 ? 'S/P' : `P${order.priority}`}
                                      </Badge>
                                   </div>
                                   <div className="truncate text-[9px] text-slate-600" title={order.product_name}>
@@ -247,7 +248,7 @@ Ent: ${order.committed_delivery_date || '-'}`;
 
                      const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
                      
-                     const tooltipText = `P${order.priority} | ${order.order_number}
+                     const tooltipText = `${order.priority === 0 ? 'S/P' : `P${order.priority}`} | ${order.order_number}
 Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
 Cli: ${order.client_name || '-'}
 Cant: ${order.quantity || '-'} | Mat: ${order.material_type || '-'}
@@ -268,7 +269,7 @@ Ini: ${order.start_date || '-'} | Fin: ${order.planned_end_date || '-'}`;
                       >
                         <div className="flex flex-col min-w-0 flex-1 justify-center h-full">
                           <div className="flex items-center gap-1">
-                            <span className="font-bold shrink-0 text-[10px]">P{order.priority}</span>
+                            <span className="font-bold shrink-0 text-[10px]">{order.priority === 0 ? 'S/P' : `P${order.priority}`}</span>
                             <span className="font-medium truncate text-[10px]">{order.order_number}</span>
                             {isLate && <AlertCircle className="w-3 h-3 text-yellow-300 shrink-0" />}
                           </div>
