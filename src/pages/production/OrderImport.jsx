@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 const SYSTEM_FIELDS = [
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'production_id', 'order_number', 'id', 'numero_orden', 'wo'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_id', 'machine_name', 'maquina', 'machine', 'recurso'] },
+    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id'] },
+    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso'] },
     { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina'] },
     { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia'] },
     { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type'] },
@@ -316,6 +317,7 @@ export default function OrderImport() {
             machine_id: row.machine_id_resolved, // Internal Resolved ID
             
             // Extended fields
+            production_id: row.production_id,
             machine_id_source: row.machine_id_source,
             priority: parseInt(row.priority) || 3,
             type: row.type,
@@ -330,7 +332,7 @@ export default function OrderImport() {
             material: row.material,
             product_family: row.product_family,
             shortages: row.shortages,
-            quantity: parseInt(row.quantity) || 0,
+            quantity: parseInt(String(row.quantity).replace(/,/g, '')) || 0,
             committed_delivery_date: row.committed_delivery_date,
             new_delivery_date: row.new_delivery_date,
             delivery_compliance: row.delivery_compliance,
