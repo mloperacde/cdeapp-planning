@@ -447,6 +447,10 @@ export default function OrderImport() {
       );
   };
 
+    
+
+    
+
   // Database Preview Component
   const DatabasePreview = () => {
       if (!showDbPreview) return null;
@@ -493,38 +497,6 @@ export default function OrderImport() {
                           </tbody>
                       </table>
                   </div>
-              </div>
-          </div>
-      );
-  };
-
-  return (
-          <div className="mt-8 mb-4 border rounded-lg overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b font-medium text-sm text-gray-700 flex justify-between items-center">
-                  <span>Vista Previa de Datos Recuperados ({orders.length} registros)</span>
-                  <span className="text-xs text-gray-500">Mostrando primeros 5 registros</span>
-              </div>
-              <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                          <tr>
-                              {headers.map(h => (
-                                  <th key={h} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-                              ))}
-                          </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                          {orders.slice(0, 5).map((row, i) => (
-                              <tr key={i}>
-                                  {headers.map(h => (
-                                      <td key={h} className="px-3 py-2 text-xs text-gray-900 whitespace-nowrap max-w-[200px] truncate">
-                                          {typeof row[h] === 'object' ? JSON.stringify(row[h]) : String(row[h] || '')}
-                                      </td>
-                                  ))}
-                              </tr>
-                          ))}
-                      </tbody>
-                  </table>
               </div>
           </div>
       );
