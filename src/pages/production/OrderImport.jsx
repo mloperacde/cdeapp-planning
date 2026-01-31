@@ -87,14 +87,14 @@ export default function OrderImport() {
                 Tabla de Datos Crudos ({rawOrders.length} registros)
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto max-h-[70vh]">
-              <Table>
-                <TableHeader>
+          <CardContent className="p-0">
+            <div className="rounded-md border overflow-x-auto h-[80vh]">
+              <Table className="relative w-full">
+                <TableHeader className="sticky top-0 z-10 bg-secondary">
                   <TableRow>
-                    <TableHead className="w-[50px]">#</TableHead>
+                    <TableHead className="w-[50px] bg-secondary font-bold text-xs h-8 text-secondary-foreground">#</TableHead>
                     {columns.map(col => (
-                      <TableHead key={col} className="whitespace-nowrap font-bold">
+                      <TableHead key={col} className="whitespace-nowrap font-bold text-xs h-8 px-2 bg-secondary text-secondary-foreground border-r border-secondary-foreground/10">
                         {col}
                       </TableHead>
                     ))}
@@ -102,10 +102,10 @@ export default function OrderImport() {
                 </TableHeader>
                 <TableBody>
                   {rawOrders.map((row, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{i + 1}</TableCell>
+                    <TableRow key={i} className="hover:bg-muted/50">
+                      <TableCell className="text-xs py-1 px-2 border-r text-muted-foreground">{i + 1}</TableCell>
                       {columns.map(col => (
-                        <TableCell key={`${i}-${col}`} className="whitespace-nowrap border-r last:border-r-0" title={String(row[col])}>
+                        <TableCell key={`${i}-${col}`} className="whitespace-nowrap text-xs py-1 px-2 border-r last:border-r-0" title={String(row[col])}>
                           {row[col] !== undefined && row[col] !== null 
                             ? (typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])) 
                             : <span className="text-gray-300">-</span>}
