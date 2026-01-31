@@ -9,38 +9,38 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 const SYSTEM_FIELDS = [
-    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID'] },
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA'] },
-    { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID'] },
-    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia', 'PRIORIDAD'] },
-    { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type', 'TIPO'] },
-    { key: 'status_source', label: 'Estado (Origen)', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO'] },
-    { key: 'room', label: 'Sala', aliases: ['Sala', 'room', 'SALA'] },
-    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO'] },
-    { key: 'internal_order_ref', label: 'Pedido', aliases: ['Pedido', 'internal_order'] },
-    { key: 'product_article_code', label: 'Artículo', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo'] },
-    { key: 'product_name', label: 'Nombre / Descripción', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto'] },
-    { key: 'article_status', label: 'Edo. Art.', aliases: ['Edo. Art.', 'article_status'] },
-    { key: 'client_name', label: 'Cliente', aliases: ['Cliente', 'client_name', 'client', 'customer', 'empresa'] },
-    { key: 'material', label: 'Material', aliases: ['Material', 'material'] },
-    { key: 'product_family', label: 'Producto (Familia)', aliases: ['Producto', 'product_family'] },
-    { key: 'shortages', label: 'Faltas', aliases: ['Faltas', 'shortages'] },
-    { key: 'quantity', label: 'Cantidad', aliases: ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas'] },
-    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin'] },
-    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['Nueva Fecha Entrega', 'new_delivery_date'] },
+    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID', 'IdProduccion', 'ID Produccion', 'Prod ID', 'id_produccion'] },
+    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code'] },
+    { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId'] },
+    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia', 'PRIORIDAD', 'Priority'] },
+    { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type', 'TIPO', 'Type', 'Clase'] },
+    { key: 'status_source', label: 'Estado (Origen)', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO', 'Status'] },
+    { key: 'room', label: 'Sala', aliases: ['Sala', 'room', 'SALA', 'Room', 'Nave', 'Zona'] },
+    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente'] },
+    { key: 'internal_order_ref', label: 'Pedido', aliases: ['Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno'] },
+    { key: 'product_article_code', label: 'Artículo', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material'] },
+    { key: 'product_name', label: 'Nombre / Descripción', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation'] },
+    { key: 'article_status', label: 'Edo. Art.', aliases: ['Edo. Art.', 'article_status', 'Estado Articulo'] },
+    { key: 'client_name', label: 'Cliente', aliases: ['Cliente', 'client_name', 'client', 'customer', 'empresa', 'razon_social', 'Customer'] },
+    { key: 'material', label: 'Material', aliases: ['Material', 'material', 'Raw Material', 'Materia Prima'] },
+    { key: 'product_family', label: 'Producto (Familia)', aliases: ['Producto', 'product_family', 'Familia', 'Family'] },
+    { key: 'shortages', label: 'Faltas', aliases: ['Faltas', 'shortages', 'Missing'] },
+    { key: 'quantity', label: 'Cantidad', aliases: ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount'] },
+    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin'] },
+    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['Nueva Fecha Entrega', 'new_delivery_date', 'New Due Date'] },
     { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['Cumplimiento entrega', 'compliance'] },
     { key: 'multi_unit', label: 'MultUnid', aliases: ['MultUnid'] },
     { key: 'multi_qty', label: 'Mult x Cantidad', aliases: ['Mult x Cantidad'] },
-    { key: 'production_cadence', label: 'Cadencia', aliases: ['Cadencia', 'production_cadence', 'cadence', 'ciclo'] },
-    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['Motivo Retraso', 'delay_reason'] },
+    { key: 'production_cadence', label: 'Cadencia', aliases: ['Cadencia', 'production_cadence', 'cadence', 'ciclo', 'Cycle Time'] },
+    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['Motivo Retraso', 'delay_reason', 'Delay Cause'] },
     { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['Fecha limite componentes'] },
-    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['Fecha Inicio Limite', 'start_date', 'inicio', 'fecha_inicio'] },
+    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['Fecha Inicio Limite', 'start_date', 'inicio', 'fecha_inicio', 'Start Date'] },
     { key: 'start_date_simple', label: 'Fecha Inicio Limite Simple', aliases: ['Fecha Inicio Limite Simple'] },
     { key: 'modified_start_date', label: 'Fecha Inicio Modificada', aliases: ['Fecha Inicio Modificada'] },
-    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['Fecha Fin', 'planned_end_date', 'end_date', 'fin'] },
+    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['Fecha Fin', 'planned_end_date', 'end_date', 'fin', 'End Date'] },
     { key: 'end_date_simple', label: 'Fecha Fin Simple', aliases: ['Fecha Fin Simple'] },
-    { key: 'notes', label: 'Observación', aliases: ['Observación', 'notes', 'notas', 'comentarios'] }
+    { key: 'notes', label: 'Observación', aliases: ['Observación', 'notes', 'notas', 'comentarios', 'Remarks', 'Comments'] }
 ];
 
 export default function OrderImport() {
@@ -191,7 +191,25 @@ export default function OrderImport() {
   const fetchDbOrders = async () => {
     try {
         const res = await base44.entities.WorkOrder.list(undefined, 100);
-        setDbOrders(res.items || res);
+        let items = res.items || res;
+        
+        // Enriquecer con nombre de máquina
+        items = items.map(item => {
+            // Intentar encontrar nombre de máquina usando el ID
+            if (!item.machine_name && item.machine_id) {
+                // Busqueda inversa en el mapa de máquinas
+                for (const [name, id] of machines.entries()) {
+                    if (id === item.machine_id) {
+                         // Preferimos devolver el nombre formateado si es posible, pero aquí solo tenemos keys en minúsculas
+                         // Así que devolvemos el ID si no hay otra opción, o el nombre detectado
+                         return { ...item, machine_name: name.toUpperCase() }; 
+                    }
+                }
+            }
+            return item;
+        });
+
+        setDbOrders(items);
         setShowDbPreview(true);
         toast.success("Datos de Base de Datos cargados");
     } catch (e) {
@@ -209,6 +227,7 @@ export default function OrderImport() {
           const mappedKey = mapping[fieldDef.key];
           // Solo usamos el mapeo si la clave existe en el objeto.
           // Si el mapeo apunta a una columna que ya no existe (stale), hacemos fallback a Auto.
+          // ADICIONAL: Si el valor es null, lo devolvemos como null (significa que la columna existe pero está vacía)
           if (obj[mappedKey] !== undefined) {
               return obj[mappedKey];
           }
