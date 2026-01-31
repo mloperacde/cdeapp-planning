@@ -105,7 +105,7 @@ export default function OrderImport() {
                     <TableRow key={i}>
                       <TableCell>{i + 1}</TableCell>
                       {columns.map(col => (
-                        <TableCell key={`${i}-${col}`} className="whitespace-nowrap max-w-[300px] truncate" title={String(row[col])}>
+                        <TableCell key={`${i}-${col}`} className="whitespace-nowrap border-r last:border-r-0" title={String(row[col])}>
                           {row[col] !== undefined && row[col] !== null 
                             ? (typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])) 
                             : <span className="text-gray-300">-</span>}
