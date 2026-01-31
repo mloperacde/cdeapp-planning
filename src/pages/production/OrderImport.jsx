@@ -193,6 +193,11 @@ export default function OrderImport() {
       return undefined;
   };
 
+  const availableKeys = React.useMemo(() => {
+      if (orders.length === 0) return [];
+      return Object.keys(orders[0]);
+  }, [orders]);
+
   const processedOrders = React.useMemo(() => {
       return orders.map(order => {
           const processed = { _original: order };
@@ -417,6 +422,16 @@ export default function OrderImport() {
             >
             {loading ? 'Cargando...' : '1. Obtener Datos'}
             </button>
+
+            {orders.length > 0 && (
+                <button 
+                onClick={() => setShowMappingDialog(true)}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors flex items-center"
+                >
+                <Settings className="w-4 h-4 mr-2" />
+                Configurar Mapeo
+                </button>
+            )}
             
             {orders.length > 0 && (
                 <button 
@@ -480,20 +495,20 @@ export default function OrderImport() {
                 </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-                {orders.length === 0 ? (
+                {processedOrders.length === 0 ? (
                     <tr>
                         <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
                             No hay datos cargados. Pulse "Obtener Datos" para comenzar.
                         </td>
                     </tr>
                 ) : (
-                    orders.map((order, i) => {
-                    const machineName = findValue(order, ['Máquina', 'machine_id', 'machine_name', 'maquina', 'machine', 'recurso']);
-                    const machineId = getMachineId(machineName);
-                    const orderId = findValue(order, ['Orden', 'production_id', 'order_number', 'id', 'numero_orden', 'wo']);
-                    const article = findValue(order, ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo']);
-                    const qty = findValue(order, ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas']);
-                    const delivery = findValue(order, ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin']);
+                    processedOrders.map((order, i) => {
+                    const machineName = order.machine_name;
+                    const machineId = order.machine_id_resolved;
+                    const orderId = order.order_number;
+                    const article = order.product_article_code;
+                    const qty = order.quantity;
+                    const delivery = order.committed_delivery_date;
                     
                     return (
                         <tr key={i} className={machineId ? 'hover:bg-gray-50' : 'bg-red-50 hover:bg-red-100'}>
@@ -537,6 +552,13 @@ export default function OrderImport() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Mapping Dialog Component */}
+          <MappingConfigDialog 
+              open={showMappingDialog} 
+              onOpenChange={setShowMappingDialog}
+              currentMapping={mapping}
+              availableKeys={availableKeys}
+              onSave={handleSaveMapping}
+          />
       </div>
     </div>
   );
