@@ -2,11 +2,51 @@ import React, { useState, useEffect } from 'react';
 import { cdeApp } from '../../api/cdeAppClient';
 import { base44 } from '../../api/base44Client';
 import { toast } from 'sonner';
+import { Settings, Save, RotateCcw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
+const SYSTEM_FIELDS = [
+    { key: 'order_number', label: 'Número de Orden (ID)', required: true, aliases: ['Orden', 'production_id', 'order_number', 'id', 'numero_orden', 'wo'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_id', 'machine_name', 'maquina', 'machine', 'recurso'] },
+    { key: 'client_name', label: 'Cliente', aliases: ['Cliente', 'client_name', 'client', 'customer', 'empresa'] },
+    { key: 'product_article_code', label: 'Artículo / Referencia', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo'] },
+    { key: 'product_name', label: 'Descripción / Nombre', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto'] },
+    { key: 'quantity', label: 'Cantidad', aliases: ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas'] },
+    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia'] },
+    { key: 'start_date', label: 'Fecha Inicio', aliases: ['Fecha Inicio Limite', 'start_date', 'inicio', 'fecha_inicio'] },
+    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin'] },
+    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['Fecha Fin', 'planned_end_date', 'end_date', 'fin'] },
+    { key: 'production_cadence', label: 'Cadencia', aliases: ['Cadencia', 'production_cadence', 'cadence', 'ciclo'] },
+    { key: 'notes', label: 'Notas', aliases: ['Observación', 'notes', 'notas', 'comentarios'] }
+];
 
 export default function OrderImport() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [machines, setMachines] = useState(new Map());
+  
+  // Mapping State
+  const [mapping, setMapping] = useState({});
+  const [showMappingDialog, setShowMappingDialog] = useState(false);
+
+  // Load mapping on mount
+  useEffect(() => {
+      try {
+          const saved = localStorage.getItem('cdeapp_api_mapping');
+          if (saved) setMapping(JSON.parse(saved));
+      } catch (e) { console.error("Error loading mapping", e); }
+  }, []);
+
+  // Save mapping
+  const handleSaveMapping = (newMapping) => {
+      setMapping(newMapping);
+      localStorage.setItem('cdeapp_api_mapping', JSON.stringify(newMapping));
+      toast.success("Configuración de mapeo guardada");
+      setShowMappingDialog(false);
+  };
 
   // Cargar máquinas al inicio para validar
   useEffect(() => {
@@ -124,16 +164,54 @@ export default function OrderImport() {
 
   // ... (getMachineId y fetchOrders sin cambios)
 
+  // Helper para extraer valor basado en config o defaults
+  const extractValue = (obj, fieldDef) => {
+      if (!obj) return undefined;
+      
+      // 1. Usar mapeo personalizado si existe
+      if (mapping[fieldDef.key] && mapping[fieldDef.key] !== 'auto') {
+          return obj[mapping[fieldDef.key]];
+      }
+
+      // 2. Usar alias por defecto (lógica "auto")
+      const keys = fieldDef.aliases || [];
+      const objKeys = Object.keys(obj);
+      // Normalizar claves del objeto para búsqueda rápida
+      const normalizedObjKeys = {};
+      objKeys.forEach(k => {
+          normalizedObjKeys[k.toLowerCase().replace(/[^a-z0-9]/g, '')] = k;
+      });
+
+      for (const key of keys) {
+          // Intento directo
+          if (obj[key] !== undefined) return obj[key];
+          // Intento normalizado
+          const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const realKey = normalizedObjKeys[normalizedKey];
+          if (realKey && obj[realKey] !== undefined) return obj[realKey];
+      }
+      return undefined;
+  };
+
+  const processedOrders = React.useMemo(() => {
+      return orders.map(order => {
+          const processed = { _original: order };
+          SYSTEM_FIELDS.forEach(field => {
+              processed[field.key] = extractValue(order, field);
+          });
+          // Resolver ID de máquina
+          processed.machine_id_resolved = getMachineId(processed.machine_name);
+          return processed;
+      });
+  }, [orders, mapping, machines]);
+
   const saveOrders = async () => {
-    if (orders.length === 0) return;
+    if (processedOrders.length === 0) return;
     
     // Filtramos solo las que tienen máquina válida
-    const validOrders = orders.filter(order => {
-       const machineName = order['Máquina'] || order['machine_id'] || order['machine_name'] || order['maquina'] || '';
-       return getMachineId(machineName);
-    });
+    const validOrders = processedOrders.filter(o => o.machine_id_resolved);
 
-    const total = orders.length;
+    const total = processedOrders.length;
     const valid = validOrders.length;
     const invalid = total - valid;
 
@@ -191,24 +269,22 @@ export default function OrderImport() {
         setImportProgress({ current: i + 1, total: valid, active: true });
         
         const row = validOrders[i];
-        const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'];
-        const machineName = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || '';
-        const machineId = getMachineId(machineName);
+        const orderNumber = row.order_number;
 
         const payload = {
             order_number: String(orderNumber),
-            machine_id: machineId,
-            client_name: row['Cliente'] || row['client_name'],
-            product_article_code: row['Artículo'] || row['product_article_code'],
-            product_name: row['Nombre'] || row['Descripción'] || row['product_name'],
-            quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
-            priority: parseInt(row['Prioridad'] || row['priority']) || 3,
+            machine_id: row.machine_id_resolved,
+            client_name: row.client_name,
+            product_article_code: row.product_article_code,
+            product_name: row.product_name,
+            quantity: parseInt(row.quantity) || 0,
+            priority: parseInt(row.priority) || 3,
             status: 'Pendiente',
-            start_date: row['Fecha Inicio Limite'] || row['start_date'],
-            committed_delivery_date: row['Fecha Entrega'] || row['committed_delivery_date'],
-            planned_end_date: row['Fecha Fin'] || row['planned_end_date'],
-            production_cadence: parseFloat(row['Cadencia'] || row['production_cadence']) || 0,
-            notes: row['Observación'] || row['notes'] || ''
+            start_date: row.start_date,
+            committed_delivery_date: row.committed_delivery_date,
+            planned_end_date: row.planned_end_date,
+            production_cadence: parseFloat(row.production_cadence) || 0,
+            notes: row.notes || ''
         };
 
         let retries = 0;
@@ -270,6 +346,45 @@ export default function OrderImport() {
     }
   };
 
+  // Preview Component
+  const OrdersPreview = () => {
+      if (!orders || orders.length === 0) return null;
+      
+      // Get headers from first order
+      const headers = Object.keys(orders[0]).slice(0, 8); // Show first 8 columns
+
+      return (
+          <div className="mt-8 mb-4 border rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2 border-b font-medium text-sm text-gray-700 flex justify-between items-center">
+                  <span>Vista Previa de Datos Recuperados ({orders.length} registros)</span>
+                  <span className="text-xs text-gray-500">Mostrando primeros 5 registros</span>
+              </div>
+              <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                          <tr>
+                              {headers.map(h => (
+                                  <th key={h} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                              ))}
+                          </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                          {orders.slice(0, 5).map((row, i) => (
+                              <tr key={i}>
+                                  {headers.map(h => (
+                                      <td key={h} className="px-3 py-2 text-xs text-gray-900 whitespace-nowrap max-w-[200px] truncate">
+                                          {typeof row[h] === 'object' ? JSON.stringify(row[h]) : String(row[h] || '')}
+                                      </td>
+                                  ))}
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      );
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Modal de Progreso */}
@@ -314,6 +429,12 @@ export default function OrderImport() {
             )}
         </div>
       </div>
+
+      <p className="mb-4 text-gray-600">
+        Esta herramienta conecta con la API de CDEApp para descargar las órdenes de producción pendientes y cargarlas en el planificador.
+      </p>
+
+      <OrdersPreview />
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {/* Debug Info - Solo visible si hay datos pero fallan mappings */}
@@ -367,13 +488,17 @@ export default function OrderImport() {
                     </tr>
                 ) : (
                     orders.map((order, i) => {
-                    const machineName = order['Máquina'] || order['machine_id'] || order['machine_name'] || order['maquina'] || '';
+                    const machineName = findValue(order, ['Máquina', 'machine_id', 'machine_name', 'maquina', 'machine', 'recurso']);
                     const machineId = getMachineId(machineName);
+                    const orderId = findValue(order, ['Orden', 'production_id', 'order_number', 'id', 'numero_orden', 'wo']);
+                    const article = findValue(order, ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo']);
+                    const qty = findValue(order, ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas']);
+                    const delivery = findValue(order, ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin']);
                     
                     return (
                         <tr key={i} className={machineId ? 'hover:bg-gray-50' : 'bg-red-50 hover:bg-red-100'}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {order['Orden'] || order['production_id'] || order['id']}
+                            {orderId}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {machineName}
@@ -385,18 +510,18 @@ export default function OrderImport() {
                                 </span>
                             ) : (
                                 <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                    No encontrada
+                                    Máquina Desconocida
                                 </span>
                             )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {order['Artículo'] || order['product_article_code']}
+                            {article}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {order['Cantidad'] || order['quantity']}
+                            {qty}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                             {order['Fecha Entrega'] || order['committed_delivery_date']}
+                            {delivery}
                         </td>
                         </tr>
                     );
@@ -409,6 +534,82 @@ export default function OrderImport() {
       <div className="mt-4 text-sm text-gray-500">
           Total registros: {orders.length}
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Mapping Dialog Component */}
+      </div>
     </div>
   );
+}
+
+function MappingConfigDialog({ open, onOpenChange, currentMapping, availableKeys, onSave }) {
+    const [localMapping, setLocalMapping] = useState(currentMapping);
+
+    useEffect(() => {
+        if (open) setLocalMapping(currentMapping);
+    }, [open, currentMapping]);
+
+    const handleChange = (fieldKey, value) => {
+        setLocalMapping(prev => ({
+            ...prev,
+            [fieldKey]: value
+        }));
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Configuración de Mapeo de Datos</DialogTitle>
+                    <DialogDescription>
+                        Asigna las columnas de la API (Origen) a los campos del sistema (Destino).
+                        Selecciona "Auto (Detectar)" para usar la lógica automática.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-4">
+                    {SYSTEM_FIELDS.map(field => (
+                        <div key={field.key} className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor={field.key} className="text-right font-medium">
+                                {field.label} {field.required && <span className="text-red-500">*</span>}
+                            </Label>
+                            <div className="col-span-3">
+                                <Select 
+                                    value={localMapping[field.key] || 'auto'} 
+                                    onValueChange={(val) => handleChange(field.key, val)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar columna origen" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="auto"><span className="italic text-gray-500">Auto (Detectar automáticamente)</span></SelectItem>
+                                        {availableKeys.map(key => (
+                                            <SelectItem key={key} value={key}>{key}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {field.aliases && (
+                                    <p className="text-[10px] text-gray-400 mt-1 truncate">
+                                        Busca: {field.aliases.join(', ')}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <DialogFooter className="gap-2">
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                    <Button variant="ghost" onClick={() => setLocalMapping({})} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Resetear
+                    </Button>
+                    <Button onClick={() => onSave(localMapping)}>
+                        <Save className="w-4 h-4 mr-2" />
+                        Guardar Configuración
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }

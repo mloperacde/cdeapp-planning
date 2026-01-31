@@ -400,18 +400,18 @@ export default function WorkOrderImporter() {
       const normalize = (s) => s?.toLowerCase().replace(/[^a-z0-9]/g, '');
       
       const strategies = {
-          order_number: ['orden', 'numero', 'order', 'wo', 'pedido'],
-          machine_name: ['maquina', 'machine', 'recurso', 'equipo'],
-          client: ['cliente', 'customer', 'client', 'empresa'],
-          part_number: ['referencia', 'articulo', 'part', 'item', 'codigo'],
-          quantity: ['cantidad', 'qty', 'unidades', 'piezas'],
-          description: ['descripcion', 'description', 'detalle'],
-          process_name: ['proceso', 'process', 'operacion'],
-          priority: ['prioridad', 'priority', 'urgencia'],
-          status: ['estado', 'status', 'situacion'],
-          start_date: ['inicio', 'start', 'fecha', 'comienzo'],
-          committed_delivery_date: ['entrega', 'delivery', 'fin', 'compromiso'],
-          notes: ['notas', 'observaciones', 'comentarios']
+          order_number: ['orden', 'numero', 'order', 'wo', 'pedido', 'id', 'production_id'],
+          machine_name: ['maquina', 'machine', 'recurso', 'equipo', 'unidad', 'centro'],
+          client: ['cliente', 'customer', 'client', 'empresa', 'razon_social'],
+          part_number: ['referencia', 'articulo', 'part', 'item', 'codigo', 'producto_id', 'product_code'],
+          quantity: ['cantidad', 'qty', 'unidades', 'piezas', 'total'],
+          description: ['descripcion', 'description', 'detalle', 'nombre', 'producto_nombre'],
+          process_name: ['proceso', 'process', 'operacion', 'tipo'],
+          priority: ['prioridad', 'priority', 'urgencia', 'importancia'],
+          status: ['estado', 'status', 'situacion', 'estatus'],
+          start_date: ['inicio', 'start', 'fecha_inicio', 'comienzo', 'desde'],
+          committed_delivery_date: ['entrega', 'delivery', 'fin', 'compromiso', 'fecha_fin', 'fecha_entrega', 'hasta'],
+          notes: ['notas', 'observaciones', 'comentarios', 'info']
       };
 
       // Invert strategy for header matching
