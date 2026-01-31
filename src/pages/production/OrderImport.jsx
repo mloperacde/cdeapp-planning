@@ -310,108 +310,132 @@ export default function OrderImport() {
 
     // Procesamiento secuencial con gestión de Rate Limit (429)
     const DELAY_MS = 250; 
+    let consecutiveErrors = 0;
 
-    for (let i = 0; i < validOrders.length; i++) {
-        setImportProgress({ current: i + 1, total: valid, active: true });
-        
-        const row = validOrders[i];
-        const orderNumber = row.order_number;
+    try {
+        for (let i = 0; i < validOrders.length; i++) {
+            // Safety check for aborting if too many errors
+            if (consecutiveErrors >= 10) {
+                const abortMsg = "Se han detectado demasiados errores consecutivos. Importación detenida por seguridad.";
+                console.error(abortMsg);
+                toast.error(abortMsg, { id: toastId });
+                break;
+            }
 
-        const payload = {
-            order_number: String(orderNumber),
-            machine_id: row.machine_id_resolved, // Internal Resolved ID
+            setImportProgress({ current: i + 1, total: valid, active: true });
             
-            // Extended fields
-            production_id: row.production_id,
-            machine_id_source: row.machine_id_source,
-            priority: parseInt(row.priority) || 3,
-            type: row.type,
-            status_source: row.status_source,
-            room: row.room,
-            client_order_ref: row.client_order_ref,
-            internal_order_ref: row.internal_order_ref,
-            product_article_code: row.product_article_code,
-            product_name: row.product_name,
-            article_status: row.article_status,
-            client_name: row.client_name,
-            material: row.material,
-            product_family: row.product_family,
-            shortages: row.shortages,
-            quantity: parseInt(String(row.quantity).replace(/,/g, '')) || 0,
-            committed_delivery_date: row.committed_delivery_date,
-            new_delivery_date: row.new_delivery_date,
-            delivery_compliance: row.delivery_compliance,
-            multi_unit: row.multi_unit,
-            multi_qty: row.multi_qty,
-            production_cadence: parseFloat(row.production_cadence) || 0,
-            delay_reason: row.delay_reason,
-            components_deadline: row.components_deadline,
-            start_date: row.start_date,
-            start_date_simple: row.start_date_simple,
-            modified_start_date: row.modified_start_date,
-            planned_end_date: row.planned_end_date,
-            end_date_simple: row.end_date_simple,
-            notes: row.notes || '',
-            
-            status: 'Pendiente', // Internal status
-        };
-
-        let retries = 0;
-        let success = false;
-        
-        // Bucle de reintento para errores 429
-        while (!success && retries < 3) {
             try {
-                // Timeout de 5s por petición individual para no colgar
-                const createPromise = new Promise(async (resolve, reject) => {
-                    const t = setTimeout(() => reject(new Error("Timeout creando orden")), 8000);
+                const row = validOrders[i];
+                const orderNumber = row.order_number;
+
+                const payload = {
+                    order_number: String(orderNumber),
+                    machine_id: row.machine_id_resolved, // Internal Resolved ID
+                    
+                    // Extended fields
+                    production_id: row.production_id,
+                    machine_id_source: row.machine_id_source,
+                    priority: parseInt(row.priority) || 3,
+                    type: row.type,
+                    status_source: row.status_source,
+                    room: row.room,
+                    client_order_ref: row.client_order_ref,
+                    internal_order_ref: row.internal_order_ref,
+                    product_article_code: row.product_article_code,
+                    product_name: row.product_name,
+                    article_status: row.article_status,
+                    client_name: row.client_name,
+                    material: row.material,
+                    product_family: row.product_family,
+                    shortages: row.shortages,
+                    quantity: parseInt(String(row.quantity).replace(/,/g, '')) || 0,
+                    committed_delivery_date: row.committed_delivery_date,
+                    new_delivery_date: row.new_delivery_date,
+                    delivery_compliance: row.delivery_compliance,
+                    multi_unit: row.multi_unit,
+                    multi_qty: row.multi_qty,
+                    production_cadence: parseFloat(row.production_cadence) || 0,
+                    delay_reason: row.delay_reason,
+                    components_deadline: row.components_deadline,
+                    start_date: row.start_date,
+                    start_date_simple: row.start_date_simple,
+                    modified_start_date: row.modified_start_date,
+                    planned_end_date: row.planned_end_date,
+                    end_date_simple: row.end_date_simple,
+                    notes: row.notes || '',
+                    
+                    status: 'Pendiente', // Internal status
+                };
+
+                let retries = 0;
+                let success = false;
+                
+                // Bucle de reintento para errores 429
+                while (!success && retries < 3) {
                     try {
-                        await base44.entities.WorkOrder.create(payload);
-                        clearTimeout(t);
-                        resolve();
-                    } catch(e) {
-                        clearTimeout(t);
-                        reject(e);
+                        // Timeout de 8s por petición individual para no colgar
+                        const createPromise = new Promise(async (resolve, reject) => {
+                            const t = setTimeout(() => reject(new Error("Timeout creando orden")), 8000);
+                            try {
+                                await base44.entities.WorkOrder.create(payload);
+                                clearTimeout(t);
+                                resolve();
+                            } catch(e) {
+                                clearTimeout(t);
+                                reject(e);
+                            }
+                        });
+                        
+                        await createPromise;
+                        created++;
+                        success = true;
+                        consecutiveErrors = 0; // Reset counter on success
+                    } catch (e) {
+                        const isRateLimit = e?.status === 429 || (e?.message && (e.message.includes('429') || e.message.includes('Rate limit')));
+                        
+                        if (isRateLimit) {
+                            retries++;
+                            const waitTime = 2000 * retries; 
+                            console.warn(`Rate limit (429) en orden ${orderNumber}. Reintentando en ${waitTime}ms...`);
+                            // Actualizar toast para que el usuario sepa que estamos esperando
+                            toast.loading(`Esperando ${waitTime/1000}s por límite de velocidad...`, { id: toastId });
+                            await new Promise(r => setTimeout(r, waitTime));
+                            // Restaurar mensaje
+                            toast.loading(`Importando... ${i + 1}/${validOrders.length}`, { id: toastId });
+                        } else {
+                            console.error(`Error fatal importando orden ${orderNumber}`, e);
+                            errors++;
+                            consecutiveErrors++;
+                            // No usamos break aquí para permitir que el bucle principal continúe con la siguiente orden
+                            // a menos que alcancemos el límite de errores consecutivos
+                            break; // Rompe el while de reintentos, no el for principal
+                        }
                     }
-                });
-                
-                await createPromise;
-                created++;
-                success = true;
-            } catch (e) {
-                const isRateLimit = e?.status === 429 || (e?.message && (e.message.includes('429') || e.message.includes('Rate limit')));
-                
-                if (isRateLimit) {
-                    retries++;
-                    const waitTime = 2000 * retries; 
-                    console.warn(`Rate limit (429) en orden ${orderNumber}. Reintentando en ${waitTime}ms...`);
-                    // Actualizar toast para que el usuario sepa que estamos esperando
-                    toast.loading(`Esperando ${waitTime/1000}s por límite de velocidad...`, { id: toastId });
-                    await new Promise(r => setTimeout(r, waitTime));
-                    // Restaurar mensaje
-                    toast.loading(`Importando... ${i + 1}/${validOrders.length}`, { id: toastId });
-                } else {
-                    console.error(`Error fatal importando orden ${orderNumber}`, e);
-                    errors++;
-                    break; 
                 }
+                
+                // Pausa entre iteraciones
+                if (success) {
+                    await new Promise(r => setTimeout(r, DELAY_MS));
+                }
+            } catch (loopError) {
+                console.error("Error inesperado en iteración de importación", loopError);
+                errors++;
+                consecutiveErrors++;
             }
         }
+    } catch (globalError) {
+        console.error("Error crítico en proceso de importación", globalError);
+        toast.error("El proceso se detuvo inesperadamente: " + globalError.message);
+    } finally {
+        setLoading(false);
+        setImportProgress({ ...importProgress, active: false });
         
-        // Pausa entre iteraciones
-        if (success) {
-            await new Promise(r => setTimeout(r, DELAY_MS));
+        // Mensaje final detallado
+        if (errors > 0) {
+            toast.error(`Importación finalizada con advertencias.\nCreadas: ${created}\nErrores: ${errors}\nOmitidas (sin máquina): ${invalid}`, { id: toastId, duration: 8000 });
+        } else {
+            toast.success(`Importación exitosa.\nCreadas: ${created}\nOmitidas (sin máquina): ${invalid}`, { id: toastId, duration: 5000 });
         }
-    }
-
-    setLoading(false);
-    setImportProgress({ ...importProgress, active: false });
-    
-    // Mensaje final detallado
-    if (errors > 0) {
-        toast.error(`Importación finalizada con advertencias.\nCreadas: ${created}\nErrores: ${errors}\nOmitidas (sin máquina): ${invalid}`, { id: toastId, duration: 8000 });
-    } else {
-        toast.success(`Importación exitosa.\nCreadas: ${created}\nOmitidas (sin máquina): ${invalid}`, { id: toastId, duration: 5000 });
     }
   };
 
