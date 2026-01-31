@@ -9,15 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 const SYSTEM_FIELDS = [
-    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id'] },
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso'] },
-    { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina'] },
-    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia'] },
-    { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type'] },
-    { key: 'status_source', label: 'Estado (Origen)', aliases: ['Estado', 'status', 'situacion', 'estatus'] },
-    { key: 'room', label: 'Sala', aliases: ['Sala', 'room'] },
-    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order'] },
+    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID'] },
+    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA'] },
+    { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID'] },
+    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia', 'PRIORIDAD'] },
+    { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type', 'TIPO'] },
+    { key: 'status_source', label: 'Estado (Origen)', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO'] },
+    { key: 'room', label: 'Sala', aliases: ['Sala', 'room', 'SALA'] },
+    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO'] },
     { key: 'internal_order_ref', label: 'Pedido', aliases: ['Pedido', 'internal_order'] },
     { key: 'product_article_code', label: 'Artículo', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo'] },
     { key: 'product_name', label: 'Nombre / Descripción', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto'] },
@@ -206,7 +206,12 @@ export default function OrderImport() {
       
       // 1. Usar mapeo personalizado si existe
       if (mapping[fieldDef.key] && mapping[fieldDef.key] !== 'auto') {
-          return obj[mapping[fieldDef.key]];
+          const mappedKey = mapping[fieldDef.key];
+          // Solo usamos el mapeo si la clave existe en el objeto.
+          // Si el mapeo apunta a una columna que ya no existe (stale), hacemos fallback a Auto.
+          if (obj[mappedKey] !== undefined) {
+              return obj[mappedKey];
+          }
       }
 
       // 2. Usar alias por defecto (lógica "auto")
