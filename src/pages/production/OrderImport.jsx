@@ -175,7 +175,11 @@ export default function OrderImport() {
             const formattedOrders = deduplicatedOrders.map(o => {
                 const newRow = { ...o };
                 SYSTEM_FIELDS.forEach(field => {
-                    const val = extractValue(o, field);
+                    // Try to get value from exact key first, then extractValue
+                    let val = o[field.key];
+                    if (val === undefined) {
+                         val = extractValue(o, field);
+                    }
                     if (val !== undefined) newRow[field.key] = val;
                 });
                 
@@ -185,6 +189,9 @@ export default function OrderImport() {
                 // Hydrate machine name if we have a machine_id
                 if (o.machine_id && machinesMap.has(o.machine_id)) {
                     newRow.machine_name = machinesMap.get(o.machine_id);
+                } else if (!newRow.machine_name && o.machine_id_source) {
+                    // Fallback to source machine name if ID resolution failed previously
+                     newRow.machine_name = o.machine_id_source;
                 }
                 
                 return newRow;
