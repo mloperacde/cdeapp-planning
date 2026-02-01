@@ -100,6 +100,24 @@ const COLUMN_DISPLAY_ORDER = [
     'notes'
 ];
 
+const extractValue = (obj, fieldDef) => {
+    if (!obj) return undefined;
+    const keys = fieldDef.aliases || [];
+    const objKeys = Object.keys(obj);
+    const normalizedObjKeys = {};
+    objKeys.forEach(k => {
+        normalizedObjKeys[k.toLowerCase().replace(/[^a-z0-9]/g, '')] = k;
+    });
+
+    for (const key of keys) {
+        if (obj[key] !== undefined) return obj[key];
+        const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const realKey = normalizedObjKeys[normalizedKey];
+        if (realKey && obj[realKey] !== undefined) return obj[realKey];
+    }
+    return undefined;
+};
+
 export default function OrderImport() {
   const [rawOrders, setRawOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -159,10 +177,8 @@ export default function OrderImport() {
             
             setRawOrders(formattedOrders);
             
-            // Collect all keys present in the data
-            const allKeys = new Set();
-            formattedOrders.forEach(item => Object.keys(item).forEach(k => allKeys.add(k)));
-            setColumns(Array.from(allKeys));
+            // Force column order based on user specification
+            setColumns(COLUMN_DISPLAY_ORDER);
             
             // Set lastSyncTime from newest updated_at or created_at
             const newest = deduplicatedOrders.reduce((prev, curr) => {
