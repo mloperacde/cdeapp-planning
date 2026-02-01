@@ -428,17 +428,37 @@ export default function OrderImport() {
           const allOrders = await base44.entities.WorkOrder.list(null, 10000); // Fetch all
           
           let deletedCount = 0;
+          let failedCount = 0;
+
+          // Process in chunks to avoid overwhelming the network, but sequentially
           for (const order of allOrders) {
-              await base44.entities.WorkOrder.delete(order.id);
-              deletedCount++;
+              try {
+                  await base44.entities.WorkOrder.delete(order.id);
+                  deletedCount++;
+              } catch (innerError) {
+                  // Ignore 404s (already deleted), log others
+                  if (innerError.status === 404 || (innerError.message && innerError.message.includes('404'))) {
+                      console.warn(`Order ${order.id} already deleted (404).`);
+                      // We can consider this "success" for the purpose of "Delete All"
+                      deletedCount++; 
+                  } else {
+                      console.error(`Failed to delete order ${order.id}:`, innerError);
+                      failedCount++;
+                  }
+              }
           }
           
-          toast.success(`Eliminados ${deletedCount} registros correctamente.`);
+          if (failedCount > 0) {
+             toast.warning(`Eliminación completada con advertencias: ${deletedCount} eliminados, ${failedCount} fallidos.`);
+          } else {
+             toast.success(`Eliminados ${deletedCount} registros correctamente.`);
+          }
+          
           setRawOrders([]); // Clear UI
           fetchLocalData(); // Refresh (should be empty)
       } catch (error) {
           console.error("Error deleting all:", error);
-          toast.error("Error al eliminar datos.");
+          toast.error("Error al iniciar el proceso de eliminación.");
       } finally {
           setLoading(false);
       }
