@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { cdeApp } from '../../api/cdeAppClient';
 import { base44 } from '../../api/base44Client';
 import { toast } from 'sonner';
-import { Download, Table as TableIcon, Save, Search, Filter, Plus, X, Trash2, RefreshCw } from 'lucide-react';
+import { Download, Table as TableIcon, Save, Search, Filter, Plus, X, Trash2, RefreshCw, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -148,6 +148,7 @@ export default function OrderImport() {
   const [rawOrders, setRawOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [debugData, setDebugData] = useState(null); // Debug state
   const [progress, setProgress] = useState(0);
   // Columns are fixed based on user requirement
   const columns = COLUMN_DISPLAY_ORDER;
@@ -356,6 +357,9 @@ export default function OrderImport() {
       if (data.length > 0) {
         // Normalize all data immediately
         data = data.map(normalize);
+
+        console.log("First row raw data:", data[0]);
+        setDebugData(data[0]);
       }
 
       setRawOrders(data);
@@ -414,6 +418,30 @@ export default function OrderImport() {
 
   const removeFilter = (id) => {
       setFilters(filters.filter(f => f.id !== id));
+  };
+
+  const handleDeleteAll = async () => {
+      if (!confirm("¿Estás seguro de que quieres eliminar TODOS los datos de WorkOrder? Esta acción no se puede deshacer.")) return;
+      
+      try {
+          setLoading(true);
+          const allOrders = await base44.entities.WorkOrder.list(null, 10000); // Fetch all
+          
+          let deletedCount = 0;
+          for (const order of allOrders) {
+              await base44.entities.WorkOrder.delete(order.id);
+              deletedCount++;
+          }
+          
+          toast.success(`Eliminados ${deletedCount} registros correctamente.`);
+          setRawOrders([]); // Clear UI
+          fetchLocalData(); // Refresh (should be empty)
+      } catch (error) {
+          console.error("Error deleting all:", error);
+          toast.error("Error al eliminar datos.");
+      } finally {
+          setLoading(false);
+      }
   };
 
   // --- SAVE LOGIC ---
@@ -738,7 +766,7 @@ export default function OrderImport() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Importación de Órdenes</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Importación de Órdenes (CDEApp)</h1>
           <p className="text-muted-foreground">Vista de datos crudos con filtrado avanzado y guardado.</p>
           {lastSyncTime && (
              <p className="text-xs text-green-600 flex items-center mt-1">
@@ -748,6 +776,9 @@ export default function OrderImport() {
           )}
         </div>
         <div className="flex gap-2">
+            <Button variant="outline" onClick={fetchLocalData} disabled={loading}>
+                Recargar BD Local
+            </Button>
             <Button variant="outline" onClick={() => syncMachinesToLocalDB(false)} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Sincronizar Máquinas
@@ -756,7 +787,7 @@ export default function OrderImport() {
               {loading ? <Download className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               Obtener Datos Crudos
             </Button>
-            <Button variant="destructive" onClick={deleteAllOrders} disabled={saving}>
+            <Button variant="destructive" onClick={handleDeleteAll} disabled={saving}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 BORRAR BD
             </Button>
@@ -770,6 +801,13 @@ export default function OrderImport() {
             </Button>
         </div>
       </div>
+
+      {debugData && (
+        <div className="bg-slate-100 p-2 rounded text-xs font-mono overflow-auto max-h-40 border border-slate-300">
+            <strong>DEBUG - First Row Keys & Values:</strong>
+            <pre>{JSON.stringify(debugData, null, 2)}</pre>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
           {/* Progress Bar */}
