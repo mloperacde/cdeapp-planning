@@ -458,31 +458,31 @@ export default function OrderImport() {
              return;
           }
 
-          // Delete in batches (Safe mode to avoid 429)
-          const CHUNK = 5; 
-          let processed = 0;
-          
-          const deleteWithRetry = async (id, retries = 3, delay = 1000) => {
+          // Delete strictly sequentially (1 by 1) to avoid 429
+          const deleteWithRetry = async (id, retries = 5, delay = 2000) => {
              try {
                  await base44.entities.WorkOrder.delete(id);
              } catch (e) {
-                 if (retries > 0 && (e.status === 429 || (e.message && e.message.includes('429')))) {
+                 // 429 or network error
+                 if (retries > 0) {
+                     console.log(`Rate limit/Error deleting ${id}. Retrying in ${delay}ms...`);
                      await new Promise(r => setTimeout(r, delay));
                      return deleteWithRetry(id, retries - 1, delay * 2);
                  }
-                 throw e;
+                 console.error(`Failed to delete ${id} after retries.`);
              }
           };
 
-          for (let i = 0; i < allItems.length; i += CHUNK) {
-             const chunk = allItems.slice(i, i + CHUNK);
-             await Promise.all(chunk.map(item => deleteWithRetry(item.id)));
+          for (let i = 0; i < allItems.length; i++) {
+             await deleteWithRetry(allItems[i].id);
              
-             processed += chunk.length;
-             setProgress(Math.round((processed / allItems.length) * 100));
+             // Update progress every 5 items to avoid too many renders
+             if (i % 5 === 0) {
+                setProgress(Math.round(((i + 1) / allItems.length) * 100));
+             }
              
-             // Add delay between chunks
-             await new Promise(r => setTimeout(r, 500));
+             // Small breathing room between requests
+             await new Promise(r => setTimeout(r, 100));
           }
           
           setRawOrders([]); // Clear local view
