@@ -297,8 +297,8 @@ export const SyncService = {
           return undefined;
       };
 
-      const CHUNK_SIZE = 2;
-      const CHUNK_DELAY = 1000; // Slower for background
+      const CHUNK_SIZE = 1; // Reduced to 1 to minimize burst rate
+      const CHUNK_DELAY = 1500; // Increased delay to 1.5s
 
       for (let i = 0; i < data.length; i += CHUNK_SIZE) {
           const chunk = data.slice(i, i + CHUNK_SIZE);
@@ -322,12 +322,12 @@ export const SyncService = {
                   return;
               }
 
-              // Check if exists
+              // Check if exists with retry
               let existing = [];
               try {
-                  existing = await base44.entities.WorkOrder.filter({ order_number: String(orderNumber) });
+                  existing = await retryOp(() => base44.entities.WorkOrder.filter({ order_number: String(orderNumber) }));
               } catch (e) {
-                  // ignore
+                  // ignore or log
               }
 
               const payload = {
@@ -354,9 +354,9 @@ export const SyncService = {
                   committed_delivery_date: extract(row, 'committed_delivery_date'),
                   new_delivery_date: extract(row, 'new_delivery_date'),
                   delivery_compliance: extract(row, 'delivery_compliance'),
-                  multi_unit: extract(row, 'multi_unit'),
-                  multi_qty: extract(row, 'multi_qty'),
-                  production_cadence: extract(row, 'production_cadence'),
+                  multi_unit: parseInt(extract(row, 'multi_unit')) || 0,
+                  multi_qty: parseFloat(extract(row, 'multi_qty')) || 0,
+                  production_cadence: parseFloat(extract(row, 'production_cadence')) || 0,
                   delay_reason: extract(row, 'delay_reason'),
                   components_deadline: extract(row, 'components_deadline'),
                   start_date: extract(row, 'start_date'),
@@ -367,17 +367,17 @@ export const SyncService = {
 
               try {
                   if (existing && existing.length > 0) {
-                      await base44.entities.WorkOrder.update(existing[0].id, payload);
+                      await retryOp(() => base44.entities.WorkOrder.update(existing[0].id, payload));
                       updated++;
                       
                       // Cleanup duplicates
                       if (existing.length > 1) {
                           for (let k = 1; k < existing.length; k++) {
-                             try { await base44.entities.WorkOrder.delete(existing[k].id); } catch(e){}
+                             try { await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id)); } catch(e){}
                           }
                       }
                   } else {
-                      await base44.entities.WorkOrder.create(payload);
+                      await retryOp(() => base44.entities.WorkOrder.create(payload));
                       created++;
                   }
               } catch (e) {
