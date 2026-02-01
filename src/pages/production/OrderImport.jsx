@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { cdeApp } from '../../api/cdeAppClient';
 import { base44 } from '../../api/base44Client';
 import { toast } from 'sonner';
-import { Download, Table as TableIcon, Save, Search, Filter, Plus, X, Trash2 } from 'lucide-react';
+import { Download, Table as TableIcon, Save, Search, Filter, Plus, X, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,11 +76,77 @@ export default function OrderImport() {
   const [newFilter, setNewFilter] = useState({ column: "", operator: "contains", value: "" });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  const syncMachinesToLocalDB = async (background = false) => {
+      const toastId = background ? null : toast.loading("Sincronizando catálogo de máquinas...");
+      try {
+          const machines = await cdeApp.syncMachines();
+          const machineList = Array.isArray(machines) ? machines : (machines.data || []);
+          
+          if (machineList.length === 0) {
+              if (!background) toast.info("No se encontraron máquinas en CDEApp.", { id: toastId });
+              return;
+          }
+
+          // Fetch existing
+          let existingMachines = [];
+          try {
+              const res = await base44.entities.MachineMasterDatabase.list(undefined, 5000);
+              existingMachines = Array.isArray(res) ? res : (res.items || []);
+          } catch (e) {
+              console.warn("Could not fetch existing machines", e);
+          }
+
+          const machineMap = new Map();
+          existingMachines.forEach(m => {
+              if (m.codigo_maquina) machineMap.set(String(m.codigo_maquina).trim(), m.id);
+          });
+
+          let updated = 0;
+          let created = 0;
+
+          for (const m of machineList) {
+              const code = String(m.code || m.id || "").trim();
+              if (!code) continue;
+
+              const name = m.name || m.description || `Máquina ${code}`;
+              const location = m.room_name || m.sala || "";
+
+              const payload = {
+                  codigo_maquina: code,
+                  nombre: name,
+                  descripcion: name,
+                  ubicacion: location,
+              };
+
+              if (machineMap.has(code)) {
+                  await base44.entities.MachineMasterDatabase.update(machineMap.get(code), payload);
+                  updated++;
+              } else {
+                  await base44.entities.MachineMasterDatabase.create(payload);
+                  created++;
+              }
+          }
+
+          const msg = `Catálogo sincronizado: ${created} nuevas, ${updated} actualizadas.`;
+          if (!background) toast.success(msg, { id: toastId });
+          else console.log(msg);
+      } catch (error) {
+          console.error("Error syncing machines:", error);
+          if (!background) toast.error("Error sincronizando máquinas.", { id: toastId });
+      }
+  };
+
   const fetchOrders = async () => {
     setLoading(true);
-    const toastId = toast.loading("Obteniendo datos crudos de CDEApp...");
+    const toastId = toast.loading("Sincronizando datos con CDEApp...");
+    
     try {
-      const response = await cdeApp.syncProductions();
+      // Execute in parallel: Fetch Productions and Sync Machines
+      const [response] = await Promise.all([
+          cdeApp.syncProductions(),
+          syncMachinesToLocalDB(true)
+      ]);
+
       let data = [];
       
       if (Array.isArray(response)) {
@@ -300,13 +366,13 @@ export default function OrderImport() {
           <p className="text-muted-foreground">Vista de datos crudos con filtrado avanzado y guardado.</p>
         </div>
         <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchOrders} disabled={loading}>
-            {loading ? "Cargando..." : (
-                <>
-                <Download className="mr-2 h-4 w-4" />
-                Obtener Datos
-                </>
-            )}
+            <Button variant="outline" onClick={() => syncMachinesToLocalDB(false)} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Sincronizar Máquinas
+            </Button>
+            <Button onClick={fetchOrders} disabled={loading}>
+              {loading ? <Download className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Obtener Datos Crudos
             </Button>
             <Button onClick={saveOrders} disabled={saving || filteredOrders.length === 0}>
             {saving ? "Guardando..." : (
