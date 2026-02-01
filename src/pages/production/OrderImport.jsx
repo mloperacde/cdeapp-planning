@@ -289,22 +289,8 @@ export default function OrderImport() {
       }
 
       if (data.length > 0) {
-        const allKeys = new Set();
-        data.forEach(item => {
-            if (item && typeof item === 'object') {
-                Object.keys(item).forEach(k => allKeys.add(k));
-            }
-        });
-        const detectedKeys = Array.from(allKeys);
-        const sortedKeys = detectedKeys.sort((a, b) => {
-            const idxA = COLUMN_DISPLAY_ORDER.indexOf(a);
-            const idxB = COLUMN_DISPLAY_ORDER.indexOf(b);
-            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-            if (idxA !== -1) return -1;
-            if (idxB !== -1) return 1;
-            return a.localeCompare(b);
-        });
-        setColumns(sortedKeys);
+        // Force column order based on user specification
+        setColumns(COLUMN_DISPLAY_ORDER);
       }
 
       setRawOrders(data);
@@ -460,9 +446,9 @@ export default function OrderImport() {
               const chunk = filteredOrders.slice(i, i + CHUNK_SIZE);
               
               await Promise.all(chunk.map(async (row) => {
-                  const orderNumber = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'order_number'));
-                  const machineName = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'machine_name'));
-                  const machineIdSource = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'machine_id_source'));
+                  const orderNumber = row.order_number;
+                  const machineName = row.machine_name;
+                  const machineIdSource = row.machine_id_source;
 
                   // Intentar resolver ID de máquina
                   let machineId = null;
@@ -489,35 +475,35 @@ export default function OrderImport() {
                       machine_id: machineId,
                       status: 'Pendiente',
                       // Map other fields
-                      production_id: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'production_id')),
+                      production_id: row.production_id,
                       machine_id_source: machineIdSource,
-                      priority: parseInt(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'priority'))) || 0,
-                      quantity: parseInt(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'quantity'))) || 0,
-                      notes: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'notes')) || '',
-                      client_name: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'client_name')),
-                      product_name: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_name')),
-                      product_article_code: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_article_code')),
-                      planned_end_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'planned_end_date')),
-                      type: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'type')),
-                      room: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'room')),
-                      client_order_ref: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'client_order_ref')),
-                      internal_order_ref: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'internal_order_ref')),
-                      article_status: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'article_status')),
-                      material: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'material')),
-                      product_family: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_family')),
-                      shortages: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'shortages')),
-                      committed_delivery_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'committed_delivery_date')),
-                      new_delivery_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'new_delivery_date')),
-                      delivery_compliance: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'delivery_compliance')),
-                      multi_unit: parseInt(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'multi_unit'))) || 0,
-                      multi_qty: parseFloat(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'multi_qty'))) || 0,
-                      production_cadence: parseFloat(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'production_cadence'))) || 0,
-                      delay_reason: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'delay_reason')),
-                      components_deadline: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'components_deadline')),
-                      start_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'start_date')),
-                      start_date_simple: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'start_date_simple')),
-                      modified_start_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'modified_start_date')),
-                      end_date_simple: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'end_date_simple'))
+                      priority: parseInt(row.priority) || 0,
+                      quantity: parseInt(row.quantity) || 0,
+                      notes: row.notes || '',
+                      client_name: row.client_name,
+                      product_name: row.product_name,
+                      product_article_code: row.product_article_code,
+                      planned_end_date: row.planned_end_date,
+                      type: row.type,
+                      room: row.room,
+                      client_order_ref: row.client_order_ref,
+                      internal_order_ref: row.internal_order_ref,
+                      article_status: row.article_status,
+                      material: row.material,
+                      product_family: row.product_family,
+                      shortages: row.shortages,
+                      committed_delivery_date: row.committed_delivery_date,
+                      new_delivery_date: row.new_delivery_date,
+                      delivery_compliance: row.delivery_compliance,
+                      multi_unit: parseInt(row.multi_unit) || 0,
+                      multi_qty: parseFloat(row.multi_qty) || 0,
+                      production_cadence: parseFloat(row.production_cadence) || 0,
+                      delay_reason: row.delay_reason,
+                      components_deadline: row.components_deadline,
+                      start_date: row.start_date,
+                      start_date_simple: row.start_date_simple,
+                      modified_start_date: row.modified_start_date,
+                      end_date_simple: row.end_date_simple
                   };
 
                   try {

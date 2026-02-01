@@ -271,32 +271,6 @@ export const SyncService = {
       // Or we process all with delays. User said "reescribiran los datos", implies full sync.
       // We will use the chunked approach.
       
-      const SYSTEM_FIELDS_ALIASES = {
-        order_number: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN'],
-        machine_name: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso'],
-        machine_id_source: ['machine_id', 'id_maquina', 'MACHINE_ID'],
-        priority: ['Prioridad', 'priority', 'urgencia'],
-        status: ['Estado', 'status', 'situacion'],
-        production_id: ['production_id', 'id', 'PRODUCTION_ID'],
-        quantity: ['Cantidad', 'quantity', 'qty'],
-        notes: ['Observación', 'notes', 'notas'],
-        client_name: ['Cliente', 'client_name'],
-        product_name: ['Nombre', 'Descripción', 'product_name'],
-        product_article_code: ['Artículo', 'product_article_code'],
-        planned_end_date: ['Fecha Fin', 'planned_end_date']
-      };
-
-      const extract = (row, field) => {
-          const aliases = SYSTEM_FIELDS_ALIASES[field] || [];
-          for (const key of aliases) {
-              if (row[key] !== undefined) return row[key];
-              const kLower = key.toLowerCase();
-              const found = Object.keys(row).find(k => k.toLowerCase() === kLower);
-              if (found) return row[found];
-          }
-          return undefined;
-      };
-
       const CHUNK_SIZE = 1; // Reduced to 1 to minimize burst rate
       const CHUNK_DELAY = 1500; // Increased delay to 1.5s
 
@@ -304,8 +278,8 @@ export const SyncService = {
           const chunk = data.slice(i, i + CHUNK_SIZE);
           
           await Promise.all(chunk.map(async (row) => {
-              const orderNumber = extract(row, 'order_number');
-              const machineName = extract(row, 'machine_name');
+              const orderNumber = row.order_number;
+              const machineName = row.machine_name;
               
               let machineId = null;
               if (machineName) {
@@ -333,36 +307,36 @@ export const SyncService = {
               const payload = {
                   order_number: String(orderNumber),
                   machine_id: machineId,
-                  status: extract(row, 'status') || 'Pendiente',
-                  production_id: extract(row, 'production_id'),
-                  machine_id_source: extract(row, 'machine_id_source'),
-                  priority: parseInt(extract(row, 'priority')) || 0,
-                  quantity: parseInt(extract(row, 'quantity')) || 0,
-                  notes: extract(row, 'notes') || '',
-                  client_name: extract(row, 'client_name'),
-                  product_name: extract(row, 'product_name'),
-                  product_article_code: extract(row, 'product_article_code'),
-                  planned_end_date: extract(row, 'planned_end_date'),
-                  type: extract(row, 'type'),
-                  room: extract(row, 'room'),
-                  client_order_ref: extract(row, 'client_order_ref'),
-                  internal_order_ref: extract(row, 'internal_order_ref'),
-                  article_status: extract(row, 'article_status'),
-                  material: extract(row, 'material'),
-                  product_family: extract(row, 'product_family'),
-                  shortages: extract(row, 'shortages'),
-                  committed_delivery_date: extract(row, 'committed_delivery_date'),
-                  new_delivery_date: extract(row, 'new_delivery_date'),
-                  delivery_compliance: extract(row, 'delivery_compliance'),
-                  multi_unit: parseInt(extract(row, 'multi_unit')) || 0,
-                  multi_qty: parseFloat(extract(row, 'multi_qty')) || 0,
-                  production_cadence: parseFloat(extract(row, 'production_cadence')) || 0,
-                  delay_reason: extract(row, 'delay_reason'),
-                  components_deadline: extract(row, 'components_deadline'),
-                  start_date: extract(row, 'start_date'),
-                  start_date_simple: extract(row, 'start_date_simple'),
-                  modified_start_date: extract(row, 'modified_start_date'),
-                  end_date_simple: extract(row, 'end_date_simple')
+                  status: row.status || 'Pendiente',
+                  production_id: row.production_id,
+                  machine_id_source: row.machine_id_source,
+                  priority: parseInt(row.priority) || 0,
+                  quantity: parseInt(row.quantity) || 0,
+                  notes: row.notes || '',
+                  client_name: row.client_name,
+                  product_name: row.product_name,
+                  product_article_code: row.product_article_code,
+                  planned_end_date: row.planned_end_date,
+                  type: row.type,
+                  room: row.room,
+                  client_order_ref: row.client_order_ref,
+                  internal_order_ref: row.internal_order_ref,
+                  article_status: row.article_status,
+                  material: row.material,
+                  product_family: row.product_family,
+                  shortages: row.shortages,
+                  committed_delivery_date: row.committed_delivery_date,
+                  new_delivery_date: row.new_delivery_date,
+                  delivery_compliance: row.delivery_compliance,
+                  multi_unit: parseInt(row.multi_unit) || 0,
+                  multi_qty: parseFloat(row.multi_qty) || 0,
+                  production_cadence: parseFloat(row.production_cadence) || 0,
+                  delay_reason: row.delay_reason,
+                  components_deadline: row.components_deadline,
+                  start_date: row.start_date,
+                  start_date_simple: row.start_date_simple,
+                  modified_start_date: row.modified_start_date,
+                  end_date_simple: row.end_date_simple
               };
 
               try {
