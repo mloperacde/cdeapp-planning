@@ -79,6 +79,57 @@ export default function OrderImport() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
+  useEffect(() => {
+    fetchLocalData();
+  }, []);
+
+  const fetchLocalData = async () => {
+    setLoading(true);
+    try {
+        // Fetch saved orders and machines to hydrate names
+        const [ordersRes, machinesRes] = await Promise.all([
+            base44.entities.WorkOrder.list(undefined, 2000), 
+            base44.entities.MachineMasterDatabase.list(undefined, 2000)
+        ]);
+        
+        const orders = Array.isArray(ordersRes) ? ordersRes : (ordersRes.items || []);
+        const machines = Array.isArray(machinesRes) ? machinesRes : (machinesRes.items || []);
+        
+        const machinesMap = new Map();
+        machines.forEach(m => machinesMap.set(m.id, m.nombre || m.codigo_maquina));
+
+        if (orders.length > 0) {
+            const formattedOrders = orders.map(o => ({
+                ...o,
+                machine_name: machinesMap.get(o.machine_id) || o.machine_id_source || 'Unknown',
+            }));
+            
+            setRawOrders(formattedOrders);
+            
+            const allKeys = new Set();
+            formattedOrders.forEach(item => Object.keys(item).forEach(k => allKeys.add(k)));
+            setColumns(Array.from(allKeys));
+            
+            // Set lastSyncTime from newest updated_at or created_at
+            const newest = orders.reduce((prev, curr) => {
+                const prevDate = new Date(prev.updated_at || prev.created_at || 0);
+                const currDate = new Date(curr.updated_at || curr.created_at || 0);
+                return prevDate > currDate ? prev : curr;
+            }, orders[0]);
+            
+            if (newest) {
+                const dateVal = newest.updated_at || newest.created_at;
+                if (dateVal) setLastSyncTime(new Date(dateVal));
+            }
+        }
+    } catch (e) {
+        console.error("Error loading local data", e);
+        toast.error("Error cargando datos guardados.");
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const syncMachinesToLocalDB = async (background = false) => {
       const toastId = background ? null : toast.loading("Sincronizando catálogo de máquinas...");
       try {
