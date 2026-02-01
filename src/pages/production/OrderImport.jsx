@@ -458,14 +458,31 @@ export default function OrderImport() {
              return;
           }
 
-          // Delete in batches
-          const CHUNK = 50;
+          // Delete in batches (Safe mode to avoid 429)
+          const CHUNK = 5; 
           let processed = 0;
+          
+          const deleteWithRetry = async (id, retries = 3, delay = 1000) => {
+             try {
+                 await base44.entities.WorkOrder.delete(id);
+             } catch (e) {
+                 if (retries > 0 && (e.status === 429 || (e.message && e.message.includes('429')))) {
+                     await new Promise(r => setTimeout(r, delay));
+                     return deleteWithRetry(id, retries - 1, delay * 2);
+                 }
+                 throw e;
+             }
+          };
+
           for (let i = 0; i < allItems.length; i += CHUNK) {
              const chunk = allItems.slice(i, i + CHUNK);
-             await Promise.all(chunk.map(item => base44.entities.WorkOrder.delete(item.id)));
+             await Promise.all(chunk.map(item => deleteWithRetry(item.id)));
+             
              processed += chunk.length;
              setProgress(Math.round((processed / allItems.length) * 100));
+             
+             // Add delay between chunks
+             await new Promise(r => setTimeout(r, 500));
           }
           
           setRawOrders([]); // Clear local view
