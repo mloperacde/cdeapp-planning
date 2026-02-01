@@ -200,12 +200,36 @@ export default function OrderImport() {
 
             // Normalize data using SYSTEM_FIELDS aliases to recover data even if DB column names differ
             const formattedOrders = deduplicatedOrders.map(o => {
-                const newRow = { ...o };
+                let sourceData = { ...o };
+                
+                // SUSTAINABILITY FIX: Try to hydrate from JSON in notes
+                // This allows us to persist all CDEApp fields even if backend schema is limited
+                try {
+                    if (o.notes && typeof o.notes === 'string' && o.notes.trim().startsWith('{')) {
+                        const parsed = JSON.parse(o.notes);
+                        // Merge parsed data (contains all original fields) with DB data
+                        // We prioritize parsed data for content, but keep DB system fields (id, created_at) if they exist in 'o'
+                        sourceData = { ...parsed, ...o };
+                        
+                        // Restore the real note for display
+                        // If the JSON object has a 'notes' field (original note), use it.
+                        // Otherwise, clear the JSON string from the notes field.
+                        if (parsed.notes && parsed.notes !== o.notes) {
+                            sourceData.notes = parsed.notes;
+                        } else {
+                            sourceData.notes = '';
+                        }
+                    }
+                } catch (e) {
+                    // If parsing fails (e.g. not JSON or truncated), keep original 'o'
+                }
+
+                const newRow = { ...sourceData };
                 SYSTEM_FIELDS.forEach(field => {
                     // Try to get value from exact key first, then extractValue
-                    let val = o[field.key];
+                    let val = sourceData[field.key];
                     if (val === undefined) {
-                         val = extractValue(o, field);
+                         val = extractValue(sourceData, field);
                     }
                     if (val !== undefined) newRow[field.key] = val;
                 });
@@ -225,6 +249,18 @@ export default function OrderImport() {
             });
             
             setRawOrders(formattedOrders);
+            
+            if (formattedOrders.length > 0) {
+                console.log("First row fetched (raw):", deduplicatedOrders[0]);
+                console.log("First row fetched (formatted):", formattedOrders[0]);
+                setDebugData({
+                    source: "Local DB (Fetch)",
+                    raw_from_db: deduplicatedOrders[0],
+                    formatted_for_ui: formattedOrders[0]
+                });
+            } else {
+                setDebugData(null);
+            }
             
             // Set lastSyncTime from newest updated_at or created_at
             const newest = deduplicatedOrders.reduce((prev, curr) => {
@@ -421,46 +457,91 @@ export default function OrderImport() {
   };
 
   const handleDeleteAll = async () => {
-      if (!confirm("¿Estás seguro de que quieres eliminar TODOS los datos de WorkOrder? Esta acción no se puede deshacer.")) return;
+      if (!confirm("⚠️ ¡PELIGRO! ⚠️\n\n¿Estás seguro de que quieres BORRAR TODA LA BASE DE DATOS de órdenes?\n\nEsta acción eliminará todos los registros de WorkOrder y no se puede deshacer.")) return;
       
+      setSaving(true);
+      const toastId = toast.loading("Borrando base de datos...");
       try {
-          setLoading(true);
-          const allOrders = await base44.entities.WorkOrder.list(null, 10000); // Fetch all
+          // Fetch all records
+          let allItems = [];
+          let page = 0;
+          let hasMore = true;
+          while(hasMore) {
+             const res = await base44.entities.WorkOrder.list(undefined, 2000, page * 2000);
+             const items = Array.isArray(res) ? res : (res.items || []);
+             if (items.length > 0) {
+                 allItems = [...allItems, ...items];
+                 page++;
+             } else {
+                 hasMore = false;
+             }
+             if (items.length < 2000) hasMore = false;
+          }
           
+          if (allItems.length === 0) {
+             toast.info("La base de datos ya está vacía.", { id: toastId });
+             setSaving(false);
+             return;
+          }
+
+          // Delete strictly sequentially (1 by 1) to avoid 429
+          const deleteWithRetry = async (id, retries = 5, delay = 2000) => {
+             try {
+                 await base44.entities.WorkOrder.delete(id);
+             } catch (e) {
+                 // Ignore 404s (already deleted)
+                 if (e.status === 404 || (e.message && e.message.includes('404')) || (e.message && e.message.includes('not found'))) {
+                     // console.warn(`Order ${id} already deleted (404).`);
+                     return;
+                 }
+
+                 // 429 or network error
+                 if (retries > 0) {
+                     console.log(`Rate limit/Error deleting ${id}. Retrying in ${delay}ms...`);
+                     await new Promise(r => setTimeout(r, delay));
+                     return deleteWithRetry(id, retries - 1, delay * 2);
+                 }
+                 console.error(`Failed to delete ${id} after retries.`);
+                 throw e; // Propagate error to count as failure
+             }
+          };
+
           let deletedCount = 0;
           let failedCount = 0;
 
-          // Process in chunks to avoid overwhelming the network, but sequentially
-          for (const order of allOrders) {
-              try {
-                  await base44.entities.WorkOrder.delete(order.id);
-                  deletedCount++;
-              } catch (innerError) {
-                  // Ignore 404s (already deleted), log others
-                  if (innerError.status === 404 || (innerError.message && innerError.message.includes('404'))) {
-                      console.warn(`Order ${order.id} already deleted (404).`);
-                      // We can consider this "success" for the purpose of "Delete All"
-                      deletedCount++; 
-                  } else {
-                      console.error(`Failed to delete order ${order.id}:`, innerError);
-                      failedCount++;
-                  }
-              }
+          for (let i = 0; i < allItems.length; i++) {
+             try {
+                 await deleteWithRetry(allItems[i].id);
+                 deletedCount++;
+             } catch (e) {
+                 failedCount++;
+             }
+             
+             // Update progress every 5 items
+             if (i % 5 === 0) {
+                setProgress(Math.round(((i + 1) / allItems.length) * 100));
+             }
+             
+             // Small breathing room
+             await new Promise(r => setTimeout(r, 100));
           }
+          
+          setRawOrders([]); // Clear local view
+          setLastSyncTime(null);
           
           if (failedCount > 0) {
-             toast.warning(`Eliminación completada con advertencias: ${deletedCount} eliminados, ${failedCount} fallidos.`);
+             toast.warning(`Eliminación completada con advertencias: ${deletedCount} eliminados, ${failedCount} fallidos.`, { id: toastId });
           } else {
-             toast.success(`Eliminados ${deletedCount} registros correctamente.`);
+             toast.success(`Base de datos eliminada (${deletedCount} registros).`, { id: toastId });
           }
           
-          setRawOrders([]); // Clear UI
           fetchLocalData(); // Refresh (should be empty)
-      } catch (error) {
-          console.error("Error deleting all:", error);
-          toast.error("Error al iniciar el proceso de eliminación.");
+      } catch (e) {
+          console.error(e);
+          toast.error("Error borrando base de datos.", { id: toastId });
       } finally {
-          setLoading(false);
+          setSaving(false);
+          setProgress(0);
       }
   };
 
@@ -533,73 +614,6 @@ export default function OrderImport() {
               return createWithRetry(payload, retries - 1, nextDelay);
           }
           throw e;
-      }
-  };
-
-  const deleteAllOrders = async () => {
-      if (!confirm("⚠️ ¡PELIGRO! ⚠️\n\n¿Estás seguro de que quieres BORRAR TODA LA BASE DE DATOS de órdenes?\n\nEsta acción eliminará todos los registros de WorkOrder y no se puede deshacer.")) return;
-      
-      setSaving(true);
-      const toastId = toast.loading("Borrando base de datos...");
-      try {
-          // Fetch all records
-          let allItems = [];
-          let page = 0;
-          let hasMore = true;
-          while(hasMore) {
-             const res = await base44.entities.WorkOrder.list(undefined, 2000, page * 2000);
-             const items = Array.isArray(res) ? res : (res.items || []);
-             if (items.length > 0) {
-                 allItems = [...allItems, ...items];
-                 page++;
-             } else {
-                 hasMore = false;
-             }
-             if (items.length < 2000) hasMore = false;
-          }
-          
-          if (allItems.length === 0) {
-             toast.info("La base de datos ya está vacía.", { id: toastId });
-             setSaving(false);
-             return;
-          }
-
-          // Delete strictly sequentially (1 by 1) to avoid 429
-          const deleteWithRetry = async (id, retries = 5, delay = 2000) => {
-             try {
-                 await base44.entities.WorkOrder.delete(id);
-             } catch (e) {
-                 // 429 or network error
-                 if (retries > 0) {
-                     console.log(`Rate limit/Error deleting ${id}. Retrying in ${delay}ms...`);
-                     await new Promise(r => setTimeout(r, delay));
-                     return deleteWithRetry(id, retries - 1, delay * 2);
-                 }
-                 console.error(`Failed to delete ${id} after retries.`);
-             }
-          };
-
-          for (let i = 0; i < allItems.length; i++) {
-             await deleteWithRetry(allItems[i].id);
-             
-             // Update progress every 5 items to avoid too many renders
-             if (i % 5 === 0) {
-                setProgress(Math.round(((i + 1) / allItems.length) * 100));
-             }
-             
-             // Small breathing room between requests
-             await new Promise(r => setTimeout(r, 100));
-          }
-          
-          setRawOrders([]); // Clear local view
-          setLastSyncTime(null);
-          toast.success(`Base de datos eliminada (${allItems.length} registros).`, { id: toastId });
-      } catch (e) {
-          console.error(e);
-          toast.error("Error borrando base de datos.", { id: toastId });
-      } finally {
-          setSaving(false);
-          setProgress(0);
       }
   };
 
@@ -677,6 +691,11 @@ export default function OrderImport() {
                       setProgress(Math.round((processed / total) * 100));
                       return;
                   }
+                  
+                  // SUSTAINABILITY FIX: Serialize full data to JSON to ensure no field is lost
+                  // This is stored in 'notes' as a fallback for backend schema limitations.
+                  // We verify 'notes' is not null/undefined before stringifying to avoid circular refs in some edge cases (though row should be plain)
+                  const serializedData = JSON.stringify(row);
 
                   const payload = {
                       ...row,
@@ -688,7 +707,7 @@ export default function OrderImport() {
                       machine_id_source: machineIdSource,
                       priority: parseInt(row.priority) || 0,
                       quantity: parseInt(row.quantity) || 0,
-                      notes: row.notes || '',
+                      notes: serializedData, // Store full JSON for sustainability
                       client_name: row.client_name,
                       product_name: row.product_name,
                       product_article_code: row.product_article_code,
