@@ -498,7 +498,26 @@ export default function OrderImport() {
                       product_name: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_name')),
                       product_article_code: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_article_code')),
                       planned_end_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'planned_end_date')),
-                      // Add more fields as needed based on schema
+                      type: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'type')),
+                      room: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'room')),
+                      client_order_ref: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'client_order_ref')),
+                      internal_order_ref: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'internal_order_ref')),
+                      article_status: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'article_status')),
+                      material: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'material')),
+                      product_family: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_family')),
+                      shortages: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'shortages')),
+                      committed_delivery_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'committed_delivery_date')),
+                      new_delivery_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'new_delivery_date')),
+                      delivery_compliance: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'delivery_compliance')),
+                      multi_unit: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'multi_unit')),
+                      multi_qty: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'multi_qty')),
+                      production_cadence: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'production_cadence')),
+                      delay_reason: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'delay_reason')),
+                      components_deadline: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'components_deadline')),
+                      start_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'start_date')),
+                      start_date_simple: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'start_date_simple')),
+                      modified_start_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'modified_start_date')),
+                      end_date_simple: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'end_date_simple'))
                   };
 
                   try {

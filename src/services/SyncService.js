@@ -343,6 +343,26 @@ export const SyncService = {
                   product_name: extract(row, 'product_name'),
                   product_article_code: extract(row, 'product_article_code'),
                   planned_end_date: extract(row, 'planned_end_date'),
+                  type: extract(row, 'type'),
+                  room: extract(row, 'room'),
+                  client_order_ref: extract(row, 'client_order_ref'),
+                  internal_order_ref: extract(row, 'internal_order_ref'),
+                  article_status: extract(row, 'article_status'),
+                  material: extract(row, 'material'),
+                  product_family: extract(row, 'product_family'),
+                  shortages: extract(row, 'shortages'),
+                  committed_delivery_date: extract(row, 'committed_delivery_date'),
+                  new_delivery_date: extract(row, 'new_delivery_date'),
+                  delivery_compliance: extract(row, 'delivery_compliance'),
+                  multi_unit: extract(row, 'multi_unit'),
+                  multi_qty: extract(row, 'multi_qty'),
+                  production_cadence: extract(row, 'production_cadence'),
+                  delay_reason: extract(row, 'delay_reason'),
+                  components_deadline: extract(row, 'components_deadline'),
+                  start_date: extract(row, 'start_date'),
+                  start_date_simple: extract(row, 'start_date_simple'),
+                  modified_start_date: extract(row, 'modified_start_date'),
+                  end_date_simple: extract(row, 'end_date_simple')
               };
 
               try {
