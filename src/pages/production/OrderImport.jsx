@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -68,6 +69,7 @@ export default function OrderImport() {
   const [rawOrders, setRawOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [columns, setColumns] = useState([]);
   
   // Filtering & Search State
@@ -259,6 +261,22 @@ export default function OrderImport() {
      return null; // Placeholder, logic inside saveOrders
   };
 
+  const createWithRetry = async (payload, retries = 3, delay = 1000) => {
+      try {
+          return await base44.entities.WorkOrder.create(payload);
+      } catch (e) {
+          // Check for Rate Limit (429) or other transient errors
+          const isRateLimit = e.status === 429 || (e.message && e.message.includes('Rate limit')) || (e.message && e.message.includes('429'));
+          
+          if (retries > 0 && isRateLimit) {
+              // Exponential backoff
+              await new Promise(r => setTimeout(r, delay));
+              return createWithRetry(payload, retries - 1, delay * 2);
+          }
+          throw e;
+      }
+  };
+
   const saveOrders = async () => {
       if (filteredOrders.length === 0) {
           toast.warning("No hay órdenes visibles para guardar.");
@@ -268,6 +286,7 @@ export default function OrderImport() {
       if (!confirm(`Se van a guardar ${filteredOrders.length} registros visibles. ¿Continuar?`)) return;
 
       setSaving(true);
+      setProgress(0);
       const toastId = toast.loading("Preparando datos para guardar...");
 
       try {
@@ -294,57 +313,77 @@ export default function OrderImport() {
 
           let successCount = 0;
           let failCount = 0;
+          let processed = 0;
+          const total = filteredOrders.length;
+          
+          // Batch configuration
+          const CHUNK_SIZE = 5; // Process 5 at a time
+          const CHUNK_DELAY = 200; // ms delay between chunks
 
-          // 2. Procesar y Guardar
-          for (const row of filteredOrders) {
-              const orderNumber = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'order_number'));
-              const machineName = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'machine_name'));
-              const machineIdSource = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'machine_id_source'));
+          // 2. Procesar y Guardar por lotes
+          for (let i = 0; i < total; i += CHUNK_SIZE) {
+              const chunk = filteredOrders.slice(i, i + CHUNK_SIZE);
+              
+              await Promise.all(chunk.map(async (row) => {
+                  const orderNumber = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'order_number'));
+                  const machineName = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'machine_name'));
+                  const machineIdSource = extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'machine_id_source'));
 
-              // Intentar resolver ID de máquina
-              let machineId = null;
-              if (machineName) {
-                  const s = String(machineName).toLowerCase().trim();
-                  if (machinesMap.has(s)) machineId = machinesMap.get(s);
-                  // Intento split simple "Code - Name"
-                  else if (s.includes(' - ')) {
-                       const parts = s.split(' - ');
-                       if (machinesMap.has(parts[0].trim())) machineId = machinesMap.get(parts[0].trim());
+                  // Intentar resolver ID de máquina
+                  let machineId = null;
+                  if (machineName) {
+                      const s = String(machineName).toLowerCase().trim();
+                      if (machinesMap.has(s)) machineId = machinesMap.get(s);
+                      // Intento split simple "Code - Name"
+                      else if (s.includes(' - ')) {
+                          const parts = s.split(' - ');
+                          if (machinesMap.has(parts[0].trim())) machineId = machinesMap.get(parts[0].trim());
+                      }
                   }
-              }
 
-              if (!orderNumber || !machineId) {
-                  console.warn("Skipping invalid order:", row);
-                  failCount++;
-                  continue;
-              }
+                  if (!orderNumber || !machineId) {
+                      console.warn("Skipping invalid order:", row);
+                      failCount++;
+                      processed++;
+                      setProgress(Math.round((processed / total) * 100));
+                      return;
+                  }
 
-              const payload = {
-                  order_number: String(orderNumber),
-                  machine_id: machineId,
-                  status: 'Pendiente',
-                  // Map other fields
-                  production_id: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'production_id')),
-                  machine_id_source: machineIdSource,
-                  priority: parseInt(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'priority'))) || 0,
-                  quantity: parseInt(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'quantity'))) || 0,
-                  notes: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'notes')) || '',
-                  client_name: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'client_name')),
-                  product_name: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_name')),
-                  product_article_code: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_article_code')),
-                  planned_end_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'planned_end_date')),
-                  // Add more fields as needed based on schema
-              };
+                  const payload = {
+                      order_number: String(orderNumber),
+                      machine_id: machineId,
+                      status: 'Pendiente',
+                      // Map other fields
+                      production_id: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'production_id')),
+                      machine_id_source: machineIdSource,
+                      priority: parseInt(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'priority'))) || 0,
+                      quantity: parseInt(extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'quantity'))) || 0,
+                      notes: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'notes')) || '',
+                      client_name: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'client_name')),
+                      product_name: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_name')),
+                      product_article_code: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'product_article_code')),
+                      planned_end_date: extractValue(row, SYSTEM_FIELDS.find(f => f.key === 'planned_end_date')),
+                      // Add more fields as needed based on schema
+                  };
 
-              try {
-                  // Check duplicate? For now, just create. 
-                  // Ideally we should use an upsert or check existence.
-                  // Simplest: Create. API might handle duplicates or create new.
-                  await base44.entities.WorkOrder.create(payload);
-                  successCount++;
-              } catch (e) {
-                  console.error("Error creating order:", payload, e);
-                  failCount++;
+                  try {
+                      // Check duplicate? For now, just create. 
+                      // Ideally we should use an upsert or check existence.
+                      // Simplest: Create. API might handle duplicates or create new.
+                      await createWithRetry(payload);
+                      successCount++;
+                  } catch (e) {
+                      console.error("Error creating order:", payload, e);
+                      failCount++;
+                  } finally {
+                      processed++;
+                      setProgress(Math.round((processed / total) * 100));
+                  }
+              }));
+
+              // Small delay between chunks to allow UI update and prevent rate limiting
+              if (i + CHUNK_SIZE < total) {
+                  await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
               }
           }
 
@@ -355,6 +394,7 @@ export default function OrderImport() {
           toast.error("Error general al guardar órdenes.", { id: toastId });
       } finally {
           setSaving(false);
+          setProgress(0);
       }
   };
 
@@ -386,6 +426,17 @@ export default function OrderImport() {
       </div>
 
       <div className="flex flex-col gap-4">
+          {/* Progress Bar */}
+          {saving && (
+              <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Guardando órdenes...</span>
+                      <span>{progress}%</span>
+                  </div>
+                  <Progress value={progress} className="h-2 w-full" />
+              </div>
+          )}
+
           {/* Search & Filter Bar */}
           <div className="flex flex-col md:flex-row gap-4 items-center bg-muted/20 p-4 rounded-lg border">
               <div className="relative w-full md:w-1/3">
