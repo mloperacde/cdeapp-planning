@@ -173,9 +173,10 @@ export default function OrderImport() {
 
             // Normalize data using SYSTEM_FIELDS aliases to recover data even if DB column names differ
             const formattedOrders = deduplicatedOrders.map(o => {
-                const newRow = {};
+                const newRow = { ...o };
                 SYSTEM_FIELDS.forEach(field => {
-                    newRow[field.key] = extractValue(o, field);
+                    const val = extractValue(o, field);
+                    if (val !== undefined) newRow[field.key] = val;
                 });
                 
                 // Specific overrides
@@ -301,9 +302,10 @@ export default function OrderImport() {
 
       // Normalize keys immediately to standard DB keys (handling Spanish/English mix)
       const normalize = (row) => {
-          const newRow = {};
+          const newRow = { ...row };
           SYSTEM_FIELDS.forEach(field => {
-              newRow[field.key] = extractValue(row, field);
+              const val = extractValue(row, field);
+              if (val !== undefined) newRow[field.key] = val;
           });
           
           // Specific overrides / Type conversions
@@ -428,6 +430,56 @@ export default function OrderImport() {
       }
   };
 
+  const deleteAllOrders = async () => {
+      if (!confirm("⚠️ ¡PELIGRO! ⚠️\n\n¿Estás seguro de que quieres BORRAR TODA LA BASE DE DATOS de órdenes?\n\nEsta acción eliminará todos los registros de WorkOrder y no se puede deshacer.")) return;
+      
+      setSaving(true);
+      const toastId = toast.loading("Borrando base de datos...");
+      try {
+          // Fetch all records
+          let allItems = [];
+          let page = 0;
+          let hasMore = true;
+          while(hasMore) {
+             const res = await base44.entities.WorkOrder.list(undefined, 2000, page * 2000);
+             const items = Array.isArray(res) ? res : (res.items || []);
+             if (items.length > 0) {
+                 allItems = [...allItems, ...items];
+                 page++;
+             } else {
+                 hasMore = false;
+             }
+             if (items.length < 2000) hasMore = false;
+          }
+          
+          if (allItems.length === 0) {
+             toast.info("La base de datos ya está vacía.", { id: toastId });
+             setSaving(false);
+             return;
+          }
+
+          // Delete in batches
+          const CHUNK = 50;
+          let processed = 0;
+          for (let i = 0; i < allItems.length; i += CHUNK) {
+             const chunk = allItems.slice(i, i + CHUNK);
+             await Promise.all(chunk.map(item => base44.entities.WorkOrder.delete(item.id)));
+             processed += chunk.length;
+             setProgress(Math.round((processed / allItems.length) * 100));
+          }
+          
+          setRawOrders([]); // Clear local view
+          setLastSyncTime(null);
+          toast.success(`Base de datos eliminada (${allItems.length} registros).`, { id: toastId });
+      } catch (e) {
+          console.error(e);
+          toast.error("Error borrando base de datos.", { id: toastId });
+      } finally {
+          setSaving(false);
+          setProgress(0);
+      }
+  };
+
   const saveOrders = async () => {
       if (filteredOrders.length === 0) {
           toast.warning("No hay órdenes visibles para guardar.");
@@ -504,6 +556,7 @@ export default function OrderImport() {
                   }
 
                   const payload = {
+                      ...row,
                       order_number: String(orderNumber),
                       machine_id: machineId,
                       status: 'Pendiente',
@@ -627,6 +680,10 @@ export default function OrderImport() {
             <Button onClick={fetchOrders} disabled={loading}>
               {loading ? <Download className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               Obtener Datos Crudos
+            </Button>
+            <Button variant="destructive" onClick={deleteAllOrders} disabled={saving}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                BORRAR BD
             </Button>
             <Button onClick={saveOrders} disabled={saving || filteredOrders.length === 0}>
             {saving ? "Guardando..." : (
