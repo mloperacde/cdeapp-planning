@@ -288,7 +288,48 @@ export default function OrderImport() {
            }
       }
 
+      // Normalize keys immediately to standard DB keys (handling Spanish/English mix)
+      const normalize = (row) => {
+          return {
+              order_number: String(row.order_number || row.Orden || row.numero_orden || row.wo || row.ORDEN || ''),
+              machine_name: row.machine_name || row.Máquina || row.maquina || row.machine || row.recurso,
+              machine_id_source: row.machine_id || row.id_maquina || row.MACHINE_ID, // source ID
+              status: row.status || row.Estado || row.situacion || 'Pendiente',
+              production_id: row.production_id || row.id || row.ID,
+              priority: parseInt(row.priority || row.Prioridad || row.urgencia) || 0,
+              quantity: parseInt(row.quantity || row.Cantidad || row.qty) || 0,
+              notes: row.notes || row.Observación || row.notas || row.comentarios || '',
+              client_name: row.client_name || row.Cliente,
+              product_name: row.product_name || row.Nombre || row.Descripción,
+              product_article_code: row.product_article_code || row.Artículo,
+              planned_end_date: row.planned_end_date || row['Fecha Fin'],
+              type: row.type || row.Tipo,
+              room: row.room || row.Sala,
+              client_order_ref: row.client_order_ref || row['Su Pedido'],
+              internal_order_ref: row.internal_order_ref || row.Pedido,
+              article_status: row.article_status || row['Edo. Art.'],
+              material: row.material || row.Material,
+              product_family: row.product_family || row.Producto,
+              shortages: row.shortages || row.Faltas,
+              committed_delivery_date: row.committed_delivery_date || row['Fecha Entrega'],
+              new_delivery_date: row.new_delivery_date || row['Nueva Fecha Entrega'],
+              delivery_compliance: row.delivery_compliance || row['Cumplimiento entrega'],
+              multi_unit: parseInt(row.multi_unit || row.MultUnid) || 0,
+              multi_qty: parseFloat(row.multi_qty || row['Mult x Cantidad']) || 0,
+              production_cadence: parseFloat(row.production_cadence || row.Cadencia) || 0,
+              delay_reason: row.delay_reason || row['Motivo Retraso'],
+              components_deadline: row.components_deadline || row['Fecha limite componentes'],
+              start_date: row.start_date || row['Fecha Inicio Limite'],
+              start_date_simple: row.start_date_simple || row['Fecha Inicio Limite Simple'],
+              modified_start_date: row.modified_start_date || row['Fecha Inicio Modificada'],
+              end_date_simple: row.end_date_simple || row['Fecha Fin Simple']
+          };
+      };
+
       if (data.length > 0) {
+        // Normalize all data immediately
+        data = data.map(normalize);
+        
         // Force column order based on user specification
         setColumns(COLUMN_DISPLAY_ORDER);
       }
