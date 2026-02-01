@@ -32,21 +32,21 @@ import { Label } from "@/components/ui/label";
 
 const SYSTEM_FIELDS = [
     { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID', 'IdProduccion', 'ID Produccion', 'Prod ID', 'id_produccion', 'ID'] },
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP', 'OrderNo', 'Order Number', 'Nº Orden'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code', 'Resource', 'W.C.', 'C.T.'] },
-    { key: 'machine_id_source', label: 'Machine ID (Origen)', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId', 'Machine ID', 'ID Maquina'] },
+    { key: 'machine_id_source', label: 'machine_id', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId', 'Machine ID', 'ID Maquina'] },
     { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia', 'PRIORIDAD', 'Priority', 'Rank', 'Ranking', 'Nivel', 'Level', 'Importancia', 'Sequence', 'Secuencia'] },
     { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type', 'TIPO', 'Type', 'Clase', 'Class', 'Kind', 'Categoria'] },
-    { key: 'status_source', label: 'Estado (Origen)', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO', 'Status', 'State', 'Condition', 'Situación'] },
+    { key: 'status', label: 'Estado', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO', 'Status', 'State', 'Condition', 'Situación', 'status_source'] },
     { key: 'room', label: 'Sala', aliases: ['Sala', 'room', 'SALA', 'Room', 'Nave', 'Zona', 'Zone', 'Area', 'Seccion'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code', 'Resource', 'W.C.', 'C.T.'] },
     { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente', 'Customer Order', 'Ref Cliente', 'Su No. Pedido'] },
     { key: 'internal_order_ref', label: 'Pedido', aliases: ['Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno', 'Ref Interna', 'Pedido Interno'] },
+    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP', 'OrderNo', 'Order Number', 'Nº Orden'] },
     { key: 'product_article_code', label: 'Artículo', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material', 'Part No', 'Part Number', 'Codigo Articulo', 'Referencia'] },
-    { key: 'product_name', label: 'Nombre / Descripción', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation', 'Item Name', 'Descripcion', 'Nombre Articulo'] },
+    { key: 'product_name', label: 'Nombre', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation', 'Item Name', 'Descripcion', 'Nombre Articulo'] },
     { key: 'article_status', label: 'Edo. Art.', aliases: ['Edo. Art.', 'article_status', 'Estado Articulo', 'Status Articulo', 'Item Status'] },
     { key: 'client_name', label: 'Cliente', aliases: ['Cliente', 'client_name', 'client', 'customer', 'empresa', 'razon_social', 'Customer', 'Client', 'Nombre Cliente'] },
     { key: 'material', label: 'Material', aliases: ['Material', 'material', 'Raw Material', 'Materia Prima', 'Compuesto', 'Compound'] },
-    { key: 'product_family', label: 'Producto (Familia)', aliases: ['Producto', 'product_family', 'Familia', 'Family', 'Product Family', 'Familia Producto'] },
+    { key: 'product_family', label: 'Producto', aliases: ['Producto', 'product_family', 'Familia', 'Family', 'Product Family', 'Familia Producto'] },
     { key: 'shortages', label: 'Faltas', aliases: ['Faltas', 'shortages', 'Missing', 'Faltantes', 'Shortage'] },
     { key: 'quantity', label: 'Cantidad', aliases: ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount', 'Cant', 'Unidades', 'Pcs'] },
     { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date'] },
@@ -63,6 +63,41 @@ const SYSTEM_FIELDS = [
     { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['Fecha Fin', 'planned_end_date', 'end_date', 'fin', 'End Date', 'Fecha Finalizacion'] },
     { key: 'end_date_simple', label: 'Fecha Fin Simple', aliases: ['Fecha Fin Simple'] },
     { key: 'notes', label: 'Observación', aliases: ['Observación', 'notes', 'notas', 'comentarios', 'Remarks', 'Comments', 'Observaciones', 'Nota'] }
+];
+
+const COLUMN_DISPLAY_ORDER = [
+    'production_id',
+    'machine_id_source',
+    'priority',
+    'type',
+    'status',
+    'room',
+    'machine_name',
+    'client_order_ref',
+    'internal_order_ref',
+    'order_number',
+    'product_article_code',
+    'product_name',
+    'article_status',
+    'client_name',
+    'material',
+    'product_family',
+    'shortages',
+    'quantity',
+    'committed_delivery_date',
+    'new_delivery_date',
+    'delivery_compliance',
+    'multi_unit',
+    'multi_qty',
+    'production_cadence',
+    'delay_reason',
+    'components_deadline',
+    'start_date',
+    'start_date_simple',
+    'modified_start_date',
+    'planned_end_date',
+    'end_date_simple',
+    'notes'
 ];
 
 export default function OrderImport() {
@@ -244,7 +279,16 @@ export default function OrderImport() {
                 Object.keys(item).forEach(k => allKeys.add(k));
             }
         });
-        setColumns(Array.from(allKeys));
+        const detectedKeys = Array.from(allKeys);
+        const sortedKeys = detectedKeys.sort((a, b) => {
+            const idxA = COLUMN_DISPLAY_ORDER.indexOf(a);
+            const idxB = COLUMN_DISPLAY_ORDER.indexOf(b);
+            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+            if (idxA !== -1) return -1;
+            if (idxB !== -1) return 1;
+            return a.localeCompare(b);
+        });
+        setColumns(sortedKeys);
       }
 
       setRawOrders(data);
