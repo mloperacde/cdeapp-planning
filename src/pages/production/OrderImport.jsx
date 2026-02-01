@@ -123,7 +123,8 @@ export default function OrderImport() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [columns, setColumns] = useState([]);
+  // Columns are fixed based on user requirement
+  const columns = COLUMN_DISPLAY_ORDER;
   
   // Filtering & Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -176,9 +177,6 @@ export default function OrderImport() {
             }));
             
             setRawOrders(formattedOrders);
-            
-            // Force column order based on user specification
-            setColumns(COLUMN_DISPLAY_ORDER);
             
             // Set lastSyncTime from newest updated_at or created_at
             const newest = deduplicatedOrders.reduce((prev, curr) => {
@@ -329,9 +327,6 @@ export default function OrderImport() {
       if (data.length > 0) {
         // Normalize all data immediately
         data = data.map(normalize);
-        
-        // Force column order based on user specification
-        setColumns(COLUMN_DISPLAY_ORDER);
       }
 
       setRawOrders(data);
@@ -477,6 +472,7 @@ export default function OrderImport() {
           let failCount = 0;
           let processed = 0;
           const total = filteredOrders.length;
+          const skippedItems = [];
           
           // Batch configuration
           const CHUNK_SIZE = 2; // Process 2 at a time (safer for rate limits)
@@ -504,7 +500,9 @@ export default function OrderImport() {
                   }
 
                   if (!orderNumber || !machineId) {
-                      console.warn("Skipping invalid order:", row);
+                      const reason = !orderNumber ? 'Falta número de orden' : `Máquina no encontrada: ${machineName || machineIdSource || 'N/A'}`;
+                      console.warn(`Skipping order: ${reason}`, row);
+                      skippedItems.push({ ...row, reason });
                       failCount++;
                       processed++;
                       setProgress(Math.round((processed / total) * 100));
@@ -587,6 +585,11 @@ export default function OrderImport() {
               if (i + CHUNK_SIZE < total) {
                   await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
               }
+          }
+          
+          if (skippedItems.length > 0) {
+              console.error("Registros omitidos:", skippedItems);
+              toast.warning(`${skippedItems.length} registros omitidos por falta de máquina o número de orden. Revise la consola.`, { duration: 10000 });
           }
 
           toast.success(`Guardado completado: ${successCount} creados, ${failCount} fallidos.`, { id: toastId });
