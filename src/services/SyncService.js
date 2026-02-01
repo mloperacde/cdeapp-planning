@@ -323,10 +323,9 @@ export const SyncService = {
               }
 
               // Check if exists
-              let existingId = null;
+              let existing = [];
               try {
-                  const found = await base44.entities.WorkOrder.filter({ order_number: String(orderNumber) });
-                  if (found && found.length > 0) existingId = found[0].id;
+                  existing = await base44.entities.WorkOrder.filter({ order_number: String(orderNumber) });
               } catch (e) {
                   // ignore
               }
@@ -347,9 +346,16 @@ export const SyncService = {
               };
 
               try {
-                  if (existingId) {
-                      await base44.entities.WorkOrder.update(existingId, payload);
+                  if (existing && existing.length > 0) {
+                      await base44.entities.WorkOrder.update(existing[0].id, payload);
                       updated++;
+                      
+                      // Cleanup duplicates
+                      if (existing.length > 1) {
+                          for (let k = 1; k < existing.length; k++) {
+                             try { await base44.entities.WorkOrder.delete(existing[k].id); } catch(e){}
+                          }
+                      }
                   } else {
                       await base44.entities.WorkOrder.create(payload);
                       created++;

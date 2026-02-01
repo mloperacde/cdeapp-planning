@@ -99,23 +99,42 @@ export default function OrderImport() {
         machines.forEach(m => machinesMap.set(m.id, m.nombre || m.codigo_maquina));
 
         if (orders.length > 0) {
-            const formattedOrders = orders.map(o => ({
+            // Deduplicate orders by order_number (keep most recent)
+            const uniqueOrders = new Map();
+            orders.forEach(o => {
+                if (!o.order_number) return;
+                const existing = uniqueOrders.get(o.order_number);
+                if (!existing) {
+                    uniqueOrders.set(o.order_number, o);
+                } else {
+                    const existingDate = new Date(existing.updated_at || existing.created_at || 0);
+                    const currentDate = new Date(o.updated_at || o.created_at || 0);
+                    if (currentDate > existingDate) {
+                        uniqueOrders.set(o.order_number, o);
+                    }
+                }
+            });
+
+            const deduplicatedOrders = Array.from(uniqueOrders.values());
+
+            const formattedOrders = deduplicatedOrders.map(o => ({
                 ...o,
                 machine_name: machinesMap.get(o.machine_id) || o.machine_id_source || 'Unknown',
             }));
             
             setRawOrders(formattedOrders);
             
+            // Collect all keys present in the data
             const allKeys = new Set();
             formattedOrders.forEach(item => Object.keys(item).forEach(k => allKeys.add(k)));
             setColumns(Array.from(allKeys));
             
             // Set lastSyncTime from newest updated_at or created_at
-            const newest = orders.reduce((prev, curr) => {
+            const newest = deduplicatedOrders.reduce((prev, curr) => {
                 const prevDate = new Date(prev.updated_at || prev.created_at || 0);
                 const currDate = new Date(curr.updated_at || curr.created_at || 0);
                 return prevDate > currDate ? prev : curr;
-            }, orders[0]);
+            }, deduplicatedOrders[0]);
             
             if (newest) {
                 const dateVal = newest.updated_at || newest.created_at;
@@ -423,13 +442,34 @@ export default function OrderImport() {
                   };
 
                   try {
-                      // Check duplicate? For now, just create. 
-                      // Ideally we should use an upsert or check existence.
-                      // Simplest: Create. API might handle duplicates or create new.
-                      await createWithRetry(payload);
-                      successCount++;
+                      // Check for existing order by order_number
+                      let existing = [];
+                      try {
+                        existing = await base44.entities.WorkOrder.filter({ order_number: String(orderNumber) });
+                      } catch (e) { /* ignore */ }
+
+                      if (existing && existing.length > 0) {
+                          // Update the first one
+                          await base44.entities.WorkOrder.update(existing[0].id, payload);
+                          successCount++; // Count as success (updated)
+                          
+                          // Delete duplicates if any (Cleanup)
+                          if (existing.length > 1) {
+                              for (let k = 1; k < existing.length; k++) {
+                                  try {
+                                      await base44.entities.WorkOrder.delete(existing[k].id);
+                                  } catch (delErr) {
+                                      console.warn("Error deleting duplicate:", existing[k].id, delErr);
+                                  }
+                              }
+                          }
+                      } else {
+                          // Create new
+                          await createWithRetry(payload);
+                          successCount++;
+                      }
                   } catch (e) {
-                      console.error("Error creating order:", payload, e);
+                      console.error("Error saving order:", payload, e);
                       failCount++;
                   } finally {
                       processed++;
@@ -616,7 +656,7 @@ export default function OrderImport() {
                         <TableHead className="w-[50px] bg-secondary font-bold text-xs h-8 text-secondary-foreground">#</TableHead>
                         {columns.map(col => (
                         <TableHead key={col} className="whitespace-nowrap font-bold text-xs h-8 px-2 bg-secondary text-secondary-foreground border-r border-secondary-foreground/10">
-                            {col}
+                            {SYSTEM_FIELDS.find(f => f.key === col)?.label || col}
                         </TableHead>
                         ))}
                     </TableRow>
