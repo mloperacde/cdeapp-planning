@@ -77,6 +77,7 @@ export default function OrderImport() {
   const [filters, setFilters] = useState([]);
   const [newFilter, setNewFilter] = useState({ column: "", operator: "contains", value: "" });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
 
   const syncMachinesToLocalDB = async (background = false) => {
       const toastId = background ? null : toast.loading("Sincronizando catálogo de máquinas...");
@@ -130,6 +131,7 @@ export default function OrderImport() {
           }
 
           const msg = `Catálogo sincronizado: ${created} nuevas, ${updated} actualizadas.`;
+          setLastSyncTime(new Date());
           if (!background) toast.success(msg, { id: toastId });
           else console.log(msg);
       } catch (error) {
@@ -261,7 +263,7 @@ export default function OrderImport() {
      return null; // Placeholder, logic inside saveOrders
   };
 
-  const createWithRetry = async (payload, retries = 3, delay = 1000) => {
+  const createWithRetry = async (payload, retries = 5, delay = 2000) => {
       try {
           return await base44.entities.WorkOrder.create(payload);
       } catch (e) {
@@ -269,9 +271,12 @@ export default function OrderImport() {
           const isRateLimit = e.status === 429 || (e.message && e.message.includes('Rate limit')) || (e.message && e.message.includes('429'));
           
           if (retries > 0 && isRateLimit) {
-              // Exponential backoff
-              await new Promise(r => setTimeout(r, delay));
-              return createWithRetry(payload, retries - 1, delay * 2);
+              // Exponential backoff with jitter
+              const jitter = Math.random() * 1000;
+              const nextDelay = delay * 1.5 + jitter;
+              console.log(`Rate limit hit. Retrying in ${Math.round(nextDelay)}ms... (${retries} left)`);
+              await new Promise(r => setTimeout(r, nextDelay));
+              return createWithRetry(payload, retries - 1, nextDelay);
           }
           throw e;
       }
@@ -317,8 +322,8 @@ export default function OrderImport() {
           const total = filteredOrders.length;
           
           // Batch configuration
-          const CHUNK_SIZE = 5; // Process 5 at a time
-          const CHUNK_DELAY = 200; // ms delay between chunks
+          const CHUNK_SIZE = 2; // Process 2 at a time (safer for rate limits)
+          const CHUNK_DELAY = 500; // 500ms delay between chunks
 
           // 2. Procesar y Guardar por lotes
           for (let i = 0; i < total; i += CHUNK_SIZE) {
@@ -404,6 +409,12 @@ export default function OrderImport() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Importación de Órdenes</h1>
           <p className="text-muted-foreground">Vista de datos crudos con filtrado avanzado y guardado.</p>
+          {lastSyncTime && (
+             <p className="text-xs text-green-600 flex items-center mt-1">
+               <RefreshCw className="h-3 w-3 mr-1" />
+               Catálogo de máquinas actualizado: {lastSyncTime.toLocaleTimeString()}
+             </p>
+          )}
         </div>
         <div className="flex gap-2">
             <Button variant="outline" onClick={() => syncMachinesToLocalDB(false)} disabled={loading}>
