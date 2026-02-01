@@ -30,39 +30,40 @@ import {
 } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 
+// Column Mapping Configuration
 const SYSTEM_FIELDS = [
-    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID', 'IdProduccion', 'ID Produccion', 'Prod ID', 'id_produccion', 'ID'] },
-    { key: 'machine_id_source', label: 'machine_id', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId', 'Machine ID', 'ID Maquina'] },
-    { key: 'priority', label: 'Prioridad', aliases: ['priority', 'Prioridad', 'urgencia', 'PRIORIDAD', 'Priority', 'Rank', 'Ranking', 'Nivel', 'Level', 'Importancia', 'Sequence', 'Secuencia'] },
-    { key: 'type', label: 'Tipo', aliases: ['type', 'Tipo', 'TIPO', 'Type', 'Clase', 'Class', 'Kind', 'Categoria'] },
-    { key: 'status', label: 'Estado', aliases: ['status', 'Estado', 'situacion', 'estatus', 'ESTADO', 'Status', 'State', 'Condition', 'Situación', 'status_source'] },
-    { key: 'room', label: 'Sala', aliases: ['room', 'Sala', 'SALA', 'Room', 'Nave', 'Zona', 'Zone', 'Area', 'Seccion'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['machine_name', 'Máquina', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code', 'Resource', 'W.C.', 'C.T.'] },
-    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['client_order_ref', 'Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente', 'Customer Order', 'Ref Cliente', 'Su No. Pedido'] },
-    { key: 'internal_order_ref', label: 'Pedido', aliases: ['internal_order_ref', 'Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno', 'Ref Interna', 'Pedido Interno'] },
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['order_number', 'Orden', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP', 'OrderNo', 'Order Number', 'Nº Orden'] },
-    { key: 'product_article_code', label: 'Artículo', aliases: ['product_article_code', 'Artículo', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material', 'Part No', 'Part Number', 'Codigo Articulo', 'Referencia'] },
-    { key: 'product_name', label: 'Nombre', aliases: ['product_name', 'Nombre', 'Descripción', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation', 'Item Name', 'Descripcion', 'Nombre Articulo'] },
-    { key: 'article_status', label: 'Edo. Art.', aliases: ['article_status', 'Edo. Art.', 'part_status', 'Estado Articulo', 'Status Articulo', 'Item Status'] },
+    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID', 'IdProduccion', 'ID Produccion', 'Prod ID', 'id_produccion', 'ID', 'Id. Produccion'] },
+    { key: 'machine_id_source', label: 'machine_id', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId', 'Machine ID', 'ID Maquina', 'Machine_Id'] },
+    { key: 'priority', label: 'Prioridad', aliases: ['priority', 'Prioridad', 'urgencia', 'PRIORIDAD', 'Priority', 'Rank', 'Ranking', 'Nivel', 'Level', 'Importancia', 'Sequence', 'Secuencia', 'Prioridad Produccion'] },
+    { key: 'type', label: 'Tipo', aliases: ['type', 'Tipo', 'TIPO', 'Type', 'Clase', 'Class', 'Kind', 'Categoria', 'Tipo Orden', 'Order Type'] },
+    { key: 'status', label: 'Estado', aliases: ['status', 'Estado', 'situacion', 'estatus', 'ESTADO', 'Status', 'State', 'Condition', 'Situación', 'status_source', 'Status Orden'] },
+    { key: 'room', label: 'Sala', aliases: ['room', 'Sala', 'SALA', 'Room', 'Nave', 'Zona', 'Zone', 'Area', 'Seccion', 'Ubicacion', 'Location', 'Sala Produccion'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['machine_name', 'Máquina', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code', 'Resource', 'W.C.', 'C.T.', 'Nombre Maquina'] },
+    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['client_order_ref', 'Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente', 'Customer Order', 'Ref Cliente', 'Su No. Pedido', 'Pedido Cliente', 'Customer PO', 'Client PO'] },
+    { key: 'internal_order_ref', label: 'Pedido', aliases: ['internal_order_ref', 'Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno', 'Ref Interna', 'Pedido Interno', 'Internal Ref', 'WO', 'Work Order'] },
+    { key: 'order_number', label: 'Orden', required: true, aliases: ['order_number', 'Orden', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP', 'OrderNo', 'Order Number', 'Nº Orden', 'Num Orden'] },
+    { key: 'product_article_code', label: 'Artículo', aliases: ['product_article_code', 'Artículo', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material', 'Part No', 'Part Number', 'Codigo Articulo', 'Referencia', 'Code'] },
+    { key: 'product_name', label: 'Nombre', aliases: ['product_name', 'Nombre', 'Descripción', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation', 'Item Name', 'Descripcion', 'Nombre Articulo', 'Product Name'] },
+    { key: 'article_status', label: 'Edo. Art.', aliases: ['article_status', 'Edo. Art.', 'part_status', 'Estado Articulo', 'Status Articulo', 'Item Status', 'Part Status', 'Estado Parte'] },
     { key: 'client_name', label: 'Cliente', aliases: ['client_name', 'Cliente', 'client', 'customer', 'empresa', 'razon_social', 'Customer', 'Client', 'Nombre Cliente'] },
-    { key: 'material', label: 'Material', aliases: ['material', 'Material', 'Raw Material', 'Materia Prima', 'Compuesto', 'Compound'] },
+    { key: 'material', label: 'Material', aliases: ['material', 'Material', 'Raw Material', 'Materia Prima', 'Compuesto', 'Compound', 'Componente'] },
     { key: 'product_family', label: 'Producto', aliases: ['product_family', 'Producto', 'product', 'Familia', 'Family', 'Product Family', 'Familia Producto'] },
-    { key: 'shortages', label: 'Faltas', aliases: ['shortages', 'Faltas', 'Missing', 'Faltantes', 'Shortage'] },
+    { key: 'shortages', label: 'Faltas', aliases: ['shortages', 'Faltas', 'Missing', 'Faltantes', 'Shortage', 'Components Missing'] },
     { key: 'quantity', label: 'Cantidad', aliases: ['quantity', 'Cantidad', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount', 'Cant', 'Unidades', 'Pcs'] },
-    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['committed_delivery_date', 'Fecha Entrega', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date'] },
-    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['new_delivery_date', 'Nueva Fecha Entrega', 'New Due Date', 'Fecha Reprogramada'] },
-    { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['delivery_compliance', 'Cumplimiento entrega', 'compliance', 'Cumplimiento'] },
-    { key: 'multi_unit', label: 'MultUnid', aliases: ['multi_unit', 'MultUnid'] },
-    { key: 'multi_qty', label: 'Mult x Cantidad', aliases: ['multi_qty', 'Mult x Cantidad'] },
+    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['committed_delivery_date', 'Fecha Entrega', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date', 'Fecha Limite'] },
+    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['new_delivery_date', 'Nueva Fecha Entrega', 'New Due Date', 'Fecha Reprogramada', 'New Delivery Date', 'Fecha Entrega Nueva'] },
+    { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['delivery_compliance', 'Cumplimiento entrega', 'compliance', 'Cumplimiento', 'Delivery Compliance'] },
+    { key: 'multi_unit', label: 'MultUnid', aliases: ['multi_unit', 'MultUnid', 'Multi Unit', 'Unidades Multiples'] },
+    { key: 'multi_qty', label: 'Mult x Cantidad', aliases: ['multi_qty', 'Mult x Cantidad', 'Multi Qty', 'Cantidad Multiple'] },
     { key: 'production_cadence', label: 'Cadencia', aliases: ['production_cadence', 'Cadencia', 'cadence', 'ciclo', 'Cycle Time', 'Velocidad', 'Speed', 'Rate'] },
-    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['delay_reason', 'Motivo Retraso', 'Delay Cause', 'Reason', 'Causa Retraso'] },
-    { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['components_deadline', 'Fecha limite componentes', 'Components Deadline'] },
-    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['start_date', 'Fecha Inicio Limite', 'inicio', 'fecha_inicio', 'Start Date', 'Fecha Comienzo'] },
-    { key: 'start_date_simple', label: 'Fecha Inicio Limite Simple', aliases: ['start_date_simple', 'Fecha Inicio Limite Simple'] },
-    { key: 'modified_start_date', label: 'Fecha Inicio Modificada', aliases: ['modified_start_date', 'Fecha Inicio Modificada'] },
-    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['planned_end_date', 'Fecha Fin', 'end_date', 'fin', 'End Date', 'Fecha Finalizacion'] },
-    { key: 'end_date_simple', label: 'Fecha Fin Simple', aliases: ['end_date_simple', 'Fecha Fin Simple'] },
-    { key: 'notes', label: 'Observación', aliases: ['notes', 'Observación', 'notas', 'comentarios', 'Remarks', 'Comments', 'Observaciones', 'Nota'] }
+    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['delay_reason', 'Motivo Retraso', 'Delay Cause', 'Reason', 'Causa Retraso', 'Delay Reason'] },
+    { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['components_deadline', 'Fecha limite componentes', 'Components Deadline', 'Limite Componentes'] },
+    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['start_date', 'Fecha Inicio Limite', 'inicio', 'fecha_inicio', 'Start Date', 'Fecha Comienzo', 'Start'] },
+    { key: 'start_date_simple', label: 'Fecha Inicio Limite Simple', aliases: ['start_date_simple', 'Fecha Inicio Limite Simple', 'Start Date Simple', 'Inicio Simple'] },
+    { key: 'modified_start_date', label: 'Fecha Inicio Modificada', aliases: ['modified_start_date', 'Fecha Inicio Modificada', 'Modified Start Date', 'Inicio Modificado'] },
+    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['planned_end_date', 'Fecha Fin', 'end_date', 'fin', 'End Date', 'Fecha Finalizacion', 'End'] },
+    { key: 'end_date_simple', label: 'Fecha Fin Simple', aliases: ['end_date_simple', 'Fecha Fin Simple', 'End Date Simple', 'Fin Simple'] },
+    { key: 'notes', label: 'Observación', aliases: ['notes', 'Observación', 'notas', 'comentarios', 'Remarks', 'Comments', 'Observaciones', 'Nota', 'Notes'] }
 ];
 
 const COLUMN_DISPLAY_ORDER = [
@@ -100,21 +101,46 @@ const COLUMN_DISPLAY_ORDER = [
     'notes'
 ];
 
+// Helper to extract value from row checking multiple aliases and case/normalization
 const extractValue = (obj, fieldDef) => {
     if (!obj) return undefined;
     const keys = fieldDef.aliases || [];
-    const objKeys = Object.keys(obj);
-    const normalizedObjKeys = {};
-    objKeys.forEach(k => {
-        normalizedObjKeys[k.toLowerCase().replace(/[^a-z0-9]/g, '')] = k;
-    });
+    
+    // 1. Check exact key matches first (fastest)
+    if (obj[fieldDef.key] !== undefined && obj[fieldDef.key] !== null) return obj[fieldDef.key];
 
+    // Normalize helper
+    const normalizeKey = (k) => String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    // Create map of normalized keys from the object
+    const normalizedObjKeys = Object.keys(obj).reduce((acc, k) => {
+        acc[normalizeKey(k)] = k;
+        return acc;
+    }, {});
+    
+    // 2. Check aliases against normalized keys
     for (const key of keys) {
-        if (obj[key] !== undefined) return obj[key];
-        const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const realKey = normalizedObjKeys[normalizedKey];
-        if (realKey && obj[realKey] !== undefined) return obj[realKey];
+        // Check exact alias
+        if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+        
+        // Check normalized alias
+        const normKey = normalizeKey(key);
+        const realKey = normalizedObjKeys[normKey];
+        if (realKey && obj[realKey] !== undefined && obj[realKey] !== null) return obj[realKey];
     }
+
+    // 3. Fuzzy Match Fallback (Last Resort)
+    // Look for keys that contain the field key or label (e.g. "sala" in "id_sala_origen")
+    const searchTerms = [fieldDef.key, fieldDef.label].filter(Boolean).map(normalizeKey);
+    for (const term of searchTerms) {
+        if (term.length < 3) continue; // Skip too short terms to avoid false positives
+        const matchingKey = Object.keys(normalizedObjKeys).find(k => k.includes(term));
+        if (matchingKey) {
+            const realKey = normalizedObjKeys[matchingKey];
+            if (obj[realKey] !== undefined && obj[realKey] !== null) return obj[realKey];
+        }
+    }
+    
     return undefined;
 };
 
@@ -391,21 +417,46 @@ export default function OrderImport() {
   };
 
   // --- SAVE LOGIC ---
+  // Helper to extract value from row checking multiple aliases and case/normalization
   const extractValue = (obj, fieldDef) => {
       if (!obj) return undefined;
       const keys = fieldDef.aliases || [];
-      const objKeys = Object.keys(obj);
-      const normalizedObjKeys = {};
-      objKeys.forEach(k => {
-          normalizedObjKeys[k.toLowerCase().replace(/[^a-z0-9]/g, '')] = k;
-      });
+      
+      // 1. Check exact key matches first (fastest)
+      if (obj[fieldDef.key] !== undefined && obj[fieldDef.key] !== null) return obj[fieldDef.key];
 
+      // Normalize helper
+      const normalizeKey = (k) => String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      // Create map of normalized keys from the object
+      const normalizedObjKeys = Object.keys(obj).reduce((acc, k) => {
+          acc[normalizeKey(k)] = k;
+          return acc;
+      }, {});
+      
+      // 2. Check aliases against normalized keys
       for (const key of keys) {
-          if (obj[key] !== undefined) return obj[key];
-          const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const realKey = normalizedObjKeys[normalizedKey];
-          if (realKey && obj[realKey] !== undefined) return obj[realKey];
+          // Check exact alias
+          if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+          
+          // Check normalized alias
+          const normKey = normalizeKey(key);
+          const realKey = normalizedObjKeys[normKey];
+          if (realKey && obj[realKey] !== undefined && obj[realKey] !== null) return obj[realKey];
       }
+
+      // 3. Fuzzy Match Fallback (Last Resort)
+      // Look for keys that contain the field key or label (e.g. "sala" in "id_sala_origen")
+      const searchTerms = [fieldDef.key, fieldDef.label].filter(Boolean).map(normalizeKey);
+      for (const term of searchTerms) {
+          if (term.length < 3) continue; // Skip too short terms to avoid false positives
+          const matchingKey = Object.keys(normalizedObjKeys).find(k => k.includes(term));
+          if (matchingKey) {
+              const realKey = normalizedObjKeys[matchingKey];
+              if (obj[realKey] !== undefined && obj[realKey] !== null) return obj[realKey];
+          }
+      }
+      
       return undefined;
   };
 
