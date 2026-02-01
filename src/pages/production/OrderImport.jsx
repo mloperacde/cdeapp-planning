@@ -171,10 +171,23 @@ export default function OrderImport() {
 
             const deduplicatedOrders = Array.from(uniqueOrders.values());
 
-            const formattedOrders = deduplicatedOrders.map(o => ({
-                ...o,
-                machine_name: machinesMap.get(o.machine_id) || o.machine_id_source || 'Unknown',
-            }));
+            // Normalize data using SYSTEM_FIELDS aliases to recover data even if DB column names differ
+            const formattedOrders = deduplicatedOrders.map(o => {
+                const newRow = {};
+                SYSTEM_FIELDS.forEach(field => {
+                    newRow[field.key] = extractValue(o, field);
+                });
+                
+                // Specific overrides
+                newRow.id = o.id; // Preserve system ID
+                
+                // Hydrate machine name if we have a machine_id
+                if (o.machine_id && machinesMap.has(o.machine_id)) {
+                    newRow.machine_name = machinesMap.get(o.machine_id);
+                }
+                
+                return newRow;
+            });
             
             setRawOrders(formattedOrders);
             
@@ -542,7 +555,16 @@ export default function OrderImport() {
                       start_date: row.start_date,
                       start_date_simple: row.start_date_simple,
                       modified_start_date: row.modified_start_date,
-                      end_date_simple: row.end_date_simple
+                      end_date_simple: row.end_date_simple,
+
+                      // Explicit Backend Mappings (Aliases) for compatibility
+                      client: row.client_name,
+                      part_number: row.product_article_code,
+                      description: row.product_name,
+                      part_status: row.article_status,
+                      cadence: parseFloat(row.production_cadence) || 0,
+                      product: row.product_family,
+                      end_date: row.planned_end_date
                   };
 
                   try {
