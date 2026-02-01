@@ -33,36 +33,36 @@ import { Label } from "@/components/ui/label";
 const SYSTEM_FIELDS = [
     { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID', 'IdProduccion', 'ID Produccion', 'Prod ID', 'id_produccion', 'ID'] },
     { key: 'machine_id_source', label: 'machine_id', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID', 'MachineId', 'Machine ID', 'ID Maquina'] },
-    { key: 'priority', label: 'Prioridad', aliases: ['Prioridad', 'priority', 'urgencia', 'PRIORIDAD', 'Priority', 'Rank', 'Ranking', 'Nivel', 'Level', 'Importancia', 'Sequence', 'Secuencia'] },
-    { key: 'type', label: 'Tipo', aliases: ['Tipo', 'type', 'TIPO', 'Type', 'Clase', 'Class', 'Kind', 'Categoria'] },
-    { key: 'status', label: 'Estado', aliases: ['Estado', 'status', 'situacion', 'estatus', 'ESTADO', 'Status', 'State', 'Condition', 'Situación', 'status_source'] },
-    { key: 'room', label: 'Sala', aliases: ['Sala', 'room', 'SALA', 'Room', 'Nave', 'Zona', 'Zone', 'Area', 'Seccion'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['Máquina', 'machine_name', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code', 'Resource', 'W.C.', 'C.T.'] },
-    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente', 'Customer Order', 'Ref Cliente', 'Su No. Pedido'] },
-    { key: 'internal_order_ref', label: 'Pedido', aliases: ['Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno', 'Ref Interna', 'Pedido Interno'] },
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['Orden', 'order_number', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP', 'OrderNo', 'Order Number', 'Nº Orden'] },
-    { key: 'product_article_code', label: 'Artículo', aliases: ['Artículo', 'product_article_code', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material', 'Part No', 'Part Number', 'Codigo Articulo', 'Referencia'] },
-    { key: 'product_name', label: 'Nombre', aliases: ['Nombre', 'Descripción', 'product_name', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation', 'Item Name', 'Descripcion', 'Nombre Articulo'] },
-    { key: 'article_status', label: 'Edo. Art.', aliases: ['Edo. Art.', 'article_status', 'Estado Articulo', 'Status Articulo', 'Item Status'] },
-    { key: 'client_name', label: 'Cliente', aliases: ['Cliente', 'client_name', 'client', 'customer', 'empresa', 'razon_social', 'Customer', 'Client', 'Nombre Cliente'] },
-    { key: 'material', label: 'Material', aliases: ['Material', 'material', 'Raw Material', 'Materia Prima', 'Compuesto', 'Compound'] },
-    { key: 'product_family', label: 'Producto', aliases: ['Producto', 'product_family', 'Familia', 'Family', 'Product Family', 'Familia Producto'] },
-    { key: 'shortages', label: 'Faltas', aliases: ['Faltas', 'shortages', 'Missing', 'Faltantes', 'Shortage'] },
-    { key: 'quantity', label: 'Cantidad', aliases: ['Cantidad', 'quantity', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount', 'Cant', 'Unidades', 'Pcs'] },
-    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['Fecha Entrega', 'committed_delivery_date', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date'] },
-    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['Nueva Fecha Entrega', 'new_delivery_date', 'New Due Date', 'Fecha Reprogramada'] },
-    { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['Cumplimiento entrega', 'compliance', 'Cumplimiento'] },
-    { key: 'multi_unit', label: 'MultUnid', aliases: ['MultUnid'] },
-    { key: 'multi_qty', label: 'Mult x Cantidad', aliases: ['Mult x Cantidad'] },
-    { key: 'production_cadence', label: 'Cadencia', aliases: ['Cadencia', 'production_cadence', 'cadence', 'ciclo', 'Cycle Time', 'Velocidad', 'Speed', 'Rate'] },
-    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['Motivo Retraso', 'delay_reason', 'Delay Cause', 'Reason', 'Causa Retraso'] },
-    { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['Fecha limite componentes', 'Components Deadline'] },
-    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['Fecha Inicio Limite', 'start_date', 'inicio', 'fecha_inicio', 'Start Date', 'Fecha Comienzo'] },
-    { key: 'start_date_simple', label: 'Fecha Inicio Limite Simple', aliases: ['Fecha Inicio Limite Simple'] },
-    { key: 'modified_start_date', label: 'Fecha Inicio Modificada', aliases: ['Fecha Inicio Modificada'] },
-    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['Fecha Fin', 'planned_end_date', 'end_date', 'fin', 'End Date', 'Fecha Finalizacion'] },
-    { key: 'end_date_simple', label: 'Fecha Fin Simple', aliases: ['Fecha Fin Simple'] },
-    { key: 'notes', label: 'Observación', aliases: ['Observación', 'notes', 'notas', 'comentarios', 'Remarks', 'Comments', 'Observaciones', 'Nota'] }
+    { key: 'priority', label: 'Prioridad', aliases: ['priority', 'Prioridad', 'urgencia', 'PRIORIDAD', 'Priority', 'Rank', 'Ranking', 'Nivel', 'Level', 'Importancia', 'Sequence', 'Secuencia'] },
+    { key: 'type', label: 'Tipo', aliases: ['type', 'Tipo', 'TIPO', 'Type', 'Clase', 'Class', 'Kind', 'Categoria'] },
+    { key: 'status', label: 'Estado', aliases: ['status', 'Estado', 'situacion', 'estatus', 'ESTADO', 'Status', 'State', 'Condition', 'Situación', 'status_source'] },
+    { key: 'room', label: 'Sala', aliases: ['room', 'Sala', 'SALA', 'Room', 'Nave', 'Zona', 'Zone', 'Area', 'Seccion'] },
+    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['machine_name', 'Máquina', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Centro Trabajo', 'Work Center', 'Code', 'Resource', 'W.C.', 'C.T.'] },
+    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['client_order_ref', 'Su Pedido', 'client_order', 'SU PEDIDO', 'SU_PEDIDO', 'ClientOrder', 'PedidoCliente', 'Customer Order', 'Ref Cliente', 'Su No. Pedido'] },
+    { key: 'internal_order_ref', label: 'Pedido', aliases: ['internal_order_ref', 'Pedido', 'internal_order', 'InternalOrder', 'PedidoInterno', 'Ref Interna', 'Pedido Interno'] },
+    { key: 'order_number', label: 'Orden', required: true, aliases: ['order_number', 'Orden', 'numero_orden', 'wo', 'ORDEN', 'Order', 'W.O.', 'OP', 'OrderNo', 'Order Number', 'Nº Orden'] },
+    { key: 'product_article_code', label: 'Artículo', aliases: ['product_article_code', 'Artículo', 'article', 'referencia', 'part_number', 'codigo', 'cod_articulo', 'Item', 'Material', 'Part No', 'Part Number', 'Codigo Articulo', 'Referencia'] },
+    { key: 'product_name', label: 'Nombre', aliases: ['product_name', 'Nombre', 'Descripción', 'description', 'detalle', 'producto', 'desc_articulo', 'Description', 'Designation', 'Item Name', 'Descripcion', 'Nombre Articulo'] },
+    { key: 'article_status', label: 'Edo. Art.', aliases: ['article_status', 'Edo. Art.', 'part_status', 'Estado Articulo', 'Status Articulo', 'Item Status'] },
+    { key: 'client_name', label: 'Cliente', aliases: ['client_name', 'Cliente', 'client', 'customer', 'empresa', 'razon_social', 'Customer', 'Client', 'Nombre Cliente'] },
+    { key: 'material', label: 'Material', aliases: ['material', 'Material', 'Raw Material', 'Materia Prima', 'Compuesto', 'Compound'] },
+    { key: 'product_family', label: 'Producto', aliases: ['product_family', 'Producto', 'product', 'Familia', 'Family', 'Product Family', 'Familia Producto'] },
+    { key: 'shortages', label: 'Faltas', aliases: ['shortages', 'Faltas', 'Missing', 'Faltantes', 'Shortage'] },
+    { key: 'quantity', label: 'Cantidad', aliases: ['quantity', 'Cantidad', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount', 'Cant', 'Unidades', 'Pcs'] },
+    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['committed_delivery_date', 'Fecha Entrega', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date'] },
+    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['new_delivery_date', 'Nueva Fecha Entrega', 'New Due Date', 'Fecha Reprogramada'] },
+    { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['delivery_compliance', 'Cumplimiento entrega', 'compliance', 'Cumplimiento'] },
+    { key: 'multi_unit', label: 'MultUnid', aliases: ['multi_unit', 'MultUnid'] },
+    { key: 'multi_qty', label: 'Mult x Cantidad', aliases: ['multi_qty', 'Mult x Cantidad'] },
+    { key: 'production_cadence', label: 'Cadencia', aliases: ['production_cadence', 'Cadencia', 'cadence', 'ciclo', 'Cycle Time', 'Velocidad', 'Speed', 'Rate'] },
+    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['delay_reason', 'Motivo Retraso', 'Delay Cause', 'Reason', 'Causa Retraso'] },
+    { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['components_deadline', 'Fecha limite componentes', 'Components Deadline'] },
+    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['start_date', 'Fecha Inicio Limite', 'inicio', 'fecha_inicio', 'Start Date', 'Fecha Comienzo'] },
+    { key: 'start_date_simple', label: 'Fecha Inicio Limite Simple', aliases: ['start_date_simple', 'Fecha Inicio Limite Simple'] },
+    { key: 'modified_start_date', label: 'Fecha Inicio Modificada', aliases: ['modified_start_date', 'Fecha Inicio Modificada'] },
+    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['planned_end_date', 'Fecha Fin', 'end_date', 'fin', 'End Date', 'Fecha Finalizacion'] },
+    { key: 'end_date_simple', label: 'Fecha Fin Simple', aliases: ['end_date_simple', 'Fecha Fin Simple'] },
+    { key: 'notes', label: 'Observación', aliases: ['notes', 'Observación', 'notas', 'comentarios', 'Remarks', 'Comments', 'Observaciones', 'Nota'] }
 ];
 
 const COLUMN_DISPLAY_ORDER = [
@@ -301,40 +301,21 @@ export default function OrderImport() {
 
       // Normalize keys immediately to standard DB keys (handling Spanish/English mix)
       const normalize = (row) => {
-          return {
-              order_number: String(row.order_number || row.Orden || row.numero_orden || row.wo || row.ORDEN || ''),
-              machine_name: row.machine_name || row.Máquina || row.maquina || row.machine || row.recurso,
-              machine_id_source: row.machine_id || row.id_maquina || row.MACHINE_ID, // source ID
-              status: row.status || row.Estado || row.situacion || 'Pendiente',
-              production_id: row.production_id || row.id || row.ID,
-              priority: parseInt(row.priority || row.Prioridad || row.urgencia) || 0,
-              quantity: parseInt(row.quantity || row.Cantidad || row.qty) || 0,
-              notes: row.notes || row.Observación || row.notas || row.comentarios || '',
-              client_name: row.client_name || row.Cliente,
-              product_name: row.product_name || row.Nombre || row.Descripción,
-              product_article_code: row.product_article_code || row.Artículo,
-              planned_end_date: row.planned_end_date || row['Fecha Fin'],
-              type: row.type || row.Tipo,
-              room: row.room || row.Sala,
-              client_order_ref: row.client_order_ref || row['Su Pedido'],
-              internal_order_ref: row.internal_order_ref || row.Pedido,
-              article_status: row.article_status || row['Edo. Art.'],
-              material: row.material || row.Material,
-              product_family: row.product_family || row.Producto,
-              shortages: row.shortages || row.Faltas,
-              committed_delivery_date: row.committed_delivery_date || row['Fecha Entrega'],
-              new_delivery_date: row.new_delivery_date || row['Nueva Fecha Entrega'],
-              delivery_compliance: row.delivery_compliance || row['Cumplimiento entrega'],
-              multi_unit: parseInt(row.multi_unit || row.MultUnid) || 0,
-              multi_qty: parseFloat(row.multi_qty || row['Mult x Cantidad']) || 0,
-              production_cadence: parseFloat(row.production_cadence || row.Cadencia) || 0,
-              delay_reason: row.delay_reason || row['Motivo Retraso'],
-              components_deadline: row.components_deadline || row['Fecha limite componentes'],
-              start_date: row.start_date || row['Fecha Inicio Limite'],
-              start_date_simple: row.start_date_simple || row['Fecha Inicio Limite Simple'],
-              modified_start_date: row.modified_start_date || row['Fecha Inicio Modificada'],
-              end_date_simple: row.end_date_simple || row['Fecha Fin Simple']
-          };
+          const newRow = {};
+          SYSTEM_FIELDS.forEach(field => {
+              newRow[field.key] = extractValue(row, field);
+          });
+          
+          // Specific overrides / Type conversions
+          newRow.priority = parseInt(newRow.priority) || 0;
+          newRow.quantity = parseInt(newRow.quantity) || 0;
+          newRow.status = newRow.status || 'Pendiente';
+          newRow.notes = newRow.notes || '';
+          newRow.multi_unit = parseInt(newRow.multi_unit) || 0;
+          newRow.multi_qty = parseFloat(newRow.multi_qty) || 0;
+          newRow.production_cadence = parseFloat(newRow.production_cadence) || 0;
+          
+          return newRow;
       };
 
       if (data.length > 0) {
