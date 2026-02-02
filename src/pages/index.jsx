@@ -244,7 +244,7 @@ function PagesContent() {
                 <Route path="/OrderImport" element={<OrderImport />} />
                 <Route path="/QualityControl" element={<QualityControl />} />
                 <Route path="/Reports" element={<Reports />} />
-                <Route path="/RolesConfig" element={<RolesConfig />} />
+                {/* <Route path="/RolesConfig" element={<RolesConfig />} /> */}
                 
                 <Route path="/ShiftHandover" element={<ShiftHandover />} />
                 
