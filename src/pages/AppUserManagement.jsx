@@ -41,6 +41,7 @@ export default function AppUserManagement() {
     isLoading,
     updatePermission,
     updatePagePermission,
+    setRoleMode,
     updateUserAssignment,
     addRole,
     deleteRole,
@@ -498,12 +499,7 @@ export default function AppUserManagement() {
                                         title="Permitir TODO"
                                         onClick={() => {
                                             if (window.confirm(`¿Estás seguro? Esto dará acceso a TODAS las páginas a ${roleName}.`)) {
-                                                // Crear un objeto con todas las páginas en true
-                                                Object.values(groupedMenu).flat().forEach(item => {
-                                                    if (item.category !== 'Configuración') {
-                                                        updatePagePermission(roleId, item.path, true);
-                                                    }
-                                                });
+                                                setRoleMode(roleId, 'allow_all');
                                                 toast.success(`Acceso total concedido a ${roleName}`);
                                             }
                                         }}
@@ -517,10 +513,7 @@ export default function AppUserManagement() {
                                         title="Bloquear TODO (Modo Estricto)"
                                         onClick={() => {
                                             if (window.confirm(`¿BLOQUEAR TODO para ${roleName}? Esto activará el modo estricto. Tendrás que marcar manualmente las páginas permitidas.`)) {
-                                                // Marcar explícitamente todo como false para activar modo estricto
-                                                Object.values(groupedMenu).flat().forEach(item => {
-                                                    updatePagePermission(roleId, item.path, false);
-                                                });
+                                                setRoleMode(roleId, 'block_all');
                                                 toast.success(`Acceso bloqueado para ${roleName}. Ahora selecciona las páginas permitidas.`);
                                             }
                                         }}

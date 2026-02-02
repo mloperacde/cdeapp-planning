@@ -174,22 +174,24 @@ export function usePermissions() {
     }
     
     // Si el rol existe en la configuración dinámica (es un rol gestionado), 
-    // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados.
-    if (roleConfig) {
-       const pagePerms = roleConfig.page_permissions || {};
-            const keys = Object.keys(pagePerms);
-            const hasConfiguredPages = keys.length > 0;
+            // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados
+            // O si está explícitamente marcado como estricto (is_strict).
+            if (roleConfig) {
+               const pagePerms = roleConfig.page_permissions || {};
+               const keys = Object.keys(pagePerms);
+               const hasConfiguredPages = keys.length > 0;
+               const isStrict = roleConfig.is_strict === true;
 
-            // Si NO hay ninguna página configurada (ni true ni false), asumimos que es un rol nuevo/legacy
-            // y aplicamos modo PERMISIVO (fallback a comportamiento antiguo) para no bloquear todo.
-            if (!hasConfiguredPages) {
-               // Bloquear configuración para no admins por seguridad básica
-               if (path.startsWith('/Configuration') || path.includes('Config')) return false;
-               return true;
-            }
+               // Si NO hay ninguna página configurada (ni true ni false) Y NO es estricto, 
+               // asumimos que es un rol nuevo/legacy y aplicamos modo PERMISIVO.
+               if (!hasConfiguredPages && !isStrict) {
+                   // Bloquear configuración para no admins por seguridad básica
+                   if (path.startsWith('/Configuration') || path.includes('Config')) return false;
+                   return true;
+               }
 
-            // Si HAY configuración, aplicamos modo ESTRICTO
-            // Normalizar path de entrada (quitar query params y trailing slash)
+               // Si HAY configuración o es ESTRICTO:
+               // Normalizar path de entrada (quitar query params y trailing slash)
             const cleanPath = path.split('?')[0].replace(/\/$/, '');
             
             // 1. Coincidencia exacta (Key lookup rápido)

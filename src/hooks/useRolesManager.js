@@ -225,23 +225,30 @@ export function useRolesManager() {
     setLocalConfig(prev => {
       const role = prev.roles[roleId];
       
-      // Lógica de Hidratación:
-      // Si page_permissions no existe (rol en modo legacy/total),
-      // lo inicializamos con TODO en true (excepto Configuración) para replicar el estado visual
-      // antes de aplicar el cambio específico. Esto evita que al tocar un solo permiso se bloquee todo lo demás.
+      // Lógica de Hidratación Inteligente:
+      // Si el rol no tiene permisos definidos (modo permisivo legacy),
+      // al hacer el primer cambio debemos explicitar TODOS los permisos existentes
+      // para no bloquear accidentalmente todo el resto de la app al pasar a modo estricto.
       let currentPermissions = role.page_permissions;
-      
-      if (!currentPermissions) {
+      let isStrict = role.is_strict;
+
+      if (!currentPermissions && !isStrict) {
         currentPermissions = {};
-        // Poblar con todos los items del menú
+        // Poblar con todos los items del menú como TRUE (excepto Configuración)
         MENU_STRUCTURE.forEach(item => {
-            // Por defecto permitimos todo excepto Configuración
-            if (item.category === 'Configuración') {
-                currentPermissions[item.path] = false;
-            } else {
+            if (item.category !== 'Configuración') {
                 currentPermissions[item.path] = true;
             }
         });
+      } else {
+          currentPermissions = { ...(currentPermissions || {}) };
+      }
+
+      // OPTIMIZACIÓN DE ESPACIO: Solo guardamos 'true'. Borramos keys en 'false'.
+      if (checked) {
+          currentPermissions[path] = true;
+      } else {
+          delete currentPermissions[path];
       }
 
       return {
@@ -250,15 +257,44 @@ export function useRolesManager() {
           ...prev.roles,
           [roleId]: {
             ...role,
-            page_permissions: {
-              ...currentPermissions,
-              [path]: checked
-            }
+            is_strict: true, // Forzamos modo estricto al editar
+            page_permissions: currentPermissions
           }
         }
       };
     });
     setIsDirty(true);
+  }, []);
+
+  // Nueva función para acciones en lote (Todo / Nada)
+  const setRoleMode = useCallback((roleId, mode) => {
+      setLocalConfig(prev => {
+          const role = prev.roles[roleId];
+          let newPermissions = {};
+
+          if (mode === 'allow_all') {
+             MENU_STRUCTURE.forEach(item => {
+                 if (item.category !== 'Configuración') {
+                     newPermissions[item.path] = true;
+                 }
+             });
+          } else if (mode === 'block_all') {
+             newPermissions = {}; // Vacío = Bloqueo total (en modo estricto)
+          }
+
+          return {
+              ...prev,
+              roles: {
+                  ...prev.roles,
+                  [roleId]: {
+                      ...role,
+                      is_strict: true,
+                      page_permissions: newPermissions
+                  }
+              }
+          };
+      });
+      setIsDirty(true);
   }, []);
 
   const updateUserAssignment = useCallback((email, roleId) => {
@@ -321,10 +357,30 @@ export function useRolesManager() {
         throw new Error("La configuración local está vacía. No se guardará.");
       }
 
-      const configString = JSON.stringify(localConfig);
+      // SANITIZACIÓN Y OPTIMIZACIÓN PRE-GUARDADO:
+      // Eliminar valores 'false' para reducir drásticamente el tamaño del payload.
+      // Esto soluciona el error "Backend rechazó ambos campos" por exceso de tamaño.
+      const configToSave = JSON.parse(JSON.stringify(localConfig));
+      if (configToSave.roles) {
+        Object.values(configToSave.roles).forEach(role => {
+            if (role.page_permissions) {
+                Object.keys(role.page_permissions).forEach(path => {
+                    if (role.page_permissions[path] === false) {
+                        delete role.page_permissions[path];
+                    }
+                });
+                // Si tiene permisos configurados, asegurar modo estricto
+                if (Object.keys(role.page_permissions).length > 0) {
+                    role.is_strict = true;
+                }
+            }
+        });
+      }
+
+      const configString = JSON.stringify(configToSave);
       const parsedCheck = JSON.parse(configString); // Validación simple
       
-      console.log("useRolesManager: Saving config (Simple Mode)...", configString.length, "chars");
+      console.log("useRolesManager: Saving config (Optimized)...", configString.length, "chars");
 
       // BACKUP DE EMERGENCIA EN LOCALSTORAGE
       try {
@@ -494,6 +550,7 @@ export function useRolesManager() {
     isLoading,
     updatePermission,
     updatePagePermission,
+    setRoleMode,
     updateUserAssignment,
     addRole,
     deleteRole,
