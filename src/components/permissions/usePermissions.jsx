@@ -165,20 +165,44 @@ export function usePermissions() {
          const roleConfig = rolesConfig?.roles?.[role];
          
          // Si el rol existe en la configuración dinámica (es un rol gestionado), 
-         // aplicamos SIEMPRE la política de "Deny by Default" (Lista blanca).
+         // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados.
          if (roleConfig) {
             const pagePerms = roleConfig.page_permissions || {};
+            const keys = Object.keys(pagePerms);
+            const hasConfiguredPages = keys.length > 0;
 
-            // 1. Coincidencia exacta
-            const perm = pagePerms[path];
-            if (perm !== undefined) return perm;
+            // Si NO hay ninguna página configurada (ni true ni false), asumimos que es un rol nuevo/legacy
+            // y aplicamos modo PERMISIVO (fallback a comportamiento antiguo) para no bloquear todo.
+            if (!hasConfiguredPages) {
+               // Bloquear configuración para no admins por seguridad básica
+               if (path.startsWith('/Configuration') || path.includes('Config')) return false;
+               return true;
+            }
+
+            // Si HAY configuración, aplicamos modo ESTRICTO
+            // Normalizar path de entrada (quitar query params y trailing slash)
+            const cleanPath = path.split('?')[0].replace(/\/$/, '');
             
-            // 2. Coincidencia de sub-rutas (para rutas anidadas como /NewProcessConfigurator/*)
-            // Buscar si existe una ruta padre configurada
-            const parentKey = Object.keys(pagePerms).find(key => 
-              path.startsWith(key + '/') && pagePerms[key] === true
-            );
-            if (parentKey) return true;
+            // 1. Coincidencia exacta (Key lookup rápido)
+            if (pagePerms[path] === true) return true;
+            if (pagePerms[cleanPath] === true) return true;
+            
+            // 2. Búsqueda por coincidencia normalizada (robustez)
+            // Busca si alguna key configurada coincide con el path solicitado
+            const matchedKey = keys.find(key => {
+               // Normalizar la key de configuración
+               const cleanKey = key.split('?')[0].replace(/\/$/, '');
+               
+               // Coincidencia exacta de path
+               if (cleanKey === cleanPath) return true;
+               
+               // Coincidencia de sub-ruta (ej. /NewProcessConfigurator/*)
+               if (cleanPath.startsWith(cleanKey + '/')) return true;
+               
+               return false;
+            });
+
+            if (matchedKey && pagePerms[matchedKey] === true) return true;
 
             // Si no está definido explícitamente en un rol gestionado -> DENEGAR
             return false;
