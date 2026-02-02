@@ -26,6 +26,7 @@ export const DEFAULT_ROLES_CONFIG = {
     },
     hr_manager: {
       name: "Gerente RRHH",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: true,
@@ -36,10 +37,24 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: false,
         canViewReports: true,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true,
+        '/AdvancedHRDashboard': true,
+        '/MasterEmployeeDatabase': true,
+        '/AbsenceManagement': true,
+        '/SkillMatrix': true,
+        '/EmployeeOnboarding': true,
+        '/AttendanceManagement': true,
+        '/CommitteeManagement': true,
+        '/IncentiveManagement': true,
+        '/Reports': true,
+        '/EmployeeAbsenceInfo': true
       }
     },
     shift_manager_production: {
       name: "Jefe Turno Producción",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: false,
@@ -50,10 +65,25 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: true,
         canViewReports: true,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true,
+        '/DailyPlanning': true,
+        '/EmployeesShiftManager': true,
+        '/ProductionPlanning': true,
+        '/OrderImport': true,
+        '/ShiftManagers': true,
+        '/ShiftAssignmentsPage': true,
+        '/MachineManagement': true,
+        '/QualityControl': true,
+        '/Reports': true,
+        '/DailyShiftPlanning': true,
+        '/MachineAssignments': true
       }
     },
     shift_manager_quality: {
       name: "Jefe Turno Calidad",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: false,
@@ -64,10 +94,17 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: false,
         canViewReports: true,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true,
+        '/QualityControl': true,
+        '/Reports': true,
+        '/CalidadSkills': true
       }
     },
     shift_manager_maintenance: {
       name: "Jefe Turno Mantenimiento",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: false,
@@ -78,10 +115,18 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: true,
         canViewReports: true,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true,
+        '/MaintenanceTracking': true,
+        '/MachineManagement': true,
+        '/Reports': true,
+        '/MantenimientoSkills': true
       }
     },
     prod_supervisor: {
       name: "Supervisor Producción",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: false,
@@ -93,10 +138,20 @@ export const DEFAULT_ROLES_CONFIG = {
         canViewReports: true,
         canConfigureSystem: false,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true,
+        '/DailyProductionPlanningPage': true,
+        '/EmployeesShiftManager': true,
+        '/DailyPlanning': true,
+        '/ProductionPlanning': true,
+        '/Reports': true,
+        '/PlanificacionSkills': true
       }
     },
     maintenance_tech: {
       name: "Técnico Mantenimiento",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: false,
@@ -107,10 +162,16 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: true,
         canViewReports: true,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true,
+        '/MaintenanceTracking': true,
+        '/MachineManagement': true
       }
     },
     operator: {
       name: "Operario",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: false,
@@ -121,10 +182,15 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: false,
         canViewReports: true,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true,
+        '/ShiftAssignmentsPage': true
       }
     },
     user: {
       name: "Usuario Estándar",
+      is_strict: true,
       permissions: {
         isAdmin: false,
         canViewSalary: false,
@@ -135,6 +201,9 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: false,
         canViewReports: false,
         canConfigureSystem: false,
+      },
+      page_permissions: {
+        '/Dashboard': true
       },
       isSystem: true
     },
