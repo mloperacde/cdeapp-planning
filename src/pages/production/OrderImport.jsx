@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { cdeApp } from '../../api/cdeAppClient';
 import { base44 } from '../../api/base44Client';
 import { toast } from 'sonner';
-import { Download, Table as TableIcon, Save, Search, Filter, Plus, X, Trash2, RefreshCw, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Download, Table as TableIcon, Save, Search, Filter, Plus, X, RefreshCw, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -148,7 +148,6 @@ export default function OrderImport() {
   const [rawOrders, setRawOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [debugData, setDebugData] = useState(null); // Debug state
   const [progress, setProgress] = useState(0);
   // Columns are fixed based on user requirement
   const columns = COLUMN_DISPLAY_ORDER;
@@ -249,18 +248,6 @@ export default function OrderImport() {
             });
             
             setRawOrders(formattedOrders);
-            
-            if (formattedOrders.length > 0) {
-                console.log("First row fetched (raw):", deduplicatedOrders[0]);
-                console.log("First row fetched (formatted):", formattedOrders[0]);
-                setDebugData({
-                    source: "Local DB (Fetch)",
-                    raw_from_db: deduplicatedOrders[0],
-                    formatted_for_ui: formattedOrders[0]
-                });
-            } else {
-                setDebugData(null);
-            }
             
             // Set lastSyncTime from newest updated_at or created_at
             const newest = deduplicatedOrders.reduce((prev, curr) => {
@@ -393,9 +380,6 @@ export default function OrderImport() {
       if (data.length > 0) {
         // Normalize all data immediately
         data = data.map(normalize);
-
-        console.log("First row raw data:", data[0]);
-        setDebugData(data[0]);
       }
 
       setRawOrders(data);
@@ -454,95 +438,6 @@ export default function OrderImport() {
 
   const removeFilter = (id) => {
       setFilters(filters.filter(f => f.id !== id));
-  };
-
-  const handleDeleteAll = async () => {
-      if (!confirm("⚠️ ¡PELIGRO! ⚠️\n\n¿Estás seguro de que quieres BORRAR TODA LA BASE DE DATOS de órdenes?\n\nEsta acción eliminará todos los registros de WorkOrder y no se puede deshacer.")) return;
-      
-      setSaving(true);
-      const toastId = toast.loading("Borrando base de datos...");
-      try {
-          // Fetch all records
-          let allItems = [];
-          let page = 0;
-          let hasMore = true;
-          while(hasMore) {
-             const res = await base44.entities.WorkOrder.list(undefined, 2000, page * 2000);
-             const items = Array.isArray(res) ? res : (res.items || []);
-             if (items.length > 0) {
-                 allItems = [...allItems, ...items];
-                 page++;
-             } else {
-                 hasMore = false;
-             }
-             if (items.length < 2000) hasMore = false;
-          }
-          
-          if (allItems.length === 0) {
-             toast.info("La base de datos ya está vacía.", { id: toastId });
-             setSaving(false);
-             return;
-          }
-
-          // Delete strictly sequentially (1 by 1) to avoid 429
-          const deleteWithRetry = async (id, retries = 5, delay = 2000) => {
-             try {
-                 await base44.entities.WorkOrder.delete(id);
-             } catch (e) {
-                 // Ignore 404s (already deleted)
-                 if (e.status === 404 || (e.message && e.message.includes('404')) || (e.message && e.message.includes('not found'))) {
-                     // console.warn(`Order ${id} already deleted (404).`);
-                     return;
-                 }
-
-                 // 429 or network error
-                 if (retries > 0) {
-                     console.log(`Rate limit/Error deleting ${id}. Retrying in ${delay}ms...`);
-                     await new Promise(r => setTimeout(r, delay));
-                     return deleteWithRetry(id, retries - 1, delay * 2);
-                 }
-                 console.error(`Failed to delete ${id} after retries.`);
-                 throw e; // Propagate error to count as failure
-             }
-          };
-
-          let deletedCount = 0;
-          let failedCount = 0;
-
-          for (let i = 0; i < allItems.length; i++) {
-             try {
-                 await deleteWithRetry(allItems[i].id);
-                 deletedCount++;
-             } catch (e) {
-                 failedCount++;
-             }
-             
-             // Update progress every 5 items
-             if (i % 5 === 0) {
-                setProgress(Math.round(((i + 1) / allItems.length) * 100));
-             }
-             
-             // Small breathing room
-             await new Promise(r => setTimeout(r, 100));
-          }
-          
-          setRawOrders([]); // Clear local view
-          setLastSyncTime(null);
-          
-          if (failedCount > 0) {
-             toast.warning(`Eliminación completada con advertencias: ${deletedCount} eliminados, ${failedCount} fallidos.`, { id: toastId });
-          } else {
-             toast.success(`Base de datos eliminada (${deletedCount} registros).`, { id: toastId });
-          }
-          
-          fetchLocalData(); // Refresh (should be empty)
-      } catch (e) {
-          console.error(e);
-          toast.error("Error borrando base de datos.", { id: toastId });
-      } finally {
-          setSaving(false);
-          setProgress(0);
-      }
   };
 
   // --- SAVE LOGIC ---
@@ -815,38 +710,20 @@ export default function OrderImport() {
           )}
         </div>
         <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchLocalData} disabled={loading}>
-                Recargar BD Local
-            </Button>
-            <Button variant="outline" onClick={() => syncMachinesToLocalDB(false)} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Sincronizar Máquinas
-            </Button>
-            <Button onClick={fetchOrders} disabled={loading}>
+            <Button variant="outline" onClick={fetchOrders} disabled={loading}>
               {loading ? <Download className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Obtener Datos Crudos
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteAll} disabled={saving}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                BORRAR BD
+              Importar desde CDEApp
             </Button>
             <Button onClick={saveOrders} disabled={saving || filteredOrders.length === 0}>
             {saving ? "Guardando..." : (
                 <>
                 <Save className="mr-2 h-4 w-4" />
-                Guardar ({filteredOrders.length})
+                Guardar Cambios ({filteredOrders.length})
                 </>
             )}
             </Button>
         </div>
       </div>
-
-      {debugData && (
-        <div className="bg-slate-100 p-2 rounded text-xs font-mono overflow-auto max-h-40 border border-slate-300">
-            <strong>DEBUG - First Row Keys & Values:</strong>
-            <pre>{JSON.stringify(debugData, null, 2)}</pre>
-        </div>
-      )}
 
       <div className="flex flex-col gap-4">
           {/* Progress Bar */}
