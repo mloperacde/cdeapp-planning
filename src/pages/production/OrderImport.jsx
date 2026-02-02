@@ -2,11 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { cdeApp } from '../../api/cdeAppClient';
 import { base44 } from '../../api/base44Client';
 import { toast } from 'sonner';
-import { Download, Table as TableIcon, Save, Search, Filter, Plus, X, RefreshCw, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Download, Table as TableIcon, Save, Search, X, RefreshCw, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -16,18 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 
 // Column Mapping Configuration
@@ -50,7 +37,8 @@ const SYSTEM_FIELDS = [
     { key: 'product_family', label: 'Producto', aliases: ['product_family', 'Producto', 'product', 'Familia', 'Family', 'Product Family', 'Familia Producto'] },
     { key: 'shortages', label: 'Faltas', aliases: ['shortages', 'Faltas', 'Missing', 'Faltantes', 'Shortage', 'Components Missing'] },
     { key: 'quantity', label: 'Cantidad', aliases: ['quantity', 'Cantidad', 'qty', 'unidades', 'piezas', 'cantidad_pendiente', 'saldo', 'Quantity', 'Amount', 'Cant', 'Unidades', 'Pcs'] },
-    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['committed_delivery_date', 'Fecha Entrega', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date', 'Fecha Limite'] },
+    { key: 'effective_delivery_date', label: 'Fecha Entrega (Vigente)', aliases: [] }, // Virtual field
+    { key: 'committed_delivery_date', label: 'Fecha Entrega (Orig.)', aliases: ['committed_delivery_date', 'Fecha Entrega', 'entrega', 'delivery_date', 'fecha_fin', 'Due Date', 'FechaFin', 'Fecha Entrega Comprometida', 'Delivery Date', 'Fecha Limite'] },
     { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['new_delivery_date', 'Nueva Fecha Entrega', 'New Due Date', 'Fecha Reprogramada', 'New Delivery Date', 'Fecha Entrega Nueva'] },
     { key: 'delivery_compliance', label: 'Cumplimiento entrega', aliases: ['delivery_compliance', 'Cumplimiento entrega', 'compliance', 'Cumplimiento', 'Delivery Compliance'] },
     { key: 'multi_unit', label: 'MultUnid', aliases: ['multi_unit', 'MultUnid', 'Multi Unit', 'Unidades Multiples'] },
@@ -58,6 +46,7 @@ const SYSTEM_FIELDS = [
     { key: 'production_cadence', label: 'Cadencia', aliases: ['production_cadence', 'Cadencia', 'cadence', 'ciclo', 'Cycle Time', 'Velocidad', 'Speed', 'Rate'] },
     { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['delay_reason', 'Motivo Retraso', 'Delay Cause', 'Reason', 'Causa Retraso', 'Delay Reason'] },
     { key: 'components_deadline', label: 'Fecha limite componentes', aliases: ['components_deadline', 'Fecha limite componentes', 'Components Deadline', 'Limite Componentes'] },
+    { key: 'effective_start_date', label: 'Fecha Inicio (Vigente)', aliases: [] }, // Virtual field
     { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['start_date', 'Fecha Inicio Limite', 'inicio', 'fecha_inicio', 'Start Date', 'Fecha Comienzo', 'Start'] },
     { key: 'start_date_simple', label: 'Fecha Inicio Limite Simple', aliases: ['start_date_simple', 'Fecha Inicio Limite Simple', 'Start Date Simple', 'Inicio Simple'] },
     { key: 'modified_start_date', label: 'Fecha Inicio Modificada', aliases: ['modified_start_date', 'Fecha Inicio Modificada', 'Modified Start Date', 'Inicio Modificado'] },
@@ -85,6 +74,7 @@ const COLUMN_DISPLAY_ORDER = [
     'product_family',
     'shortages',
     'quantity',
+    'effective_delivery_date',
     'committed_delivery_date',
     'new_delivery_date',
     'delivery_compliance',
@@ -93,6 +83,7 @@ const COLUMN_DISPLAY_ORDER = [
     'production_cadence',
     'delay_reason',
     'components_deadline',
+    'effective_start_date',
     'start_date',
     'start_date_simple',
     'modified_start_date',
@@ -154,9 +145,18 @@ export default function OrderImport() {
   
   // Filtering & Search State
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState([]);
-  const [newFilter, setNewFilter] = useState({ column: "", operator: "contains", value: "" });
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // New structured filters
+  const [filterValues, setFilterValues] = useState({
+      machine: "",
+      material: "",
+      order: "",
+      client: "",
+      deliveryDateStart: "",
+      deliveryDateEnd: "",
+      startDateStart: "",
+      startDateEnd: ""
+  });
+  
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
   useEffect(() => {
@@ -236,6 +236,20 @@ export default function OrderImport() {
                 // Specific overrides
                 newRow.id = o.id; // Preserve system ID
                 
+                // --- LOGIC: EFFECTIVE DELIVERY DATE ---
+                let effectiveDate = newRow.new_delivery_date;
+                if (!effectiveDate || String(effectiveDate).trim() === '' || String(effectiveDate).startsWith('0000')) {
+                    effectiveDate = newRow.committed_delivery_date;
+                }
+                newRow.effective_delivery_date = effectiveDate;
+
+                // --- LOGIC: EFFECTIVE START DATE ---
+                let effectiveStart = newRow.modified_start_date;
+                if (!effectiveStart || String(effectiveStart).trim() === '' || String(effectiveStart).startsWith('0000')) {
+                    effectiveStart = newRow.start_date;
+                }
+                newRow.effective_start_date = effectiveStart;
+
                 // Hydrate machine name if we have a machine_id
                 if (o.machine_id && machinesMap.has(o.machine_id)) {
                     newRow.machine_name = machinesMap.get(o.machine_id);
@@ -374,6 +388,24 @@ export default function OrderImport() {
           newRow.multi_qty = parseFloat(newRow.multi_qty) || 0;
           newRow.production_cadence = parseFloat(newRow.production_cadence) || 0;
           
+          // --- LOGIC: EFFECTIVE DELIVERY DATE ---
+          // "La fecha que prevalece es 'nueva fecha de entrega' pero si no hay nada configurado, la valida es fecha de entrega"
+          // We normalize this into a new virtual field for display/filtering purposes.
+          let effectiveDate = newRow.new_delivery_date;
+          // Check if it's empty, null, or invalid date string like "0000-00-00" or just whitespace
+          if (!effectiveDate || String(effectiveDate).trim() === '' || String(effectiveDate).startsWith('0000')) {
+              effectiveDate = newRow.committed_delivery_date;
+          }
+          newRow.effective_delivery_date = effectiveDate;
+
+          // --- LOGIC: EFFECTIVE START DATE ---
+          // "Si hay dato en fecha de inicio modificada esa es la que vale, si no lo hay tomaremos fecha de inicio limite"
+          let effectiveStart = newRow.modified_start_date;
+          if (!effectiveStart || String(effectiveStart).trim() === '' || String(effectiveStart).startsWith('0000')) {
+              effectiveStart = newRow.start_date;
+          }
+          newRow.effective_start_date = effectiveStart;
+
           return newRow;
       };
 
@@ -405,40 +437,66 @@ export default function OrderImport() {
               if (!match) return false;
           }
 
-          // 2. Advanced Filters
-          if (filters.length > 0) {
-              const allFiltersMatch = filters.every(f => {
-                  const val = row[f.column];
-                  const strVal = String(val !== undefined && val !== null ? val : "").toLowerCase();
-                  const filterVal = f.value.toLowerCase();
+          // 2. Structured Filters
+          const { machine, material, order, client, deliveryDateStart, deliveryDateEnd, startDateStart, startDateEnd } = filterValues;
 
-                  switch (f.operator) {
-                      case 'contains': return strVal.includes(filterVal);
-                      case 'equals': return strVal === filterVal;
-                      case 'startsWith': return strVal.startsWith(filterVal);
-                      case 'endsWith': return strVal.endsWith(filterVal);
-                      case 'notContains': return !strVal.includes(filterVal);
-                      default: return true;
-                  }
-              });
-              if (!allFiltersMatch) return false;
+          // Sala/Máquina (check both machine_name and room)
+          if (machine) {
+              const mVal = machine.toLowerCase();
+              const machineName = String(row.machine_name || "").toLowerCase();
+              const room = String(row.room || "").toLowerCase();
+              if (!machineName.includes(mVal) && !room.includes(mVal)) return false;
+          }
+
+          // Material
+          if (material) {
+              if (!String(row.material || "").toLowerCase().includes(material.toLowerCase())) return false;
+          }
+
+          // Order
+          if (order) {
+              if (!String(row.order_number || "").toLowerCase().includes(order.toLowerCase())) return false;
+          }
+
+          // Client
+          if (client) {
+              if (!String(row.client_name || "").toLowerCase().includes(client.toLowerCase())) return false;
+          }
+
+          // Helper for date comparison
+          const checkDateRange = (dateStr, start, end) => {
+              if (!dateStr) return false;
+              const d = new Date(dateStr);
+              if (isNaN(d.getTime())) return false;
+              
+              const dTime = d.getTime();
+              
+              if (start) {
+                  const startDate = new Date(start);
+                  if (dTime < startDate.getTime()) return false;
+              }
+              if (end) {
+                  const endDate = new Date(end);
+                  endDate.setHours(23, 59, 59, 999); // Inclusive end date
+                  if (dTime > endDate.getTime()) return false;
+              }
+              return true;
+          };
+
+          // Delivery Date
+          if (deliveryDateStart || deliveryDateEnd) {
+              // Use effective_delivery_date for filtering
+              if (!checkDateRange(row.effective_delivery_date, deliveryDateStart, deliveryDateEnd)) return false;
+          }
+
+          // Start Date
+          if (startDateStart || startDateEnd) {
+              if (!checkDateRange(row.effective_start_date, startDateStart, startDateEnd)) return false;
           }
 
           return true;
       });
-  }, [rawOrders, searchQuery, filters]);
-
-  const addFilter = () => {
-      if (newFilter.column && newFilter.value) {
-          setFilters([...filters, { ...newFilter, id: Date.now() }]);
-          setNewFilter({ column: "", operator: "contains", value: "" });
-          setIsFilterOpen(false);
-      }
-  };
-
-  const removeFilter = (id) => {
-      setFilters(filters.filter(f => f.id !== id));
-  };
+  }, [rawOrders, searchQuery, filterValues]);
 
   // --- SAVE LOGIC ---
   // Helper to extract value from row checking multiple aliases and case/normalization
@@ -738,104 +796,123 @@ export default function OrderImport() {
           )}
 
           {/* Search & Filter Bar */}
-          <div className="flex flex-col md:flex-row gap-4 items-center bg-muted/20 p-4 rounded-lg border">
-              <div className="relative w-full md:w-1/3">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                      placeholder="Búsqueda global..." 
-                      className="pl-8" 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-              </div>
-              
-              <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                  <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full md:w-auto">
-                          <Filter className="mr-2 h-4 w-4" />
-                          Agregar Filtro
-                      </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-4" align="start">
-                      <div className="space-y-4">
-                          <div className="space-y-2">
-                              <Label>Columna</Label>
-                              <Select 
-                                  value={newFilter.column} 
-                                  onValueChange={(val) => setNewFilter({...newFilter, column: val})}
-                              >
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar columna" />
-                                  </SelectTrigger>
-                                  <SelectContent className="max-h-[200px]">
-                                      {columns.map(col => (
-                                          <SelectItem key={col} value={col}>{col}</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                              <Label>Operador</Label>
-                              <Select 
-                                  value={newFilter.operator} 
-                                  onValueChange={(val) => setNewFilter({...newFilter, operator: val})}
-                              >
-                                  <SelectTrigger>
-                                      <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      <SelectItem value="contains">Contiene</SelectItem>
-                                      <SelectItem value="equals">Igual a</SelectItem>
-                                      <SelectItem value="startsWith">Empieza por</SelectItem>
-                                      <SelectItem value="endsWith">Termina en</SelectItem>
-                                      <SelectItem value="notContains">No contiene</SelectItem>
-                                  </SelectContent>
-                              </Select>
-                          </div>
+          <Card className="bg-slate-50 border-slate-200">
+            <CardContent className="p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Text Filters */}
+                  <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-500">Sala / Máquina</Label>
+                      <Input 
+                          placeholder="Buscar..." 
+                          value={filterValues.machine}
+                          onChange={(e) => setFilterValues({...filterValues, machine: e.target.value})}
+                          className="h-8 bg-white"
+                      />
+                  </div>
+                  <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-500">Material</Label>
+                      <Input 
+                          placeholder="Buscar..." 
+                          value={filterValues.material}
+                          onChange={(e) => setFilterValues({...filterValues, material: e.target.value})}
+                          className="h-8 bg-white"
+                      />
+                  </div>
+                  <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-500">Orden</Label>
+                      <Input 
+                          placeholder="Buscar..." 
+                          value={filterValues.order}
+                          onChange={(e) => setFilterValues({...filterValues, order: e.target.value})}
+                          className="h-8 bg-white"
+                      />
+                  </div>
+                  <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-500">Cliente</Label>
+                      <Input 
+                          placeholder="Buscar..." 
+                          value={filterValues.client}
+                          onChange={(e) => setFilterValues({...filterValues, client: e.target.value})}
+                          className="h-8 bg-white"
+                      />
+                  </div>
 
-                          <div className="space-y-2">
-                              <Label>Valor</Label>
+                  {/* Date Filters */}
+                  <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-500">Fecha Entrega (Desde - Hasta)</Label>
+                      <div className="flex gap-2">
+                          <Input 
+                              type="date"
+                              value={filterValues.deliveryDateStart}
+                              onChange={(e) => setFilterValues({...filterValues, deliveryDateStart: e.target.value})}
+                              className="h-8 bg-white"
+                          />
+                          <Input 
+                              type="date"
+                              value={filterValues.deliveryDateEnd}
+                              onChange={(e) => setFilterValues({...filterValues, deliveryDateEnd: e.target.value})}
+                              className="h-8 bg-white"
+                          />
+                      </div>
+                  </div>
+
+                  <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-500">Inicio Límite (Desde - Hasta)</Label>
+                      <div className="flex gap-2">
+                          <Input 
+                              type="date"
+                              value={filterValues.startDateStart}
+                              onChange={(e) => setFilterValues({...filterValues, startDateStart: e.target.value})}
+                              className="h-8 bg-white"
+                          />
+                          <Input 
+                              type="date"
+                              value={filterValues.startDateEnd}
+                              onChange={(e) => setFilterValues({...filterValues, startDateEnd: e.target.value})}
+                              className="h-8 bg-white"
+                          />
+                      </div>
+                  </div>
+                  
+                  {/* Global Search & Reset */}
+                  <div className="space-y-2 lg:col-span-2">
+                      <Label className="text-xs font-medium text-slate-500">Búsqueda Global</Label>
+                      <div className="flex gap-2">
+                          <div className="relative flex-1">
+                              <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
                               <Input 
-                                  value={newFilter.value}
-                                  onChange={(e) => setNewFilter({...newFilter, value: e.target.value})}
-                                  placeholder="Valor a filtrar..."
+                                  placeholder="Buscar en todo..." 
+                                  className="pl-8 h-8 bg-white" 
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value)}
                               />
                           </div>
-
-                          <Button className="w-full" onClick={addFilter} disabled={!newFilter.column || !newFilter.value}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Aplicar Filtro
+                          <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                  setSearchQuery("");
+                                  setFilterValues({
+                                      machine: "",
+                                      material: "",
+                                      order: "",
+                                      client: "",
+                                      deliveryDateStart: "",
+                                      deliveryDateEnd: "",
+                                      startDateStart: "",
+                                      startDateEnd: ""
+                                  });
+                              }}
+                              className="h-8"
+                          >
+                              <X className="mr-2 h-3 w-3" />
+                              Limpiar
                           </Button>
                       </div>
-                  </PopoverContent>
-              </Popover>
-
-              <div className="flex-1 flex flex-wrap gap-2">
-                  {filters.map(f => (
-                      <Badge key={f.id} variant="secondary" className="px-3 py-1 text-sm flex items-center gap-2">
-                          <span>{f.column}</span>
-                          <span className="text-muted-foreground font-normal">
-                              {f.operator === 'contains' && 'contiene'}
-                              {f.operator === 'equals' && '='}
-                              {f.operator === 'startsWith' && 'empieza por'}
-                              {f.operator === 'endsWith' && 'termina en'}
-                              {f.operator === 'notContains' && 'no contiene'}
-                          </span>
-                          <span className="font-bold">"{f.value}"</span>
-                          <button onClick={() => removeFilter(f.id)} className="ml-1 hover:text-destructive">
-                              <X className="h-3 w-3" />
-                          </button>
-                      </Badge>
-                  ))}
-                  {filters.length > 0 && (
-                      <Button variant="ghost" size="sm" onClick={() => setFilters([])} className="text-muted-foreground h-7">
-                          <Trash2 className="mr-2 h-3 w-3" />
-                          Limpiar
-                      </Button>
-                  )}
+                  </div>
               </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Table */}
           {rawOrders.length > 0 ? (
