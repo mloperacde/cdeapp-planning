@@ -464,25 +464,45 @@ export function useRolesManager() {
 
       // 3. GUARDAR MASTER RECORD (Metadata)
       // El master ahora solo dice "soy chunked" y cuántos chunks hay.
+      // ESTRATEGIA DE ROBUSTEZ: Guardamos la metadata TAMBIÉN en description,
+      // porque a veces el backend limpia el campo 'value' inexplicablemente.
+      const metadata = {
+          v: 3,
+          is_chunked: true,
+          total_chunks: chunks.length,
+          timestamp: new Date().toISOString(),
+          stats: {
+              roles: Object.keys(compressedRoles).length,
+              chunks: chunks.length
+          }
+      };
+      const metadataString = JSON.stringify(metadata);
+
       const masterPayload = {
           key: 'roles_config',
           config_key: 'roles_config',
-          value: JSON.stringify({
-              v: 3,
-              is_chunked: true,
-              total_chunks: chunks.length,
-              timestamp: new Date().toISOString()
-          }),
-          description: `Roles Config Master v3 (Chunked) - ${chunks.length} chunks - ${Object.keys(compressedRoles).length} roles`,
+          value: metadataString,
+          description: metadataString, // FALLBACK CRÍTICO: Si value falla, DataProvider lee esto.
           is_active: true
       };
 
-      console.log("useRolesManager: Creating master record");
+      console.log("useRolesManager: Creating master record with metadata:", metadataString);
       const savedRecord = await base44.entities.AppConfig.create(masterPayload);
 
       // VERIFICACIÓN INMEDIATA DE ESCRITURA
        if (savedRecord) {
            console.log("useRolesManager: Registro Master guardado.", savedRecord.id);
+           
+           // Verificación doble
+           setTimeout(async () => {
+               try {
+                   const check = await base44.entities.AppConfig.filter({ id: savedRecord.id });
+                   if (check && check.length > 0) {
+                       const rec = check[0];
+                       console.log(`useRolesManager: CHECK MASTER -> Value: ${rec.value ? 'OK' : 'EMPTY'}, Desc: ${rec.description ? 'OK' : 'EMPTY'}`);
+                   }
+               } catch(e) { console.warn("Check failed", e); }
+           }, 1000);
        }
 
       // 3. Actualización Optimista
