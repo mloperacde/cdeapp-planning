@@ -172,60 +172,69 @@ export function usePermissions() {
             roleConfig = rolesConfig.roles[foundKey];
         }
     }
+
+    // DIAGNOSTIC LOG (Solo en desarrollo o si hay problemas)
+    // console.log(`usePermissions Check: Role=${role}, Path=${path}, FoundConfig=${!!roleConfig}, IsAdmin=${permissions.isAdmin}`);
     
     // Si el rol existe en la configuración dinámica (es un rol gestionado), 
-            // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados
-            // O si está explícitamente marcado como estricto (is_strict).
-            if (roleConfig) {
-               const pagePerms = roleConfig.page_permissions || {};
-               const keys = Object.keys(pagePerms);
-               const hasConfiguredPages = keys.length > 0;
-               const isStrict = roleConfig.is_strict === true;
+    // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados
+    // O si está explícitamente marcado como estricto (is_strict).
+    if (roleConfig) {
+       const pagePerms = roleConfig.page_permissions || {};
+       const keys = Object.keys(pagePerms);
+       const hasConfiguredPages = keys.length > 0;
+       const isStrict = roleConfig.is_strict === true;
 
-               // Si NO hay ninguna página configurada (ni true ni false) Y NO es estricto, 
-               // asumimos que es un rol nuevo/legacy y aplicamos modo PERMISIVO.
-               if (!hasConfiguredPages && !isStrict) {
-                   // Bloquear configuración para no admins por seguridad básica
-                   if (path.startsWith('/Configuration') || path.includes('Config')) return false;
-                   return true;
-               }
+       // Si NO hay ninguna página configurada (ni true ni false) Y NO es estricto, 
+       // asumimos que es un rol nuevo/legacy y aplicamos modo PERMISIVO.
+       if (!hasConfiguredPages && !isStrict) {
+           // Bloquear configuración para no admins por seguridad básica
+           if (path.startsWith('/Configuration') || path.includes('Config')) return false;
+           return true;
+       }
 
-               // Si HAY configuración o es ESTRICTO:
-               // Normalizar path de entrada (quitar query params y trailing slash)
-            const cleanPath = path.split('?')[0].replace(/\/$/, '');
-            
-            // 1. Coincidencia exacta (Key lookup rápido)
-            if (pagePerms[path] === true) return true;
-            if (pagePerms[cleanPath] === true) return true;
-            
-            // 2. Búsqueda por coincidencia normalizada (robustez)
-            // Busca si alguna key configurada coincide con el path solicitado
-            const matchedKey = keys.find(key => {
-               // Normalizar la key de configuración
-               const cleanKey = key.split('?')[0].replace(/\/$/, '');
-               
-               // Coincidencia exacta de path
-               if (cleanKey === cleanPath) return true;
-               
-               // Coincidencia de sub-ruta (ej. /NewProcessConfigurator/*)
-               if (cleanPath.startsWith(cleanKey + '/')) return true;
-               
-               return false;
-            });
+       // Si HAY configuración o es ESTRICTO:
+       // Normalizar path de entrada (quitar query params y trailing slash)
+       const cleanPath = path.split('?')[0].replace(/\/$/, '');
+       
+       // 1. Coincidencia exacta (Key lookup rápido)
+       if (pagePerms[path] === true) return true;
+       if (pagePerms[cleanPath] === true) return true;
+       
+       // 2. Búsqueda por coincidencia normalizada (robustez)
+       // Busca si alguna key configurada coincide con el path solicitado
+       const matchedKey = keys.find(key => {
+          // Normalizar la key de configuración
+          const cleanKey = key.split('?')[0].replace(/\/$/, '');
+          
+          // Coincidencia exacta de path
+          if (cleanKey === cleanPath) return true;
+          
+          // Coincidencia de sub-ruta (ej. /NewProcessConfigurator/*)
+          if (cleanPath.startsWith(cleanKey + '/')) return true;
+          
+          return false;
+       });
 
-            if (matchedKey && pagePerms[matchedKey] === true) return true;
+       if (matchedKey && pagePerms[matchedKey] === true) return true;
 
-            // Si no está definido explícitamente en un rol gestionado -> DENEGAR
-            return false;
-         }
-         
-         // Fallback estático (Legacy) para roles NO gestionados (hardcoded)
-        // Bloquear configuración para no admins
-        if (path.startsWith('/Configuration') || path.includes('Config')) return false;
-        
-        return true;
-      }
-    };
+       // Si no está definido explícitamente en un rol gestionado -> DENEGAR
+       return false;
+    }
+    
+    // FALLBACK (Roles NO gestionados o Configuración no cargada)
+    // CAMBIO DE SEGURIDAD: Deny by Default (Modo Estricto)
+    // Antes era permisivo (return true), ahora cerramos el acceso si no hay config explícita.
+    
+    // 1. Siempre permitir Dashboard
+    if (path === '/Dashboard' || path === '/') return true;
+
+    // 2. Bloquear todo lo demás si no se encontró configuración del rol
+    // Esto evita que roles mal configurados o huérfanos vean toda la app.
+    // console.warn(`Access Denied (Fallback): Role=${role} Path=${path} - No configuration found for role.`);
+    return false;
+  }
+};
 
     return base;
   }, [user, rolesConfig]);
