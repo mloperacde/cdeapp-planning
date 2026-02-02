@@ -4,6 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { MENU_STRUCTURE } from '@/config/menuConfig';
+
 // Roles por defecto (copia de seguridad del sistema anterior)
 export const DEFAULT_ROLES_CONFIG = {
   roles: {
@@ -222,6 +224,26 @@ export function useRolesManager() {
   const updatePagePermission = useCallback((roleId, path, checked) => {
     setLocalConfig(prev => {
       const role = prev.roles[roleId];
+      
+      // Lógica de Hidratación:
+      // Si page_permissions no existe (rol en modo legacy/total),
+      // lo inicializamos con TODO en true (excepto Configuración) para replicar el estado visual
+      // antes de aplicar el cambio específico. Esto evita que al tocar un solo permiso se bloquee todo lo demás.
+      let currentPermissions = role.page_permissions;
+      
+      if (!currentPermissions) {
+        currentPermissions = {};
+        // Poblar con todos los items del menú
+        MENU_STRUCTURE.forEach(item => {
+            // Por defecto permitimos todo excepto Configuración
+            if (item.category === 'Configuración') {
+                currentPermissions[item.path] = false;
+            } else {
+                currentPermissions[item.path] = true;
+            }
+        });
+      }
+
       return {
         ...prev,
         roles: {
@@ -229,7 +251,7 @@ export function useRolesManager() {
           [roleId]: {
             ...role,
             page_permissions: {
-              ...(role.page_permissions || {}),
+              ...currentPermissions,
               [path]: checked
             }
           }

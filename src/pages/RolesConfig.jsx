@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Shield, Users, Save, Plus, Trash2, RotateCcw, Factory } from "lucide-react";
 import { toast } from "sonner";
+import { format, startOfWeek, subDays } from "date-fns";
+import { cn } from "@/lib/utils";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
 import { useRolesManager } from '@/hooks/useRolesManager';
 
@@ -247,14 +249,34 @@ export default function RolesConfig() {
                             }
                             
                             const isLocked = roleId === 'admin';
+                            
+                            // Visualización explícita para el usuario
+                            const isConfigured = role.page_permissions !== undefined;
+                            const isLegacyMode = !isConfigured;
 
                             return (
-                              <TableCell key={`${roleId}-${item.path}`} className="text-center">
-                                <Checkbox 
-                                  checked={effectiveValue}
-                                  disabled={isLocked}
-                                  onCheckedChange={(checked) => updatePagePermission(roleId, item.path, checked)}
-                                />
+                              <TableCell key={`${roleId}-${item.path}`} className="text-center relative">
+                                <div className="flex justify-center items-center gap-2">
+                                    <Checkbox 
+                                      checked={effectiveValue}
+                                      disabled={isLocked}
+                                      onCheckedChange={(checked) => updatePagePermission(roleId, item.path, checked)}
+                                      className={cn(
+                                        isLegacyMode && !isLocked && "opacity-50 data-[state=checked]:bg-slate-400"
+                                      )}
+                                    />
+                                    {/* Etiqueta explícita para claridad */}
+                                    {!isLocked && (
+                                        <span className={cn(
+                                            "text-[10px] font-mono px-1 rounded",
+                                            effectiveValue 
+                                                ? "text-green-600 bg-green-50 border border-green-100" 
+                                                : "text-red-600 bg-red-50 border border-red-100"
+                                        )}>
+                                            {effectiveValue ? "SÍ" : "NO"}
+                                        </span>
+                                    )}
+                                </div>
                               </TableCell>
                             );
                           })}
