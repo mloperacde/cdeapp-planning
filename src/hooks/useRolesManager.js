@@ -403,9 +403,18 @@ export function useRolesManager() {
       };
 
       const configString = JSON.stringify(compressedConfig);
-      const parsedCheck = JSON.parse(configString); // Validación simple
       
       console.log("useRolesManager: Saving config (Compressed v2)...", configString.length, "chars");
+
+      // CHUNKING STRATEGY (v3)
+      // Si el backend rechaza payloads grandes (>2000 chars), dividimos en chunks de 1000 chars.
+      const CHUNK_SIZE = 1000;
+      const chunks = [];
+      for (let i = 0; i < configString.length; i += CHUNK_SIZE) {
+          chunks.push(configString.substring(i, i + CHUNK_SIZE));
+      }
+
+      console.log(`useRolesManager: Splitting into ${chunks.length} chunks of max ${CHUNK_SIZE} chars.`);
 
       // BACKUP DE EMERGENCIA EN LOCALSTORAGE
       try {
@@ -417,79 +426,63 @@ export function useRolesManager() {
 
       console.log("useRolesManager: Config payload stats:", {
           rolesCount: Object.keys(compressedRoles).length,
-          dictionarySize: dictionary.length
+          dictionarySize: dictionary.length,
+          totalChunks: chunks.length
       });
 
-      // 1. Buscar si ya existe la configuración
-      let existingId = null;
-      try {
-          const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-          if (f1 && f1.length > 0) {
-            existingId = f1[0].id; // Tomamos el primero si hay duplicados
-            
-            // DIAGNÓSTICO: Verificar si el registro existente está corrupto
-            if (!f1[0].value) {
-                console.warn(`useRolesManager: Registro existente ${existingId} está IRRECUPERABLE (value vacío). ELIMINANDO para crear uno nuevo.`);
-                try {
-                    await base44.entities.AppConfig.delete(existingId);
-                    console.log("useRolesManager: Registro corrupto eliminado correctamente.");
-                    existingId = null; // Forzamos creación de uno nuevo
-                } catch (delErr) {
-                    console.error("useRolesManager: Falló la eliminación del registro corrupto", delErr);
-                    // Si falla el borrado, intentamos actualizar de todos modos como último recurso
-                }
-            }
-          }
-      } catch(e) { 
-          console.warn("Search failed, assuming create new", e); 
-      }
+      // 1. LIMPIEZA PREVIA (Master antiguo y chunks huérfanos)
+      // Buscamos todo lo que empiece por roles_config (si pudiéramos, pero filter es exacto)
+      // Así que buscamos el master 'roles_config' y los chunks conocidos (limitados a 10 por seguridad)
+      
+      const cleanOldRecords = async () => {
+         // Borrar master
+         const masters = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+         if (masters) await Promise.all(masters.map(m => base44.entities.AppConfig.delete(m.id)));
+         
+         // Borrar chunks potenciales (hasta 10)
+         for(let i=0; i<10; i++) {
+             const chunkMatches = await base44.entities.AppConfig.filter({ config_key: `roles_config_chunk_${i}` });
+             if (chunkMatches) await Promise.all(chunkMatches.map(m => base44.entities.AppConfig.delete(m.id)));
+         }
+      };
+      
+      console.log("useRolesManager: Cleaning old records...");
+      await cleanOldRecords();
 
-      // 2. Upsert (Actualizar o Crear)
-      // ESTRATEGIA DE PERSISTENCIA:
-      // Usamos JSON plano (stringified) en 'value'. 
-      // Base64 puede causar problemas en algunos backends si no se espera un string "opaco".
-      // La longitud ya está optimizada eliminando los 'false'.
-      
-      // const base64Config = btoa(unescape(encodeURIComponent(configString)));
-      // console.log("useRolesManager: Saving config as Base64...", base64Config.length, "chars");
-      
-      const payload = {
+      // 2. GUARDAR CHUNKS
+      console.log("useRolesManager: Saving chunks...");
+      await Promise.all(chunks.map(async (chunkData, index) => {
+          const payload = {
+              key: `roles_config_chunk_${index}`,
+              config_key: `roles_config_chunk_${index}`,
+              value: chunkData,
+              description: `Chunk ${index}/${chunks.length} - ${new Date().toISOString()}`,
+              is_active: true
+          };
+          await base44.entities.AppConfig.create(payload);
+      }));
+
+      // 3. GUARDAR MASTER RECORD (Metadata)
+      // El master ahora solo dice "soy chunked" y cuántos chunks hay.
+      const masterPayload = {
           key: 'roles_config',
           config_key: 'roles_config',
-          value: configString, // JSON string directo
-          description: `Roles Config v2 (Compressed) - ${new Date().toISOString()} - ${Object.keys(compressedRoles).length} roles`,
+          value: JSON.stringify({
+              v: 3,
+              is_chunked: true,
+              total_chunks: chunks.length,
+              timestamp: new Date().toISOString()
+          }),
+          description: `Roles Config Master v3 (Chunked) - ${chunks.length} chunks - ${Object.keys(compressedRoles).length} roles`,
           is_active: true
       };
 
-      let savedRecord = null;
-      if (existingId) {
-        console.log(`useRolesManager: Updating ID ${existingId}`);
-        savedRecord = await base44.entities.AppConfig.update(existingId, payload);
-      } else {
-        console.log("useRolesManager: Creating new record");
-        savedRecord = await base44.entities.AppConfig.create(payload);
-      }
+      console.log("useRolesManager: Creating master record");
+      const savedRecord = await base44.entities.AppConfig.create(masterPayload);
 
       // VERIFICACIÓN INMEDIATA DE ESCRITURA
        if (savedRecord) {
-           console.log("useRolesManager: Registro guardado. Verificando contenido...", savedRecord.id);
-           
-           // Esperar un momento por consistencia eventual
-           await new Promise(r => setTimeout(r, 500));
-
-           const checks = await base44.entities.AppConfig.filter({ id: savedRecord.id });
-           const check = checks && checks.length > 0 ? checks[0] : null;
-
-           // Verificamos si AL MENOS UNO de los campos se guardó
-           const valueOk = check && check.value && check.value.length > 0;
-           // const descOk = check && check.description && check.description.length > 0; 
-           // Ya no verificamos descripción porque ahora es solo metadata
-
-           if (!valueOk) {
-               console.error("CRITICAL: Backend rechazó value.");
-           } else {
-               console.log(`useRolesManager: Verificación exitosa. Value: OK`);
-           }
+           console.log("useRolesManager: Registro Master guardado.", savedRecord.id);
        }
 
       // 3. Actualización Optimista

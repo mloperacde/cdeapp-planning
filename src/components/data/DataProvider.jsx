@@ -287,6 +287,97 @@ export function DataProvider({ children }) {
 
             const parsed = JSON.parse(jsonString);
             
+            // LÓGICA DE REENSAMBLADO DE CHUNKS (v3)
+            if (parsed.v === 3 && parsed.is_chunked) {
+                console.log(`DataProvider: Detectada configuración en ${parsed.total_chunks} chunks (v3). Reensamblando...`);
+                
+                try {
+                    // Fetch all chunks in parallel
+                    const chunkPromises = [];
+                    for(let i = 0; i < parsed.total_chunks; i++) {
+                        chunkPromises.push(base44.entities.AppConfig.filter({ config_key: `roles_config_chunk_${i}` }));
+                    }
+                    
+                    const chunkResults = await Promise.all(chunkPromises);
+                    let fullString = "";
+                    
+                    chunkResults.forEach((res, idx) => {
+                        if (res && res.length > 0 && res[0].value) {
+                            fullString += res[0].value;
+                        } else {
+                            throw new Error(`Falta el chunk ${idx}`);
+                        }
+                    });
+                    
+                    console.log("DataProvider: Chunks reensamblados correctamente. Longitud total:", fullString.length);
+                    // Parseamos el string completo (que debería ser un v2 compressed config)
+                    const reassembled = JSON.parse(fullString);
+                    
+                    // Si es v2, lo procesamos con la lógica de v2
+                    if (reassembled.v === 2) {
+                         // Recursive call logic or just proceed to v2 block below?
+                         // Better to just update parsed variable and fall through
+                         // parsed = reassembled; // Can't reassign const
+                         
+                         // Quick hack: Execute v2 logic here
+                         const dictionary = reassembled.d;
+                         const roles = {};
+                         Object.keys(reassembled.r).forEach(roleId => {
+                            const cRole = reassembled.r[roleId];
+                            const page_permissions = {};
+                            if (cRole.pp) {
+                                cRole.pp.forEach(idx => {
+                                    if (dictionary[idx]) page_permissions[dictionary[idx]] = true;
+                                });
+                            }
+                            roles[roleId] = {
+                                name: cRole.n,
+                                is_strict: !!cRole.s,
+                                permissions: cRole.p || {},
+                                page_permissions,
+                                isSystem: cRole.sys
+                            };
+                        });
+                        return { roles, user_assignments: reassembled.ua || {} };
+                    }
+                    
+                    return reassembled;
+
+                } catch (chunkError) {
+                    console.error("DataProvider: Error reensamblando chunks", chunkError);
+                    // Fallback a backup local si existe
+                    const localBackup = typeof localStorage !== 'undefined' ? localStorage.getItem('roles_config_backup') : null;
+                    if (localBackup) {
+                         console.warn("DataProvider: Usando backup local tras fallo de chunks.");
+                         // El backup local es el string v2 comprimido
+                         const backupParsed = JSON.parse(localBackup);
+                         if (backupParsed.v === 2) {
+                             // Copiar lógica v2... (DRY violation but safe)
+                             const dictionary = backupParsed.d;
+                             const roles = {};
+                             Object.keys(backupParsed.r).forEach(roleId => {
+                                const cRole = backupParsed.r[roleId];
+                                const page_permissions = {};
+                                if (cRole.pp) {
+                                    cRole.pp.forEach(idx => {
+                                        if (dictionary[idx]) page_permissions[dictionary[idx]] = true;
+                                    });
+                                }
+                                roles[roleId] = {
+                                    name: cRole.n,
+                                    is_strict: !!cRole.s,
+                                    permissions: cRole.p || {},
+                                    page_permissions,
+                                    isSystem: cRole.sys
+                                };
+                            });
+                            return { roles, user_assignments: backupParsed.ua || {} };
+                         }
+                    }
+                    return null;
+                }
+            }
+
             // LÓGICA DE DESCOMPRESIÓN (v2)
             if (parsed.v === 2 && parsed.r && parsed.d) {
                 console.log("DataProvider: Detectada configuración comprimida (v2). Descomprimiendo...");
