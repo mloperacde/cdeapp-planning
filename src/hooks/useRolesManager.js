@@ -177,9 +177,9 @@ export function useRolesManager() {
       // HIDRATACIÓN DEFENSIVA: Asegurar que existan todas las estructuras necesarias
       // Esto previene que una configuración remota incompleta sobrescriba datos locales válidos
       const hydratedConfig = {
+          ...rolesConfig,
           roles: { ...DEFAULT_ROLES_CONFIG.roles, ...(rolesConfig.roles || {}) },
-          user_assignments: rolesConfig.user_assignments || {}, 
-          ...rolesConfig 
+          user_assignments: rolesConfig.user_assignments || {}
       };
 
       // Doble verificación para user_assignments
@@ -468,7 +468,12 @@ export function useRolesManager() {
        }
 
       // 3. Actualización Optimista
+      // Forzar que el queryClient tenga los datos guardados inmediatamente
       queryClient.setQueryData(['rolesConfig'], parsedCheck);
+      
+      // Invalidar explícitamente para forzar recarga en otros componentes
+      queryClient.invalidateQueries(['rolesConfig']);
+      
       setIsDirty(false); 
       toast.success("Configuración guardada correctamente.");
       
@@ -495,6 +500,14 @@ export function useRolesManager() {
     setIsDirty(false);
     toast.info("Cambios descartados");
   }, [rolesConfig]);
+
+  const restoreDefaults = useCallback(() => {
+    if (confirm("¿Estás seguro de que quieres RESTAURAR los roles por defecto? Esto sobrescribirá la configuración actual.")) {
+        setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
+        setIsDirty(true);
+        toast.info("Roles restaurados a valores por defecto. No olvides guardar.");
+    }
+  }, []);
 
   const forceCleanup = async () => {
     // Versión simplificada de limpieza manual
@@ -549,6 +562,7 @@ export function useRolesManager() {
     deleteRole,
     saveConfig,
     resetConfig,
+    restoreDefaults,
     forceCleanup
   };
 }

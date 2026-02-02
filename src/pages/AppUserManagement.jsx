@@ -47,6 +47,7 @@ export default function AppUserManagement() {
     deleteRole,
     saveConfig,
     resetConfig,
+    restoreDefaults,
     forceCleanup
   } = useRolesManager();
   
@@ -176,26 +177,26 @@ export default function AppUserManagement() {
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto pb-24">
-      {/* --- DEBUG BANNER --- */}
-      <div className="bg-red-600 text-white p-4 font-bold text-center rounded animate-pulse flex flex-col items-center gap-2">
-        <span>DEBUG MODE ACTIVE: Si ves esto, el archivo se ha actualizado correctamente.</span>
-        <span>Roles detectados: {roleKeys.length} ({roleKeys.join(', ')})</span>
-        {roleKeys.length <= 1 && (
-            <Button 
-                variant="secondary" 
-                size="sm" 
-                className="bg-white text-red-600 hover:bg-slate-100"
-                onClick={() => {
-                    if(confirm("¿Restaurar configuración por defecto? Se perderán los cambios locales.")) {
-                        resetConfig();
-                        window.location.reload();
-                    }
-                }}
-            >
-                Restaurar Roles por Defecto (Fix Corrupción)
-            </Button>
-        )}
-      </div>
+      {/* --- Integrity Check Banner --- */}
+      {roleKeys.length <= 2 && (
+        <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 mb-4 rounded flex justify-between items-center shadow-sm">
+          <div className="flex items-center gap-2">
+             <AlertCircle className="w-5 h-5" />
+             <div>
+                <p className="font-bold">Configuración de roles incompleta detectada</p>
+                <p className="text-sm">Parece que faltan roles estándar (posiblemente debido a una sobrescritura del sistema). Se recomienda restaurar los valores por defecto.</p>
+             </div>
+          </div>
+          <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-white border-amber-300 hover:bg-amber-50 text-amber-800"
+              onClick={restoreDefaults}
+          >
+              Restaurar Roles por Defecto
+          </Button>
+        </div>
+      )}
       <Breadcrumb className="mb-2">
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -233,6 +234,10 @@ export default function AppUserManagement() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={restoreDefaults} disabled={isSaving} className="text-slate-600 border-slate-200 hover:bg-slate-50">
+             <RotateCcw className="w-4 h-4 mr-2" />
+             Restaurar Defaults
+          </Button>
           {isDirty && (
             <Button variant="outline" onClick={resetConfig} disabled={isSaving} className="text-amber-600 border-amber-200 hover:bg-amber-50">
               <RotateCcw className="w-4 h-4 mr-2" />
