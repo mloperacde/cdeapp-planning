@@ -421,13 +421,12 @@ export function useRolesManager() {
 
       // 2. Upsert (Actualizar o Crear)
       // ESTRATEGIA DE PERSISTENCIA ROBUSTA:
-      // 1. Base64 para evitar filtros de caracteres.
-      // 2. Guardar en 'value' Y 'description' simultáneamente.
-      // 3. 'description' ha demostrado ser más fiable en este backend.
+      // 1. Base64 para evitar filtros de caracteres en 'value'.
+      // 2. Usar 'description' solo para metadatos, NO para backup completo (límite de caracteres).
       const base64Config = btoa(unescape(encodeURIComponent(configString)));
       console.log("useRolesManager: Saving config as Base64...", base64Config.length, "chars");
 
-      // Validar longitud antes de enviar para evitar errores 413 o truncado silencioso
+      // Validar longitud antes de enviar
       if (base64Config.length > 50000) {
           console.warn("useRolesManager: Configuración muy grande, podría fallar en backend.", base64Config.length);
       }
@@ -436,7 +435,7 @@ export function useRolesManager() {
           key: 'roles_config',
           config_key: 'roles_config',
           value: base64Config, 
-          description: configString, // Guardamos JSON plano en description como backup legible/robusto
+          description: `Roles Config - ${new Date().toISOString()} - ${Object.keys(configToSave.roles || {}).length} roles`,
           is_active: true
       };
 
@@ -461,16 +460,13 @@ export function useRolesManager() {
 
            // Verificamos si AL MENOS UNO de los campos se guardó
            const valueOk = check && check.value && check.value.length > 0;
-           const descOk = check && check.description && check.description.length > 0;
+           // const descOk = check && check.description && check.description.length > 0; 
+           // Ya no verificamos descripción porque ahora es solo metadata
 
-           if (!valueOk && !descOk) {
-               console.error("CRITICAL: Backend rechazó ambos campos (value y description).");
-               // Último intento: Usar Base64 también en description
-               await base44.entities.AppConfig.update(savedRecord.id, {
-                   description: base64Config
-               });
+           if (!valueOk) {
+               console.error("CRITICAL: Backend rechazó value.");
            } else {
-               console.log(`useRolesManager: Verificación exitosa. Value: ${valueOk ? 'OK' : 'EMPTY'}, Desc: ${descOk ? 'OK' : 'EMPTY'}`);
+               console.log(`useRolesManager: Verificación exitosa. Value: OK`);
            }
        }
 
