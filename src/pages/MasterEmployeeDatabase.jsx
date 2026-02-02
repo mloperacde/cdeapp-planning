@@ -145,7 +145,10 @@ export default function MasterEmployeeDatabasePage() {
   const permissions = usePermissions() || {};
 
   const canCreateEmployee = permissions.isAdmin || permissions.canEditEmployees;
-  const isHrModuleAllowed = permissions.role === "hr_manager" || permissions.isAdmin;
+  // Use centralized permission check instead of hardcoded role check
+  const isHrModuleAllowed = permissions.canAccessPage 
+    ? permissions.canAccessPage('/MasterEmployeeDatabase') 
+    : (permissions.role === "hr_manager" || permissions.isAdmin);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.EmployeeMasterDatabase.delete(id),

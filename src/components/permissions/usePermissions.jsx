@@ -164,14 +164,20 @@ export function usePermissions() {
          // Configuración dinámica de páginas
          const roleConfig = rolesConfig?.roles?.[role];
          if (roleConfig?.page_permissions) {
+            // 1. Coincidencia exacta
             const perm = roleConfig.page_permissions[path];
             if (perm !== undefined) return perm;
             
-            // Si no está definido en la configuración dinámica (ruta no listada en menú):
-            // Aplicar reglas de seguridad mínimas para rutas críticas no listadas
-            if (path.startsWith('/Configuration') || path.includes('Config')) return false;
-            
-            return true;
+            // 2. Coincidencia de sub-rutas (para rutas anidadas como /NewProcessConfigurator/*)
+            // Buscar si existe una ruta padre configurada
+            const parentKey = Object.keys(roleConfig.page_permissions).find(key => 
+              path.startsWith(key + '/') && roleConfig.page_permissions[key] === true
+            );
+            if (parentKey) return true;
+
+            // Si no está definido en la configuración dinámica:
+            // Aplicar política de "Deny by Default" (Lista blanca) para roles configurados
+            return false;
          }
          
          // Fallback estático (Legacy)
