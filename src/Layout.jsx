@@ -8,6 +8,7 @@ import {
   Menu, X, Cog, ChevronDown, ChevronRight, LogOut, 
   User as UserIcon, Key, Shield
 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,7 @@ export default function Layout({ children, currentPageName }) {
     'Revisión de páginas': true
   });
   
-  const { user, isAdmin, branding } = useAppData();
+  const { user, isAdmin, branding, userLoading } = useAppData();
 
   const toggleCategory = (category) => {
     setExpandedCategories(prev => ({
@@ -228,6 +229,26 @@ export default function Layout({ children, currentPageName }) {
                {children}
             </div>
           </div>
+        ) : !user ? (
+            <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+              {userLoading ? (
+                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+              ) : (
+                <>
+                  <Shield className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-6" />
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Bienvenido</h2>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-md mb-8">
+                    Para acceder a la aplicación, necesitas iniciar sesión con tu cuenta.
+                  </p>
+                  <Button 
+                    onClick={() => base44.auth.login()}
+                    className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  >
+                    Iniciar Sesión
+                  </Button>
+                </>
+              )}
+            </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center p-8 text-center">
             <Shield className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-6" />
