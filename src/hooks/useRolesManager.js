@@ -420,21 +420,18 @@ export function useRolesManager() {
       }
 
       // 2. Upsert (Actualizar o Crear)
-      // ESTRATEGIA DE PERSISTENCIA ROBUSTA:
-      // 1. Base64 para evitar filtros de caracteres en 'value'.
-      // 2. Usar 'description' solo para metadatos, NO para backup completo (límite de caracteres).
-      const base64Config = btoa(unescape(encodeURIComponent(configString)));
-      console.log("useRolesManager: Saving config as Base64...", base64Config.length, "chars");
-
-      // Validar longitud antes de enviar
-      if (base64Config.length > 50000) {
-          console.warn("useRolesManager: Configuración muy grande, podría fallar en backend.", base64Config.length);
-      }
-
+      // ESTRATEGIA DE PERSISTENCIA:
+      // Usamos JSON plano (stringified) en 'value'. 
+      // Base64 puede causar problemas en algunos backends si no se espera un string "opaco".
+      // La longitud ya está optimizada eliminando los 'false'.
+      
+      // const base64Config = btoa(unescape(encodeURIComponent(configString)));
+      // console.log("useRolesManager: Saving config as Base64...", base64Config.length, "chars");
+      
       const payload = {
           key: 'roles_config',
           config_key: 'roles_config',
-          value: base64Config, 
+          value: configString, // JSON string directo
           description: `Roles Config - ${new Date().toISOString()} - ${Object.keys(configToSave.roles || {}).length} roles`,
           is_active: true
       };

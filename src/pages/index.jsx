@@ -48,7 +48,6 @@ import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
 
-// import RolesConfig from "./RolesConfig";
 import MessagingConfiguration from "./MessagingConfiguration";
 import RulesAndTemplates from "./RulesAndTemplates";
 import OrganizationalStructure from "./OrganizationalStructure";
@@ -244,7 +243,6 @@ function PagesContent() {
                 <Route path="/OrderImport" element={<OrderImport />} />
                 <Route path="/QualityControl" element={<QualityControl />} />
                 <Route path="/Reports" element={<Reports />} />
-                {/* <Route path="/RolesConfig" element={<RolesConfig />} /> */}
                 
                 <Route path="/ShiftHandover" element={<ShiftHandover />} />
                 
