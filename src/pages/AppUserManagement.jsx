@@ -416,6 +416,60 @@ export default function AppUserManagement() {
             <CardHeader>
               <CardTitle>Permisos de Navegación</CardTitle>
               <CardDescription>Controla a qué páginas puede acceder cada rol</CardDescription>
+               {/* Controles de Acción Masiva */}
+               <div className="flex flex-wrap gap-4 mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
+                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 self-center mr-2">
+                     Acciones Rápidas:
+                 </span>
+                 {roleKeys.filter(r => r !== 'admin').length === 0 && (
+                     <span className="text-sm text-slate-400 italic self-center">No hay roles configurables disponibles.</span>
+                 )}
+                 {roleKeys.map(roleId => {
+                     const isLocked = roleId === 'admin';
+                     if (isLocked) return null;
+                     return (
+                         <div key={roleId} className="flex flex-col gap-2 items-center min-w-[120px] p-2 bg-white dark:bg-slate-950 rounded border border-slate-100 dark:border-slate-800 shadow-sm">
+                              <span className="text-xs font-bold truncate max-w-[110px] text-slate-800 dark:text-slate-200" title={localConfig.roles[roleId].name}>
+                                 {localConfig.roles[roleId].name}
+                              </span>
+                              <div className="flex gap-2 w-full justify-center">
+                                  <Button 
+                                     variant="outline" 
+                                     size="sm" 
+                                     className="h-7 text-xs px-2 w-full"
+                                     title="Permitir acceso a todas las páginas"
+                                     onClick={() => {
+                                         if (confirm(`¿Permitir acceso a TODAS las páginas para ${localConfig.roles[roleId].name}?`)) {
+                                             MENU_STRUCTURE.forEach(item => {
+                                                 if (item.category !== 'Configuración') {
+                                                     updatePagePermission(roleId, item.path, true);
+                                                 }
+                                             });
+                                         }
+                                     }}
+                                  >
+                                     Todo
+                                  </Button>
+                                  <Button 
+                                     variant="outline" 
+                                     size="sm" 
+                                     className="h-7 text-xs px-2 w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50"
+                                     title="Bloquear acceso a todas las páginas"
+                                     onClick={() => {
+                                         if (confirm(`¿BLOQUEAR acceso a TODAS las páginas para ${localConfig.roles[roleId].name}?`)) {
+                                             MENU_STRUCTURE.forEach(item => {
+                                                 updatePagePermission(roleId, item.path, false);
+                                             });
+                                         }
+                                     }}
+                                  >
+                                     Nada
+                                  </Button>
+                              </div>
+                         </div>
+                     )
+                 })}
+               </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>

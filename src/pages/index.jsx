@@ -112,7 +112,6 @@ const PAGES = {
   ProductionPlanning: ProductionPlanning,
   QualityControl: QualityControl,
   Reports: Reports,
-  RolesConfig: RolesConfig,
   ShiftHandover: ShiftHandover,
   ShiftManagers: ShiftManagers,
   ShiftPlanning: ShiftPlanning,
