@@ -150,10 +150,51 @@ export default function AppUserManagement() {
       }
   };
 
-  if (isLoading || !localConfig) return <div className="p-8 text-center">Cargando configuración...</div>;
+  // --- DEBUGGING ---
+  React.useEffect(() => {
+      console.log("AppUserManagement MOUNTED");
+      console.log("localConfig:", localConfig);
+      console.log("roleKeys:", roleKeys);
+      console.log("MENU_STRUCTURE:", MENU_STRUCTURE);
+  }, [localConfig, roleKeys]);
+
+  if (isLoading) {
+    return (
+        <div className="p-8 flex justify-center items-center h-full">
+            <div className="text-center">
+                <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p>Cargando configuración de roles...</p>
+            </div>
+        </div>
+    );
+  }
+
+  if (!localConfig) {
+      return <div className="p-8 text-red-500 font-bold">ERROR CRÍTICO: No se pudo cargar la configuración local.</div>;
+  }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto pb-24">
+      {/* --- DEBUG BANNER --- */}
+      <div className="bg-red-600 text-white p-4 font-bold text-center rounded animate-pulse flex flex-col items-center gap-2">
+        <span>DEBUG MODE ACTIVE: Si ves esto, el archivo se ha actualizado correctamente.</span>
+        <span>Roles detectados: {roleKeys.length} ({roleKeys.join(', ')})</span>
+        {roleKeys.length <= 1 && (
+            <Button 
+                variant="secondary" 
+                size="sm" 
+                className="bg-white text-red-600 hover:bg-slate-100"
+                onClick={() => {
+                    if(confirm("¿Restaurar configuración por defecto? Se perderán los cambios locales.")) {
+                        resetConfig();
+                        window.location.reload();
+                    }
+                }}
+            >
+                Restaurar Roles por Defecto (Fix Corrupción)
+            </Button>
+        )}
+      </div>
       <Breadcrumb className="mb-2">
         <BreadcrumbList>
           <BreadcrumbItem>
