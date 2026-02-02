@@ -48,7 +48,7 @@ import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
 
-import RolesConfig from "./RolesConfig";
+// import RolesConfig from "./RolesConfig";
 import MessagingConfiguration from "./MessagingConfiguration";
 import RulesAndTemplates from "./RulesAndTemplates";
 import OrganizationalStructure from "./OrganizationalStructure";
