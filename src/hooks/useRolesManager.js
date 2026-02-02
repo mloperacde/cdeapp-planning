@@ -241,7 +241,7 @@ export function useRolesManager() {
     if (localConfig && isDirty) return;
 
     if (rolesConfig && Object.keys(rolesConfig).length > 0) {
-      console.log("useRolesManager: Loaded remote configuration keys:", Object.keys(rolesConfig));
+      // console.log("useRolesManager: Loaded remote configuration keys:", Object.keys(rolesConfig));
       
       // HIDRATACIÓN DEFENSIVA: Asegurar que existan todas las estructuras necesarias
       // Esto previene que una configuración remota incompleta sobrescriba datos locales válidos
@@ -256,13 +256,13 @@ export function useRolesManager() {
 
       // Verificar asignaciones cargadas
       const loadedAssignments = Object.keys(hydratedConfig.user_assignments).length;
-      console.log(`useRolesManager: Hydrated config with ${loadedAssignments} assignments.`);
+      // console.log(`useRolesManager: Hydrated config with ${loadedAssignments} assignments.`);
 
       setLocalConfig(JSON.parse(JSON.stringify(hydratedConfig)));
     } else {
       // Solo inicializar con defaults si NO tenemos nada local
       if (!localConfig) {
-          console.log("useRolesManager: Initializing with default configuration");
+          // console.log("useRolesManager: Initializing with default configuration");
           setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_ROLES_CONFIG)));
       }
     }
@@ -473,7 +473,7 @@ export function useRolesManager() {
 
       const configString = JSON.stringify(compressedConfig);
       
-      console.log("useRolesManager: Saving config (Compressed v2)...", configString.length, "chars");
+      // console.log("useRolesManager: Saving config (Compressed v2)...", configString.length, "chars");
 
       // CHUNKING STRATEGY (v3)
       // Si el backend rechaza payloads grandes (>2000 chars), dividimos en chunks de 1000 chars.
@@ -483,21 +483,23 @@ export function useRolesManager() {
           chunks.push(configString.substring(i, i + CHUNK_SIZE));
       }
 
-      console.log(`useRolesManager: Splitting into ${chunks.length} chunks of max ${CHUNK_SIZE} chars.`);
+      // console.log(`useRolesManager: Splitting into ${chunks.length} chunks of max ${CHUNK_SIZE} chars.`);
 
       // BACKUP DE EMERGENCIA EN LOCALSTORAGE
       try {
           localStorage.setItem('roles_config_backup', configString);
-          console.log("useRolesManager: Backup de emergencia guardado en LocalStorage.");
+          // console.log("useRolesManager: Backup de emergencia guardado en LocalStorage.");
       } catch (e) {
           console.warn("useRolesManager: No se pudo guardar backup en LocalStorage", e);
       }
 
+      /*
       console.log("useRolesManager: Config payload stats:", {
           rolesCount: Object.keys(compressedRoles).length,
           dictionarySize: dictionary.length,
           totalChunks: chunks.length
       });
+      */
 
       // 1. LIMPIEZA PREVIA (Master antiguo y chunks huérfanos)
       // Buscamos todo lo que empiece por roles_config (si pudiéramos, pero filter es exacto)
@@ -515,11 +517,11 @@ export function useRolesManager() {
          }
       };
       
-      console.log("useRolesManager: Cleaning old records...");
+      // console.log("useRolesManager: Cleaning old records...");
       await cleanOldRecords();
 
       // 2. GUARDAR CHUNKS
-      console.log("useRolesManager: Saving chunks...");
+      // console.log("useRolesManager: Saving chunks...");
       await Promise.all(chunks.map(async (chunkData, index) => {
           const payload = {
               key: `roles_config_chunk_${index}`,
@@ -555,12 +557,12 @@ export function useRolesManager() {
           is_active: true
       };
 
-      console.log("useRolesManager: Creating master record with metadata:", metadataString);
+      // console.log("useRolesManager: Creating master record with metadata:", metadataString);
       const savedRecord = await base44.entities.AppConfig.create(masterPayload);
 
       // VERIFICACIÓN INMEDIATA DE ESCRITURA
        if (savedRecord) {
-           console.log("useRolesManager: Registro Master guardado.", savedRecord.id);
+           // console.log("useRolesManager: Registro Master guardado.", savedRecord.id);
            
            // Verificación doble
            setTimeout(async () => {
@@ -568,7 +570,7 @@ export function useRolesManager() {
                    const check = await base44.entities.AppConfig.filter({ id: savedRecord.id });
                    if (check && check.length > 0) {
                        const rec = check[0];
-                       console.log(`useRolesManager: CHECK MASTER -> Value: ${rec.value ? 'OK' : 'EMPTY'}, Desc: ${rec.description ? 'OK' : 'EMPTY'}`);
+                       // console.log(`useRolesManager: CHECK MASTER -> Value: ${rec.value ? 'OK' : 'EMPTY'}, Desc: ${rec.description ? 'OK' : 'EMPTY'}`);
                    }
                } catch(e) { console.warn("Check failed", e); }
            }, 1000);

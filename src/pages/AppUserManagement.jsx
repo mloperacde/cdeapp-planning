@@ -152,14 +152,6 @@ export default function AppUserManagement() {
       }
   };
 
-  // --- DEBUGGING ---
-  React.useEffect(() => {
-      console.log("AppUserManagement MOUNTED");
-      console.log("localConfig:", localConfig);
-      console.log("roleKeys:", roleKeys);
-      console.log("MENU_STRUCTURE:", MENU_STRUCTURE);
-  }, [localConfig, roleKeys]);
-
   if (isLoading) {
     return (
         <div className="p-8 flex justify-center items-center h-full">
@@ -261,9 +253,6 @@ export default function AppUserManagement() {
           </TabsTrigger>
           <TabsTrigger value="navigation" className="flex items-center gap-2">
             <Factory className="w-4 h-4" /> Navegación
-          </TabsTrigger>
-          <TabsTrigger value="diagnostics" className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" /> Diagnóstico
           </TabsTrigger>
         </TabsList>
 
@@ -594,56 +583,6 @@ export default function AppUserManagement() {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* --- PESTAÑA DIAGNÓSTICO --- */}
-        <TabsContent value="diagnostics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Diagnóstico de Configuración</CardTitle>
-              <CardDescription>Herramientas para solucionar problemas de acceso</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="flex gap-4">
-                  <Button variant="outline" onClick={() => window.location.reload()}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Recargar Página Completa
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-                     console.log("Volcando configuración local:", localConfig);
-                     alert("Configuración volcada a consola");
-                  }}>
-                     Ver Configuración en Consola
-                  </Button>
-                  <Button variant="destructive" onClick={forceCleanup} disabled={isSaving}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Purgar Registros Obsoletos
-                  </Button>
-               </div>
-               
-               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-md overflow-auto max-h-[300px] space-y-4">
-                  <div>
-                    <h4 className="font-bold mb-2">Resumen de Estado:</h4>
-                    <pre className="text-xs">{JSON.stringify({ 
-                      loaded: !!localConfig,
-                      rolesCount: localConfig?.roles ? Object.keys(localConfig.roles).length : 0,
-                      assignmentsCount: localConfig?.user_assignments ? Object.keys(localConfig.user_assignments).length : 0,
-                      employeesCount: employees?.length || 0,
-                    }, null, 2)}</pre>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-bold mb-2">Estructura de Datos de Empleado (Ejemplo):</h4>
-                    <p className="text-xs text-slate-500 mb-2">Usa esto para verificar qué campo contiene el nombre real.</p>
-                    <pre className="text-xs bg-slate-200 dark:bg-slate-950 p-2 rounded">
-                      {employees && employees.length > 0 
-                        ? JSON.stringify(employees[0], null, 2) 
-                        : "No hay empleados cargados"}
-                    </pre>
-                  </div>
-               </div>
             </CardContent>
           </Card>
         </TabsContent>
