@@ -415,62 +415,84 @@ export default function AppUserManagement() {
           <Card>
             <CardHeader>
               <CardTitle>Permisos de Navegación</CardTitle>
-              <CardDescription>Controla a qué páginas puede acceder cada rol</CardDescription>
-               {/* Controles de Acción Masiva */}
-               <div className="flex flex-wrap gap-4 mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
-                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 self-center mr-2">
-                     Acciones Rápidas:
-                 </span>
-                 {roleKeys.filter(r => r !== 'admin').length === 0 && (
-                     <span className="text-sm text-slate-400 italic self-center">No hay roles configurables disponibles.</span>
-                 )}
-                 {roleKeys.map(roleId => {
-                     const isLocked = roleId === 'admin';
-                     if (isLocked) return null;
-                     return (
-                         <div key={roleId} className="flex flex-col gap-2 items-center min-w-[120px] p-2 bg-white dark:bg-slate-950 rounded border border-slate-100 dark:border-slate-800 shadow-sm">
-                              <span className="text-xs font-bold truncate max-w-[110px] text-slate-800 dark:text-slate-200" title={localConfig.roles[roleId].name}>
-                                 {localConfig.roles[roleId].name}
-                              </span>
-                              <div className="flex gap-2 w-full justify-center">
-                                  <Button 
-                                     variant="outline" 
-                                     size="sm" 
-                                     className="h-7 text-xs px-2 w-full"
-                                     title="Permitir acceso a todas las páginas"
-                                     onClick={() => {
-                                         if (confirm(`¿Permitir acceso a TODAS las páginas para ${localConfig.roles[roleId].name}?`)) {
-                                             MENU_STRUCTURE.forEach(item => {
-                                                 if (item.category !== 'Configuración') {
-                                                     updatePagePermission(roleId, item.path, true);
-                                                 }
-                                             });
-                                         }
-                                     }}
-                                  >
-                                     Todo
-                                  </Button>
-                                  <Button 
-                                     variant="outline" 
-                                     size="sm" 
-                                     className="h-7 text-xs px-2 w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50"
-                                     title="Bloquear acceso a todas las páginas"
-                                     onClick={() => {
-                                         if (confirm(`¿BLOQUEAR acceso a TODAS las páginas para ${localConfig.roles[roleId].name}?`)) {
-                                             MENU_STRUCTURE.forEach(item => {
-                                                 updatePagePermission(roleId, item.path, false);
-                                             });
-                                         }
-                                     }}
-                                  >
-                                     Nada
-                                  </Button>
-                              </div>
-                         </div>
-                     )
-                 })}
-               </div>
+              <CardDescription>
+                Controla a qué páginas puede acceder cada rol.
+                <br />
+                <span className="text-amber-600 font-bold">
+                  Importante: Por defecto los roles tienen acceso TOTAL. Usa "Nada" para bloquear todo y luego selecciona lo permitido.
+                </span>
+              </CardDescription>
             </CardHeader>
+            <CardContent>
+               {/* Controles de Acción Masiva - Movido a CardContent para asegurar visibilidad */}
+               <div className="flex flex-col gap-4 mb-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
+                 <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Acciones Rápidas (Configuración Masiva):
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                        {roleKeys.filter(r => r !== 'admin').length} roles configurables
+                    </Badge>
+                 </div>
+                 
+                 <div className="flex flex-wrap gap-4">
+                    {roleKeys.filter(r => r !== 'admin').length === 0 && (
+                        <span className="text-sm text-slate-400 italic">No hay roles configurables disponibles.</span>
+                    )}
+                    {roleKeys.map(roleId => {
+                        const isLocked = roleId === 'admin';
+                        if (isLocked) return null;
+                        const roleName = localConfig.roles[roleId].name;
+                        
+                        return (
+                            <div key={roleId} className="flex flex-col gap-2 items-center min-w-[140px] p-3 bg-white dark:bg-slate-950 rounded border border-slate-100 dark:border-slate-800 shadow-sm">
+                                <span className="text-xs font-bold truncate max-w-[130px] text-slate-800 dark:text-slate-200" title={roleName}>
+                                    {roleName}
+                                </span>
+                                <div className="flex gap-2 w-full justify-center">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-7 text-xs px-2 w-full"
+                                        title="Permitir TODO"
+                                        onClick={() => {
+                                            if (window.confirm(`¿Estás seguro? Esto dará acceso a TODAS las páginas a ${roleName}.`)) {
+                                                // Crear un objeto con todas las páginas en true
+                                                Object.values(groupedMenu).flat().forEach(item => {
+                                                    if (item.category !== 'Configuración') {
+                                                        updatePagePermission(roleId, item.path, true);
+                                                    }
+                                                });
+                                                toast.success(`Acceso total concedido a ${roleName}`);
+                                            }
+                                        }}
+                                    >
+                                        Todo
+                                    </Button>
+                                    <Button 
+                                        variant="destructive" 
+                                        size="sm" 
+                                        className="h-7 text-xs px-2 w-full bg-red-100 text-red-700 hover:bg-red-200 border border-red-200"
+                                        title="Bloquear TODO (Modo Estricto)"
+                                        onClick={() => {
+                                            if (window.confirm(`¿BLOQUEAR TODO para ${roleName}? Esto activará el modo estricto. Tendrás que marcar manualmente las páginas permitidas.`)) {
+                                                // Marcar explícitamente todo como false para activar modo estricto
+                                                Object.values(groupedMenu).flat().forEach(item => {
+                                                    updatePagePermission(roleId, item.path, false);
+                                                });
+                                                toast.success(`Acceso bloqueado para ${roleName}. Ahora selecciona las páginas permitidas.`);
+                                            }
+                                        }}
+                                    >
+                                        Nada
+                                    </Button>
+                                </div>
+                            </div>
+                        )
+                    })}
+                 </div>
+               </div>
+            </CardContent>
             <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
