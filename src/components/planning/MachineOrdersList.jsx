@@ -93,7 +93,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                 ) : (
                     uniqueOrders.map(order => {
                     const process = processes.find(p => p.id === order.process_id);
-                    const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
+                    const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
                     
                     return (
                         <div 
@@ -149,15 +149,15 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                                 )}
 
                                 <div className="ml-auto flex items-center gap-2 shrink-0">
-                                    {(order.new_delivery_date || order.committed_delivery_date) && (
-                                        <span className={`flex items-center gap-1 ${isLate ? 'text-red-700 font-bold' : ''}`} title="Fecha Entrega">
-                                           Ent: {formatDateSafe(order.new_delivery_date || order.committed_delivery_date) || '-'}
+                                    {order.effective_delivery_date && (
+                                        <span className={`flex items-center gap-1 ${isLate ? 'text-red-700 font-bold' : ''}`} title="Fecha Entrega (Vigente)">
+                                           Ent: {formatDateSafe(order.effective_delivery_date) || '-'}
                                         </span>
                                     )}
                                     
-                                    {order.start_date && (
-                                        <span className="text-slate-500" title="Fecha Inicio Límite">
-                                           Ini: {formatDateSafe(order.start_date) || '-'}
+                                    {order.effective_start_date && (
+                                        <span className="text-slate-500" title="Fecha Inicio (Vigente)">
+                                           Ini: {formatDateSafe(order.effective_start_date) || '-'}
                                         </span>
                                     )}
 

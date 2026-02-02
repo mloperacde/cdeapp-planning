@@ -39,10 +39,10 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
       const machineOrders = orders.filter(o => o.machine_id === machine.id);
       
       // Separate scheduled vs unscheduled (backlog)
-      // Unscheduled: No start_date OR explicitly cleared
-      // Scheduled: Has start_date
-      const scheduled = machineOrders.filter(o => o.start_date);
-      const backlog = machineOrders.filter(o => !o.start_date); // Pry 1 & 2 from CSV will be here
+      // Unscheduled: No effective_start_date OR explicitly cleared
+      // Scheduled: Has effective_start_date
+      const scheduled = machineOrders.filter(o => o.effective_start_date);
+      const backlog = machineOrders.filter(o => !o.effective_start_date); // Pry 1 & 2 from CSV will be here
 
       return {
         ...machine,
@@ -200,12 +200,12 @@ Ent: ${order.committed_delivery_date || '-'}`;
                   {/* Scheduled Orders - Stacked Compact Cards */}
                   <div className="absolute inset-0 p-2 space-y-1 overflow-visible">
                    {machine.scheduled.map((order, idx) => {
-                     let startDate = parseISO(order.start_date);
-                     if (!isValid(startDate)) startDate = new Date(order.start_date);
+                     let startDate = parseISO(order.effective_start_date);
+                     if (!isValid(startDate)) startDate = new Date(order.effective_start_date);
                      if (!isValid(startDate)) return null;
 
-                     // Usar planned_end_date como fecha fin principal, fallback a committed_delivery_date
-                     let endDateStr = order.planned_end_date || order.committed_delivery_date;
+                     // Usar planned_end_date como fecha fin principal, fallback a effective_delivery_date
+                     let endDateStr = order.planned_end_date || order.effective_delivery_date;
                      let endDate = endDateStr ? parseISO(endDateStr) : startDate;
                      
                      if (!isValid(endDate) && endDateStr) endDate = new Date(endDateStr);
@@ -246,14 +246,14 @@ Ent: ${order.committed_delivery_date || '-'}`;
                      const durationCols = effectiveEndIndex - effectiveStartIndex + 1;
                      if (durationCols <= 0) return null;
 
-                     const isLate = order.committed_delivery_date && new Date(order.committed_delivery_date) < new Date();
+                     const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
                      
                      const tooltipText = `${order.priority === 0 ? 'S/P' : `P${order.priority}`} | ${order.order_number}
 Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
 Cli: ${order.client_name || '-'}
 Cant: ${order.quantity || '-'} | Mat: ${order.material_type || '-'}
-Ent: ${order.committed_delivery_date || '-'}
-Ini: ${order.start_date || '-'} | Fin: ${order.planned_end_date || '-'}`;
+Ent: ${order.effective_delivery_date || '-'}
+Ini: ${order.effective_start_date || '-'} | Fin: ${order.planned_end_date || '-'}`;
 
                      return (
                        <div

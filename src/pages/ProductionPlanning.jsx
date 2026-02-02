@@ -88,7 +88,14 @@ export default function ProductionPlanningPage() {
 
   // Derived Data
   const filteredOrders = useMemo(() => {
-    const filtered = workOrders.filter(order => {
+    // First, augment orders with effective dates logic
+    const augmentedOrders = workOrders.map(order => ({
+        ...order,
+        effective_start_date: order.modified_start_date || order.start_date,
+        effective_delivery_date: order.new_delivery_date || order.committed_delivery_date
+    }));
+
+    const filtered = augmentedOrders.filter(order => {
       // Filter by Priority (Must exist)
       if (order.priority === null || order.priority === undefined) return false;
 
@@ -99,10 +106,10 @@ export default function ProductionPlanningPage() {
       if (selectedStatus !== "all" && order.status !== selectedStatus) return false;
       
       // Filter by Date Range (Check overlap) - ONLY for scheduled orders
-      if (order.start_date) {
-        const orderStart = new Date(order.start_date);
+      if (order.effective_start_date) {
+        const orderStart = new Date(order.effective_start_date);
         // Using delivery date as end for visualization, or start date if missing
-        const orderEnd = order.committed_delivery_date ? new Date(order.committed_delivery_date) : new Date(order.start_date); 
+        const orderEnd = order.effective_delivery_date ? new Date(order.effective_delivery_date) : new Date(order.effective_start_date); 
         const rangeStart = new Date(dateRange.start);
         const rangeEnd = new Date(dateRange.end);
         

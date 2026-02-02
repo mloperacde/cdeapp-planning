@@ -45,8 +45,9 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         machine_id: orderToEdit.machine_id,
         process_id: orderToEdit.process_id,
         priority: orderToEdit.priority?.toString() || "3",
-        start_date: orderToEdit.start_date || "",
-        committed_delivery_date: orderToEdit.committed_delivery_date || "",
+        // Use effective dates if available (from ProductionPlanningPage injection)
+        start_date: orderToEdit.effective_start_date || orderToEdit.start_date || "",
+        committed_delivery_date: orderToEdit.effective_delivery_date || orderToEdit.committed_delivery_date || "",
         status: orderToEdit.status,
         notes: orderToEdit.notes || "",
         
@@ -130,6 +131,10 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         material_type: data.material_type,
         product_category: data.product_category,
         production_cadence: data.production_cadence ? parseFloat(data.production_cadence) : null,
+
+        // Clear overrides to ensure manual edit takes precedence
+        modified_start_date: null,
+        new_delivery_date: null
       };
 
       // Append part_status to notes if present and not already there
