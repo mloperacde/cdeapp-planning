@@ -203,6 +203,53 @@ export default function RolesConfig() {
             <CardHeader>
               <CardTitle>Permisos de Navegación</CardTitle>
               <CardDescription>Controla a qué páginas puede acceder cada rol</CardDescription>
+              {/* Controles de Acción Masiva */}
+              <div className="flex gap-2 mt-2 p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800">
+                <span className="text-sm text-slate-500 self-center mr-2">Acciones Rápidas:</span>
+                {roleKeys.map(roleId => {
+                    const isLocked = roleId === 'admin';
+                    if (isLocked) return null;
+                    return (
+                        <div key={roleId} className="flex flex-col gap-1 items-center min-w-[100px]">
+                             <span className="text-xs font-bold truncate max-w-[100px]">{localConfig.roles[roleId].name}</span>
+                             <div className="flex gap-1">
+                                 <Button 
+                                    variant="outline" 
+                                    size="xs" 
+                                    className="h-6 text-[10px]"
+                                    title="Permitir Todo"
+                                    onClick={() => {
+                                        if (confirm(`¿Permitir acceso a TODAS las páginas para ${localConfig.roles[roleId].name}?`)) {
+                                            MENU_STRUCTURE.forEach(item => {
+                                                if (item.category !== 'Configuración') {
+                                                    updatePagePermission(roleId, item.path, true);
+                                                }
+                                            });
+                                        }
+                                    }}
+                                 >
+                                    Todo
+                                 </Button>
+                                 <Button 
+                                    variant="outline" 
+                                    size="xs" 
+                                    className="h-6 text-[10px] text-red-600 hover:text-red-700"
+                                    title="Bloquear Todo"
+                                    onClick={() => {
+                                        if (confirm(`¿BLOQUEAR acceso a TODAS las páginas para ${localConfig.roles[roleId].name}?`)) {
+                                            MENU_STRUCTURE.forEach(item => {
+                                                updatePagePermission(roleId, item.path, false);
+                                            });
+                                        }
+                                    }}
+                                 >
+                                    Nada
+                                 </Button>
+                             </div>
+                        </div>
+                    )
+                })}
+              </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>

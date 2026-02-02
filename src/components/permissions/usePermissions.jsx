@@ -156,18 +156,27 @@ export function usePermissions() {
       userName: user.full_name,
       ...permissions,
       canAccessPage: (path) => {
-        if (permissions.isAdmin) return true;
-         
-         // Hard security check: Solo admin puede ver RolesConfig
-         if (path.includes('RolesConfig')) return false;
+    if (permissions.isAdmin) return true;
+    
+    // Hard security check: Solo admin puede ver RolesConfig
+    if (path.includes('RolesConfig')) return false;
 
-         // Configuración dinámica de páginas
-         const roleConfig = rolesConfig?.roles?.[role];
-         
-         // Si el rol existe en la configuración dinámica (es un rol gestionado), 
-         // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados.
-         if (roleConfig) {
-            const pagePerms = roleConfig.page_permissions || {};
+    // 1. Intentar obtener configuración del rol
+    // Normalización robusta para evitar errores de case/tipo
+    let roleConfig = rolesConfig?.roles?.[role];
+    if (!roleConfig && typeof role === 'string') {
+        // Intentar buscar case-insensitive si no se encuentra exacto
+        const roleLower = role.toLowerCase();
+        const foundKey = Object.keys(rolesConfig?.roles || {}).find(k => k.toLowerCase() === roleLower);
+        if (foundKey) {
+            roleConfig = rolesConfig.roles[foundKey];
+        }
+    }
+    
+    // Si el rol existe en la configuración dinámica (es un rol gestionado), 
+    // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados.
+    if (roleConfig) {
+       const pagePerms = roleConfig.page_permissions || {};
             const keys = Object.keys(pagePerms);
             const hasConfiguredPages = keys.length > 0;
 
