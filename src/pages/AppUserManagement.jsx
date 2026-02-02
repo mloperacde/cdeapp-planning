@@ -570,8 +570,8 @@ export default function AppUserManagement() {
                             let effectiveValue;
                             if (role.page_permissions === undefined) {
                                 if (roleId === 'admin') effectiveValue = true;
-                                else if (item.category === 'Configuración') effectiveValue = false;
-                                else effectiveValue = true;
+                                else if (item.path === '/Dashboard' || item.path === '/') effectiveValue = true; // Dashboard siempre visible
+                                else effectiveValue = false; // CAMBIO: Por defecto todo bloqueado (Deny by Default)
                             } else {
                                 effectiveValue = !!role.page_permissions[item.path];
                             }

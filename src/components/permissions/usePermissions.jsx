@@ -186,11 +186,16 @@ export function usePermissions() {
        const isStrict = roleConfig.is_strict === true;
 
        // Si NO hay ninguna página configurada (ni true ni false) Y NO es estricto, 
-       // asumimos que es un rol nuevo/legacy y aplicamos modo PERMISIVO.
+       // asumimos que es un rol nuevo/legacy.
+       // CAMBIO DE SEGURIDAD: Ya no aplicamos modo permisivo.
+       // Si el rol está en el sistema de gestión, debe tener permisos explícitos.
        if (!hasConfiguredPages && !isStrict) {
-           // Bloquear configuración para no admins por seguridad básica
-           if (path.startsWith('/Configuration') || path.includes('Config')) return false;
-           return true;
+           // Solo permitir Dashboard
+           if (path === '/Dashboard' || path === '/') return true;
+           
+           // Bloquear todo lo demás
+           // console.warn(`Access Denied (Empty Config): Role=${role} Path=${path}`);
+           return false;
        }
 
        // Si HAY configuración o es ESTRICTO:
