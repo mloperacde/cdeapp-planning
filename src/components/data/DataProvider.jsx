@@ -23,7 +23,19 @@ export function DataProvider({ children }) {
   // 1. USUARIO ACTUAL - Cache 5 min
   const userQuery = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => isLocal ? Promise.resolve(null) : base44.auth.me().catch(() => null),
+    queryFn: async () => {
+      if (isLocal) return null;
+      try {
+        const me = await base44.auth.me();
+        // console.log("DataProvider: User authenticated:", me.email);
+        return me;
+      } catch (error) {
+        console.error("DataProvider: Auth Check Failed:", error);
+        // If error is 401/403, return null (not authenticated)
+        // If error is 404 (App Not Found), it's critical but we return null to avoid crash
+        return null;
+      }
+    },
     staleTime: 60 * 60 * 1000, // 1 hora
     gcTime: 2 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,

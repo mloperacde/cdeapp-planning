@@ -4,6 +4,7 @@ import Pages from "@/pages/index.jsx"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { SyncService } from "@/services/SyncService"
+import GlobalErrorBoundary from "@/components/common/GlobalErrorBoundary"
 
 function App() {
   useEffect(() => {
@@ -11,11 +12,13 @@ function App() {
   }, []);
 
   return (
-    <div className="notranslate" translate="no">
-      <Pages />
-      <Toaster />
-      <SonnerToaster />
-    </div>
+    <GlobalErrorBoundary>
+      <div className="notranslate" translate="no">
+        <Pages />
+        <Toaster />
+        <SonnerToaster />
+      </div>
+    </GlobalErrorBoundary>
   )
 }
 

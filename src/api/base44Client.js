@@ -241,9 +241,13 @@ function createMockBase44() {
 
 export const APP_ID = "690cdd4205782920ba2297c8";
 
+if (typeof window !== 'undefined') {
+    console.log(`[Base44] Initialized with App ID: ${APP_ID}`);
+}
+
 export const base44 = useMockApi
   ? createMockBase44()
   : createClient({
       appId: APP_ID,
-      requiresAuth: true
+      requiresAuth: false // Changed to false to prevent automatic redirects/crashes on load. We handle auth in DataProvider.
     });
