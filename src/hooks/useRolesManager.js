@@ -177,7 +177,7 @@ export function useRolesManager() {
       // HIDRATACIÓN DEFENSIVA: Asegurar que existan todas las estructuras necesarias
       // Esto previene que una configuración remota incompleta sobrescriba datos locales válidos
       const hydratedConfig = {
-          roles: rolesConfig.roles || DEFAULT_ROLES_CONFIG.roles,
+          roles: { ...DEFAULT_ROLES_CONFIG.roles, ...(rolesConfig.roles || {}) },
           user_assignments: rolesConfig.user_assignments || {}, 
           ...rolesConfig 
       };
