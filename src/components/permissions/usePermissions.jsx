@@ -163,24 +163,28 @@ export function usePermissions() {
 
          // Configuración dinámica de páginas
          const roleConfig = rolesConfig?.roles?.[role];
-         if (roleConfig?.page_permissions) {
+         
+         // Si el rol existe en la configuración dinámica (es un rol gestionado), 
+         // aplicamos SIEMPRE la política de "Deny by Default" (Lista blanca).
+         if (roleConfig) {
+            const pagePerms = roleConfig.page_permissions || {};
+
             // 1. Coincidencia exacta
-            const perm = roleConfig.page_permissions[path];
+            const perm = pagePerms[path];
             if (perm !== undefined) return perm;
             
             // 2. Coincidencia de sub-rutas (para rutas anidadas como /NewProcessConfigurator/*)
             // Buscar si existe una ruta padre configurada
-            const parentKey = Object.keys(roleConfig.page_permissions).find(key => 
-              path.startsWith(key + '/') && roleConfig.page_permissions[key] === true
+            const parentKey = Object.keys(pagePerms).find(key => 
+              path.startsWith(key + '/') && pagePerms[key] === true
             );
             if (parentKey) return true;
 
-            // Si no está definido en la configuración dinámica:
-            // Aplicar política de "Deny by Default" (Lista blanca) para roles configurados
+            // Si no está definido explícitamente en un rol gestionado -> DENEGAR
             return false;
          }
          
-         // Fallback estático (Legacy)
+         // Fallback estático (Legacy) para roles NO gestionados (hardcoded)
         // Bloquear configuración para no admins
         if (path.startsWith('/Configuration') || path.includes('Config')) return false;
         
