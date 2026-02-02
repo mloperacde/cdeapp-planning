@@ -357,30 +357,55 @@ export function useRolesManager() {
         throw new Error("La configuración local está vacía. No se guardará.");
       }
 
-      // SANITIZACIÓN Y OPTIMIZACIÓN PRE-GUARDADO:
-      // Eliminar valores 'false' para reducir drásticamente el tamaño del payload.
-      // Esto soluciona el error "Backend rechazó ambos campos" por exceso de tamaño.
-      const configToSave = JSON.parse(JSON.stringify(localConfig));
-      if (configToSave.roles) {
-        Object.values(configToSave.roles).forEach(role => {
-            if (role.page_permissions) {
-                Object.keys(role.page_permissions).forEach(path => {
-                    if (role.page_permissions[path] === false) {
-                        delete role.page_permissions[path];
-                    }
-                });
-                // Si tiene permisos configurados, asegurar modo estricto
-                if (Object.keys(role.page_permissions).length > 0) {
-                    role.is_strict = true;
-                }
-            }
-        });
-      }
+      // COMPRESIÓN (v2): Indexación de rutas y minificación de claves
+      // Esto reduce drásticamente el tamaño del payload para evitar rechazos del backend.
+      const dictionary = [];
+      const getPathIndex = (path) => {
+        let idx = dictionary.indexOf(path);
+        if (idx === -1) {
+          idx = dictionary.length;
+          dictionary.push(path);
+        }
+        return idx;
+      };
 
-      const configString = JSON.stringify(configToSave);
+      const compressedRoles = {};
+      Object.keys(localConfig.roles || {}).forEach(roleId => {
+        const role = localConfig.roles[roleId];
+        const compressedRole = {
+          n: role.name,
+          s: role.is_strict ? 1 : 0,
+          p: role.permissions || {},
+          pp: [],
+          sys: role.isSystem
+        };
+        
+        if (role.page_permissions) {
+          Object.keys(role.page_permissions).forEach(path => {
+            if (role.page_permissions[path] === true) { // Solo guardar permisos TRUE
+               compressedRole.pp.push(getPathIndex(path));
+            }
+          });
+          
+          // Si tiene permisos explícitos, forzamos modo estricto
+          if (compressedRole.pp.length > 0) {
+             compressedRole.s = 1;
+          }
+        }
+        compressedRoles[roleId] = compressedRole;
+      });
+
+      const compressedConfig = {
+        v: 2,
+        d: dictionary,
+        r: compressedRoles,
+        ua: localConfig.user_assignments || {}
+      };
+
+      const configString = JSON.stringify(compressedConfig);
       const parsedCheck = JSON.parse(configString); // Validación simple
       
-      console.log("useRolesManager: Saving config (Optimized)...", configString.length, "chars");
+      console.log("useRolesManager: Saving config (Compressed v2)...", configString.length, "chars");
 
       // BACKUP DE EMERGENCIA EN LOCALSTORAGE
       try {
@@ -390,9 +415,9 @@ export function useRolesManager() {
           console.warn("useRolesManager: No se pudo guardar backup en LocalStorage", e);
       }
 
-      console.log("useRolesManager: Config payload:", {
-          rolesCount: Object.keys(localConfig.roles || {}).length,
-          assignmentsCount: Object.keys(localConfig.user_assignments || {}).length
+      console.log("useRolesManager: Config payload stats:", {
+          rolesCount: Object.keys(compressedRoles).length,
+          dictionarySize: dictionary.length
       });
 
       // 1. Buscar si ya existe la configuración
@@ -432,7 +457,7 @@ export function useRolesManager() {
           key: 'roles_config',
           config_key: 'roles_config',
           value: configString, // JSON string directo
-          description: `Roles Config - ${new Date().toISOString()} - ${Object.keys(configToSave.roles || {}).length} roles`,
+          description: `Roles Config v2 (Compressed) - ${new Date().toISOString()} - ${Object.keys(compressedRoles).length} roles`,
           is_active: true
       };
 
@@ -469,7 +494,9 @@ export function useRolesManager() {
 
       // 3. Actualización Optimista
       // Forzar que el queryClient tenga los datos guardados inmediatamente
-      queryClient.setQueryData(['rolesConfig'], parsedCheck);
+      // IMPORTANTE: Guardamos 'localConfig' (expandido) en el cache, NO 'parsedCheck' (comprimido),
+      // porque el resto de la app espera el formato expandido.
+      queryClient.setQueryData(['rolesConfig'], localConfig);
       
       // Invalidar explícitamente para forzar recarga en otros componentes
       queryClient.invalidateQueries(['rolesConfig']);

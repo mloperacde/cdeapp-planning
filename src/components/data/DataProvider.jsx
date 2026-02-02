@@ -286,6 +286,41 @@ export function DataProvider({ children }) {
             }
 
             const parsed = JSON.parse(jsonString);
+            
+            // LÓGICA DE DESCOMPRESIÓN (v2)
+            if (parsed.v === 2 && parsed.r && parsed.d) {
+                console.log("DataProvider: Detectada configuración comprimida (v2). Descomprimiendo...");
+                const dictionary = parsed.d;
+                const roles = {};
+                
+                Object.keys(parsed.r).forEach(roleId => {
+                    const cRole = parsed.r[roleId];
+                    const page_permissions = {};
+                    if (cRole.pp) {
+                        cRole.pp.forEach(idx => {
+                            if (dictionary[idx]) {
+                                page_permissions[dictionary[idx]] = true;
+                            }
+                        });
+                    }
+                    
+                    roles[roleId] = {
+                        name: cRole.n,
+                        is_strict: !!cRole.s,
+                        permissions: cRole.p || {},
+                        page_permissions,
+                        isSystem: cRole.sys // Opcional, si lo guardamos
+                    };
+                });
+                
+                const decompressed = {
+                    roles,
+                    user_assignments: parsed.ua || {}
+                };
+                console.log(`DataProvider: Descompresión exitosa. Roles: ${Object.keys(roles).length}`);
+                return decompressed;
+            }
+
             console.log(`DataProvider: Configuración parseada correctamente. Roles: ${Object.keys(parsed.roles || {}).length}, Asignaciones: ${Object.keys(parsed.user_assignments || {}).length}`);
             return parsed;
           } catch (parseError) {
