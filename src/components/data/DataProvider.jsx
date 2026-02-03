@@ -436,14 +436,30 @@ export function DataProvider({ children }) {
     refetchOnWindowFocus: true, // Refrescar al volver a la ventana
   });
 
-  // 14. BRANDING - Cache 1 hora (cambia poco)
+  // 14. BRANDING - Cache 1 hora (cambia poco) -> Ahora staleTime 0 para debug y reactividad inmediata
   const brandingConfigQuery = useQuery({
     queryKey: ['brandingConfig'],
     queryFn: async () => {
       if (isLocal) return null;
       try {
         const configs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
-        const config = configs[0];
+        // Log para depuración
+        // console.log("DataProvider: Branding Configs found:", configs);
+        
+        // Si hay múltiples, intentamos encontrar el más reciente por updated_at o created_at
+        // O simplemente tomamos el último de la lista si asumimos orden de inserción
+        // Pero para seguridad, tomamos el primero que suele ser el "activo" si la lógica de update es correcta.
+        // MEJORA: Ordenar por fecha de actualización descendente para tomar siempre el último modificado.
+        
+        if (!configs || configs.length === 0) return null;
+
+        const sortedConfigs = configs.sort((a, b) => {
+            const dateA = new Date(a.updated_at || a.created_at || 0);
+            const dateB = new Date(b.updated_at || b.created_at || 0);
+            return dateB - dateA; // Descendente (más nuevo primero)
+        });
+
+        const config = sortedConfigs[0];
         
         if (!config) return null;
 
@@ -464,9 +480,9 @@ export function DataProvider({ children }) {
         return null;
       }
     },
-    staleTime: 60 * 60 * 1000,
+    staleTime: 0, // Siempre fresco para asegurar cambios inmediatos
     gcTime: 24 * 60 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 
   const allAbsenceTypes = absenceTypesQuery.data || [];

@@ -73,9 +73,33 @@ export default function BrandingConfig() {
         updated_by_name: currentUser?.full_name
       };
 
-      if (brandingConfig?.id) {
-        return await base44.entities.AppConfig.update(brandingConfig.id, payload);
+      // Lógica robusta: buscar configuraciones existentes frescas
+      const currentConfigs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
+      
+      if (currentConfigs && currentConfigs.length > 0) {
+        // Ordenar por fecha de actualización descendente para encontrar la más reciente
+        currentConfigs.sort((a, b) => {
+            const dateA = new Date(a.updated_at || a.created_at || 0);
+            const dateB = new Date(b.updated_at || b.created_at || 0);
+            return dateB - dateA;
+        });
+
+        const targetId = currentConfigs[0].id;
+        console.log(`BrandingConfig: Actualizando configuración existente (ID: ${targetId})`);
+
+        // Limpieza proactiva de duplicados si existen
+        if (currentConfigs.length > 1) {
+             console.warn(`BrandingConfig: Detectados ${currentConfigs.length - 1} duplicados. Eliminando...`);
+             for (let i = 1; i < currentConfigs.length; i++) {
+                 try {
+                    await base44.entities.AppConfig.delete(currentConfigs[i].id);
+                 } catch (e) { console.warn("Error eliminando duplicado", e); }
+             }
+        }
+
+        return await base44.entities.AppConfig.update(targetId, payload);
       } else {
+        console.log("BrandingConfig: Creando nueva configuración");
         return await base44.entities.AppConfig.create(payload);
       }
     },
