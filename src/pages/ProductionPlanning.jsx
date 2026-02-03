@@ -12,6 +12,7 @@ import WorkOrderForm from "../components/planning/WorkOrderForm";
 import PlanningGantt from "../components/planning/PlanningGantt";
 import MachineOrdersList from "../components/planning/MachineOrdersList";
 import ResourceForecast from "../components/planning/ResourceForecast";
+import MachineLoadGraph from "../components/planning/MachineLoadGraph";
 import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -573,17 +574,37 @@ export default function ProductionPlanningPage() {
       </Card>
 
       <div className="flex flex-col gap-6">
-        {/* Resource Forecast */}
+        {/* Resource Analysis Tabs */}
         <div className="min-h-0 flex flex-col">
-          <ResourceForecast 
-            orders={filteredOrders}
-            processes={processes}
-            machineProcesses={machineProcesses}
-            employees={employees}
-            teams={teams}
-            selectedTeam={selectedTeam}
-            dateRange={dateRange}
-          />
+          <Tabs defaultValue="personnel" className="w-full">
+             <div className="flex items-center justify-between mb-2">
+                 <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Análisis de Recursos</h3>
+                 <TabsList>
+                    <TabsTrigger value="personnel">Personal (RRHH)</TabsTrigger>
+                    <TabsTrigger value="machines">Máquinas (Carga)</TabsTrigger>
+                 </TabsList>
+             </div>
+             
+             <TabsContent value="personnel">
+                <ResourceForecast 
+                  orders={filteredOrders}
+                  processes={processes}
+                  machineProcesses={machineProcesses}
+                  employees={employees}
+                  teams={teams}
+                  selectedTeam={selectedTeam}
+                  dateRange={dateRange}
+                />
+             </TabsContent>
+             
+             <TabsContent value="machines">
+                <MachineLoadGraph 
+                   orders={filteredOrders}
+                   machines={machines}
+                   dateRange={dateRange}
+                />
+             </TabsContent>
+          </Tabs>
         </div>
 
         {/* Main Planning View */}

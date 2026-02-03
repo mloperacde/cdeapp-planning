@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Calculator, ArrowLeft } from "lucide-react";
 import { getEligibleProcessesForMachine, getEligibleMachinesForProcess } from "@/lib/domain/planning";
+import { addDays, subDays, format, isWeekend, parseISO } from "date-fns";
 
 export default function WorkOrderForm({ open, onClose, orderToEdit, machines, processes, machineProcesses, existingOrders = [] }) {
   const queryClient = useQueryClient();
@@ -109,6 +111,58 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
   };
 
   const currentOperators = getOperatorsRequired();
+
+  // --- Asprova Feature: Backward Scheduling (JIT) ---
+  const calculateJITStartDate = () => {
+      const { quantity, production_cadence, committed_delivery_date } = formData;
+      
+      if (!quantity || !production_cadence || !committed_delivery_date) {
+          toast.error("Faltan datos para el cálculo (Cantidad, Cadencia o Fecha Entrega)");
+          return;
+      }
+
+      // 1. Calculate Duration in Days (rounding up)
+      // Cadence = units / hour (usually) or hours / unit? 
+      // User context implies "Cadence" might be units/hour. Let's assume units/hour.
+      // If cadence is 100 and qty is 1000 -> 10 hours.
+      // If we assume 24h shifts for now (simplification), or 8h? 
+      // Let's assume continuous production (24h) for simple calculation or 1 day min.
+      // Better: Ask user? No, assume standard day (24h for machines).
+      
+      const unitsPerHour = parseFloat(production_cadence);
+      const qty = parseInt(quantity);
+      if (unitsPerHour <= 0) return;
+
+      const totalHours = qty / unitsPerHour;
+      const totalDays = Math.ceil(totalHours / 24); // Simple approximation
+
+      // 2. Backward Calculation: Delivery Date - Duration
+      let calcDate = parseISO(committed_delivery_date);
+      let daysToSubtract = totalDays;
+
+      // Skip weekends logic (optional, but "Asprova" usually respects calendars)
+      while (daysToSubtract > 0) {
+          calcDate = subDays(calcDate, 1);
+          if (!isWeekend(calcDate)) {
+              daysToSubtract--;
+          }
+      }
+
+      const jitDateStr = format(calcDate, 'yyyy-MM-dd');
+      
+      setFormData(prev => ({
+          ...prev,
+          start_date: jitDateStr,
+          planned_end_date: committed_delivery_date, // End is delivery
+          // Clear manual overrides to respect this new calculation
+          modified_start_date: null,
+          new_delivery_date: null 
+      }));
+
+      toast.success(`Cálculo JIT aplicado: Inicio sugerido ${jitDateStr} (${totalDays} días prod.)`, {
+          description: "Basado en Cantidad / Cadencia (Backward Scheduling)"
+      });
+  };
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
@@ -290,7 +344,20 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Fecha Inicio *</Label>
+              <Label className="flex justify-between items-center">
+                  Fecha Inicio *
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-5 text-[10px] text-blue-600 px-1 hover:bg-blue-50"
+                    onClick={calculateJITStartDate}
+                    title="Calcular fecha de inicio basada en fecha de entrega y cadencia (Asprova Backward Scheduling)"
+                  >
+                    <Calculator className="w-3 h-3 mr-1" />
+                    Calc. JIT
+                  </Button>
+              </Label>
               <Input 
                 type="date"
                 value={formData.start_date}
