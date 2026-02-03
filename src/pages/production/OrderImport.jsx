@@ -755,8 +755,8 @@ export default function OrderImport() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] p-6 gap-4">
+      <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Importación de Órdenes (CDEApp)</h1>
           <p className="text-muted-foreground">Vista de datos crudos con filtrado avanzado y guardado.</p>
@@ -783,21 +783,20 @@ export default function OrderImport() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
-          {/* Progress Bar */}
-          {saving && (
-              <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Guardando órdenes...</span>
-                      <span>{progress}%</span>
-                  </div>
-                  <Progress value={progress} className="h-2 w-full" />
+      {/* Progress Bar */}
+      {saving && (
+          <div className="flex-shrink-0 space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Guardando órdenes...</span>
+                  <span>{progress}%</span>
               </div>
-          )}
+              <Progress value={progress} className="h-2 w-full" />
+          </div>
+      )}
 
-          {/* Search & Filter Bar */}
-          <Card className="bg-slate-50 border-slate-200">
-            <CardContent className="p-4 space-y-4">
+      {/* Search & Filter Bar */}
+      <Card className="flex-shrink-0 bg-slate-50 border-slate-200">
+        <CardContent className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Text Filters */}
                   <div className="space-y-2">
@@ -911,77 +910,71 @@ export default function OrderImport() {
                       </div>
                   </div>
               </div>
-            </CardContent>
-          </Card>
+        </CardContent>
+      </Card>
 
-          {/* Table */}
-          {rawOrders.length > 0 ? (
-          <Card className="shadow-sm border-0 flex-1 overflow-hidden flex flex-col min-h-0">
-          <CardHeader className="py-3 px-4 bg-white border-b sticky top-0 z-10">
-            <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <TableIcon className="h-4 w-4 text-slate-500" />
-                    Vista de Datos ({filteredOrders.length} registros)
-                </CardTitle>
-                <div className="text-xs text-muted-foreground">
-                    Mostrando columnas principales
-                </div>
+      {/* Table */}
+      {rawOrders.length > 0 ? (
+      <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-0 overflow-hidden">
+      <CardHeader className="flex-shrink-0 py-3 px-4 bg-white border-b">
+        <div className="flex justify-between items-center">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TableIcon className="h-4 w-4 text-slate-500" />
+                Vista de Datos ({filteredOrders.length} registros)
+            </CardTitle>
+            <div className="text-xs text-muted-foreground">
+                Mostrando columnas principales
             </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden relative">
-            {/* Contenedor con scroll controlado:
-                - overflow-auto para permitir scroll en ambas direcciones
-                - max-h-[calc(100vh-350px)] para fijar altura y forzar scroll vertical si es necesario
-                - w-full para ancho completo
-             */}
-            <div className="overflow-auto w-full h-full max-h-[600px] border-b">
-              <Table>
-                <TableHeader className="bg-slate-50 sticky top-0 z-20 shadow-sm">
-                  <TableRow>
-                    <TableHead className="w-[50px] bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-500 border-b">#</TableHead>
-                    {columns.map(key => {
-                        const field = SYSTEM_FIELDS.find(f => f.key === key);
-                        return (
-                            <TableHead key={key} className="whitespace-nowrap px-3 py-2 bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-500 border-b min-w-[120px]">
-                                {field?.label || key}
-                                {field?.required && <span className="text-red-500 ml-1">*</span>}
-                            </TableHead>
-                        );
-                    })}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredOrders.length > 0 ? filteredOrders.map((row, i) => (
-                        <TableRow key={i} className="hover:bg-muted/50">
-                        <TableCell className="text-xs py-1 px-2 border-r text-muted-foreground">{i + 1}</TableCell>
-                        {columns.map(col => (
-                            <TableCell key={`${i}-${col}`} className="whitespace-nowrap text-xs py-1 px-2 border-r last:border-r-0" title={String(row[col])}>
-                            {row[col] !== undefined && row[col] !== null 
-                                ? (typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])) 
-                                : <span className="text-gray-300">-</span>}
-                            </TableCell>
-                        ))}
-                        </TableRow>
-                    )) : (
-                        <TableRow>
-                            <TableCell colSpan={columns.length + 1} className="h-24 text-center">
-                                No hay resultados que coincidan con los filtros.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    </TableBody>
-                </Table>
-                </div>
-            </CardContent>
-            </Card>
-        ) : (
-            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg text-muted-foreground">
-                <TableIcon className="h-10 w-10 mb-2 opacity-20" />
-                <p>No hay datos cargados.</p>
-                <p className="text-sm">Pulse "Obtener Datos" para comenzar.</p>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 min-h-0 p-0 relative">
+        <div className="absolute inset-0 overflow-auto">
+          <Table>
+            <TableHeader className="bg-slate-50 sticky top-0 z-20 shadow-sm">
+              <TableRow>
+                <TableHead className="w-[50px] bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-500 border-b">#</TableHead>
+                {columns.map(key => {
+                    const field = SYSTEM_FIELDS.find(f => f.key === key);
+                    return (
+                        <TableHead key={key} className="whitespace-nowrap px-3 py-2 bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-500 border-b min-w-[120px]">
+                            {field?.label || key}
+                            {field?.required && <span className="text-red-500 ml-1">*</span>}
+                        </TableHead>
+                    );
+                })}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+                {filteredOrders.length > 0 ? filteredOrders.map((row, i) => (
+                    <TableRow key={i} className="hover:bg-muted/50">
+                    <TableCell className="text-xs py-1 px-2 border-r text-muted-foreground">{i + 1}</TableCell>
+                    {columns.map(col => (
+                        <TableCell key={`${i}-${col}`} className="whitespace-nowrap text-xs py-1 px-2 border-r last:border-r-0" title={String(row[col])}>
+                        {row[col] !== undefined && row[col] !== null 
+                            ? (typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])) 
+                            : <span className="text-gray-300">-</span>}
+                        </TableCell>
+                    ))}
+                    </TableRow>
+                )) : (
+                    <TableRow>
+                        <TableCell colSpan={columns.length + 1} className="h-24 text-center">
+                            No hay resultados que coincidan con los filtros.
+                        </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
             </div>
-        )}
-      </div>
+        </CardContent>
+        </Card>
+    ) : (
+        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg text-muted-foreground min-h-[200px]">
+            <TableIcon className="h-10 w-10 mb-2 opacity-20" />
+            <p>No hay datos cargados.</p>
+            <p className="text-sm">Pulse "Obtener Datos" para comenzar.</p>
+        </div>
+    )}
     </div>
   );
 }
