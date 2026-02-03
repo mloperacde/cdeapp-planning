@@ -135,11 +135,18 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                                 )}
                             </div>
 
-                            {/* Línea 2: Cantidad, Materiales, Fechas */}
+                            {/* Línea 2: Cantidad, Multiplo, Materiales, Fechas */}
                             <div className="flex items-center gap-2 text-[10px] text-slate-600 dark:text-slate-400 overflow-hidden whitespace-nowrap border-t border-black/5 dark:border-white/5 pt-1.5">
                                 <span className="font-semibold shrink-0" title="Cantidad">
                                     {order.quantity ? `${order.quantity} uds` : 'Sin cantidad'}
                                 </span>
+
+                                {order.multi_qty && (
+                                    <>
+                                        <span className="text-slate-300 shrink-0">•</span>
+                                        <span className="truncate max-w-[80px]" title={`Multiplo: ${order.multi_qty}`}>Multi: {order.multi_qty}</span>
+                                    </>
+                                )}
                                 
                                 {order.material_type && (
                                     <>

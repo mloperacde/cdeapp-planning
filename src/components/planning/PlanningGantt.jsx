@@ -141,8 +141,8 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                              const tooltipText = `${order.priority === 0 ? 'S/P' : `P${order.priority}`} | ${order.order_number}
 Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
 Cli: ${order.client_name || '-'}
-Cant: ${order.quantity || '-'} | Mat: ${order.material_type || '-'}
-Ent: ${order.committed_delivery_date || '-'}`;
+Cant: ${order.quantity || '-'} | Multi: ${order.multi_qty || '-'} | Mat: ${order.material_type || '-'}
+Ent: ${order.effective_delivery_date || '-'}`;
                             return (
                             <Draggable key={order.id} draggableId={order.id} index={index}>
                               {(provided, snapshot) => (
@@ -251,7 +251,7 @@ Ent: ${order.committed_delivery_date || '-'}`;
                      const tooltipText = `${order.priority === 0 ? 'S/P' : `P${order.priority}`} | ${order.order_number}
 Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
 Cli: ${order.client_name || '-'}
-Cant: ${order.quantity || '-'} | Mat: ${order.material_type || '-'}
+Cant: ${order.quantity || '-'} | Multi: ${order.multi_qty || '-'} | Mat: ${order.material_type || '-'}
 Ent: ${order.effective_delivery_date || '-'}
 Ini: ${order.effective_start_date || '-'} | Fin: ${order.planned_end_date || '-'}`;
 

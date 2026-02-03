@@ -524,15 +524,18 @@ export default function ProductionPlanningPage() {
               machine_id: machineId,
               client_name: row['Cliente'] || row['client_name'] || row['client'],
               product_article_code: row['Artículo'] || row['product_article_code'] || row['article'],
-              product_name: row['Nombre'] || row['Descripción'] || row['product_name'] || row['description'],
-              quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
-              priority: isNaN(rawPriority) ? 3 : rawPriority,
+            product_name: row['Nombre'] || row['Descripción'] || row['product_name'] || row['description'],
+            quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
+            material_type: row['Material'] || row['material_type'] || row['material'] || '',
+            multi_qty: row['Multiplo x Cantidad'] || row['Multiplo'] || row['multi_qty'] || '',
+            priority: isNaN(rawPriority) ? 3 : rawPriority,
               status: row['Estado'] || row['status'] || 'Pendiente',
               start_date: parseImportDate(row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'] || row['start_date']),
-              committed_delivery_date: parseImportDate(row['Fecha Entrega'] || row['Nueva Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date']),
-              planned_end_date: parseImportDate(row['Fecha Fin'] || row['planned_end_date'] || row['end_date']),
-              production_cadence: parseFloat(row['Cadencia'] || row['production_cadence'] || row['cadence']) || 0,
-              notes: row['Observación'] || row['notes'] || ''
+            committed_delivery_date: parseImportDate(row['Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date']),
+            new_delivery_date: parseImportDate(row['Nueva Fecha Entrega'] || row['new_delivery_date']),
+            planned_end_date: parseImportDate(row['Fecha Fin'] || row['planned_end_date'] || row['end_date']),
+            production_cadence: parseFloat(row['Cadencia'] || row['production_cadence'] || row['cadence']) || 0,
+            notes: row['Observación'] || row['notes'] || ''
           };
 
           // Debug payload for first few items to check dates
