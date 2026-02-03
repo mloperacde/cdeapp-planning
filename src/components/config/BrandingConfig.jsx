@@ -116,7 +116,14 @@ export default function BrandingConfig() {
 
     setIsUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: logoFile });
+      const response = await base44.integrations.Core.UploadFile({ file: logoFile });
+      console.log("UploadFile response:", response);
+      
+      const file_url = response.file_url || response.data?.file_url || response.url || (typeof response === 'string' ? response : null);
+      
+      if (!file_url) {
+        throw new Error("No se pudo obtener la URL del archivo subido");
+      }
       
       await saveBrandingMutation.mutateAsync({
         ...formData,

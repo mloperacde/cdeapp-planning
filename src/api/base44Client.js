@@ -232,12 +232,32 @@ function createMockBase44() {
 
   const appLogs = { logUserInApp: async () => {} };
   
+  const integrations = {
+    Core: {
+      UploadFile: async ({ file }) => {
+        console.log("[Mock] Uploading file...", file.name);
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                console.log("[Mock] File uploaded successfully");
+                resolve({ file_url: reader.result });
+            };
+            reader.onerror = (e) => {
+                console.error("[Mock] File upload failed", e);
+                reject(e);
+            };
+            reader.readAsDataURL(file);
+        });
+      }
+    }
+  };
+  
   // Expose for debugging if needed
   if (typeof window !== 'undefined') {
       window.__base44_mock_db = getStorage;
   }
 
-  return { auth, entities, appLogs, query };
+  return { auth, entities, appLogs, query, integrations };
 }
 
 export const APP_ID = appParams.appId || "690cdd4205782920ba2297c8";
