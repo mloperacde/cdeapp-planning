@@ -39,11 +39,9 @@ const MachineRow = ({ index, style, data }) => {
     <div style={style} className="px-3 py-1">
       <div className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200 h-full">
           <div className="flex flex-col overflow-hidden mr-2 gap-0.5">
-              <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-500 uppercase">{machine.ubicacion || "Sin Sala"}</span>
-                  {machine.codigo_maquina && <span className="text-xs font-mono text-slate-400">• {machine.codigo_maquina}</span>}
-              </div>
-              <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
+              <span className="font-medium text-sm text-slate-700 truncate" title={machine.alias || machine.nombre}>
+                  {machine.alias || machine.nombre}
+              </span>
           </div>
           <Button 
               size="icon" 
@@ -113,7 +111,14 @@ export default function DailyProductionPlanningPage() {
         if (!m.id) return;
         const id = String(m.id);
         if (!uniqueMap.has(id)) {
-          uniqueMap.set(id, m);
+          // Normalize fields for consistency
+          const sala = (m.ubicacion || '').trim();
+          const codigo = (m.codigo_maquina || '').trim();
+          const nombre = (m.nombre || '').trim();
+          const prefix = [sala, codigo].filter(Boolean).join(' ');
+          const alias = prefix ? `(${prefix} - ${nombre})` : nombre;
+          
+          uniqueMap.set(id, { ...m, alias, ubicacion: sala, codigo_maquina: codigo, nombre });
         }
       });
       

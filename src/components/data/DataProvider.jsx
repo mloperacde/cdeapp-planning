@@ -134,21 +134,33 @@ export function DataProvider({ children }) {
         const masterData = await base44.entities.MachineMasterDatabase.list(undefined, 500);
         if (!Array.isArray(masterData)) return [];
         
-        return masterData.map(m => ({
+        return masterData.map(m => {
+          const sala = (m.ubicacion || '').trim();
+          const codigo = (m.codigo_maquina || '').trim();
+          const nombre = (m.nombre || '').trim();
+          
+          // Alias standard format: "(Sala Code - Name)"
+          // Example: "(119 001A - B1600 DOYPACK)"
+          const prefix = [sala, codigo].filter(Boolean).join(' ');
+          const alias = prefix ? `(${prefix} - ${nombre})` : nombre;
+
+          return {
                   id: m.id,
-                  nombre: m.nombre || '',
-                  codigo: m.codigo_maquina || '',
+                  nombre: nombre,
+                  codigo: codigo,
                   marca: m.marca || '',
                   modelo: m.modelo || '',
                   tipo: m.tipo || '',
-                  ubicacion: m.ubicacion || '',
+                  ubicacion: sala,
+                  alias: alias, // Standard display name
                   orden: m.orden_visualizacion || 999,
                   estado: m.estado_operativo || 'Disponible',
                   procesos_configurados: m.procesos_configurados || [],
                   procesos_ids: Array.isArray(m.procesos_configurados) 
                     ? m.procesos_configurados.map(p => p?.process_id).filter(Boolean) 
                     : []
-                })).sort((a, b) => (a.orden || 999) - (b.orden || 999));
+                };
+        }).sort((a, b) => (a.orden || 999) - (b.orden || 999));
       } catch (err) {
         console.error('Error fetching machines:', err);
         return [];

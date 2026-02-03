@@ -71,16 +71,18 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
               {/* Machine Header */}
               <div className="p-3 border-b bg-slate-50/80 dark:bg-slate-900 sticky top-0 z-10 backdrop-blur-sm rounded-t-lg">
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight">
-                    {machine.descripcion || machine.nombre}
+                  <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight" title={machine.alias || machine.nombre}>
+                    {machine.alias || machine.nombre}
                   </h3>
                   <Badge variant="secondary" className="bg-white dark:bg-slate-800 shadow-sm border text-xs font-mono shrink-0">
                     {uniqueOrders.length}
                   </Badge>
                 </div>
+                {/* 
                 <div className="text-[11px] text-slate-500 flex items-center gap-1">
                    <span className="truncate max-w-[150px]">{machine.ubicacion || 'Sin ubicación'}</span>
                 </div>
+                */}
               </div>
 
               {/* Orders List */}

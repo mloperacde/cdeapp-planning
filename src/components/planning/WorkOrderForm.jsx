@@ -311,7 +311,7 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
                 </SelectTrigger>
                 <SelectContent>
                   {availableMachines.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.descripcion || m.nombre}</SelectItem>
+                    <SelectItem key={m.id} value={m.id}>{m.alias || m.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

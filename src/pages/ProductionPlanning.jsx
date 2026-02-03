@@ -43,15 +43,24 @@ export default function ProductionPlanningPage() {
     queryKey: ['machines'],
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      return data.map(m => ({
-        id: m.id,
-        nombre: m.nombre,
-        descripcion: m.descripcion,
-        codigo: m.codigo_maquina || m.codigo,
-        orden: m.orden_visualizacion || 999,
-        tipo: m.tipo,
-        ubicacion: m.ubicacion
-      })).sort((a, b) => a.orden - b.orden);
+      return data.map(m => {
+        const sala = (m.ubicacion || '').trim();
+        const codigo = (m.codigo_maquina || m.codigo || '').trim();
+        const nombre = (m.nombre || '').trim();
+        const prefix = [sala, codigo].filter(Boolean).join(' ');
+        const alias = prefix ? `(${prefix} - ${nombre})` : nombre;
+        
+        return {
+            id: m.id,
+            nombre: nombre,
+            alias: alias,
+            descripcion: m.descripcion,
+            codigo: codigo,
+            orden: m.orden_visualizacion || 999,
+            tipo: m.tipo,
+            ubicacion: sala
+        };
+      }).sort((a, b) => a.orden - b.orden);
     },
     staleTime: 0,
     gcTime: 0
@@ -703,7 +712,7 @@ export default function ProductionPlanningPage() {
                 <SelectItem value="all">Todas</SelectItem>
                 {machines.map(m => (
                   <SelectItem key={m.id} value={m.id}>
-                    {m.nombre} {m.ubicacion ? `(${m.ubicacion})` : ''}
+                    {m.alias || m.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -826,6 +835,7 @@ export default function ProductionPlanningPage() {
         order={dropDialogData?.order}
         dropDate={dropDialogData?.dropDate}
         processes={processes}
+        machines={machines}
         machineProcesses={machineProcesses}
         onConfirm={handleScheduleConfirm}
         holidays={holidays}

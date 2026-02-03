@@ -6,10 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, addDays, isWeekend, parseISO } from "date-fns";
 
-export default function ScheduleOrderDialog({ open, onClose, order, dropDate, processes, machineProcesses, onConfirm, holidays = [] }) {
+export default function ScheduleOrderDialog({ open, onClose, order, dropDate, processes, machines = [], machineProcesses, onConfirm, holidays = [] }) {
   const [processId, setProcessId] = useState("");
   const [endDate, setEndDate] = useState("");
   const [estimatedHours, setEstimatedHours] = useState(0);
+
+  const targetMachine = useMemo(() => {
+    if (!order || !machines.length) return null;
+    return machines.find(m => m.id === order.machine_id);
+  }, [order, machines]);
 
   // Helper to calculate end date skipping weekends and holidays
   const calculateEndDate = (startDate, hoursNeeded, holidaysList) => {
@@ -127,7 +132,10 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Programar Orden {order.order_number}</DialogTitle>
+          <DialogTitle>
+            Programar Orden {order.order_number}
+            {targetMachine && <span className="block text-sm font-normal text-muted-foreground mt-1">en {targetMachine.alias || targetMachine.nombre}</span>}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 p-3 rounded-lg border">
