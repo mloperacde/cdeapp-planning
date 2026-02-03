@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Upload, FileText, Image as ImageIcon, Wrench, TrendingUp, X, Download, Settings2 } from "lucide-react";
+import { Calendar, Upload, FileText, Image as ImageIcon, Wrench, TrendingUp, X, Download, Settings2, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -504,6 +504,26 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                       <span className="text-xs text-slate-500 uppercase font-semibold">Código</span>
                       <p className="font-medium font-mono">{machine.codigo || "-"}</p>
                     </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">ID Sistema</span>
+                      <div className="flex items-center gap-1">
+                          <p className="font-medium font-mono text-xs truncate max-w-[120px]" title={machine.id}>{machine.id}</p>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(machine.id); toast.success("ID copiado"); }}>
+                              <Copy className="h-3 w-3" />
+                          </Button>
+                      </div>
+                    </div>
+                    {machine.cde_machine_id && (
+                        <div className="space-y-1">
+                            <span className="text-xs text-slate-500 uppercase font-semibold">ID Externo (CDE)</span>
+                            <div className="flex items-center gap-1">
+                                <p className="font-medium font-mono text-xs truncate max-w-[120px]" title={machine.cde_machine_id}>{machine.cde_machine_id}</p>
+                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(machine.cde_machine_id); toast.success("ID Externo copiado"); }}>
+                                    <Copy className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                     <div className="space-y-1">
                       <span className="text-xs text-slate-500 uppercase font-semibold">Sala / Ubicación</span>
                       <p className="font-medium">{machine.ubicacion || "-"}</p>
