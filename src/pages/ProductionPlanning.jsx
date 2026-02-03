@@ -389,6 +389,27 @@ export default function ProductionPlanningPage() {
            return s;
       };
 
+      // Helper para parsear fechas DD/MM/YYYY a ISO YYYY-MM-DD
+      const parseImportDate = (val) => {
+          if (!val) return null;
+          // Si ya es ISO (contiene guiones y empieza por año o tiene T)
+          if (val.includes('-') && (val.length === 10 || val.includes('T'))) return val;
+          
+          // Intentar parsear DD/MM/YYYY o DD/MM/YYYY HH:mm
+          if (val.includes('/')) {
+              const parts = val.split(' ')[0].split('/'); // Tomar solo la fecha, ignorar hora
+              if (parts.length === 3) {
+                  const [day, month, year] = parts;
+                  // Validar que sean números
+                  if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                      // Asegurar formato YYYY-MM-DD
+                      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                  }
+              }
+          }
+          return val; // Devolver original si no se pudo parsear (fallback)
+      };
+
       for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
 
@@ -445,9 +466,9 @@ export default function ProductionPlanningPage() {
               quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
               priority: parseInt(row['Prioridad'] || row['priority']) || 3,
               status: row['Estado'] || row['status'] || 'Pendiente',
-              start_date: row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'] || row['start_date'],
-              committed_delivery_date: row['Fecha Entrega'] || row['Nueva Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date'],
-              planned_end_date: row['Fecha Fin'] || row['planned_end_date'] || row['end_date'],
+              start_date: parseImportDate(row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'] || row['start_date']),
+              committed_delivery_date: parseImportDate(row['Fecha Entrega'] || row['Nueva Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date']),
+              planned_end_date: parseImportDate(row['Fecha Fin'] || row['planned_end_date'] || row['end_date']),
               production_cadence: parseFloat(row['Cadencia'] || row['production_cadence'] || row['cadence']) || 0,
               notes: row['Observación'] || row['notes'] || ''
           };
