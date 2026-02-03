@@ -125,7 +125,7 @@ export default function ProductionPlanningPage() {
     });
 
     // Sort by Priority (Ascending: 1 is higher than 10)
-    return filtered.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+    return filtered.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
   }, [workOrders, selectedMachine, selectedStatus, dateRange]);
 
   const handleSyncCdeApp = async () => {
@@ -164,39 +164,52 @@ export default function ProductionPlanningPage() {
           // Obtener lista actual para comparación (sin depender del cache stale)
           const currentMachines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
           const currentMachineMap = new Map();
+          const cdeIdMap = new Map(); // Mapa para buscar por ID de CDEApp
+
           currentMachines.forEach(m => {
+              if (m.cde_machine_id) cdeIdMap.set(String(m.cde_machine_id), m);
               if (m.codigo) currentMachineMap.set(String(m.codigo).trim(), m);
               if (m.nombre) currentMachineMap.set(m.nombre.toLowerCase().trim(), m);
           });
 
           for (const rm of remoteMachines) {
               // Mapeo de campos (ajustar según respuesta real de API)
-              const code = String(rm['Código'] || rm['code'] || rm['id'] || '').trim();
+              // Priorizamos ID explicito: id o machine_id
+              const cdeId = String(rm['id'] || rm['machine_id'] || '').trim();
+              const code = String(rm['Código'] || rm['code'] || '').trim();
               const name = String(rm['Nombre'] || rm['name'] || rm['machine'] || '').trim();
               
-              if (!code && !name) continue;
+              if (!cdeId && !code && !name) continue;
 
-              const match = currentMachineMap.get(code) || currentMachineMap.get(name.toLowerCase());
+              // 1. Buscar por ID único (Prioridad Máxima)
+              let match = cdeId ? cdeIdMap.get(cdeId) : null;
+              
+              // 2. Fallback: Buscar por código o nombre (si no hay match por ID)
+              if (!match) {
+                  match = currentMachineMap.get(code) || currentMachineMap.get(name.toLowerCase());
+              }
               
               const machinePayload = {
-                  codigo: code, // Asegurar que guardamos el código externo para futura referencia
-                  nombre: name,
+                  cde_machine_id: cdeId, // Guardar ID externo para futuras referencias
+                  codigo: code || (match ? match.codigo : cdeId), 
+                  nombre: name || (match ? match.nombre : `Machine ${cdeId}`),
                   descripcion: rm['Descripción'] || rm['description'] || name,
+                  ubicacion: rm['Ubicación'] || rm['location'] || (match ? match.ubicacion : ''),
                   // Otros campos si vienen
               };
 
               if (match) {
-                  // Update si hay cambios relevantes (opcional, por ahora solo aseguramos que exista)
-                  // await base44.entities.MachineMasterDatabase.update(match.id, machinePayload);
-                  // machinesUpdated++;
+                  // Update siempre para asegurar que cde_machine_id se guarda si faltaba
+                  await base44.entities.MachineMasterDatabase.update(match.id, machinePayload);
+                  machinesUpdated++;
               } else {
                   await base44.entities.MachineMasterDatabase.create(machinePayload);
                   machinesCreated++;
               }
           }
           
-          if (machinesCreated > 0) {
-              toast.success(`Inventario unificado: ${machinesCreated} máquinas nuevas creadas.`);
+          if (machinesCreated > 0 || machinesUpdated > 0) {
+              toast.success(`Inventario unificado: ${machinesCreated} creadas, ${machinesUpdated} actualizadas (IDs vinculados).`);
               await queryClient.invalidateQueries({ queryKey: ['machines'] });
           }
           
@@ -273,6 +286,10 @@ export default function ProductionPlanningPage() {
       const normalizeKey = (str) => String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
       freshMachines.forEach(m => {
+          // 1. Mapeo por ID externo (cde_machine_id) -> Local ID (Prioridad Absoluta)
+          if (m.cde_machine_id) machineMap.set(String(m.cde_machine_id), m.id);
+
+          // 2. Mapeos Legacy (Fallback por Nombre/Código)
           if (m.codigo) machineMap.set(normalizeKey(m.codigo), m.id);
           if (m.nombre) machineMap.set(normalizeKey(m.nombre), m.id);
           // También mapear por ID directo si es numérico (casos legacy)
@@ -429,34 +446,79 @@ export default function ProductionPlanningPage() {
               continue;
           }
 
-          // Resolver Máquina - Intenta varios campos
+          // Resolver Máquina - Estrategia robusta con IDs y Matching Avanzado
           let machineId = null;
-          const machineVal = row['Máquina'] || row['machine_id'] || row['machine_name'] || row['maquina'] || row['machine'];
+          
+          const rowMachineId = String(row['machine_id'] || row['maquina_id'] || row['id_maquina'] || '').trim();
+          const rowMachineName = String(row['Máquina'] || row['machine_name'] || row['maquina'] || row['machine'] || rowMachineId).trim();
+          const rowSala = String(row['Sala'] || row['sala'] || row['room'] || '').trim();
 
-          // Estrategia 1: Nombre exacto o 'Máquina' limpia
-          if (machineVal) {
-              const name = normalizeKey(machineVal);
-              if (machineMap.has(name)) machineId = machineMap.get(name);
-              
-              // Estrategia 2: Intentar extraer código de "119 - Nombre"
-              if (!machineId) {
-                  const code = normalizeKey(normalizeMachineName(machineVal));
-                  if (machineMap.has(code)) machineId = machineMap.get(code);
+          // 1. Prioridad: ID explícito de máquina (machine_id)
+          if (rowMachineId && machineMap.has(rowMachineId)) {
+               machineId = machineMap.get(rowMachineId);
+          }
+
+          // 2. Fallback: Matching por Nombre/Código/Sala
+          if (!machineId) {
+              // A. Matching exacto o normalizado (existente)
+              if (rowMachineName) {
+                  const name = normalizeKey(rowMachineName);
+                  if (machineMap.has(name)) machineId = machineMap.get(name);
+                  
+                  // Try code from machine name
+                  if (!machineId) {
+                      const code = normalizeKey(normalizeMachineName(rowMachineName));
+                      if (machineMap.has(code)) machineId = machineMap.get(code);
+                  }
               }
-              
-              // Estrategia 3: Intentar coincidencia directa de ID (si viene numérico en el JSON original)
-              if (!machineId) {
-                   // A veces machineVal es el ID numérico (ej. 119)
-                   if (machineMap.has(String(machineVal))) machineId = machineMap.get(String(machineVal));
+
+              // B. Matching por parsing de Sala (Code extraction)
+              // Example: "104C 130 - BELCA" -> Code "130"
+              if (!machineId && rowSala) {
+                   // Strategy: Look for digits that match a known machine code
+                   // Iterate all known machine codes to see if they appear in Sala string
+                   // This is safer than regex guessing
+                   
+                   // freshMachines is available
+                   for (const m of freshMachines) {
+                       if (!m.codigo) continue;
+                       const codeStr = String(m.codigo).trim();
+                       if (codeStr.length < 2) continue; // Skip too short codes to avoid false positives (e.g. "1")
+                       
+                       // Check if Sala contains the code as a distinct word
+                       const regex = new RegExp(`\\b${codeStr}\\b`);
+                       if (regex.test(rowSala)) {
+                           machineId = m.id;
+                           break; // Found matching code in Sala
+                       }
+                   }
+              }
+
+              // C. Matching por Substring (Fuzzy) - Solves "001A 119 - B1600..." vs "B1600..."
+              if (!machineId && rowMachineName) {
+                   const searchName = normalizeKey(rowMachineName);
+                   
+                   for (const m of freshMachines) {
+                       const mName = normalizeKey(m.nombre);
+                       
+                       // Check if machine name contains the imported name (e.g. DB has full name, Import has partial)
+                       // OR if imported name contains the machine name (Import has full info, DB has partial)
+                       // Enforce min length 4 to avoid matching short codes like "1" or "A" loosely
+                       if (mName.includes(searchName) || (mName.length > 3 && searchName.includes(mName))) {
+                           machineId = m.id;
+                           break; 
+                       }
+                   }
               }
           }
 
           if (!machineId) {
               skipped++;
-              if (skipped <= 5) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Valor máquina: "${machineVal}"`);
+              if (skipped <= 5) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Valor máquina: "${rowMachineName}"`);
               continue;
           }
 
+          const rawPriority = parseInt(row['Prioridad'] || row['priority']);
           const payload = {
               order_number: String(orderNumber),
               machine_id: machineId,
@@ -464,7 +526,7 @@ export default function ProductionPlanningPage() {
               product_article_code: row['Artículo'] || row['product_article_code'] || row['article'],
               product_name: row['Nombre'] || row['Descripción'] || row['product_name'] || row['description'],
               quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
-              priority: parseInt(row['Prioridad'] || row['priority']) || 3,
+              priority: isNaN(rawPriority) ? 3 : rawPriority,
               status: row['Estado'] || row['status'] || 'Pendiente',
               start_date: parseImportDate(row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'] || row['start_date']),
               committed_delivery_date: parseImportDate(row['Fecha Entrega'] || row['Nueva Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date']),
