@@ -133,7 +133,79 @@ export default function ProductionPlanningPage() {
     toast.info("Conectando con CDEApp...");
     
     try {
-      // 1. Obtener datos externos
+      // 0. Sincronizar Máquinas (Unificación de Inventario)
+      toast.info("Sincronizando catálogo de máquinas...");
+      let remoteMachines = [];
+      try {
+          const machinesResponse = await cdeApp.syncMachines();
+          // Normalización de respuesta de máquinas (similar a órdenes)
+          if (machinesResponse.data && Array.isArray(machinesResponse.data)) {
+             if (machinesResponse.data.length > 0 && typeof machinesResponse.data[0] === 'object' && !Array.isArray(machinesResponse.data[0])) {
+                 remoteMachines = machinesResponse.data;
+             } else if (machinesResponse.headers && Array.isArray(machinesResponse.headers)) {
+                 remoteMachines = machinesResponse.data.map(r => {
+                     const obj = {};
+                     machinesResponse.headers.forEach((h, i) => { if (r[i] !== undefined) obj[h] = r[i]; });
+                     return obj;
+                 });
+             } else {
+                 remoteMachines = machinesResponse.data;
+             }
+          } else if (Array.isArray(machinesResponse)) {
+              remoteMachines = machinesResponse;
+          }
+
+          console.log(`[Sync] Máquinas encontradas en CDEApp: ${remoteMachines.length}`);
+          
+          // Upsert Máquinas
+          let machinesUpdated = 0;
+          let machinesCreated = 0;
+          
+          // Obtener lista actual para comparación (sin depender del cache stale)
+          const currentMachines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+          const currentMachineMap = new Map();
+          currentMachines.forEach(m => {
+              if (m.codigo) currentMachineMap.set(String(m.codigo).trim(), m);
+              if (m.nombre) currentMachineMap.set(m.nombre.toLowerCase().trim(), m);
+          });
+
+          for (const rm of remoteMachines) {
+              // Mapeo de campos (ajustar según respuesta real de API)
+              const code = String(rm['Código'] || rm['code'] || rm['id'] || '').trim();
+              const name = String(rm['Nombre'] || rm['name'] || rm['machine'] || '').trim();
+              
+              if (!code && !name) continue;
+
+              const match = currentMachineMap.get(code) || currentMachineMap.get(name.toLowerCase());
+              
+              const machinePayload = {
+                  codigo: code, // Asegurar que guardamos el código externo para futura referencia
+                  nombre: name,
+                  descripcion: rm['Descripción'] || rm['description'] || name,
+                  // Otros campos si vienen
+              };
+
+              if (match) {
+                  // Update si hay cambios relevantes (opcional, por ahora solo aseguramos que exista)
+                  // await base44.entities.MachineMasterDatabase.update(match.id, machinePayload);
+                  // machinesUpdated++;
+              } else {
+                  await base44.entities.MachineMasterDatabase.create(machinePayload);
+                  machinesCreated++;
+              }
+          }
+          
+          if (machinesCreated > 0) {
+              toast.success(`Inventario unificado: ${machinesCreated} máquinas nuevas creadas.`);
+              await queryClient.invalidateQueries({ queryKey: ['machines'] });
+          }
+          
+      } catch (err) {
+          console.error("Error sincronizando máquinas (no bloqueante):", err);
+          toast.warning("No se pudo sincronizar el inventario de máquinas. Usando local.");
+      }
+
+      // 1. Obtener datos de Producción
       const response = await cdeApp.syncProductions();
       
       // 2. Normalizar respuesta (Headers -> Objetos)
@@ -193,11 +265,18 @@ export default function ProductionPlanningPage() {
         return;
       }
 
-      // 3. Preparar mapeo de máquinas
+      // 3. Preparar mapeo de máquinas (Recargar frescas después del sync de máquinas)
+      const freshMachines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
       const machineMap = new Map();
-      machines.forEach(m => {
-          if (m.codigo) machineMap.set(String(m.codigo).trim(), m.id);
-          if (m.nombre) machineMap.set(m.nombre.toLowerCase().trim(), m.id);
+      
+      // Función helper de normalización estricta para matching
+      const normalizeKey = (str) => String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      freshMachines.forEach(m => {
+          if (m.codigo) machineMap.set(normalizeKey(m.codigo), m.id);
+          if (m.nombre) machineMap.set(normalizeKey(m.nombre), m.id);
+          // También mapear por ID directo si es numérico (casos legacy)
+          if (m.id) machineMap.set(String(m.id), m.id);
       });
 
       // 4. Limpiar órdenes existentes antes de insertar nuevas (Estrategia "Full Refresh")
@@ -335,13 +414,19 @@ export default function ProductionPlanningPage() {
 
           // Estrategia 1: Nombre exacto o 'Máquina' limpia
           if (machineVal) {
-              const name = String(machineVal).toLowerCase().trim();
+              const name = normalizeKey(machineVal);
               if (machineMap.has(name)) machineId = machineMap.get(name);
               
               // Estrategia 2: Intentar extraer código de "119 - Nombre"
               if (!machineId) {
-                  const code = normalizeMachineName(machineVal);
+                  const code = normalizeKey(normalizeMachineName(machineVal));
                   if (machineMap.has(code)) machineId = machineMap.get(code);
+              }
+              
+              // Estrategia 3: Intentar coincidencia directa de ID (si viene numérico en el JSON original)
+              if (!machineId) {
+                   // A veces machineVal es el ID numérico (ej. 119)
+                   if (machineMap.has(String(machineVal))) machineId = machineMap.get(String(machineVal));
               }
           }
 
