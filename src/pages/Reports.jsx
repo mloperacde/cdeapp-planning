@@ -25,7 +25,6 @@ import {
 import { FileText, Download, Filter, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { getMachineAlias } from "@/utils/machineAlias";
 import { format } from "date-fns";
 import AIReportGenerator from "../components/reports/AIReportGenerator";
 
