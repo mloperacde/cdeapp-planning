@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Activity } from "lucide-react";
 import { addDays, format, isSameDay, isValid, startOfDay, endOfDay, max, min, differenceInHours } from "date-fns";
 import { es } from "date-fns/locale";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachineLoadGraph({ orders, machines, dateRange }) {
   // Generate days array
@@ -121,8 +122,8 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
               return (
                 <div key={machine.id} className="flex border-b hover:bg-slate-50 transition-colors">
                     <div className="w-40 p-2 text-sm font-medium border-r sticky left-0 bg-white dark:bg-slate-900 z-10 flex items-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                        <div className="truncate" title={machine.alias || machine.nombre || machine.name}>
-                            {machine.alias || machine.nombre || machine.name}
+                        <div className="truncate" title={getMachineAlias(machine)}>
+                            {getMachineAlias(machine)}
                         </div>
                     </div>
                     {days.map(day => {

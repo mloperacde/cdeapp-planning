@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -297,7 +298,7 @@ export default function AdvancedReportGenerator() {
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
                     {machines.map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                      <SelectItem key={m.id} value={m.id}>{m.alias}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

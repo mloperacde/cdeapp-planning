@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { usePagination } from "@/components/utils/usePagination";
 import AdvancedSearch from "@/components/common/AdvancedSearch";
 import MachineDetailCard from "@/components/machines/MachineDetailCard";
@@ -34,17 +35,24 @@ export default function MachineManagement() {
     queryKey: ['machines'],
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
-      const normalized = Array.isArray(data) ? data.map(m => ({
-        id: m.id,
-        nombre: m.nombre || '',
-        descripcion: m.descripcion || '',
-        codigo_maquina: m.codigo_maquina || m.codigo || '',
-        tipo: m.tipo || '',
-        ubicacion: m.ubicacion || '',
-        orden_visualizacion: m.orden_visualizacion || 999,
-        estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
-        estado_produccion: m.estado_produccion || 'Sin Producción'
-      })) : [];
+      const normalized = Array.isArray(data) ? data.map(m => {
+        const alias = getMachineAlias(m);
+        const sala = (m.ubicacion || '').trim();
+        const codigo = (m.codigo_maquina || m.codigo || '').trim();
+        
+        return {
+          id: m.id,
+          nombre: (m.nombre || '').trim(),
+          alias: alias,
+          descripcion: m.descripcion || '',
+          codigo_maquina: codigo,
+          tipo: m.tipo || '',
+          ubicacion: sala,
+          orden_visualizacion: m.orden_visualizacion || 999,
+          estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
+          estado_produccion: m.estado_produccion || 'Sin Producción'
+        };
+      }) : [];
       return normalized.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
     staleTime: 15 * 60 * 1000,
@@ -57,9 +65,8 @@ export default function MachineManagement() {
     let result = machines.filter(m => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
-        m.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.codigo_maquina?.toLowerCase().includes(searchTerm.toLowerCase());
+        m.alias?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesDisp = !filters.disponibilidad || filters.disponibilidad === 'all' || 
         m.estado_disponibilidad === filters.disponibilidad;
@@ -184,7 +191,7 @@ export default function MachineManagement() {
           <AdvancedSearch
             data={machines}
             onFilterChange={setFilters}
-            searchFields={['descripcion', 'nombre', 'codigo_maquina']}
+            searchFields={['alias', 'descripcion', 'nombre', 'codigo_maquina']}
             filterOptions={{
               disponibilidad: {
                 label: 'Disponibilidad',
@@ -205,9 +212,8 @@ export default function MachineManagement() {
             }}
             sortOptions={[
               { field: 'orden_visualizacion', label: 'Orden' },
+              { field: 'alias', label: 'Alias' },
               { field: 'descripcion', label: 'Descripción' },
-              { field: 'nombre', label: 'Nombre' },
-              { field: 'codigo_maquina', label: 'Código' },
               { field: 'estado_disponibilidad', label: 'Disponibilidad' }
             ]}
             placeholder="Buscar por descripción, nombre o código..."
@@ -262,22 +268,12 @@ export default function MachineManagement() {
                       <CardContent className="p-3">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate" title={machine.descripcion || machine.nombre}>
-                              {machine.descripcion || machine.nombre}
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate" title={machine.alias}>
+                              {machine.alias}
                             </h3>
                             {machine.descripcion && machine.descripcion !== machine.nombre && (
-                                <p className="text-[10px] text-slate-500 mt-0.5 font-medium truncate">{machine.nombre}</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5 font-medium truncate">{machine.descripcion}</p>
                             )}
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                                <p className="text-[10px] text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">
-                                  {machine.codigo_maquina || machine.codigo}
-                                </p>
-                                {machine.ubicacion && (
-                                  <p className="text-[10px] text-slate-500 dark:text-slate-500">
-                                    • {machine.ubicacion}
-                                  </p>
-                                )}
-                            </div>
                           </div>
                           <Button
                               variant="ghost"

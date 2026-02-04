@@ -6,6 +6,8 @@ import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+import { getMachineAlias } from '../../utils/machineAlias';
+
 export default function DeduplicateMachines() {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState(null);
@@ -57,7 +59,7 @@ export default function DeduplicateMachines() {
           await base44.entities.Machine.delete(machine.id);
           summary.legacyDeleted++;
         } catch (err) {
-          summary.errors.push({ machine: machine.nombre, error: err.message });
+          summary.errors.push({ machine: getMachineAlias(machine), error: err.message });
         }
       }
 

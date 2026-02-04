@@ -889,7 +889,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                               <SelectItem value={null}>Sin asignar</SelectItem>
                               {allMachines.map((machine) => (
                                 <SelectItem key={machine.id} value={machine.id}>
-                                  {machine.nombre} ({machine.codigo})
+                                  {machine.alias}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -941,7 +941,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                            <SelectItem value={null}>Sin asignar</SelectItem>
                            {masterMachines.map((machine) => (
                              <SelectItem key={machine.id} value={machine.id}>
-                               {machine.nombre} ({machine.codigo_maquina})
+                               {machine.alias || getMachineAlias(machine)}
                              </SelectItem>
                            ))}
                           </SelectContent>

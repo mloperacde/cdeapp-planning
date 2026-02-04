@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,7 +57,8 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
       return data.map(m => ({
         id: m.id,
-        nombre: m.nombre,
+        nombre: getMachineAlias(m),
+        alias: getMachineAlias(m),
         codigo: m.codigo_maquina,
         orden: m.orden_visualizacion || 999
       })).sort((a, b) => a.orden - b.orden);
@@ -288,10 +290,10 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
                          <div className="flex-1">
                            <div className="font-medium">{getSkillName(es.skill_id)}</div>
                            {machine && (
-                             <div className="text-xs text-blue-600 font-medium mt-0.5">
-                               📍 {machine.nombre}
-                             </div>
-                           )}
+                            <div className="text-xs text-blue-600 font-medium mt-0.5">
+                              📍 {machine.alias}
+                            </div>
+                          )}
                            <div className="text-xs text-slate-500 mt-1">
                              Adquirida: {es.fecha_adquisicion || 'N/A'}
                              {es.experiencia_meses > 0 && ` • ${es.experiencia_meses} meses exp.`}
@@ -371,9 +373,9 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={null}>Sin máquina</SelectItem>
-                        {machines.map(machine => (
+                        {machines.map((machine) => (
                           <SelectItem key={machine.id} value={machine.id}>
-                            {machine.nombre} ({machine.codigo})
+                            {getMachineAlias(machine)}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { GripVertical, Save } from "lucide-react";
 import { toast } from "sonner";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachineOrderManager() {
   const [machines, setMachines] = useState([]);
@@ -79,8 +80,7 @@ export default function MachineOrderManager() {
           >
             <GripVertical className="w-5 h-5 text-slate-400" />
             <div className="flex-1">
-              <div className="font-medium">{machine.descripcion || machine.nombre}</div>
-              <div className="text-xs text-slate-500">{machine.codigo_maquina || machine.codigo}</div>
+              <div className="font-medium">{getMachineAlias(machine)}</div>
             </div>
             <div className="text-sm font-semibold text-slate-600 bg-white px-2 py-1 rounded">{index + 1}</div>
           </div>

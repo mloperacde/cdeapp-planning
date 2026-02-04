@@ -12,6 +12,7 @@ import { Save, UserCheck, User, Users, History, MapPin, Sparkles, Loader2, Wand2
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getMachineAlias } from "@/utils/machineAlias";
 import EmployeeSelect from "../common/EmployeeSelect";
 
 const EMPTY_ARRAY = [];
@@ -34,6 +35,7 @@ export default function IdealAssignmentView() {
         return data.map(m => ({
             id: m.id,
             nombre: m.nombre,
+            alias: getMachineAlias(m),
             codigo: m.codigo_maquina,
             ubicacion: m.ubicacion,
             orden: m.orden_visualizacion || 999
@@ -502,7 +504,8 @@ export default function IdealAssignmentView() {
     Object.keys(assignments).forEach(machineId => {
         const currentData = assignments[machineId];
         const machine = machines.find(m => m.id === machineId);
-        const machineName = machine?.nombre || "Máquina";
+        // Usar el alias estandarizado si está disponible, sino construirlo o usar fallback
+        const machineName = machine?.alias || getMachineAlias(machine) || "Máquina";
 
         // Check against DB data
         const original = machineAssignments.find(a => a.machine_id === machineId && a.team_key === currentTeam);
@@ -653,15 +656,7 @@ export default function IdealAssignmentView() {
                             <CardHeader className="bg-slate-50 border-b pb-4">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <CardTitle className="text-xl">{machine.nombre}</CardTitle>
-                                        <div className="flex gap-4 text-sm text-slate-500 mt-1">
-                                            <span className="font-mono bg-slate-200 px-1 rounded">{machine.codigo}</span>
-                                            {machine.ubicacion && (
-                                                <span className="flex items-center gap-1">
-                                                    <MapPin className="w-3 h-3" /> {machine.ubicacion}
-                                                </span>
-                                            )}
-                                        </div>
+                                        <CardTitle className="text-xl" title={machine.alias}>{machine.alias}</CardTitle>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button
@@ -683,7 +678,7 @@ export default function IdealAssignmentView() {
                                             Historial
                                         </Button>
                                         <Button 
-                                            onClick={() => handleSaveMachine(machine.id, machine.nombre)} 
+                                            onClick={() => handleSaveMachine(machine.id, machine.alias)} 
                                             size="sm" 
                                             className="bg-blue-600 hover:bg-blue-700"
                                         >
@@ -790,7 +785,7 @@ export default function IdealAssignmentView() {
                 <ScrollArea className="h-[400px] pr-4">
                     <div className="space-y-4">
                         {Object.entries(optimizationResult).map(([machineId, sugg]) => {
-                            const machineName = machines.find(m => m.id === machineId)?.nombre || machineId;
+                            const machineName = machines.find(m => m.id === machineId)?.alias || machines.find(m => m.id === machineId)?.nombre || machineId;
                             return (
                                 <div key={machineId} className="bg-slate-50 p-3 rounded-lg border">
                                     <h4 className="font-semibold text-sm mb-2">{machineName}</h4>

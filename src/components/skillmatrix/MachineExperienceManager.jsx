@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,15 +31,21 @@ export default function MachineExperienceManager() {
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
       const list = Array.isArray(data) ? data : [];
-      return list.map(m => ({
-        id: m.id,
-        nombre: m.nombre || '',
-        descripcion: m.descripcion || '',
-        codigo: m.codigo_maquina || m.codigo || '',
-        orden: m.orden_visualizacion || 999,
-        tipo: m.tipo || '',
-        ubicacion: m.ubicacion || ''
-      })).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
+      return list.map(m => {
+        const alias = getMachineAlias(m);
+        const sala = (m.ubicacion || '').trim();
+        
+        return {
+          id: m.id,
+          nombre: m.nombre || '',
+          alias: alias,
+          descripcion: m.descripcion || '',
+          codigo: (m.codigo_maquina || m.codigo || '').trim(),
+          orden: m.orden_visualizacion || 999,
+          tipo: m.tipo || '',
+          ubicacion: sala
+        };
+      }).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
     },
     initialData: [],
   });
@@ -335,9 +342,9 @@ export default function MachineExperienceManager() {
                                   <SelectItem value={null}>Sin asignar</SelectItem>
                                   {machines.map(machine => (
                                     <SelectItem key={machine.id} value={machine.id}>
-                                      {machine.descripcion || machine.nombre} ({machine.codigo})
+                                        {getMachineAlias(machine)}
                                     </SelectItem>
-                                  ))}
+                                ))}
                                 </SelectContent>
                               </Select>
                             </div>

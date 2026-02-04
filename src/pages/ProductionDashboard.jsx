@@ -18,6 +18,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import { subDays } from "date-fns";
 
 import { createPageUrl } from "@/utils";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function ProductionDashboardPage() {
   const [dateRange, setDateRange] = useState("7days");
@@ -32,6 +33,7 @@ export default function ProductionDashboardPage() {
         .map(m => ({
           id: m.id,
           nombre: m.nombre || '',
+          alias: getMachineAlias(m),
           codigo: m.codigo_maquina || m.codigo || '',
           orden: m.orden_visualizacion || 999,
           estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
@@ -114,7 +116,7 @@ export default function ProductionDashboardPage() {
     const data = machines.map(machine => {
       const machineOrders = workOrders.filter(wo => wo.machine_id === machine.id);
       return {
-        name: machine.nombre,
+        name: machine.alias,
         completadas: machineOrders.filter(o => o.status === "Completada").length,
         enProgreso: machineOrders.filter(o => o.status === "En Progreso").length,
         atrasadas: machineOrders.filter(o => o.status === "Retrasada").length,
@@ -146,7 +148,7 @@ export default function ProductionDashboardPage() {
       ).length;
       
       return {
-        name: machine.nombre,
+        name: machine.alias,
         carga: pending,
       };
     }).filter(d => d.carga > 0).sort((a, b) => b.carga - a.carga).slice(0, 8);
@@ -174,7 +176,7 @@ export default function ProductionDashboardPage() {
             <SelectContent>
               <SelectItem value="all">Todas las máquinas</SelectItem>
               {machines.map(m => (
-                <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                <SelectItem key={m.id} value={m.id}>{m.alias}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -457,8 +459,7 @@ export default function ProductionDashboardPage() {
                   <CardContent className="p-3 md:p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h4 className="font-bold text-sm">{machine.nombre}</h4>
-                        <p className="text-xs text-slate-500">{machine.codigo}</p>
+                        <h4 className="font-bold text-sm" title={machine.alias}>{machine.alias}</h4>
                       </div>
                       <Badge className={isAvailable ? "bg-green-600" : "bg-red-600"}>
                         {isAvailable ? "Disponible" : "No disponible"}

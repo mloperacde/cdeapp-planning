@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Cog, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachineRequirements() {
   const { data: machines = [] } = useQuery({
@@ -11,8 +12,7 @@ export default function MachineRequirements() {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
       return data.map(m => ({
         id: m.id,
-        nombre: m.nombre,
-        codigo: m.codigo_maquina,
+        alias: getMachineAlias(m),
         tipo: m.tipo,
         estado: m.estado_operativo || 'Disponible',
         orden: m.orden_visualizacion || 999
@@ -130,13 +130,7 @@ export default function MachineRequirements() {
                 className="p-4 border-2 border-slate-200 rounded-lg bg-white hover:border-blue-300 transition-all"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="font-semibold text-slate-900">{machine.nombre}</div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span className="font-mono">{machine.codigo}</span>
-                      {machine.ubicacion && <span>• {machine.ubicacion}</span>}
-                    </div>
-                  </div>
+                  <div className="font-semibold text-slate-900" title={machine.alias}>{machine.alias}</div>
                   <Cog className="w-5 h-5 text-blue-600" />
                 </div>
                 

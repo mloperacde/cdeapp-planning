@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import EmployeeSelect from "@/components/common/EmployeeSelect";
 import { toast } from "sonner";
 import { getEmployeeDefaultMachineExperience } from "@/lib/domain/planning";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachineSkillsView() {
     const queryClient = useQueryClient();
@@ -31,14 +32,19 @@ export default function MachineSkillsView() {
         queryKey: ['machines'],
         queryFn: async () => {
             const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-            return data.map(m => ({
-                id: m.id,
-                nombre: m.nombre,
-                codigo: m.codigo_maquina,
-                descripcion: m.descripcion,
-                ubicacion: m.ubicacion,
-                orden: m.orden_visualizacion || 999
-            })).sort((a, b) => a.orden - b.orden);
+            return data.map(m => {
+                const alias = getMachineAlias(m);
+
+                return {
+                    id: m.id,
+                    nombre: (m.nombre || '').trim(),
+                    alias: alias,
+                    codigo: (m.codigo_maquina || m.codigo || '').trim(),
+                    descripcion: m.descripcion,
+                    ubicacion: (m.ubicacion || '').trim(),
+                    orden: m.orden_visualizacion ?? 999
+                };
+            }).sort((a, b) => a.orden - b.orden);
         },
     });
 
@@ -242,8 +248,9 @@ export default function MachineSkillsView() {
         if (!searchTerm) return machines;
         const lower = searchTerm.toLowerCase();
         return machines.filter(m => 
+            m.alias?.toLowerCase().includes(lower) ||
             m.descripcion?.toLowerCase().includes(lower) || 
-            m.nombre.toLowerCase().includes(lower) || 
+            m.nombre?.toLowerCase().includes(lower) || 
             m.codigo?.toLowerCase().includes(lower)
         );
     }, [machines, searchTerm]);
@@ -301,15 +308,8 @@ export default function MachineSkillsView() {
                             return (
                                 <TableRow key={machine.id} className="hover:bg-slate-50">
                                     <TableCell>
-                                        <div className="font-medium">{machine.nombre}</div>
+                                        <div className="font-medium">{machine.alias}</div>
                                         <div className="text-sm text-slate-500">{machine.descripcion}</div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {machine.ubicacion && (
-                                            <Badge variant="outline" className="bg-slate-100 text-slate-700 whitespace-nowrap">
-                                                {machine.ubicacion}
-                                            </Badge>
-                                        )}
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">

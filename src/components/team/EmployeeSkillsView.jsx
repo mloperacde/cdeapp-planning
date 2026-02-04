@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.jsx";
 import { Button } from "@/components/ui/button";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { Badge } from "@/components/ui/badge";
 import { Search, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
             return data.map(m => ({
                 id: m.id,
                 nombre: m.nombre,
+                alias: getMachineAlias(m),
                 codigo: m.codigo_maquina,
                 ubicacion: m.ubicacion,
                 orden: m.orden_visualizacion || 999
@@ -266,7 +268,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
                             <SelectTrigger className="bg-white w-full"><SelectValue placeholder="Todas" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todas</SelectItem>
-                                {machines.map(m => <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>)}
+                                {machines.map(m => <SelectItem key={m.id} value={m.id}>{m.alias || m.nombre}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -344,30 +346,26 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                                        onValueChange={(v) => handleMachineChange(emp.id, i, v === "none" ? null : v)}
                                                    >
                                                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent hover:bg-slate-100 focus:ring-0">
-                                                           <SelectValue>
-                                                               {selectedMachine ? (
-                                                                   <span>
-                                                                       {selectedMachine.nombre}
-                                                                       {selectedMachine.ubicacion && (
-                                                                           <span className="ml-1 text-[10px] text-slate-400">({selectedMachine.ubicacion})</span>
-                                                                       )}
-                                                                   </span>
-                                                               ) : "-"}
-                                                           </SelectValue>
-                                                       </SelectTrigger>
-                                                       <SelectContent>
-                                                           <SelectItem value="none">- Sin asignar -</SelectItem>
-                                                           {machines.map(m => (
-                                                               <SelectItem key={m.id} value={m.id}>
-                                                                   <div className="flex flex-col">
-                                                                       <span>{m.nombre}</span>
-                                                                       {m.ubicacion && (
-                                                                           <span className="text-[10px] text-slate-400">{m.ubicacion}</span>
-                                                                       )}
-                                                                   </div>
-                                                               </SelectItem>
-                                                           ))}
-                                                       </SelectContent>
+                                                        <SelectValue>
+                                                            {selectedMachine ? (
+                                                                <span>
+                                                                    {selectedMachine.alias || selectedMachine.nombre}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-slate-300">-</span>
+                                                            )}
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">- Sin asignar -</SelectItem>
+                                                        {machines.map(m => (
+                                                            <SelectItem key={m.id} value={m.id}>
+                                                                <div className="flex flex-col">
+                                                                    <span>{m.alias || m.nombre}</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
                                                    </Select>
                                                </TableCell>
                                            );

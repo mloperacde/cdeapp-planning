@@ -17,6 +17,7 @@ import {
 import { Cog, Users, CheckCircle2, XCircle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachinePlanningManager({ open, onOpenChange, machines, onUpdate }) {
   const { data: machinePlannings, refetch } = useQuery({
@@ -104,8 +105,7 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
               <TableHeader>
                 <TableRow className="bg-slate-50">
                   <TableHead className="w-16">Estado</TableHead>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nombre</TableHead>
+                  <TableHead>Máquina</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-center">Operadores</TableHead>
                   <TableHead className="text-center">Estado Máquina</TableHead>
@@ -126,15 +126,7 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono font-semibold text-slate-900">
-                          {machine.codigo}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-semibold text-slate-900">{machine.nombre}</span>
-                        {machine.ubicacion && (
-                          <div className="text-xs text-slate-500">{machine.ubicacion}</div>
-                        )}
+                        <span className="font-semibold text-slate-900">{getMachineAlias(machine)}</span>
                       </TableCell>
                       <TableCell className="text-slate-600">{machine.tipo || '-'}</TableCell>
                       <TableCell className="text-center">
@@ -173,8 +165,7 @@ export default function MachinePlanningManager({ open, onOpenChange, machines, o
                 {activeMachines.map((machine) => (
                   <div key={machine.id} className="flex justify-between items-center p-2 bg-white rounded border">
                     <div>
-                      <span className="font-semibold text-slate-900">{machine.nombre}</span>
-                      <span className="text-slate-500 text-sm ml-2">({machine.codigo})</span>
+                      <span className="font-semibold text-slate-900">{getMachineAlias(machine)}</span>
                     </div>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700">
                       <Users className="w-3 h-3 mr-1" />

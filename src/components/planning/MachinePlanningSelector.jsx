@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Cog, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachinePlanningSelector({ 
   machines = [], 
@@ -56,9 +57,10 @@ export default function MachinePlanningSelector({
 
     onAddMachine({
       machine_id: machine.id,
-      machine_nombre: machine.nombre,
+      machine_nombre: getMachineAlias(machine),
       machine_codigo: machine.codigo,
       machine_ubicacion: machine.ubicacion,
+      alias: getMachineAlias(machine),
       process_id: process.id,
       process_nombre: process.nombre,
       operadores_requeridos: process.operadores_requeridos || 1,
@@ -95,8 +97,7 @@ export default function MachinePlanningSelector({
                     <SelectItem key={machine.id} value={machine.id}>
                       <div className="flex items-center gap-2">
                         <Cog className="w-3 h-3" />
-                        {machine.nombre} ({machine.codigo})
-                        {machine.ubicacion && <span className="text-xs text-slate-400">• {machine.ubicacion}</span>}
+                        {getMachineAlias(machine)}
                       </div>
                     </SelectItem>
                   ))}

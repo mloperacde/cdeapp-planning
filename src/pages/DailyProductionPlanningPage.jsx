@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,32 +31,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-
-const MachineRow = ({ index, style, data }) => {
-  const { machines, onAdd } = data;
-  const machine = machines[index];
-  
-  return (
-    <div style={style} className="px-3 py-1">
-      <div className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200 h-full">
-          <div className="flex flex-col overflow-hidden mr-2 gap-0.5">
-              <span className="font-medium text-sm text-slate-700 truncate" title={machine.alias || machine.nombre}>
-                  {machine.alias || machine.nombre}
-              </span>
-          </div>
-          <Button 
-              size="icon" 
-              variant="ghost"
-              onClick={() => onAdd(machine)}
-              className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-full"
-              title="Añadir a planificación"
-          >
-              <Plus className="h-4 w-4" />
-          </Button>
-      </div>
-    </div>
-  );
-};
 
 export default function DailyProductionPlanningPage() {
   const { toast } = useToast();
@@ -111,12 +86,10 @@ export default function DailyProductionPlanningPage() {
         if (!m.id) return;
         const id = String(m.id);
         if (!uniqueMap.has(id)) {
-          // Normalize fields for consistency
+          const alias = getMachineAlias(m);
           const sala = (m.ubicacion || '').trim();
           const codigo = (m.codigo_maquina || '').trim();
           const nombre = (m.nombre || '').trim();
-          const prefix = [sala, codigo].filter(Boolean).join(' ');
-          const alias = prefix ? `(${prefix} - ${nombre})` : nombre;
           
           uniqueMap.set(id, { ...m, alias, ubicacion: sala, codigo_maquina: codigo, nombre });
         }
@@ -210,9 +183,15 @@ export default function DailyProductionPlanningPage() {
         if (machine) {
             list.push({ ...machine, planning });
         } else {
+          const alias = getMachineAlias({
+              nombre: planning.machine_nombre,
+              codigo_maquina: planning.machine_codigo,
+              ubicacion: planning.machine_ubicacion
+            });
             list.push({ 
                 id: planning.machine_id, 
                 nombre: planning.machine_nombre || "Desconocida", 
+                alias: alias || planning.machine_nombre || "Desconocida",
                 codigo_maquina: planning.machine_codigo || "N/A", 
                 planning 
             });
@@ -229,8 +208,7 @@ export default function DailyProductionPlanningPage() {
       if (!machineSearch.trim()) return availableMachines;
       const lower = machineSearch.toLowerCase();
       return availableMachines.filter(m => 
-          m.nombre?.toLowerCase().includes(lower) || 
-          m.codigo_maquina?.toLowerCase().includes(lower)
+          m.alias?.toLowerCase().includes(lower)
       );
   }, [availableMachines, machineSearch]);
 
@@ -478,7 +456,7 @@ export default function DailyProductionPlanningPage() {
 
     createMutation.mutate({
         machine_id: machine.id,
-        machine_nombre: machine.nombre,
+        machine_nombre: machine.alias,
         machine_codigo: machine.codigo_maquina,
         fecha_planificacion: selectedDate,
         team_key: selectedTeam,
@@ -548,11 +526,9 @@ export default function DailyProductionPlanningPage() {
       <div style={style} className="px-3 py-1">
         <div className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200 h-full">
             <div className="flex flex-col overflow-hidden mr-2 gap-0.5">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-500 uppercase">{machine.ubicacion || "Sin Sala"}</span>
-                    {machine.codigo_maquina && <span className="text-xs font-mono text-slate-400">• {machine.codigo_maquina}</span>}
-                </div>
-                <span className="font-medium text-sm text-slate-700 truncate">{machine.nombre}</span>
+                <span className="font-medium text-sm text-slate-700 truncate" title={getMachineAlias(machine)}>
+                    {getMachineAlias(machine)}
+                </span>
             </div>
             <Button 
                 size="icon" 
@@ -847,7 +823,6 @@ export default function DailyProductionPlanningPage() {
                                 <TableHeader className="bg-slate-50 sticky top-0 z-10">
                                     <TableRow>
                                         <TableHead className="pl-6">Máquina</TableHead>
-                                        <TableHead>Código</TableHead>
                                         <TableHead className="w-[150px]">Operarios</TableHead>
                                         <TableHead className="w-[100px] text-center pr-6">Acciones</TableHead>
                                     </TableRow>
@@ -858,19 +833,14 @@ export default function DailyProductionPlanningPage() {
                                         return (
                                             <TableRow key={planning.id} className="hover:bg-slate-50/50">
                                                 <TableCell className="pl-6 font-medium">
-                                                    <div>{item.nombre}</div>
-                                                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                        {item.ubicacion && <span>{item.ubicacion}</span>}
-                                                        {item.descripcion && item.descripcion !== item.nombre && (
-                                                            <>
-                                                                {item.ubicacion && <span>•</span>}
-                                                                <span className="truncate max-w-[200px]" title={item.descripcion}>{item.descripcion}</span>
-                                                            </>
-                                                        )}
+                                                    <div className="truncate text-sm" title={getMachineAlias(item)}>
+                                                        {getMachineAlias(item)}
                                                     </div>
-                                                </TableCell>
-                                                <TableCell className="font-mono text-sm text-slate-500">
-                                                    {item.codigo_maquina}
+                                                    {item.descripcion && item.descripcion !== item.alias && (
+                                                        <div className="text-xs text-slate-500 truncate max-w-[300px]" title={item.descripcion}>
+                                                            {item.descripcion}
+                                                        </div>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">

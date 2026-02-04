@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import * as ReactWindow from 'react-window';
 import { AutoSizer } from "react-virtualized-auto-sizer";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 const List = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList;
 
@@ -430,10 +431,9 @@ export default function ShiftAssignmentsPage() {
                             <CardHeader className="py-3 bg-slate-50 border-b">
                                 <CardTitle className="text-sm flex items-center gap-2">
                                     <Factory className="w-4 h-4 text-slate-500" />
-                                    {/* Machine Order: Sala, Codigo, Nombre */}
-                                    <span className="font-bold text-slate-700 uppercase">{machine.ubicacion || "N/A"}</span>
-                                    {machine.codigo_maquina && <span className="text-slate-400 font-mono text-xs">• {machine.codigo_maquina}</span>}
-                                    <span className="text-slate-600 font-medium truncate ml-1">{machine.nombre}</span>
+                                    <span className="font-medium text-slate-700 truncate" title={getMachineAlias(machine)}>
+                                        {getMachineAlias(machine)}
+                                    </span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-4 grid grid-cols-2 gap-4">

@@ -47,13 +47,11 @@ export default function ProductionPlanningPage() {
         const sala = (m.ubicacion || '').trim();
         const codigo = (m.codigo_maquina || m.codigo || '').trim();
         const nombre = (m.nombre || '').trim();
-        const prefix = [sala, codigo].filter(Boolean).join(' ');
-        const alias = prefix ? `(${prefix} - ${nombre})` : nombre;
         
         return {
             id: m.id,
             nombre: nombre,
-            alias: alias,
+            alias: getMachineAlias(m),
             descripcion: m.descripcion,
             codigo: codigo,
             orden: m.orden_visualizacion || 999,
@@ -198,12 +196,23 @@ export default function ProductionPlanningPage() {
                   match = currentMachineMap.get(code) || currentMachineMap.get(name.toLowerCase());
               }
               
+              const shortName = name || (match ? (match.nombre_maquina || match.nombre) : `Machine ${cdeId}`);
+              const codeVal = code || (match ? (match.codigo_maquina || match.codigo) : cdeId);
+              const locVal = rm['Ubicación'] || rm['location'] || (match ? match.ubicacion : '');
+
               const machinePayload = {
                   cde_machine_id: cdeId, // Guardar ID externo para futuras referencias
-                  codigo: code || (match ? match.codigo : cdeId), 
-                  nombre: name || (match ? match.nombre : `Machine ${cdeId}`),
-                  descripcion: rm['Descripción'] || rm['description'] || name,
-                  ubicacion: rm['Ubicación'] || rm['location'] || (match ? match.ubicacion : ''),
+                  codigo_maquina: codeVal,
+                  nombre_maquina: shortName,
+                  ubicacion: locVal,
+                  nombre: getMachineAlias({
+                      ubicacion: locVal,
+                      codigo_maquina: codeVal,
+                      nombre_maquina: shortName,
+                      nombre: shortName
+                  }),
+                  descripcion: rm['Descripción'] || rm['description'] || shortName,
+                  codigo: codeVal, // Legacy fallback
                   // Otros campos si vienen
               };
 

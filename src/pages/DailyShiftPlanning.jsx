@@ -12,6 +12,7 @@ import { Briefcase, Sparkles, CheckCircle2, Loader2, ArrowRight } from "lucide-r
 import { format } from "date-fns";
 import { toast } from "sonner";
 import EmployeeSelect from "../components/common/EmployeeSelect";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function DailyShiftPlanningPage() {
     const { shifts } = useShiftConfig();
@@ -45,7 +46,8 @@ export default function DailyShiftPlanningPage() {
           estado: m.estado_operativo,
           orden: m.orden_visualizacion || 999,
           tipo: m.tipo,
-          ubicacion: m.ubicacion
+          ubicacion: m.ubicacion,
+          alias: getMachineAlias(m)
         })).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
       },
       staleTime: 5 * 60 * 1000,
@@ -262,20 +264,13 @@ export default function DailyShiftPlanningPage() {
                             <CardHeader className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-700 pb-3 pt-3">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            {machine.nombre}
+                                        <CardTitle className="text-lg flex items-center gap-2" title={getMachineAlias(machine)}>
+                                            <span className="truncate max-w-[200px] md:max-w-[300px]">
+                                                {getMachineAlias(machine)}
+                                            </span>
                                             {hasHighPriority && <Badge variant="destructive" className="text-xs">Prioridad Alta</Badge>}
                                         </CardTitle>
-                                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 mb-2">
-                                            <span>{machine.codigo}</span>
-                                            {machine.ubicacion && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span className="font-medium text-slate-600 dark:text-slate-400">{machine.ubicacion}</span>
-                                                </>
-                                            )}
-                                        </div>
-                                        <div className="text-xs text-slate-500">
+                                        <div className="text-xs text-slate-500 mt-2">
                                             {orders.length > 0 ? (
                                                 <div className="flex flex-col gap-1">
                                                     {orders.map(o => (

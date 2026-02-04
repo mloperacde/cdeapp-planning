@@ -60,6 +60,7 @@ export default function QualityPlanningTab({ selectedDate, selectedTeam, selecte
       return list.map(m => ({
         id: m.id,
         nombre: m.nombre || '',
+        alias: getMachineAlias(m),
         codigo: m.codigo_maquina || m.codigo || '',
         orden: m.orden_visualizacion || 999,
         tipo: m.tipo || '',

@@ -12,6 +12,7 @@ import { Factory, Calendar, Save, CheckCircle2, Trash2, AlertCircle, Clock, MapP
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { useAppData } from "../components/data/DataProvider";
 import MachinePlanningSelector from "../components/planning/MachinePlanningSelector";
 import ViabilityTrafficLight from "../components/planning/ViabilityTrafficLight";
@@ -169,7 +170,7 @@ export default function MachineDailyPlanningPage() {
       maquinas_planificadas: [...prev.maquinas_planificadas, machineData]
     }));
     setHasUnsavedChanges(true);
-    toast.success(`${machineData.machine_nombre} añadida al planning`);
+    toast.success(`${machineData.alias || machineData.machine_nombre} añadida al planning`);
   };
 
   const handleRemoveMachine = (index) => {
@@ -402,11 +403,12 @@ export default function MachineDailyPlanningPage() {
                               #{index + 1}
                             </Badge>
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">
-                              {maq.machine_nombre}
+                              {getMachineAlias({
+                                nombre: maq.machine_nombre,
+                                codigo: maq.machine_codigo,
+                                ubicacion: maq.machine_ubicacion
+                              })}
                             </h3>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                              ({maq.machine_codigo})
-                            </span>
                           </div>
                           <div className="space-y-2">
                             <div className="flex items-center gap-4 text-sm">

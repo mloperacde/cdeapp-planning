@@ -24,6 +24,7 @@ import {
 import { FileText, Download, Filter, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { format } from "date-fns";
 import AIReportGenerator from "../components/reports/AIReportGenerator";
 
@@ -49,6 +50,7 @@ export default function ReportsPage() {
         .map(m => ({
           id: m.id,
           nombre: m.nombre || '',
+          alias: getMachineAlias(m),
           codigo: m.codigo_maquina || m.codigo || '',
           orden: m.orden_visualizacion || 999
         }))
@@ -161,7 +163,7 @@ export default function ReportsPage() {
       case "maintenance":
         headers = ["Máquina", "Tipo", "Estado", "Fecha Programada", "Técnico"];
         rows = filteredData.map(maint => [
-          machines.find(m => m.id === maint.machine_id)?.nombre || "Desconocida",
+          machines.find(m => m.id === maint.machine_id) ? getMachineAlias(machines.find(m => m.id === maint.machine_id)) : "Desconocida",
           maint.tipo,
           maint.estado,
           format(new Date(maint.fecha_programada), "dd/MM/yyyy HH:mm"),
@@ -173,7 +175,7 @@ export default function ReportsPage() {
         headers = ["Fecha", "Máquina", "Equipo", "Operadores Necesarios"];
         rows = filteredData.map(plan => [
           plan.fecha_planificacion,
-          machines.find(m => m.id === plan.machine_id)?.nombre || "Desconocida",
+          machines.find(m => m.id === plan.machine_id) ? getMachineAlias(machines.find(m => m.id === plan.machine_id)) : "Desconocida",
           teams.find(t => t.team_key === plan.team_key)?.team_name || plan.team_key,
           plan.operadores_necesarios || 0
         ]);
@@ -199,7 +201,7 @@ export default function ReportsPage() {
 
   const getMachineName = (id) => {
     const machine = machines.find(m => m.id === id);
-    return machine ? (machine.descripcion || machine.nombre) : "Desconocida";
+    return machine ? getMachineAlias(machine) : "Desconocida";
   };
 
   const getTeamName = (key) => {
@@ -309,7 +311,7 @@ export default function ReportsPage() {
                       <SelectItem value="all">Todas las Máquinas</SelectItem>
                       {machines.map(machine => (
                         <SelectItem key={machine.id} value={machine.id}>
-                          {machine.nombre}
+                          {getMachineAlias(machine)}
                         </SelectItem>
                       ))}
                     </SelectContent>

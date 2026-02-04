@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Plus, Edit, Trash2, Cog } from "lucide-react";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MaintenanceTypeManager({ open, onOpenChange, machines }) {
   const [showForm, setShowForm] = useState(false);
@@ -121,7 +122,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
 
   const getMachineName = (machineId) => {
     const machine = machines.find(m => m.id === machineId);
-    return machine?.nombre || "Máquina desconocida";
+    return machine ? getMachineAlias(machine) : "Máquina desconocida";
   };
 
   if (showForm) {
@@ -168,8 +169,8 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
                           onCheckedChange={() => toggleMachine(machine.id)}
                         />
                         <label htmlFor={`machine-${machine.id}`} className="text-sm cursor-pointer">
-                          {machine.nombre}
-                        </label>
+                                                    {getMachineAlias(machine)}
+                                                </label>
                       </div>
                     ))}
                   </div>

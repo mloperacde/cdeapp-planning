@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { CheckCircle2, AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function DirectMachineConsolidation() {
   const [step, setStep] = useState(null);
@@ -127,16 +128,21 @@ export default function DirectMachineConsolidation() {
 
         // Crear en master
         try {
-          const created = await base44.entities.MachineMasterDatabase.create({
+          // Campos mapeados
+          const machinePayload = {
+            // Usar ID original si es posible para mantener referencias, o dejar que DB genere uno
+            // id: machine.id, 
+            nombre_maquina: machine.nombre, // Nombre original corto
+            nombre: getMachineAlias(machine), // Nombre canónico completo
+            descripcion: getMachineAlias(machine),
             codigo_maquina: machine.codigo || `M${machine.id}`,
-            nombre: machine.nombre,
             marca: machine.marca,
             modelo: machine.modelo,
             numero_serie: machine.numero_serie,
             fecha_compra: machine.fecha_compra,
             tipo: machine.tipo,
             ubicacion: machine.ubicacion,
-            descripcion: machine.descripcion,
+            // descripcion: machine.descripcion, // Usamos alias
             orden_visualizacion: machine.orden,
             estado_operativo: 'Operativa',
             parametros_sobres: machine.parametros_sobres,
@@ -150,11 +156,13 @@ export default function DirectMachineConsolidation() {
             machine_id_legacy: machine.id,
             ultimo_sincronizado: new Date().toISOString(),
             estado_sincronizacion: 'Sincronizado'
-          });
+          };
+
+          const created = await base44.entities.MachineMasterDatabase.create(machinePayload);
           legacyToNewMap[machine.id] = created.id;
           migratedCount++;
         } catch (err) {
-          summary.errors.push({ machine: machine.nombre, error: err.message });
+          summary.errors.push({ machine: getMachineAlias(machine), error: err.message });
         }
       }
       summary.machinesMigrated = migratedCount;

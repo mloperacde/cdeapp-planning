@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 /**
  * PROVEEDOR CENTRALIZADO DE DATOS
@@ -135,23 +136,16 @@ export function DataProvider({ children }) {
         if (!Array.isArray(masterData)) return [];
         
         return masterData.map(m => {
-          const sala = (m.ubicacion || '').trim();
-          const codigo = (m.codigo_maquina || '').trim();
-          const nombre = (m.nombre || '').trim();
+          const alias = getMachineAlias(m);
           
-          // Alias standard format: "(Sala Code - Name)"
-          // Example: "(119 001A - B1600 DOYPACK)"
-          const prefix = [sala, codigo].filter(Boolean).join(' ');
-          const alias = prefix ? `(${prefix} - ${nombre})` : nombre;
-
           return {
                   id: m.id,
-                  nombre: nombre,
-                  codigo: codigo,
+                  nombre: m.nombre,
+                  codigo: m.codigo_maquina || m.codigo,
                   marca: m.marca || '',
                   modelo: m.modelo || '',
                   tipo: m.tipo || '',
-                  ubicacion: sala,
+                  ubicacion: m.ubicacion,
                   alias: alias, // Standard display name
                   orden: m.orden_visualizacion || 999,
                   estado: m.estado_operativo || 'Disponible',

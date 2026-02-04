@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +63,7 @@ export default function MaintenancePlanningTab({ selectedDate, selectedTeam, sel
       return list.map(m => ({
         id: m.id,
         nombre: m.nombre || '',
+        alias: getMachineAlias(m),
         codigo: m.codigo_maquina || m.codigo || '',
         orden: m.orden_visualizacion || 999,
         tipo: m.tipo || '',
@@ -148,7 +152,7 @@ export default function MaintenancePlanningTab({ selectedDate, selectedTeam, sel
   );
 
   const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || 'N/A';
-  const getMachineName = (id) => machines.find(m => m.id === id)?.nombre || id;
+  const getMachineName = (id) => machines.find(m => m.id === id)?.alias || id;
 
   return (
     <div className="space-y-6">

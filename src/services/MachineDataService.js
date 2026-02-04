@@ -1,4 +1,5 @@
 import { base44 } from '@/api/base44Client';
+import { getMachineAlias } from '@/utils/machineAlias';
 
 // src/services/Base44DataService.js
 /**
@@ -142,16 +143,36 @@ class Base44DataService {
     
     // Si es un array, procesar directamente
     if (Array.isArray(sdkData)) {
-      return sdkData.map(item => ({
-        id: item.id || item._id,
-        name: item.name || item.nombre || `Máquina ${item.id}`,
-        code: item.code || item.codigo || item.codigo_maquina,
-        type: item.type || item.tipo,
-        status: item.status || item.estado || item.estado_operativo || 'active',
-        department: item.department || item.departamento || item.ubicacion,
-        // Campos específicos Base44
-        ...item
-      }));
+      return sdkData.map(item => {
+        const sala = (item.ubicacion || item.department || '').trim();
+        const codigo = (item.codigo_maquina || item.codigo || item.code || '').trim();
+        const nombre = (item.nombre || item.name || `Máquina ${item.id}`).trim();
+        const descripcion = (item.descripcion || item.description || nombre).trim();
+
+        // Formato unificado usando utilidad centralizada
+        const alias = getMachineAlias({
+            ...item,
+            ubicacion: sala,
+            codigo_maquina: codigo,
+            nombre: nombre,
+            nombre_maquina: item.nombre_maquina
+        });
+
+        return {
+          id: item.id || item._id,
+          name: nombre,
+          alias: alias,
+          nombre: nombre, // Mantener compatibilidad
+          code: codigo,
+          type: item.type || item.tipo,
+          status: item.status || item.estado || item.estado_operativo || 'active',
+          department: sala,
+          ubicacion: sala, // Mantener compatibilidad
+          descripcion: descripcion,
+          // Campos específicos Base44
+          ...item
+        };
+      });
     }
     
     // Si el SDK devuelve un objeto con data/results
@@ -173,7 +194,7 @@ class Base44DataService {
       return {
         ...assignment,
         machine_id: machineId,
-        machine_name: machine ? (machine.descripcion || machine.name || machine.nombre) : 'Desconocida',
+        machine_name: machine ? (machine.alias || machine.name || machine.nombre) : 'Desconocida',
         machine_details: machine,
         priority: assignment.priority || assignment.prioridad || 1,
         _enriched: true

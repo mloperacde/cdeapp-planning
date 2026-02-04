@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { RefreshCw, Save, Trash2, ArrowLeftRight, Mic, Square } from "lucide-react";
 import { format } from "date-fns";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function ShiftHandoverPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -36,6 +37,7 @@ export default function ShiftHandoverPage() {
         .map(m => ({
           id: m.id,
           nombre: m.nombre || '',
+          alias: getMachineAlias(m),
           codigo: m.codigo_maquina || m.codigo || '',
           estado: m.estado_operativo || 'Disponible',
           orden: m.orden_visualizacion || 999
@@ -293,9 +295,8 @@ export default function ShiftHandoverPage() {
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-slate-900 text-lg">
-                            {machine.nombre}
+                            {getMachineAlias(machine)}
                           </h3>
-                          <p className="text-sm text-slate-500">{machine.codigo}</p>
                         </div>
                         <Badge className={
                           machine.estado === "Disponible"

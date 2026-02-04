@@ -15,6 +15,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import EmployeeSelect from "../components/common/EmployeeSelect";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 import { createPageUrl } from "@/utils";
 
@@ -49,6 +50,7 @@ export default function QualityControlPage() {
         .map(m => ({
           id: m.id,
           nombre: m.nombre || '',
+          alias: getMachineAlias(m),
           codigo: m.codigo_maquina || m.codigo || '',
           orden: m.orden_visualizacion || 999
         }))
@@ -506,7 +508,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                     const machine = machines.find(m => m.id === wo.machine_id);
                     return (
                       <SelectItem key={wo.id} value={wo.id}>
-                        {wo.order_number} - {wo.product_name || wo.product_article_code} {machine ? `(${machine.nombre})` : ''}
+                        {wo.order_number} - {wo.product_name || wo.product_article_code} {machine ? `(${machine.alias})` : ''}
                       </SelectItem>
                     );
                   })}
@@ -535,7 +537,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                   setFormData({
                     ...formData, 
                     machine_id: val,
-                    machine_name: machine?.nombre || ""
+                    machine_name: machine ? machine.alias : ""
                   });
                 }}
               >
@@ -544,7 +546,7 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                 </SelectTrigger>
                 <SelectContent>
                   {machines.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>
+                    <SelectItem key={m.id} value={m.id}>{m.alias}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

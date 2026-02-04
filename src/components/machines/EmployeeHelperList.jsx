@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, User, Wrench } from "lucide-react";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function EmployeeHelperList({ employees, currentTeam, machines }) {
     const [searchTerm, setSearchTerm] = useState("");
@@ -57,7 +58,7 @@ export default function EmployeeHelperList({ employees, currentTeam, machines })
 
     const getMachineName = (id) => {
         const machine = machines.find(m => m.id === id);
-        return machine ? (machine.descripcion || machine.nombre) : id;
+        return machine ? getMachineAlias(machine) : id;
     };
 
     return (

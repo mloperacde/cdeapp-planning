@@ -152,7 +152,13 @@ export default function ShiftManagersPage() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
       queryKey: ['machines_master'],
-      queryFn: () => base44.entities.MachineMasterDatabase.list(),
+      queryFn: async () => {
+          const data = await base44.entities.MachineMasterDatabase.list();
+          return Array.isArray(data) ? data.map(m => ({
+              ...m,
+              alias: getMachineAlias(m)
+          })) : [];
+      },
       staleTime: 10 * 60 * 1000,
   });
 

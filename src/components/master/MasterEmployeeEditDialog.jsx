@@ -27,6 +27,7 @@ import {
 import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo } from "react";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions }) {
   const [activeTab, setActiveTab] = useState("personal");
@@ -46,7 +47,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const allMachines = useMemo(() => {
     return sharedMachines.map(m => ({
       id: m.id,
-      nombre: m.nombre || 'Sin nombre',
+      nombre: getMachineAlias(m),
+      original_nombre: m.nombre, // Preserve original name if needed
       codigo: m.codigo || '',
       ubicacion: m.ubicacion || '',
       tipo: m.tipo || '',
@@ -1126,12 +1128,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                          <SelectValue placeholder="Sin asignar">
                            {selectedMachine ? (
                              <div className="flex items-center gap-2">
-                               <span>{selectedMachine.nombre} ({selectedMachine.codigo})</span>
-                               {selectedMachine.ubicacion && (
-                                 <Badge variant="outline" className="h-5 px-1 text-[10px] bg-slate-100 text-slate-700 border-slate-200">
-                                   {selectedMachine.ubicacion}
-                                 </Badge>
-                               )}
+                               <span>{selectedMachine.nombre}</span>
                              </div>
                            ) : "Sin asignar"}
                          </SelectValue>

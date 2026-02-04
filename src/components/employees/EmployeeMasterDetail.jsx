@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const [activeTab, setActiveTab] = useState("general");
@@ -113,13 +114,16 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
       return (Array.isArray(data) ? data : [])
-        .map(m => ({
-          id: m.id,
-          nombre: m.nombre || '',
-          codigo: m.codigo_maquina || m.codigo || '',
-          ubicacion: m.ubicacion || '',
-          orden: m.orden_visualizacion || 999
-        }))
+        .map(m => {
+          return {
+            id: m.id,
+            nombre: m.nombre,
+            alias: getMachineAlias(m),
+            codigo: m.codigo_maquina,
+            ubicacion: m.ubicacion,
+            orden: m.orden_visualizacion || 999
+          };
+        })
         .sort((a, b) => (a.orden || 999) - (b.orden || 999));
     },
     initialData: [],
@@ -583,14 +587,9 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
                               </Badge>
                               <div>
                                 <h4 className="font-semibold text-slate-900">
-                                  {machine?.nombre || "Máquina no encontrada"}
+                                  {machine?.alias || machine?.nombre || "Máquina no encontrada"}
                                 </h4>
-                                {machine?.codigo && (
-                                  <p className="text-xs text-slate-500 font-mono">{machine.codigo}</p>
-                                )}
-                                {machine?.ubicacion && (
-                                  <p className="text-xs text-blue-600 font-medium">{machine.ubicacion}</p>
-                                )}
+                                {/* Detalles ya incluidos en el alias */}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">

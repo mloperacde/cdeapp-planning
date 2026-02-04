@@ -252,8 +252,8 @@ export default function DailyShiftPlanningPage() {
                             <CardHeader className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-700 pb-3 pt-3">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            {machine.nombre}
+                                        <CardTitle className="text-lg flex items-center gap-2" title={getMachineAlias(machine)}>
+                                            {getMachineAlias(machine)}
                                             {hasHighPriority && <Badge variant="destructive" className="text-xs">Prioridad Alta</Badge>}
                                         </CardTitle>
                                         <div className="text-xs text-slate-500 mt-1">

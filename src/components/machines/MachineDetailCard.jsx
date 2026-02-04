@@ -14,6 +14,7 @@ import { Calendar, Upload, FileText, Image as ImageIcon, Wrench, TrendingUp, X, 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { getMachineAlias } from "@/utils/machineAlias";
 import MachineProcessesTab from "./MachineProcessesTab";
 
 export default function MachineDetailCard({ machine, onClose, initialEditMode = false, isNew = false, canEdit = true }) {
@@ -24,7 +25,6 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
 
   const [formData, setFormData] = useState({
     nombre_maquina: machine.nombre_maquina || machine.nombre || "",
-    nombre: machine.nombre || "",
     codigo: machine.codigo || "",
     marca: machine.marca || "",
     modelo: machine.modelo || "",
@@ -36,36 +36,21 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
     estado_produccion: machine.estado_produccion || "Sin Producción",
     estado_disponibilidad: machine.estado_disponibilidad || "Disponible",
     orden: machine.orden || 1,
-    descripcion: machine.descripcion || "",
     programa_mantenimiento: machine.programa_mantenimiento || "",
     imagenes: machine.imagenes || [],
     archivos_adjuntos: machine.archivos_adjuntos || [],
   });
 
-  // Actualizar nombre compuesto y descripción automáticamente cuando cambian los campos relacionados
-  useEffect(() => {
-    if (editMode) {
-      const sala = formData.ubicacion || "";
-      const codigo = formData.codigo || "";
-      const nombreCorto = formData.nombre_maquina || "";
-      
-      // Formato: [Sala] [Codigo] - [Nombre Corto]
-      // Ejemplo: "Sala 1 M001 - Torno CNC"
-      const parts = [sala, codigo].filter(Boolean);
-      const prefix = parts.join(" ");
-      const newFullName = prefix ? `${prefix} - ${nombreCorto}` : nombreCorto;
-      const cleanName = newFullName.trim();
-      
-      // Actualizar nombre (largo) y descripción si han cambiado
-      if (formData.nombre !== cleanName || formData.descripcion !== cleanName) {
-        setFormData(prev => ({ 
-          ...prev, 
-          nombre: cleanName,
-          descripcion: cleanName
-        }));
-      }
-    }
-  }, [formData.ubicacion, formData.codigo, formData.nombre_maquina, editMode]);
+  const getCanonicalName = (data) => {
+    const sala = (data.ubicacion || "").trim();
+    const codigo = (data.codigo || "").trim();
+    const nombreCorto = (data.nombre_maquina || "").trim();
+    
+    // Formato: [Sala] [Codigo] - [Nombre Corto]
+    const parts = [sala, codigo].filter(Boolean);
+    const prefix = parts.join(" ");
+    return prefix ? `${prefix} - ${nombreCorto}` : nombreCorto;
+  };
 
   const { data: maintenances } = useQuery({
     queryKey: ['maintenances', machine.id],
@@ -75,21 +60,20 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
 
   const updateMutation = useMutation({
     mutationFn: (data) => {
-      // Los campos nombre y descripcion ya vienen calculados del useEffect
-      // pero por seguridad recalculamos si es necesario o confiamos en data
+      const canonicalName = getCanonicalName(data);
       
       // Siempre actualizar en MachineMasterDatabase
       return base44.entities.MachineMasterDatabase.update(machine.id, {
         ...machine._raw,
         ...data,
         nombre_maquina: data.nombre_maquina, // Nuevo campo corto
-        nombre: data.nombre, // Campo largo compuesto
+        nombre: canonicalName, // Campo largo compuesto calculado
         codigo_maquina: data.codigo || machine.codigo,
         estado_operativo: data.estado || machine.estado,
         estado_produccion: data.estado_produccion || machine.estado_produccion,
         estado_disponibilidad: data.estado_disponibilidad || machine.estado_disponibilidad,
         orden_visualizacion: data.orden || machine.orden,
-        descripcion: data.descripcion // Campo largo compuesto
+        descripcion: canonicalName // Campo largo compuesto calculado
       });
     },
     onSuccess: () => {
@@ -102,11 +86,13 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
 
   const handleSave = () => {
     const desiredOrder = Math.max(1, Number(formData.orden || 1));
+    const canonicalName = getCanonicalName(formData);
+
     if (!machine.id || isNew) {
       base44.entities.MachineMasterDatabase.create({
         nombre_maquina: formData.nombre_maquina,
-        nombre: formData.nombre, // Ya calculado
-        descripcion: formData.descripcion, // Ya calculado
+        nombre: canonicalName,
+        descripcion: canonicalName,
         codigo_maquina: formData.codigo,
         marca: formData.marca || "",
         modelo: formData.modelo || "",
@@ -266,14 +252,8 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
           <DialogTitle className="flex items-center justify-between">
             <div className="flex flex-col overflow-hidden max-w-[70%]">
               <span className="truncate text-lg">
-                {machine.nombre_maquina || machine.nombre || "Ficha de Máquina"}
+                {getMachineAlias(machine)}
               </span>
-              {machine.ubicacion && (
-                <span className="text-xs text-slate-500 font-normal flex items-center gap-1">
-                  {machine.ubicacion}
-                  {machine.codigo && <span className="bg-slate-100 px-1 rounded text-slate-600 font-mono">{machine.codigo}</span>}
-                </span>
-              )}
             </div>
             {canEdit && (
               <div className="flex gap-2">
@@ -322,7 +302,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                       Este campo es el identificador principal del sistema y se genera automáticamente: [Ubicación] [Código] - [Nombre Máquina]
                     </p>
                     <Input
-                      value={formData.descripcion}
+                      value={getCanonicalName(formData)}
                       readOnly
                       className="bg-white dark:bg-slate-900 font-medium text-lg border-blue-200 dark:border-blue-800 text-slate-700 dark:text-slate-200"
                     />
@@ -451,24 +431,8 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                     </Label>
                     <div className="flex flex-col gap-1">
                       <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                        {machine.nombre_maquina || machine.nombre}
+                        {getMachineAlias(machine)}
                       </h3>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm mt-1">
-                        {machine.ubicacion && (
-                          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-                            <span className="font-semibold">Sala:</span>
-                            <span className="bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                              {machine.ubicacion}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-                          <span className="font-semibold">Código:</span>
-                          <span className="font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                            {machine.codigo || 'N/A'}
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
 
@@ -497,14 +461,6 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                   
                   <div className="grid grid-cols-2 gap-6 text-sm">
                     <div className="space-y-1">
-                      <span className="text-xs text-slate-500 uppercase font-semibold">Nombre Máquina</span>
-                      <p className="font-medium">{machine.nombre_maquina || machine.nombre?.split('-').pop()?.trim() || "-"}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-slate-500 uppercase font-semibold">Código</span>
-                      <p className="font-medium font-mono">{machine.codigo || "-"}</p>
-                    </div>
-                    <div className="space-y-1">
                       <span className="text-xs text-slate-500 uppercase font-semibold">ID Sistema</span>
                       <div className="flex items-center gap-1">
                           <p className="font-medium font-mono text-xs truncate max-w-[120px]" title={machine.id}>{machine.id}</p>
@@ -524,10 +480,6 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
                             </div>
                         </div>
                     )}
-                    <div className="space-y-1">
-                      <span className="text-xs text-slate-500 uppercase font-semibold">Sala / Ubicación</span>
-                      <p className="font-medium">{machine.ubicacion || "-"}</p>
-                    </div>
                     <div className="space-y-1">
                       <span className="text-xs text-slate-500 uppercase font-semibold">Tipo</span>
                       <p className="font-medium">{machine.tipo || "-"}</p>

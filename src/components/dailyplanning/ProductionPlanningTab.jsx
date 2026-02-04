@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { getMachineAlias } from "@/utils/machineAlias";
 import {
   Command,
   CommandEmpty,
@@ -72,6 +73,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
            uniqueMachines.set(id, {
              id: m.id, // Keep original type if needed by backend, or normalize? usually keeping original is safer but for comparison we use String
              nombre: m.nombre,
+             alias: getMachineAlias(m),
              codigo: m.codigo_maquina,
              descripcion: m.descripcion,
              ubicacion: m.ubicacion,
@@ -148,7 +150,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
             // Fallback if machine not found in master list
             list.push({ 
                 id: planning.machine_id, 
-                nombre: planning.machine_nombre || "Desconocida", 
+                nombre: planning.machine_alias || planning.machine_nombre || "Desconocida", 
                 codigo_maquina: planning.machine_codigo || "N/A", 
                 descripcion: "",
                 planning 
@@ -262,7 +264,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
 
     createPlanningMutation.mutate({
         machine_id: machine.id,
-        machine_nombre: machine.nombre,
+        machine_nombre: machine.alias,
         machine_codigo: machine.codigo_maquina, // Ensure correct field mapping from machine object
         fecha_planificacion: selectedDate,
         team_key: selectedTeam,
@@ -411,14 +413,11 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                                     {availableMachines.map((machine) => (
                                         <CommandItem
                                             key={machine.id}
-                                            value={`${machine.nombre} ${machine.codigo_maquina || ''}`}
+                                            value={getMachineAlias(machine)}
                                             onSelect={() => handleAddMachine(machine)}
                                         >
                                             <div className="flex flex-col">
-                                                <span>{machine.nombre}</span>
-                                                {machine.codigo_maquina && (
-                                                    <span className="text-xs text-slate-500">{machine.codigo_maquina}</span>
-                                                )}
+                                                <span>{getMachineAlias(machine)}</span>
                                             </div>
                                             <Plus className="ml-auto h-4 w-4 opacity-50" />
                                         </CommandItem>
@@ -455,15 +454,12 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                                         <TableCell className="font-medium text-slate-900">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
-                                                    <span>{item.nombre}</span>
-                                                    {item.ubicacion && (
-                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-slate-50 font-normal text-slate-500 border-slate-200">
-                                                            {item.ubicacion}
-                                                        </Badge>
-                                                    )}
+                                                    <span>{item.alias}</span>
                                                 </div>
                                                 {item.descripcion && item.descripcion !== item.nombre && (
-                                                    <div className="text-xs text-slate-500">{item.descripcion}</div>
+                                                    <div className="text-xs text-slate-500" title={item.descripcion}>
+                                                        {item.descripcion.length > 50 ? item.descripcion.substring(0, 50) + '...' : item.descripcion}
+                                                    </div>
                                                 )}
                                             </div>
                                         </TableCell>
@@ -572,7 +568,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
               <div className="divide-y max-h-60 overflow-y-auto">
                 {plannedMachines.map(item => (
                   <div key={item.planning.id} className="flex justify-between items-center px-4 py-2 text-sm">
-                    <span className="font-medium">{item.nombre}</span>
+                    <span className="font-medium">{item.alias}</span>
                     <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
                       {item.planning.operadores_necesarios} op.
                     </span>

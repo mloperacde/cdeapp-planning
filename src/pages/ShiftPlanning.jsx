@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import * as ReactWindow from 'react-window';
 import { AutoSizer } from "react-virtualized-auto-sizer";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 const List = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList;
 
@@ -628,11 +629,9 @@ export default function ShiftPlanningPage() {
                           <div className="flex items-center gap-3">
                             <Cog className="w-5 h-5 text-blue-600" />
                             <div>
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-xs font-bold text-slate-500 uppercase">{machine.ubicacion || "N/A"}</span>
-                                {(machine.codigo_maquina || machine.codigo) && <span className="text-xs text-slate-400 font-mono">• {machine.codigo_maquina || machine.codigo}</span>}
-                              </div>
-                              <CardTitle className="text-lg">{machine.nombre}</CardTitle>
+                              <CardTitle className="text-lg" title={getMachineAlias(machine)}>
+                                {getMachineAlias(machine)}
+                              </CardTitle>
                             </div>
                           </div>
                         </CardHeader>

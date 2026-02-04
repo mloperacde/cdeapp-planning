@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { cdeApp } from '../../api/cdeAppClient';
 import { base44 } from '../../api/base44Client';
+import { getMachineAlias } from "@/utils/machineAlias";
 import { toast } from 'sonner';
-import { Download, Table as TableIcon, Save, Search, X, RefreshCw, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Download, Table as TableIcon, Save, Search, X, RefreshCw, Calendar as CalendarIcon, Loader2, Copy } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -176,7 +177,7 @@ export default function OrderImport() {
         const machines = Array.isArray(machinesRes) ? machinesRes : (machinesRes.items || []);
         
         const machinesMap = new Map();
-        machines.forEach(m => machinesMap.set(m.id, m.nombre || m.codigo_maquina));
+        machines.forEach(m => machinesMap.set(m.id, getMachineAlias(m)));
 
         if (orders.length > 0) {
             // Deduplicate orders by order_number (keep most recent)

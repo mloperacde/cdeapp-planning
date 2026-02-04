@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MaintenanceForm({ maintenance, machines, employees, maintenanceTypes, onClose }) {
   const [formData, setFormData] = useState(maintenance || {
@@ -166,7 +167,7 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
                 <SelectContent>
                   {machines.map((machine) => (
                     <SelectItem key={machine.id} value={machine.id}>
-                      {machine.nombre} ({machine.codigo})
+                      {getMachineAlias(machine)}
                     </SelectItem>
                   ))}
                 </SelectContent>

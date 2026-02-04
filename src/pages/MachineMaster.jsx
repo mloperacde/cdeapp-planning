@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import MachineDetailCard from "../components/machines/MachineDetailCard";
@@ -76,12 +77,22 @@ export default function MachineMasterPage() {
 
         console.log(`[Sync] Processing ${apiMachine.codigo} - Found existing: ${!!existing}`);
 
+        // Construir objeto para generar alias
+        const aliasObj = {
+            ubicacion: apiMachine.sala,
+            codigo_maquina: apiMachine.codigo,
+            nombre_maquina: apiMachine.nombre,
+            nombre: apiMachine.nombre
+        };
+        const canonicalName = getMachineAlias(aliasObj);
+
         // MAPEO ESTRICTO: Solo actualizamos identificación, ubicación y datos técnicos básicos.
         // Se preservan explícitamente: Mantenimiento, Imágenes, Archivos, Notas, etc.
         const machineData = {
           id_base44: apiMachine.external_id,      // ID Externo (Vinculación)
           codigo_maquina: apiMachine.codigo,      // Código
-          nombre: apiMachine.nombre,              // Nombre / Denominación
+          nombre_maquina: apiMachine.nombre,      // Nombre Corto Original
+          nombre: canonicalName,                  // Nombre Canónico (Alias)
           ubicacion: apiMachine.sala,             // Sala / Ubicación
           
           // ELIMINADOS DE LA SINCRONIZACIÓN (Se gestionan solo localmente):
@@ -157,30 +168,36 @@ export default function MachineMasterPage() {
   });
 
   // Transformar datos para vista
-  const machines = rawMachines.map(m => ({
-    id: m.id,
-    id_base44: m.id_base44 || '',
-    nombre: m.nombre || '',
-    codigo: m.codigo_maquina || '',
-    marca: m.marca || '',
-    modelo: m.modelo || '',
-    numero_serie: m.numero_serie || '',
-    fecha_compra: m.fecha_compra || '',
-    tipo: m.tipo || '',
-    ubicacion: m.ubicacion || '',
-    descripcion: m.descripcion || '',
-    orden: m.orden_visualizacion || 999,
-    estado: m.estado_operativo || 'Disponible',
-    estado_produccion: m.estado_produccion || 'Sin Producción',
-    estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
-    programa_mantenimiento: m.programa_mantenimiento || '',
-    imagenes: m.imagenes || [],
-    archivos_adjuntos: m.archivos_adjuntos || [],
-    procesos_configurados: m.procesos_configurados || [],
-    estado_sincronizacion: m.estado_sincronizacion || '',
-    ultimo_sincronizado: m.ultimo_sincronizado || '',
-    _raw: m
-  }));
+  const machines = rawMachines.map(m => {
+    const alias = getMachineAlias(m);
+
+    return {
+      id: m.id,
+      id_base44: m.id_base44 || '',
+      nombre: (m.nombre || '').trim(),
+      nombre_maquina: (m.nombre_maquina || '').trim(), // Preserve short name
+      alias: alias,
+      codigo: m.codigo_maquina || '',
+      marca: m.marca || '',
+      modelo: m.modelo || '',
+      numero_serie: m.numero_serie || '',
+      fecha_compra: m.fecha_compra || '',
+      tipo: m.tipo || '',
+      ubicacion: m.ubicacion || '',
+      descripcion: m.descripcion || '',
+      orden: m.orden_visualizacion || 999,
+      estado: m.estado_operativo || 'Disponible',
+      estado_produccion: m.estado_produccion || 'Sin Producción',
+      estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
+      programa_mantenimiento: m.programa_mantenimiento || '',
+      imagenes: m.imagenes || [],
+      archivos_adjuntos: m.archivos_adjuntos || [],
+      procesos_configurados: m.procesos_configurados || [],
+      estado_sincronizacion: m.estado_sincronizacion || '',
+      ultimo_sincronizado: m.ultimo_sincronizado || '',
+      _raw: m
+    };
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MachineMasterDatabase.delete(id),
@@ -197,10 +214,8 @@ export default function MachineMasterPage() {
     let result = machines.filter(m => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
-        m.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
+        m.alias?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesTipo = !filters.tipo || filters.tipo === 'all' || m.tipo === filters.tipo;
       
@@ -335,7 +350,7 @@ export default function MachineMasterPage() {
           <AdvancedSearch
             data={machines}
             onFilterChange={setFilters}
-            searchFields={['descripcion', 'nombre', 'codigo', 'ubicacion']}
+            searchFields={['alias', 'descripcion', 'nombre', 'codigo', 'ubicacion']}
             filterOptions={{
               tipo: {
                 label: 'Tipo',
@@ -343,11 +358,10 @@ export default function MachineMasterPage() {
               }
             }}
             sortOptions={[
+              { field: 'orden_visualizacion', label: 'Orden' },
+              { field: 'alias', label: 'Alias' },
               { field: 'descripcion', label: 'Descripción' },
-              { field: 'nombre', label: 'Nombre' },
-              { field: 'codigo', label: 'Código' },
-              { field: 'ubicacion', label: 'Sala' },
-              { field: 'orden', label: 'Orden' }
+              { field: 'estado_disponibilidad', label: 'Disponibilidad' }
             ]}
             placeholder="Buscar..."
             pageId="machine_master"
@@ -381,9 +395,7 @@ export default function MachineMasterPage() {
                 <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 shadow-sm">
                   <tr>
                     <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider w-1/3">Máquina</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Código</th>
                     <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sala</th>
                     <th className="px-4 py-2 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Marca/Modelo</th>
                     <th className="px-4 py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Orden</th>
                     <th className="px-4 py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
@@ -393,18 +405,14 @@ export default function MachineMasterPage() {
                   {paginatedItems.map((machine) => (
                     <tr key={machine.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td className="px-4 py-2">
-                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">{machine.nombre_maquina || machine.nombre}</span>
-                        {machine.descripcion && machine.descripcion !== (machine.nombre_maquina || machine.nombre) && (
-                          <span className="text-[10px] text-slate-500 block mt-0.5 truncate max-w-[200px]" title={machine.descripcion}>{machine.descripcion}</span>
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">{machine.alias}</span>
+                        {machine.descripcion && machine.descripcion !== machine.nombre && (
+                          <p className="text-[10px] text-slate-500 mt-0.5 font-medium truncate">{machine.descripcion}</p>
                         )}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className="text-xs font-mono text-slate-600 dark:text-slate-400">{machine.codigo}</span>
                       </td>
                       <td className="px-4 py-2">
                         <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">{machine.tipo || '-'}</Badge>
                       </td>
-                      <td className="px-4 py-2 text-xs text-slate-600 dark:text-slate-400">{machine.ubicacion || '-'}</td>
                       <td className="px-4 py-2 text-xs text-slate-600 dark:text-slate-400">
                         {machine.marca && machine.modelo ? `${machine.marca} ${machine.modelo}` : '-'}
                       </td>
@@ -459,7 +467,7 @@ export default function MachineMasterPage() {
               <DialogTitle>Confirmar Eliminación</DialogTitle>
               <div className="py-4">
                 <p className="text-slate-600 dark:text-slate-400">
-                  ¿Estás seguro de que quieres eliminar la máquina <strong>{showDeleteConfirm.nombre}</strong>?
+                  ¿Estás seguro de que quieres eliminar la máquina <strong>{showDeleteConfirm.alias || showDeleteConfirm.nombre}</strong>?
                 </p>
                 <p className="text-sm text-red-600 mt-2">
                   Esta acción no se puede deshacer.

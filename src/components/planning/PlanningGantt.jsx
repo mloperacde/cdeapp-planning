@@ -119,8 +119,8 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                 {/* Left Column: Machine Info + Backlog */}
                 <div className="w-64 border-r sticky left-0 bg-white dark:bg-slate-900 z-20 flex flex-col shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   <div className="p-3 font-medium text-sm border-b bg-slate-50/50 dark:bg-slate-800/50">
-                    <div className="font-bold text-slate-800 dark:text-slate-200" title={machine.alias || machine.nombre}>
-                        {machine.alias || machine.nombre}
+                    <div className="font-bold text-slate-800 dark:text-slate-200" title={getMachineAlias(machine)}>
+                        {getMachineAlias(machine)}
                     </div>
                   </div>
                   

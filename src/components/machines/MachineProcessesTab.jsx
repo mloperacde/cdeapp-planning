@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Settings, GripVertical, Check, Edit } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from "sonner";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachineProcessesTab({ machine }) {
   const [showConfig, setShowConfig] = useState(false);
@@ -298,27 +299,11 @@ export default function MachineProcessesTab({ machine }) {
         <Dialog open={true} onOpenChange={() => setShowConfig(false)}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Configurar Procesos: {machine.nombre}</DialogTitle>
+              <DialogTitle>Configurar Procesos: {getMachineAlias(machine)}</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
-              <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4 text-sm">
-                    <div>
-                      <span className="text-slate-700">Código:</span>
-                      <span className="font-semibold ml-2">{machine.codigo}</span>
-                    </div>
-                    {machine.ubicacion && (
-                      <div>
-                        <span className="text-slate-700">Ubicación:</span>
-                        <span className="font-semibold ml-2">{machine.ubicacion}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
+              
               <div className="space-y-3">
                 <Label className="text-base font-semibold">
                   Selecciona los procesos que puede realizar esta máquina:

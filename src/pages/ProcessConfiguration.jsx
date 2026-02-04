@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { toast } from "sonner";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 const EMPTY_ARRAY = [];
@@ -66,6 +67,7 @@ export default function ProcessConfigurationPage() {
       return data.map(m => ({
         id: m.id,
         nombre: m.nombre,
+        alias: getMachineAlias(m),
         codigo: m.codigo_maquina || m.codigo,
         tipo: m.tipo,
         ubicacion: m.ubicacion,
@@ -93,6 +95,7 @@ export default function ProcessConfigurationPage() {
     let result = machines.filter(m => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
+        m.alias?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
       
@@ -566,10 +569,10 @@ export default function ProcessConfigurationPage() {
             <TabsContent value="machines">
           <div className="mb-6 space-y-4">
             <AdvancedSearch
-              data={processes}
+              data={machines}
               onFilterChange={setFilters}
-              searchFields={['nombre', 'codigo']}
-              placeholder="Buscar máquina por nombre o código..."
+              searchFields={['alias', 'nombre', 'codigo']}
+              placeholder="Buscar máquina por alias, nombre o código..."
               pageId="process_configuration"
             />
             
@@ -650,21 +653,13 @@ export default function ProcessConfigurationPage() {
                                     </div>
                                     <Cog className="w-6 h-6 text-blue-600" />
                             <div>
-                              <CardTitle className="text-xl">{machine.nombre}</CardTitle>
+                              <CardTitle className="text-xl">{getMachineAlias(machine)}</CardTitle>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="font-mono text-xs">
-                                  {machine.codigo}
-                                </Badge>
-                                {machine.ubicacion && (
-                                  <span className="text-xs text-slate-500">
-                                    📍 {machine.ubicacion}
-                                  </span>
-                                )}
                                 <Badge variant="outline" className="text-xs">
                                   Orden: {machine.orden ?? machineIndex}
                                 </Badge>
                               </div>
-                                  </div>
+                            </div>
                                 </div>
                               </div>
                               <Button
@@ -912,7 +907,7 @@ export default function ProcessConfigurationPage() {
                           htmlFor={`new-machine-${machine.id}`} 
                           className="text-sm font-medium cursor-pointer"
                         >
-                          {machine.nombre} <span className="text-xs text-slate-500">({machine.codigo})</span>
+                          {machine.alias}
                         </label>
                       </div>
                     ))}
@@ -960,7 +955,7 @@ export default function ProcessConfigurationPage() {
                 <Cog className="w-5 h-5 text-blue-600" />
                 {showMachineAssignment.isProcessConfig 
                   ? `Configurar Máquinas para: ${showMachineAssignment.nombre}`
-                  : `Configurar Procesos: ${showMachineAssignment.nombre}`}
+                  : `Configurar Procesos: ${showMachineAssignment.alias || showMachineAssignment.nombre}`}
               </DialogTitle>
             </DialogHeader>
 
@@ -968,15 +963,24 @@ export default function ProcessConfigurationPage() {
               <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4 text-sm">
-                    <div>
-                      <span className="text-slate-700 dark:text-slate-300">Código:</span>
-                      <span className="font-semibold ml-2">{showMachineAssignment.codigo}</span>
-                    </div>
-                    {showMachineAssignment.ubicacion && (
-                      <div>
-                        <span className="text-slate-700 dark:text-slate-300">Ubicación:</span>
-                        <span className="font-semibold ml-2">{showMachineAssignment.ubicacion}</span>
-                      </div>
+                    {!showMachineAssignment.isProcessConfig && showMachineAssignment.alias ? (
+                        <div>
+                          <span className="text-slate-700 dark:text-slate-300">Máquina:</span>
+                          <span className="font-semibold ml-2">{showMachineAssignment.alias}</span>
+                        </div>
+                    ) : (
+                        <>
+                            <div>
+                              <span className="text-slate-700 dark:text-slate-300">Código:</span>
+                              <span className="font-semibold ml-2">{showMachineAssignment.codigo}</span>
+                            </div>
+                            {showMachineAssignment.ubicacion && (
+                              <div>
+                                <span className="text-slate-700 dark:text-slate-300">Ubicación:</span>
+                                <span className="font-semibold ml-2">{showMachineAssignment.ubicacion}</span>
+                              </div>
+                            )}
+                        </>
                     )}
                     {showMachineAssignment.operadores_requeridos && (
                       <div>
@@ -1018,13 +1022,7 @@ export default function ProcessConfigurationPage() {
                             />
                             <label htmlFor={`machine-${machine.id}`} className="flex-1 cursor-pointer">
                               <div>
-                                <div className="font-semibold text-slate-900 dark:text-slate-100">{machine.nombre}</div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-xs">{machine.codigo}</Badge>
-                                  {machine.ubicacion && (
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">📍 {machine.ubicacion}</span>
-                                  )}
-                                </div>
+                                <div className="font-semibold text-slate-900 dark:text-slate-100">{getMachineAlias(machine)}</div>
                               </div>
                             </label>
                           </div>
