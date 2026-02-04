@@ -361,7 +361,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                                         {machines.map(m => (
                                                             <SelectItem key={m.id} value={m.id}>
                                                                 <div className="flex flex-col">
-                                                                    <span>{m.alias || m.nombre}</span>
+                                                                    <span>{m.alias}</span>
                                                                 </div>
                                                             </SelectItem>
                                                         ))}

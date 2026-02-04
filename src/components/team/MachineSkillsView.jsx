@@ -37,11 +37,9 @@ export default function MachineSkillsView() {
 
                 return {
                     id: m.id,
-                    nombre: (m.nombre || '').trim(),
                     alias: alias,
-                    codigo: (m.codigo_maquina || m.codigo || '').trim(),
+                    codigo: m.codigo_maquina,
                     descripcion: m.descripcion,
-                    ubicacion: (m.ubicacion || '').trim(),
                     orden: m.orden_visualizacion ?? 999
                 };
             }).sort((a, b) => a.orden - b.orden);
@@ -249,9 +247,7 @@ export default function MachineSkillsView() {
         const lower = searchTerm.toLowerCase();
         return machines.filter(m => 
             m.alias?.toLowerCase().includes(lower) ||
-            m.descripcion?.toLowerCase().includes(lower) || 
-            m.nombre?.toLowerCase().includes(lower) || 
-            m.codigo?.toLowerCase().includes(lower)
+            m.descripcion?.toLowerCase().includes(lower)
         );
     }, [machines, searchTerm]);
 
@@ -293,7 +289,6 @@ export default function MachineSkillsView() {
                     <TableHeader className="bg-slate-50 sticky top-0 z-10">
                         <TableRow>
                             <TableHead className="w-[200px]">Máquina</TableHead>
-                            <TableHead className="w-[100px]">Sala</TableHead>
                             <TableHead className="w-[30%]">Responsables de Línea</TableHead>
                             <TableHead className="w-[30%]">Segundas de Línea</TableHead>
                             <TableHead className="w-[30%]">Operarios</TableHead>

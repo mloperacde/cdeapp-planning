@@ -46,6 +46,7 @@ export default function AdvancedReportGenerator() {
         .map(m => ({
           id: m.id,
           nombre: m.nombre || '',
+          alias: getMachineAlias(m),
           codigo: m.codigo_maquina || m.codigo || '',
           orden: m.orden_visualizacion || 999
         }))
@@ -125,7 +126,7 @@ export default function AdvancedReportGenerator() {
         byMachine: Object.entries(
           filtered.reduce((acc, p) => {
             const machine = machines.find(m => m.id === p.machine_id);
-            const name = machine?.nombre || "Desconocida";
+            const name = machine ? getMachineAlias(machine) : "Desconocida";
             acc[name] = (acc[name] || 0) + 1;
             return acc;
           }, {})
@@ -173,7 +174,8 @@ export default function AdvancedReportGenerator() {
       csv = "Máquina,Fecha,Equipo,Proceso,Operadores\n";
       reportData.rawData.forEach(p => {
         const machine = machines.find(m => m.id === p.machine_id);
-        csv += `"${machine?.nombre}","${p.fecha_planificacion}","${p.team_key}","${p.process_id || 'N/A'}","${p.operadores_necesarios || 0}"\n`;
+        const machineName = machine ? getMachineAlias(machine) : "Desconocida";
+        csv += `"${machineName}","${p.fecha_planificacion}","${p.team_key}","${p.process_id || 'N/A'}","${p.operadores_necesarios || 0}"\n`;
       });
     }
 

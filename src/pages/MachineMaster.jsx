@@ -174,7 +174,6 @@ export default function MachineMasterPage() {
     return {
       id: m.id,
       id_base44: m.id_base44 || '',
-      nombre: (m.nombre || '').trim(),
       nombre_maquina: (m.nombre_maquina || '').trim(), // Preserve short name
       alias: alias,
       codigo: m.codigo_maquina || '',

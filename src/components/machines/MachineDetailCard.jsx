@@ -42,14 +42,13 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
   });
 
   const getCanonicalName = (data) => {
-    const sala = (data.ubicacion || "").trim();
-    const codigo = (data.codigo || "").trim();
-    const nombreCorto = (data.nombre_maquina || "").trim();
-    
-    // Formato: [Sala] [Codigo] - [Nombre Corto]
-    const parts = [sala, codigo].filter(Boolean);
-    const prefix = parts.join(" ");
-    return prefix ? `${prefix} - ${nombreCorto}` : nombreCorto;
+    return getMachineAlias({
+      ...data,
+      nombre_maquina: data.nombre_maquina,
+      nombre: data.nombre_maquina, // Fallback if nombre_maquina is empty
+      ubicacion: data.ubicacion,
+      codigo: data.codigo
+    });
   };
 
   const { data: maintenances } = useQuery({
@@ -130,7 +129,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
         if (idx >= 0) {
           const [moved] = ordered.splice(idx, 1);
           moved.nombre_maquina = formData.nombre_maquina;
-          moved.nombre = formData.nombre;
+          moved.nombre = canonicalName;
           moved.descripcion = formData.descripcion;
           moved.codigo_maquina = formData.codigo;
           moved.marca = formData.marca || "";
@@ -149,7 +148,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
         })));
         await base44.entities.MachineMasterDatabase.update(machine.id, {
           nombre_maquina: formData.nombre_maquina,
-          nombre: formData.nombre,
+          nombre: canonicalName,
           descripcion: formData.descripcion,
           codigo_maquina: formData.codigo,
           marca: formData.marca || "",

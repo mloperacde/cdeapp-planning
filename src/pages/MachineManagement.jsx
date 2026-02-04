@@ -37,7 +37,6 @@ export default function MachineManagement() {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
       const normalized = Array.isArray(data) ? data.map(m => {
         const alias = getMachineAlias(m);
-        const sala = (m.ubicacion || '').trim();
         const codigo = (m.codigo_maquina || m.codigo || '').trim();
         
         return {
@@ -47,7 +46,6 @@ export default function MachineManagement() {
           descripcion: m.descripcion || '',
           codigo_maquina: codigo,
           tipo: m.tipo || '',
-          ubicacion: sala,
           orden_visualizacion: m.orden_visualizacion || 999,
           estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
           estado_produccion: m.estado_produccion || 'Sin Producción'
@@ -191,7 +189,7 @@ export default function MachineManagement() {
           <AdvancedSearch
             data={machines}
             onFilterChange={setFilters}
-            searchFields={['alias', 'descripcion', 'nombre', 'codigo_maquina']}
+            searchFields={['alias', 'descripcion', 'codigo_maquina']}
             filterOptions={{
               disponibilidad: {
                 label: 'Disponibilidad',
@@ -271,7 +269,7 @@ export default function MachineManagement() {
                             <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate" title={machine.alias}>
                               {machine.alias}
                             </h3>
-                            {machine.descripcion && machine.descripcion !== machine.nombre && (
+                            {machine.descripcion && machine.descripcion !== machine.alias && (
                                 <p className="text-[10px] text-slate-500 mt-0.5 font-medium truncate">{machine.descripcion}</p>
                             )}
                           </div>

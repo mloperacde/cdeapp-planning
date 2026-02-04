@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MaintenanceWorkOrderPDF({ order: maintenance, machine, employees }) {
   const getEmployeeName = (employeeId) => {

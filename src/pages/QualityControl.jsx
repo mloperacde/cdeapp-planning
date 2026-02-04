@@ -381,8 +381,10 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
 
   useEffect(() => {
     if (inspection) {
+      const machine = machines.find(m => m.id === inspection.machine_id);
       setFormData({
         ...inspection,
+        machine_name: machine ? machine.alias : (inspection.machine_name || ""),
         operarios: inspection.operarios || [],
         images: inspection.images || []
       });

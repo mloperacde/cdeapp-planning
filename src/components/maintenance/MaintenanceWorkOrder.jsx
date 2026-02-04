@@ -1,5 +1,7 @@
 import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -179,7 +181,7 @@ const MaintenanceWorkOrderPDF = ({ maintenance, machine, employees }) => {
           <div className="space-y-2">
             <div>
               <span className="text-sm text-slate-600">Máquina:</span>
-              <div className="font-bold text-lg">{machine?.nombre || "N/A"}</div>
+              <div className="font-bold text-lg">{machine ? getMachineAlias(machine) : "N/A"}</div>
             </div>
             <div>
               <span className="text-sm text-slate-600">Código:</span>

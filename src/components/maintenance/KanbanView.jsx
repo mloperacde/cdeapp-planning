@@ -72,7 +72,7 @@ export default function KanbanView({ maintenances, machines, employees, onOpenWo
 
   const getMachineName = (machineId) => {
     const machine = machines.find(m => m.id === machineId);
-    return machine?.nombre || "Máquina";
+    return machine ? getMachineAlias(machine) : "Máquina";
   };
 
   const getEmployeeName = (employeeId) => {

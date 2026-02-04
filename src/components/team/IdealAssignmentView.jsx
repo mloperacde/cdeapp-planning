@@ -34,10 +34,9 @@ export default function IdealAssignmentView() {
         const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
         return data.map(m => ({
             id: m.id,
-            nombre: m.nombre,
             alias: getMachineAlias(m),
+            descripcion: m.descripcion,
             codigo: m.codigo_maquina,
-            ubicacion: m.ubicacion,
             orden: m.orden_visualizacion || 999
         })).sort((a, b) => a.orden - b.orden);
     },
@@ -313,7 +312,7 @@ export default function IdealAssignmentView() {
           return { ...emp, _group: group, _slot: slot };
       }).sort((a, b) => {
            // Sort priority handled by EmployeeSelect grouping usually, but we sort internal list too
-           return a.nombre.localeCompare(b.nombre);
+          return a.alias.localeCompare(b.alias);
       });
   };
 
@@ -785,7 +784,7 @@ export default function IdealAssignmentView() {
                 <ScrollArea className="h-[400px] pr-4">
                     <div className="space-y-4">
                         {Object.entries(optimizationResult).map(([machineId, sugg]) => {
-                            const machineName = machines.find(m => m.id === machineId)?.alias || machines.find(m => m.id === machineId)?.nombre || machineId;
+                            const machineName = machines.find(m => m.id === machineId)?.alias || machineId;
                             return (
                                 <div key={machineId} className="bg-slate-50 p-3 rounded-lg border">
                                     <h4 className="font-semibold text-sm mb-2">{machineName}</h4>

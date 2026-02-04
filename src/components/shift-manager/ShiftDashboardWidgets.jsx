@@ -112,7 +112,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                 // Robust ID matching
                 const machine = machines.find(m => String(m.id) === String(assignment.machine_id));
                 // Standardize sala extraction matching machineAlias logic
-                const sala = (machine?.ubicacion || machine?.room || machine?.room_name || machine?.sala || '').trim();
+                const sala = (machine?.ubicacion || '').trim();
                 if (sala) {
                     activeSalas.add(sala);
                 }
