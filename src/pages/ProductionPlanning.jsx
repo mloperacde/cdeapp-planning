@@ -18,7 +18,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cdeApp } from "@/api/cdeAppClient";
-
+import { getMachineAlias } from "@/utils/machineAlias";
 
 import { Link } from "react-router-dom";
 
