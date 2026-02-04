@@ -357,7 +357,7 @@ export default function MachineMasterPage() {
               }
             }}
             sortOptions={[
-              { field: 'orden_visualizacion', label: 'Orden' },
+              { field: 'orden', label: 'Orden' },
               { field: 'alias', label: 'Alias' },
               { field: 'descripcion', label: 'Descripción' },
               { field: 'estado_disponibilidad', label: 'Disponibilidad' }

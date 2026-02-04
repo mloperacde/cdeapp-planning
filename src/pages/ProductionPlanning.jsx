@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Factory, Plus, RefreshCw, DownloadCloud } from "lucide-react";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import WorkOrderForm from "../components/planning/WorkOrderForm";
 import PlanningGantt from "../components/planning/PlanningGantt";
@@ -518,11 +519,13 @@ export default function ProductionPlanningPage() {
                    
                    for (const m of freshMachines) {
                        const mName = normalizeKey(m.nombre);
+                       const mAlias = normalizeKey(getMachineAlias(m));
                        
                        // Check if machine name contains the imported name (e.g. DB has full name, Import has partial)
                        // OR if imported name contains the machine name (Import has full info, DB has partial)
                        // Enforce min length 4 to avoid matching short codes like "1" or "A" loosely
-                       if (mName.includes(searchName) || (mName.length > 3 && searchName.includes(mName))) {
+                       if (mName.includes(searchName) || (mName.length > 3 && searchName.includes(mName)) ||
+                           mAlias.includes(searchName) || (mAlias.length > 3 && searchName.includes(mAlias))) {
                            machineId = m.id;
                            break; 
                        }

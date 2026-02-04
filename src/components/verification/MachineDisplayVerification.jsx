@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Loader2, Wrench } from "lucide-react";
@@ -18,11 +19,7 @@ export default function MachineDisplayVerification({ employeeId }) {
     queryKey: ['allMachinesMaster'],
     queryFn: async () => {
       const machines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      return machines.map(m => ({
-        id: m.id,
-        nombre: m.nombre,
-        codigo: m.codigo_maquina
-      }));
+      return machines;
     },
   });
 
@@ -103,7 +100,7 @@ export default function MachineDisplayVerification({ employeeId }) {
                 {machinesFromLegacy.map(m => (
                   <div key={m.priority} className="flex items-center gap-2 text-xs">
                     <Badge variant="outline" className="w-6 justify-center">{m.priority}</Badge>
-                    <span>{m.nombre} ({m.codigo})</span>
+                    <span>{getMachineAlias(m)}</span>
                   </div>
                 ))}
               </div>

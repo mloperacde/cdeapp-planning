@@ -35,12 +35,13 @@ export default function ProductionDashboardPage() {
           nombre: m.nombre || '',
           alias: getMachineAlias(m),
           codigo: m.codigo_maquina || m.codigo || '',
-          orden: m.orden_visualizacion || 999,
+          orden: m.orden_visualizacion ?? 999,
           estado_disponibilidad: m.estado_disponibilidad || 'Disponible',
           estado_produccion: m.estado_produccion || 'Sin Producción'
         }))
         .sort((a, b) => (a.orden || 999) - (b.orden || 999));
     },
+    refetchInterval: 5000,
   });
 
   const { data: workOrders = [] } = useQuery({

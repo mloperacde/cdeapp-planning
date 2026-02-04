@@ -254,8 +254,16 @@ const retryOperation = async (operation, maxRetries = 3, delay = 1000) => {
     }
 };
 
+import { getMachineAlias } from "@/utils/machineAlias";
+
 // --- Main Component ---
-export default function WorkOrderImporter() {
+export default function WorkOrderImporter({ 
+    open, 
+    onClose, 
+    onImport,
+    machines = [],
+    processes = []
+}) {
   console.log("WorkOrderImporter loaded");
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
@@ -468,13 +476,14 @@ export default function WorkOrderImporter() {
             const normalize = s => s?.toLowerCase().trim();
             const search = normalize(rawMachineName);
             
-            // Search Priority: Description (Primary ID) > Code > Short Name > Long Name
+            // Search Priority: Description (Primary ID) > Code > Short Name > Long Name > Alias
             // El usuario especificó que la descripción es el identificador principal para comparar en importaciones.
             let match = machines.find(m => 
                 normalize(m.descripcion) === search ||
                 normalize(m.codigo) === search || 
                 normalize(m.nombre_maquina) === search || 
-                normalize(m.nombre) === search
+                normalize(m.nombre) === search ||
+                normalize(getMachineAlias(m)) === search
             );
 
             // "Code - Name" parsing logic (Legacy or heuristic)
