@@ -6,7 +6,7 @@ import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-import { getMachineAlias } from '../../utils/machineAlias';
+import { getMachineAlias } from '@/utils/machineAlias';
 
 export default function DeduplicateMachines() {
   const [isRunning, setIsRunning] = useState(false);

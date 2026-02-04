@@ -9,6 +9,7 @@ import {
   Upload, FileSpreadsheet, Check, AlertCircle, Search, 
   Plus, Loader2, ArrowRight, X, RefreshCw 
 } from 'lucide-react';
+import { getMachineAlias } from "@/utils/machineAlias";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

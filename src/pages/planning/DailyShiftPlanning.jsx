@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,8 @@ export default function DailyShiftPlanningPage() {
           estado: m.estado_operativo,
           orden: m.orden_visualizacion || 999,
           tipo: m.tipo,
-          ubicacion: m.ubicacion
+          ubicacion: m.ubicacion,
+          alias: getMachineAlias(m)
         })).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
       },
       staleTime: 5 * 60 * 1000,

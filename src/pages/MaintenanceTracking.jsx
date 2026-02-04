@@ -16,7 +16,7 @@ import {
 import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { getMachineAlias } from "../utils/machineAlias";
+import { getMachineAlias } from "@/utils/machineAlias";
  
 
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";

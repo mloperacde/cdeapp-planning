@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { addDays, format, isSameDay, parseISO, isWeekend, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle, CalendarClock } from "lucide-react";

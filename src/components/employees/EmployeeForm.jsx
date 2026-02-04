@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, Suspense, lazy } from "react";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Dialog,

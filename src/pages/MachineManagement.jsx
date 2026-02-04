@@ -89,7 +89,7 @@ export default function MachineManagement() {
         return filters.sortDirection === 'desc' ? -comparison : comparison;
       });
     } else {
-      result = [...result].sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
+      result = [...result].sort((a, b) => (a.orden || 999) - (b.orden || 999));
     }
 
     return result;

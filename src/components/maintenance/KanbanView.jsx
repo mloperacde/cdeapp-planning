@@ -13,6 +13,7 @@ import { Clock, AlertTriangle, CheckCircle2, Wrench, User, Calendar, FileText } 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { getMachineAlias } from "@/utils/machineAlias";
 
 const COLUMNS = [
   { id: "Pendiente", title: "Pendiente", icon: Clock, color: "slate" },

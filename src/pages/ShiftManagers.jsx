@@ -7,6 +7,7 @@ import ShiftDashboardCustomizer from "../components/shift-manager/ShiftDashboard
 import { KPIWidget, TeamStatusWidget, ModulesWidget, CommunicationWidget, RequestsAndBirthdaysWidget, AlertsWidget } from "../components/shift-manager/ShiftDashboardWidgets";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { getMachineAlias } from "@/utils/machineAlias";
 import { format, startOfWeek, isSameDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
