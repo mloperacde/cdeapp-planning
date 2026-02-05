@@ -706,42 +706,56 @@ export default function DailyProductionPlanningPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                    <p className="text-sm text-blue-600 font-medium">Máquinas Planificadas</p>
-                    <p className="text-2xl font-bold text-blue-900">{activePlanningsMap.size}</p>
-                </div>
-                <Factory className="w-8 h-8 text-blue-500" />
-            </CardContent>
-        </Card>
-        <Card className="bg-orange-50 border-orange-200">
-            <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                    <p className="text-sm text-orange-600 font-medium">Operadores Necesarios</p>
-                    <p className="text-2xl font-bold text-orange-900">{totalRequiredOperators}</p>
-                </div>
-                <Users className="w-8 h-8 text-orange-500" />
-            </CardContent>
-        </Card>
-        <Card className={`${availableOperators >= totalRequiredOperators ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-            <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                    <p className={`text-sm font-medium ${availableOperators >= totalRequiredOperators ? 'text-green-600' : 'text-red-600'}`}>
-                        Operadores Disponibles
-                    </p>
-                    <p className={`text-2xl font-bold ${availableOperators >= totalRequiredOperators ? 'text-green-900' : 'text-red-900'}`}>
-                        {availableOperators}
-                    </p>
-                </div>
-                {availableOperators >= totalRequiredOperators ? 
-                    <Users className="w-8 h-8 text-green-500" /> : 
-                    <AlertTriangle className="w-8 h-8 text-red-500" />
-                }
-            </CardContent>
-        </Card>
+      {/* Stats - Sticky Header */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-6 md:-mx-8 px-6 md:px-8 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-all mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-blue-50 border-blue-200 shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-blue-600 font-medium">Máquinas Planificadas</p>
+                        <p className="text-2xl font-bold text-blue-900">{activePlanningsMap.size}</p>
+                    </div>
+                    <Factory className="w-8 h-8 text-blue-500/50" />
+                </CardContent>
+            </Card>
+            <Card className="bg-orange-50 border-orange-200 shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-orange-600 font-medium">Operadores Necesarios</p>
+                        <p className="text-2xl font-bold text-orange-900">{totalRequiredOperators}</p>
+                    </div>
+                    <Users className="w-8 h-8 text-orange-500/50" />
+                </CardContent>
+            </Card>
+            <Card className={`shadow-sm transition-colors duration-300 ${availableOperators >= totalRequiredOperators ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <CardContent className="p-4 flex items-center justify-between relative overflow-hidden">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                             <p className={`text-sm font-medium ${availableOperators >= totalRequiredOperators ? 'text-green-600' : 'text-red-600'}`}>
+                                Operadores Disponibles
+                            </p>
+                            {/* Semáforo Visual */}
+                            <div className={`w-3 h-3 rounded-full shadow-sm border ${
+                                availableOperators >= totalRequiredOperators 
+                                    ? 'bg-green-500 border-green-600 shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
+                                    : 'bg-red-500 border-red-600 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                            }`} title={availableOperators >= totalRequiredOperators ? "Cobertura Suficiente" : "Déficit de Personal"} />
+                        </div>
+                        <p className={`text-2xl font-bold ${availableOperators >= totalRequiredOperators ? 'text-green-900' : 'text-red-900'}`}>
+                            {availableOperators}
+                        </p>
+                    </div>
+                    {availableOperators >= totalRequiredOperators ? 
+                        <Users className="w-8 h-8 text-green-500/50" /> : 
+                        <AlertTriangle className="w-8 h-8 text-red-500/50" />
+                    }
+                    {/* Background decoration for semaphore effect */}
+                    <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none ${
+                        availableOperators >= totalRequiredOperators ? 'bg-green-500' : 'bg-red-500'
+                    }`} />
+                </CardContent>
+            </Card>
+          </div>
       </div>
 
       {/* Deficit Alert */}
