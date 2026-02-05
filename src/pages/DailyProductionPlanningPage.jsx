@@ -492,19 +492,20 @@ export default function DailyProductionPlanningPage() {
       const deficit = totalRequiredOperators - availableOperators;
       if (deficit > 0) {
           toast({
-              title: "Planificación Guardada (Con Advertencias)",
-              description: `Se ha registrado la planificación, pero existe un déficit de ${deficit} operadores.`,
+              title: "Bloqueo de Planificación",
+              description: `No se puede guardar la configuración: Faltan ${deficit} operadores para cubrir la demanda.`,
               variant: "destructive",
-              duration: 3000
+              duration: 5000
           });
-      } else {
-          toast({
-              title: "Planificación Guardada",
-              description: "La configuración de producción ha sido confirmada correctamente.",
-              className: "bg-green-600 text-white border-green-700",
-              duration: 3000
-          });
+          return;
       }
+      
+      toast({
+          title: "Planificación Guardada",
+          description: "La configuración de producción ha sido confirmada correctamente.",
+          className: "bg-green-600 text-white border-green-700",
+          duration: 3000
+      });
   };
 
   const handleCopyPreviousDay = () => {
