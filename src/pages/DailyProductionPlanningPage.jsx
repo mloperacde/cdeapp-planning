@@ -551,11 +551,8 @@ export default function DailyProductionPlanningPage() {
   return (
     <div className="p-6 md:p-8 w-full max-w-full min-h-screen space-y-6">
       
-      {/* Sticky Header Group */}
-      <div className="sticky top-0 z-40 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 -mx-6 md:-mx-8 px-6 md:px-8 py-4 -mt-6 border-b border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-        
-        {/* Header Compacto */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+      {/* Header Compacto */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -710,8 +707,8 @@ export default function DailyProductionPlanningPage() {
         </div>
       </div>
 
-      {/* Stats - Inside Sticky Group */}
-      <div className="shrink-0 transition-all">
+      {/* Stats - Sticky Header */}
+      <div className="sticky top-0 z-40 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 py-4 -mx-6 md:-mx-8 px-6 md:px-8 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-all">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-blue-50 border-blue-200 shadow-sm">
                 <CardContent className="p-4 flex items-center justify-between">
@@ -775,8 +772,7 @@ export default function DailyProductionPlanningPage() {
       )}
 
       </div>
-      {/* End Sticky Header Group */}
-
+      
       {/* Main Split Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-350px)] min-h-[500px]">
           
