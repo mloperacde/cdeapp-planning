@@ -802,27 +802,20 @@ export default function DailyProductionPlanningPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex-1 w-full min-h-0 flex flex-col">
-                    {/* Debug Info - Remove after verification */}
-                    <div className="px-2 py-1 text-[10px] text-slate-400 border-b bg-white/50 flex justify-between shrink-0">
-                       <span>Disponibles: {filteredAvailableMachines.length}</span>
-                       <span>Total: {machines.length}</span>
-                    </div>
-                    <div className="flex-1 w-full min-h-0">
-                        <AutoSizer>
-                        {({ height, width }) => (
-                            <List
-                            height={height}
-                            width={width}
-                            itemCount={filteredAvailableMachines.length}
-                            itemSize={72}
-                            itemData={{ machines: filteredAvailableMachines, onAdd: handleAddMachine }}
-                            >
-                            {MachineRow}
-                            </List>
-                        )}
-                        </AutoSizer>
-                    </div>
+                  <div className="flex-1 w-full min-h-0" style={{ height: '100%' }}>
+                      <AutoSizer>
+                      {({ height, width }) => (
+                          <List
+                          height={height}
+                          width={width}
+                          itemCount={filteredAvailableMachines.length}
+                          itemSize={72}
+                          itemData={{ machines: filteredAvailableMachines, onAdd: handleAddMachine }}
+                          >
+                          {MachineRow}
+                          </List>
+                      )}
+                      </AutoSizer>
                   </div>
                 )}
             </CardContent>
