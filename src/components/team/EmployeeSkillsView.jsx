@@ -34,9 +34,8 @@ export default function EmployeeSkillsView({ department = "all" }) {
         queryFn: async () => {
             const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
             return data.map(m => ({
-                id: m.id,
-                nombre: m.nombre,
-                alias: getMachineAlias(m),
+            id: m.id,
+            alias: getMachineAlias(m),
                 codigo: m.codigo_maquina,
                 ubicacion: m.ubicacion,
                 orden: m.orden_visualizacion || 999
@@ -349,7 +348,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                                         <SelectValue>
                                                             {selectedMachine ? (
                                                                 <span>
-                                                                    {selectedMachine.alias || selectedMachine.nombre}
+                                                                    {selectedMachine.alias}
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-slate-300">-</span>

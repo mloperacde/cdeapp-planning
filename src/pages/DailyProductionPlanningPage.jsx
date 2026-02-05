@@ -89,9 +89,8 @@ export default function DailyProductionPlanningPage() {
           const alias = getMachineAlias(m);
           const sala = (m.ubicacion || '').trim();
           const codigo = (m.codigo_maquina || '').trim();
-          const nombre = (m.nombre || '').trim();
           
-          uniqueMap.set(id, { ...m, alias, ubicacion: sala, codigo_maquina: codigo, nombre });
+          uniqueMap.set(id, { ...m, alias, ubicacion: sala, codigo_maquina: codigo });
         }
       });
       
@@ -184,13 +183,12 @@ export default function DailyProductionPlanningPage() {
             list.push({ ...machine, planning });
         } else {
           const alias = getMachineAlias({
-              nombre: planning.machine_nombre,
+              machine_name: planning.machine_nombre,
               codigo_maquina: planning.machine_codigo,
               ubicacion: planning.machine_ubicacion
             });
             list.push({ 
                 id: planning.machine_id, 
-                nombre: planning.machine_nombre || "Desconocida", 
                 alias: alias || planning.machine_nombre || "Desconocida",
                 codigo_maquina: planning.machine_codigo || "N/A", 
                 planning 
@@ -395,9 +393,13 @@ export default function DailyProductionPlanningPage() {
             
             if (!isAlreadyPlanned) {
                 // Create new planning
+                // Try to get fresh alias from loaded machines if possible
+                const currentMachine = machines.find(m => String(m.id) === String(p.machine_id));
+                const freshAlias = currentMachine ? getMachineAlias(currentMachine) : p.machine_nombre;
+
                 const newPlanning = {
                     machine_id: p.machine_id,
-                    machine_nombre: p.machine_nombre,
+                    machine_nombre: freshAlias,
                     machine_codigo: p.machine_codigo,
                     fecha_planificacion: selectedDate, // Target Date
                     team_key: selectedTeam,            // Target Team

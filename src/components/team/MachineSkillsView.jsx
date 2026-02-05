@@ -132,6 +132,8 @@ export default function MachineSkillsView() {
             if (isSuggested) group = "Sugeridos";
 
             return { ...e, _group: group };
+        }).sort((a, b) => {
+            return (a.nombre || "").localeCompare(b.nombre || "");
         });
     };
 

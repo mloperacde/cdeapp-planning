@@ -47,7 +47,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const allMachines = useMemo(() => {
     return sharedMachines.map(m => ({
       id: m.id,
-      nombre: getMachineAlias(m),
+      alias: getMachineAlias(m),
       tipo: m.tipo || '',
       estado: m.estado || 'Disponible',
       orden: m.orden || 999
@@ -1123,11 +1123,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                       >
                        <SelectTrigger>
                          <SelectValue placeholder="Sin asignar">
-                           {selectedMachine ? (
-                            <div className="flex items-center gap-2">
-                              <span>{selectedMachine.alias}</span>
-                            </div>
-                          ) : "Sin asignar"}
+                           <span className="truncate text-slate-900 dark:text-slate-100">
+                             {selectedMachine ? selectedMachine.alias : "Sin asignar"}
+                           </span>
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1135,7 +1133,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                         {allMachines.map((machine) => (
                           <SelectItem key={machine.id} value={machine.id}>
                             <div className="flex items-center gap-2">
-                              <span>{machine.alias}</span>
+                              <span className="text-slate-900 dark:text-slate-100">{machine.alias}</span>
                             </div>
                           </SelectItem>
                         ))}

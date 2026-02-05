@@ -1,6 +1,9 @@
 export const getMachineAlias = (machine) => {
     if (!machine) return '';
     
+    // Optimization: If alias is already computed/stored, use it
+    if (machine.alias) return machine.alias;
+    
     // Handle various field names for compatibility across modules
     const sala = (machine.ubicacion || machine.room || machine.room_name || machine.sala || '').trim();
     const codigo = (machine.codigo_maquina || machine.codigo || machine.code || '').trim();

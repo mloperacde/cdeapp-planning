@@ -456,7 +456,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
                                                 <div className="flex items-center gap-2">
                                                     <span>{item.alias}</span>
                                                 </div>
-                                                {item.descripcion && item.descripcion !== item.nombre && (
+                                                {item.descripcion && item.descripcion !== item.alias && (
                                                     <div className="text-xs text-slate-500" title={item.descripcion}>
                                                         {item.descripcion.length > 50 ? item.descripcion.substring(0, 50) + '...' : item.descripcion}
                                                     </div>

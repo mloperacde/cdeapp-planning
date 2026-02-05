@@ -41,7 +41,6 @@ export default function MachineManagement() {
         
         return {
           id: m.id,
-          nombre: (m.nombre || '').trim(),
           alias: alias,
           descripcion: m.descripcion || '',
           codigo_maquina: codigo,

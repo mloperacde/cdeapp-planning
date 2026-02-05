@@ -405,7 +405,7 @@ export default function MachineMasterPage() {
                     <tr key={machine.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td className="px-4 py-2">
                         <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">{machine.alias}</span>
-                        {machine.descripcion && machine.descripcion !== machine.nombre && (
+                        {machine.descripcion && machine.descripcion !== machine.nombre_maquina && machine.descripcion !== machine.alias && (
                           <p className="text-[10px] text-slate-500 mt-0.5 font-medium truncate">{machine.descripcion}</p>
                         )}
                       </td>

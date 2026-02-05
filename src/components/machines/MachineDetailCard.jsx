@@ -24,7 +24,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
-    nombre_maquina: machine.nombre_maquina || machine.nombre || "",
+    nombre_maquina: machine.nombre_maquina || (machine.nombre && !machine.nombre.includes('(') ? machine.nombre : "") || "",
     codigo: machine.codigo || "",
     marca: machine.marca || "",
     modelo: machine.modelo || "",

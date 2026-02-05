@@ -32,7 +32,6 @@ export default function ProductionDashboardPage() {
       return (Array.isArray(data) ? data : [])
         .map(m => ({
           id: m.id,
-          nombre: m.nombre || '',
           alias: getMachineAlias(m),
           codigo: m.codigo_maquina || m.codigo || '',
           orden: m.orden_visualizacion ?? 999,

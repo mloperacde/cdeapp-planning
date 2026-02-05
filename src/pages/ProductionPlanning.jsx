@@ -46,11 +46,9 @@ export default function ProductionPlanningPage() {
       return data.map(m => {
         const sala = (m.ubicacion || '').trim();
         const codigo = (m.codigo_maquina || m.codigo || '').trim();
-        const nombre = (m.nombre || '').trim();
         
         return {
             id: m.id,
-            nombre: nombre,
             alias: getMachineAlias(m),
             descripcion: m.descripcion,
             codigo: codigo,
@@ -176,7 +174,7 @@ export default function ProductionPlanningPage() {
           currentMachines.forEach(m => {
               if (m.cde_machine_id) cdeIdMap.set(String(m.cde_machine_id), m);
               if (m.codigo) currentMachineMap.set(String(m.codigo).trim(), m);
-              if (m.nombre) currentMachineMap.set(m.nombre.toLowerCase().trim(), m);
+              if (m.nombre_maquina) currentMachineMap.set(m.nombre_maquina.toLowerCase().trim(), m);
           });
 
           for (const rm of remoteMachines) {
@@ -196,7 +194,7 @@ export default function ProductionPlanningPage() {
                   match = currentMachineMap.get(code) || currentMachineMap.get(name.toLowerCase());
               }
               
-              const shortName = name || (match ? (match.nombre_maquina || match.nombre) : `Machine ${cdeId}`);
+              const shortName = name || (match ? (match.nombre_maquina || getMachineAlias(match)) : `Machine ${cdeId}`);
               const codeVal = code || (match ? (match.codigo_maquina || match.codigo) : cdeId);
               const locVal = rm['Ubicación'] || rm['location'] || (match ? match.ubicacion : '');
 

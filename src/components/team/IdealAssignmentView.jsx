@@ -178,7 +178,7 @@ export default function IdealAssignmentView() {
              const catA = parseInt(a.categoria) || 99;
              const catB = parseInt(b.categoria) || 99;
              if (catA !== catB) return catA - catB;
-             return a.nombre.localeCompare(b.nombre);
+             return (a.nombre || "").localeCompare(b.nombre || "");
         });
     if (eligibleResp.length > 0) {
         defaultAssign.responsable_linea = eligibleResp[0].id;
@@ -193,7 +193,7 @@ export default function IdealAssignmentView() {
             const sortB = getSortValue(b, machineId);
             if (sortA.slot !== sortB.slot) return sortA.slot - sortB.slot;
             if (sortA.category !== sortB.category) return sortA.category - sortB.category;
-            return sortA.name.localeCompare(sortB.name);
+            return (sortA.name || "").localeCompare(sortB.name || "");
         });
     if (eligibleSeg.length > 0) {
         defaultAssign.segunda_linea = eligibleSeg[0].id;
@@ -208,7 +208,7 @@ export default function IdealAssignmentView() {
             const sortB = getSortValue(b, machineId);
             if (sortA.slot !== sortB.slot) return sortA.slot - sortB.slot;
             if (sortA.category !== sortB.category) return sortA.category - sortB.category;
-            return sortA.name.localeCompare(sortB.name);
+            return (sortA.name || "").localeCompare(sortB.name || "");
         });
     
     for (let i = 1; i <= 5; i++) {
@@ -312,7 +312,7 @@ export default function IdealAssignmentView() {
           return { ...emp, _group: group, _slot: slot };
       }).sort((a, b) => {
            // Sort priority handled by EmployeeSelect grouping usually, but we sort internal list too
-          return a.alias.localeCompare(b.alias);
+          return (a.nombre || "").localeCompare(b.nombre || "");
       });
   };
 
