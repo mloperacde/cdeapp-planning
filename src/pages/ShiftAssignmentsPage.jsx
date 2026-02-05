@@ -15,7 +15,8 @@ import {
   Save,
   History,
   Search,
-  Factory
+  Factory,
+  Sparkles
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -138,12 +139,85 @@ export default function ShiftAssignmentsPage() {
   const queryClient = useQueryClient();
   const { employees = [], teams = [], machines = [] } = useAppData();
 
-  // Sync default shift
+  // New: Fetch Machine Planning
+  const { data: machinePlannings = [] } = useQuery({
+    queryKey: ['machinePlannings', format(selectedDate, 'yyyy-MM-dd'), selectedTeam],
+    queryFn: () => {
+       const filters = { 
+         fecha_planificacion: format(selectedDate, 'yyyy-MM-dd')
+       };
+       if (selectedTeam !== "all") {
+           const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
+           if (teamObj) filters.team_key = teamObj.team_key;
+       }
+       return base44.entities.MachinePlanning.filter(filters);
+    },
+    enabled: !!selectedDate
+  });
+
+  // New: Fetch Team Schedules (for Shift Auto-detection)
+  const { data: teamSchedules = [] } = useQuery({
+      queryKey: ['teamSchedules'],
+      queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 1000)
+  });
+
+  // New: Fetch Employee Machine Skills (Ideal Assignment Source)
+  const { data: employeeSkills = [] } = useQuery({
+      queryKey: ['employeeMachineSkills'],
+      queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 2000)
+  });
+
+  // Auto-detect Shift based on Date + Team
   useEffect(() => {
-    if (shifts.MORNING && selectedShift === "Mañana" && shifts.MORNING !== "Mañana") {
-        setSelectedShift(shifts.MORNING);
-    }
-  }, [shifts, selectedShift]);
+      if (selectedTeam !== "all" && teamSchedules.length > 0) {
+          const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
+          if (!teamObj) return;
+
+          const dateObj = new Date(selectedDate);
+          const weekStart = new Date(dateObj);
+          const day = weekStart.getDay();
+          const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+          weekStart.setDate(diff);
+          const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+
+          const schedule = teamSchedules.find(s => 
+              s.team_key === teamObj.team_key && 
+              s.fecha_inicio_semana === weekStartStr
+          );
+
+          if (schedule && schedule.turno) {
+              setSelectedShift(schedule.turno);
+          }
+      }
+  }, [selectedDate, selectedTeam, teamSchedules, teams]);
+
+  // Sync Team based on Shift (Reverse Logic - Optional but requested)
+  useEffect(() => {
+      // If user selects shift manually, we try to find the team? 
+      // User requirement: "si elegimos el turno el equipo aparecerá automaticamente"
+      // This is ambiguous if multiple teams have the same shift. 
+      // Let's assume for now we prioritize Date+Team -> Shift.
+      // If we implement Shift -> Team, we need to know WHICH team has that shift today.
+      // We can search teamSchedules for today + shift.
+      if (selectedTeam === "all" && teamSchedules.length > 0) {
+           const dateObj = new Date(selectedDate);
+           const weekStart = new Date(dateObj);
+           const day = weekStart.getDay();
+           const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+           weekStart.setDate(diff);
+           const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+
+           const schedule = teamSchedules.find(s => 
+               s.turno === selectedShift && 
+               s.fecha_inicio_semana === weekStartStr
+           );
+
+           if (schedule) {
+               const team = teams.find(t => t.team_key === schedule.team_key);
+               if (team) setSelectedTeam(String(team.id));
+           }
+      }
+  }, [selectedShift, selectedDate, teamSchedules, teams, selectedTeam]);
 
   // Fetch Assignments
   const { data: dailyStaffing = [] } = useQuery({
@@ -286,39 +360,62 @@ export default function ShiftAssignmentsPage() {
     }
   });
 
-  // Available Employees Calculation (Unified Logic)
-  const availableEmployees = useMemo(() => {
-    const assignedIds = new Set();
-    Object.values(assignments).forEach(roles => {
-        Object.values(roles).forEach(id => {
-            if (id) assignedIds.add(String(id));
-        });
-    });
+  // Filter machines based on planning
+  const plannedMachines = useMemo(() => {
+    if (!machinePlannings.length) return [];
+    const plannedIds = new Set(machinePlannings.map(mp => String(mp.machine_id)));
+    return machines.filter(m => plannedIds.has(String(m.id)))
+        .sort((a,b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
+  }, [machines, machinePlannings]);
 
-    const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+  // Helper: Get Ideal Slot
+  const getExperienceSlot = (emp, machineId) => {
+    const skill = employeeSkills.find(s => 
+        s.employee_id === emp.id && s.machine_id === machineId
+    );
+    if (skill?.orden_preferencia) return skill.orden_preferencia;
     
-    return employees.filter(e => {
-        if (assignedIds.has(String(e.id))) return false;
+    const machine = machines.find(m => String(m.id) === String(machineId));
+    const identifiers = machine ? [
+        String(machine.id),
+        machine.codigo ? String(machine.codigo) : null
+    ].filter(Boolean) : [String(machineId)];
 
-        // 1. Department: Fabricación
-        if (normalize(e.departamento) !== "fabricacion") return false;
+    for (let i = 1; i <= 10; i++) {
+        const val = emp[`maquina_${i}`];
+        if (val && identifiers.includes(String(val))) return i;
+    }
+    return 999;
+  };
 
-        // 2. Availability: Disponible
-        if (normalize(e.disponibilidad) !== "disponible") return false;
+  // Helper: Check Role Match
+  const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+  
+  const checkRoleMatch = (emp, roleKey) => {
+      const puesto = normalize(emp.puesto);
+      if (roleKey === 'responsable_linea') {
+          return puesto.includes('responsable de linea') || puesto.includes('responsable de línea');
+      }
+      if (roleKey === 'segunda_linea') {
+          return puesto.includes('segunda de linea') || puesto.includes('2ª');
+      }
+      if (roleKey.startsWith('operador')) {
+          return puesto.includes('operari'); // Matches operario, operaria
+      }
+      return false;
+  };
 
-        // 3. Role Check
-        const currentPuesto = normalize(e.puesto);
-        const allowedRoles = ['responsable de linea', 'segunda de linea', 'operario de linea', 'operaria de linea'].map(normalize);
-        if (!allowedRoles.includes(currentPuesto)) return false;
-
-        // 4. Absence Check
-        if (e.ausencia_inicio) {
-            const checkDate = new Date(selectedDate);
+  const isEmployeeAvailable = (e, dateStr, teamId) => {
+       // 1. Department
+       if (normalize(e.departamento) !== "fabricacion") return false;
+       // 2. Availability
+       if (normalize(e.disponibilidad) !== "disponible") return false;
+       // 3. Absence
+       if (e.ausencia_inicio) {
+            const checkDate = new Date(dateStr);
             checkDate.setHours(0, 0, 0, 0);
-            
             const startDate = new Date(e.ausencia_inicio);
             startDate.setHours(0, 0, 0, 0);
-
             if (e.ausencia_fin) {
                 const endDate = new Date(e.ausencia_fin);
                 endDate.setHours(0, 0, 0, 0);
@@ -326,36 +423,150 @@ export default function ShiftAssignmentsPage() {
             } else {
                 if (checkDate >= startDate) return false;
             }
-        }
+       }
+       // 4. Team (Strict match or Fixed Shift)
+       // If selectedTeam is "all", we skip team check? Or match any? 
+       // User implies we select a team. If "all", we probably shouldn't auto-assign across teams blindly.
+       // But assuming we are in a team context:
+       if (teamId !== "all") {
+           const teamObj = teams.find(t => String(t.id) === String(teamId));
+           if (teamObj) {
+               const empTeam = normalize(e.equipo);
+               const targetTeam = normalize(teamObj.team_name);
+               // Also check team_id if available
+               if (e.team_id && String(e.team_id) === String(teamId)) return true;
+               if (empTeam === targetTeam) return true;
+               
+               // Fixed Shifts?
+               // "Si es turno fijo..." - logic might be needed. 
+               // For now strict team match as per "empleados de ese equipo".
+               return false;
+           }
+       }
+       return true;
+  };
 
-        // 5. Team Filter
-        if (selectedTeam !== "all") {
-            const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
-            if (teamObj) {
-                let matchesTeam = false;
-                if (e.team_id && String(e.team_id) === String(teamObj.id)) {
-                    matchesTeam = true;
-                } else {
-                    const empTeam = normalize(e.equipo);
-                    const targetTeam = normalize(teamObj.team_name);
-                    if (empTeam && targetTeam && empTeam === targetTeam) {
-                        matchesTeam = true;
-                    }
-                }
-                
-                if (!matchesTeam) return false;
-            }
-        }
+  const handleAutoAssign = () => {
+    if (selectedTeam === "all") {
+        toast.error("Seleccione un equipo para realizar la asignación automática.");
+        return;
+    }
 
-        // 6. Search
-        if (searchTerm) {
-            const lower = normalize(searchTerm);
-            return normalize(e.nombre).includes(lower);
-        }
-
-        return true;
+    const newAssignments = { ...assignments };
+    const assignedEmpIds = new Set();
+    
+    // Mark currently assigned as unavailable (so we don't double assign)
+    Object.values(newAssignments).forEach(roles => {
+        Object.values(roles).forEach(id => { if(id) assignedEmpIds.add(String(id)); });
     });
-  }, [employees, assignments, selectedTeam, searchTerm, selectedDate, teams]);
+
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    let assignedCount = 0;
+
+    plannedMachines.forEach(machine => {
+        const planning = machinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
+        const requiredOps = Number(planning?.operadores_necesarios) || 0;
+        
+        // Define needed roles
+        const rolesToFill = [];
+        if (requiredOps >= 1) rolesToFill.push({ key: 'responsable_linea', label: 'Responsable' });
+        if (requiredOps >= 2) rolesToFill.push({ key: 'segunda_linea', label: 'Segunda' });
+        for (let i = 0; i < requiredOps - 2; i++) {
+            rolesToFill.push({ key: `operador_${i+1}`, label: `Operador ${i+1}` });
+        }
+
+        rolesToFill.forEach(({ key }) => {
+            // Skip if already filled
+            if (newAssignments[machine.id]?.[key]) return;
+
+            // Find Candidates
+            // Criteria: 
+            // 1. Available & In Team
+            // 2. Matches Role
+            // 3. Ideal Slot 1 (Fallback to Slot 2)
+            
+            // Get all potential candidates first
+            const candidates = employees.filter(e => {
+                if (assignedEmpIds.has(String(e.id))) return false;
+                if (!isEmployeeAvailable(e, dateStr, selectedTeam)) return false;
+                if (!checkRoleMatch(e, key)) return false;
+                return true;
+            });
+
+            // Sort by Preference Slot
+            // We look for Slot 1, then Slot 2.
+            let bestCandidate = null;
+            
+            // Find Slot 1
+            const slot1 = candidates.find(e => getExperienceSlot(e, machine.id) === 1);
+            if (slot1) {
+                bestCandidate = slot1;
+            } else {
+                // Find Slot 2
+                const slot2 = candidates.find(e => getExperienceSlot(e, machine.id) === 2);
+                if (slot2) bestCandidate = slot2;
+            }
+
+            if (bestCandidate) {
+                newAssignments[machine.id] = {
+                    ...newAssignments[machine.id],
+                    [key]: bestCandidate.id
+                };
+                assignedEmpIds.add(String(bestCandidate.id));
+                assignedCount++;
+            }
+        });
+    });
+
+    setAssignments(newAssignments);
+    if (assignedCount > 0) {
+        toast.success(`Se han sugerido ${assignedCount} asignaciones.`);
+    } else {
+        toast.info("No se encontraron nuevas asignaciones sugeridas.");
+    }
+  };
+
+  // Available Employees (Restored & Updated)
+  const availableEmployees = useMemo(() => {
+     const assignedIds = new Set();
+     Object.values(assignments).forEach(roles => {
+         Object.values(roles).forEach(id => {
+             if (id) assignedIds.add(String(id));
+         });
+     });
+     
+     const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+     return employees.filter(e => {
+         if (assignedIds.has(String(e.id))) return false;
+         if (!isEmployeeAvailable(e, dateStr, selectedTeam)) return false;
+         if (searchTerm) {
+             const lower = normalize(searchTerm);
+             return normalize(e.nombre).includes(lower);
+         }
+         return true;
+     });
+  }, [employees, assignments, selectedTeam, searchTerm, selectedDate]);
+
+  // Grouped Employees for Right Panel
+  const groupedAvailableEmployees = useMemo(() => {
+      // Sort by Role: Responsable, Segunda, Operario, Others
+      const getRolePriority = (puesto) => {
+          const p = normalize(puesto);
+          if (p.includes('responsable')) return 1;
+          if (p.includes('segunda') || p.includes('2ª')) return 2;
+          if (p.includes('operari')) return 3;
+          return 4;
+      };
+
+      return [...availableEmployees].sort((a, b) => {
+          const prioA = getRolePriority(a.puesto);
+          const prioB = getRolePriority(b.puesto);
+          if (prioA !== prioB) return prioA - prioB;
+          return a.nombre.localeCompare(b.nombre);
+      });
+  }, [availableEmployees]);
+
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col p-6 gap-6">
@@ -416,55 +627,80 @@ export default function ShiftAssignmentsPage() {
          <div className="flex flex-1 gap-6 min-h-0">
             {/* Machine List */}
             <div className="flex-1 flex flex-col gap-4 min-h-0">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input 
-                        placeholder="Buscar máquina..." 
-                        className="pl-9"
-                    />
+                {/* Search Bar & Auto Assign Button */}
+                <div className="flex items-center gap-2">
+                     <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Input 
+                            placeholder="Buscar máquina..." 
+                            className="pl-9"
+                        />
+                     </div>
+                     <Button variant="outline" onClick={handleAutoAssign} className="gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-500" />
+                        Sugerir Asignación
+                     </Button>
                 </div>
+
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                    {machines
-                        .sort((a,b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999))
-                        .map(machine => (
-                        <Card key={machine.id} className="overflow-hidden">
-                            <CardHeader className="py-3 bg-slate-50 border-b">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <Factory className="w-4 h-4 text-slate-500" />
-                                    <span className="font-medium text-slate-700 truncate" title={getMachineAlias(machine)}>
-                                        {getMachineAlias(machine)}
-                                    </span>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 grid grid-cols-2 gap-4">
-                                <Slot 
-                                    id={`machine-${machine.id}-responsable_linea`} 
-                                    label="Responsable" 
-                                    assignedId={assignments[machine.id]?.responsable_linea} 
-                                    employees={employees}
-                                    isRequired
-                                />
-                                <Slot 
-                                    id={`machine-${machine.id}-segunda_linea`} 
-                                    label="2ª Línea" 
-                                    assignedId={assignments[machine.id]?.segunda_linea} 
-                                    employees={employees}
-                                />
-                                <Slot 
-                                    id={`machine-${machine.id}-operador_1`} 
-                                    label="Operador 1" 
-                                    assignedId={assignments[machine.id]?.operador_1} 
-                                    employees={employees}
-                                />
-                                <Slot 
-                                    id={`machine-${machine.id}-operador_2`} 
-                                    label="Operador 2" 
-                                    assignedId={assignments[machine.id]?.operador_2} 
-                                    employees={employees}
-                                />
-                            </CardContent>
-                        </Card>
-                    ))}
+                    {plannedMachines.length === 0 ? (
+                        <div className="text-center py-10 text-slate-500">
+                            No hay máquinas planificadas para este turno/equipo.
+                        </div>
+                    ) : (
+                        plannedMachines.map(machine => {
+                            const planning = machinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
+                            const requiredOps = Number(planning?.operadores_necesarios) || 0;
+                            
+                            return (
+                                <Card key={machine.id} className="overflow-hidden">
+                                    <CardHeader className="py-3 bg-slate-50 border-b">
+                                        <CardTitle className="text-sm flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Factory className="w-4 h-4 text-slate-500" />
+                                                <span className="font-medium text-slate-700 truncate" title={getMachineAlias(machine)}>
+                                                    {getMachineAlias(machine)}
+                                                </span>
+                                            </div>
+                                            <Badge variant="outline" className="text-xs font-normal">
+                                                {requiredOps} Operarios
+                                            </Badge>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 grid grid-cols-2 gap-4">
+                                        {requiredOps >= 1 && (
+                                            <Slot 
+                                                id={`machine-${machine.id}-responsable_linea`} 
+                                                label="Responsable" 
+                                                assignedId={assignments[machine.id]?.responsable_linea} 
+                                                employees={employees}
+                                                isRequired
+                                            />
+                                        )}
+                                        {requiredOps >= 2 && (
+                                            <Slot 
+                                                id={`machine-${machine.id}-segunda_linea`} 
+                                                label="2ª Línea" 
+                                                assignedId={assignments[machine.id]?.segunda_linea} 
+                                                employees={employees}
+                                                isRequired
+                                            />
+                                        )}
+                                        {Array.from({ length: Math.max(0, requiredOps - 2) }).map((_, i) => (
+                                            <Slot 
+                                                key={i}
+                                                id={`machine-${machine.id}-operador_${i+1}`} 
+                                                label={`Operador ${i+1}`} 
+                                                assignedId={assignments[machine.id]?.[`operador_${i+1}`]} 
+                                                employees={employees}
+                                                isRequired
+                                            />
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 
@@ -474,7 +710,7 @@ export default function ShiftAssignmentsPage() {
                     <h3 className="font-semibold flex items-center gap-2">
                         <Users className="w-4 h-4" />
                         Disponibles
-                        <Badge variant="secondary">{availableEmployees.length}</Badge>
+                        <Badge variant="secondary">{groupedAvailableEmployees.length}</Badge>
                     </h3>
                 </div>
                 <Input 
@@ -488,7 +724,7 @@ export default function ShiftAssignmentsPage() {
                         droppableId="unassigned-pool" 
                         mode="virtual"
                         renderClone={(provided, snapshot, rubric) => {
-                            const emp = availableEmployees[rubric.source.index];
+                            const emp = groupedAvailableEmployees[rubric.source.index];
                             return (
                                 <div
                                     ref={provided.innerRef}
@@ -509,9 +745,9 @@ export default function ShiftAssignmentsPage() {
                                         <List
                                             height={height}
                                             width={width}
-                                            itemCount={availableEmployees.length}
+                                            itemCount={groupedAvailableEmployees.length}
                                             itemSize={80}
-                                            itemData={availableEmployees}
+                                            itemData={groupedAvailableEmployees}
                                             outerRef={provided.innerRef}
                                         >
                                             {EmployeeRow}
