@@ -549,167 +549,168 @@ export default function DailyProductionPlanningPage() {
   // --- Render ---
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-full min-h-screen space-y-6">
+    <div className="flex flex-col h-full w-full max-w-full bg-slate-50/50 dark:bg-background overflow-hidden">
       
-      {/* Header Compacto */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+      {/* Fixed Header Section */}
+      <div className="flex-none p-4 md:p-6 space-y-4 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-10 shadow-sm">
+        {/* Header Compacto */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                  Planificación Diaria de Producción
+                </h1>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                  Configure la planificación de máquinas y operadores para el día seleccionado.
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                Planificación Diaria de Producción
-              </h1>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                Configure la planificación de máquinas y operadores para el día seleccionado.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-             <ThemeToggle />
-          </div>
-      </div>
-
-      {/* Toolbar Unificada */}
-      <div className="flex flex-col xl:flex-row gap-4 shrink-0 justify-between items-start xl:items-center">
-        {/* Left: Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
-            <div className="flex flex-col sm:flex-row items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full xl:w-auto">
-                <div className="flex items-center px-2 border-r border-slate-200 dark:border-slate-800">
-                    <Filter className="w-4 h-4 text-slate-500 mr-2" />
-                    <span className="text-sm font-medium text-slate-700">Filtros</span>
-                </div>
-                
-                <Input 
-                    type="date" 
-                    value={selectedDate} 
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="border-0 shadow-none focus-visible:ring-0 w-full sm:w-auto h-8"
-                />
-                
-                <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-                
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-full sm:w-[200px] border-0 shadow-none focus:ring-0 h-8">
-                        <SelectValue placeholder="Seleccionar Equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {teams.map(t => (
-                            <SelectItem key={t.team_key} value={t.team_key}>
-                                {t.team_name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-
-                <div className="px-3 text-sm font-medium text-slate-600 whitespace-nowrap flex items-center gap-2">
-                    Turno: <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">{currentShift}</span>
-                </div>
+            <div className="flex items-center gap-2">
+               <ThemeToggle />
             </div>
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
-            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                <DialogTrigger asChild>
-                     <Button variant="outline" size="sm" className="h-9 gap-2 bg-white border-slate-200">
-                        <Copy className="w-4 h-4" />
-                        <span className="hidden md:inline">Importar</span>
-                     </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Importar Planificación</DialogTitle>
-                        <DialogDescription>
-                            Copie la configuración de máquinas de otro día o equipo.
-                            Las máquinas se añadirán a la planificación actual.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                         <Button 
-                            variant="secondary" 
-                            className="w-full justify-start gap-3" 
-                            onClick={handleCopyPreviousDay}
-                            disabled={importMutation.isPending}
-                        >
-                            <Repeat className="w-4 h-4" />
-                            <div className="flex flex-col items-start">
-                                <span className="font-medium">Repetir Día Anterior</span>
-                                <span className="text-xs text-slate-500">Mismo equipo, fecha ayer</span>
-                            </div>
-                         </Button>
-                         
-                         <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-2 text-muted-foreground">O personalizar</span>
-                            </div>
-                        </div>
+        {/* Toolbar Unificada */}
+        <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
+          {/* Left: Filters */}
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
+              <div className="flex flex-col sm:flex-row items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full xl:w-auto">
+                  <div className="flex items-center px-2 border-r border-slate-200 dark:border-slate-800">
+                      <Filter className="w-4 h-4 text-slate-500 mr-2" />
+                      <span className="text-sm font-medium text-slate-700">Filtros</span>
+                  </div>
+                  
+                  <Input 
+                      type="date" 
+                      value={selectedDate} 
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="border-0 shadow-none focus-visible:ring-0 w-full sm:w-auto h-8"
+                  />
+                  
+                  <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+                  
+                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                      <SelectTrigger className="w-full sm:w-[200px] border-0 shadow-none focus:ring-0 h-8">
+                          <SelectValue placeholder="Seleccionar Equipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {teams.map(t => (
+                              <SelectItem key={t.team_key} value={t.team_key}>
+                                  {t.team_name}
+                              </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
 
-                        <div className="grid gap-2">
-                            <label className="text-sm font-medium">Fecha Origen</label>
-                            <Input 
-                                type="date" 
-                                value={importDate}
-                                onChange={(e) => setImportDate(e.target.value)}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <label className="text-sm font-medium">Equipo Origen</label>
-                            <Select value={importTeam} onValueChange={setImportTeam}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar equipo..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {teams.map(t => (
-                                        <SelectItem key={t.team_key} value={t.team_key}>
-                                            {t.team_name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button 
-                            onClick={handleImportCustom} 
-                            disabled={!importDate || !importTeam || importMutation.isPending}
-                        >
-                            {importMutation.isPending ? "Importando..." : "Importar Selección"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                  <div className="h-6 w-px bg-slate-200 hidden sm:block" />
 
-            <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleSavePlanning}
-                className="h-9 gap-2 border-green-600 text-green-700 hover:bg-green-50 bg-white"
-            >
-                <Save className="w-4 h-4" />
-                Guardar
-            </Button>
-            <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={handleClearAll}
-                disabled={activePlanningsMap.size === 0 || clearMutation.isPending}
-                className="h-9"
-            >
-                {clearMutation.isPending ? "Limpiando..." : "Limpiar"}
-            </Button>
+                  <div className="px-3 text-sm font-medium text-slate-600 whitespace-nowrap flex items-center gap-2">
+                      Turno: <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">{currentShift}</span>
+                  </div>
+              </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
+              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                  <DialogTrigger asChild>
+                       <Button variant="outline" size="sm" className="h-9 gap-2 bg-white border-slate-200">
+                          <Copy className="w-4 h-4" />
+                          <span className="hidden md:inline">Importar</span>
+                       </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                          <DialogTitle>Importar Planificación</DialogTitle>
+                          <DialogDescription>
+                              Copie la configuración de máquinas de otro día o equipo.
+                              Las máquinas se añadirán a la planificación actual.
+                          </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                           <Button 
+                              variant="secondary" 
+                              className="w-full justify-start gap-3" 
+                              onClick={handleCopyPreviousDay}
+                              disabled={importMutation.isPending}
+                          >
+                              <Repeat className="w-4 h-4" />
+                              <div className="flex flex-col items-start">
+                                  <span className="font-medium">Repetir Día Anterior</span>
+                                  <span className="text-xs text-slate-500">Mismo equipo, fecha ayer</span>
+                              </div>
+                           </Button>
+                           
+                           <div className="relative">
+                              <div className="absolute inset-0 flex items-center">
+                                  <span className="w-full border-t" />
+                              </div>
+                              <div className="relative flex justify-center text-xs uppercase">
+                                  <span className="bg-background px-2 text-muted-foreground">O personalizar</span>
+                              </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                              <label className="text-sm font-medium">Fecha Origen</label>
+                              <Input 
+                                  type="date" 
+                                  value={importDate}
+                                  onChange={(e) => setImportDate(e.target.value)}
+                              />
+                          </div>
+                          <div className="grid gap-2">
+                              <label className="text-sm font-medium">Equipo Origen</label>
+                              <Select value={importTeam} onValueChange={setImportTeam}>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Seleccionar equipo..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      {teams.map(t => (
+                                          <SelectItem key={t.team_key} value={t.team_key}>
+                                              {t.team_name}
+                                          </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                      </div>
+                      <DialogFooter>
+                          <Button 
+                              onClick={handleImportCustom} 
+                              disabled={!importDate || !importTeam || importMutation.isPending}
+                          >
+                              {importMutation.isPending ? "Importando..." : "Importar Selección"}
+                          </Button>
+                      </DialogFooter>
+                  </DialogContent>
+              </Dialog>
+
+              <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleSavePlanning}
+                  className="h-9 gap-2 border-green-600 text-green-700 hover:bg-green-50 bg-white"
+              >
+                  <Save className="w-4 h-4" />
+                  Guardar
+              </Button>
+              <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={handleClearAll}
+                  disabled={activePlanningsMap.size === 0 || clearMutation.isPending}
+                  className="h-9"
+              >
+                  {clearMutation.isPending ? "Limpiando..." : "Limpiar"}
+              </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Stats - Sticky Header */}
-      <div className="sticky top-0 z-40 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 py-4 -mx-6 md:-mx-8 px-6 md:px-8 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-all">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-blue-50 border-blue-200 shadow-sm">
                 <CardContent className="p-4 flex items-center justify-between">
                     <div>
@@ -732,7 +733,7 @@ export default function DailyProductionPlanningPage() {
                 <CardContent className="p-4 flex items-center justify-between relative overflow-hidden">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                             <p className={`text-sm font-medium ${availableOperators >= totalRequiredOperators ? 'text-green-600' : 'text-red-600'}`}>
+                                <p className={`text-sm font-medium ${availableOperators >= totalRequiredOperators ? 'text-green-600' : 'text-red-600'}`}>
                                 Operadores Disponibles
                             </p>
                             {/* Semáforo Visual */}
@@ -756,11 +757,11 @@ export default function DailyProductionPlanningPage() {
                     }`} />
                 </CardContent>
             </Card>
-          </div>
+        </div>
 
-          {/* Deficit Alert - Inside Sticky */}
-          {availableOperators < totalRequiredOperators && (
-            <Alert variant="destructive" className="mt-4 shadow-sm bg-red-50 border-red-200">
+        {/* Deficit Alert */}
+        {availableOperators < totalRequiredOperators && (
+            <Alert variant="destructive" className="shadow-sm bg-red-50 border-red-200">
                 <AlertTriangle className="h-4 w-4 text-red-600" />
                 <AlertTitle className="text-red-800">Déficit de Operadores</AlertTitle>
                 <AlertDescription className="text-red-700">
@@ -768,15 +769,16 @@ export default function DailyProductionPlanningPage() {
                     Por favor, revise la asignación de personal.
                 </AlertDescription>
             </Alert>
-          )}
+        )}
       </div>
       
-      {/* Main Split Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-350px)] min-h-[500px]">
+      {/* Scrollable Main Content */}
+      <div className="flex-1 min-h-0 p-4 md:p-6 pt-0 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
           
           {/* Left Column: Machine Catalog */}
-          <Card className="flex flex-col h-full border-slate-200 shadow-sm">
-            <CardHeader className="pb-3 border-b bg-slate-50/50">
+          <Card className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
+            <CardHeader className="pb-3 border-b bg-slate-50/50 shrink-0">
                <div className="flex items-center justify-between">
                  <CardTitle className="text-base font-semibold flex items-center gap-2">
                    <Factory className="w-4 h-4 text-slate-500" />
@@ -802,7 +804,7 @@ export default function DailyProductionPlanningPage() {
                   />
                </div>
             </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30 flex flex-col">
+            <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30 flex flex-col min-h-0">
               {filteredAvailableMachines.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center h-full">
                     {machines.length === 0 ? (
@@ -818,11 +820,11 @@ export default function DailyProductionPlanningPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex-1 w-full min-h-0 overflow-hidden">
+                  <div className="flex-1 w-full h-full min-h-0">
                       <ScrollArea className="h-full w-full">
-                        <div className="flex flex-col">
+                        <div className="flex flex-col p-2">
                             {filteredAvailableMachines.map((machine) => (
-                                <div key={machine.id} className="px-3 py-1">
+                                <div key={machine.id} className="px-1 py-1">
                                     <div className="bg-white border rounded-md p-2 flex items-center justify-between hover:border-slate-300 hover:shadow-sm transition-all group">
                                         <div className="min-w-0 flex-1 mr-3">
                                             <div className="font-medium text-sm text-slate-700 truncate" title={machine.alias}>
@@ -854,16 +856,16 @@ export default function DailyProductionPlanningPage() {
           </Card>
 
           {/* Right Column: Planning Table */}
-          <Card className="lg:col-span-2 flex flex-col h-full border-slate-200 shadow-sm">
-            <CardHeader className="pb-3 border-b">
+          <Card className="lg:col-span-2 flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
+            <CardHeader className="pb-3 border-b shrink-0">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-semibold">
                         Máquinas Planificadas <span className="text-slate-400 font-normal ml-1">({plannedMachines.length})</span>
                     </CardTitle>
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-                <ScrollArea className="h-full">
+            <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
+                <ScrollArea className="h-full w-full">
                     <div className="min-w-[600px]">
                         {plannedMachines.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-64 text-slate-500">
@@ -931,6 +933,7 @@ export default function DailyProductionPlanningPage() {
                 </ScrollArea>
             </CardContent>
           </Card>
+        </div>
       </div>
     </div>
   );
