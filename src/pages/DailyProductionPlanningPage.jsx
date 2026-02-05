@@ -761,10 +761,21 @@ export default function DailyProductionPlanningPage() {
           {/* Left Column: Machine Catalog */}
           <Card className="flex flex-col h-full border-slate-200 shadow-sm">
             <CardHeader className="pb-3 border-b bg-slate-50/50">
-               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                 <Factory className="w-4 h-4 text-slate-500" />
-                 Catálogo de Máquinas
-               </CardTitle>
+               <div className="flex items-center justify-between">
+                 <CardTitle className="text-base font-semibold flex items-center gap-2">
+                   <Factory className="w-4 h-4 text-slate-500" />
+                   Catálogo de Máquinas
+                 </CardTitle>
+                 <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-slate-400 hover:text-blue-600"
+                    onClick={() => queryClient.invalidateQueries(['machines'])}
+                    title="Recargar máquinas"
+                 >
+                    <Repeat className="h-3 w-3" />
+                 </Button>
+               </div>
                <div className="relative mt-2">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                   <Input 
@@ -776,13 +787,22 @@ export default function DailyProductionPlanningPage() {
                </div>
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30">
-                {filteredAvailableMachines.length === 0 ? (
+              {filteredAvailableMachines.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center h-full">
-                    <Search className="w-8 h-8 mb-2 opacity-20" />
-                    <p className="text-sm">No se encontraron máquinas disponibles con ese criterio.</p>
+                    {machines.length === 0 ? (
+                       <div className="flex flex-col items-center animate-pulse">
+                          <Factory className="w-8 h-8 mb-2 opacity-20" />
+                          <p className="text-sm">Cargando catálogo...</p>
+                       </div>
+                    ) : (
+                       <>
+                          <Search className="w-8 h-8 mb-2 opacity-20" />
+                          <p className="text-sm">No se encontraron máquinas disponibles.</p>
+                       </>
+                    )}
                   </div>
                 ) : (
-                  <div className="h-full">
+                  <div style={{ height: '100%', width: '100%' }}>
                     <AutoSizer>
                       {({ height, width }) => (
                         <List
