@@ -802,20 +802,36 @@ export default function DailyProductionPlanningPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex-1 w-full min-h-0" style={{ height: '100%' }}>
-                      <AutoSizer>
-                      {({ height, width }) => (
-                          <List
-                          height={height}
-                          width={width}
-                          itemCount={filteredAvailableMachines.length}
-                          itemSize={72}
-                          itemData={{ machines: filteredAvailableMachines, onAdd: handleAddMachine }}
-                          >
-                          {MachineRow}
-                          </List>
-                      )}
-                      </AutoSizer>
+                  <div className="flex-1 w-full min-h-0 overflow-hidden">
+                      <ScrollArea className="h-full w-full">
+                        <div className="flex flex-col">
+                            {filteredAvailableMachines.map((machine) => (
+                                <div key={machine.id} className="px-3 py-1">
+                                    <div className="bg-white border rounded-md p-2 flex items-center justify-between hover:border-slate-300 hover:shadow-sm transition-all group">
+                                        <div className="min-w-0 flex-1 mr-3">
+                                            <div className="font-medium text-sm text-slate-700 truncate" title={machine.alias}>
+                                                {machine.alias}
+                                            </div>
+                                            {(machine.codigo_maquina || machine.ubicacion) && (
+                                                <div className="text-xs text-slate-400 truncate flex items-center gap-2 mt-0.5">
+                                                    {machine.codigo_maquina && <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono">{machine.codigo_maquina}</span>}
+                                                    {machine.ubicacion && <span className="truncate max-w-[120px]">{machine.ubicacion}</span>}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Button 
+                                            size="sm" 
+                                            variant="secondary"
+                                            className="h-7 w-7 p-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 hover:bg-slate-200 text-slate-600"
+                                            onClick={() => handleAddMachine(machine)}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                      </ScrollArea>
                   </div>
                 )}
             </CardContent>
