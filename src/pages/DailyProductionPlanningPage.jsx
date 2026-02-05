@@ -786,7 +786,7 @@ export default function DailyProductionPlanningPage() {
                   />
                </div>
             </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30">
+            <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30 flex flex-col">
               {filteredAvailableMachines.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center h-full">
                     {machines.length === 0 ? (
@@ -802,20 +802,27 @@ export default function DailyProductionPlanningPage() {
                     )}
                   </div>
                 ) : (
-                  <div style={{ height: '100%', width: '100%' }}>
-                    <AutoSizer>
-                      {({ height, width }) => (
-                        <List
-                          height={height}
-                          width={width}
-                          itemCount={filteredAvailableMachines.length}
-                          itemSize={72}
-                          itemData={{ machines: filteredAvailableMachines, onAdd: handleAddMachine }}
-                        >
-                          {MachineRow}
-                        </List>
-                      )}
-                    </AutoSizer>
+                  <div className="flex-1 w-full min-h-0 flex flex-col">
+                    {/* Debug Info - Remove after verification */}
+                    <div className="px-2 py-1 text-[10px] text-slate-400 border-b bg-white/50 flex justify-between shrink-0">
+                       <span>Disponibles: {filteredAvailableMachines.length}</span>
+                       <span>Total: {machines.length}</span>
+                    </div>
+                    <div className="flex-1 w-full min-h-0">
+                        <AutoSizer>
+                        {({ height, width }) => (
+                            <List
+                            height={height}
+                            width={width}
+                            itemCount={filteredAvailableMachines.length}
+                            itemSize={72}
+                            itemData={{ machines: filteredAvailableMachines, onAdd: handleAddMachine }}
+                            >
+                            {MachineRow}
+                            </List>
+                        )}
+                        </AutoSizer>
+                    </div>
                   </div>
                 )}
             </CardContent>

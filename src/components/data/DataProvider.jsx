@@ -242,30 +242,27 @@ export function DataProvider({ children }) {
           }
 
           if (!config) {
-              console.warn("DataProvider: NO se encontró configuración remota (retornando null)");
+              // Silently fail or debug log
               return null;
           }
 
           if (!config?.value) {
               // INFO: Esto es normal si el backend rechaza el payload en 'value' pero lo aceptó en 'description'
-              // No asustar al usuario con warnings si la recuperación es exitosa.
               const hasDescriptionBackup = config?.description && config.description.startsWith('{');
               const hasLocalBackup = typeof localStorage !== 'undefined' && localStorage.getItem('roles_config_backup');
               
               if (hasDescriptionBackup) {
-                  console.log("DataProvider: Recuperando configuración desde backup en 'description'.");
                   config.value = config.description;
               } 
               else if (hasLocalBackup) {
                   const localBackup = localStorage.getItem('roles_config_backup');
                   if (localBackup && localBackup.startsWith('{')) {
-                       console.log("DataProvider: Recuperando configuración desde LocalStorage (Emergency Backup).");
                        config.value = localBackup;
                   }
               }
               
               if (!config.value) {
-                   console.warn("DataProvider: Configuración vacía y sin backups. Usando defaults.");
+                   console.debug("DataProvider: Configuración de roles no inicializada (usando defaults).");
                    return {
                        roles: {
                            admin: { permissions: { isAdmin: true } },
@@ -283,11 +280,9 @@ export function DataProvider({ children }) {
             // Si no parece JSON (no empieza por {), asumimos que es Base64 y decodificamos
             if (jsonString && !jsonString.trim().startsWith('{')) {
                 try {
-                    console.log("DataProvider: Detectado formato codificado (posible Base64). Decodificando...");
                     jsonString = decodeURIComponent(escape(atob(jsonString)));
-                    console.log("DataProvider: Decodificación exitosa.");
                 } catch (e) {
-                    console.warn("DataProvider: Falló la decodificación Base64, intentando parsear tal cual...", e);
+                    // Fail silently or debug
                 }
             }
 
@@ -295,8 +290,6 @@ export function DataProvider({ children }) {
             
             // LÓGICA DE REENSAMBLADO DE CHUNKS (v3)
             if (parsed.v === 3 && parsed.is_chunked) {
-                console.log(`DataProvider: Detectada configuración en ${parsed.total_chunks} chunks (v3). Reensamblando...`);
-                
                 try {
                     // Fetch all chunks in parallel
                     const chunkPromises = [];
@@ -315,7 +308,6 @@ export function DataProvider({ children }) {
                         }
                     });
                     
-                    console.log("DataProvider: Chunks reensamblados correctamente. Longitud total:", fullString.length);
                     // Parseamos el string completo (que debería ser un v2 compressed config)
                     const reassembled = JSON.parse(fullString);
                     
