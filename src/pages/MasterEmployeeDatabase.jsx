@@ -272,7 +272,7 @@ export default function MasterEmployeeDatabasePage() {
       .sort((a, b) => b.count - a.count);
 
     return {
-      total: masterEmployees.length,
+      total: masterEmployees.filter(e => ['Alta', 'Excedencia'].includes(e.estado_empleado)).length,
       active: masterEmployees.filter(e => e.estado_empleado === 'Alta').length,
       absent: masterEmployees.filter(e => e.disponibilidad === 'Ausente').length,
       departments: new Set(masterEmployees.map(e => e.departamento).filter(Boolean)).size,
@@ -324,20 +324,20 @@ export default function MasterEmployeeDatabasePage() {
           </div>
           <div className="flex items-center gap-6">
             <div className="flex flex-col">
-              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
+              <span className="text-4xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
               <span className="text-[10px] text-slate-500">Total</span>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
                 <UserCheck className="w-3 h-3 text-green-500" />
-                <span className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.active}</span>
+                <span className="text-4xl font-bold text-green-600 dark:text-green-400">{stats.active}</span>
               </div>
               <span className="text-[10px] text-slate-500">Activos</span>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
                 <UserX className="w-3 h-3 text-red-500" />
-                <span className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.absent}</span>
+                <span className="text-4xl font-bold text-red-600 dark:text-red-400">{stats.absent}</span>
               </div>
               <span className="text-[10px] text-slate-500">Ausentes</span>
             </div>

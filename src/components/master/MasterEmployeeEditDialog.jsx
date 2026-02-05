@@ -392,6 +392,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Excedencia">Excedencia</SelectItem>
                       <SelectItem value="Baja">Baja</SelectItem>
                     </SelectContent>
                   </Select>
