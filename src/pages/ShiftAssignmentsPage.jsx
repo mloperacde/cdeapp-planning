@@ -406,10 +406,12 @@ export default function ShiftAssignmentsPage() {
   };
 
   const isEmployeeAvailable = (e, dateStr, teamId) => {
-       // 1. Department
-       if (normalize(e.departamento) !== "fabricacion") return false;
-       // 2. Availability
-       if (normalize(e.disponibilidad) !== "disponible") return false;
+       // 1. Department (Relaxed for debugging/broader compatibility)
+       // if (normalize(e.departamento) !== "fabricacion") return false;
+       
+       // 2. Availability (Relaxed)
+       // if (normalize(e.disponibilidad) !== "disponible") return false;
+
        // 3. Absence
        if (e.ausencia_inicio) {
             const checkDate = new Date(dateStr);
@@ -425,21 +427,21 @@ export default function ShiftAssignmentsPage() {
             }
        }
        // 4. Team (Strict match or Fixed Shift)
-       // If selectedTeam is "all", we skip team check? Or match any? 
-       // User implies we select a team. If "all", we probably shouldn't auto-assign across teams blindly.
-       // But assuming we are in a team context:
        if (teamId !== "all") {
            const teamObj = teams.find(t => String(t.id) === String(teamId));
            if (teamObj) {
+               // Check team_id first (more reliable)
+               if (e.team_id && String(e.team_id) === String(teamId)) return true;
+               
+               // Fallback to name matching
                const empTeam = normalize(e.equipo);
                const targetTeam = normalize(teamObj.team_name);
-               // Also check team_id if available
-               if (e.team_id && String(e.team_id) === String(teamId)) return true;
-               if (empTeam === targetTeam) return true;
                
-               // Fixed Shifts?
-               // "Si es turno fijo..." - logic might be needed. 
-               // For now strict team match as per "empleados de ese equipo".
+               // Flexible match
+               if (empTeam === targetTeam) return true;
+               if (targetTeam.length > 2 && empTeam.includes(targetTeam)) return true;
+               if (empTeam.length > 2 && targetTeam.includes(empTeam)) return true;
+               
                return false;
            }
        }
@@ -710,7 +712,7 @@ export default function ShiftAssignmentsPage() {
                     <h3 className="font-semibold flex items-center gap-2">
                         <Users className="w-4 h-4" />
                         Disponibles
-                        <Badge variant="secondary">{groupedAvailableEmployees.length}</Badge>
+                        <Badge variant="secondary">{groupedAvailableEmployees.length} / {employees.length}</Badge>
                     </h3>
                 </div>
                 <Input 
@@ -720,6 +722,17 @@ export default function ShiftAssignmentsPage() {
                 />
                 
                 <div className="flex-1 min-h-0">
+                    {groupedAvailableEmployees.length === 0 && employees.length > 0 && (
+                        <div className="p-4 text-sm text-amber-600 bg-amber-50 rounded-md mb-2">
+                            <p className="font-semibold">No hay empleados visibles.</p>
+                            <p>Total cargados: {employees.length}</p>
+                            <p>Equipo Seleccionado: {teams.find(t => String(t.id) === String(selectedTeam))?.team_name || selectedTeam}</p>
+                            <p className="mt-2 text-xs text-slate-500">
+                                Verifique que los empleados tengan el campo "Equipo" asignado correctamente o que el filtro de departamento/disponibilidad coincida.
+                            </p>
+                        </div>
+                    )}
+
                     <Droppable 
                         droppableId="unassigned-pool" 
                         mode="virtual"
