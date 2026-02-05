@@ -344,18 +344,20 @@ export default function MasterEmployeeDatabasePage() {
           </div>
         </Card>
 
-        <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
+        <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between mb-2 shrink-0">
             <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Por Departamento</span>
             <Database className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="flex flex-wrap gap-4 pb-1">
-            {stats.employeesPerDept.map((dept, i) => (
-              <div key={i} className="flex flex-col min-w-[60px] max-w-[100px]">
-                <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{dept.count}</span>
-                <span className="text-[10px] text-slate-500 truncate w-full" title={dept.name}>{dept.name}</span>
-              </div>
-            ))}
+          <div className="flex-1 overflow-x-auto no-scrollbar">
+             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-6 gap-y-3 min-w-max">
+              {stats.employeesPerDept.map((dept, i) => (
+                 <div key={i} className="flex flex-col">
+                   <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{dept.count}</span>
+                   <span className="text-[10px] text-slate-500 truncate max-w-[100px]" title={dept.name}>{dept.name}</span>
+                 </div>
+               ))}
+            </div>
           </div>
         </Card>
       </div>
