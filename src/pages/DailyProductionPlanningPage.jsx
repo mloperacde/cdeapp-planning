@@ -96,7 +96,6 @@ export default function DailyProductionPlanningPage() {
       
       return Array.from(uniqueMap.values()).sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
-    enabled: teams.length > 0, // Stagger: Wait for Teams
     staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
