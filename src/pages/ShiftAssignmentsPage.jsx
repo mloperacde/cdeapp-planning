@@ -29,6 +29,12 @@ import { getMachineAlias } from "@/utils/machineAlias";
 
 const List = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList;
 
+// Helper: Get Employee Name Robustly
+const getEmployeeName = (emp) => {
+    if (!emp) return "";
+    return emp.nombre || emp.name || emp.Name || emp.full_name || emp.fullName || emp.display_name || "Sin Nombre";
+};
+
 // --- Subcomponents ---
 
 // Subcomponent for a Drop Slot
@@ -67,9 +73,9 @@ function Slot({ id, label, assignedId, employees, isRequired }) {
                                     >
                                         <div className="flex items-center gap-2 overflow-hidden">
                                             <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold shrink-0">
-                                                {assignedEmployee.nombre.charAt(0)}
+                                                {getEmployeeName(assignedEmployee).charAt(0)}
                                             </div>
-                                            <span className="text-sm truncate font-medium">{assignedEmployee.nombre}</span>
+                                            <span className="text-sm truncate font-medium">{getEmployeeName(assignedEmployee)}</span>
                                         </div>
                                     </div>
                                 )}
@@ -111,7 +117,7 @@ const EmployeeRow = ({ index, style, data }) => {
         >
           <div className="flex justify-between items-center">
               <div>
-                  <p className="font-medium text-sm text-slate-900 truncate">{emp.nombre}</p>
+                  <p className="font-medium text-sm text-slate-900 truncate">{getEmployeeName(emp)}</p>
                   <p className="text-xs text-slate-500 truncate">{emp.puesto}</p>
               </div>
               {emp.isSkilled && (
@@ -528,6 +534,12 @@ export default function ShiftAssignmentsPage() {
     }
   };
 
+  // Helper: Get Employee Name Robustly
+  const getEmployeeName = (emp) => {
+      if (!emp) return "";
+      return emp.nombre || emp.name || emp.Name || emp.full_name || emp.fullName || emp.display_name || "Sin Nombre";
+  };
+
   // Available Employees (Restored & Updated)
   const availableEmployees = useMemo(() => {
      const assignedIds = new Set();
@@ -544,7 +556,8 @@ export default function ShiftAssignmentsPage() {
          if (!isEmployeeAvailable(e, dateStr, selectedTeam)) return false;
          if (searchTerm) {
              const lower = normalize(searchTerm);
-             return normalize(e.nombre).includes(lower);
+             const name = normalize(getEmployeeName(e));
+             return name.includes(lower);
          }
          return true;
      });
@@ -565,7 +578,7 @@ export default function ShiftAssignmentsPage() {
           const prioA = getRolePriority(a.puesto);
           const prioB = getRolePriority(b.puesto);
           if (prioA !== prioB) return prioA - prioB;
-          return a.nombre.localeCompare(b.nombre);
+          return getEmployeeName(a).localeCompare(getEmployeeName(b));
       });
   }, [availableEmployees]);
 
@@ -746,7 +759,7 @@ export default function ShiftAssignmentsPage() {
                                     style={provided.draggableProps.style}
                                     className="p-3 rounded-lg border bg-white shadow-xl border-blue-500 z-50"
                                 >
-                                   {emp?.nombre}
+                                   {getEmployeeName(emp)}
                                 </div>
                             );
                         }}
