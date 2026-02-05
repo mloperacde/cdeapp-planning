@@ -549,9 +549,9 @@ export default function DailyProductionPlanningPage() {
   // --- Render ---
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-full space-y-6">
+    <div className="flex flex-col h-[calc(100vh-64px)] w-full max-w-full p-6 md:p-8 gap-6 overflow-hidden">
       {/* Header Compacto */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -571,7 +571,7 @@ export default function DailyProductionPlanningPage() {
       </div>
 
       {/* Toolbar Unificada */}
-      <div className="flex flex-col xl:flex-row gap-4 shrink-0 mb-6 justify-between items-start xl:items-center">
+      <div className="flex flex-col xl:flex-row gap-4 shrink-0 justify-between items-start xl:items-center">
         {/* Left: Filters */}
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
             <div className="flex flex-col sm:flex-row items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full xl:w-auto">
@@ -706,8 +706,8 @@ export default function DailyProductionPlanningPage() {
         </div>
       </div>
 
-      {/* Stats - Sticky Header */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-6 md:-mx-8 px-6 md:px-8 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-all mb-6">
+      {/* Stats - Static Header */}
+      <div className="shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-1 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-all">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-blue-50 border-blue-200 shadow-sm">
                 <CardContent className="p-4 flex items-center justify-between">
@@ -771,7 +771,7 @@ export default function DailyProductionPlanningPage() {
       )}
 
       {/* Main Split Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-350px)] min-h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
           
           {/* Left Column: Machine Catalog */}
           <Card className="flex flex-col h-full border-slate-200 shadow-sm">
