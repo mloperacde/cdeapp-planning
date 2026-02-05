@@ -774,31 +774,34 @@ export default function DailyProductionPlanningPage() {
       
       {/* Scrollable Main Content */}
       <div className="flex-1 min-h-0 p-4 md:p-6 pt-0 overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           
           {/* Left Column: Machine Catalog */}
           <Card className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
-            <CardHeader className="pb-3 border-b bg-slate-50/50 shrink-0">
+            <CardHeader className="pb-2 pt-3 px-3 border-b bg-slate-50/50 shrink-0">
                <div className="flex items-center justify-between">
-                 <CardTitle className="text-base font-semibold flex items-center gap-2">
-                   <Factory className="w-4 h-4 text-slate-500" />
-                   Catálogo de Máquinas
+                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                   <Factory className="w-3.5 h-3.5 text-slate-500" />
+                   Catálogo
                  </CardTitle>
-                 <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 text-slate-400 hover:text-blue-600"
-                    onClick={() => queryClient.invalidateQueries(['machines'])}
-                    title="Recargar máquinas"
-                 >
-                    <Repeat className="h-3 w-3" />
-                 </Button>
+                 <div className="flex items-center gap-1">
+                    <span className="text-xs text-slate-400 font-normal mr-1">{filteredAvailableMachines.length} disp.</span>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 text-slate-400 hover:text-blue-600"
+                        onClick={() => queryClient.invalidateQueries(['machines'])}
+                        title="Recargar máquinas"
+                    >
+                        <Repeat className="h-3 w-3" />
+                    </Button>
+                 </div>
                </div>
                <div className="relative mt-2">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
                   <Input 
-                     placeholder="Buscar por nombre o código..." 
-                     className="pl-9 bg-white" 
+                     placeholder="Buscar..." 
+                     className="pl-8 h-8 text-xs bg-white" 
                      value={machineSearch}
                      onChange={(e) => setMachineSearch(e.target.value)}
                   />
@@ -810,41 +813,43 @@ export default function DailyProductionPlanningPage() {
                     {machines.length === 0 ? (
                        <div className="flex flex-col items-center animate-pulse">
                           <Factory className="w-8 h-8 mb-2 opacity-20" />
-                          <p className="text-sm">Cargando catálogo...</p>
+                          <p className="text-xs">Cargando...</p>
                        </div>
                     ) : (
                        <>
                           <Search className="w-8 h-8 mb-2 opacity-20" />
-                          <p className="text-sm">No se encontraron máquinas disponibles.</p>
+                          <p className="text-xs">Sin resultados.</p>
                        </>
                     )}
                   </div>
                 ) : (
                   <div className="flex-1 w-full h-full min-h-0">
                       <ScrollArea className="h-full w-full">
-                        <div className="flex flex-col p-2">
+                        <div className="grid grid-cols-2 xl:grid-cols-3 gap-1.5 p-2">
                             {filteredAvailableMachines.map((machine) => (
-                                <div key={machine.id} className="px-1 py-1">
-                                    <div className="bg-white border rounded-md p-2 flex items-center justify-between hover:border-slate-300 hover:shadow-sm transition-all group">
-                                        <div className="min-w-0 flex-1 mr-3">
-                                            <div className="font-medium text-sm text-slate-700 truncate" title={machine.alias}>
-                                                {machine.alias}
-                                            </div>
-                                            {(machine.codigo_maquina || machine.ubicacion) && (
-                                                <div className="text-xs text-slate-400 truncate flex items-center gap-2 mt-0.5">
-                                                    {machine.codigo_maquina && <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono">{machine.codigo_maquina}</span>}
-                                                    {machine.ubicacion && <span className="truncate max-w-[120px]">{machine.ubicacion}</span>}
-                                                </div>
-                                            )}
+                                <div 
+                                    key={machine.id} 
+                                    className="group relative bg-white border border-slate-200 rounded-md p-2 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
+                                    onClick={() => handleAddMachine(machine)}
+                                >
+                                    <div className="flex flex-col h-full justify-between gap-1">
+                                        <div className="font-medium text-xs text-slate-700 leading-tight line-clamp-2" title={machine.alias}>
+                                            {machine.alias}
                                         </div>
-                                        <Button 
-                                            size="sm" 
-                                            variant="secondary"
-                                            className="h-7 w-7 p-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 hover:bg-slate-200 text-slate-600"
-                                            onClick={() => handleAddMachine(machine)}
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                        </Button>
+                                        {(machine.codigo_maquina || machine.ubicacion) && (
+                                            <div className="flex items-center gap-1 mt-auto pt-1">
+                                                {machine.codigo_maquina && (
+                                                    <span className="bg-slate-100 text-slate-500 px-1 rounded text-[9px] font-mono border border-slate-100">
+                                                        {machine.codigo_maquina}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="bg-blue-50 text-blue-600 rounded-full p-0.5 shadow-sm">
+                                            <Plus className="h-3 w-3" />
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -855,79 +860,80 @@ export default function DailyProductionPlanningPage() {
             </CardContent>
           </Card>
 
-          {/* Right Column: Planning Table */}
+          {/* Right Column: Planning Grid */}
           <Card className="lg:col-span-2 flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
-            <CardHeader className="pb-3 border-b shrink-0">
+            <CardHeader className="pb-2 pt-3 px-4 border-b shrink-0">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold">
-                        Máquinas Planificadas <span className="text-slate-400 font-normal ml-1">({plannedMachines.length})</span>
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <div className="bg-blue-100 p-1 rounded">
+                            <Factory className="w-3.5 h-3.5 text-blue-600" />
+                        </div>
+                        Máquinas Planificadas <span className="text-slate-400 font-normal">({plannedMachines.length})</span>
                     </CardTitle>
+                    <div className="text-xs text-slate-500">
+                        {totalRequiredOperators} operarios asignados
+                    </div>
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
+            <CardContent className="flex-1 overflow-hidden p-0 min-h-0 bg-slate-50/10">
                 <ScrollArea className="h-full w-full">
-                    <div className="min-w-[600px]">
+                    <div className="p-3">
                         {plannedMachines.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                                <Factory className="w-12 h-12 mb-3 text-slate-200" />
-                                <p className="font-medium">No hay máquinas planificadas</p>
-                                <p className="text-sm mt-1">Seleccione máquinas del catálogo para comenzar</p>
+                            <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+                                <Factory className="w-10 h-10 mb-2 text-slate-200" />
+                                <p className="font-medium text-sm">Lista vacía</p>
+                                <p className="text-xs mt-1">Añada máquinas del catálogo</p>
                             </div>
                         ) : (
-                            <Table>
-                                <TableHeader className="bg-slate-50 sticky top-0 z-10">
-                                    <TableRow>
-                                        <TableHead className="pl-6">Máquina</TableHead>
-                                        <TableHead className="w-[150px]">Operarios</TableHead>
-                                        <TableHead className="w-[100px] text-center pr-6">Acciones</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {plannedMachines.map(item => {
-                                        const { planning } = item;
-                                        return (
-                                            <TableRow key={planning.id} className="hover:bg-slate-50/50">
-                                                <TableCell className="pl-6 font-medium">
-                                                    <div className="truncate text-sm" title={getMachineAlias(item)}>
-                                                        {getMachineAlias(item)}
-                                                    </div>
-                                                    {item.descripcion && item.descripcion !== item.alias && (
-                                                        <div className="text-xs text-slate-500 truncate max-w-[300px]" title={item.descripcion}>
-                                                            {item.descripcion}
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Users className="w-4 h-4 text-slate-400" />
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+                                {plannedMachines.map(item => {
+                                    const { planning } = item;
+                                    return (
+                                        <div key={planning.id} className="group bg-white border border-slate-200 rounded-lg p-2.5 hover:shadow-md hover:border-blue-200 transition-all relative flex flex-col gap-2">
+                                            {/* Header: Name */}
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="font-semibold text-xs text-slate-800 leading-tight line-clamp-2" title={getMachineAlias(item)}>
+                                                    {getMachineAlias(item)}
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5 -mr-1 -mt-1 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-full shrink-0"
+                                                    onClick={() => handleDeletePlanning(planning.id)}
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+
+                                            {/* Details & Controls */}
+                                            <div className="flex items-end justify-between gap-2 mt-auto">
+                                                <div className="flex flex-col gap-0.5">
+                                                     <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Operarios</span>
+                                                     <div className="flex items-center gap-1">
                                                         <Input 
                                                             type="number" 
-                                                            min="1" 
-                                                            className="w-20 h-8"
+                                                            min="1"
+                                                            className="h-6 w-12 px-1 text-center text-xs font-bold bg-slate-50 border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                                                             defaultValue={planning.operadores_necesarios}
-                                                            disabled={String(planning.id).startsWith('temp-')}
                                                             onBlur={(e) => handleOperatorChange(planning.id, e.target.value)}
                                                             onKeyDown={(e) => {
                                                                 if(e.key === 'Enter') handleOperatorChange(planning.id, e.currentTarget.value);
                                                             }}
                                                         />
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center pr-6">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        onClick={() => handleDeletePlanning(planning.id)}
-                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
+                                                     </div>
+                                                </div>
+                                                
+                                                <div className="flex flex-col items-end gap-0.5">
+                                                     <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Turno</span>
+                                                     <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                                                        {planning.turno || currentShift}
+                                                     </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
                 </ScrollArea>
