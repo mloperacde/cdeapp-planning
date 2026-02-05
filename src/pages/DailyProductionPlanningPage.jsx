@@ -757,20 +757,18 @@ export default function DailyProductionPlanningPage() {
                 </CardContent>
             </Card>
           </div>
-      </div>
 
-      {/* Deficit Alert */}
-      {availableOperators < totalRequiredOperators && (
-        <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Déficit de Operadores</AlertTitle>
-            <AlertDescription>
-                Se requieren {totalRequiredOperators} operadores pero solo hay {availableOperators} disponibles.
-                Por favor, revise la asignación de personal.
-            </AlertDescription>
-        </Alert>
-      )}
-
+          {/* Deficit Alert - Inside Sticky */}
+          {availableOperators < totalRequiredOperators && (
+            <Alert variant="destructive" className="mt-4 shadow-sm bg-red-50 border-red-200">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertTitle className="text-red-800">Déficit de Operadores</AlertTitle>
+                <AlertDescription className="text-red-700">
+                    Se requieren {totalRequiredOperators} operadores pero solo hay {availableOperators} disponibles.
+                    Por favor, revise la asignación de personal.
+                </AlertDescription>
+            </Alert>
+          )}
       </div>
       
       {/* Main Split Layout */}
