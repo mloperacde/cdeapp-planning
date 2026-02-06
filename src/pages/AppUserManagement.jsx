@@ -594,6 +594,9 @@ export default function AppUserManagement() {
                                  }
 
                                  configFound = !!localConfig.roles[resolvedId];
+                                 
+                                 // Auto-generate safe ID for missing role
+                                 const suggestedId = nativeRole ? nativeRole.toString().toLowerCase().trim().replace(/[^a-z0-9_]/g, '_') : "";
 
                                  return (
                                      <div className="grid gap-2">
@@ -627,6 +630,33 @@ export default function AppUserManagement() {
                                                  )}
                                              </span>
                                          </div>
+                                         
+                                         {/* QUICK FIX ACTION */}
+                                         {!configFound && nativeRole && !assignedId && (
+                                             <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+                                                 <p className="font-bold text-amber-700 mb-2 flex items-center gap-2">
+                                                     <AlertCircle className="w-4 h-4"/> Acción Requerida
+                                                 </p>
+                                                 <p className="text-amber-800 mb-3">
+                                                     El rol nativo <strong>"{nativeRole}"</strong> no existe en la App. El usuario no podrá acceder a nada.
+                                                 </p>
+                                                 <div className="flex gap-2">
+                                                     <Button 
+                                                         size="sm" 
+                                                         variant="default"
+                                                         className="bg-amber-600 hover:bg-amber-700 text-white w-full"
+                                                         onClick={() => {
+                                                             setNewRoleName(nativeRole);
+                                                             setNewRoleId(suggestedId);
+                                                             setIsNewRoleOpen(true);
+                                                         }}
+                                                     >
+                                                         <Plus className="w-4 h-4 mr-2"/>
+                                                         Crear Configuración para "{nativeRole}"
+                                                     </Button>
+                                                 </div>
+                                             </div>
+                                         )}
                                      </div>
                                  );
                              })()}

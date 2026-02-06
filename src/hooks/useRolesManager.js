@@ -396,7 +396,11 @@ export function useRolesManager() {
         [cleanId]: {
           name: newRoleName,
           permissions: { ...DEFAULT_ROLES_CONFIG.roles.user.permissions },
-          isSystem: false
+          isSystem: false,
+          is_strict: true,
+          page_permissions: {
+              '/Dashboard': true
+          }
         }
       }
     }));
