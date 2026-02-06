@@ -350,11 +350,11 @@ export default function MasterEmployeeDatabasePage() {
             <Database className="w-4 h-4 text-slate-400" />
           </div>
           <div className="flex-1 overflow-x-auto no-scrollbar">
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4 min-w-max pb-2">
+             <div className="grid grid-rows-2 grid-flow-col gap-2 min-w-max pb-2">
               {stats.employeesPerDept.map((dept, i) => (
-                <div key={i} className="flex flex-col p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <span className="text-2xl font-bold text-slate-900 dark:text-slate-100 leading-none mb-1">{dept.count}</span>
-                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-tight truncate max-w-[120px]" title={dept.name}>{dept.name}</span>
+                <div key={i} className="flex flex-col p-1.5 rounded-md bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 min-w-[100px]">
+                  <span className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-none mb-0.5">{dept.count}</span>
+                  <span className="text-[9px] font-medium text-slate-500 uppercase tracking-tight truncate max-w-[110px]" title={dept.name}>{dept.name}</span>
                 </div>
               ))}
             </div>
