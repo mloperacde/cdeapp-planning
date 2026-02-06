@@ -572,31 +572,31 @@ export default function AppUserManagement() {
                                      resolvedId = assignedId;
                                      resolutionSource = "Asignación Manual (App)";
                                  } else if (nativeRole) {
-                                     const roleLower = String(nativeRole).trim().toLowerCase();
-                                     
-                                     // 1. Buscar por ID
-                                     let foundKey = Object.keys(localConfig.roles).find(k => k.toLowerCase() === roleLower);
-                                     
-                                     // 2. Buscar por Nombre
-                                     if (!foundKey) {
-                                         foundKey = Object.keys(localConfig.roles).find(k => 
-                                             localConfig.roles[k].name?.trim().toLowerCase() === roleLower
-                                         );
+                                         const roleLower = String(nativeRole).replace(/\s+/g, ' ').trim().toLowerCase();
+                                         
+                                         // 1. Buscar por ID
+                                         let foundKey = Object.keys(localConfig.roles).find(k => k.toLowerCase() === roleLower);
+                                         
+                                         // 2. Buscar por Nombre
+                                         if (!foundKey) {
+                                             foundKey = Object.keys(localConfig.roles).find(k => 
+                                                 localConfig.roles[k].name?.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower
+                                             );
+                                         }
+
+                                         if (foundKey) {
+                                             resolvedId = foundKey;
+                                             resolutionSource = `Mapeado desde Base44 ("${nativeRole}")`;
+                                         } else {
+                                             resolvedId = nativeRole; // Fallback, probablemente no tendrá config
+                                             resolutionSource = "Nativo Base44 (Sin coincidencia en App)";
+                                         }
                                      }
 
-                                     if (foundKey) {
-                                         resolvedId = foundKey;
-                                         resolutionSource = `Mapeado desde Base44 ("${nativeRole}")`;
-                                     } else {
-                                         resolvedId = nativeRole; // Fallback, probablemente no tendrá config
-                                         resolutionSource = "Nativo Base44 (Sin coincidencia en App)";
-                                     }
-                                 }
-
-                                 configFound = !!localConfig.roles[resolvedId];
-                                 
-                                 // Auto-generate safe ID for missing role
-                                 const suggestedId = nativeRole ? nativeRole.toString().toLowerCase().trim().replace(/[^a-z0-9_]/g, '_') : "";
+                                     configFound = !!localConfig.roles[resolvedId];
+                                     
+                                     // Auto-generate safe ID for missing role
+                                     const suggestedId = nativeRole ? nativeRole.toString().toLowerCase().trim().replace(/[^a-z0-9_]/g, '_') : "";
 
                                  return (
                                      <div className="grid gap-2">
@@ -678,11 +678,11 @@ export default function AppUserManagement() {
                                 let effectiveRoleId = "user";
                                 if (assignedId) effectiveRoleId = assignedId;
                                 else if (nativeRole) {
-                                    const roleLower = String(nativeRole).trim().toLowerCase();
+                                    const roleLower = String(nativeRole).replace(/\s+/g, ' ').trim().toLowerCase();
                                     let foundKey = Object.keys(localConfig.roles).find(k => k.toLowerCase() === roleLower);
                                     if (!foundKey) {
                                         foundKey = Object.keys(localConfig.roles).find(k => 
-                                            localConfig.roles[k].name?.trim().toLowerCase() === roleLower
+                                            localConfig.roles[k].name?.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower
                                         );
                                     }
                                     if (foundKey) effectiveRoleId = foundKey;
@@ -723,11 +723,11 @@ export default function AppUserManagement() {
                                 let effectiveRoleId = "user";
                                 if (assignedId) effectiveRoleId = assignedId;
                                 else if (nativeRole) {
-                                    const roleLower = String(nativeRole).trim().toLowerCase();
+                                    const roleLower = String(nativeRole).replace(/\s+/g, ' ').trim().toLowerCase();
                                     let foundKey = Object.keys(localConfig.roles).find(k => k.toLowerCase() === roleLower);
                                     if (!foundKey) {
                                         foundKey = Object.keys(localConfig.roles).find(k => 
-                                            localConfig.roles[k].name?.trim().toLowerCase() === roleLower
+                                            localConfig.roles[k].name?.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower
                                         );
                                     }
                                     if (foundKey) effectiveRoleId = foundKey;
