@@ -36,6 +36,7 @@ import {
   Bot,
   Filter,
   Download,
+  Briefcase,
 } from "lucide-react";
 import { format, differenceInDays, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
