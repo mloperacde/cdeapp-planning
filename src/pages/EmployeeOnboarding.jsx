@@ -43,6 +43,7 @@ import { useAppData } from "../components/data/DataProvider";
 import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
 import OnboardingAIAssistant from "../components/onboarding/OnboardingAIAssistant";
+import PositionProfileManager from "../components/onboarding/PositionProfileManager";
 import EmployeeForm from "../components/employees/EmployeeForm";
 
 export default function EmployeeOnboardingPage() {
@@ -471,6 +472,10 @@ export default function EmployeeOnboardingPage() {
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
             </TabsTrigger>
+            <TabsTrigger value="profiles">
+              <Briefcase className="w-4 h-4 mr-2" />
+              Perfiles y Puestos
+            </TabsTrigger>
             <TabsTrigger value="temporary">
               <Clock className="w-4 h-4 mr-2" />
               ETT y Temporales
@@ -763,6 +768,10 @@ export default function EmployeeOnboardingPage() {
               onboardings={onboardings}
               employees={employees}
             />
+          </TabsContent>
+
+          <TabsContent value="profiles" className="space-y-6">
+             <PositionProfileManager />
           </TabsContent>
 
           <TabsContent value="temporary" className="space-y-6">
