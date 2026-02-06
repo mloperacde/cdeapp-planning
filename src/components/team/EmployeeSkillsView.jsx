@@ -14,6 +14,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getEmployeeDefaultMachineExperience } from "@/lib/domain/planning";
 
+const getEmployeeName = (emp) => {
+  if (!emp) return "";
+  return emp.nombre || emp.name || emp.Name || emp.full_name || emp.fullName || emp.display_name || "Sin Nombre";
+};
+
 export default function EmployeeSkillsView({ department = "all" }) {
     const queryClient = useQueryClient();
     const [filters, setFilters] = useState({});
@@ -147,10 +152,11 @@ export default function EmployeeSkillsView({ department = "all" }) {
 
         if (filters.searchTerm) {
             const lower = filters.searchTerm.toLowerCase();
-            result = result.filter(e => 
-                e.nombre.toLowerCase().includes(lower) || 
-                e.puesto?.toLowerCase().includes(lower)
-            );
+            result = result.filter(e => {
+                const name = getEmployeeName(e);
+                return name.toLowerCase().includes(lower) || 
+                       e.puesto?.toLowerCase().includes(lower);
+            });
         }
 
         if (filters.equipo && filters.equipo !== "all") {
@@ -318,7 +324,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                 return (
                                     <TableRow key={emp.id} className={cn("hover:bg-slate-50", emp.disponibilidad === "Ausente" ? "bg-red-50 hover:bg-red-100" : "")}>
                                         <TableCell className={cn("font-medium", emp.disponibilidad === "Ausente" ? "text-red-700" : "")}>
-                                            {emp.nombre}
+                                            {getEmployeeName(emp)}
                                             {emp.disponibilidad === "Ausente" && (
                                                 <span className="ml-2 text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded-full">Ausente</span>
                                             )}

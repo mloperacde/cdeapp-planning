@@ -17,6 +17,11 @@ const normalizeString = (str) => {
   return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
 };
 
+const getEmployeeName = (emp) => {
+  if (!emp) return "";
+  return emp.nombre || emp.name || emp.Name || emp.full_name || emp.fullName || emp.display_name || "Sin Nombre";
+};
+
 export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedDepartment = false, onlyManagers = false }) {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showAddSkillDialog, setShowAddSkillDialog] = useState(false);
@@ -109,7 +114,8 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
-      const matchesSearch = emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+      const name = getEmployeeName(emp);
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesDepartment =
         filterDepartment === "all" ||
         (emp.departamento && normalizeString(emp.departamento) === normalizeString(filterDepartment));
@@ -220,7 +226,7 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-semibold text-slate-900">{employee.nombre}</div>
+                        <div className="font-semibold text-slate-900">{getEmployeeName(employee)}</div>
                         <div className="text-xs text-slate-600">{employee.departamento} - {employee.puesto}</div>
                       </div>
                       <Badge className="bg-blue-600">{empSkills.length}</Badge>
@@ -271,7 +277,7 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
             <DialogHeader>
-              <DialogTitle>Habilidades de {selectedEmployee.nombre}</DialogTitle>
+              <DialogTitle>Habilidades de {getEmployeeName(selectedEmployee)}</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-6">

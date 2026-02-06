@@ -130,7 +130,11 @@ export default function TrainingNeedsView({ department = "all" }) {
     }
   };
 
-  const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || "Desconocido";
+  const getEmployeeName = (id) => {
+    const emp = employees.find(e => e.id === id);
+    if (!emp) return "Desconocido";
+    return emp.nombre || emp.name || emp.Name || emp.full_name || emp.fullName || emp.display_name || "Sin Nombre";
+  };
   const getSkillName = (id) => skills.find(s => s.id === id)?.nombre || "Desconocida";
 
   const filteredTrainingNeeds = trainingNeeds.filter(tn => {
