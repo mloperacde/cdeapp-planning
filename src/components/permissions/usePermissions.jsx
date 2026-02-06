@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAppData } from "@/components/data/DataProvider";
 
-const ROLE_PERMISSIONS = {
+export const ROLE_PERMISSIONS = {
   admin: {
     isAdmin: true,
     canViewSalary: true,

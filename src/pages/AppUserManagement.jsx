@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useAppData } from "@/components/data/DataProvider";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,14 +8,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Shield, Users, Save, Plus, Trash2, AlertCircle, RotateCcw, Factory, Search, X, Lock, CheckCircle, ArrowLeft } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Shield, Users, Save, Plus, Trash2, AlertCircle, RotateCcw, Factory, Search, X, Lock, CheckCircle, ArrowLeft, UserCog, Eye, Key } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
 import { useRolesManager } from '@/hooks/useRolesManager';
+import { ROLE_PERMISSIONS } from '@/components/permissions/usePermissions';
+import { toast } from "sonner";
 
 // Definición de permisos y sus etiquetas legibles
 const PERMISSION_LABELS = {
@@ -30,33 +35,68 @@ const PERMISSION_LABELS = {
   canConfigureSystem: "Configurar Sistema",
 };
 
+// Helper para calcular permisos efectivos (Simulación)
+const calculateEffectivePermissions = (roleId, rolesConfig) => {
+    let permissions = { ...ROLE_PERMISSIONS.user }; // Default safe
+
+    // 1. Configuración dinámica
+    if (rolesConfig?.roles?.[roleId]) {
+        permissions = { ...rolesConfig.roles[roleId].permissions };
+    }
+    // 2. Configuración estática fallback
+    else if (ROLE_PERMISSIONS[roleId]) {
+        permissions = { ...ROLE_PERMISSIONS[roleId] };
+    }
+
+    return permissions;
+};
+
+// Helper para obtener páginas accesibles
+const getAccessiblePages = (roleId, rolesConfig) => {
+    const roleConfig = rolesConfig?.roles?.[roleId];
+    if (!roleConfig) return [];
+    
+    // Si es admin, todo
+    if (roleConfig.permissions?.isAdmin) return MENU_STRUCTURE.map(i => i.path);
+
+    // Si es strict
+    if (roleConfig.is_strict) {
+        return Object.keys(roleConfig.page_permissions || {}).filter(k => roleConfig.page_permissions[k]);
+    }
+
+    // Legacy fallback (should not happen in strict mode)
+    return ["/Dashboard"];
+};
+
 export default function AppUserManagement() {
   const { employees } = useAppData();
   
-  // Usar el nuevo hook centralizado
   const {
     localConfig,
     isDirty,
     isSaving,
     isLoading,
     updatePermission,
-    updatePagePermission,
-    setRoleMode,
+    updatePagePermission, // Usado en la pestaña de navegación (opcional si se mantiene)
+    setRoleMode, // Usado para bloqueos masivos
     updateUserAssignment,
     addRole,
     deleteRole,
     saveConfig,
     resetConfig,
     restoreDefaults,
-    forceCleanup
   } = useRolesManager();
   
-  // Estados para nuevo rol
+  // Estados UI
   const [isNewRoleOpen, setIsNewRoleOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleId, setNewRoleId] = useState("");
+  
+  // Inspector de Usuario
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
-  // Estados de filtrado y búsqueda
+  // Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -105,30 +145,10 @@ export default function AppUserManagement() {
     });
   }, [employees, localConfig, searchTerm, departmentFilter, roleFilter]);
 
-  // Stats for Diagnostics
-  const stats = useMemo(() => {
-    if (!employees || !localConfig) return { totalEmployees: 0, withRole: 0, missingRole: 0 };
-    
-    const withRole = Object.keys(localConfig.user_assignments || {}).length;
-    // Count employees with email who don't have a role assignment
-    const missingRole = employees.filter(e => e.email && !localConfig.user_assignments?.[e.email.toLowerCase()]).length;
-    
-    return {
-      totalEmployees: employees.length,
-      withRole,
-      missingRole
-    };
-  }, [employees, localConfig]);
-
-  // Agrupar menú para visualización en pestaña Navegación
-  const groupedMenu = useMemo(() => {
-    return MENU_STRUCTURE.reduce((acc, item) => {
-      const category = item.category || 'Otros';
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(item);
-      return acc;
-    }, {});
-  }, []);
+  const handleInspectUser = (user) => {
+      setSelectedUser(user);
+      setIsInspectorOpen(true);
+  };
 
   const handleCreateRole = () => {
       try {
@@ -169,224 +189,222 @@ export default function AppUserManagement() {
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto pb-24">
-      {/* --- Integrity Check Banner --- */}
-      {roleKeys.length <= 2 && (
-        <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 mb-4 rounded flex justify-between items-center shadow-sm">
-          <div className="flex items-center gap-2">
-             <AlertCircle className="w-5 h-5" />
-             <div>
-                <p className="font-bold">Configuración de roles incompleta detectada</p>
-                <p className="text-sm">Parece que faltan roles estándar (posiblemente debido a una sobrescritura del sistema). Se recomienda restaurar los valores por defecto.</p>
-             </div>
-          </div>
-          <Button 
-              variant="outline" 
-              size="sm" 
-              className="bg-white border-amber-300 hover:bg-amber-50 text-amber-800"
-              onClick={restoreDefaults}
-          >
-              Restaurar Roles por Defecto
-          </Button>
-        </div>
-      )}
-      <Breadcrumb className="mb-2">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/">Inicio</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={createPageUrl("Configuration")}>Configuración</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Gestión de Usuarios y Accesos</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      {/* --- Header & Breadcrumb --- */}
+      <div className="flex flex-col space-y-4">
+        <Breadcrumb>
+            <BreadcrumbList>
+            <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                <Link to="/">Inicio</Link>
+                </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                <Link to={createPageUrl("Configuration")}>Configuración</Link>
+                </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+                <BreadcrumbPage>Gestión Unificada de Usuarios</BreadcrumbPage>
+            </BreadcrumbItem>
+            </BreadcrumbList>
+        </Breadcrumb>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Link to={createPageUrl("Configuration")}>
-            <Button variant="ghost" size="icon" className="text-slate-600">
-              <ArrowLeft className="w-5 h-5" />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-4">
+            <Link to={createPageUrl("Configuration")}>
+                <Button variant="ghost" size="icon" className="text-slate-600">
+                <ArrowLeft className="w-5 h-5" />
+                </Button>
+            </Link>
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                Gestión Unificada de Usuarios
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Administración centralizada de accesos, roles y permisos
+                </p>
+            </div>
+            </div>
+            <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={restoreDefaults} disabled={isSaving} className="text-slate-600 border-slate-200 hover:bg-slate-50">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Restaurar Defaults
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Gestión de Usuarios y Accesos
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">
-              Configura roles, permisos y asignaciones de usuarios
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={restoreDefaults} disabled={isSaving} className="text-slate-600 border-slate-200 hover:bg-slate-50">
-             <RotateCcw className="w-4 h-4 mr-2" />
-             Restaurar Defaults
-          </Button>
-          {isDirty && (
-            <Button variant="outline" onClick={resetConfig} disabled={isSaving} className="text-amber-600 border-amber-200 hover:bg-amber-50">
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Descartar Cambios
+            {isDirty && (
+                <Button variant="outline" onClick={resetConfig} disabled={isSaving} className="text-amber-600 border-amber-200 hover:bg-amber-50">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Descartar Cambios
+                </Button>
+            )}
+            <Button onClick={saveConfig} disabled={!isDirty || isSaving} className={isDirty ? "bg-green-600 hover:bg-green-700" : ""}>
+                <Save className="w-4 h-4 mr-2" />
+                {isSaving ? "Guardando..." : "Guardar Cambios"}
             </Button>
-          )}
-          <Button onClick={saveConfig} disabled={!isDirty || isSaving} className={isDirty ? "bg-green-600 hover:bg-green-700" : ""}>
-            <Save className="w-4 h-4 mr-2" />
-            {isSaving ? "Guardando..." : "Guardar Configuración"}
-          </Button>
+            </div>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
           <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="w-4 h-4" /> Usuarios
+            <Users className="w-4 h-4" /> Usuarios y Accesos
           </TabsTrigger>
           <TabsTrigger value="matrix" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" /> Roles
+            <Shield className="w-4 h-4" /> Definición de Roles
           </TabsTrigger>
           <TabsTrigger value="navigation" className="flex items-center gap-2">
-            <Factory className="w-4 h-4" /> Navegación
+            <Factory className="w-4 h-4" /> Páginas
           </TabsTrigger>
         </TabsList>
 
-        {/* --- PESTAÑA USUARIOS --- */}
+        {/* --- PESTAÑA USUARIOS (Unified View) --- */}
         <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Asignación de Roles a Usuarios</CardTitle>
-              <CardDescription>
-                Gestiona qué rol tiene cada empleado. Los empleados sin email no pueden acceder.
-              </CardDescription>
-              <div className="flex flex-col md:flex-row gap-4 mt-4 pt-4 border-t">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nombre o email..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="bg-slate-50/50 pb-4">
+              <div className="flex flex-col md:flex-row justify-between gap-4">
+                <div>
+                    <CardTitle>Directorio de Usuarios</CardTitle>
+                    <CardDescription>
+                        Asigna roles y verifica permisos efectivos.
+                    </CardDescription>
                 </div>
-                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Departamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los Dept.</SelectItem>
-                    {departments.map(d => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filtro por Rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los Roles</SelectItem>
-                    <SelectItem value="none">Sin Rol Asignado</SelectItem>
-                    {roleKeys.map(key => (
-                      <SelectItem key={key} value={key}>{localConfig.roles[key].name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {(searchTerm || departmentFilter !== "all" || roleFilter !== "all") && (
-                  <Button variant="ghost" size="icon" onClick={() => { setSearchTerm(""); setDepartmentFilter("all"); setRoleFilter("all"); }}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                {/* Filters */}
+                <div className="flex gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar..."
+                            className="pl-8 w-[200px]"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Todos los Roles" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los Roles</SelectItem>
+                            <SelectItem value="none">Sin Rol</SelectItem>
+                            {roleKeys.map(k => (
+                                <SelectItem key={k} value={k}>{localConfig.roles[k].name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                     {(searchTerm || roleFilter !== "all") && (
+                        <Button variant="ghost" size="icon" onClick={() => {setSearchTerm(""); setRoleFilter("all");}}>
+                            <X className="w-4 h-4"/>
+                        </Button>
+                    )}
+                </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[300px]">Empleado</TableHead>
+                    <TableHead>Email / ID</TableHead>
+                    <TableHead>Rol Asignado</TableHead>
+                    <TableHead>Estado Efectivo</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredEmployees.length === 0 ? (
                     <TableRow>
-                      <TableHead>Empleado</TableHead>
-                      <TableHead>Email (ID de Acceso)</TableHead>
-                      <TableHead>Departamento</TableHead>
-                      <TableHead>Rol Asignado</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEmployees.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-slate-500">
-                          No se encontraron empleados con los filtros actuales
+                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                            No se encontraron empleados.
                         </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredEmployees.map(emp => {
+                    </TableRow>
+                  ) : (
+                    filteredEmployees.map(emp => {
                         const email = emp.email ? emp.email.toLowerCase() : null;
-                        const currentRole = email ? (localConfig.user_assignments?.[email] || "none") : "none";
-                        // Robust name retrieval with email fallback - Expanded to catch more variations
-                        const displayName = emp.nombre || emp.name || emp.Name || emp.fullname || emp.fullName || emp.display_name || emp.email || "Sin Nombre";
+                        const assignedRoleId = email ? (localConfig.user_assignments?.[email] || "none") : "none";
+                        const assignedRoleName = assignedRoleId !== "none" ? localConfig.roles[assignedRoleId]?.name : "Sin Acceso";
+                        const displayName = emp.nombre || emp.name || emp.Name || emp.full_name || "Sin Nombre";
                         
+                        // Heuristic status check
+                        const hasAccess = assignedRoleId !== "none";
+                        const isSystemAdmin = assignedRoleId === 'admin';
+
                         return (
-                          <TableRow key={emp.id}>
+                          <TableRow key={emp.id} className="hover:bg-slate-50/50">
                             <TableCell className="font-medium">
-                              {displayName}
-                              {(!emp.nombre && !emp.name && !emp.Name) && (
-                                <span className="ml-2 text-xs text-amber-500 italic">(Nombre no disponible)</span>
-                              )}
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${hasAccess ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
+                                        {displayName.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <div>{displayName}</div>
+                                        <div className="text-xs text-slate-500">{emp.departamento || "N/A"}</div>
+                                    </div>
+                                </div>
                             </TableCell>
                             <TableCell>
-                              {email ? (
-                                <span className="font-mono text-xs">{email}</span>
-                              ) : (
-                                <span className="text-slate-400 italic text-xs">Sin email configurado</span>
-                              )}
+                                {email ? (
+                                    <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{email}</code>
+                                ) : (
+                                    <span className="text-slate-400 italic text-xs">Sin email</span>
+                                )}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="font-normal">{emp.departamento || "N/A"}</Badge>
+                                <Select 
+                                    value={assignedRoleId} 
+                                    onValueChange={(val) => updateUserAssignment(email, val)}
+                                    disabled={!email}
+                                >
+                                    <SelectTrigger className="w-[180px] h-8">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none" className="text-slate-500 italic">-- Sin Acceso --</SelectItem>
+                                        {roleKeys.map(key => (
+                                            <SelectItem key={key} value={key}>
+                                                {localConfig.roles[key].name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </TableCell>
                             <TableCell>
-                              <Select 
-                                value={currentRole} 
-                                onValueChange={(val) => updateUserAssignment(email, val)}
-                                disabled={!email}
-                              >
-                                <SelectTrigger className="w-[200px]">
-                                  <SelectValue placeholder="Seleccionar rol" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none" className="text-slate-500 italic">-- Sin Acceso --</SelectItem>
-                                  {roleKeys.map(key => (
-                                    <SelectItem key={key} value={key}>
-                                      {localConfig.roles[key].name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                {isSystemAdmin ? (
+                                    <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200">Admin Total</Badge>
+                                ) : hasAccess ? (
+                                    <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Activo</Badge>
+                                ) : (
+                                    <Badge variant="outline" className="text-slate-400">Inactivo</Badge>
+                                )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" onClick={() => handleInspectUser(emp)} disabled={!email}>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Detalles
+                                </Button>
                             </TableCell>
                           </TableRow>
                         );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="mt-4 text-xs text-slate-500 text-center">
-                Mostrando {filteredEmployees.length} de {employees?.length || 0} empleados
-              </div>
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
+            <CardFooter className="bg-slate-50/50 border-t py-2 text-xs text-slate-500 flex justify-between">
+                <span>Total Empleados: {employees?.length || 0}</span>
+                <span>Mostrando: {filteredEmployees.length}</span>
+            </CardFooter>
           </Card>
         </TabsContent>
 
-        {/* --- PESTAÑA ROLES (MATRIZ) --- */}
+        {/* --- PESTAÑA ROLES (Legacy Matrix) --- */}
         <TabsContent value="matrix">
-          <Card>
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Matriz de Roles y Permisos</CardTitle>
-                <CardDescription>Define qué puede hacer cada rol en la aplicación</CardDescription>
+                <CardTitle>Definición de Roles y Permisos</CardTitle>
+                <CardDescription>Configura las capacidades funcionales de cada rol.</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => setIsNewRoleOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" /> Nuevo Rol
@@ -425,7 +443,6 @@ export default function AppUserManagement() {
                       </TableCell>
                       {roleKeys.map(roleId => {
                         const isChecked = localConfig.roles[roleId].permissions[permKey];
-                        // Admin role always has all permissions
                         const isLocked = roleId === 'admin'; 
                         
                         return (
@@ -448,180 +465,214 @@ export default function AppUserManagement() {
 
         {/* --- PESTAÑA NAVEGACIÓN --- */}
         <TabsContent value="navigation">
-          <Card>
+           <Card>
             <CardHeader>
-              <CardTitle>Permisos de Navegación</CardTitle>
+              <CardTitle>Control de Acceso a Páginas</CardTitle>
               <CardDescription>
-                Controla a qué páginas puede acceder cada rol.
-                <br />
-                <span className="text-amber-600 font-bold">
-                  Importante: Por defecto los roles tienen acceso TOTAL. Usa "Nada" para bloquear todo y luego selecciona lo permitido.
-                </span>
+                Define qué rutas son visibles para cada rol. 
+                <span className="ml-2 text-amber-600 font-medium">Política "Deny by Default": Solo se permite lo marcado explícitamente.</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
-               {/* Controles de Acción Masiva - Movido a CardContent para asegurar visibilidad */}
-               <div className="flex flex-col gap-4 mb-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
-                 <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Acciones Rápidas (Configuración Masiva):
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                        {roleKeys.filter(r => r !== 'admin').length} roles configurables
-                    </Badge>
-                 </div>
-                 
-                 <div className="flex flex-wrap gap-4">
-                    {roleKeys.filter(r => r !== 'admin').length === 0 && (
-                        <span className="text-sm text-slate-400 italic">No hay roles configurables disponibles.</span>
-                    )}
-                    {roleKeys.map(roleId => {
-                        const isLocked = roleId === 'admin';
-                        if (isLocked) return null;
-                        const roleName = localConfig.roles[roleId].name;
-                        
-                        return (
-                            <div key={roleId} className="flex flex-col gap-2 items-center min-w-[140px] p-3 bg-white dark:bg-slate-950 rounded border border-slate-100 dark:border-slate-800 shadow-sm">
-                                <span className="text-xs font-bold truncate max-w-[130px] text-slate-800 dark:text-slate-200" title={roleName}>
-                                    {roleName}
-                                </span>
-                                <div className="flex gap-2 w-full justify-center">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-7 text-xs px-2 w-full"
-                                        title="Permitir TODO"
-                                        onClick={() => {
-                                            if (window.confirm(`¿Estás seguro? Esto dará acceso a TODAS las páginas a ${roleName}.`)) {
-                                                setRoleMode(roleId, 'allow_all');
-                                                toast.success(`Acceso total concedido a ${roleName}`);
-                                            }
-                                        }}
-                                    >
-                                        Todo
-                                    </Button>
-                                    <Button 
-                                        variant="destructive" 
-                                        size="sm" 
-                                        className="h-7 text-xs px-2 w-full bg-red-100 text-red-700 hover:bg-red-200 border border-red-200"
-                                        title="Bloquear TODO (Modo Estricto)"
-                                        onClick={() => {
-                                            if (window.confirm(`¿BLOQUEAR TODO para ${roleName}? Esto activará el modo estricto. Tendrás que marcar manualmente las páginas permitidas.`)) {
-                                                setRoleMode(roleId, 'block_all');
-                                                toast.success(`Acceso bloqueado para ${roleName}. Ahora selecciona las páginas permitidas.`);
-                                            }
-                                        }}
-                                    >
-                                        Nada
-                                    </Button>
-                                </div>
+               <ScrollArea className="h-[600px] pr-4">
+                 {/* Reutilizando la lógica de renderizado de pestañas anterior pero simplificada */}
+                  <div className="space-y-8">
+                    {Object.entries(
+                        MENU_STRUCTURE.reduce((acc, item) => {
+                            const cat = item.category || 'General';
+                            if (!acc[cat]) acc[cat] = [];
+                            acc[cat].push(item);
+                            return acc;
+                        }, {})
+                    ).map(([category, items]) => (
+                        <div key={category} className="space-y-3">
+                            <h3 className="font-semibold text-lg text-slate-800 border-b pb-1 flex items-center gap-2">
+                                {category === 'Configuración' ? <UserCog className="w-5 h-5" /> : <Factory className="w-5 h-5" />}
+                                {category}
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {items.map(menuItem => (
+                                    <div key={menuItem.path} className="border rounded-lg p-3 bg-white shadow-sm">
+                                        <div className="font-medium mb-2 flex items-center gap-2">
+                                            <span className="text-sm">{menuItem.title}</span>
+                                            <code className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{menuItem.path}</code>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {roleKeys.map(roleId => {
+                                                if (roleId === 'admin') return null; // Admin always has access
+                                                const role = localConfig.roles[roleId];
+                                                // Check exact path or sub-paths
+                                                const hasAccess = role.page_permissions?.[menuItem.path] === true;
+                                                
+                                                return (
+                                                    <Badge 
+                                                        key={roleId}
+                                                        variant={hasAccess ? "default" : "outline"}
+                                                        className={`cursor-pointer select-none text-[10px] ${hasAccess ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-400 hover:border-slate-400'}`}
+                                                        onClick={() => updatePagePermission(roleId, menuItem.path, !hasAccess)}
+                                                    >
+                                                        {role.name}
+                                                    </Badge>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        )
-                    })}
-                 </div>
-               </div>
-            </CardContent>
-            <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[300px] bg-slate-50 dark:bg-slate-900 sticky left-0 z-10">Página / Módulo</TableHead>
-                    {roleKeys.map(roleId => (
-                      <TableHead key={roleId} className="text-center min-w-[100px]">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="font-bold">{localConfig.roles[roleId].name}</span>
                         </div>
-                      </TableHead>
                     ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Object.entries(groupedMenu).map(([category, items]) => (
-                    <React.Fragment key={category}>
-                      <TableRow className="bg-slate-100 dark:bg-slate-800">
-                        <TableCell colSpan={roleKeys.length + 1} className="font-bold py-2">
-                          {category}
-                        </TableCell>
-                      </TableRow>
-                      {items.map(item => (
-                        <TableRow key={item.path}>
-                          <TableCell className="pl-6 bg-slate-50 dark:bg-slate-900 sticky left-0 z-10 border-r">
-                            <div className="flex items-center gap-2">
-                              <span>{item.name}</span>
-                            </div>
-                            <p className="text-xs text-slate-400 font-normal ml-6 truncate max-w-[200px]">{item.path}</p>
-                          </TableCell>
-                          {roleKeys.map(roleId => {
-                            const role = localConfig.roles[roleId];
-                            
-                            // Lógica de visualización del estado actual
-                            // Si page_permissions es undefined, mostramos el valor por defecto (Legacy)
-                            let effectiveValue;
-                            if (role.page_permissions === undefined) {
-                                if (roleId === 'admin') effectiveValue = true;
-                                else if (item.path === '/Dashboard' || item.path === '/') effectiveValue = true; // Dashboard siempre visible
-                                else effectiveValue = false; // CAMBIO: Por defecto todo bloqueado (Deny by Default)
-                            } else {
-                                effectiveValue = !!role.page_permissions[item.path];
-                            }
-                            
-                            const isLocked = roleId === 'admin';
-
-                            return (
-                              <TableCell key={`${roleId}-${item.path}`} className="text-center">
-                                <Checkbox 
-                                  checked={effectiveValue}
-                                  disabled={isLocked}
-                                  onCheckedChange={(checked) => updatePagePermission(roleId, item.path, checked)}
-                                />
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
+                  </div>
+               </ScrollArea>
             </CardContent>
-          </Card>
+           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Dialog para Nuevo Rol */}
+      {/* --- INSPECTOR SHEET (Unified Detail View) --- */}
+      <Sheet open={isInspectorOpen} onOpenChange={setIsInspectorOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+            <SheetHeader>
+                <SheetTitle>Inspector de Usuario</SheetTitle>
+                <SheetDescription>
+                    Detalle de permisos y accesos efectivos para {selectedUser?.nombre || "Usuario"}
+                </SheetDescription>
+            </SheetHeader>
+            
+            {selectedUser && (
+                <div className="mt-6 space-y-6">
+                    {/* 1. Identity */}
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xl">
+                            {(selectedUser.nombre || "U").charAt(0)}
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg">{selectedUser.nombre || "Sin Nombre"}</h3>
+                            <p className="text-sm text-slate-500">{selectedUser.email || "No Email"}</p>
+                            <Badge variant="outline" className="mt-1">{selectedUser.departamento || "Sin Dept."}</Badge>
+                        </div>
+                    </div>
+
+                    {/* 2. Role Assignment */}
+                    <div className="space-y-3">
+                        <h4 className="font-semibold flex items-center gap-2">
+                            <Key className="w-4 h-4" /> Asignación de Roles
+                        </h4>
+                        <div className="grid gap-4 p-4 border rounded-lg">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-xs text-slate-500">Rol en App (Configurable)</Label>
+                                    <Select 
+                                        value={selectedUser.email ? (localConfig.user_assignments?.[selectedUser.email.toLowerCase()] || "none") : "none"} 
+                                        onValueChange={(val) => updateUserAssignment(selectedUser.email, val)}
+                                        disabled={!selectedUser.email}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">-- Sin Rol --</SelectItem>
+                                            {roleKeys.map(k => (
+                                                <SelectItem key={k} value={k}>{localConfig.roles[k].name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-slate-500">Rol Base44 (Nativo)</Label>
+                                    <div className="h-10 flex items-center px-3 border rounded bg-slate-50 text-slate-500 text-sm italic">
+                                        No visible (Privado)
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                        *Los permisos nativos pueden sobrescribir la configuración de la App.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Effective Permissions Simulation */}
+                    <div className="space-y-3">
+                        <h4 className="font-semibold flex items-center gap-2">
+                            <Shield className="w-4 h-4" /> Permisos Efectivos (Simulación)
+                        </h4>
+                        <div className="bg-slate-50 p-4 rounded-lg border text-sm space-y-2">
+                            {(() => {
+                                const roleId = selectedUser.email ? (localConfig.user_assignments?.[selectedUser.email.toLowerCase()] || "none") : "none";
+                                const perms = calculateEffectivePermissions(roleId, localConfig);
+                                
+                                return (
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
+                                            <div key={key} className="flex items-center justify-between">
+                                                <span>{label}</span>
+                                                {perms[key] ? (
+                                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                                ) : (
+                                                    <X className="w-4 h-4 text-slate-300" />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+
+                    {/* 4. Page Access */}
+                    <div className="space-y-3">
+                        <h4 className="font-semibold flex items-center gap-2">
+                            <Factory className="w-4 h-4" /> Páginas Accesibles
+                        </h4>
+                         <ScrollArea className="h-[200px] border rounded-lg p-2 bg-slate-50">
+                            {(() => {
+                                const roleId = selectedUser.email ? (localConfig.user_assignments?.[selectedUser.email.toLowerCase()] || "none") : "none";
+                                const pages = getAccessiblePages(roleId, localConfig);
+                                
+                                if (pages.length === 0) return <p className="text-slate-400 text-sm text-center py-4">Sin acceso a páginas</p>;
+                                
+                                return (
+                                    <div className="flex flex-wrap gap-2">
+                                        {pages.map(p => (
+                                            <Badge key={p} variant="secondary" className="font-mono text-xs">
+                                                {p}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </ScrollArea>
+                    </div>
+
+                </div>
+            )}
+            <SheetFooter className="mt-8">
+                <Button onClick={() => setIsInspectorOpen(false)}>Cerrar Inspector</Button>
+            </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* --- DIALOGS --- */}
       <Dialog open={isNewRoleOpen} onOpenChange={setIsNewRoleOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Crear Nuevo Rol</DialogTitle>
-            <DialogDescription>
-              Define un nombre y un identificador único para el nuevo rol.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="roleName">Nombre del Rol</Label>
-              <Input 
-                id="roleName" 
-                value={newRoleName} 
-                onChange={(e) => setNewRoleName(e.target.value)} 
-                placeholder="Ej. Supervisor de Planta"
-              />
+            <DialogHeader>
+                <DialogTitle>Crear Nuevo Rol</DialogTitle>
+                <DialogDescription>Define un identificador único y un nombre visible.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label>Nombre del Rol</Label>
+                    <Input value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="Ej. Auditor Externo" />
+                </div>
+                <div className="space-y-2">
+                    <Label>Identificador (ID)</Label>
+                    <Input value={newRoleId} onChange={(e) => setNewRoleId(e.target.value)} placeholder="Ej. external_auditor" />
+                    <p className="text-xs text-slate-500">Solo letras minúsculas y guiones bajos.</p>
+                </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="roleId">ID del Rol</Label>
-              <Input 
-                id="roleId" 
-                value={newRoleId} 
-                onChange={(e) => setNewRoleId(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))} 
-                placeholder="Ej. plant_supervisor"
-              />
-              <p className="text-xs text-slate-500">Solo minúsculas y guiones bajos</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewRoleOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateRole} disabled={!newRoleName || !newRoleId}>Crear Rol</Button>
-          </DialogFooter>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsNewRoleOpen(false)}>Cancelar</Button>
+                <Button onClick={handleCreateRole}>Crear Rol</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
