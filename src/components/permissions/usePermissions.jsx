@@ -170,10 +170,21 @@ export function usePermissions() {
     // 1. Intentar obtener configuración del rol
     // Normalización robusta para evitar errores de case/tipo
     let roleConfig = rolesConfig?.roles?.[role];
+    
     if (!roleConfig && typeof role === 'string') {
-        // Intentar buscar case-insensitive si no se encuentra exacto
         const roleLower = role.toLowerCase();
-        const foundKey = Object.keys(rolesConfig?.roles || {}).find(k => k.toLowerCase() === roleLower);
+        
+        // 1. Buscar case-insensitive por Key (ID del rol)
+        let foundKey = Object.keys(rolesConfig?.roles || {}).find(k => k.toLowerCase() === roleLower);
+        
+        // 2. Si no, buscar por Name (propiedad 'name' del rol - ej. "Gerente RRHH")
+        // Esto soluciona problemas donde Base44 devuelve el nombre legible en lugar del ID
+        if (!foundKey) {
+            foundKey = Object.keys(rolesConfig?.roles || {}).find(k => 
+                rolesConfig.roles[k].name?.toLowerCase() === roleLower
+            );
+        }
+
         if (foundKey) {
             roleConfig = rolesConfig.roles[foundKey];
         }
