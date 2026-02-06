@@ -208,21 +208,29 @@ export function usePermissions() {
        // Normalizar path de entrada (quitar query params y trailing slash)
        const cleanPath = path.split('?')[0].replace(/\/$/, '');
        
-       // 1. Coincidencia exacta (Key lookup rápido)
+       // Generar variantes para comparación robusta (con y sin slash inicial)
+       const pathNoSlash = cleanPath.replace(/^\//, '');
+       const pathWithSlash = '/' + pathNoSlash;
+       
+       // 1. Coincidencia exacta y variantes (Key lookup rápido)
        if (pagePerms[path] === true) return true;
        if (pagePerms[cleanPath] === true) return true;
+       if (pagePerms[pathNoSlash] === true) return true;
+       if (pagePerms[pathWithSlash] === true) return true;
        
-       // 2. Búsqueda por coincidencia normalizada (robustez)
+       // 2. Búsqueda por coincidencia normalizada (robustez y sub-rutas)
        // Busca si alguna key configurada coincide con el path solicitado
        const matchedKey = keys.find(key => {
           // Normalizar la key de configuración
           const cleanKey = key.split('?')[0].replace(/\/$/, '');
+          const keyNoSlash = cleanKey.replace(/^\//, '');
           
-          // Coincidencia exacta de path
-          if (cleanKey === cleanPath) return true;
+          // Coincidencia exacta de path (ignorando slash inicial)
+          if (keyNoSlash === pathNoSlash) return true;
           
           // Coincidencia de sub-ruta (ej. /NewProcessConfigurator/*)
-          if (cleanPath.startsWith(cleanKey + '/')) return true;
+          // Comprobamos si el path solicitado empieza con la key configurada + '/'
+          if (pathWithSlash.startsWith('/' + keyNoSlash + '/')) return true;
           
           return false;
        });

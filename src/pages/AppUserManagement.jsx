@@ -570,11 +570,14 @@ export default function AppUserManagement() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="none">-- Sin Rol --</SelectItem>
-                                            {roleKeys.map(k => (
-                                                <SelectItem key={k} value={k}>{localConfig.roles[k].name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
+                                                <SelectItem value="none">-- Sin Rol --</SelectItem>
+                                                {roleKeys.map(k => (
+                                                    <SelectItem key={k} value={k}>
+                                                        <span>{localConfig.roles[k].name}</span>
+                                                        <span className="ml-2 text-slate-400 text-xs font-mono">({k})</span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
                                     </Select>
                                 </div>
                                 <div>
