@@ -534,62 +534,102 @@ export default function AppUserManagement() {
             <SheetHeader>
                 <SheetTitle>Inspector de Usuario</SheetTitle>
                 <SheetDescription>
-                    Detalle de permisos y accesos efectivos para {selectedUser?.nombre || "Usuario"}
+                    Detalles de acceso y permisos efectivos.
                 </SheetDescription>
             </SheetHeader>
-            
+
             {selectedUser && (
-                <div className="mt-6 space-y-6">
-                    {/* 1. Identity */}
-                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border">
-                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xl">
-                            {(selectedUser.nombre || "U").charAt(0)}
+                <div className="py-6 space-y-6">
+                    {/* 1. User Info */}
+                    <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg border">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xl font-bold">
+                             {(selectedUser.nombre || selectedUser.name || "U").charAt(0)}
                         </div>
-                        <div>
-                            <h3 className="font-bold text-lg">{selectedUser.nombre || "Sin Nombre"}</h3>
-                            <p className="text-sm text-slate-500">{selectedUser.email || "No Email"}</p>
-                            <Badge variant="outline" className="mt-1">{selectedUser.departamento || "Sin Dept."}</Badge>
+                        <div className="flex-1 overflow-hidden">
+                            <h3 className="font-bold text-lg truncate">{selectedUser.nombre || selectedUser.name || "Sin Nombre"}</h3>
+                            <p className="text-sm text-slate-500 truncate">{selectedUser.email}</p>
+                            <p className="text-xs text-slate-400 mt-1">{selectedUser.departamento || "Sin Departamento"}</p>
                         </div>
                     </div>
 
-                    {/* 2. Role Assignment */}
+                    {/* 2. Role Resolution Diagnostics */}
                     <div className="space-y-3">
                         <h4 className="font-semibold flex items-center gap-2">
-                            <Key className="w-4 h-4" /> Asignación de Roles
+                            <Search className="w-4 h-4" /> Diagnóstico de Resolución de Rol
                         </h4>
-                        <div className="grid gap-4 p-4 border rounded-lg">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label className="text-xs text-slate-500">Rol en App (Configurable)</Label>
-                                    <Select 
-                                        value={selectedUser.email ? (localConfig.user_assignments?.[selectedUser.email.toLowerCase()] || "none") : "none"} 
-                                        onValueChange={(val) => updateUserAssignment(selectedUser.email, val)}
-                                        disabled={!selectedUser.email}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                                <SelectItem value="none">-- Sin Rol --</SelectItem>
-                                                {roleKeys.map(k => (
-                                                    <SelectItem key={k} value={k}>
-                                                        <span>{localConfig.roles[k].name}</span>
-                                                        <span className="ml-2 text-slate-400 text-xs font-mono">({k})</span>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                    </Select>
-                                </div>
-                                <div>
-                                    <Label className="text-xs text-slate-500">Rol Base44 (Nativo)</Label>
-                                    <div className="h-10 flex items-center px-3 border rounded bg-slate-50 text-slate-500 text-sm italic">
-                                        No visible (Privado)
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 mt-1">
-                                        *Los permisos nativos pueden sobrescribir la configuración de la App.
-                                    </p>
-                                </div>
-                            </div>
+                        <div className="bg-slate-50 p-4 rounded-lg border text-sm space-y-3">
+                             {(() => {
+                                 const email = selectedUser.email?.toLowerCase();
+                                 const assignedId = localConfig.user_assignments?.[email];
+                                 const nativeRole = selectedUser.role; // Rol que viene de Base44
+                                 
+                                 // Lógica de resolución (replicando usePermissions)
+                                 let resolvedId = "user";
+                                 let resolutionSource = "Default";
+                                 let configFound = false;
+
+                                 if (assignedId) {
+                                     resolvedId = assignedId;
+                                     resolutionSource = "Asignación Manual (App)";
+                                 } else if (nativeRole) {
+                                     const roleLower = String(nativeRole).trim().toLowerCase();
+                                     
+                                     // 1. Buscar por ID
+                                     let foundKey = Object.keys(localConfig.roles).find(k => k.toLowerCase() === roleLower);
+                                     
+                                     // 2. Buscar por Nombre
+                                     if (!foundKey) {
+                                         foundKey = Object.keys(localConfig.roles).find(k => 
+                                             localConfig.roles[k].name?.trim().toLowerCase() === roleLower
+                                         );
+                                     }
+
+                                     if (foundKey) {
+                                         resolvedId = foundKey;
+                                         resolutionSource = `Mapeado desde Base44 ("${nativeRole}")`;
+                                     } else {
+                                         resolvedId = nativeRole; // Fallback, probablemente no tendrá config
+                                         resolutionSource = "Nativo Base44 (Sin coincidencia en App)";
+                                     }
+                                 }
+
+                                 configFound = !!localConfig.roles[resolvedId];
+
+                                 return (
+                                     <div className="grid gap-2">
+                                         <div className="grid grid-cols-2 gap-1 border-b pb-2">
+                                             <span className="text-slate-500">Rol Nativo (Base44):</span>
+                                             <span className="font-mono font-medium">{nativeRole || "N/A"}</span>
+                                         </div>
+                                         <div className="grid grid-cols-2 gap-1 border-b pb-2">
+                                             <span className="text-slate-500">Asignación Manual:</span>
+                                             <span className="font-mono font-medium">
+                                                 {assignedId ? (
+                                                     <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-200">{assignedId}</Badge>
+                                                 ) : (
+                                                     <span className="text-slate-400 italic">Ninguna</span>
+                                                 )}
+                                             </span>
+                                         </div>
+                                         <div className="grid grid-cols-2 gap-1 pt-1 bg-blue-50/50 p-2 rounded border border-blue-100">
+                                             <span className="text-blue-700 font-semibold">Rol Efectivo:</span>
+                                             <span className="font-bold text-blue-800">{resolvedId}</span>
+                                             
+                                             <span className="text-xs text-blue-500">Fuente:</span>
+                                             <span className="text-xs text-blue-600">{resolutionSource}</span>
+                                             
+                                             <span className="text-xs text-blue-500">Configuración:</span>
+                                             <span className="text-xs">
+                                                 {configFound ? (
+                                                     <span className="text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3"/> Encontrada</span>
+                                                 ) : (
+                                                     <span className="text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> No encontrada (Bloqueo Total)</span>
+                                                 )}
+                                             </span>
+                                         </div>
+                                     </div>
+                                 );
+                             })()}
                         </div>
                     </div>
 
@@ -600,8 +640,25 @@ export default function AppUserManagement() {
                         </h4>
                         <div className="bg-slate-50 p-4 rounded-lg border text-sm space-y-2">
                             {(() => {
-                                const roleId = selectedUser.email ? (localConfig.user_assignments?.[selectedUser.email.toLowerCase()] || "none") : "none";
-                                const perms = calculateEffectivePermissions(roleId, localConfig);
+                                // Recalcular ID efectivo para usar en permisos
+                                const email = selectedUser.email?.toLowerCase();
+                                const assignedId = localConfig.user_assignments?.[email];
+                                const nativeRole = selectedUser.role;
+                                
+                                let effectiveRoleId = "user";
+                                if (assignedId) effectiveRoleId = assignedId;
+                                else if (nativeRole) {
+                                    const roleLower = String(nativeRole).trim().toLowerCase();
+                                    let foundKey = Object.keys(localConfig.roles).find(k => k.toLowerCase() === roleLower);
+                                    if (!foundKey) {
+                                        foundKey = Object.keys(localConfig.roles).find(k => 
+                                            localConfig.roles[k].name?.trim().toLowerCase() === roleLower
+                                        );
+                                    }
+                                    if (foundKey) effectiveRoleId = foundKey;
+                                }
+
+                                const perms = calculateEffectivePermissions(effectiveRoleId, localConfig);
                                 
                                 return (
                                     <div className="grid grid-cols-1 gap-2">
@@ -626,12 +683,29 @@ export default function AppUserManagement() {
                         <h4 className="font-semibold flex items-center gap-2">
                             <Factory className="w-4 h-4" /> Páginas Accesibles
                         </h4>
-                         <ScrollArea className="h-[200px] border rounded-lg p-2 bg-slate-50">
+                        <ScrollArea className="h-[200px] border rounded-lg p-2 bg-slate-50">
                             {(() => {
-                                const roleId = selectedUser.email ? (localConfig.user_assignments?.[selectedUser.email.toLowerCase()] || "none") : "none";
-                                const pages = getAccessiblePages(roleId, localConfig);
+                                // Recalcular ID efectivo (mismo código, idealmente refactorizar en función helper si fuera posible)
+                                const email = selectedUser.email?.toLowerCase();
+                                const assignedId = localConfig.user_assignments?.[email];
+                                const nativeRole = selectedUser.role;
                                 
-                                if (pages.length === 0) return <p className="text-slate-400 text-sm text-center py-4">Sin acceso a páginas</p>;
+                                let effectiveRoleId = "user";
+                                if (assignedId) effectiveRoleId = assignedId;
+                                else if (nativeRole) {
+                                    const roleLower = String(nativeRole).trim().toLowerCase();
+                                    let foundKey = Object.keys(localConfig.roles).find(k => k.toLowerCase() === roleLower);
+                                    if (!foundKey) {
+                                        foundKey = Object.keys(localConfig.roles).find(k => 
+                                            localConfig.roles[k].name?.trim().toLowerCase() === roleLower
+                                        );
+                                    }
+                                    if (foundKey) effectiveRoleId = foundKey;
+                                }
+
+                                const pages = getAccessiblePages(effectiveRoleId, localConfig);
+                                
+                                if (pages.length === 0) return <p className="text-slate-400 text-sm text-center py-4">Sin acceso a páginas configuradas</p>;
                                 
                                 return (
                                     <div className="flex flex-wrap gap-2">
