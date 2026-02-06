@@ -19,15 +19,11 @@ import {
   Sparkles
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import * as ReactWindow from 'react-window';
-import { AutoSizer } from "react-virtualized-auto-sizer";
 import { getMachineAlias } from "@/utils/machineAlias";
-
-const List = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList;
 
 // Helper: Get Employee Name Robustly
 const getEmployeeName = (emp) => {
@@ -93,45 +89,6 @@ function Slot({ id, label, assignedId, employees, isRequired }) {
     );
 }
 
-const EmployeeRow = ({ index, style, data }) => {
-  const emp = data[index];
-  
-  return (
-    <Draggable key={emp.id} draggableId={String(emp.id)} index={index}>
-      {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          style={{
-             ...style,
-             ...provided.draggableProps.style,
-             left: style.left + 8,
-             top: style.top + 8,
-             width: "calc(100% - 16px)",
-             height: style.height - 8
-          }}
-          className={`p-3 rounded-lg border bg-white shadow-sm cursor-grab active:cursor-grabbing group hover:border-blue-400 transition-colors ${
-              emp.isSkilled ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-slate-200'
-          } ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500 opacity-90 z-50' : ''}`}
-        >
-          <div className="flex justify-between items-center">
-              <div>
-                  <p className="font-medium text-sm text-slate-900 truncate">{getEmployeeName(emp)}</p>
-                  <p className="text-xs text-slate-500 truncate">{emp.puesto}</p>
-              </div>
-              {emp.isSkilled && (
-                  <Badge variant="secondary" className="bg-green-50 text-green-700 text-[10px] px-1.5 h-5 shrink-0">
-                      Skill
-                  </Badge>
-              )}
-          </div>
-        </div>
-      )}
-    </Draggable>
-  );
-};
-
 // --- Main Component ---
 
 export default function ShiftAssignmentsPage() {
@@ -180,11 +137,11 @@ export default function ShiftAssignmentsPage() {
           if (!teamObj) return;
 
           const dateObj = new Date(selectedDate);
-          const weekStart = new Date(dateObj);
-          const day = weekStart.getDay();
-          const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-          weekStart.setDate(diff);
+          // Calculate start of week (Monday)
+          const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
           const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+
+          console.log(`Checking schedule for Team ${teamObj.team_key} Week ${weekStartStr}`);
 
           const schedule = teamSchedules.find(s => 
               s.team_key === teamObj.team_key && 
@@ -192,25 +149,19 @@ export default function ShiftAssignmentsPage() {
           );
 
           if (schedule && schedule.turno) {
+              console.log(`Found schedule: ${schedule.turno}`);
               setSelectedShift(schedule.turno);
+          } else {
+              console.log("No schedule found");
           }
       }
   }, [selectedDate, selectedTeam, teamSchedules, teams]);
 
   // Sync Team based on Shift (Reverse Logic - Optional but requested)
   useEffect(() => {
-      // If user selects shift manually, we try to find the team? 
-      // User requirement: "si elegimos el turno el equipo aparecerá automaticamente"
-      // This is ambiguous if multiple teams have the same shift. 
-      // Let's assume for now we prioritize Date+Team -> Shift.
-      // If we implement Shift -> Team, we need to know WHICH team has that shift today.
-      // We can search teamSchedules for today + shift.
       if (selectedTeam === "all" && teamSchedules.length > 0) {
            const dateObj = new Date(selectedDate);
-           const weekStart = new Date(dateObj);
-           const day = weekStart.getDay();
-           const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
-           weekStart.setDate(diff);
+           const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
            const weekStartStr = format(weekStart, 'yyyy-MM-dd');
 
            const schedule = teamSchedules.find(s => 
@@ -748,38 +699,23 @@ export default function ShiftAssignmentsPage() {
 
                     <Droppable 
                         droppableId="unassigned-pool" 
-                        mode="virtual"
-                        renderClone={(provided, snapshot, rubric) => {
-                            const emp = groupedAvailableEmployees[rubric.source.index];
-                            return (
-                                <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    style={provided.draggableProps.style}
-                                    className="p-3 rounded-lg border bg-white shadow-xl border-blue-500 z-50"
-                                >
-                                   {getEmployeeName(emp)}
-                                </div>
-                            );
-                        }}
+                        isDropDisabled={false}
                     >
                         {(provided) => (
-                            <div className="h-full w-full">
-                                <AutoSizer>
-                                    {({ height, width }) => (
-                                        <List
-                                            height={height}
-                                            width={width}
-                                            itemCount={groupedAvailableEmployees.length}
-                                            itemSize={80}
-                                            itemData={groupedAvailableEmployees}
-                                            outerRef={provided.innerRef}
-                                        >
-                                            {EmployeeRow}
-                                        </List>
-                                    )}
-                                </AutoSizer>
+                            <div 
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-2"
+                            >
+                                {groupedAvailableEmployees.map((emp, index) => (
+                                    <EmployeeRow 
+                                        key={emp.id} 
+                                        index={index} 
+                                        data={groupedAvailableEmployees} 
+                                        style={{}} // No longer needed for standard list
+                                    />
+                                ))}
+                                {provided.placeholder}
                             </div>
                         )}
                     </Droppable>
@@ -790,3 +726,38 @@ export default function ShiftAssignmentsPage() {
     </div>
   );
 }
+
+// Adjusted EmployeeRow for standard list
+function EmployeeRow({ index, data }) {
+  const emp = data[index];
+  
+  return (
+    <Draggable key={emp.id} draggableId={String(emp.id)} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          style={{
+             ...provided.draggableProps.style,
+          }}
+          className={`p-3 rounded-lg border bg-white shadow-sm cursor-grab active:cursor-grabbing group hover:border-blue-400 transition-colors ${
+              emp.isSkilled ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-slate-200'
+          } ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500 opacity-90 z-50' : ''}`}
+        >
+          <div className="flex justify-between items-center">
+              <div>
+                  <p className="font-medium text-sm text-slate-900 truncate">{getEmployeeName(emp)}</p>
+                  <p className="text-xs text-slate-500 truncate">{emp.puesto}</p>
+              </div>
+              {emp.isSkilled && (
+                  <Badge variant="secondary" className="bg-green-50 text-green-700 text-[10px] px-1.5 h-5 shrink-0">
+                      Skill
+                  </Badge>
+              )}
+          </div>
+        </div>
+      )}
+    </Draggable>
+  );
+};

@@ -138,15 +138,21 @@ export function usePermissions() {
     }
 
     // 2. Obtener permisos para ese rol
-    let permissions = ROLE_PERMISSIONS.user; // Default permissions
+    let permissions = { ...ROLE_PERMISSIONS.user }; // Start with default safe permissions
 
     // Intento A: Configuración dinámica (si existe el rol)
     if (rolesConfig?.roles?.[role]) {
-      permissions = rolesConfig.roles[role].permissions;
+      permissions = { ...rolesConfig.roles[role].permissions };
     }
     // Intento B: Configuración estática (fallback)
     else if (ROLE_PERMISSIONS[role]) {
-      permissions = ROLE_PERMISSIONS[role];
+      permissions = { ...ROLE_PERMISSIONS[role] };
+    }
+
+    // 3. Mergear permisos explícitos de Base44 (si existen)
+    // Esto permite usar el campo 'permisos' del usuario en Base44 como override
+    if (user.permisos && typeof user.permisos === 'object') {
+        permissions = { ...permissions, ...user.permisos };
     }
 
     const base = {
