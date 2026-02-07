@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Table, 
   TableBody, 
@@ -34,10 +35,41 @@ const INITIAL_PROFILES = {
     mission: "El Técnico de Proceso es el máximo responsable operativo de una línea de fabricación. Su función es garantizar la excelencia en el envasado mediante el manejo técnico avanzado (cambio de formato, limpieza, montaje y arranque), la resolución proactiva de averías y la gestión directa del equipo humano asignado. Es el garante del cumplimiento de los estándares de calidad, seguridad y orden (GMP) en su área de influencia.",
     training_summary: "El plan de formación se estructura en 4 fases progresivas diseñadas para garantizar una integración segura y eficiente. Comienza con una inmersión en cultura y seguridad (Semana 1), avanza hacia el control de procesos y gestión (Semana 2), profundiza en aspectos técnicos y mantenimiento (Semanas 3-4), y culmina con la autonomía operativa y liderazgo (Mes 2).",
     onboarding: [
-      { phase: "Semana 1", focus: "Inmersión y Seguridad", milestones: "• Cultura GMP: Normas de Correcta Fabricación.\n• Seguridad: Protocolos LOTO (Bloqueo/Etiquetado) y EPIs.\n• Shadowing: Observación guiada con un técnico mentor." },
-      { phase: "Semana 2", focus: "Control y Gestión", milestones: "• Manejo de Software: Registro de producción y paradas en la App interna.\n• IPC (In-Process Control): Verificación de atributos cada 30 minutos.\n• Gestión de Equipos: Asignación de tareas y supervisión de operarios." },
-      { phase: "Semanas 3-4", focus: "Técnica y Mantenimiento", milestones: "• Resolución de averías: Diagnóstico y reparación de fallos comunes.\n• Cambio de Formato: Ajustes mecánicos y sustitución de piezas.\n• Limpieza y Desinfección: Protocolos de contacto con producto." },
-      { phase: "Mes 2", focus: "Autonomía", milestones: "• Liderazgo real: Gestión de turno bajo supervisión mínima.\n• Evaluación de KPIs: Revisión de productividad y mermas." }
+      { 
+        phase: "Semana 1", 
+        focus: "Inmersión y Seguridad", 
+        milestones: [
+          { text: "Cultura GMP: Normas de Correcta Fabricación.", responsible: "", completed: false },
+          { text: "Seguridad: Protocolos LOTO (Bloqueo/Etiquetado) y EPIs.", responsible: "", completed: false },
+          { text: "Shadowing: Observación guiada con un técnico mentor.", responsible: "", completed: false }
+        ]
+      },
+      { 
+        phase: "Semana 2", 
+        focus: "Control y Gestión", 
+        milestones: [
+          { text: "Manejo de Software: Registro de producción y paradas en la App interna.", responsible: "", completed: false },
+          { text: "IPC (In-Process Control): Verificación de atributos cada 30 minutos.", responsible: "", completed: false },
+          { text: "Gestión de Equipos: Asignación de tareas y supervisión de operarios.", responsible: "", completed: false }
+        ]
+      },
+      { 
+        phase: "Semanas 3-4", 
+        focus: "Técnica y Mantenimiento", 
+        milestones: [
+          { text: "Resolución de averías: Diagnóstico y reparación de fallos comunes.", responsible: "", completed: false },
+          { text: "Cambio de Formato: Ajustes mecánicos y sustitución de piezas.", responsible: "", completed: false },
+          { text: "Limpieza y Desinfección: Protocolos de contacto con producto.", responsible: "", completed: false }
+        ]
+      },
+      { 
+        phase: "Mes 2", 
+        focus: "Autonomía", 
+        milestones: [
+          { text: "Liderazgo real: Gestión de turno bajo supervisión mínima.", responsible: "", completed: false },
+          { text: "Evaluación de KPIs: Revisión de productividad y mermas.", responsible: "", completed: false }
+        ]
+      }
     ],
     responsibilities: [
       {
@@ -133,7 +165,26 @@ export default function PositionProfileManager() {
     // If we switched profiles, OR if we don't have any local state yet
     // We should load the data from the server/store
     if (profileChanged || !localProfile) {
-       setLocalProfile(JSON.parse(JSON.stringify(profiles[selectedProfileId])));
+       let profileData = JSON.parse(JSON.stringify(profiles[selectedProfileId]));
+       
+       // Migration: Convert legacy string milestones to array objects
+       if (profileData.onboarding) {
+         profileData.onboarding = profileData.onboarding.map(phase => {
+           if (typeof phase.milestones === 'string') {
+             return {
+               ...phase,
+               milestones: phase.milestones.split('\n').map(line => ({
+                 text: line.replace(/^[•\-\*]\s*/, ''),
+                 responsible: "",
+                 completed: false
+               })).filter(m => m.text.trim() !== '')
+             };
+           }
+           return phase;
+         });
+       }
+
+       setLocalProfile(profileData);
        setHasChanges(false);
        prevProfileIdRef.current = selectedProfileId;
     }
@@ -310,12 +361,24 @@ export default function PositionProfileManager() {
               <tbody>
                 ${(selectedProfile.onboarding || []).map(o => `
                   <tr>
-                    <td>${o.phase}</td>
-                    <td>${o.focus}</td>
-                    <td style="white-space: pre-wrap;">${o.milestones}</td>
-                    <td></td>
-                    <td></td>
-                  </tr>
+                  <td>${o.phase}</td>
+                  <td>${o.focus}</td>
+                  <td>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                      ${Array.isArray(o.milestones) ? o.milestones.map(m => `
+                        <li style="margin-bottom: 8px; display: flex; align-items: flex-start;">
+                          <span style="margin-right: 8px; font-weight: bold; font-family: monospace;">${m.completed ? '[X]' : '[_]'}</span>
+                          <div>
+                            <div style="margin-bottom: 2px;">${m.text}</div>
+                            ${m.responsible ? `<div style="font-size: 10px; color: #666; font-style: italic;">Resp: ${m.responsible}</div>` : ''}
+                          </div>
+                        </li>
+                      `).join('') : o.milestones}
+                    </ul>
+                  </td>
+                  <td></td>
+                  <td></td>
+                </tr>
                 `).join('')}
               </tbody>
             </table>
@@ -559,15 +622,86 @@ export default function PositionProfileManager() {
                           </div>
                           <div className="md:col-span-3">
                             <Label className="text-xs">Hitos de Aprendizaje</Label>
-                            <Textarea 
-                              value={phase.milestones} 
-                              onChange={(e) => {
-                                const newOnboarding = [...selectedProfile.onboarding];
-                                newOnboarding[idx].milestones = e.target.value;
-                                handleUpdateProfile('onboarding', newOnboarding);
-                              }}
-                              className="h-20"
-                            />
+                            <div className="border rounded-md mt-1">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-[40px] p-2 text-center">OK</TableHead>
+                                    <TableHead className="p-2">Hito</TableHead>
+                                    <TableHead className="p-2 w-[140px]">Responsable</TableHead>
+                                    <TableHead className="w-[40px] p-2"></TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {Array.isArray(phase.milestones) ? phase.milestones.map((milestone, mIdx) => (
+                                    <TableRow key={mIdx}>
+                                      <TableCell className="p-2 align-top text-center">
+                                        <Checkbox 
+                                          checked={milestone.completed}
+                                          onCheckedChange={(checked) => {
+                                            const newOnboarding = [...selectedProfile.onboarding];
+                                            newOnboarding[idx].milestones[mIdx].completed = checked;
+                                            handleUpdateProfile('onboarding', newOnboarding);
+                                          }}
+                                        />
+                                      </TableCell>
+                                      <TableCell className="p-2 align-top">
+                                        <Textarea 
+                                          value={milestone.text}
+                                          onChange={(e) => {
+                                            const newOnboarding = [...selectedProfile.onboarding];
+                                            newOnboarding[idx].milestones[mIdx].text = e.target.value;
+                                            handleUpdateProfile('onboarding', newOnboarding);
+                                          }}
+                                          className="min-h-[38px] h-auto resize-none py-2 text-sm"
+                                          placeholder="Descripción del hito..."
+                                        />
+                                      </TableCell>
+                                      <TableCell className="p-2 align-top">
+                                         <Input 
+                                          value={milestone.responsible}
+                                          onChange={(e) => {
+                                            const newOnboarding = [...selectedProfile.onboarding];
+                                            newOnboarding[idx].milestones[mIdx].responsible = e.target.value;
+                                            handleUpdateProfile('onboarding', newOnboarding);
+                                          }}
+                                          placeholder="Rol/Persona"
+                                          className="h-9 text-xs"
+                                        />
+                                      </TableCell>
+                                      <TableCell className="p-2 align-top">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                           const newOnboarding = [...selectedProfile.onboarding];
+                                           newOnboarding[idx].milestones = newOnboarding[idx].milestones.filter((_, i) => i !== mIdx);
+                                           handleUpdateProfile('onboarding', newOnboarding);
+                                        }}>
+                                          <Trash2 className="w-3 h-3 text-slate-400 hover:text-red-500" />
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  )) : (
+                                    <TableRow>
+                                      <TableCell colSpan={4} className="text-center text-red-500 p-4">
+                                        Error de formato en hitos. Guarde para corregir.
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="w-full text-xs text-muted-foreground hover:text-primary rounded-t-none border-t"
+                                onClick={() => {
+                                  const newOnboarding = [...selectedProfile.onboarding];
+                                  if (!Array.isArray(newOnboarding[idx].milestones)) newOnboarding[idx].milestones = [];
+                                  newOnboarding[idx].milestones.push({ text: "", responsible: "", completed: false });
+                                  handleUpdateProfile('onboarding', newOnboarding);
+                                }}
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Añadir Hito
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </Card>
