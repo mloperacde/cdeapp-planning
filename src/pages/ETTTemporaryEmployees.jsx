@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Calendar, AlertTriangle, CheckCircle2, Clock, Users, Filter, Download, UserPlus } from "lucide-react";
+import { Calendar, AlertTriangle, CheckCircle2, Clock, Users, Filter, Download, UserPlus, Pencil } from "lucide-react";
 import { format, differenceInDays, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
