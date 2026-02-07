@@ -99,7 +99,7 @@ export default function PositionProfileManager() {
     queryFn: async () => {
       try {
         const config = await base44.entities.AppConfig.list();
-        const profileConfig = config.find(c => c.key === 'position_profiles_v1');
+        const profileConfig = config.find(c => c.config_key === 'position_profiles_v1' || c.key === 'position_profiles_v1');
         
         if (profileConfig) {
           return JSON.parse(profileConfig.value);
@@ -125,7 +125,7 @@ export default function PositionProfileManager() {
     mutationFn: async () => {
       if (!localProfile) return;
       const configList = await base44.entities.AppConfig.list();
-      const existingConfig = configList.find(c => c.key === 'position_profiles_v1');
+      const existingConfig = configList.find(c => c.config_key === 'position_profiles_v1' || c.key === 'position_profiles_v1');
       
       const newProfiles = {
         ...profiles,
@@ -138,7 +138,7 @@ export default function PositionProfileManager() {
         return base44.entities.AppConfig.update(existingConfig.id, { value });
       } else {
         return base44.entities.AppConfig.create({ 
-          key: 'position_profiles_v1', 
+          config_key: 'position_profiles_v1', 
           value,
           description: 'Configuration for Job Descriptions and Onboarding Templates'
         });
@@ -198,14 +198,14 @@ export default function PositionProfileManager() {
     // Ideally we should update the server.
     
     // Quick fix: Update server directly for Add
-    base44.entities.AppConfig.list().then(configList => {
-        const existingConfig = configList.find(c => c.key === 'position_profiles_v1');
-        const value = JSON.stringify(newProfiles);
-        const promise = existingConfig 
-            ? base44.entities.AppConfig.update(existingConfig.id, { value })
-            : base44.entities.AppConfig.create({ key: 'position_profiles_v1', value, description: '...' });
-            
-        promise.then(() => {
+     base44.entities.AppConfig.list().then(configList => {
+         const existingConfig = configList.find(c => c.config_key === 'position_profiles_v1' || c.key === 'position_profiles_v1');
+         const value = JSON.stringify(newProfiles);
+         const promise = existingConfig 
+             ? base44.entities.AppConfig.update(existingConfig.id, { value })
+             : base44.entities.AppConfig.create({ config_key: 'position_profiles_v1', value, description: 'Configuration for Job Descriptions and Onboarding Templates' });
+             
+         promise.then(() => {
             queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
             setSelectedProfileId(id);
             toast.success("Puesto creado");
