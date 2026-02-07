@@ -37,6 +37,7 @@ import {
   Bot,
   Briefcase,
   Upload,
+  Trash2,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -276,13 +277,17 @@ export default function EmployeeOnboardingPage() {
           console.error("Error finding existing config in mutation:", e);
       }
       
-      const resource = {
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        ...newResource,
-      };
-
-      const updatedResources = [...currentResources, resource];
+      let updatedResources;
+      if (Array.isArray(newResource)) {
+          updatedResources = newResource;
+      } else {
+          const resource = {
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            ...newResource,
+          };
+          updatedResources = [...currentResources, resource];
+      }
       const value = JSON.stringify(updatedResources);
 
       // DUAL WRITE STRATEGY + APP SUBTITLE HACK
@@ -394,30 +399,44 @@ export default function EmployeeOnboardingPage() {
 
   const handleAddDoc = () => {
     if (!newDoc.title || !newDoc.url) return;
-    createTrainingResourceMutation.mutate({
+    
+    const doc = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
       type: "document",
-      title: newDoc.title,
-      description: newDoc.description,
-      url: newDoc.url,
-    });
+      ...newDoc
+    };
+
+    const updatedResources = [...trainingResources, doc];
     setNewDoc({ title: "", description: "", url: "" });
+    createTrainingResourceMutation.mutate(updatedResources);
+  };
+
+  const handleDeleteDoc = (docId) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar este recurso de formación?")) {
+      const updatedResources = trainingResources.filter(r => r.id !== docId);
+      createTrainingResourceMutation.mutate(updatedResources);
+    }
   };
 
   const handleAddTraining = () => {
     if (!newTraining.title || !newTraining.fecha) return;
-    createTrainingResourceMutation.mutate({
+    
+    const training = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
       type: "training",
-      title: newTraining.title,
-      colectivo: newTraining.colectivo,
-      fecha: newTraining.fecha,
-      estado: newTraining.estado,
-    });
+      ...newTraining
+    };
+
+    const updatedResources = [...trainingResources, training];
     setNewTraining({
       title: "",
       colectivo: "",
       fecha: "",
       estado: "Pendiente",
     });
+    createTrainingResourceMutation.mutate(updatedResources);
   };
 
   const handleTabChange = (value) => {
@@ -875,14 +894,25 @@ export default function EmployeeOnboardingPage() {
                               <p className="text-xs text-slate-600">{doc.description}</p>
                             )}
                           </div>
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            Abrir
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Abrir
+                            </a>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDeleteDoc(doc.id)}
+                              title="Eliminar documento"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
