@@ -121,12 +121,15 @@ const INITIAL_PROFILES = {
 };
 
 export default function PositionProfileManager({ trainingResources = [] }) {
-  console.log("PositionProfileManager received trainingResources:", trainingResources);
   const queryClient = useQueryClient();
   const [selectedProfileId, setSelectedProfileId] = useState("tecnico-proceso");
   const [localProfile, setLocalProfile] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const iframeRef = useRef(null);
+
+  // Ref to track the last server profile version we synced with to prevent infinite loops
+  const lastSyncedProfileRef = useRef(null);
+  const prevProfileIdRef = useRef(selectedProfileId);
 
   const trainingDocs = useMemo(() => {
     return (trainingResources || []).filter(r => r.type === 'document' || r.type === 'url');
@@ -147,21 +150,24 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     false
   );
 
-  // Sync local state when selection changes or data loads
-  // We use a ref to track the previous ID to distinguish between "data refresh" and "user switched profile"
-  const prevProfileIdRef = useRef(selectedProfileId);
-
+  // Sync logic: Only update local state if ID changed OR server data is new (and we haven't edited)
   useEffect(() => {
     // If profiles data is not loaded yet, do nothing
     if (!profiles || !profiles[selectedProfileId]) return;
 
-    // Check if we switched to a different profile
-    const profileChanged = prevProfileIdRef.current !== selectedProfileId;
+    const serverProfile = profiles[selectedProfileId];
+    const profileIdChanged = prevProfileIdRef.current !== selectedProfileId;
     
-    // If we switched profiles, OR if we don't have any local state yet
-    // OR if the server data updated and we don't have unsaved changes
-    if (profileChanged || !localProfile || (!hasChanges && profiles[selectedProfileId])) {
-       let profileData = JSON.parse(JSON.stringify(profiles[selectedProfileId]));
+    // Check if server data is actually different from what we last synced
+    // This uses object reference equality from React Query (stable if data unchanged)
+    const isNewServerData = serverProfile !== lastSyncedProfileRef.current;
+
+    // Conditions to sync:
+    // 1. User switched profile (always load fresh)
+    // 2. We don't have local state yet (initial load)
+    // 3. Server has new data AND we haven't made unsaved changes
+    if (profileIdChanged || !localProfile || (isNewServerData && !hasChanges)) {
+       let profileData = JSON.parse(JSON.stringify(serverProfile));
        
        // Migration: Convert legacy string milestones to array objects
         if (profileData.onboarding) {
@@ -183,11 +189,12 @@ export default function PositionProfileManager({ trainingResources = [] }) {
 
        setLocalProfile(profileData);
        setHasChanges(false);
+       
+       // Update refs to track current state
        prevProfileIdRef.current = selectedProfileId;
+       lastSyncedProfileRef.current = serverProfile;
     }
-    // Note: We intentionally DO NOT update if profiles changed but ID didn't and we have localProfile.
-    // This prevents background refetches from overwriting user's unsaved edits.
-  }, [profiles, selectedProfileId, localProfile, hasChanges]);
+  }, [profiles, selectedProfileId, hasChanges]); // Removed localProfile from deps to avoid loop
 
   const handleSave = () => {
     if (!localProfile) return;

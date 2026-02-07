@@ -107,7 +107,7 @@ export default function EmployeeOnboardingPage() {
     save: saveTrainingResources 
   } = usePersistentAppConfig(
     'onboarding_training_resources',
-    [],
+    EMPTY_ARRAY,
     'onboardingTrainingResources',
     true
   );
