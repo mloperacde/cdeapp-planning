@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
 import { useAppData } from "../components/data/DataProvider";
 import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
@@ -70,11 +71,16 @@ export default function EmployeeOnboardingPage() {
   const { data: trainingResources = [] } = useQuery({
     queryKey: ["onboardingTrainingResources"],
     queryFn: async () => {
-      const entity = base44.entities.OnboardingTrainingResource;
-      if (!entity || typeof entity.list !== "function") {
+      try {
+        const configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+        if (configs && configs.length > 0) {
+          return JSON.parse(configs[0].value);
+        }
+        return [];
+      } catch (e) {
+        console.error("Error fetching training resources", e);
         return [];
       }
-      return entity.list("-created_at");
     },
     initialData: [],
   });
@@ -88,18 +94,40 @@ export default function EmployeeOnboardingPage() {
 
   const createTrainingResourceMutation = useMutation({
     mutationFn: async (data) => {
-      const entity = base44.entities.OnboardingTrainingResource;
-      if (!entity || typeof entity.create !== "function") {
-        console.warn("OnboardingTrainingResource entity is not configured in Base44");
-        return null;
+      const newItem = { ...data, id: Math.random().toString(36).substring(2, 15), created_at: new Date().toISOString() };
+      
+      let configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      let currentResources = [];
+      let configId = null;
+
+      if (configs && configs.length > 0) {
+        currentResources = JSON.parse(configs[0].value);
+        configId = configs[0].id;
       }
-      return entity.create(data);
+
+      const updatedResources = [newItem, ...currentResources];
+      const value = JSON.stringify(updatedResources);
+
+      if (configId) {
+        await base44.entities.AppConfig.update(configId, { value });
+      } else {
+        await base44.entities.AppConfig.create({
+          config_key: 'onboarding_training_resources',
+          value,
+          description: 'Repository of training documents and resources'
+        });
+      }
+      return newItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["onboardingTrainingResources"],
       });
+      toast.success("Recurso añadido correctamente");
     },
+    onError: () => {
+      toast.error("Error al añadir recurso");
+    }
   });
 
   const getEmployeeName = (employeeId) => {
