@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { 
   FileText, Plus, Trash2, Save, Printer, Download, 
-  Briefcase, CheckCircle2, AlertTriangle, BookOpen, PenTool 
+  Briefcase, CheckCircle2, AlertTriangle, BookOpen, PenTool, RefreshCw 
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -168,8 +168,8 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     const profileChanged = prevProfileIdRef.current !== selectedProfileId;
     
     // If we switched profiles, OR if we don't have any local state yet
-    // We should load the data from the server/store
-    if (profileChanged || !localProfile) {
+    // OR if the server data updated and we don't have unsaved changes
+    if (profileChanged || !localProfile || (!hasChanges && profiles[selectedProfileId])) {
        let profileData = JSON.parse(JSON.stringify(profiles[selectedProfileId]));
        
        // Migration: Convert legacy string milestones to array objects
@@ -196,7 +196,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     }
     // Note: We intentionally DO NOT update if profiles changed but ID didn't and we have localProfile.
     // This prevents background refetches from overwriting user's unsaved edits.
-  }, [profiles, selectedProfileId, localProfile]);
+  }, [profiles, selectedProfileId, localProfile, hasChanges]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -502,7 +502,19 @@ export default function PositionProfileManager({ trainingResources = [] }) {
               </div>
               <div className="flex gap-2">
                 <Button 
-                  onClick={() => saveMutation.mutate()} 
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
+                    toast.info("Recargando datos...");
+                  }} 
+                  title="Recargar datos del servidor"
+                  className="mr-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+                <Button 
+                  onClick={() => saveMutation.mutate()}  
                   disabled={!hasChanges || saveMutation.isPending}
                   className={`${hasChanges ? "bg-green-600 hover:bg-green-700 animate-pulse" : "bg-slate-300 text-slate-500"}`}
                 >
@@ -694,11 +706,15 @@ export default function PositionProfileManager({ trainingResources = [] }) {
                                           </SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value="none">Ninguno</SelectItem>
-                                            {trainingDocs.map(doc => (
-                                              <SelectItem key={doc.id} value={doc.id} className="text-xs">
-                                                {doc.title}
-                                              </SelectItem>
-                                            ))}
+                                            {trainingDocs.length > 0 ? (
+                                              trainingDocs.map(doc => (
+                                                <SelectItem key={doc.id} value={doc.id} className="text-xs">
+                                                  {doc.title}
+                                                </SelectItem>
+                                              ))
+                                            ) : (
+                                              <SelectItem value="no-docs" disabled>No hay documentos disponibles</SelectItem>
+                                            )}
                                           </SelectContent>
                                         </Select>
                                       </TableCell>
