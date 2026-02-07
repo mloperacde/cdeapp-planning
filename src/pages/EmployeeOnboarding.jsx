@@ -139,14 +139,20 @@ export default function EmployeeOnboardingPage() {
           }
           
           let jsonString = latestConfig.value;
-          
-          // FALLBACK: If value is missing, check description (Dual Write Strategy)
-          if ((!jsonString || jsonString === "undefined") && latestConfig.description && latestConfig.description.startsWith('[')) {
-              console.log("Recovered config from description field.");
-              jsonString = latestConfig.description;
-          }
+           
+           // FALLBACK 1: If value is missing, check description (Dual Write Strategy)
+           if ((!jsonString || jsonString === "undefined") && latestConfig.description && latestConfig.description.startsWith('[')) {
+               console.log("Recovered config from description field.");
+               jsonString = latestConfig.description;
+           }
 
-          if (jsonString && jsonString !== "undefined") {
+           // FALLBACK 2: Check app_subtitle
+           if ((!jsonString || jsonString === "undefined") && latestConfig.app_subtitle && latestConfig.app_subtitle.startsWith('[')) {
+               console.log("Recovered config from app_subtitle field.");
+               jsonString = latestConfig.app_subtitle;
+           }
+ 
+           if (jsonString && jsonString !== "undefined") {
              try {
                  // Ensure it's an array
                  const parsed = JSON.parse(jsonString);
@@ -208,14 +214,17 @@ export default function EmployeeOnboardingPage() {
                console.warn("Error in force GET by ID (mutation), falling back to list item:", fetchError);
             }
 
-            // CORRUPTION CHECK: If 'value' AND 'description' are missing/invalid, treat as corrupt.
+            // CORRUPTION CHECK: If 'value' AND 'description' AND 'app_subtitle' are missing/invalid, treat as corrupt.
              let hasValidContent = ('value' in latest);
              if (!hasValidContent && latest.description && latest.description.startsWith('[')) {
                  hasValidContent = true;
              }
+             if (!hasValidContent && latest.app_subtitle && latest.app_subtitle.startsWith('[')) {
+                 hasValidContent = true;
+             }
 
              if (!hasValidContent) {
-                 console.error("Config found but 'value' field is MISSING and 'description' backup is invalid. Detected CORRUPTION.");
+                 console.error("Config found but 'value' field is MISSING and 'description'/'app_subtitle' backup is invalid. Detected CORRUPTION.");
                  console.log("Corrupted config keys:", Object.keys(latest));
                  try {
                     await base44.entities.AppConfig.delete(latest.id);
@@ -231,11 +240,14 @@ export default function EmployeeOnboardingPage() {
                  targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
                  
                  let jsonToParse = latest.value;
-                 if ((!jsonToParse || jsonToParse === "undefined") && latest.description && latest.description.startsWith('[')) {
-                     jsonToParse = latest.description;
-                 }
-
-                 if (jsonToParse && jsonToParse !== "undefined") {
+                  if ((!jsonToParse || jsonToParse === "undefined") && latest.description && latest.description.startsWith('[')) {
+                      jsonToParse = latest.description;
+                  }
+                  if ((!jsonToParse || jsonToParse === "undefined") && latest.app_subtitle && latest.app_subtitle.startsWith('[')) {
+                      jsonToParse = latest.app_subtitle;
+                  }
+ 
+                  if (jsonToParse && jsonToParse !== "undefined") {
                      try {
                          const parsed = JSON.parse(jsonToParse);
                          currentResources = Array.isArray(parsed) ? parsed : [];
@@ -267,20 +279,22 @@ export default function EmployeeOnboardingPage() {
       const updatedResources = [...currentResources, resource];
       const value = JSON.stringify(updatedResources);
 
-      // DUAL WRITE STRATEGY:
-      // Since backend might strip 'value', we also write to 'description' as a backup.
+      // DUAL WRITE STRATEGY + APP SUBTITLE HACK
+      // 1. Write to 'value' (standard)
+      // 2. Write to 'description' (backup)
+      // 3. Write to 'app_subtitle' (backup 2 - if backend strips everything else)
       const payload = { 
           value,
-          description: value // Backup
+          description: value, 
+          app_subtitle: value, // Hack: Use app_subtitle if available
+          key: targetKey, // Explicitly send 'key' in addition to 'config_key' to try to bypass branding mode
+          config_key: targetKey
       };
 
       if (targetConfigId) {
         return base44.entities.AppConfig.update(targetConfigId, payload);
       } else {
-        return base44.entities.AppConfig.create({ 
-          config_key: targetKey, 
-          ...payload
-        });
+        return base44.entities.AppConfig.create(payload);
       }
     },
     onSuccess: () => {

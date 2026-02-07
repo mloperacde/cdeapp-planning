@@ -170,13 +170,19 @@ export default function PositionProfileManager({ trainingResources = [] }) {
 
             let jsonString = latest.value;
             
-            // FALLBACK: Dual Write Strategy check
-            if ((!jsonString || jsonString === "undefined") && latest.description && latest.description.startsWith('{')) {
-                console.log("Recovered profile config from description field.");
-                jsonString = latest.description;
-            }
+            // FALLBACK 1: Dual Write Strategy check
+             if ((!jsonString || jsonString === "undefined") && latest.description && latest.description.startsWith('{')) {
+                 console.log("Recovered profile config from description field.");
+                 jsonString = latest.description;
+             }
 
-            if (jsonString && jsonString !== "undefined") {
+             // FALLBACK 2: Check app_subtitle
+             if ((!jsonString || jsonString === "undefined") && latest.app_subtitle && latest.app_subtitle.startsWith('{')) {
+                 console.log("Recovered profile config from app_subtitle field.");
+                 jsonString = latest.app_subtitle;
+             }
+
+             if (jsonString && jsonString !== "undefined") {
               try {
                 return JSON.parse(jsonString);
               } catch (e) {
@@ -271,14 +277,17 @@ export default function PositionProfileManager({ trainingResources = [] }) {
           }
           
           // CORRUPTION CHECK
-          let hasValidContent = ('value' in latest);
-          if (!hasValidContent && latest.description && latest.description.startsWith('{')) {
-              hasValidContent = true;
-          }
+           let hasValidContent = ('value' in latest);
+           if (!hasValidContent && latest.description && latest.description.startsWith('{')) {
+               hasValidContent = true;
+           }
+           if (!hasValidContent && latest.app_subtitle && latest.app_subtitle.startsWith('{')) {
+               hasValidContent = true;
+           }
 
-          if (!hasValidContent) {
-              console.error("Profile Config found but 'value' field is MISSING and 'description' backup is invalid. Detected CORRUPTION.");
-              try {
+           if (!hasValidContent) {
+               console.error("Profile Config found but 'value' field is MISSING and 'description'/'app_subtitle' backup is invalid. Detected CORRUPTION.");
+               try {
                   await base44.entities.AppConfig.delete(latest.id);
                   targetConfigId = null; // Force create
               } catch (delErr) {
@@ -294,7 +303,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
              console.warn("Found duplicate profile configs, cleaning up...");
              for (let i = 1; i < matches.length; i++) {
                  // Skip the one we are working on (if we haven't deleted it)
-                 if (matches[i].id !== latest.id) {
+                 if (matches[i].id !== targetConfigId) {
                      await base44.entities.AppConfig.delete(matches[i].id);
                  }
              }
@@ -308,19 +317,19 @@ export default function PositionProfileManager({ trainingResources = [] }) {
 
       const value = JSON.stringify(newProfiles);
       
-      // DUAL WRITE STRATEGY
+      // DUAL WRITE STRATEGY + APP SUBTITLE HACK
       const payload = {
           value,
-          description: value // Backup
+          description: value, // Backup 1
+          app_subtitle: value, // Backup 2
+          key: 'position_profiles_v1', // Explicitly send 'key'
+          config_key: 'position_profiles_v1'
       };
       
       if (targetConfigId) {
         return base44.entities.AppConfig.update(targetConfigId, payload);
       } else {
-        return base44.entities.AppConfig.create({ 
-          config_key: 'position_profiles_v1', 
-          ...payload
-        });
+        return base44.entities.AppConfig.create(payload);
       }
     },
     onSuccess: () => {
