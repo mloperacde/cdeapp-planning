@@ -248,13 +248,40 @@ export default function PositionProfileManager({ trainingResources = [] }) {
       if (matches && matches.length > 0) {
           // Sort and use latest
           matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-          targetConfigId = matches[0].id;
+          let latest = matches[0];
+          
+          // FORCE GET by ID to ensure we have the full content
+          try {
+             const fullConfig = await base44.entities.AppConfig.get(latest.id);
+             if (fullConfig) {
+                 latest = fullConfig;
+             }
+          } catch (fetchError) {
+             console.warn("Error in force GET by ID (profiles mutation), falling back to list item:", fetchError);
+          }
+          
+          // CORRUPTION CHECK
+          if (!('value' in latest)) {
+              console.error("Profile Config found but 'value' field is MISSING. Detected CORRUPTION.");
+              try {
+                  await base44.entities.AppConfig.delete(latest.id);
+                  targetConfigId = null; // Force create
+              } catch (delErr) {
+                  console.error("Failed to delete corrupted profile config:", delErr);
+                  targetConfigId = null;
+              }
+          } else {
+              targetConfigId = latest.id;
+          }
           
           // Cleanup duplicates
           if (matches.length > 1) {
              console.warn("Found duplicate profile configs, cleaning up...");
              for (let i = 1; i < matches.length; i++) {
-                 await base44.entities.AppConfig.delete(matches[i].id);
+                 // Skip the one we are working on (if we haven't deleted it)
+                 if (matches[i].id !== latest.id) {
+                     await base44.entities.AppConfig.delete(matches[i].id);
+                 }
              }
           }
       }

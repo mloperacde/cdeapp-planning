@@ -198,17 +198,35 @@ export default function EmployeeOnboardingPage() {
             } catch (fetchError) {
                console.warn("Error in force GET by ID (mutation), falling back to list item:", fetchError);
             }
-            
-            // Preserve the key used by the existing record
-            targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
-            
-            if (latest.value && latest.value !== "undefined") {
+
+            // CORRUPTION CHECK: If 'value' field is missing from keys, the record is likely corrupted (e.g. overwritten by Branding data)
+            // We must DELETE it and force creation of a new clean record.
+            if (!('value' in latest)) {
+                console.error("Config found but 'value' field is MISSING. Detected CORRUPTION/SCHEMA MISMATCH.");
+                console.log("Corrupted config keys:", Object.keys(latest));
                 try {
-                    const parsed = JSON.parse(latest.value);
-                    currentResources = Array.isArray(parsed) ? parsed : [];
-                } catch (e) {
-                    console.error("Error parsing current resources during mutation", e);
+                    await base44.entities.AppConfig.delete(latest.id);
+                    console.log("Deleted corrupted config:", latest.id);
+                    targetConfigId = null; // Force create
                     currentResources = [];
+                } catch (delErr) {
+                    console.error("Failed to delete corrupted config:", delErr);
+                    // If delete fails, we can't do much but try to proceed or fail.
+                    // Let's assume we can't use this ID.
+                    targetConfigId = null; 
+                }
+            } else {
+                // Preserve the key used by the existing record
+                targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
+                
+                if (latest.value && latest.value !== "undefined") {
+                    try {
+                        const parsed = JSON.parse(latest.value);
+                        currentResources = Array.isArray(parsed) ? parsed : [];
+                    } catch (e) {
+                        console.error("Error parsing current resources during mutation", e);
+                        currentResources = [];
+                    }
                 }
             }
             
