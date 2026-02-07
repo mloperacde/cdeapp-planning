@@ -136,17 +136,25 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     queryKey: ['positionProfiles'],
     queryFn: async () => {
       try {
+        console.log("Fetching profiles...");
         // Try to find by config_key first (standard), then key (legacy)
         let configs = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
         if (!configs || configs.length === 0) {
            configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
         }
         
-        const profileConfig = configs && configs.length > 0 ? configs[0] : null;
-        
-        if (profileConfig) {
-          return JSON.parse(profileConfig.value);
+        console.log("Profiles configs found:", configs);
+
+        if (configs && configs.length > 0) {
+           // Sort by updated_at descending to get the latest
+           configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+           const latest = configs[0];
+           
+           if (latest.value) {
+             return JSON.parse(latest.value);
+           }
         }
+        
         return INITIAL_PROFILES;
       } catch (e) {
         console.error("Error fetching profiles", e);
@@ -207,7 +215,21 @@ export default function PositionProfileManager({ trainingResources = [] }) {
       if (!configs || configs.length === 0) {
          configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
       }
-      const existingConfig = configs && configs.length > 0 ? configs[0] : null;
+      
+      let targetConfigId = null;
+      if (configs && configs.length > 0) {
+          // Sort and use latest
+          configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+          targetConfigId = configs[0].id;
+          
+          // Cleanup duplicates
+          if (configs.length > 1) {
+             console.warn("Found duplicate profile configs, cleaning up...");
+             for (let i = 1; i < configs.length; i++) {
+                 await base44.entities.AppConfig.delete(configs[i].id);
+             }
+          }
+      }
       
       const newProfiles = {
         ...profiles,
@@ -216,8 +238,8 @@ export default function PositionProfileManager({ trainingResources = [] }) {
 
       const value = JSON.stringify(newProfiles);
       
-      if (existingConfig) {
-        return base44.entities.AppConfig.update(existingConfig.id, { value });
+      if (targetConfigId) {
+        return base44.entities.AppConfig.update(targetConfigId, { value });
       } else {
         return base44.entities.AppConfig.create({ 
           config_key: 'position_profiles_v1', 

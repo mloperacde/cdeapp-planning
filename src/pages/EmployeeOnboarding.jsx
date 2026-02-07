@@ -105,12 +105,22 @@ export default function EmployeeOnboardingPage() {
     queryFn: async () => {
       try {
         console.log("Fetching training resources...");
+        // Fetch all configs matching the key
         const configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
-        console.log("Configs found:", configs);
-        if (configs && configs.length > 0 && configs[0].value) {
-          const parsed = JSON.parse(configs[0].value);
-          console.log("Parsed resources:", parsed);
-          return parsed;
+        console.log("Configs found raw:", configs);
+        
+        if (configs && configs.length > 0) {
+          // Sort by updated_at descending to get the latest
+          configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+          
+          const latestConfig = configs[0];
+          console.log("Using latest config:", latestConfig.id, latestConfig.updated_at);
+          
+          if (latestConfig.value) {
+             const parsed = JSON.parse(latestConfig.value);
+             console.log("Parsed resources:", parsed);
+             return parsed;
+          }
         }
         return [];
       } catch (e) {
@@ -129,47 +139,62 @@ export default function EmployeeOnboardingPage() {
   });
 
   const createTrainingResourceMutation = useMutation({
-    mutationFn: async (data) => {
-      const newItem = { ...data, id: Math.random().toString(36).substring(2, 15), created_at: new Date().toISOString() };
-      
-      let configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+    mutationFn: async (newResource) => {
+      // 1. Get current list (re-fetch to be safe)
       let currentResources = [];
-      let configId = null;
-
+      const configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      
+      let targetConfigId = null;
+      
       if (configs && configs.length > 0) {
-        if (configs[0].value) {
-          try {
-            currentResources = JSON.parse(configs[0].value);
-          } catch (e) {
-            console.error("Error parsing existing resources", e);
-            currentResources = [];
-          }
+        // Sort and use latest
+        configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        const latest = configs[0];
+        targetConfigId = latest.id;
+        if (latest.value) {
+            try {
+                currentResources = JSON.parse(latest.value);
+            } catch (e) {
+                console.error("Error parsing current resources during mutation", e);
+                currentResources = [];
+            }
         }
-        configId = configs[0].id;
+        
+        // Cleanup duplicates if any
+        if (configs.length > 1) {
+            console.warn("Found duplicate configs, cleaning up...");
+            for (let i = 1; i < configs.length; i++) {
+                await base44.entities.AppConfig.delete(configs[i].id);
+            }
+        }
       }
 
-      const updatedResources = [newItem, ...currentResources];
+      const resource = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        ...newResource,
+      };
+
+      const updatedResources = [...currentResources, resource];
       const value = JSON.stringify(updatedResources);
 
-      if (configId) {
-        await base44.entities.AppConfig.update(configId, { value });
+      if (targetConfigId) {
+        return base44.entities.AppConfig.update(targetConfigId, { value });
       } else {
-        await base44.entities.AppConfig.create({
+        return base44.entities.AppConfig.create({
           config_key: 'onboarding_training_resources',
           value,
-          description: 'Repository of training documents and resources'
+          description: 'Resources and Documents for Employee Onboarding'
         });
       }
-      return newItem;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["onboardingTrainingResources"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["onboardingTrainingResources"] });
       toast.success("Recurso añadido correctamente");
     },
-    onError: () => {
-      toast.error("Error al añadir recurso");
+    onError: (e) => {
+        console.error("Mutation error:", e);
+        toast.error("Error al guardar el recurso");
     }
   });
 
