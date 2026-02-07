@@ -6,8 +6,11 @@ const CHUNK_SIZE = 1500; // Safe limit for text fields
 
 /**
  * Hook personalizado para gestionar AppConfig con persistencia robusta.
- * Implementa estrategia "Triple Write" (value, description, app_subtitle) 
- * y "Chunked Storage" para datos grandes, más "Delete-Replace" para limpieza.
+ * Versión 7: Estrategia "Internal Timestamp" + "Create-Then-Cleanup".
+ * 
+ * Problema resuelto: Evita que el backend devuelva versiones antiguas o borradas,
+ * y garantiza que siempre se lea la versión más reciente basándose en un timestamp interno
+ * en lugar de confiar en metadatos del sistema (updated_at) o consistencia eventual.
  * 
  * @param {string} configKey - Clave única de configuración (ej. 'training_resources_v1')
  * @param {any} initialData - Datos iniciales por defecto
@@ -17,22 +20,21 @@ const CHUNK_SIZE = 1500; // Safe limit for text fields
 export function usePersistentAppConfig(configKey, initialData, queryKeyName, isArray = false) {
   const queryClient = useQueryClient();
 
-  // 1. Lectura Robusta con soporte para Chunking
+  // 1. Lectura Robusta (Busca todo, parsea todo, elige el más nuevo por timestamp interno)
   const query = useQuery({
     queryKey: [queryKeyName],
     queryFn: async () => {
       try {
-        console.log(`[Config] Fetching ${configKey}...`);
+        console.log(`[Config] Fetching ${configKey} (v7 Strategy)...`);
         
-        // Strategy: Search by exact key matches instead of listing all to avoid limits and signature issues
-        // 1. Try finding by 'key'
+        // Strategy: Fetch ALL candidates matching the key
         let matches = [];
         try {
            const byKey = await base44.entities.AppConfig.filter({ key: configKey });
            if (byKey && Array.isArray(byKey)) matches = [...matches, ...byKey];
         } catch (e) { console.warn("Filter by key failed", e); }
 
-        // 2. Try finding by 'config_key' (legacy support)
+        // Legacy fallback
         try {
            const byConfigKey = await base44.entities.AppConfig.filter({ config_key: configKey });
            if (byConfigKey && Array.isArray(byConfigKey)) matches = [...matches, ...byConfigKey];
@@ -43,65 +45,102 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
           return initialData;
         }
 
-        // Sort by update time to get latest master
-        matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-        let latest = matches[0];
+        console.log(`[Config] Found ${matches.length} candidates for ${configKey}. resolving...`);
 
-        // Force GET to ensure full content (some APIs might return partial objects in list/filter)
-        try {
-          const fullConfig = await base44.entities.AppConfig.get(latest.id);
-          if (fullConfig) latest = fullConfig;
-        } catch (e) {
-          // console.warn(`Force GET failed for ${configKey}, using list item.`);
+        // Resolve all candidates to find the true latest version
+        // We must inspect content to find our internal timestamp
+        const candidates = [];
+
+        for (const match of matches) {
+            // Force GET to ensure full content if value is missing
+            let record = match;
+            if (!record.value && !record.description) {
+                try {
+                    const full = await base44.entities.AppConfig.get(match.id);
+                    if (full) record = full;
+                } catch(e) {}
+            }
+
+            // Extract content (Triple Read)
+            let jsonString = record.value;
+            if (!isValidJsonString(jsonString) && isValidJsonString(record.description)) jsonString = record.description;
+            if (!isValidJsonString(jsonString) && isValidJsonString(record.app_subtitle)) jsonString = record.app_subtitle;
+
+            if (isValidJsonString(jsonString)) {
+                try {
+                    const parsed = JSON.parse(jsonString);
+                    // Standardize: If it has internal timestamp, use it. If not, use updated_at.
+                    // New format: { _ts: 123456789, _is_chunked: bool, data: ... }
+                    // Legacy format: raw data or { is_chunked: true, ... }
+                    
+                    let timestamp = new Date(record.updated_at).getTime(); // Default to system time
+                    let isChunked = false;
+                    let chunkCount = 0;
+                    let content = parsed;
+
+                    // Check for v7 envelope
+                    if (parsed._ts) {
+                        timestamp = parsed._ts;
+                        content = parsed.data;
+                        isChunked = parsed._is_chunked;
+                        if (isChunked) chunkCount = parsed._chunk_count;
+                    } 
+                    // Check for v6 envelope (Master Record)
+                    else if (parsed.timestamp && parsed.is_chunked) {
+                        timestamp = parsed.timestamp;
+                        isChunked = true;
+                        chunkCount = parsed.count;
+                    }
+
+                    candidates.push({
+                        id: record.id,
+                        timestamp,
+                        isChunked,
+                        chunkCount,
+                        content,
+                        originalRecord: record
+                    });
+
+                } catch(e) {
+                    console.warn(`Failed to parse candidate ${record.id}`, e);
+                }
+            }
         }
 
-        // Recover JSON string (Triple Read)
-        let jsonString = latest.value;
-        if (!isValidJsonString(jsonString) && isValidJsonString(latest.description)) jsonString = latest.description;
-        if (!isValidJsonString(jsonString) && isValidJsonString(latest.app_subtitle)) jsonString = latest.app_subtitle;
+        if (candidates.length === 0) return initialData;
 
-        if (!isValidJsonString(jsonString)) {
-           console.warn(`[Config] Invalid JSON for ${configKey}`);
-           return initialData;
-        }
+        // Sort by Internal Timestamp (Descending)
+        candidates.sort((a, b) => b.timestamp - a.timestamp);
+        const winner = candidates[0];
+        
+        console.log(`[Config] Winner for ${configKey} is ${winner.id} (ts: ${winner.timestamp})`);
 
-        // Check for Chunking
-        try {
-          const parsed = JSON.parse(jsonString);
-          
-          if (parsed && parsed.is_chunked) {
-             console.log(`[Config] Detected CHUNKED data for ${configKey} (${parsed.count} chunks)`);
-             // Reassemble chunks
+        // If chunked, we need to fetch chunks
+        if (winner.isChunked) {
+             console.log(`[Config] Winner is CHUNKED (${winner.chunkCount} chunks). Reassembling...`);
              const chunks = [];
-             for (let i = 0; i < parsed.count; i++) {
-                const chunkKey = `${configKey}_chunk_${i}`;
-                // Fetch specific chunk
+             for (let i = 0; i < winner.chunkCount; i++) {
+                const chunkKey = `${configKey}_chunk_${i}`; // Note: Chunks don't use unique IDs per version, they share key. This is a limitation.
+                // To fix the "old chunks" issue, we must rely on "Delete-Replace" for chunks being effective.
+                // Or better: We assume the chunks currently in DB belong to the latest master if we cleanup correctly.
+                
+                // Fetch chunk
                 let chunkMatches = [];
                 try {
                     const cKey = await base44.entities.AppConfig.filter({ key: chunkKey });
                     if (cKey) chunkMatches = [...chunkMatches, ...cKey];
                 } catch(e) {}
                 
-                // Fallback check
-                if (chunkMatches.length === 0) {
-                     try {
-                        const cConfigKey = await base44.entities.AppConfig.filter({ config_key: chunkKey });
-                        if (cConfigKey) chunkMatches = [...chunkMatches, ...cConfigKey];
-                     } catch(e) {}
-                }
-
                 if (chunkMatches.length > 0) {
-                    // Get latest chunk version if multiple
+                    // Sort chunks by updated_at (best effort)
                     chunkMatches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
                     let chunkMatch = chunkMatches[0];
 
-                    // Force GET to ensure full content (Fix for empty chunks)
+                    // Force GET
                     try {
                         const fullChunk = await base44.entities.AppConfig.get(chunkMatch.id);
                         if (fullChunk) chunkMatch = fullChunk;
-                    } catch (e) {
-                         // console.warn(`Force GET failed for chunk ${i}`);
-                    }
+                    } catch (e) {}
                     
                     let chunkVal = chunkMatch.value;
                     if (!chunkVal && chunkMatch.description) chunkVal = chunkMatch.description;
@@ -109,27 +148,24 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                     
                     chunks.push(chunkVal || "");
                 } else {
-                    console.error(`[Config] Missing chunk ${i} for ${configKey}`);
-                    // If a chunk is missing, the data is corrupted. 
-                    // We could return partial data or fail. Failing is safer to avoid overwriting with bad data.
-                    // But to be user friendly, maybe we assume empty string?
-                    chunks.push(""); 
+                    chunks.push(""); // Missing chunk
                 }
              }
              
              const fullJson = chunks.join('');
-             console.log(`[Config] Reassembled ${configKey}, length: ${fullJson.length}`);
-             const realData = JSON.parse(fullJson);
-             return realData;
-          }
-          
-          if (isArray && !Array.isArray(parsed)) return initialData;
-          return parsed;
-
-        } catch (e) {
-          console.error(`JSON parse error for ${configKey}`, e);
-          return initialData;
+             try {
+                const realData = JSON.parse(fullJson);
+                return realData;
+             } catch(e) {
+                 console.error("Failed to parse reassembled chunks", e);
+                 return initialData;
+             }
         }
+
+        // Return winner content
+        if (isArray && !Array.isArray(winner.content)) return initialData;
+        return winner.content;
+
       } catch (e) {
         console.error(`Error fetching ${configKey}`, e);
         return initialData;
@@ -139,66 +175,15 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
     initialData: initialData,
   });
 
-  // 2. Escritura con Chunking y Delete-Replace
+  // 2. Escritura (Create New -> Cleanup Old)
   const mutation = useMutation({
     mutationFn: async (newData) => {
-      console.log(`[Config] Saving ${configKey}...`);
+      console.log(`[Config] Saving ${configKey} (v7 Strategy)...`);
       const fullJson = JSON.stringify(newData);
       const isLarge = fullJson.length > CHUNK_SIZE;
+      const timestamp = Date.now();
       
-      // 1. Clean up OLD versions (Master + Chunks)
-      // Instead of listing all, we search for what we know might exist.
-      
-      // Find existing master(s)
-      let existingMasters = [];
-      try {
-          const k = await base44.entities.AppConfig.filter({ key: configKey });
-          if(k) existingMasters = [...existingMasters, ...k];
-          const ck = await base44.entities.AppConfig.filter({ config_key: configKey });
-          if(ck) existingMasters = [...existingMasters, ...ck];
-      } catch(e) { console.warn("Cleanup search failed", e); }
-      
-      // Delete found masters and their chunks
-      for (const master of existingMasters) {
-          try {
-             // Delete master
-             await base44.entities.AppConfig.delete(master.id);
-             
-             // Check if it was chunked to delete its chunks
-             let chunkCount = 0;
-             if (master.value && master.value.includes("is_chunked")) {
-                 try {
-                     const parsed = JSON.parse(master.value);
-                     if (parsed.is_chunked) chunkCount = parsed.count;
-                 } catch(e) {}
-             }
-             
-             // Delete chunks
-             for (let i = 0; i < chunkCount; i++) {
-                 const chunkKey = `${configKey}_chunk_${i}`;
-                 const chunks = await base44.entities.AppConfig.filter({ key: chunkKey });
-                 for (const c of chunks) {
-                     await base44.entities.AppConfig.delete(c.id);
-                 }
-             }
-          } catch(e) {
-              console.warn(`Failed to cleanup ${master.id}`, e);
-          }
-      }
-      
-      // Safety: Attempt to delete potential orphaned chunks from previous failed overwrites
-      // We'll check for a reasonable number of chunks (e.g., up to 20) to be safe
-      for(let i=0; i<20; i++) {
-          try {
-             const chunkKey = `${configKey}_chunk_${i}`;
-             const orphans = await base44.entities.AppConfig.filter({ key: chunkKey });
-             if (orphans && orphans.length > 0) {
-                 for(const o of orphans) await base44.entities.AppConfig.delete(o.id);
-             }
-          } catch(e) {}
-      }
-
-      // 2. Create New Records
+      let newMasterId = null;
 
       if (isLarge) {
           // Chunked Save
@@ -209,13 +194,26 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
           
           console.log(`[Config] Saving as ${chunks.length} chunks (Total size: ${fullJson.length})`);
 
-          // Save Chunks first
+          // 1. Delete OLD Chunks first (Critical for consistency since chunk keys are reused)
+          // We can't version chunk keys easily without exploding DB size/lookup complexity.
+          // So we aggressively clean chunks.
+          for (let i = 0; i < 20; i++) { // Check up to 20 potential chunks
+              const chunkKey = `${configKey}_chunk_${i}`;
+              try {
+                  const oldChunks = await base44.entities.AppConfig.filter({ key: chunkKey });
+                  if (oldChunks && oldChunks.length > 0) {
+                      for(const c of oldChunks) await base44.entities.AppConfig.delete(c.id);
+                  }
+              } catch(e) {}
+          }
+
+          // 2. Create NEW Chunks
           for (let i = 0; i < chunks.length; i++) {
               const chunkKey = `${configKey}_chunk_${i}`;
               const chunkPayload = {
                   value: chunks[i],
-                  description: chunks[i], // Backup
-                  app_subtitle: chunks[i], // Backup 2: Triple Write for Chunks too
+                  description: chunks[i], 
+                  app_subtitle: chunks[i], 
                   key: chunkKey,
                   config_key: chunkKey,
                   is_active: true,
@@ -224,32 +222,64 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
               await base44.entities.AppConfig.create(chunkPayload);
           }
 
-          // Save Master Record
-          const metaJson = JSON.stringify({ is_chunked: true, count: chunks.length, timestamp: Date.now() });
+          // 3. Create Master Record (v7 Envelope)
+          const metaEnvelope = {
+              _ts: timestamp,
+              _is_chunked: true,
+              _chunk_count: chunks.length,
+              data: null // Data is in chunks
+          };
+          const metaJson = JSON.stringify(metaEnvelope);
+          
           const masterPayload = {
               value: metaJson,
-              description: metaJson, // Backup: Triple Write for Master Record too
-              app_subtitle: metaJson, // Backup: Triple Write for Master Record too
+              description: metaJson,
+              app_subtitle: metaJson,
               key: configKey,
               config_key: configKey,
               is_active: true,
               app_name: 'Config Manager'
           };
-          return await base44.entities.AppConfig.create(masterPayload);
+          const res = await base44.entities.AppConfig.create(masterPayload);
+          newMasterId = res.id;
 
       } else {
-          // Normal Save (Triple Write)
+          // Normal Save (v7 Envelope)
+          const envelope = {
+              _ts: timestamp,
+              _is_chunked: false,
+              data: newData
+          };
+          const envelopeJson = JSON.stringify(envelope);
+
           const payload = {
-            value: fullJson,
-            description: fullJson,
-            app_subtitle: fullJson,
+            value: envelopeJson,
+            description: envelopeJson,
+            app_subtitle: envelopeJson,
             key: configKey,
             config_key: configKey,
             is_active: true,
             app_name: 'Config Manager'
           };
-          return await base44.entities.AppConfig.create(payload);
+          const res = await base44.entities.AppConfig.create(payload);
+          newMasterId = res.id;
       }
+
+      // 4. Cleanup OLD Masters (After successful create)
+      if (newMasterId) {
+          try {
+              const k = await base44.entities.AppConfig.filter({ key: configKey });
+              if (k) {
+                  for (const m of k) {
+                      if (m.id !== newMasterId) {
+                          await base44.entities.AppConfig.delete(m.id);
+                      }
+                  }
+              }
+          } catch(e) { console.warn("Cleanup failed", e); }
+      }
+
+      return { success: true };
     },
     onSuccess: (data, variables) => {
       queryClient.setQueryData([queryKeyName], variables);
