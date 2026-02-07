@@ -192,12 +192,12 @@ export default function EmployeeOnboardingPage() {
   }, [onboardings]);
 
   const trainingDocs = useMemo(
-    () => trainingResources.filter(r => r.type === "document"),
+    () => (trainingResources || []).filter(r => r.type === "document"),
     [trainingResources]
   );
 
   const trainings = useMemo(
-    () => trainingResources.filter(r => r.type === "training"),
+    () => (trainingResources || []).filter(r => r.type === "training"),
     [trainingResources]
   );
 

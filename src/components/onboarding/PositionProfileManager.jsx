@@ -129,11 +129,11 @@ export default function PositionProfileManager({ trainingResources = [] }) {
   const iframeRef = useRef(null);
 
   const trainingDocs = useMemo(() => {
-    return trainingResources.filter(r => r.type === 'document' || r.type === 'url');
+    return (trainingResources || []).filter(r => r.type === 'document' || r.type === 'url');
   }, [trainingResources]);
 
   const trainingPlans = useMemo(() => {
-    return trainingResources.filter(r => r.type === 'training');
+    return (trainingResources || []).filter(r => r.type === 'training');
   }, [trainingResources]);
 
   const { 

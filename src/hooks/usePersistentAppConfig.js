@@ -76,6 +76,7 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
     },
     // Mantener datos frescos pero no re-fetchear obsesivamente
     staleTime: 1000 * 60 * 5, // 5 minutos
+    initialData: initialData,
   });
 
   // 2. Escritura (Delete All + Create New)

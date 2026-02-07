@@ -198,26 +198,26 @@ export default function DailyProductionPlanningPage() {
   }, [activePlanningsMap, machines]);
 
   const availableMachines = useMemo(() => {
-    return machines.filter(m => !activePlanningsMap.has(String(m.id)));
+    return (machines || []).filter(m => !activePlanningsMap.has(String(m.id)));
   }, [machines, activePlanningsMap]);
 
   const filteredAvailableMachines = useMemo(() => {
-      if (!machineSearch.trim()) return availableMachines;
+      if (!machineSearch.trim()) return availableMachines || [];
       const lower = machineSearch.toLowerCase();
-      return availableMachines.filter(m => 
+      return (availableMachines || []).filter(m => 
           m.alias?.toLowerCase().includes(lower)
       );
   }, [availableMachines, machineSearch]);
 
   const availableOperators = useMemo(() => {
-    const teamObj = teams.find(t => t.team_key === selectedTeam);
+    const teamObj = (teams || []).find(t => t.team_key === selectedTeam);
     if (!teamObj) return 0;
     
     // Normalization helper for robust comparison
     const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
     const targetTeam = normalize(teamObj.team_name);
 
-    return employees.filter(e => {
+    return (employees || []).filter(e => {
         // 1. Team Match (Robust with team_id support)
         if (e.team_id && String(e.team_id) === String(teamObj.id)) {
             // Match by ID
