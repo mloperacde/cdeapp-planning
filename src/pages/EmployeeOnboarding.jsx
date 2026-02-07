@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -233,11 +233,6 @@ export default function EmployeeOnboardingPage() {
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Empleado desconocido";
   };
-
-  // Debug effect
-  useEffect(() => {
-    console.log("Current trainingResources state:", trainingResources);
-  }, [trainingResources]);
 
   const getEmployeeData = (employeeId) => {
     return employees.find(e => e.id === employeeId);
