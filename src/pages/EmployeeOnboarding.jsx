@@ -106,7 +106,14 @@ export default function EmployeeOnboardingPage() {
       try {
         console.log("Fetching training resources...");
         // Fetch all configs matching the key
-        const configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+        let configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+        
+        // Fallback: Try legacy key if no config_key found
+        if (!configs || configs.length === 0) {
+           console.log("No configs found with config_key, trying legacy key...");
+           configs = await base44.entities.AppConfig.filter({ key: 'onboarding_training_resources' });
+        }
+
         console.log("Configs found raw:", configs);
         
         if (configs && configs.length > 0) {
@@ -116,10 +123,15 @@ export default function EmployeeOnboardingPage() {
           const latestConfig = configs[0];
           console.log("Using latest config:", latestConfig.id, latestConfig.updated_at);
           
-          if (latestConfig.value) {
-             const parsed = JSON.parse(latestConfig.value);
-             console.log("Parsed resources:", parsed);
-             return parsed;
+          if (latestConfig.value && latestConfig.value !== "undefined") {
+             try {
+                 const parsed = JSON.parse(latestConfig.value);
+                 console.log("Parsed resources:", parsed);
+                 return Array.isArray(parsed) ? parsed : [];
+             } catch (e) {
+                 console.error("JSON Parse Error in fetch:", e);
+                 return [];
+             }
           }
         }
         return [];
@@ -142,7 +154,11 @@ export default function EmployeeOnboardingPage() {
     mutationFn: async (newResource) => {
       // 1. Get current list (re-fetch to be safe)
       let currentResources = [];
-      const configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      let configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      
+      if (!configs || configs.length === 0) {
+          configs = await base44.entities.AppConfig.filter({ key: 'onboarding_training_resources' });
+      }
       
       let targetConfigId = null;
       
@@ -151,9 +167,10 @@ export default function EmployeeOnboardingPage() {
         configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
         const latest = configs[0];
         targetConfigId = latest.id;
-        if (latest.value) {
+        if (latest.value && latest.value !== "undefined") {
             try {
-                currentResources = JSON.parse(latest.value);
+                const parsed = JSON.parse(latest.value);
+                currentResources = Array.isArray(parsed) ? parsed : [];
             } catch (e) {
                 console.error("Error parsing current resources during mutation", e);
                 currentResources = [];
@@ -190,7 +207,7 @@ export default function EmployeeOnboardingPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboardingTrainingResources"] });
-      toast.success("Recurso añadido correctamente");
+      toast.success("Recurso añadido y guardado");
     },
     onError: (e) => {
         console.error("Mutation error:", e);
@@ -732,10 +749,14 @@ export default function EmployeeOnboardingPage() {
                         type="button"
                         onClick={handleAddDoc}
                         disabled={!newDoc.title || !newDoc.url}
+                        className="min-w-[100px]"
                       >
-                        Añadir
+                        Confirmar
                       </Button>
                     </div>
+                    <p className="text-xs text-slate-500 italic">
+                        * Sube el archivo y pulsa "Confirmar" para guardarlo en la lista.
+                    </p>
                   </div>
 
                   {trainingDocs.length > 0 ? (

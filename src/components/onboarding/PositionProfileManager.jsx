@@ -131,6 +131,10 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     return trainingResources.filter(r => r.type === 'document' || r.type === 'url');
   }, [trainingResources]);
 
+  const trainingPlans = useMemo(() => {
+    return trainingResources.filter(r => r.type === 'training');
+  }, [trainingResources]);
+
   // Fetch Profiles from AppConfig
   const { data: profiles, isLoading } = useQuery({
     queryKey: ['positionProfiles'],
@@ -150,8 +154,13 @@ export default function PositionProfileManager({ trainingResources = [] }) {
            configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
            const latest = configs[0];
            
-           if (latest.value) {
-             return JSON.parse(latest.value);
+           if (latest.value && latest.value !== "undefined") {
+             try {
+                return JSON.parse(latest.value);
+             } catch (e) {
+                console.error("JSON Parse Error in Profiles:", e);
+                return INITIAL_PROFILES;
+             }
            }
         }
         
@@ -485,7 +494,8 @@ export default function PositionProfileManager({ trainingResources = [] }) {
   };
 
   return (
-    <div className="flex h-[calc(100vh-200px)] gap-6">
+    <div className="flex flex-col gap-6">
+      <div className="flex h-[calc(100vh-200px)] gap-6">
       {/* Sidebar List */}
       <Card className="w-64 shrink-0 flex flex-col">
         <CardHeader className="p-4 border-b">
@@ -920,6 +930,50 @@ export default function PositionProfileManager({ trainingResources = [] }) {
         )}
       </Card>
       <iframe ref={iframeRef} className="hidden" />
+      </div>
+
+      {/* Training Plans Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+             <BookOpen className="w-5 h-5 text-blue-600" />
+             Catálogo de Planes de Formación
+          </CardTitle>
+          <CardDescription>
+            Formaciones disponibles para asignar a los planes de onboarding
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {trainingPlans.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Formación</TableHead>
+                  <TableHead>Colectivo</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {trainingPlans.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell className="font-medium">{t.title}</TableCell>
+                    <TableCell>{t.colectivo || "-"}</TableCell>
+                    <TableCell>{t.fecha}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{t.estado}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+             <div className="text-center py-4 text-slate-500 text-sm">
+                No hay planes de formación registrados en el sistema.
+             </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
