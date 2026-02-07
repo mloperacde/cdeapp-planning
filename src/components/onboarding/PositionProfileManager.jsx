@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -89,14 +89,15 @@ const INITIAL_PROFILES = {
 export default function PositionProfileManager() {
   const queryClient = useQueryClient();
   const [selectedProfileId, setSelectedProfileId] = useState("tecnico-proceso");
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [localProfile, setLocalProfile] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const iframeRef = useRef(null);
 
   // Fetch Profiles from AppConfig
   const { data: profiles, isLoading } = useQuery({
     queryKey: ['positionProfiles'],
     queryFn: async () => {
       try {
-        // Try to fetch from AppConfig
         const config = await base44.entities.AppConfig.list();
         const profileConfig = config.find(c => c.key === 'position_profiles_v1');
         
@@ -112,11 +113,25 @@ export default function PositionProfileManager() {
     initialData: INITIAL_PROFILES
   });
 
+  // Sync local state when selection changes or data loads
+  useEffect(() => {
+    if (profiles && selectedProfileId && profiles[selectedProfileId]) {
+       setLocalProfile(JSON.parse(JSON.stringify(profiles[selectedProfileId])));
+       setHasChanges(false);
+    }
+  }, [profiles, selectedProfileId]);
+
   const saveMutation = useMutation({
-    mutationFn: async (newProfiles) => {
+    mutationFn: async () => {
+      if (!localProfile) return;
       const configList = await base44.entities.AppConfig.list();
       const existingConfig = configList.find(c => c.key === 'position_profiles_v1');
       
+      const newProfiles = {
+        ...profiles,
+        [selectedProfileId]: localProfile
+      };
+
       const value = JSON.stringify(newProfiles);
       
       if (existingConfig) {
@@ -131,6 +146,7 @@ export default function PositionProfileManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
+      setHasChanges(false);
       toast.success("Perfiles guardados correctamente");
     },
     onError: () => {
@@ -139,19 +155,13 @@ export default function PositionProfileManager() {
   });
 
   const handleUpdateProfile = (field, value) => {
-    if (!selectedProfileId || !profiles) return;
+    if (!localProfile) return;
     
-    const updatedProfiles = {
-      ...profiles,
-      [selectedProfileId]: {
-        ...profiles[selectedProfileId],
-        [field]: value
-      }
-    };
-    
-    // Optimistic update handled by React Query normally, but here we just trigger save
-    // For a real app, we might want local state before save, but for simplicity:
-    saveMutation.mutate(updatedProfiles);
+    setLocalProfile(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setHasChanges(true);
   };
 
   const handleAddProfile = () => {
@@ -164,9 +174,7 @@ export default function PositionProfileManager() {
       return;
     }
 
-    const newProfiles = {
-      ...profiles,
-      [id]: {
+    const newProfile = {
         id,
         title: name,
         mission: "",
@@ -175,23 +183,45 @@ export default function PositionProfileManager() {
         protocols: [],
         handover: [],
         troubleshooting: []
-      }
     };
-    saveMutation.mutate(newProfiles);
-    setSelectedProfileId(id);
+
+    const newProfiles = {
+      ...profiles,
+      [id]: newProfile
+    };
+
+    // For adding, we do want to save immediately to create the entry
+    // But then we need to select it
+    // We can just update local state logic? 
+    // Let's force a save here to simplify
+    // We need to call a different mutation or just reuse save logic but we need to update 'profiles' directly
+    // Ideally we should update the server.
+    
+    // Quick fix: Update server directly for Add
+    base44.entities.AppConfig.list().then(configList => {
+        const existingConfig = configList.find(c => c.key === 'position_profiles_v1');
+        const value = JSON.stringify(newProfiles);
+        const promise = existingConfig 
+            ? base44.entities.AppConfig.update(existingConfig.id, { value })
+            : base44.entities.AppConfig.create({ key: 'position_profiles_v1', value, description: '...' });
+            
+        promise.then(() => {
+            queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
+            setSelectedProfileId(id);
+            toast.success("Puesto creado");
+        });
+    });
   };
 
-  const selectedProfile = profiles?.[selectedProfileId];
+  const selectedProfile = localProfile;
 
   const handlePrint = () => {
-    // Create a printable window content
-    const printContent = document.getElementById('printable-area');
-    if (!printContent) return;
-
-    // Use a hidden iframe or specific print styles
-    // For simplicity in this environment, we'll open a new window
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
       <html>
         <head>
           <title>Plan de Onboarding - ${selectedProfile.title}</title>
@@ -315,9 +345,12 @@ export default function PositionProfileManager() {
         </body>
       </html>
     `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    doc.close();
+    
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    }, 100);
   };
 
   return (
@@ -358,10 +391,18 @@ export default function PositionProfileManager() {
                 <CardTitle>{selectedProfile.title}</CardTitle>
                 <CardDescription>Configuración del perfil y plan de onboarding</CardDescription>
               </div>
-              <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir / PDF
-              </Button>
+              <div className="flex gap-2">
+                {hasChanges && (
+                  <Button onClick={() => saveMutation.mutate()} className="bg-green-600 hover:bg-green-700 animate-pulse">
+                    <Save className="w-4 h-4 mr-2" />
+                    Guardar Cambios
+                  </Button>
+                )}
+                <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
+                  <Printer className="w-4 h-4 mr-2" />
+                  Imprimir / PDF
+                </Button>
+              </div>
             </CardHeader>
             <ScrollArea className="flex-1 p-6">
               <div className="space-y-8 max-w-4xl mx-auto">
@@ -571,6 +612,7 @@ export default function PositionProfileManager() {
           </div>
         )}
       </Card>
+      <iframe ref={iframeRef} className="hidden" />
     </div>
   );
 }
