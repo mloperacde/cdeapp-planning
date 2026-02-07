@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ import {
   BookOpen,
   Bot,
   Briefcase,
+  Upload,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -53,6 +54,37 @@ export default function EmployeeOnboardingPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [newDoc, setNewDoc] = useState({ title: "", description: "", url: "" });
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      toast.info("Subiendo archivo...");
+      // Check if integrations.Core.UploadFile exists
+      if (base44.integrations?.Core?.UploadFile) {
+        const result = await base44.integrations.Core.UploadFile({ file });
+        if (result && result.file_url) {
+          setNewDoc(prev => ({
+            ...prev,
+            url: result.file_url,
+            title: prev.title || file.name // Auto-fill title if empty
+          }));
+          toast.success("Archivo subido correctamente");
+        } else {
+           throw new Error("No file URL returned");
+        }
+      } else {
+        // Fallback for demo if not implemented in real client yet
+        console.warn("UploadFile integration not found");
+        toast.error("La subida de archivos no está configurada en este entorno");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Error al subir el archivo");
+    }
+  };
   const [newTraining, setNewTraining] = useState({
     title: "",
     colectivo: "",
@@ -645,6 +677,21 @@ export default function EmployeeOnboardingPage() {
                           setNewDoc((prev) => ({ ...prev, url: e.target.value }))
                         }
                       />
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        onChange={handleFileUpload} 
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Subir archivo"
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
                       <Button
                         type="button"
                         onClick={handleAddDoc}
