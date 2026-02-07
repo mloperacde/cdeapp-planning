@@ -98,8 +98,13 @@ export default function PositionProfileManager() {
     queryKey: ['positionProfiles'],
     queryFn: async () => {
       try {
-        const config = await base44.entities.AppConfig.list();
-        const profileConfig = config.find(c => c.config_key === 'position_profiles_v1' || c.key === 'position_profiles_v1');
+        // Try to find by config_key first (standard), then key (legacy)
+        let configs = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
+        if (!configs || configs.length === 0) {
+           configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
+        }
+        
+        const profileConfig = configs && configs.length > 0 ? configs[0] : null;
         
         if (profileConfig) {
           return JSON.parse(profileConfig.value);
@@ -124,8 +129,13 @@ export default function PositionProfileManager() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!localProfile) return;
-      const configList = await base44.entities.AppConfig.list();
-      const existingConfig = configList.find(c => c.config_key === 'position_profiles_v1' || c.key === 'position_profiles_v1');
+      
+      // Robust lookup using filter instead of list
+      let configs = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
+      if (!configs || configs.length === 0) {
+         configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
+      }
+      const existingConfig = configs && configs.length > 0 ? configs[0] : null;
       
       const newProfiles = {
         ...profiles,
@@ -198,19 +208,23 @@ export default function PositionProfileManager() {
     // Ideally we should update the server.
     
     // Quick fix: Update server directly for Add
-     base44.entities.AppConfig.list().then(configList => {
-         const existingConfig = configList.find(c => c.config_key === 'position_profiles_v1' || c.key === 'position_profiles_v1');
+     (async () => {
+         let configs = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
+         if (!configs || configs.length === 0) {
+            configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
+         }
+         const existingConfig = configs && configs.length > 0 ? configs[0] : null;
+
          const value = JSON.stringify(newProfiles);
          const promise = existingConfig 
              ? base44.entities.AppConfig.update(existingConfig.id, { value })
              : base44.entities.AppConfig.create({ config_key: 'position_profiles_v1', value, description: 'Configuration for Job Descriptions and Onboarding Templates' });
              
-         promise.then(() => {
-            queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
-            setSelectedProfileId(id);
-            toast.success("Puesto creado");
-        });
-    });
+         await promise;
+         queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
+         setSelectedProfileId(id);
+         toast.success("Puesto creado");
+    })();
   };
 
   const selectedProfile = localProfile;
