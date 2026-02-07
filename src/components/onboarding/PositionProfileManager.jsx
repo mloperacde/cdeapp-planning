@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
+import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,72 +136,16 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     return trainingResources.filter(r => r.type === 'training');
   }, [trainingResources]);
 
-  // Fetch Profiles from AppConfig
-  const { data: profiles, isLoading } = useQuery({
-    queryKey: ['positionProfiles'],
-    queryFn: async () => {
-      try {
-        console.log("Fetching profiles...");
-        
-        // Strategy: Fetch ALL configs (or a broad search) and filter in memory to guarantee we find it
-        // This bypasses potential API filter quirks
-        const allConfigs = await base44.entities.AppConfig.list();
-        const matches = allConfigs.filter(c => 
-            c.config_key === 'position_profiles_v1' || 
-            c.key === 'position_profiles_v1'
-        );
-        
-        console.log("Profiles configs found:", matches);
-
-        if (matches && matches.length > 0) {
-            // Sort by updated_at descending to get the latest
-            matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-            let latest = matches[0];
-            console.log("Using latest profile config from list:", latest.id);
-            
-            // FORCE GET by ID to ensure we have the full content
-            try {
-               const fullConfig = await base44.entities.AppConfig.get(latest.id);
-               if (fullConfig) {
-                   latest = fullConfig;
-               }
-            } catch (fetchError) {
-               console.warn("Error in force GET by ID (profiles), falling back to list item:", fetchError);
-            }
-
-            let jsonString = latest.value;
-            
-            // FALLBACK 1: Dual Write Strategy check
-             if ((!jsonString || jsonString === "undefined") && latest.description && latest.description.startsWith('{')) {
-                 console.log("Recovered profile config from description field.");
-                 jsonString = latest.description;
-             }
-
-             // FALLBACK 2: Check app_subtitle
-             if ((!jsonString || jsonString === "undefined") && latest.app_subtitle && latest.app_subtitle.startsWith('{')) {
-                 console.log("Recovered profile config from app_subtitle field.");
-                 jsonString = latest.app_subtitle;
-             }
-
-             if (jsonString && jsonString !== "undefined") {
-              try {
-                return JSON.parse(jsonString);
-              } catch (e) {
-                console.error("Error parsing position profiles JSON:", e);
-                return {};
-              }
-            } else {
-              console.warn("Profiles config found but value (and description) is empty/undefined.");
-            }
-        }
-        return {};
-      } catch (e) {
-        console.error("Error fetching profiles", e);
-        return INITIAL_PROFILES;
-      }
-    },
-    initialData: INITIAL_PROFILES
-  });
+  const { 
+    data: profiles, 
+    save: saveProfiles,
+    isSaving 
+  } = usePersistentAppConfig(
+    'position_profiles_v1',
+    INITIAL_PROFILES,
+    'positionProfiles',
+    false
+  );
 
   // Sync local state when selection changes or data loads
   // We use a ref to track the previous ID to distinguish between "data refresh" and "user switched profile"
@@ -244,110 +189,17 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     // This prevents background refetches from overwriting user's unsaved edits.
   }, [profiles, selectedProfileId, localProfile, hasChanges]);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (!localProfile) return;
-      
-      // Robust lookup using list + memory filter
-      let matches = [];
-      try {
-          const allConfigs = await base44.entities.AppConfig.list();
-          matches = allConfigs.filter(c => 
-              c.config_key === 'position_profiles_v1' || 
-              c.key === 'position_profiles_v1'
-          );
-      } catch (e) {
-          console.error("Error listing configs in mutation:", e);
-      }
-      
-      let targetConfigId = null;
-      if (matches && matches.length > 0) {
-          // Sort and use latest
-          matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-          let latest = matches[0];
-          
-          // FORCE GET by ID to ensure we have the full content
-          try {
-             const fullConfig = await base44.entities.AppConfig.get(latest.id);
-             if (fullConfig) {
-                 latest = fullConfig;
-             }
-          } catch (fetchError) {
-             console.warn("Error in force GET by ID (profiles mutation), falling back to list item:", fetchError);
-          }
-          
-          // CORRUPTION CHECK
-           let hasValidContent = ('value' in latest);
-           if (!hasValidContent && latest.description && latest.description.startsWith('{')) {
-               hasValidContent = true;
-           }
-           if (!hasValidContent && latest.app_subtitle && latest.app_subtitle.startsWith('{')) {
-               hasValidContent = true;
-           }
-
-           if (!hasValidContent) {
-               console.error("Profile Config found but 'value' field is MISSING and 'description'/'app_subtitle' backup is invalid. Detected CORRUPTION.");
-               console.log("Corrupted Profile Config VALUES (Partial):", {
-                   val: latest.value ? latest.value.substring(0, 50) : 'undefined',
-                   desc: latest.description ? latest.description.substring(0, 50) : 'undefined',
-                   sub: latest.app_subtitle ? latest.app_subtitle.substring(0, 50) : 'undefined'
-               });
-               try {
-                  await base44.entities.AppConfig.delete(latest.id);
-                  targetConfigId = null; // Force create
-              } catch (delErr) {
-                  console.error("Failed to delete corrupted profile config:", delErr);
-                  targetConfigId = null;
-              }
-          } else {
-              targetConfigId = latest.id;
-          }
-          
-          // Cleanup duplicates
-          if (matches.length > 1) {
-             console.warn("Found duplicate profile configs, cleaning up...");
-             for (let i = 1; i < matches.length; i++) {
-                 // Skip the one we are working on (if we haven't deleted it)
-                 if (matches[i].id !== targetConfigId) {
-                     await base44.entities.AppConfig.delete(matches[i].id);
-                 }
-             }
-          }
-      }
-      
-      const newProfiles = {
-        ...profiles,
-        [selectedProfileId]: localProfile
-      };
-
-      const value = JSON.stringify(newProfiles);
-      
-      // DUAL WRITE STRATEGY + APP SUBTITLE HACK
-      const payload = {
-          value,
-          description: value, // Backup 1
-          app_subtitle: value, // Backup 2
-          key: 'position_profiles_v1', // Explicitly send 'key'
-          config_key: 'position_profiles_v1',
-          is_active: true, // MIMIC roles_config
-          app_name: 'Position Profiles Config' // Prevent Branding Overwrite
-      };
-      
-      if (targetConfigId) {
-        return base44.entities.AppConfig.update(targetConfigId, payload);
-      } else {
-        return base44.entities.AppConfig.create(payload);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
-      setHasChanges(false);
-      toast.success("Perfiles guardados correctamente");
-    },
-    onError: () => {
-      toast.error("Error al guardar perfiles");
-    }
-  });
+  const handleSave = () => {
+    if (!localProfile) return;
+    
+    const newProfiles = {
+      ...profiles,
+      [selectedProfileId]: localProfile
+    };
+    
+    saveProfiles(newProfiles);
+    setHasChanges(false);
+  };
 
   const handleUpdateProfile = (field, value) => {
     if (!localProfile) return;
@@ -385,31 +237,8 @@ export default function PositionProfileManager({ trainingResources = [] }) {
       [id]: newProfile
     };
 
-    // For adding, we do want to save immediately to create the entry
-    // But then we need to select it
-    // We can just update local state logic? 
-    // Let's force a save here to simplify
-    // We need to call a different mutation or just reuse save logic but we need to update 'profiles' directly
-    // Ideally we should update the server.
-    
-    // Quick fix: Update server directly for Add
-     (async () => {
-         let configs = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
-         if (!configs || configs.length === 0) {
-            configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
-         }
-         const existingConfig = configs && configs.length > 0 ? configs[0] : null;
-
-         const value = JSON.stringify(newProfiles);
-         const promise = existingConfig 
-             ? base44.entities.AppConfig.update(existingConfig.id, { value })
-             : base44.entities.AppConfig.create({ config_key: 'position_profiles_v1', value, description: 'Configuration for Job Descriptions and Onboarding Templates' });
-             
-         await promise;
-         queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
-         setSelectedProfileId(id);
-         toast.success("Puesto creado");
-    })();
+    saveProfiles(newProfiles);
+    setSelectedProfileId(id);
   };
 
   const selectedProfile = localProfile;
@@ -628,12 +457,12 @@ export default function PositionProfileManager({ trainingResources = [] }) {
                   <RefreshCw className="w-4 h-4" />
                 </Button>
                 <Button 
-                  onClick={() => saveMutation.mutate()}  
-                  disabled={!hasChanges || saveMutation.isPending}
+                  onClick={handleSave}  
+                  disabled={!hasChanges || isSaving}
                   className={`${hasChanges ? "bg-green-600 hover:bg-green-700 animate-pulse" : "bg-slate-300 text-slate-500"}`}
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {saveMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+                  {isSaving ? "Guardando..." : "Guardar Cambios"}
                 </Button>
                 <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
                   <Printer className="w-4 h-4 mr-2" />

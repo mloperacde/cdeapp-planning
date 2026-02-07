@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,82 +102,15 @@ export default function EmployeeOnboardingPage() {
     initialData: [],
   });
 
-  const { data: trainingResources = [] } = useQuery({
-    queryKey: ["onboardingTrainingResources"],
-    queryFn: async () => {
-      try {
-        console.log("Fetching training resources (Debug Mode)...");
-        
-        // Strategy: Fetch ALL configs (or a broad search) and filter in memory to guarantee we find it
-        // This bypasses potential API filter quirks
-        const allConfigs = await base44.entities.AppConfig.list();
-        console.log("Total AppConfigs fetched:", allConfigs.length);
-        console.log("AppConfig Keys:", allConfigs.map(c => c.config_key || c.key));
-
-        const matches = allConfigs.filter(c => 
-            c.config_key === 'onboarding_training_resources' || 
-            c.key === 'onboarding_training_resources'
-        );
-        
-        console.log("Matching configs found:", matches);
-        
-        if (matches && matches.length > 0) {
-          // Sort by updated_at descending to get the latest
-          matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-          
-          let latestConfig = matches[0];
-          console.log("Using latest config from list:", latestConfig.id, "Keys:", Object.keys(latestConfig));
-
-          // FORCE GET by ID to ensure we have the full content
-          try {
-             console.log("Forcing GET by ID to ensure full content...");
-             const fullConfig = await base44.entities.AppConfig.get(latestConfig.id);
-             if (fullConfig) {
-                 latestConfig = fullConfig;
-                 console.log("Full config fetched. Keys:", Object.keys(latestConfig));
-             }
-          } catch (fetchError) {
-             console.warn("Error in force GET by ID, falling back to list item:", fetchError);
-          }
-          
-          let jsonString = latestConfig.value;
-           
-           // FALLBACK 1: If value is missing, check description (Dual Write Strategy)
-           if ((!jsonString || jsonString === "undefined") && latestConfig.description && latestConfig.description.startsWith('[')) {
-               console.log("Recovered config from description field.");
-               jsonString = latestConfig.description;
-           }
-
-           // FALLBACK 2: Check app_subtitle
-           if ((!jsonString || jsonString === "undefined") && latestConfig.app_subtitle && latestConfig.app_subtitle.startsWith('[')) {
-               console.log("Recovered config from app_subtitle field.");
-               jsonString = latestConfig.app_subtitle;
-           }
- 
-           if (jsonString && jsonString !== "undefined") {
-             try {
-                 // Ensure it's an array
-                 const parsed = JSON.parse(jsonString);
-                 return Array.isArray(parsed) ? parsed : [];
-             } catch (e) {
-                 console.error("Error parsing training resources JSON:", e);
-                 return [];
-             }
-          } else {
-             console.warn("Config found but value (and description) is empty or undefined. Value:", latestConfig.value);
-             return [];
-          }
-        } else {
-            console.warn("No configuration found for 'onboarding_training_resources'");
-        }
-        return [];
-      } catch (e) {
-        console.error("Error fetching training resources", e);
-        return [];
-      }
-    },
-    initialData: [],
-  });
+  const { 
+    data: trainingResources, 
+    save: saveTrainingResources 
+  } = usePersistentAppConfig(
+    'onboarding_training_resources',
+    [],
+    'onboardingTrainingResources',
+    true
+  );
 
   const deleteOnboardingMutation = useMutation({
     mutationFn: (id) => base44.entities.EmployeeOnboarding.delete(id),
@@ -185,140 +119,10 @@ export default function EmployeeOnboardingPage() {
     },
   });
 
-  const createTrainingResourceMutation = useMutation({
-    mutationFn: async (newResource) => {
-      // 1. Get current list (re-fetch to be safe) using ROBUST list() strategy
-      let currentResources = [];
-      let targetConfigId = null;
-      let targetKey = 'onboarding_training_resources'; // Default key to use if creating new
-      
-      try {
-          const allConfigs = await base44.entities.AppConfig.list();
-          const matches = allConfigs.filter(c => 
-              c.config_key === 'onboarding_training_resources' || 
-              c.key === 'onboarding_training_resources'
-          );
-          
-          if (matches && matches.length > 0) {
-            // Sort and use latest
-            matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-            let latest = matches[0];
-            targetConfigId = latest.id;
-            
-            // FORCE GET by ID to ensure we have the full content
-            try {
-               const fullConfig = await base44.entities.AppConfig.get(latest.id);
-               if (fullConfig) {
-                   latest = fullConfig;
-               }
-            } catch (fetchError) {
-               console.warn("Error in force GET by ID (mutation), falling back to list item:", fetchError);
-            }
-
-            // CORRUPTION CHECK: If 'value' AND 'description' AND 'app_subtitle' are missing/invalid, treat as corrupt.
-             let hasValidContent = ('value' in latest);
-             if (!hasValidContent && latest.description && latest.description.startsWith('[')) {
-                 hasValidContent = true;
-             }
-             if (!hasValidContent && latest.app_subtitle && latest.app_subtitle.startsWith('[')) {
-                 hasValidContent = true;
-             }
-
-             if (!hasValidContent) {
-                 console.error("Config found but 'value' field is MISSING and 'description'/'app_subtitle' backup is invalid. Detected CORRUPTION.");
-                 console.log("Corrupted config keys:", Object.keys(latest));
-                 console.log("Corrupted config VALUES (Partial):", {
-                     val: latest.value ? latest.value.substring(0, 50) : 'undefined',
-                     desc: latest.description ? latest.description.substring(0, 50) : 'undefined',
-                     sub: latest.app_subtitle ? latest.app_subtitle.substring(0, 50) : 'undefined'
-                 });
-
-                 try {
-                    await base44.entities.AppConfig.delete(latest.id);
-                    console.log("Deleted corrupted config:", latest.id);
-                    targetConfigId = null; // Force create
-                    currentResources = [];
-                 } catch (delErr) {
-                    console.error("Failed to delete corrupted config:", delErr);
-                    targetConfigId = null; 
-                 }
-             } else {
-                 // Preserve the key used by the existing record
-                 targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
-                 
-                 let jsonToParse = latest.value;
-                  if ((!jsonToParse || jsonToParse === "undefined") && latest.description && latest.description.startsWith('[')) {
-                      jsonToParse = latest.description;
-                  }
-                  if ((!jsonToParse || jsonToParse === "undefined") && latest.app_subtitle && latest.app_subtitle.startsWith('[')) {
-                      jsonToParse = latest.app_subtitle;
-                  }
- 
-                  if (jsonToParse && jsonToParse !== "undefined") {
-                     try {
-                         const parsed = JSON.parse(jsonToParse);
-                         currentResources = Array.isArray(parsed) ? parsed : [];
-                     } catch (e) {
-                         console.error("Error parsing current resources during mutation", e);
-                         currentResources = [];
-                     }
-                 }
-             }
-            
-            // Cleanup duplicates if any
-            if (matches.length > 1) {
-                console.warn("Found duplicate configs, cleaning up...");
-                for (let i = 1; i < matches.length; i++) {
-                    await base44.entities.AppConfig.delete(matches[i].id);
-                }
-            }
-          }
-      } catch (e) {
-          console.error("Error finding existing config in mutation:", e);
-      }
-      
-      let updatedResources;
-      if (Array.isArray(newResource)) {
-          updatedResources = newResource;
-      } else {
-          const resource = {
-            id: crypto.randomUUID(),
-            createdAt: new Date().toISOString(),
-            ...newResource,
-          };
-          updatedResources = [...currentResources, resource];
-      }
-      const value = JSON.stringify(updatedResources);
-
-      // DUAL WRITE STRATEGY + APP SUBTITLE HACK
-      // 1. Write to 'value' (standard)
-      // 2. Write to 'description' (backup)
-      // 3. Write to 'app_subtitle' (backup 2 - if backend strips everything else)
-      const payload = { 
-          value,
-          description: value, 
-          app_subtitle: value, // Hack: Use app_subtitle if available
-          key: targetKey, // Explicitly send 'key' in addition to 'config_key' to try to bypass branding mode
-          config_key: targetKey,
-          is_active: true, // MIMIC roles_config
-          app_name: 'Training Resources Config' // Prevent Branding Overwrite
-      };
-
-      if (targetConfigId) {
-        return base44.entities.AppConfig.update(targetConfigId, payload);
-      } else {
-        return base44.entities.AppConfig.create(payload);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["onboardingTrainingResources"] });
-      toast.success("Recurso añadido y guardado");
-    },
-    onError: (e) => {
-        console.error("Mutation error:", e);
-        toast.error("Error al guardar el recurso");
-    }
-  });
+  // Adapter for existing code
+  const createTrainingResourceMutation = {
+    mutate: saveTrainingResources
+  };
 
   const getEmployeeName = (employeeId) => {
     const emp = employees.find(e => e.id === employeeId);
