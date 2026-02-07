@@ -32,6 +32,7 @@ const INITIAL_PROFILES = {
     id: "tecnico-proceso",
     title: "Técnico de Proceso",
     mission: "El Técnico de Proceso es el máximo responsable operativo de una línea de fabricación. Su función es garantizar la excelencia en el envasado mediante el manejo técnico avanzado (cambio de formato, limpieza, montaje y arranque), la resolución proactiva de averías y la gestión directa del equipo humano asignado. Es el garante del cumplimiento de los estándares de calidad, seguridad y orden (GMP) en su área de influencia.",
+    training_summary: "El plan de formación se estructura en 4 fases progresivas diseñadas para garantizar una integración segura y eficiente. Comienza con una inmersión en cultura y seguridad (Semana 1), avanza hacia el control de procesos y gestión (Semana 2), profundiza en aspectos técnicos y mantenimiento (Semanas 3-4), y culmina con la autonomía operativa y liderazgo (Mes 2).",
     onboarding: [
       { phase: "Semana 1", focus: "Inmersión y Seguridad", milestones: "• Cultura GMP: Normas de Correcta Fabricación.\n• Seguridad: Protocolos LOTO (Bloqueo/Etiquetado) y EPIs.\n• Shadowing: Observación guiada con un técnico mentor." },
       { phase: "Semana 2", focus: "Control y Gestión", milestones: "• Manejo de Software: Registro de producción y paradas en la App interna.\n• IPC (In-Process Control): Verificación de atributos cada 30 minutos.\n• Gestión de Equipos: Asignación de tareas y supervisión de operarios." },
@@ -119,12 +120,26 @@ export default function PositionProfileManager() {
   });
 
   // Sync local state when selection changes or data loads
+  // We use a ref to track the previous ID to distinguish between "data refresh" and "user switched profile"
+  const prevProfileIdRef = useRef(selectedProfileId);
+
   useEffect(() => {
-    if (profiles && selectedProfileId && profiles[selectedProfileId]) {
+    // If profiles data is not loaded yet, do nothing
+    if (!profiles || !profiles[selectedProfileId]) return;
+
+    // Check if we switched to a different profile
+    const profileChanged = prevProfileIdRef.current !== selectedProfileId;
+    
+    // If we switched profiles, OR if we don't have any local state yet
+    // We should load the data from the server/store
+    if (profileChanged || !localProfile) {
        setLocalProfile(JSON.parse(JSON.stringify(profiles[selectedProfileId])));
        setHasChanges(false);
+       prevProfileIdRef.current = selectedProfileId;
     }
-  }, [profiles, selectedProfileId]);
+    // Note: We intentionally DO NOT update if profiles changed but ID didn't and we have localProfile.
+    // This prevents background refetches from overwriting user's unsaved edits.
+  }, [profiles, selectedProfileId, localProfile]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -266,7 +281,22 @@ export default function PositionProfileManager() {
           </div>
 
           <div class="section">
-            <h2>2. PLAN DE FORMACIÓN (4 FASES)</h2>
+            <h2>2. Funciones y Responsabilidades</h2>
+            ${(selectedProfile.responsibilities || []).map(cat => `
+              <h3>${cat.category}</h3>
+              <ul>
+                ${cat.items.map(item => `<li>${item}</li>`).join('')}
+              </ul>
+            `).join('')}
+          </div>
+
+          <div class="section">
+            <h2>3. Resumen del Plan de Formación</h2>
+            <div style="margin-bottom: 15px;">${selectedProfile.training_summary || 'Sin resumen definido'}</div>
+          </div>
+
+          <div class="section">
+            <h2>4. Detalle de Fases de Formación (Onboarding)</h2>
             <table>
               <thead>
                 <tr>
@@ -292,17 +322,7 @@ export default function PositionProfileManager() {
           </div>
 
           <div class="section">
-            <h2>3. Responsabilidades Detalladas</h2>
-            ${(selectedProfile.responsibilities || []).map(cat => `
-              <h3>${cat.category}</h3>
-              <ul>
-                ${cat.items.map(item => `<li>${item}</li>`).join('')}
-              </ul>
-            `).join('')}
-          </div>
-
-          <div class="section">
-            <h2>4. Protocolos y Estándares</h2>
+            <h2>5. Protocolos y Estándares</h2>
             <ul>
               ${(selectedProfile.protocols || []).map(p => `
                 <li><strong>${p.title}:</strong> ${p.description}</li>
@@ -311,7 +331,7 @@ export default function PositionProfileManager() {
           </div>
 
           <div class="section">
-            <h2>5. Relevos y Orden</h2>
+            <h2>6. Relevos y Orden</h2>
             <ul>
               ${(selectedProfile.handover || []).map(h => `<li>${h}</li>`).join('')}
             </ul>
@@ -320,13 +340,14 @@ export default function PositionProfileManager() {
            <div class="page-break"></div>
 
           <div class="section">
-            <h2>6. Guía de Resolución de Averías</h2>
+            <h2>7. Guía de Resolución de Averías</h2>
             <table>
               <thead>
                 <tr>
                   <th>Problema</th>
                   <th>Verificación</th>
                   <th>Acción</th>
+                  <th style="width: 100px;">Firma</th>
                 </tr>
               </thead>
               <tbody>
@@ -335,6 +356,7 @@ export default function PositionProfileManager() {
                     <td>${t.problem}</td>
                     <td>${t.check}</td>
                     <td>${t.action}</td>
+                    <td></td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -406,12 +428,14 @@ export default function PositionProfileManager() {
                 <CardDescription>Configuración del perfil y plan de onboarding</CardDescription>
               </div>
               <div className="flex gap-2">
-                {hasChanges && (
-                  <Button onClick={() => saveMutation.mutate()} className="bg-green-600 hover:bg-green-700 animate-pulse">
-                    <Save className="w-4 h-4 mr-2" />
-                    Guardar Cambios
-                  </Button>
-                )}
+                <Button 
+                  onClick={() => saveMutation.mutate()} 
+                  disabled={!hasChanges || saveMutation.isPending}
+                  className={`${hasChanges ? "bg-green-600 hover:bg-green-700 animate-pulse" : "bg-slate-300 text-slate-500"}`}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {saveMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+                </Button>
                 <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
                   <Printer className="w-4 h-4 mr-2" />
                   Imprimir / PDF
@@ -435,14 +459,75 @@ export default function PositionProfileManager() {
                   />
                 </div>
 
+                {/* 2. Responsabilidades */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700">2. Funciones</Badge>
+                    <h3 className="font-semibold text-lg">Responsabilidades Detalladas</h3>
+                  </div>
+                  
+                  {selectedProfile.responsibilities.map((cat, idx) => (
+                    <Card key={idx} className="p-4">
+                      <div className="space-y-3">
+                        <Input 
+                          value={cat.category} 
+                          onChange={(e) => {
+                            const newResp = [...selectedProfile.responsibilities];
+                            newResp[idx].category = e.target.value;
+                            handleUpdateProfile('responsibilities', newResp);
+                          }}
+                          className="font-medium border-none shadow-none text-lg p-0 h-auto focus-visible:ring-0"
+                        />
+                        <Textarea 
+                          value={cat.items.join('\n')}
+                          onChange={(e) => {
+                            const newResp = [...selectedProfile.responsibilities];
+                            newResp[idx].items = e.target.value.split('\n');
+                            handleUpdateProfile('responsibilities', newResp);
+                          }}
+                          className="min-h-[100px] font-normal"
+                          placeholder="Lista de responsabilidades (una por línea)"
+                        />
+                      </div>
+                    </Card>
+                  ))}
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                       const newResp = [...(selectedProfile.responsibilities || []), { category: "Nueva Categoría", items: ["Nueva responsabilidad"] }];
+                       handleUpdateProfile('responsibilities', newResp);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> Añadir Categoría
+                  </Button>
+                </div>
+
                 <Separator />
 
-                {/* 2. Onboarding */}
+                {/* 3. Training Summary */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700">3. Resumen</Badge>
+                    <h3 className="font-semibold text-lg">Resumen del Plan de Formación</h3>
+                  </div>
+                  <Textarea 
+                    value={selectedProfile.training_summary || ''} 
+                    onChange={(e) => handleUpdateProfile('training_summary', e.target.value)}
+                    className="min-h-[80px]"
+                    placeholder="Resumen ejecutivo del plan de formación..."
+                  />
+                </div>
+
+                <Separator />
+
+                {/* 4. Onboarding */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-green-50 text-green-700">2. Onboarding</Badge>
-                      <h3 className="font-semibold text-lg">Plan de Formación (4 Fases)</h3>
+                      <Badge variant="outline" className="bg-green-50 text-green-700">4. Detalle</Badge>
+                      <h3 className="font-semibold text-lg">Detalle de Fases de Formación (Onboarding)</h3>
                     </div>
                   </div>
                   
@@ -498,60 +583,63 @@ export default function PositionProfileManager() {
 
                 <Separator />
 
-                {/* 3. Responsabilidades */}
+                {/* 5. Protocolos */}
                 <div className="space-y-4">
-                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700">3. Funciones</Badge>
-                    <h3 className="font-semibold text-lg">Responsabilidades Detalladas</h3>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700">5. Protocolos</Badge>
+                    <h3 className="font-semibold text-lg">Protocolos y Estándares</h3>
                   </div>
                   
-                  {(selectedProfile.responsibilities || []).map((cat, idx) => (
-                    <div key={idx} className="bg-slate-50 p-4 rounded-lg space-y-3">
-                      <div className="flex gap-2">
+                  {(selectedProfile.protocols || []).map((proto, idx) => (
+                    <Card key={idx} className="p-3">
+                      <div className="grid gap-2">
                         <Input 
-                          value={cat.category} 
-                          className="font-bold bg-transparent border-0 border-b rounded-none focus-visible:ring-0 px-0"
+                          value={proto.title} 
                           onChange={(e) => {
-                            const newResp = [...selectedProfile.responsibilities];
-                            newResp[idx].category = e.target.value;
-                            handleUpdateProfile('responsibilities', newResp);
+                            const newProto = [...selectedProfile.protocols];
+                            newProto[idx].title = e.target.value;
+                            handleUpdateProfile('protocols', newProto);
                           }}
+                          placeholder="Título del protocolo"
+                          className="font-medium"
                         />
-                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => {
-                           const newResp = selectedProfile.responsibilities.filter((_, i) => i !== idx);
-                           handleUpdateProfile('responsibilities', newResp);
-                        }}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <Input 
+                          value={proto.description} 
+                          onChange={(e) => {
+                            const newProto = [...selectedProfile.protocols];
+                            newProto[idx].description = e.target.value;
+                            handleUpdateProfile('protocols', newProto);
+                          }}
+                          placeholder="Descripción breve"
+                        />
                       </div>
-                      <Textarea 
-                        value={cat.items.join('\n')}
-                        onChange={(e) => {
-                          const newResp = [...selectedProfile.responsibilities];
-                          newResp[idx].items = e.target.value.split('\n');
-                          handleUpdateProfile('responsibilities', newResp);
-                        }}
-                        className="min-h-[100px]"
-                        placeholder="Un ítem por línea"
-                      />
-                      <p className="text-[10px] text-slate-400">Escribe cada responsabilidad en una línea nueva</p>
-                    </div>
+                    </Card>
                   ))}
-                   <Button 
-                      variant="outline" 
-                      onClick={() => handleUpdateProfile('responsibilities', [...(selectedProfile.responsibilities || []), { category: "Nueva Categoría", items: [] }])}
-                    >
-                      <Plus className="w-4 h-4 mr-2" /> Añadir Categoría
-                    </Button>
                 </div>
 
-                 <Separator />
+                <Separator />
 
-                {/* 4. Troubleshooting */}
+                {/* 6. Handover */}
                 <div className="space-y-4">
-                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-red-50 text-red-700">4. Averías</Badge>
-                    <h3 className="font-semibold text-lg">Guía de Resolución de Averías</h3>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-red-50 text-red-700">6. Relevos</Badge>
+                    <h3 className="font-semibold text-lg">Estándares de Relevo (Handover)</h3>
+                  </div>
+                  <Textarea 
+                    value={(selectedProfile.handover || []).join('\n')}
+                    onChange={(e) => handleUpdateProfile('handover', e.target.value.split('\n'))}
+                    className="min-h-[100px]"
+                    placeholder="Lista de puntos clave para el relevo (uno por línea)"
+                  />
+                </div>
+
+                <Separator />
+
+                {/* 7. Troubleshooting */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                     <Badge variant="outline" className="bg-gray-50 text-gray-700">7. Averías</Badge>
+                     <h3 className="font-semibold text-lg">Guía de Resolución de Averías</h3>
                   </div>
                   
                   <Table>
