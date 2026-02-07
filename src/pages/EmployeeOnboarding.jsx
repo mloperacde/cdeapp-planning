@@ -126,7 +126,7 @@ export default function EmployeeOnboardingPage() {
           let latestConfig = matches[0];
           console.log("Using latest config from list:", latestConfig.id, "Keys:", Object.keys(latestConfig));
 
-          // FORCE GET by ID to ensure we have the full content (value)
+          // FORCE GET by ID to ensure we have the full content
           try {
              console.log("Forcing GET by ID to ensure full content...");
              const fullConfig = await base44.entities.AppConfig.get(latestConfig.id);
@@ -138,17 +138,26 @@ export default function EmployeeOnboardingPage() {
              console.warn("Error in force GET by ID, falling back to list item:", fetchError);
           }
           
-          if (latestConfig.value && latestConfig.value !== "undefined") {
+          let jsonString = latestConfig.value;
+          
+          // FALLBACK: If value is missing, check description (Dual Write Strategy)
+          if ((!jsonString || jsonString === "undefined") && latestConfig.description && latestConfig.description.startsWith('[')) {
+              console.log("Recovered config from description field.");
+              jsonString = latestConfig.description;
+          }
+
+          if (jsonString && jsonString !== "undefined") {
              try {
-                 const parsed = JSON.parse(latestConfig.value);
-                 console.log("Parsed resources:", parsed);
+                 // Ensure it's an array
+                 const parsed = JSON.parse(jsonString);
                  return Array.isArray(parsed) ? parsed : [];
              } catch (e) {
-                 console.error("JSON Parse Error in fetch:", e);
+                 console.error("Error parsing training resources JSON:", e);
                  return [];
              }
           } else {
-             console.warn("Config found but value is empty or undefined. Value:", latestConfig.value);
+             console.warn("Config found but value (and description) is empty or undefined. Value:", latestConfig.value);
+             return [];
           }
         } else {
             console.warn("No configuration found for 'onboarding_training_resources'");
@@ -199,36 +208,43 @@ export default function EmployeeOnboardingPage() {
                console.warn("Error in force GET by ID (mutation), falling back to list item:", fetchError);
             }
 
-            // CORRUPTION CHECK: If 'value' field is missing from keys, the record is likely corrupted (e.g. overwritten by Branding data)
-            // We must DELETE it and force creation of a new clean record.
-            if (!('value' in latest)) {
-                console.error("Config found but 'value' field is MISSING. Detected CORRUPTION/SCHEMA MISMATCH.");
-                console.log("Corrupted config keys:", Object.keys(latest));
-                try {
+            // CORRUPTION CHECK: If 'value' AND 'description' are missing/invalid, treat as corrupt.
+             let hasValidContent = ('value' in latest);
+             if (!hasValidContent && latest.description && latest.description.startsWith('[')) {
+                 hasValidContent = true;
+             }
+
+             if (!hasValidContent) {
+                 console.error("Config found but 'value' field is MISSING and 'description' backup is invalid. Detected CORRUPTION.");
+                 console.log("Corrupted config keys:", Object.keys(latest));
+                 try {
                     await base44.entities.AppConfig.delete(latest.id);
                     console.log("Deleted corrupted config:", latest.id);
                     targetConfigId = null; // Force create
                     currentResources = [];
-                } catch (delErr) {
+                 } catch (delErr) {
                     console.error("Failed to delete corrupted config:", delErr);
-                    // If delete fails, we can't do much but try to proceed or fail.
-                    // Let's assume we can't use this ID.
                     targetConfigId = null; 
-                }
-            } else {
-                // Preserve the key used by the existing record
-                targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
-                
-                if (latest.value && latest.value !== "undefined") {
-                    try {
-                        const parsed = JSON.parse(latest.value);
-                        currentResources = Array.isArray(parsed) ? parsed : [];
-                    } catch (e) {
-                        console.error("Error parsing current resources during mutation", e);
-                        currentResources = [];
-                    }
-                }
-            }
+                 }
+             } else {
+                 // Preserve the key used by the existing record
+                 targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
+                 
+                 let jsonToParse = latest.value;
+                 if ((!jsonToParse || jsonToParse === "undefined") && latest.description && latest.description.startsWith('[')) {
+                     jsonToParse = latest.description;
+                 }
+
+                 if (jsonToParse && jsonToParse !== "undefined") {
+                     try {
+                         const parsed = JSON.parse(jsonToParse);
+                         currentResources = Array.isArray(parsed) ? parsed : [];
+                     } catch (e) {
+                         console.error("Error parsing current resources during mutation", e);
+                         currentResources = [];
+                     }
+                 }
+             }
             
             // Cleanup duplicates if any
             if (matches.length > 1) {
@@ -251,13 +267,19 @@ export default function EmployeeOnboardingPage() {
       const updatedResources = [...currentResources, resource];
       const value = JSON.stringify(updatedResources);
 
-      if (targetConfigId) {
-        return base44.entities.AppConfig.update(targetConfigId, { value });
-      } else {
-        return base44.entities.AppConfig.create({
-          config_key: 'onboarding_training_resources', // Prefer config_key for new records
+      // DUAL WRITE STRATEGY:
+      // Since backend might strip 'value', we also write to 'description' as a backup.
+      const payload = { 
           value,
-          description: 'Resources and Documents for Employee Onboarding'
+          description: value // Backup
+      };
+
+      if (targetConfigId) {
+        return base44.entities.AppConfig.update(targetConfigId, payload);
+      } else {
+        return base44.entities.AppConfig.create({ 
+          config_key: targetKey, 
+          ...payload
         });
       }
     },

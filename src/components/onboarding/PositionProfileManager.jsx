@@ -153,31 +153,41 @@ export default function PositionProfileManager({ trainingResources = [] }) {
         console.log("Profiles configs found:", matches);
 
         if (matches && matches.length > 0) {
-           // Sort by updated_at descending to get the latest
-           matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-           let latest = matches[0];
-           
-           // FORCE GET by ID to ensure we have the full content
-           try {
-              const fullConfig = await base44.entities.AppConfig.get(latest.id);
-              if (fullConfig) {
-                  latest = fullConfig;
+            // Sort by updated_at descending to get the latest
+            matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+            let latest = matches[0];
+            console.log("Using latest profile config from list:", latest.id);
+            
+            // FORCE GET by ID to ensure we have the full content
+            try {
+               const fullConfig = await base44.entities.AppConfig.get(latest.id);
+               if (fullConfig) {
+                   latest = fullConfig;
+               }
+            } catch (fetchError) {
+               console.warn("Error in force GET by ID (profiles), falling back to list item:", fetchError);
+            }
+
+            let jsonString = latest.value;
+            
+            // FALLBACK: Dual Write Strategy check
+            if ((!jsonString || jsonString === "undefined") && latest.description && latest.description.startsWith('{')) {
+                console.log("Recovered profile config from description field.");
+                jsonString = latest.description;
+            }
+
+            if (jsonString && jsonString !== "undefined") {
+              try {
+                return JSON.parse(jsonString);
+              } catch (e) {
+                console.error("Error parsing position profiles JSON:", e);
+                return {};
               }
-           } catch (fetchError) {
-              console.warn("Error in force GET by ID (profiles), falling back to list item:", fetchError);
-           }
-           
-           if (latest.value && latest.value !== "undefined") {
-             try {
-                return JSON.parse(latest.value);
-             } catch (e) {
-                console.error("JSON Parse Error in Profiles:", e);
-                return INITIAL_PROFILES;
-             }
-           }
+            } else {
+              console.warn("Profiles config found but value (and description) is empty/undefined.");
+            }
         }
-        
-        return INITIAL_PROFILES;
+        return {};
       } catch (e) {
         console.error("Error fetching profiles", e);
         return INITIAL_PROFILES;
@@ -261,8 +271,13 @@ export default function PositionProfileManager({ trainingResources = [] }) {
           }
           
           // CORRUPTION CHECK
-          if (!('value' in latest)) {
-              console.error("Profile Config found but 'value' field is MISSING. Detected CORRUPTION.");
+          let hasValidContent = ('value' in latest);
+          if (!hasValidContent && latest.description && latest.description.startsWith('{')) {
+              hasValidContent = true;
+          }
+
+          if (!hasValidContent) {
+              console.error("Profile Config found but 'value' field is MISSING and 'description' backup is invalid. Detected CORRUPTION.");
               try {
                   await base44.entities.AppConfig.delete(latest.id);
                   targetConfigId = null; // Force create
@@ -293,13 +308,18 @@ export default function PositionProfileManager({ trainingResources = [] }) {
 
       const value = JSON.stringify(newProfiles);
       
+      // DUAL WRITE STRATEGY
+      const payload = {
+          value,
+          description: value // Backup
+      };
+      
       if (targetConfigId) {
-        return base44.entities.AppConfig.update(targetConfigId, { value });
+        return base44.entities.AppConfig.update(targetConfigId, payload);
       } else {
         return base44.entities.AppConfig.create({ 
           config_key: 'position_profiles_v1', 
-          value,
-          description: 'Configuration for Job Descriptions and Onboarding Templates'
+          ...payload
         });
       }
     },
