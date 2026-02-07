@@ -225,6 +225,13 @@ export default function EmployeeOnboardingPage() {
     }
   };
 
+  const handleDeleteTraining = (trainingId) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar esta formación?")) {
+      const updatedResources = trainingResources.filter(r => r.id !== trainingId);
+      createTrainingResourceMutation.mutate(updatedResources);
+    }
+  };
+
   const handleAddTraining = () => {
     if (!newTraining.title || !newTraining.fecha) return;
     
@@ -814,6 +821,7 @@ export default function EmployeeOnboardingPage() {
                               <TableHead>Colectivo</TableHead>
                               <TableHead>Fecha</TableHead>
                               <TableHead>Estado</TableHead>
+                              <TableHead className="w-[100px]">Acciones</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -826,6 +834,17 @@ export default function EmployeeOnboardingPage() {
                                   <Badge className="bg-slate-100 text-slate-800">
                                     {t.estado}
                                   </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleDeleteTraining(t.id)}
+                                    title="Eliminar formación"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             ))}
