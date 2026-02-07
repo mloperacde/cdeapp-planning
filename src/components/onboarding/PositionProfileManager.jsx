@@ -33,10 +33,10 @@ const INITIAL_PROFILES = {
     title: "Técnico de Proceso",
     mission: "El Técnico de Proceso es el máximo responsable operativo de una línea de fabricación. Su función es garantizar la excelencia en el envasado mediante el manejo técnico avanzado (cambio de formato, limpieza, montaje y arranque), la resolución proactiva de averías y la gestión directa del equipo humano asignado. Es el garante del cumplimiento de los estándares de calidad, seguridad y orden (GMP) en su área de influencia.",
     onboarding: [
-      { phase: "Semana 1", focus: "Seguridad y Entorno", milestones: "Seguridad de máquinas, protocolos LOTO, normas de higiene y vestimenta." },
-      { phase: "Semana 2", focus: "Gestión y Control", milestones: "Manejo de la App interna, control de procesos (IPC), gestión de personal de línea." },
-      { phase: "Semana 3", focus: "Técnica Operativa", milestones: "Cambios de formato, ajustes finos, limpieza y desinfección de piezas clave." },
-      { phase: "Semana 4", focus: "Autonomía", milestones: "Arranque de línea independiente, resolución de averías y cierre de órdenes." }
+      { phase: "Semana 1", focus: "Inmersión y Seguridad", milestones: "• Cultura GMP: Normas de Correcta Fabricación.\n• Seguridad: Protocolos LOTO (Bloqueo/Etiquetado) y EPIs.\n• Shadowing: Observación guiada con un técnico mentor." },
+      { phase: "Semana 2", focus: "Control y Gestión", milestones: "• Manejo de Software: Registro de producción y paradas en la App interna.\n• IPC (In-Process Control): Verificación de atributos cada 30 minutos.\n• Gestión de Equipos: Asignación de tareas y supervisión de operarios." },
+      { phase: "Semanas 3-4", focus: "Técnica y Mantenimiento", milestones: "• Resolución de averías: Diagnóstico y reparación de fallos comunes.\n• Cambio de Formato: Ajustes mecánicos y sustitución de piezas.\n• Limpieza y Desinfección: Protocolos de contacto con producto." },
+      { phase: "Mes 2", focus: "Autonomía", milestones: "• Liderazgo real: Gestión de turno bajo supervisión mínima.\n• Evaluación de KPIs: Revisión de productividad y mermas." }
     ],
     responsibilities: [
       {
@@ -266,7 +266,7 @@ export default function PositionProfileManager() {
           </div>
 
           <div class="section">
-            <h2>2. Cronograma de Adaptación (Onboarding)</h2>
+            <h2>2. PLAN DE FORMACIÓN (4 FASES)</h2>
             <table>
               <thead>
                 <tr>
@@ -282,7 +282,7 @@ export default function PositionProfileManager() {
                   <tr>
                     <td>${o.phase}</td>
                     <td>${o.focus}</td>
-                    <td>${o.milestones}</td>
+                    <td style="white-space: pre-wrap;">${o.milestones}</td>
                     <td></td>
                     <td></td>
                   </tr>
@@ -442,7 +442,7 @@ export default function PositionProfileManager() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="bg-green-50 text-green-700">2. Onboarding</Badge>
-                      <h3 className="font-semibold text-lg">Cronograma de Adaptación</h3>
+                      <h3 className="font-semibold text-lg">Plan de Formación (4 Fases)</h3>
                     </div>
                   </div>
                   
