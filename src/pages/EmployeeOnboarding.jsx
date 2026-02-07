@@ -49,6 +49,8 @@ import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
 import OnboardingAIAssistant from "../components/onboarding/OnboardingAIAssistant";
 import PositionProfileManager from "../components/onboarding/PositionProfileManager";
 
+const EMPTY_ARRAY = [];
+
 export default function EmployeeOnboardingPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
