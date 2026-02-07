@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAppData } from "../components/data/DataProvider";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,10 +22,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, AlertTriangle, CheckCircle2, Clock, Users, Filter, Download } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Calendar, AlertTriangle, CheckCircle2, Clock, Users, Filter, Download, UserPlus } from "lucide-react";
 import { format, differenceInDays, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
 import EmployeeForm from "../components/employees/EmployeeForm";
+
+// Initial Seed Data (Fallback)
+const INITIAL_PROFILES = {
+  "tecnico-proceso": {
+    id: "tecnico-proceso",
+    title: "Técnico de Proceso",
+    mission: "El Técnico de Proceso es el máximo responsable operativo de una línea de fabricación...",
+    onboarding: [
+      { phase: "Semana 1", focus: "Seguridad y Entorno", milestones: "Seguridad de máquinas, protocolos LOTO..." },
+      { phase: "Semana 2", focus: "Gestión y Control", milestones: "Manejo de la App interna, control de procesos..." },
+      { phase: "Semana 3", focus: "Técnica Operativa", milestones: "Cambios de formato, ajustes finos..." },
+      { phase: "Semana 4", focus: "Autonomía", milestones: "Arranque de línea independiente..." }
+    ],
+    responsibilities: [],
+    protocols: [],
+    handover: [],
+    troubleshooting: []
+  }
+};
 
 export default function ETTTemporaryEmployeesPage() {
   const [filters, setFilters] = useState({
@@ -36,8 +66,72 @@ export default function ETTTemporaryEmployeesPage() {
   
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
+  const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
+  const [selectedForOnboarding, setSelectedForOnboarding] = useState(null);
+  const [selectedProfileId, setSelectedProfileId] = useState("");
 
   const { employees, machines } = useAppData();
+  const queryClient = useQueryClient();
+
+  // Fetch Profiles
+  const { data: profiles } = useQuery({
+    queryKey: ['positionProfiles'],
+    queryFn: async () => {
+      try {
+        const config = await base44.entities.AppConfig.list();
+        const profileConfig = config.find(c => c.key === 'position_profiles_v1');
+        if (profileConfig) return JSON.parse(profileConfig.value);
+        return INITIAL_PROFILES;
+      } catch (e) {
+        return INITIAL_PROFILES;
+      }
+    },
+    initialData: INITIAL_PROFILES
+  });
+
+  const assignOnboardingMutation = useMutation({
+    mutationFn: async (data) => {
+      // 1. Check if already exists
+      const existing = await base44.entities.EmployeeOnboarding.filter({ employee_id: data.employeeId });
+      if (existing.length > 0) {
+        throw new Error("El empleado ya tiene un proceso de onboarding activo o completado.");
+      }
+
+      // 2. Create Onboarding Record
+      return base44.entities.EmployeeOnboarding.create({
+        employee_id: data.employeeId,
+        profile_id: data.profileId,
+        fecha_inicio: new Date().toISOString(),
+        estado: "Pendiente",
+        progreso: 0,
+        tareas_completadas: []
+      });
+    },
+    onSuccess: () => {
+      toast.success("Proceso de onboarding asignado correctamente");
+      setShowOnboardingDialog(false);
+      setSelectedForOnboarding(null);
+      setSelectedProfileId("");
+      queryClient.invalidateQueries({ queryKey: ['employeeOnboardings'] });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const handleAssignOnboardingClick = (employee) => {
+    setSelectedForOnboarding(employee);
+    setSelectedProfileId(""); // Reset
+    setShowOnboardingDialog(true);
+  };
+
+  const confirmAssignOnboarding = () => {
+    if (!selectedForOnboarding || !selectedProfileId) return;
+    assignOnboardingMutation.mutate({
+      employeeId: selectedForOnboarding.id,
+      profileId: selectedProfileId
+    });
+  };
 
   // Filtrar empleados ETT y temporales
   const ettAndTemporaryEmployees = useMemo(() => {
@@ -404,14 +498,24 @@ export default function ETTTemporaryEmployeesPage() {
                       <TableCell className="text-center">
                         {getEstadoBadge(employee.estadoAlerta, employee.diasRestantes, employee.vencido)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right flex justify-end gap-1">
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           className="h-7 w-7 p-0"
+                          title="Ver Detalle"
                           onClick={() => handleViewDetail(employee)}
                         >
                           <Filter className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Asignar Onboarding"
+                          onClick={() => handleAssignOnboardingClick(employee)}
+                        >
+                          <UserPlus className="h-3 w-3" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -452,6 +556,49 @@ export default function ETTTemporaryEmployeesPage() {
           }}
         />
       )}
+
+      <Dialog open={showOnboardingDialog} onOpenChange={setShowOnboardingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar Proceso de Onboarding</DialogTitle>
+            <DialogDescription>
+              Seleccione el perfil de puesto para iniciar el onboarding de <strong>{selectedForOnboarding?.nombre}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+             <div className="space-y-2">
+              <Label>Perfil / Puesto</Label>
+              <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar perfil..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(profiles).map((profile) => (
+                    <SelectItem key={profile.id} value={profile.id}>
+                      {profile.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedProfileId && profiles[selectedProfileId] && (
+                <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded border mt-2">
+                  <p className="font-medium">Resumen del plan:</p>
+                  <ul className="list-disc list-inside mt-1">
+                    <li>{(profiles[selectedProfileId].onboarding || []).length} fases definidas</li>
+                    <li>{(profiles[selectedProfileId].responsibilities || []).length} áreas de responsabilidad</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOnboardingDialog(false)}>Cancelar</Button>
+            <Button onClick={confirmAssignOnboarding} disabled={!selectedProfileId || assignOnboardingMutation.isPending}>
+              {assignOnboardingMutation.isPending ? "Asignando..." : "Asignar Onboarding"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

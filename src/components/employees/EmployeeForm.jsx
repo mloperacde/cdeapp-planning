@@ -353,6 +353,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 Máquinas {isMaintenanceDepartment && "(Mant.)"}
               </TabsTrigger>
               <TabsTrigger value="availability">Disponibilidad</TabsTrigger>
+              <TabsTrigger value="contract">Contrato</TabsTrigger>
               <TabsTrigger value="absentismo">Absentismo</TabsTrigger>
               <TabsTrigger value="rrhh">RRHH</TabsTrigger>
             </TabsList>
@@ -1025,6 +1026,85 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               </div>
             </TabsContent>
 
+            <TabsContent value="contract" className="space-y-4 mt-4">
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                <h4 className="font-semibold text-slate-900 mb-2">Gestión de Contrato</h4>
+                <p className="text-sm text-slate-600">
+                  Configure el tipo de contrato y vigencia. Los contratos indefinidos no aparecerán en la lista de temporales.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tipo_contrato">Tipo de Contrato</Label>
+                  <Select
+                    value={formData.tipo_contrato || ""}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_contrato: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Indefinido">Indefinido</SelectItem>
+                      <SelectItem value="Temporal">Temporal</SelectItem>
+                      <SelectItem value="ETT">ETT</SelectItem>
+                      <SelectItem value="Obra y Servicio">Obra y Servicio</SelectItem>
+                      <SelectItem value="Interinidad">Interinidad</SelectItem>
+                      <SelectItem value="Prácticas">Prácticas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.tipo_contrato === "Indefinido" && (
+                   <div className="col-span-2 bg-blue-50 text-blue-800 p-3 rounded-md text-sm flex items-center gap-2 border border-blue-200">
+                     <AlertCircle className="w-4 h-4" />
+                     Al guardar como Indefinido, este empleado dejará de aparecer en la lista de ETT/Temporales.
+                   </div>
+                )}
+
+                {(formData.tipo_contrato === "ETT" || formData.tipo_contrato?.includes("ETT")) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="empresa_ett">Empresa ETT</Label>
+                    <Input
+                      id="empresa_ett"
+                      value={formData.empresa_ett || ""}
+                      onChange={(e) => setFormData({ ...formData, empresa_ett: e.target.value })}
+                      placeholder="Ej: Adecco, Randstad..."
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_alta">Fecha Inicio / Alta</Label>
+                  <Input
+                    id="fecha_alta"
+                    type="date"
+                    value={formData.fecha_alta || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_alta: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_fin_contrato">Fecha Fin Contrato</Label>
+                  <Input
+                    id="fecha_fin_contrato"
+                    type="date"
+                    value={formData.fecha_fin_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, fecha_fin_contrato: e.target.value })}
+                  />
+                </div>
+
+                 <div className="space-y-2">
+                  <Label htmlFor="codigo_contrato">Código de Contrato</Label>
+                  <Input
+                    id="codigo_contrato"
+                    value={formData.codigo_contrato || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
             <TabsContent value="absentismo" className="space-y-4">
               {employee?.id ? (
                 <Suspense fallback={<div className="p-4 text-center">Cargando datos de absentismo...</div>}>
@@ -1042,58 +1122,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             <TabsContent value="rrhh" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fecha_alta">Fecha de Alta</Label>
-                  <Input
-                    id="fecha_alta"
-                    type="date"
-                    value={formData.fecha_alta || ""}
-                    onChange={(e) => setFormData({ ...formData, fecha_alta: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label>Antigüedad</Label>
                   <Input value={antiguedad || "Sin fecha de alta"} disabled className="bg-slate-50" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tipo_contrato">Tipo de Contrato</Label>
-                  <Input
-                    id="tipo_contrato"
-                    value={formData.tipo_contrato || ""}
-                    onChange={(e) => setFormData({ ...formData, tipo_contrato: e.target.value })}
-                  />
-                </div>
-
-                {isETT && (
-                  <div className="space-y-2">
-                    <Label htmlFor="empresa_ett">Empresa ETT</Label>
-                    <Input
-                      id="empresa_ett"
-                      value={formData.empresa_ett || ""}
-                      onChange={(e) => setFormData({ ...formData, empresa_ett: e.target.value })}
-                      placeholder="Nombre de la empresa de trabajo temporal"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="codigo_contrato">Código de Contrato</Label>
-                  <Input
-                    id="codigo_contrato"
-                    value={formData.codigo_contrato || ""}
-                    onChange={(e) => setFormData({ ...formData, codigo_contrato: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fecha_fin_contrato">Fecha Fin Contrato</Label>
-                  <Input
-                    id="fecha_fin_contrato"
-                    type="date"
-                    value={formData.fecha_fin_contrato || ""}
-                    onChange={(e) => setFormData({ ...formData, fecha_fin_contrato: e.target.value })}
-                  />
                 </div>
 
                 <div className="space-y-2">
