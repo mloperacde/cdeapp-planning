@@ -93,10 +93,20 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                 if (chunkMatches.length > 0) {
                     // Get latest chunk version if multiple
                     chunkMatches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-                    const chunkMatch = chunkMatches[0];
+                    let chunkMatch = chunkMatches[0];
+
+                    // Force GET to ensure full content (Fix for empty chunks)
+                    try {
+                        const fullChunk = await base44.entities.AppConfig.get(chunkMatch.id);
+                        if (fullChunk) chunkMatch = fullChunk;
+                    } catch (e) {
+                         // console.warn(`Force GET failed for chunk ${i}`);
+                    }
                     
                     let chunkVal = chunkMatch.value;
                     if (!chunkVal && chunkMatch.description) chunkVal = chunkMatch.description;
+                    if (!chunkVal && chunkMatch.app_subtitle && chunkMatch.app_subtitle !== "chunk") chunkVal = chunkMatch.app_subtitle;
+                    
                     chunks.push(chunkVal || "");
                 } else {
                     console.error(`[Config] Missing chunk ${i} for ${configKey}`);
@@ -205,7 +215,7 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
               const chunkPayload = {
                   value: chunks[i],
                   description: chunks[i], // Backup
-                  app_subtitle: "chunk",
+                  app_subtitle: chunks[i], // Backup 2: Triple Write for Chunks too
                   key: chunkKey,
                   config_key: chunkKey,
                   is_active: true,
