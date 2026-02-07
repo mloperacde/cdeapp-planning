@@ -104,9 +104,13 @@ export default function EmployeeOnboardingPage() {
     queryKey: ["onboardingTrainingResources"],
     queryFn: async () => {
       try {
+        console.log("Fetching training resources...");
         const configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
-        if (configs && configs.length > 0) {
-          return JSON.parse(configs[0].value);
+        console.log("Configs found:", configs);
+        if (configs && configs.length > 0 && configs[0].value) {
+          const parsed = JSON.parse(configs[0].value);
+          console.log("Parsed resources:", parsed);
+          return parsed;
         }
         return [];
       } catch (e) {
@@ -709,7 +713,7 @@ export default function EmployeeOnboardingPage() {
                     </div>
                   </div>
 
-                  {trainingDocs.length > 0 && (
+                  {trainingDocs.length > 0 ? (
                     <div className="mt-4 space-y-2">
                       {trainingDocs.map((doc) => (
                         <div
@@ -732,6 +736,10 @@ export default function EmployeeOnboardingPage() {
                           </a>
                         </div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="mt-8 text-center py-8 border-2 border-dashed border-slate-200 rounded-lg">
+                      <p className="text-sm text-slate-500">No hay documentos cargados</p>
                     </div>
                   )}
                 </CardContent>
@@ -811,7 +819,7 @@ export default function EmployeeOnboardingPage() {
                     </div>
                   </div>
 
-                  {trainings.length > 0 && (
+                  {trainings.length > 0 ? (
                     <div className="mt-4">
                       <div className="overflow-x-auto">
                         <Table>
@@ -839,6 +847,10 @@ export default function EmployeeOnboardingPage() {
                           </TableBody>
                         </Table>
                       </div>
+                    </div>
+                  ) : (
+                    <div className="mt-8 text-center py-8 border-2 border-dashed border-slate-200 rounded-lg">
+                      <p className="text-sm text-slate-500">No hay planes de formación configurados</p>
                     </div>
                   )}
                 </CardContent>

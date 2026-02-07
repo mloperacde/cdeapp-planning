@@ -120,6 +120,7 @@ const INITIAL_PROFILES = {
 };
 
 export default function PositionProfileManager({ trainingResources = [] }) {
+  console.log("PositionProfileManager received trainingResources:", trainingResources);
   const queryClient = useQueryClient();
   const [selectedProfileId, setSelectedProfileId] = useState("tecnico-proceso");
   const [localProfile, setLocalProfile] = useState(null);
