@@ -28,7 +28,7 @@ import { toast } from "sonner";
 
 // Initial Seed Data based on User Request
 const INITIAL_PROFILES = {
-  "Técnico de Proceso": {
+  "tecnico-proceso": {
     id: "tecnico-proceso",
     title: "Técnico de Proceso",
     mission: "El Técnico de Proceso es el máximo responsable operativo de una línea de fabricación. Su función es garantizar la excelencia en el envasado mediante el manejo técnico avanzado (cambio de formato, limpieza, montaje y arranque), la resolución proactiva de averías y la gestión directa del equipo humano asignado. Es el garante del cumplimiento de los estándares de calidad, seguridad y orden (GMP) en su área de influencia.",
