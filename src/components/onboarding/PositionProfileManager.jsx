@@ -141,18 +141,31 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     queryFn: async () => {
       try {
         console.log("Fetching profiles...");
-        // Try to find by config_key first (standard), then key (legacy)
-        let configs = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
-        if (!configs || configs.length === 0) {
-           configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
-        }
         
-        console.log("Profiles configs found:", configs);
+        // Strategy: Fetch ALL configs (or a broad search) and filter in memory to guarantee we find it
+        // This bypasses potential API filter quirks
+        const allConfigs = await base44.entities.AppConfig.list();
+        const matches = allConfigs.filter(c => 
+            c.config_key === 'position_profiles_v1' || 
+            c.key === 'position_profiles_v1'
+        );
+        
+        console.log("Profiles configs found:", matches);
 
-        if (configs && configs.length > 0) {
+        if (matches && matches.length > 0) {
            // Sort by updated_at descending to get the latest
-           configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-           const latest = configs[0];
+           matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+           let latest = matches[0];
+           
+           // FORCE GET by ID to ensure we have the full content
+           try {
+              const fullConfig = await base44.entities.AppConfig.get(latest.id);
+              if (fullConfig) {
+                  latest = fullConfig;
+              }
+           } catch (fetchError) {
+              console.warn("Error in force GET by ID (profiles), falling back to list item:", fetchError);
+           }
            
            if (latest.value && latest.value !== "undefined") {
              try {
@@ -219,23 +232,29 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     mutationFn: async () => {
       if (!localProfile) return;
       
-      // Robust lookup using filter instead of list
-      let configs = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
-      if (!configs || configs.length === 0) {
-         configs = await base44.entities.AppConfig.filter({ key: 'position_profiles_v1' });
+      // Robust lookup using list + memory filter
+      let matches = [];
+      try {
+          const allConfigs = await base44.entities.AppConfig.list();
+          matches = allConfigs.filter(c => 
+              c.config_key === 'position_profiles_v1' || 
+              c.key === 'position_profiles_v1'
+          );
+      } catch (e) {
+          console.error("Error listing configs in mutation:", e);
       }
       
       let targetConfigId = null;
-      if (configs && configs.length > 0) {
+      if (matches && matches.length > 0) {
           // Sort and use latest
-          configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-          targetConfigId = configs[0].id;
+          matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+          targetConfigId = matches[0].id;
           
           // Cleanup duplicates
-          if (configs.length > 1) {
+          if (matches.length > 1) {
              console.warn("Found duplicate profile configs, cleaning up...");
-             for (let i = 1; i < configs.length; i++) {
-                 await base44.entities.AppConfig.delete(configs[i].id);
+             for (let i = 1; i < matches.length; i++) {
+                 await base44.entities.AppConfig.delete(matches[i].id);
              }
           }
       }

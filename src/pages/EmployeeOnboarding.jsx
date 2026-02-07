@@ -123,8 +123,20 @@ export default function EmployeeOnboardingPage() {
           // Sort by updated_at descending to get the latest
           matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
           
-          const latestConfig = matches[0];
-          console.log("Using latest config:", latestConfig.id, latestConfig.updated_at);
+          let latestConfig = matches[0];
+          console.log("Using latest config from list:", latestConfig.id, "Keys:", Object.keys(latestConfig));
+
+          // FORCE GET by ID to ensure we have the full content (value)
+          try {
+             console.log("Forcing GET by ID to ensure full content...");
+             const fullConfig = await base44.entities.AppConfig.get(latestConfig.id);
+             if (fullConfig) {
+                 latestConfig = fullConfig;
+                 console.log("Full config fetched. Keys:", Object.keys(latestConfig));
+             }
+          } catch (fetchError) {
+             console.warn("Error in force GET by ID, falling back to list item:", fetchError);
+          }
           
           if (latestConfig.value && latestConfig.value !== "undefined") {
              try {
@@ -135,6 +147,8 @@ export default function EmployeeOnboardingPage() {
                  console.error("JSON Parse Error in fetch:", e);
                  return [];
              }
+          } else {
+             console.warn("Config found but value is empty or undefined. Value:", latestConfig.value);
           }
         } else {
             console.warn("No configuration found for 'onboarding_training_resources'");
@@ -172,8 +186,18 @@ export default function EmployeeOnboardingPage() {
           if (matches && matches.length > 0) {
             // Sort and use latest
             matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-            const latest = matches[0];
+            let latest = matches[0];
             targetConfigId = latest.id;
+            
+            // FORCE GET by ID to ensure we have the full content
+            try {
+               const fullConfig = await base44.entities.AppConfig.get(latest.id);
+               if (fullConfig) {
+                   latest = fullConfig;
+               }
+            } catch (fetchError) {
+               console.warn("Error in force GET by ID (mutation), falling back to list item:", fetchError);
+            }
             
             // Preserve the key used by the existing record
             targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
