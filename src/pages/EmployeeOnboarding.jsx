@@ -104,23 +104,26 @@ export default function EmployeeOnboardingPage() {
     queryKey: ["onboardingTrainingResources"],
     queryFn: async () => {
       try {
-        console.log("Fetching training resources...");
-        // Fetch all configs matching the key
-        let configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+        console.log("Fetching training resources (Debug Mode)...");
         
-        // Fallback: Try legacy key if no config_key found
-        if (!configs || configs.length === 0) {
-           console.log("No configs found with config_key, trying legacy key...");
-           configs = await base44.entities.AppConfig.filter({ key: 'onboarding_training_resources' });
-        }
+        // Strategy: Fetch ALL configs (or a broad search) and filter in memory to guarantee we find it
+        // This bypasses potential API filter quirks
+        const allConfigs = await base44.entities.AppConfig.list();
+        console.log("Total AppConfigs fetched:", allConfigs.length);
+        console.log("AppConfig Keys:", allConfigs.map(c => c.config_key || c.key));
 
-        console.log("Configs found raw:", configs);
+        const matches = allConfigs.filter(c => 
+            c.config_key === 'onboarding_training_resources' || 
+            c.key === 'onboarding_training_resources'
+        );
         
-        if (configs && configs.length > 0) {
+        console.log("Matching configs found:", matches);
+        
+        if (matches && matches.length > 0) {
           // Sort by updated_at descending to get the latest
-          configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+          matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
           
-          const latestConfig = configs[0];
+          const latestConfig = matches[0];
           console.log("Using latest config:", latestConfig.id, latestConfig.updated_at);
           
           if (latestConfig.value && latestConfig.value !== "undefined") {
@@ -133,6 +136,8 @@ export default function EmployeeOnboardingPage() {
                  return [];
              }
           }
+        } else {
+            console.warn("No configuration found for 'onboarding_training_resources'");
         }
         return [];
       } catch (e) {
@@ -152,40 +157,49 @@ export default function EmployeeOnboardingPage() {
 
   const createTrainingResourceMutation = useMutation({
     mutationFn: async (newResource) => {
-      // 1. Get current list (re-fetch to be safe)
+      // 1. Get current list (re-fetch to be safe) using ROBUST list() strategy
       let currentResources = [];
-      let configs = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
-      
-      if (!configs || configs.length === 0) {
-          configs = await base44.entities.AppConfig.filter({ key: 'onboarding_training_resources' });
-      }
-      
       let targetConfigId = null;
+      let targetKey = 'onboarding_training_resources'; // Default key to use if creating new
       
-      if (configs && configs.length > 0) {
-        // Sort and use latest
-        configs.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-        const latest = configs[0];
-        targetConfigId = latest.id;
-        if (latest.value && latest.value !== "undefined") {
-            try {
-                const parsed = JSON.parse(latest.value);
-                currentResources = Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                console.error("Error parsing current resources during mutation", e);
-                currentResources = [];
+      try {
+          const allConfigs = await base44.entities.AppConfig.list();
+          const matches = allConfigs.filter(c => 
+              c.config_key === 'onboarding_training_resources' || 
+              c.key === 'onboarding_training_resources'
+          );
+          
+          if (matches && matches.length > 0) {
+            // Sort and use latest
+            matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+            const latest = matches[0];
+            targetConfigId = latest.id;
+            
+            // Preserve the key used by the existing record
+            targetKey = latest.config_key || latest.key || 'onboarding_training_resources';
+            
+            if (latest.value && latest.value !== "undefined") {
+                try {
+                    const parsed = JSON.parse(latest.value);
+                    currentResources = Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    console.error("Error parsing current resources during mutation", e);
+                    currentResources = [];
+                }
             }
-        }
-        
-        // Cleanup duplicates if any
-        if (configs.length > 1) {
-            console.warn("Found duplicate configs, cleaning up...");
-            for (let i = 1; i < configs.length; i++) {
-                await base44.entities.AppConfig.delete(configs[i].id);
+            
+            // Cleanup duplicates if any
+            if (matches.length > 1) {
+                console.warn("Found duplicate configs, cleaning up...");
+                for (let i = 1; i < matches.length; i++) {
+                    await base44.entities.AppConfig.delete(matches[i].id);
+                }
             }
-        }
+          }
+      } catch (e) {
+          console.error("Error finding existing config in mutation:", e);
       }
-
+      
       const resource = {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
@@ -199,7 +213,7 @@ export default function EmployeeOnboardingPage() {
         return base44.entities.AppConfig.update(targetConfigId, { value });
       } else {
         return base44.entities.AppConfig.create({
-          config_key: 'onboarding_training_resources',
+          config_key: 'onboarding_training_resources', // Prefer config_key for new records
           value,
           description: 'Resources and Documents for Employee Onboarding'
         });
@@ -219,6 +233,11 @@ export default function EmployeeOnboardingPage() {
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Empleado desconocido";
   };
+
+  // Debug effect
+  useEffect(() => {
+    console.log("Current trainingResources state:", trainingResources);
+  }, [trainingResources]);
 
   const getEmployeeData = (employeeId) => {
     return employees.find(e => e.id === employeeId);
@@ -373,6 +392,9 @@ export default function EmployeeOnboardingPage() {
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <UserPlus className="w-8 h-8 text-blue-600" />
               Onboarding
+              <Badge variant="outline" className="text-xs font-normal ml-2 bg-blue-50">
+                 Recursos: {trainingResources.length}
+              </Badge>
             </h1>
             <p className="text-slate-600 mt-1">
               Gestiona incorporaciones y planes de acogida
