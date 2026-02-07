@@ -133,7 +133,14 @@ export default function EmployeeOnboardingPage() {
       let configId = null;
 
       if (configs && configs.length > 0) {
-        currentResources = JSON.parse(configs[0].value);
+        if (configs[0].value) {
+          try {
+            currentResources = JSON.parse(configs[0].value);
+          } catch (e) {
+            console.error("Error parsing existing resources", e);
+            currentResources = [];
+          }
+        }
         configId = configs[0].id;
       }
 
