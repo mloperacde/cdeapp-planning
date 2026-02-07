@@ -226,6 +226,12 @@ export default function EmployeeOnboardingPage() {
              if (!hasValidContent) {
                  console.error("Config found but 'value' field is MISSING and 'description'/'app_subtitle' backup is invalid. Detected CORRUPTION.");
                  console.log("Corrupted config keys:", Object.keys(latest));
+                 console.log("Corrupted config VALUES (Partial):", {
+                     val: latest.value ? latest.value.substring(0, 50) : 'undefined',
+                     desc: latest.description ? latest.description.substring(0, 50) : 'undefined',
+                     sub: latest.app_subtitle ? latest.app_subtitle.substring(0, 50) : 'undefined'
+                 });
+
                  try {
                     await base44.entities.AppConfig.delete(latest.id);
                     console.log("Deleted corrupted config:", latest.id);
@@ -288,7 +294,9 @@ export default function EmployeeOnboardingPage() {
           description: value, 
           app_subtitle: value, // Hack: Use app_subtitle if available
           key: targetKey, // Explicitly send 'key' in addition to 'config_key' to try to bypass branding mode
-          config_key: targetKey
+          config_key: targetKey,
+          is_active: true, // MIMIC roles_config
+          app_name: 'Training Resources Config' // Prevent Branding Overwrite
       };
 
       if (targetConfigId) {

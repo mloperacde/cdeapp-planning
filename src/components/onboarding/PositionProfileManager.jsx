@@ -287,6 +287,11 @@ export default function PositionProfileManager({ trainingResources = [] }) {
 
            if (!hasValidContent) {
                console.error("Profile Config found but 'value' field is MISSING and 'description'/'app_subtitle' backup is invalid. Detected CORRUPTION.");
+               console.log("Corrupted Profile Config VALUES (Partial):", {
+                   val: latest.value ? latest.value.substring(0, 50) : 'undefined',
+                   desc: latest.description ? latest.description.substring(0, 50) : 'undefined',
+                   sub: latest.app_subtitle ? latest.app_subtitle.substring(0, 50) : 'undefined'
+               });
                try {
                   await base44.entities.AppConfig.delete(latest.id);
                   targetConfigId = null; // Force create
@@ -323,7 +328,9 @@ export default function PositionProfileManager({ trainingResources = [] }) {
           description: value, // Backup 1
           app_subtitle: value, // Backup 2
           key: 'position_profiles_v1', // Explicitly send 'key'
-          config_key: 'position_profiles_v1'
+          config_key: 'position_profiles_v1',
+          is_active: true, // MIMIC roles_config
+          app_name: 'Position Profiles Config' // Prevent Branding Overwrite
       };
       
       if (targetConfigId) {
