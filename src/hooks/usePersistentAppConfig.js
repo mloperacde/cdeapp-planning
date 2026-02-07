@@ -215,10 +215,11 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
           }
 
           // Save Master Record
+          const metaJson = JSON.stringify({ is_chunked: true, count: chunks.length, timestamp: Date.now() });
           const masterPayload = {
-              value: JSON.stringify({ is_chunked: true, count: chunks.length, timestamp: Date.now() }),
-              description: "Master Record for Chunked Config",
-              app_subtitle: "Master",
+              value: metaJson,
+              description: metaJson, // Backup: Triple Write for Master Record too
+              app_subtitle: metaJson, // Backup: Triple Write for Master Record too
               key: configKey,
               config_key: configKey,
               is_active: true,
