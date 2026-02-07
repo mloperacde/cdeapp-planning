@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -291,6 +292,9 @@ export default function OnboardingWizard({ onboarding, onClose }) {
             <DialogTitle className="text-2xl">
               {onboarding ? "Gestionar Onboarding" : "Nuevo Proceso de Onboarding"}
             </DialogTitle>
+            <DialogDescription>
+              Complete la información necesaria para el proceso de incorporación del empleado.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
