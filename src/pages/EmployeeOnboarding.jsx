@@ -575,7 +575,7 @@ export default function EmployeeOnboardingPage() {
           </TabsContent>
 
           <TabsContent value="profiles" className="space-y-6">
-             <PositionProfileManager />
+             <PositionProfileManager trainingResources={trainingResources} />
           </TabsContent>
 
 

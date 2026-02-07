@@ -119,12 +119,16 @@ const INITIAL_PROFILES = {
   }
 };
 
-export default function PositionProfileManager() {
+export default function PositionProfileManager({ trainingResources = [] }) {
   const queryClient = useQueryClient();
   const [selectedProfileId, setSelectedProfileId] = useState("tecnico-proceso");
   const [localProfile, setLocalProfile] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const iframeRef = useRef(null);
+
+  const trainingDocs = useMemo(() => {
+    return trainingResources.filter(r => r.type === 'document' || r.type === 'url');
+  }, [trainingResources]);
 
   // Fetch Profiles from AppConfig
   const { data: profiles, isLoading } = useQuery({
@@ -168,21 +172,22 @@ export default function PositionProfileManager() {
        let profileData = JSON.parse(JSON.stringify(profiles[selectedProfileId]));
        
        // Migration: Convert legacy string milestones to array objects
-       if (profileData.onboarding) {
-         profileData.onboarding = profileData.onboarding.map(phase => {
-           if (typeof phase.milestones === 'string') {
-             return {
-               ...phase,
-               milestones: phase.milestones.split('\n').map(line => ({
-                 text: line.replace(/^[•\-\*]\s*/, ''),
-                 responsible: "",
-                 completed: false
-               })).filter(m => m.text.trim() !== '')
-             };
-           }
-           return phase;
-         });
-       }
+        if (profileData.onboarding) {
+          profileData.onboarding = profileData.onboarding.map(phase => {
+            if (typeof phase.milestones === 'string') {
+              return {
+                ...phase,
+                milestones: phase.milestones.split('\n').map(line => ({
+                  text: line.replace(/^[•\-\*]\s*/, ''),
+                  responsible: "",
+                  resourceId: "",
+                  completed: false
+                })).filter(m => m.text.trim() !== '')
+              };
+            }
+            return phase;
+          });
+        }
 
        setLocalProfile(profileData);
        setHasChanges(false);
@@ -371,6 +376,10 @@ export default function PositionProfileManager() {
                           <div>
                             <div style="margin-bottom: 2px;">${m.text}</div>
                             ${m.responsible ? `<div style="font-size: 10px; color: #666; font-style: italic;">Resp: ${m.responsible}</div>` : ''}
+                            ${m.resourceId ? (() => {
+                              const doc = trainingDocs.find(d => d.id === m.resourceId);
+                              return doc ? `<div style="font-size: 10px; color: #3b82f6;">Doc: ${doc.title}</div>` : '';
+                            })() : ''}
                           </div>
                         </li>
                       `).join('') : o.milestones}
@@ -629,6 +638,7 @@ export default function PositionProfileManager() {
                                     <TableHead className="w-[40px] p-2 text-center">OK</TableHead>
                                     <TableHead className="p-2">Hito</TableHead>
                                     <TableHead className="p-2 w-[140px]">Responsable</TableHead>
+                                    <TableHead className="p-2 w-[160px]">Documento</TableHead>
                                     <TableHead className="w-[40px] p-2"></TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -670,6 +680,28 @@ export default function PositionProfileManager() {
                                         />
                                       </TableCell>
                                       <TableCell className="p-2 align-top">
+                                        <Select 
+                                          value={milestone.resourceId || "none"} 
+                                          onValueChange={(val) => {
+                                            const newOnboarding = [...selectedProfile.onboarding];
+                                            newOnboarding[idx].milestones[mIdx].resourceId = val === "none" ? "" : val;
+                                            handleUpdateProfile('onboarding', newOnboarding);
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-9 text-xs w-full">
+                                            <SelectValue placeholder="Seleccionar..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="none">Ninguno</SelectItem>
+                                            {trainingDocs.map(doc => (
+                                              <SelectItem key={doc.id} value={doc.id} className="text-xs">
+                                                {doc.title}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </TableCell>
+                                      <TableCell className="p-2 align-top">
                                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
                                            const newOnboarding = [...selectedProfile.onboarding];
                                            newOnboarding[idx].milestones = newOnboarding[idx].milestones.filter((_, i) => i !== mIdx);
@@ -681,7 +713,7 @@ export default function PositionProfileManager() {
                                     </TableRow>
                                   )) : (
                                     <TableRow>
-                                      <TableCell colSpan={4} className="text-center text-red-500 p-4">
+                                      <TableCell colSpan={5} className="text-center text-red-500 p-4">
                                         Error de formato en hitos. Guarde para corregir.
                                       </TableCell>
                                     </TableRow>
@@ -695,7 +727,7 @@ export default function PositionProfileManager() {
                                 onClick={() => {
                                   const newOnboarding = [...selectedProfile.onboarding];
                                   if (!Array.isArray(newOnboarding[idx].milestones)) newOnboarding[idx].milestones = [];
-                                  newOnboarding[idx].milestones.push({ text: "", responsible: "", completed: false });
+                                  newOnboarding[idx].milestones.push({ text: "", responsible: "", resourceId: "", completed: false });
                                   handleUpdateProfile('onboarding', newOnboarding);
                                 }}
                               >
