@@ -91,9 +91,15 @@ export default function PersistenceDebugger() {
                 }
 
                 // Handle Invalid Date from server
-                let updatedStr = "Missing/Invalid";
+                let updatedStr = "Invalid Date";
                 try {
-                    if (record.updated_at) updatedStr = new Date(record.updated_at).toLocaleString();
+                    const d = new Date(record.updated_at);
+                    if (!isNaN(d.getTime())) {
+                        updatedStr = d.toLocaleString();
+                    } else {
+                        // Fallback: try to interpret ISO string manually or just mark as Server Error
+                         updatedStr = "Server Error (Invalid Date)";
+                    }
                 } catch(e) {}
 
                 return {

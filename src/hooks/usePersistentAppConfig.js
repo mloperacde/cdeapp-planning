@@ -37,6 +37,7 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
 
         const MAX_RETRIES = 5;
         const RETRY_DELAY = 1000;
+        let bestCandidateSoFar = null;
 
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             if (attempt > 0) {
@@ -144,15 +145,18 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
             candidates.sort((a, b) => b.timestamp - a.timestamp);
             const winner = candidates[0];
             
-            // CHECK CONSISTENCY
-            if (minRequiredTimestamp > 0 && winner.timestamp < minRequiredTimestamp) {
-                console.warn(`[Config] Found winner TS ${winner.timestamp} < Required ${minRequiredTimestamp}. Retrying...`);
-                continue; // Retry loop
-            }
+        // CHECK CONSISTENCY
+        if (minRequiredTimestamp > 0 && winner.timestamp < minRequiredTimestamp) {
+            console.warn(`[Config] Found winner TS ${winner.timestamp} < Required ${minRequiredTimestamp}. Retrying...`);
+            continue; // Retry loop
+        }
 
-            console.log(`[Config] Winner: ${winner.id} (v${winner.version}, ts: ${winner.timestamp})`);
-    
-            // Paso 3: Recuperar Chunks
+        console.log(`[Config] Winner: ${winner.id} (v${winner.version}, ts: ${winner.timestamp})`);
+        
+        // Save best candidate if we need to fallback
+        bestCandidateSoFar = winner;
+
+        // Paso 3: Recuperar Chunks
             if (winner.isChunked) {
                  let fullJson = "";
     
@@ -226,6 +230,30 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
             if (isArray && !Array.isArray(winner.content)) return initialData;
             return winner.content;
         } // End Retry Loop
+
+        // Fallback if consistency check failed but we found SOMETHING
+        if (!initialData && bestCandidateSoFar) {
+             console.warn(`[Config] Consistency Timeout. Using best candidate found (TS: ${bestCandidateSoFar.timestamp})`);
+             const winner = bestCandidateSoFar;
+
+             if (winner.isChunked) {
+                 if (winner.version === 8 && winner.chunkIds.length > 0) {
+                     try {
+                         const chunkPromises = winner.chunkIds.map(id => base44.entities.AppConfig.get(id).catch(e => null));
+                         const chunkResults = await Promise.all(chunkPromises);
+                         const chunks = chunkResults.map(c => {
+                             if (!c) return "";
+                             let val = c.value || c.description || (c.app_subtitle !== "chunk" ? c.app_subtitle : "") || "";
+                             return val;
+                         });
+                         const fullJson = chunks.join('');
+                         if (fullJson) return JSON.parse(fullJson);
+                     } catch(e) { console.error("Fallback chunk fetch failed", e); }
+                 }
+             } else {
+                 return winner.content;
+             }
+        }
         
         return initialData; // Should theoretically not reach here if loop works right
 
