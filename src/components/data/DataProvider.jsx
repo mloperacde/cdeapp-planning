@@ -2,6 +2,7 @@ import React, { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { getMachineAlias } from "@/utils/machineAlias";
+import { toast } from "sonner";
 
 /**
  * PROVEEDOR CENTRALIZADO DE DATOS
@@ -251,7 +252,7 @@ export function DataProvider({ children }) {
           const MAX_RETRIES = 10;
           const RETRY_DELAY = 1000;
 
-          let config = null;
+          // Remove local 'config' shadowing to ensure we update the outer variable
           let bestCandidateSoFar = null;
 
           for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
