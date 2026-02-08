@@ -10,7 +10,7 @@ const forceReal = import.meta.env.VITE_USE_REAL_API === 'true';
 // Determinar modo: 
 // - Por defecto usamos API REAL.
 // - Solo usamos Mock si se especifica explícitamente VITE_USE_MOCK=true
-const useMockApi = forceMock;
+const useMockApi = false; // FORZADO A REAL PARA PERSISTENCIA
 
 if (typeof window !== 'undefined') {
   console.log(`[Base44] Initializing Client...`);

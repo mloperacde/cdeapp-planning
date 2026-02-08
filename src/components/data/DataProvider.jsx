@@ -288,6 +288,47 @@ export function DataProvider({ children }) {
 
             const parsed = JSON.parse(jsonString);
             
+            // v8 SUPPORT: Direct ID Linking
+            if (parsed._v === 8 && parsed._chunk_ids && Array.isArray(parsed._chunk_ids)) {
+                 try {
+                     const chunkPromises = parsed._chunk_ids.map(id => base44.entities.AppConfig.get(id));
+                     const chunkResults = await Promise.all(chunkPromises);
+                     
+                     let fullString = "";
+                     chunkResults.forEach((res, idx) => {
+                         if (res && (res.value || res.description)) {
+                             fullString += (res.value || res.description);
+                         } else {
+                             console.warn(`[DataProvider] Missing chunk ${idx} (${parsed._chunk_ids[idx]})`);
+                         }
+                     });
+                     
+                     if (!fullString) return parsed.data || null;
+
+                     try {
+                         const reassembled = JSON.parse(fullString);
+                         // Handle v2 compression inside v8 payload if necessary
+                         if (reassembled.v === 2 && reassembled.r) {
+                             // Use v2 logic below
+                             parsed.v = 2; 
+                             parsed.r = reassembled.r;
+                             parsed.d = reassembled.d;
+                             parsed.ua = reassembled.ua;
+                             // Fall through to v2 logic
+                         } else {
+                             return reassembled;
+                         }
+                     } catch(e) {
+                         console.warn("Failed to parse reassembled v8 content", e);
+                         return parsed.data || null;
+                     }
+
+                 } catch(e) {
+                     console.error("[DataProvider] v8 Chunk retrieval failed", e);
+                     return parsed.data || null;
+                 }
+            }
+
             // LÓGICA DE REENSAMBLADO DE CHUNKS (v3)
             if (parsed.v === 3 && parsed.is_chunked) {
                 try {

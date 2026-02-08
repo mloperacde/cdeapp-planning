@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppData } from '@/components/data/DataProvider';
 import { base44 } from '@/api/base44Client';
+import { usePersistentAppConfig } from './usePersistentAppConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -217,6 +218,15 @@ export function useRolesManager() {
   const { rolesConfig, refetchRolesConfig, rolesConfigLoading: isDataLoading } = useAppData();
   const queryClient = useQueryClient();
 
+  // v8 Persistence Hook (Writer Only)
+  const { save: saveRolesV8 } = usePersistentAppConfig(
+      'roles_config', 
+      null, 
+      'rolesConfig_v8_writer', 
+      false, 
+      { enabled: false }
+  );
+
   // Estado local
   const [localConfig, setLocalConfig] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -420,7 +430,7 @@ export function useRolesManager() {
     setIsDirty(true);
   }, [localConfig]);
 
-  // Acción de Guardado SIMPLIFICADA
+  // Acción de Guardado SIMPLIFICADA (v8 Integrated)
   const saveConfig = async () => {
     if (!isMountedRef.current) return;
     setIsSaving(true);
@@ -430,8 +440,7 @@ export function useRolesManager() {
         throw new Error("La configuración local está vacía. No se guardará.");
       }
 
-      // COMPRESIÓN (v2): Indexación de rutas y minificación de claves
-      // Esto reduce drásticamente el tamaño del payload para evitar rechazos del backend.
+      // COMPRESIÓN (v2) - Mantenida por eficiencia
       const dictionary = [];
       const getPathIndex = (path) => {
         let idx = dictionary.indexOf(path);
@@ -460,7 +469,6 @@ export function useRolesManager() {
             }
           });
           
-          // Si tiene permisos explícitos, forzamos modo estricto
           if (compressedRole.pp.length > 0) {
              compressedRole.s = 1;
           }
@@ -475,131 +483,22 @@ export function useRolesManager() {
         ua: localConfig.user_assignments || {}
       };
 
-      const configString = JSON.stringify(compressedConfig);
+      // DELEGACIÓN A ESTRATEGIA v8 (Direct ID Linking)
+      // Esto maneja automáticamente: Chunking, Triple Write, Verificación y Limpieza.
+      await saveRolesV8(compressedConfig);
       
-      // console.log("useRolesManager: Saving config (Compressed v2)...", configString.length, "chars");
-
-      // CHUNKING STRATEGY (v3)
-      // Si el backend rechaza payloads grandes (>2000 chars), dividimos en chunks de 1000 chars.
-      const CHUNK_SIZE = 1000;
-      const chunks = [];
-      for (let i = 0; i < configString.length; i += CHUNK_SIZE) {
-          chunks.push(configString.substring(i, i + CHUNK_SIZE));
-      }
-
-      // console.log(`useRolesManager: Splitting into ${chunks.length} chunks of max ${CHUNK_SIZE} chars.`);
-
-      // BACKUP DE EMERGENCIA EN LOCALSTORAGE
-      try {
-          localStorage.setItem('roles_config_backup', configString);
-          // console.log("useRolesManager: Backup de emergencia guardado en LocalStorage.");
-      } catch (e) {
-          console.warn("useRolesManager: No se pudo guardar backup en LocalStorage", e);
-      }
-
-      /*
-      console.log("useRolesManager: Config payload stats:", {
-          rolesCount: Object.keys(compressedRoles).length,
-          dictionarySize: dictionary.length,
-          totalChunks: chunks.length
-      });
-      */
-
-      // 1. LIMPIEZA PREVIA (Master antiguo y chunks huérfanos)
-      // Buscamos todo lo que empiece por roles_config (si pudiéramos, pero filter es exacto)
-      // Así que buscamos el master 'roles_config' y los chunks conocidos (limitados a 10 por seguridad)
-      
-      const cleanOldRecords = async () => {
-         // Borrar master
-         const masters = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-         if (masters) await Promise.all(masters.map(m => base44.entities.AppConfig.delete(m.id)));
-         
-         // Borrar chunks potenciales (hasta 10)
-         for(let i=0; i<10; i++) {
-             const chunkMatches = await base44.entities.AppConfig.filter({ config_key: `roles_config_chunk_${i}` });
-             if (chunkMatches) await Promise.all(chunkMatches.map(m => base44.entities.AppConfig.delete(m.id)));
-         }
-      };
-      
-      // console.log("useRolesManager: Cleaning old records...");
-      await cleanOldRecords();
-
-      // 2. GUARDAR CHUNKS
-      // console.log("useRolesManager: Saving chunks...");
-      await Promise.all(chunks.map(async (chunkData, index) => {
-          const payload = {
-              key: `roles_config_chunk_${index}`,
-              config_key: `roles_config_chunk_${index}`,
-              value: chunkData,
-              description: `Chunk ${index}/${chunks.length} - ${new Date().toISOString()}`,
-              is_active: true
-          };
-          await base44.entities.AppConfig.create(payload);
-      }));
-
-      // 3. GUARDAR MASTER RECORD (Metadata)
-      // El master ahora solo dice "soy chunked" y cuántos chunks hay.
-      // ESTRATEGIA DE ROBUSTEZ: Guardamos la metadata TAMBIÉN en description,
-      // porque a veces el backend limpia el campo 'value' inexplicablemente.
-      const metadata = {
-          v: 3,
-          is_chunked: true,
-          total_chunks: chunks.length,
-          timestamp: new Date().toISOString(),
-          stats: {
-              roles: Object.keys(compressedRoles).length,
-              chunks: chunks.length
-          }
-      };
-      const metadataString = JSON.stringify(metadata);
-
-      const masterPayload = {
-          key: 'roles_config',
-          config_key: 'roles_config',
-          value: metadataString,
-          description: metadataString, // FALLBACK CRÍTICO: Si value falla, DataProvider lee esto.
-          is_active: true
-      };
-
-      // console.log("useRolesManager: Creating master record with metadata:", metadataString);
-      const savedRecord = await base44.entities.AppConfig.create(masterPayload);
-
-      // VERIFICACIÓN INMEDIATA DE ESCRITURA
-       if (savedRecord) {
-           // console.log("useRolesManager: Registro Master guardado.", savedRecord.id);
-           
-           // Verificación doble
-           setTimeout(async () => {
-               try {
-                   const check = await base44.entities.AppConfig.filter({ id: savedRecord.id });
-                   if (check && check.length > 0) {
-                       const rec = check[0];
-                       // console.log(`useRolesManager: CHECK MASTER -> Value: ${rec.value ? 'OK' : 'EMPTY'}, Desc: ${rec.description ? 'OK' : 'EMPTY'}`);
-                   }
-               } catch(e) { console.warn("Check failed", e); }
-           }, 1000);
-       }
-
-      // 3. Actualización Optimista
-      // Forzar que el queryClient tenga los datos guardados inmediatamente
-      // IMPORTANTE: Guardamos 'localConfig' (expandido) en el cache, NO 'parsedCheck' (comprimido),
-      // porque el resto de la app espera el formato expandido.
+      // Actualización Optimista
       queryClient.setQueryData(['rolesConfig'], localConfig);
-      
-      // Invalidar explícitamente para forzar recarga en otros componentes
       queryClient.invalidateQueries(['rolesConfig']);
       
       setIsDirty(false); 
-      toast.success("Configuración guardada correctamente.");
       
-      // Opcional: Refetch en segundo plano para asegurar consistencia eventual
       if (refetchRolesConfig) {
         setTimeout(() => refetchRolesConfig(), 1000);
       }
 
     } catch (error) {
       console.error("useRolesManager: Save error", error);
-      toast.error("Error al guardar: " + error.message);
       setIsDirty(true);
     } finally {
       if (isMountedRef.current) setIsSaving(false);
