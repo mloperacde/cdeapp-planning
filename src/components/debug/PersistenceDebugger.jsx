@@ -204,20 +204,47 @@ export default function PersistenceDebugger() {
                   <th className="py-2">Key</th>
                   <th className="py-2">ID</th>
                   <th className="py-2">Updated</th>
-                  <th className="py-2">Size (Value)</th>
+                  <th className="py-2">Size (Total)</th>
+                  <th className="py-2">Storage Mode</th>
                 </tr>
               </thead>
               <tbody>
-                {configs.map(c => (
-                  <tr key={c.id} className="border-b hover:bg-slate-50">
-                    <td className="py-2 font-mono text-blue-600">{c.key || c.config_key || '(sin key)'}</td>
-                    <td className="py-2 font-mono text-slate-500">{c.id}</td>
-                    <td className="py-2">{new Date(c.updated_at).toLocaleString()}</td>
-                    <td className="py-2">{(c.value || '').length} chars</td>
-                  </tr>
-                ))}
+                {configs.map(c => {
+                  const valSize = (c.value || '').length;
+                  const descSize = (c.description || '').length;
+                  const subSize = (c.app_subtitle || '').length;
+                  const totalSize = valSize + descSize + subSize;
+                  
+                  let storageMode = [];
+                  if (valSize > 0) storageMode.push('VAL');
+                  if (descSize > 0) storageMode.push('DESC');
+                  if (subSize > 0) storageMode.push('SUB');
+
+                  return (
+                    <tr key={c.id} className="border-b hover:bg-slate-50">
+                      <td className="py-2 font-mono text-blue-600">{c.key || c.config_key || '(sin key)'}</td>
+                      <td className="py-2 font-mono text-slate-500">{c.id}</td>
+                      <td className="py-2">
+                        {c.updated_at ? new Date(c.updated_at).toLocaleString() : 
+                         c.created_at ? new Date(c.created_at).toLocaleString() : 'N/A'}
+                      </td>
+                      <td className="py-2">
+                        <span className={totalSize > 0 ? "text-green-600 font-bold" : "text-red-400"}>
+                          {totalSize} chars
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        {storageMode.length > 0 ? (
+                          <span className="bg-slate-100 px-1 rounded text-slate-600">{storageMode.join('+')}</span>
+                        ) : (
+                          <span className="text-red-400 italic">Empty</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 {configs.length === 0 && !isLoading && (
-                  <tr><td colSpan="4" className="py-4 text-center text-slate-400">No se encontraron registros</td></tr>
+                  <tr><td colSpan="5" className="py-4 text-center text-slate-400">No se encontraron registros</td></tr>
                 )}
               </tbody>
             </table>
