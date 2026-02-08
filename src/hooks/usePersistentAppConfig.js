@@ -36,10 +36,56 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
         } catch(e) {}
 
         const MAX_RETRIES = 5;
-        const RETRY_DELAY = 1000;
-        let bestCandidateSoFar = null;
+                        const RETRY_DELAY = 1000;
+                        let bestCandidateSoFar = null;
 
-        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                        // ESTRATEGIA v9: DIRECT ID FETCH (Bypass Indexing Lag)
+                        // Si tenemos un ID conocido localmente, intentemos leerlo directamente antes de buscar.
+                        try {
+                            const lastSaveId = localStorage.getItem(`last_save_id_${configKey}`);
+                            if (lastSaveId) {
+                                console.log(`[Config] Direct Fetch Attempt for ${configKey} using ID ${lastSaveId}...`);
+                                const directRecord = await base44.entities.AppConfig.get(lastSaveId);
+                                if (directRecord) {
+                                    // Validar que corresponda a la key
+                                    if (directRecord.key === configKey || directRecord.config_key === configKey) {
+                                        console.log(`[Config] Direct Fetch SUCCESS for ${lastSaveId}`);
+                                        
+                                        // LOGICA DE PARSEO DUPLICADA (Para evitar refactor masivo)
+                                        let record = directRecord;
+                                        let jsonString = record.value;
+                                        // Simple heuristic instead of helper function to avoid reference errors
+                                        if ((!jsonString || !jsonString.trim().startsWith('{')) && record.description && record.description.trim().startsWith('{')) jsonString = record.description;
+                                        if ((!jsonString || !jsonString.trim().startsWith('{')) && record.app_subtitle && record.app_subtitle.trim().startsWith('{')) jsonString = record.app_subtitle;
+
+                                        if (jsonString && jsonString.trim().startsWith('{')) {
+                                            const parsed = JSON.parse(jsonString);
+                                            // Asumimos v8 porque acabamos de guardar
+                                            if (parsed._v === 8) {
+                                                if (parsed._is_chunked && parsed._chunk_ids && parsed._chunk_ids.length > 0) {
+                                                    // Fetch Chunks
+                                                    const chunkPromises = parsed._chunk_ids.map(id => base44.entities.AppConfig.get(id).catch(e => null));
+                                                    const chunkResults = await Promise.all(chunkPromises);
+                                                    const chunks = chunkResults.map(c => {
+                                                        if (!c) return "";
+                                                        let val = c.value || c.description || (c.app_subtitle !== "chunk" ? c.app_subtitle : "") || "";
+                                                        return val;
+                                                    });
+                                                    const fullJson = chunks.join('');
+                                                    if (fullJson) return JSON.parse(fullJson);
+                                                } else {
+                                                    return parsed.data;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } catch(e) {
+                            console.warn(`[Config] Direct fetch failed for ${configKey}`, e);
+                        }
+
+                        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             if (attempt > 0) {
                 console.log(`[Config] Attempt ${attempt}: Data stale (TS < ${minRequiredTimestamp}), retrying in ${RETRY_DELAY}ms...`);
                 await new Promise(r => setTimeout(r, RETRY_DELAY));

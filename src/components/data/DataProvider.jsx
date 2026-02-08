@@ -220,9 +220,28 @@ export function DataProvider({ children }) {
       try {
           console.log("DataProvider: Buscando configuración de roles (Aggressive)...");
           
-          // CLIENT-SIDE CONSISTENCY CHECK
-          // If we recently saved data, ensure we don't return older data.
-          let minRequiredTimestamp = 0;
+          let config = null;
+
+          // ESTRATEGIA v9: DIRECT ID FETCH (Bypass Indexing Lag)
+          // Si acabamos de guardar, sabemos el ID exacto. Intentemos recuperarlo directamente.
+          try {
+              const lastSaveId = localStorage.getItem('last_save_id_roles_config');
+              if (lastSaveId) {
+                  console.log(`DataProvider: Intentando recuperación directa por ID conocido (${lastSaveId})...`);
+                  const directRecord = await base44.entities.AppConfig.get(lastSaveId);
+                  if (directRecord && (directRecord.key === 'roles_config' || directRecord.config_key === 'roles_config')) {
+                      console.log("DataProvider: ¡Recuperación directa exitosa!");
+                      config = directRecord;
+                  }
+              }
+          } catch (e) {
+              console.warn("DataProvider: Error en recuperación directa", e);
+          }
+
+          if (!config) {
+              // CLIENT-SIDE CONSISTENCY CHECK
+              // If we recently saved data, ensure we don't return older data.
+              let minRequiredTimestamp = 0;
           try {
               const localTs = localStorage.getItem('last_save_ts_roles_config');
               if (localTs) minRequiredTimestamp = parseInt(localTs, 10);
