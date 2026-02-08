@@ -13,7 +13,7 @@ const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
   // DIAGNOSTIC LOG
-  // console.log("DataProvider: Mounting...");
+  console.log("DataProvider: Mounting...");
 
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   // isLocal NO debe impedir cargar datos si estamos usando un mock local o si queremos probar persistencia
