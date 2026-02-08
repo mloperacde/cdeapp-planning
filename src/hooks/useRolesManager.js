@@ -224,7 +224,7 @@ export function useRolesManager() {
       null, 
       'rolesConfig_v8_writer', 
       false, 
-      { enabled: false }
+      { enabled: true }
   );
 
   // Estado local
@@ -253,12 +253,37 @@ export function useRolesManager() {
     if (rolesConfig && Object.keys(rolesConfig).length > 0) {
       // console.log("useRolesManager: Loaded remote configuration keys:", Object.keys(rolesConfig));
       
+      // DECOMPRESIÓN DEFENSIVA (Por si DataProvider no lo hizo o llegó raw)
+      let sourceConfig = rolesConfig;
+      if (sourceConfig.v === 2 && sourceConfig.r) {
+          try {
+             const dictionary = sourceConfig.d || [];
+             const decompressedRoles = {};
+             Object.keys(sourceConfig.r).forEach(rid => {
+                 const cRole = sourceConfig.r[rid];
+                 const pp = {};
+                 if (cRole.pp) cRole.pp.forEach(idx => { if(dictionary[idx]) pp[dictionary[idx]] = true; });
+                 decompressedRoles[rid] = {
+                     name: cRole.n,
+                     is_strict: !!cRole.s,
+                     permissions: cRole.p || {},
+                     page_permissions: pp,
+                     isSystem: cRole.sys
+                 };
+             });
+             sourceConfig = { roles: decompressedRoles, user_assignments: sourceConfig.ua || {} };
+             console.log("useRolesManager: Decompressed config locally.");
+          } catch(e) {
+             console.error("useRolesManager: Decompression failed", e);
+          }
+      }
+
       // HIDRATACIÓN DEFENSIVA: Asegurar que existan todas las estructuras necesarias
       // Esto previene que una configuración remota incompleta sobrescriba datos locales válidos
       const hydratedConfig = {
-          ...rolesConfig,
-          roles: { ...DEFAULT_ROLES_CONFIG.roles, ...(rolesConfig.roles || {}) },
-          user_assignments: rolesConfig.user_assignments || {}
+          ...sourceConfig,
+          roles: { ...DEFAULT_ROLES_CONFIG.roles, ...(sourceConfig.roles || {}) },
+          user_assignments: sourceConfig.user_assignments || {}
       };
 
       // Doble verificación para user_assignments
@@ -485,7 +510,9 @@ export function useRolesManager() {
 
       // DELEGACIÓN A ESTRATEGIA v8 (Direct ID Linking)
       // Esto maneja automáticamente: Chunking, Triple Write, Verificación y Limpieza.
+      console.log("useRolesManager: Saving config...", compressedConfig);
       await saveRolesV8(compressedConfig);
+      console.log("useRolesManager: Save completed.");
       
       // Actualización Optimista
       queryClient.setQueryData(['rolesConfig'], localConfig);
@@ -499,6 +526,7 @@ export function useRolesManager() {
 
     } catch (error) {
       console.error("useRolesManager: Save error", error);
+      toast.error(`Error al guardar: ${error.message}`);
       setIsDirty(true);
     } finally {
       if (isMountedRef.current) setIsSaving(false);

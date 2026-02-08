@@ -415,7 +415,7 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
   return {
     data: query.data,
     isLoading: query.isLoading,
-    save: mutation.mutate,
+    save: mutation.mutateAsync,
     isSaving: mutation.isPending
   };
 }
