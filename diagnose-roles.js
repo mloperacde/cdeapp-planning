@@ -1,18 +1,10 @@
 import { createClient } from '@base44/sdk';
 import fs from 'fs';
+import https from 'https';
 
-// App ID confirmed from src/api/base44Client.js
 const APP_ID = '690cdd4205782920ba2297c8';
-// Token from .env VITE_CDEAPP_API_KEY (Attempting to use as auth token)
-const TOKEN = '1oeV2Wg9g6gmY8rAGF4qxtBme4DsX7exYoiFFCf4xVQXDKDYp4Xc9CPSlm2ZzxSJ';
+const TOKEN = "9841e97309b042b8be82e6c7846d03e4"; // API Key proporcionada por el usuario
 const LOG_FILE = 'diagnosis.log';
-
-// Initialize client with explicit App ID and Token
-const base44 = createClient({ 
-    appId: APP_ID, 
-    token: TOKEN,
-    // Add baseUrl if needed, but default should work for production
-});
 
 function log(msg) {
     console.log(msg);
@@ -20,24 +12,88 @@ function log(msg) {
 }
 
 async function diagnose() {
-    fs.writeFileSync(LOG_FILE, "Starting Diagnosis...\n");
-    log(`Starting Roles Diagnosis for App ID: ${APP_ID}...`);
+    fs.writeFileSync(LOG_FILE, "Starting Deep Diagnosis (Round 2)...\n");
+    log(`App ID: ${APP_ID}`);
+    log(`Token: ${TOKEN.substring(0, 4)}... (Length: ${TOKEN.length})`);
+
+    // TEST 7: SDK Token (User)
+    log("\n--- TEST 7: SDK Token (User) ---");
+    try {
+        const client = createClient({ 
+            appId: APP_ID, 
+            token: TOKEN, // Try as user token
+            requiresAuth: true
+        });
+        
+        const res = await client.entities.AppConfig.list(undefined, 1);
+        log(`Success! Found ${res.length} items using User Token.`);
+        
+        // If successful, proceed with full diagnosis
+        await fullDiagnosis(client);
+        return; 
+    } catch (e) { log(`Failed: ${e.message}`); }
+
+    // TEST 7b: SDK Service Token
+    log("\n--- TEST 7b: SDK Service Token ---");
+    try {
+        const client = createClient({ 
+            appId: APP_ID, 
+            serviceToken: TOKEN 
+        });
+
+        // Note: accessing asServiceRole
+        const res = await client.asServiceRole.entities.AppConfig.list(undefined, 1);
+        log(`Success! Found ${res.length} items using Service Role.`);
+        
+        // If successful, proceed with full diagnosis
+        await fullDiagnosis(client.asServiceRole);
+        return; 
+    } catch (e) { log(`Failed: ${e.message}`); }
+
+    // TEST 8: Custom Header X-Api-Key
+    log("\n--- TEST 8: SDK with X-Api-Key Header ---");
+    try {
+        const client = createClient({ 
+            appId: APP_ID, 
+            headers: { "X-Api-Key": TOKEN }
+        });
+        const res = await client.entities.AppConfig.list(undefined, 1);
+        log(`Success! Found ${res.length} items using X-Api-Key.`);
+        
+        await fullDiagnosis(client);
+        return;
+    } catch (e) { log(`Failed: ${e.message}`); }
+
+    // TEST 9: Custom Header Authorization: ApiKey
+    log("\n--- TEST 9: SDK with Authorization: ApiKey ---");
+    try {
+        const client = createClient({ 
+            appId: APP_ID, 
+            headers: { "Authorization": `ApiKey ${TOKEN}` }
+        });
+        const res = await client.entities.AppConfig.list(undefined, 1);
+        log(`Success! Found ${res.length} items using Authorization: ApiKey.`);
+        
+        await fullDiagnosis(client);
+        return;
+    } catch (e) { log(`Failed: ${e.message}`); }
+}
+
+async function fullDiagnosis(apiClient) {
+    log("\n>>> STARTING FULL DATA ANALYSIS <<<");
     
     try {
         log("Fetching roles_config...");
         
-        // Parallel fetch strategy
-        // Note: remove explicit TOKEN arg from calls as it's in the client
         const [byConfigKey, byKey, recentItems] = await Promise.all([
-            base44.entities.AppConfig.filter({ config_key: 'roles_config' }).catch(e => { log("Filter by config_key failed: " + e.message); return []; }),
-            base44.entities.AppConfig.filter({ key: 'roles_config' }).catch(e => { log("Filter by key failed: " + e.message); return []; }),
-            base44.entities.AppConfig.list('-updated_at', 50).catch(e => { log("List failed: " + e.message); return []; })
+            apiClient.entities.AppConfig.filter({ config_key: 'roles_config' }).catch(e => { log("Filter by config_key failed: " + e.message); return []; }),
+            apiClient.entities.AppConfig.filter({ key: 'roles_config' }).catch(e => { log("Filter by key failed: " + e.message); return []; }),
+            apiClient.entities.AppConfig.list('-updated_at', 50).catch(e => { log("List failed: " + e.message); return []; })
         ]);
 
         log(`Found: byConfigKey=${byConfigKey.length}, byKey=${byKey.length}, recent=${recentItems.length}`);
         
         const candidates = [...byConfigKey, ...byKey, ...recentItems];
-        // Deduplicate by ID
         const unique = Array.from(new Map(candidates.map(c => [c.id, c])).values());
         
         log(`Unique candidates: ${unique.length}`);
@@ -46,7 +102,6 @@ async function diagnose() {
             log(`--- Record ${c.id} ---`);
             log(`Updated (Server): ${c.updated_at}`);
             
-            // Analyze value/content
             let content = c.value || c.description || c.app_subtitle || "";
             log(`Content Preview: ${content.substring(0, 100)}...`);
             
@@ -66,14 +121,12 @@ async function diagnose() {
             }
         });
 
-        // Sort Logic Test (matching DataProvider)
         unique.sort((a, b) => {
             const getTs = (item) => {
                 try {
                     const val = item.value || item.description || item.app_subtitle;
                     if (val && val.startsWith('{')) {
                         const p = JSON.parse(val);
-                        // Check multiple timestamp fields
                         if (p._ts) return Number(p._ts);
                         if (p.timestamp) return Number(p.timestamp);
                     }
@@ -96,46 +149,21 @@ async function diagnose() {
                 const chunkIds = p.chunkIds || p._chunk_ids;
                 if (chunkIds && chunkIds.length > 0) {
                     log("Attempting chunk retrieval...");
-                    const chunkPromises = chunkIds.map(id => base44.entities.AppConfig.get(id).catch(e => {
+                    const chunkPromises = chunkIds.map(id => apiClient.entities.AppConfig.get(id).catch(e => {
                         log(`Chunk ${id} failed: ${e.message}`);
                         return null;
                     }));
-                    
-                    const results = await Promise.all(chunkPromises);
-                    const validResults = results.filter(r => r !== null);
-                    log(`Chunks retrieved: ${validResults.length}/${chunkIds.length}`);
-                    
-                    let full = "";
-                    validResults.forEach(r => {
-                        // Logic from usePersistentAppConfig
-                        let val = r.value || r.description || (r.app_subtitle !== "chunk" ? r.app_subtitle : "") || "";
-                        full += val;
-                    });
-                    
-                    log(`Reassembled Length: ${full.length}`);
-                    try {
-                        const fullJson = JSON.parse(full);
-                        log(`Reassembled JSON: Valid`);
-                        // Check if it has roles
-                        if (fullJson.roles) {
-                            log(`Roles found: ${Object.keys(fullJson.roles).join(', ')}`);
-                        } else {
-                            log(`Roles key missing in reassembled JSON`);
-                        }
-                    } catch(e) {
-                        log(`Reassembled JSON: Invalid`);
-                    }
-                } else {
-                    // Direct content check
-                    if (p.roles) {
-                         log(`Roles found (Direct): ${Object.keys(p.roles).join(', ')}`);
-                    }
+                    const chunkResults = await Promise.all(chunkPromises);
+                    const chunks = chunkResults.map(c => c ? c.value || c.description || "" : "");
+                    const fullContent = chunks.join('');
+                    log(`Reassembled Content Length: ${fullContent.length}`);
                 }
             }
         }
 
+        log("Diagnosis Complete!");
     } catch (e) {
-        log("Diagnosis failed: " + e.message);
+        log(`Diagnosis Failed: ${e.message}`);
         console.error(e);
     }
 }

@@ -36,10 +36,10 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
         } catch(e) {}
 
         const MAX_RETRIES = 5;
-                        const RETRY_DELAY = 1000;
-                        let bestCandidateSoFar = null;
+        const RETRY_DELAY = 1000;
+        let bestCandidateSoFar = null;
 
-                        // ESTRATEGIA v9: DIRECT ID FETCH (Bypass Indexing Lag)
+        // ESTRATEGIA v9: DIRECT ID FETCH (Bypass Indexing Lag)
                         // Si tenemos un ID conocido localmente, intentemos leerlo directamente antes de buscar.
                         try {
                             const lastSaveId = localStorage.getItem(`last_save_id_${configKey}`);
@@ -111,9 +111,29 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
             }
     
             // Deduplicate matches by ID
-            matches = Array.from(new Map(matches.map(item => [item.id, item])).values());
-    
-            if (!matches || matches.length === 0) {
+        matches = Array.from(new Map(matches.map(item => [item.id, item])).values());
+
+        // CRITICAL FIX: Sort matches by timestamp (Newest First) to ensure we process the latest record
+        matches.sort((a, b) => {
+            const getTs = (item) => {
+                // 1. Try internal timestamp (most reliable)
+                try {
+                    const val = item.value || item.description || item.app_subtitle;
+                    if (val && val.startsWith('{')) {
+                        const p = JSON.parse(val);
+                        if (p._ts) return p._ts;
+                        if (p.timestamp) return p.timestamp;
+                    }
+                } catch(e) {}
+                
+                // 2. Fallback to record timestamp
+                const d = new Date(item.updated_at || item.created_at || 0);
+                return isNaN(d.getTime()) ? 0 : d.getTime();
+            };
+            return getTs(b) - getTs(a);
+        });
+
+        if (!matches || matches.length === 0) {
               if (minRequiredTimestamp > 0 && attempt < MAX_RETRIES) continue; // Retry if we expect data
               console.log(`[Config] No config found for ${configKey}, using initial data.`);
               return initialData;
@@ -472,6 +492,7 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
 async function cleanupOldVersions(configKey, keepMasterId) {
     try {
         console.log(`[Cleanup] Starting aggressive cleanup for ${configKey}, keeping ${keepMasterId}`);
+        toast.info("Consolidando base de datos...", { duration: 2000 });
         
         // 1. Find ALL candidates (Filter + Recent List)
         const [byKey, byConfigKey, recentItems] = await Promise.all([
@@ -489,53 +510,53 @@ async function cleanupOldVersions(configKey, keepMasterId) {
         
         if (!matches || matches.length === 0) return;
 
-        let deletedCount = 0;
-        for (const m of matches) {
-            if (m.id === keepMasterId) continue;
+        // Filter items to delete (Everything that is NOT the keepMasterId)
+        const toDelete = matches.filter(m => m.id !== keepMasterId);
+
+        if (toDelete.length > 0) {
+            console.log(`[Cleanup] Found ${toDelete.length} obsolete masters to delete.`);
+            toast.loading(`Eliminando ${toDelete.length} versiones obsoletas...`);
             
-            console.log(`[Cleanup] Deleting obsolete master: ${m.id}`);
-            
-            // Delete chunks if v8/v7.1
-            try {
-                const val = m.value || m.description;
-                if (val && val.startsWith('{')) {
-                    const parsed = JSON.parse(val);
-                    
-                    // v8 cleanup
-                    if (parsed._v === 8 && parsed._chunk_ids) {
-                        for(const cid of parsed._chunk_ids) {
-                            await base44.entities.AppConfig.delete(cid).catch(()=>{});
+            let deletedCount = 0;
+            for (const m of toDelete) {
+                console.log(`[Cleanup] Deleting obsolete master: ${m.id}`);
+                
+                // Delete chunks if v8/v7.1
+                try {
+                    const val = m.value || m.description || m.app_subtitle;
+                    if (val && val.startsWith('{')) {
+                        const parsed = JSON.parse(val);
+                        
+                        // v8 cleanup
+                        if (parsed._v === 8 && parsed._chunk_ids) {
+                            await Promise.all(parsed._chunk_ids.map(cid => base44.entities.AppConfig.delete(cid).catch(()=>{}) ));
+                        }
+                        // v7.1 cleanup
+                        else if (parsed._use_versioned_keys && parsed._ts) {
+                             for(let i=0; i<(parsed._chunk_count || 20); i++) {
+                                 const ck = `${configKey}_${parsed._ts}_chunk_${i}`;
+                                 const cs = await base44.entities.AppConfig.filter({ key: ck });
+                                 for(const c of cs) await base44.entities.AppConfig.delete(c.id).catch(()=>{});
+                             }
                         }
                     }
-                    // v7.1 cleanup
-                    else if (parsed._use_versioned_keys && parsed._ts) {
-                         for(let i=0; i<parsed._chunk_count; i++) {
-                             const ck = `${configKey}_${parsed._ts}_chunk_${i}`;
-                             const cs = await base44.entities.AppConfig.filter({ key: ck });
-                             for(const c of cs) await base44.entities.AppConfig.delete(c.id).catch(()=>{});
-                         }
-                    }
-                    // v6 cleanup
-                    else if (parsed.is_chunked) {
-                         // Careful with shared keys...
-                         const count = parsed.count || 20;
-                         for(let i=0; i<count; i++) {
-                             const ck = `${configKey}_chunk_${i}`;
-                             const cs = await base44.entities.AppConfig.filter({ key: ck });
-                             for(const c of cs) await base44.entities.AppConfig.delete(c.id).catch(()=>{});
-                         }
-                    }
-                }
-            } catch(e) {}
+                } catch(e) {}
 
-            await base44.entities.AppConfig.delete(m.id).catch(()=>{});
-            deletedCount++;
+                // Delete the master record itself
+                await base44.entities.AppConfig.delete(m.id).catch(e => console.warn("Delete master failed", e));
+                deletedCount++;
+            }
+            toast.dismiss();
+            toast.success(`Limpieza completada: ${deletedCount} registros eliminados`);
+        } else {
+            console.log("[Cleanup] No obsolete records found.");
         }
-        console.log(`[Cleanup] Deleted ${deletedCount} obsolete records.`);
-    } catch(e) {
-        console.warn("Cleanup error", e);
+    } catch (e) {
+        console.error("[Cleanup] Error:", e);
     }
 }
+
+
 
 function isValidJsonString(str) {
   if (!str || str === "undefined" || typeof str !== 'string') return false;

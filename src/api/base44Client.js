@@ -282,6 +282,7 @@ export const base44 = useMockApi
   ? createMockBase44()
   : createClient({
       appId: APP_ID,
+      token: appParams.token, // INJECT TOKEN EXPLICITLY
       requiresAuth: true,
       baseUrl: apiBaseUrl // Inject calculated Base URL
     });
