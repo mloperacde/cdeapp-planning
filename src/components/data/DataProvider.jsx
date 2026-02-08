@@ -229,11 +229,23 @@ export function DataProvider({ children }) {
               const lastSaveId = localStorage.getItem('last_save_id_roles_config');
               if (lastSaveId) {
                   console.log(`DataProvider: Intentando recuperación directa por ID conocido (${lastSaveId})...`);
-                  const directRecord = await base44.entities.AppConfig.get(lastSaveId);
+                  
+                  // RETRY LOGIC FOR DIRECT FETCH
+                  let directRecord = null;
+                  for (let i = 0; i < 3; i++) {
+                      try {
+                          directRecord = await base44.entities.AppConfig.get(lastSaveId);
+                          if (directRecord) break;
+                      } catch (e) {
+                          console.warn(`DataProvider: Direct fetch attempt ${i+1} failed`, e);
+                          await new Promise(r => setTimeout(r, 500));
+                      }
+                  }
+
                   if (directRecord && (directRecord.key === 'roles_config' || directRecord.config_key === 'roles_config')) {
-                        console.log("DataProvider: ¡Recuperación directa exitosa!");
-                        toast.success("⚡ Roles sincronizados instantáneamente (v9)", { duration: 2000 });
+                        console.log("DataProvider: ¡Recuperación directa exitosa (Master Record)!");
                         config = directRecord;
+                        // Nota: El toast se moverá al final para confirmar que los datos son válidos
                     }
               }
           } catch (e) {
@@ -388,22 +400,51 @@ export function DataProvider({ children }) {
             // v8 SUPPORT: Direct ID Linking
             if (parsed._v === 8 && parsed._chunk_ids && Array.isArray(parsed._chunk_ids)) {
                  try {
-                     const chunkPromises = parsed._chunk_ids.map(id => base44.entities.AppConfig.get(id));
+                     // Robust Chunk Fetching with Retries
+                     const fetchChunkWithRetry = async (id, retries = 3) => {
+                         for (let i = 0; i < retries; i++) {
+                             try {
+                                 const c = await base44.entities.AppConfig.get(id);
+                                 if (c) return c;
+                             } catch (e) {
+                                 console.warn(`[DataProvider] Chunk ${id} fetch failed (attempt ${i+1})`, e);
+                                 await new Promise(r => setTimeout(r, 500));
+                             }
+                         }
+                         return null;
+                     };
+
+                     const chunkPromises = parsed._chunk_ids.map(id => fetchChunkWithRetry(id));
                      const chunkResults = await Promise.all(chunkPromises);
                      
                      let fullString = "";
+                     let missingChunks = false;
+                     
                      chunkResults.forEach((res, idx) => {
                          if (res && (res.value || res.description)) {
                              fullString += (res.value || res.description);
                          } else {
                              console.warn(`[DataProvider] Missing chunk ${idx} (${parsed._chunk_ids[idx]})`);
+                             missingChunks = true;
                          }
                      });
                      
-                     if (!fullString) return parsed.data || null;
+                     if (missingChunks || !fullString) {
+                         console.error("[DataProvider] Incomplete v8 data. Missing chunks.");
+                         // If v9 direct fetch was used, this is a critical failure. 
+                         // But we can't fall back to search because search will likely yield old data.
+                         // Return parsed.data (likely null) is the only safe option unless we want to try "Search" as a desperate fallback?
+                         // Let's stick to null but log heavily.
+                         return parsed.data || null;
+                     }
 
                      try {
                          const reassembled = JSON.parse(fullString);
+                         // Success!
+                         if (config.id === localStorage.getItem('last_save_id_roles_config')) {
+                             toast.success("⚡ Roles sincronizados y verificados (v9)", { duration: 2000, id: 'roles-sync-success' });
+                         }
+
                          // Handle v2 compression inside v8 payload
                          if (reassembled.v === 2 && reassembled.r) {
                              // Update parsed to point to the reassembled v2 object
