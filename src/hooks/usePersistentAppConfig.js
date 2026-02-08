@@ -355,11 +355,12 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
       // 3. VERIFICATION (Read-Back Check)
       if (newMasterId) {
           console.log(`[Config] Verifying write integrity for ${newMasterId}...`);
-          // Store Local Timestamp for Client-Side Consistency Check
+          // Store Local Timestamp AND ID for Client-Side Consistency Check
           try {
              if (typeof localStorage !== 'undefined') {
                  localStorage.setItem(`last_save_ts_${configKey}`, timestamp.toString());
-                 console.log(`[Config] Saved local consistency timestamp: ${timestamp}`);
+                 localStorage.setItem(`last_save_id_${configKey}`, newMasterId);
+                 console.log(`[Config] Saved local consistency tokens: TS=${timestamp}, ID=${newMasterId}`);
              }
           } catch(e) {}
           

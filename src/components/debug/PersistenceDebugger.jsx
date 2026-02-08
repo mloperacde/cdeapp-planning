@@ -144,6 +144,75 @@ export default function PersistenceDebugger() {
       }
   };
 
+  const consolidateRecords = async (key) => {
+      if (!confirm(`¿Estás SEGURO de consolidar '${key}'? Esto eliminará duplicados y mantendrá solo la versión más reciente.`)) return;
+      
+      try {
+          toast.info(`Consolidando ${key}...`);
+          
+          // 1. Get all records
+          const [byKey, byConfigKey, recentItems] = await Promise.all([
+             base44.entities.AppConfig.filter({ key }).catch(() => []),
+             base44.entities.AppConfig.filter({ config_key: key }).catch(() => []),
+             base44.entities.AppConfig.list('-updated_at', 100).catch(() => [])
+          ]);
+          
+          let matches = [...byKey, ...byConfigKey, ...recentItems.filter(r => r.key === key || r.config_key === key)];
+          matches = Array.from(new Map(matches.map(item => [item.id, item])).values());
+          
+          if (matches.length === 0) {
+              toast.warning("No se encontraron registros para consolidar.");
+              return;
+          }
+
+          // 2. Identify Best Candidate
+          matches.sort((a, b) => {
+               const getTs = (item) => {
+                   try {
+                       const val = item.value || item.description || item.app_subtitle;
+                       if (val && val.startsWith('{')) {
+                           const p = JSON.parse(val);
+                           if (p._ts) return p._ts;
+                           if (p.timestamp) return p.timestamp;
+                       }
+                   } catch(e) {}
+                   const d = new Date(item.updated_at || item.created_at || 0);
+                   return isNaN(d.getTime()) ? 0 : d.getTime();
+               };
+               return getTs(b) - getTs(a);
+          });
+          
+          const winner = matches[0];
+          const losers = matches.slice(1);
+          
+          console.log(`[Consolidate] Winner: ${winner.id}, Losers: ${losers.length}`);
+          
+          // 3. Delete Losers
+          for (const loser of losers) {
+              await base44.entities.AppConfig.delete(loser.id);
+          }
+          
+          // 4. Refresh Winner (Update to fix invalid date)
+          // We read it, then write it back identical to force updated_at refresh
+          // NOTE: Only if it's not a v8 master pointing to chunks (chunks are fine)
+          // Actually updating the master record is safe.
+          const currentContent = winner.value; 
+          await base44.entities.AppConfig.update(winner.id, {
+              value: currentContent, // Keep same content
+              description: winner.description,
+              app_subtitle: winner.app_subtitle,
+              is_active: true
+          });
+          
+          toast.success(`Consolidación exitosa. Mantenido: ${winner.id}. Eliminados: ${losers.length}`);
+          runDeepScan();
+
+      } catch (error) {
+          console.error("Consolidation failed", error);
+          toast.error(`Error al consolidar: ${error.message}`);
+      }
+  };
+
   const fetchConfigs = async () => {
     setIsLoading(true);
     try {
@@ -344,8 +413,15 @@ export default function PersistenceDebugger() {
         <CardContent>
           {deepScanResult.length > 0 && (
               <div className="mb-6 border rounded-lg overflow-hidden">
-                  <div className="bg-amber-50 p-2 text-amber-800 text-xs font-bold border-b border-amber-200">
-                      Resultados del Escaneo Profundo ({deepScanResult.length})
+                  <div className="bg-amber-50 p-2 text-amber-800 text-xs font-bold border-b border-amber-200 flex justify-between items-center">
+                      <span>Resultados del Escaneo Profundo ({deepScanResult.length})</span>
+                      <div className="flex gap-2">
+                         {Array.from(new Set(deepScanResult.map(r => r.key || r.config_key))).map(k => (
+                             <Button key={k} size="sm" variant="outline" onClick={() => consolidateRecords(k)} className="h-6 text-[10px] bg-white hover:bg-amber-100 border-amber-300 text-amber-800">
+                                ⚡ Consolidar {k}
+                             </Button>
+                         ))}
+                      </div>
                   </div>
                   <table className="w-full text-xs text-left bg-white">
                       <thead className="bg-slate-50">
