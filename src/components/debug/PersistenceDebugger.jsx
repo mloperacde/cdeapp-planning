@@ -97,8 +97,10 @@ export default function PersistenceDebugger() {
                     if (!isNaN(d.getTime())) {
                         updatedStr = d.toLocaleString();
                     } else {
-                        // Fallback: try to interpret ISO string manually or just mark as Server Error
-                         updatedStr = "Server Error (Invalid Date)";
+                        // Fallback: Use internal timestamp if available
+                        if (timestamp !== "Unknown") {
+                           updatedStr = `${timestamp} (Internal)`;
+                        }
                     }
                 } catch(e) {}
 
