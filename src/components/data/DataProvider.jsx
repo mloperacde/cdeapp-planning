@@ -218,41 +218,30 @@ export function DataProvider({ children }) {
     queryFn: async () => {
       if (isLocal) return null;
       try {
-          console.log("DataProvider: Buscando configuración de roles...");
+          console.log("DataProvider: Buscando configuración de roles (Aggressive)...");
           
-          // 1. Intentar filtro directo por config_key
-          let config = null;
-          try {
-             const f1 = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-             if (f1 && f1.length > 0) {
-                 config = f1[0];
-                 console.log("DataProvider: Encontrado por config_key", config.id);
-             }
-          } catch(e) { console.warn("Filter by config_key failed", e); }
-          
-          // 2. Intentar filtro alternativo por key
-          if (!config) {
-             try {
-                 const f2 = await base44.entities.AppConfig.filter({ key: 'roles_config' });
-                 if (f2 && f2.length > 0) {
-                     config = f2[0];
-                     console.log("DataProvider: Encontrado por key", config.id);
-                 }
-             } catch(e) { console.warn("Filter by key failed", e); }
-          }
+          // ESTRATEGIA AGRESIVA DE LECTURA (Paralela)
+          // Ejecutamos Filter y List Scan simultáneamente para vencer la consistencia eventual
+          const [byConfigKey, byKey, recentItems] = await Promise.all([
+             base44.entities.AppConfig.filter({ config_key: 'roles_config' }).catch(() => []),
+             base44.entities.AppConfig.filter({ key: 'roles_config' }).catch(() => []),
+             base44.entities.AppConfig.list('-updated_at', 50).catch(() => [])
+          ]);
 
-          // 3. FALLBACK CRÍTICO: Escaneo de lista (para evitar lag de indexación)
-          if (!config) {
-             try {
-                 // Traemos los últimos 50 cambios para encontrar el registro aunque filter falle
-                 const recent = await base44.entities.AppConfig.list('-updated_at', 50);
-                 const found = recent.find(r => r.key === 'roles_config' || r.config_key === 'roles_config');
-                 if (found) {
-                     config = found;
-                     console.log("DataProvider: Encontrado por Fallback List Scan", config.id);
-                 }
-             } catch(e) { console.warn("Fallback List Scan failed", e); }
-          }
+          // Recolectar candidatos
+          let candidates = [...(byConfigKey || []), ...(byKey || [])];
+          
+          // Buscar en lista reciente (para vencer lag de indexación)
+          const recentCandidates = recentItems.filter(r => r.key === 'roles_config' || r.config_key === 'roles_config');
+          candidates = [...candidates, ...recentCandidates];
+          
+          // Deduplicar por ID
+          candidates = Array.from(new Map(candidates.map(c => [c.id, c])).values());
+
+          // Ordenar por fecha de actualización (más reciente primero)
+          candidates.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+          let config = candidates.length > 0 ? candidates[0] : null;
 
           if (!config) {
               // Silently fail or debug log

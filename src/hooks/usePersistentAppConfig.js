@@ -25,39 +25,30 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
     queryKey: [queryKeyName],
     queryFn: async () => {
       try {
-        console.log(`[Config] Fetching ${configKey} (v8 Direct-ID Strategy)...`);
+        console.log(`[Config] Fetching ${configKey} (v8 Aggressive Strategy)...`);
         
-        // Paso 1: Buscar Candidatos Maestros
-        let matches = [];
-        try {
-           const byKey = await base44.entities.AppConfig.filter({ key: configKey });
-           if (byKey && Array.isArray(byKey)) matches = [...matches, ...byKey];
-        } catch (e) { console.warn("Filter by key failed", e); }
+        // ESTRATEGIA AGRESIVA DE LECTURA (Paralela)
+        // Ejecutamos Filter y List Scan simultáneamente para vencer la consistencia eventual
+        const [byKey, byConfigKey, recentItems] = await Promise.all([
+             base44.entities.AppConfig.filter({ key: configKey }).catch(e => { console.warn("Filter key failed", e); return []; }),
+             base44.entities.AppConfig.filter({ config_key: configKey }).catch(e => { console.warn("Filter config_key failed", e); return []; }),
+             base44.entities.AppConfig.list('-updated_at', 50).catch(e => { console.warn("List scan failed", e); return []; })
+        ]);
 
-        // Fallback Legacy
-        try {
-           const byConfigKey = await base44.entities.AppConfig.filter({ config_key: configKey });
-           if (byConfigKey && Array.isArray(byConfigKey)) matches = [...matches, ...byConfigKey];
-        } catch (e) { console.warn("Filter by config_key failed", e); }
+        let matches = [...(byKey || []), ...(byConfigKey || [])];
 
-        // CRITICAL FALLBACK: If filter returns empty, try listing recent items and filtering manually.
-        // This handles cases where API filtering is unreliable or eventually consistent.
-        if (matches.length === 0) {
-            console.log(`[Config] Filter returned empty for ${configKey}, attempting fallback list scan...`);
-            try {
-                // Fetch recent 100 items (most likely to contain our config if recently saved)
-                const recentItems = await base44.entities.AppConfig.list('-updated_at', 100);
-                const manualMatches = recentItems.filter(item => 
-                    item.key === configKey || item.config_key === configKey
-                );
-                if (manualMatches.length > 0) {
-                    console.log(`[Config] Fallback scan found ${manualMatches.length} candidates.`);
-                    matches = [...matches, ...manualMatches];
-                }
-            } catch (e) {
-                console.warn("[Config] Fallback list scan failed", e);
-            }
+        // Merge manual matches from recent list (Critical for eventual consistency)
+        const manualMatches = recentItems.filter(item => 
+            item.key === configKey || item.config_key === configKey
+        );
+        
+        if (manualMatches.length > 0) {
+            // console.log(`[Config] Found ${manualMatches.length} candidates via List Scan`);
+            matches = [...matches, ...manualMatches];
         }
+
+        // Deduplicate matches by ID
+        matches = Array.from(new Map(matches.map(item => [item.id, item])).values());
 
         if (!matches || matches.length === 0) {
           console.log(`[Config] No config found for ${configKey}, using initial data.`);
