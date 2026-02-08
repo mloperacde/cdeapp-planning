@@ -57,13 +57,26 @@ export default function PersistenceDebugger() {
   const runReadTest = async () => {
     setReadResult('pending');
     try {
-      // Test filter
-      const matches = await base44.entities.AppConfig.filter({ key: testKey });
+      // 1. Try standard filter
+      let matches = await base44.entities.AppConfig.filter({ key: testKey });
+
+      // 2. Fallback: List scan if filter fails (mimics usePersistentAppConfig behavior)
+      if (!matches || matches.length === 0) {
+        try {
+          const recent = await base44.entities.AppConfig.list('-updated_at', 50);
+          const found = recent.filter(r => r.key === testKey || r.config_key === testKey);
+          if (found.length > 0) {
+            matches = found;
+            toast.info("Recuperado vía Fallback Scan (Filter falló)");
+          }
+        } catch (e) { console.warn("Fallback failed", e); }
+      }
+
       if (matches && matches.length > 0) {
         setReadResult({ success: true, count: matches.length, data: matches[0] });
         toast.success(`Lectura exitosa: encontrado ${matches.length} registro(s)`);
       } else {
-        setReadResult({ success: false, error: "No se encontraron registros con la clave" });
+        setReadResult({ success: false, error: "No se encontraron registros con la clave (ni con fallback)" });
         toast.error("No se encontró el registro de prueba");
       }
     } catch (error) {
