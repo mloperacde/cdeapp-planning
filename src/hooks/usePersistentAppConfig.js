@@ -123,7 +123,7 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
     
                         candidates.push({
                             id: record.id,
-                            timestamp,
+                            timestamp: isNaN(timestamp) ? 0 : timestamp,
                             isChunked,
                             chunkIds,
                             chunkCount,

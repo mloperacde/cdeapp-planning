@@ -558,9 +558,11 @@ export function DataProvider({ children }) {
         if (!configs || configs.length === 0) return null;
 
         const sortedConfigs = configs.sort((a, b) => {
-            const dateA = new Date(a.updated_at || a.created_at || 0);
-            const dateB = new Date(b.updated_at || b.created_at || 0);
-            return dateB - dateA; // Descendente (más nuevo primero)
+            const getTs = (d) => {
+                const date = new Date(d.updated_at || d.created_at || 0);
+                return isNaN(date.getTime()) ? 0 : date.getTime();
+            };
+            return getTs(b) - getTs(a); // Descendente (más nuevo primero)
         });
 
         const config = sortedConfigs[0];
