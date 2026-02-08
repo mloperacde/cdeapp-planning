@@ -230,9 +230,10 @@ export function DataProvider({ children }) {
                   console.log(`DataProvider: Intentando recuperación directa por ID conocido (${lastSaveId})...`);
                   const directRecord = await base44.entities.AppConfig.get(lastSaveId);
                   if (directRecord && (directRecord.key === 'roles_config' || directRecord.config_key === 'roles_config')) {
-                      console.log("DataProvider: ¡Recuperación directa exitosa!");
-                      config = directRecord;
-                  }
+                        console.log("DataProvider: ¡Recuperación directa exitosa!");
+                        toast.success("⚡ Roles sincronizados instantáneamente (v9)", { duration: 2000 });
+                        config = directRecord;
+                    }
               }
           } catch (e) {
               console.warn("DataProvider: Error en recuperación directa", e);

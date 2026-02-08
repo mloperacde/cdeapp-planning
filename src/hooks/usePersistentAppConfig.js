@@ -50,6 +50,7 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                                     // Validar que corresponda a la key
                                     if (directRecord.key === configKey || directRecord.config_key === configKey) {
                                         console.log(`[Config] Direct Fetch SUCCESS for ${lastSaveId}`);
+                                        toast.success(`⚡ Datos sincronizados instantáneamente (v9)`, { duration: 2000 });
                                         
                                         // LOGICA DE PARSEO DUPLICADA (Para evitar refactor masivo)
                                         let record = directRecord;
