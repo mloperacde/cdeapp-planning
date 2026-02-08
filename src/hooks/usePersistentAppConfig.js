@@ -353,17 +353,29 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
 
       // 4. Cleanup OLD Masters (After success)
       if (newMasterId) {
-          // Run in background (don't await strictly)
-          cleanupOldVersions(configKey, newMasterId).catch(err => console.warn("Cleanup warning", err));
+          // AWAIT CLEANUP to ensure old data is gone before returning
+          await cleanupOldVersions(configKey, newMasterId);
       }
 
       return { success: true };
     },
     onSuccess: (data, variables) => {
+      // Invalidate both the writer key AND the reader key if they differ
+      // Common reader keys: 'rolesConfig', 'onboardingTrainingResources', 'roles_config'
+      
+      const keysToInvalidate = [
+          [queryKeyName],
+          [configKey], // often the same as configKey
+          ['rolesConfig'], // explicitly for roles
+          ['roles_config']
+      ];
+      
+      keysToInvalidate.forEach(k => {
+          queryClient.removeQueries({ queryKey: k });
+          queryClient.invalidateQueries({ queryKey: k });
+      });
+
       queryClient.setQueryData([queryKeyName], variables);
-      queryClient.invalidateQueries({ queryKey: [queryKeyName] });
-      // Force remove queries to ensure no stale data remains in cache
-      queryClient.removeQueries({ queryKey: [queryKeyName], exact: true }); 
       toast.success("Cambios guardados y verificados (v8)");
     },
     onError: (e) => {

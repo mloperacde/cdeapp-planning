@@ -16,6 +16,103 @@ export default function PersistenceDebugger() {
   const [fileUrl, setFileUrl] = useState('');
   const [uploadStatus, setUploadStatus] = useState('idle');
 
+  const [deepScanResult, setDeepScanResult] = useState([]);
+  const [isDeepScanning, setIsDeepScanning] = useState(false);
+
+  const runDeepScan = async () => {
+    setIsDeepScanning(true);
+    setDeepScanResult([]);
+    try {
+      toast.info("Iniciando escaneo profundo de Roles y Training...");
+      
+      const keysToScan = ['roles_config', 'onboarding_training_resources'];
+      let allFound = [];
+
+      for (const key of keysToScan) {
+          // 1. Filter Scan
+          const byKey = await base44.entities.AppConfig.filter({ key }).catch(() => []);
+          const byConfigKey = await base44.entities.AppConfig.filter({ config_key: key }).catch(() => []);
+          
+          // 2. List Scan
+          const recent = await base44.entities.AppConfig.list('-updated_at', 100).catch(() => []);
+          const byRecent = recent.filter(r => r.key === key || r.config_key === key);
+
+          const combined = [...byKey, ...byConfigKey, ...byRecent];
+          
+          // Deduplicate
+          const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+
+          // Analyze Content
+          const analyzed = unique.map(record => {
+              let contentStatus = "Unknown";
+              let version = "Unknown";
+              let timestamp = "Unknown";
+              let chunkCount = 0;
+              let isChunked = false;
+
+              let val = record.value || record.description || record.app_subtitle;
+              if (val && (val.startsWith('{') || val.startsWith('['))) {
+                  try {
+                      const parsed = JSON.parse(val);
+                      if (parsed._v) version = `v${parsed._v}`;
+                      else if (parsed.timestamp) version = "v6/Legacy";
+                      else version = "Raw JSON";
+
+                      if (parsed._ts) timestamp = new Date(parsed._ts).toLocaleString();
+                      else if (parsed.timestamp) timestamp = new Date(parsed.timestamp).toLocaleString();
+                      
+                      if (parsed._is_chunked) {
+                          isChunked = true;
+                          chunkCount = parsed._chunk_ids ? parsed._chunk_ids.length : (parsed.count || 0);
+                      }
+                      contentStatus = "Valid JSON";
+                  } catch(e) {
+                      contentStatus = "Invalid JSON";
+                  }
+              } else {
+                  contentStatus = val ? "Raw Text" : "Empty";
+              }
+
+              return {
+                  ...record,
+                  analysis: {
+                      version,
+                      timestamp,
+                      contentStatus,
+                      isChunked,
+                      chunkCount
+                  }
+              };
+          });
+
+          allFound = [...allFound, ...analyzed];
+      }
+
+      // Sort by updated_at desc
+      allFound.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      
+      setDeepScanResult(allFound);
+      toast.success(`Escaneo completado. ${allFound.length} registros encontrados.`);
+
+    } catch (error) {
+      console.error("Deep scan failed:", error);
+      toast.error("Error en escaneo profundo");
+    } finally {
+      setIsDeepScanning(false);
+    }
+  };
+
+  const deleteRecord = async (id) => {
+      if(!confirm(`¿Eliminar registro ${id} permanentemente?`)) return;
+      try {
+          await base44.entities.AppConfig.delete(id);
+          toast.success(`Registro ${id} eliminado.`);
+          runDeepScan(); // Refresh
+      } catch(e) {
+          toast.error(`Error al eliminar: ${e.message}`);
+      }
+  };
+
   const fetchConfigs = async () => {
     setIsLoading(true);
     try {
@@ -206,10 +303,61 @@ export default function PersistenceDebugger() {
 
       {/* Lista de Configs Existentes */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-medium">Últimas Configuraciones en Base de Datos (AppConfig)</CardTitle>
+          <Button onClick={runDeepScan} disabled={isDeepScanning} size="sm" variant="destructive">
+            <RefreshCw className={`w-4 h-4 mr-2 ${isDeepScanning ? 'animate-spin' : ''}`} />
+            Escaneo Profundo (Roles/Training)
+          </Button>
         </CardHeader>
         <CardContent>
+          {deepScanResult.length > 0 && (
+              <div className="mb-6 border rounded-lg overflow-hidden">
+                  <div className="bg-amber-50 p-2 text-amber-800 text-xs font-bold border-b border-amber-200">
+                      Resultados del Escaneo Profundo ({deepScanResult.length})
+                  </div>
+                  <table className="w-full text-xs text-left bg-white">
+                      <thead className="bg-slate-50">
+                          <tr>
+                              <th className="p-2 border-b">Key</th>
+                              <th className="p-2 border-b">ID</th>
+                              <th className="p-2 border-b">Updated (Server)</th>
+                              <th className="p-2 border-b">Analysis</th>
+                              <th className="p-2 border-b">Action</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {deepScanResult.map(r => (
+                              <tr key={r.id} className="hover:bg-slate-50 border-b">
+                                  <td className="p-2 font-mono text-blue-600 font-bold">{r.key || r.config_key}</td>
+                                  <td className="p-2 font-mono text-slate-500">{r.id}</td>
+                                  <td className="p-2">{new Date(r.updated_at).toLocaleString()}</td>
+                                  <td className="p-2">
+                                      <div className="flex flex-col gap-1">
+                                          <span className="font-bold">{r.analysis.version}</span>
+                                          <span className="text-slate-500">TS: {r.analysis.timestamp}</span>
+                                          <span className={`px-1 rounded text-white text-[10px] w-fit ${r.analysis.contentStatus === 'Valid JSON' ? 'bg-green-500' : 'bg-red-500'}`}>
+                                              {r.analysis.contentStatus}
+                                          </span>
+                                          {r.analysis.isChunked && (
+                                              <span className="bg-purple-100 text-purple-800 px-1 rounded text-[10px] w-fit">
+                                                  Chunks: {r.analysis.chunkCount}
+                                              </span>
+                                          )}
+                                      </div>
+                                  </td>
+                                  <td className="p-2">
+                                      <Button variant="ghost" size="sm" onClick={() => deleteRecord(r.id)} className="h-6 w-6 p-0 text-red-500">
+                                          <XCircle className="w-4 h-4" />
+                                      </Button>
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead>
