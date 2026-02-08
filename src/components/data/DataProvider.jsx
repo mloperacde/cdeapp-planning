@@ -241,6 +241,19 @@ export function DataProvider({ children }) {
              } catch(e) { console.warn("Filter by key failed", e); }
           }
 
+          // 3. FALLBACK CRÍTICO: Escaneo de lista (para evitar lag de indexación)
+          if (!config) {
+             try {
+                 // Traemos los últimos 50 cambios para encontrar el registro aunque filter falle
+                 const recent = await base44.entities.AppConfig.list('-updated_at', 50);
+                 const found = recent.find(r => r.key === 'roles_config' || r.config_key === 'roles_config');
+                 if (found) {
+                     config = found;
+                     console.log("DataProvider: Encontrado por Fallback List Scan", config.id);
+                 }
+             } catch(e) { console.warn("Fallback List Scan failed", e); }
+          }
+
           if (!config) {
               // Silently fail or debug log
               return null;
