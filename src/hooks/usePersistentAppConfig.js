@@ -40,6 +40,25 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
            if (byConfigKey && Array.isArray(byConfigKey)) matches = [...matches, ...byConfigKey];
         } catch (e) { console.warn("Filter by config_key failed", e); }
 
+        // CRITICAL FALLBACK: If filter returns empty, try listing recent items and filtering manually.
+        // This handles cases where API filtering is unreliable or eventually consistent.
+        if (matches.length === 0) {
+            console.log(`[Config] Filter returned empty for ${configKey}, attempting fallback list scan...`);
+            try {
+                // Fetch recent 100 items (most likely to contain our config if recently saved)
+                const recentItems = await base44.entities.AppConfig.list('-updated_at', 100);
+                const manualMatches = recentItems.filter(item => 
+                    item.key === configKey || item.config_key === configKey
+                );
+                if (manualMatches.length > 0) {
+                    console.log(`[Config] Fallback scan found ${manualMatches.length} candidates.`);
+                    matches = [...matches, ...manualMatches];
+                }
+            } catch (e) {
+                console.warn("[Config] Fallback list scan failed", e);
+            }
+        }
+
         if (!matches || matches.length === 0) {
           console.log(`[Config] No config found for ${configKey}, using initial data.`);
           return initialData;

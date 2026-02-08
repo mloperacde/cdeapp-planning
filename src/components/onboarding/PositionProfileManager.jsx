@@ -248,6 +248,30 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     setSelectedProfileId(id);
   };
 
+  const handleDeleteProfile = (e, profileId) => {
+    e.stopPropagation(); // Prevent selection when clicking delete
+    
+    if (Object.keys(profiles).length <= 1) {
+        toast.error("Debe existir al menos un perfil activo.");
+        return;
+    }
+    
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar el perfil "${profiles[profileId].title}"? Esta acción no se puede deshacer.`)) return;
+
+    const newProfiles = { ...profiles };
+    delete newProfiles[profileId];
+    
+    saveProfiles(newProfiles);
+    
+    // Select another profile if we deleted the current one
+    if (selectedProfileId === profileId) {
+        const remainingIds = Object.keys(newProfiles);
+        if (remainingIds.length > 0) {
+            setSelectedProfileId(remainingIds[0]);
+        }
+    }
+  };
+
   const selectedProfile = localProfile;
 
   const handlePrint = () => {

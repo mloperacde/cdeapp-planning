@@ -262,13 +262,26 @@ function createMockBase44() {
 
 export const APP_ID = appParams.appId || "690cdd4205782920ba2297c8";
 
+// Determinar Base URL para evitar CORS en entornos de Preview
+let apiBaseUrl = undefined;
+if (appParams.appBaseUrl) {
+    apiBaseUrl = appParams.appBaseUrl;
+} else if (typeof window !== 'undefined' && window.location.hostname.endsWith('.base44.app')) {
+    // En entornos de preview (*.base44.app), usar el origen actual para aprovechar el proxy implícito
+    // Esto evita errores de CORS al intentar acceder a base44.app directamente
+    apiBaseUrl = window.location.origin;
+    console.log(`[Base44] Preview environment detected, using proxy: ${apiBaseUrl}`);
+}
+
 if (typeof window !== 'undefined') {
     console.log(`[Base44] Initialized with App ID: ${APP_ID}`);
+    if (apiBaseUrl) console.log(`[Base44] API Base URL: ${apiBaseUrl}`);
 }
 
 export const base44 = useMockApi
   ? createMockBase44()
   : createClient({
       appId: APP_ID,
-      requiresAuth: true
+      requiresAuth: true,
+      baseUrl: apiBaseUrl // Inject calculated Base URL
     });

@@ -48,6 +48,7 @@ import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
 import OnboardingAIAssistant from "../components/onboarding/OnboardingAIAssistant";
 import PositionProfileManager from "../components/onboarding/PositionProfileManager";
+import PersistenceDebugger from "../components/debug/PersistenceDebugger";
 
 const EMPTY_ARRAY = [];
 
@@ -343,6 +344,10 @@ export default function EmployeeOnboardingPage() {
             <TabsTrigger value="ai">
               <Bot className="w-4 h-4 mr-2" />
               Asistente IA
+            </TabsTrigger>
+            <TabsTrigger value="debug" className="text-amber-600">
+              <Database className="w-4 h-4 mr-2" />
+              Debug
             </TabsTrigger>
           </TabsList>
 
@@ -890,6 +895,10 @@ export default function EmployeeOnboardingPage() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="debug">
+             <PersistenceDebugger />
           </TabsContent>
         </Tabs>
 
