@@ -228,10 +228,11 @@ export function DataProvider({ children }) {
               if (localTs) minRequiredTimestamp = parseInt(localTs, 10);
           } catch(e) {}
 
-          const MAX_RETRIES = 5;
+          const MAX_RETRIES = 10;
           const RETRY_DELAY = 1000;
 
           let config = null;
+          let bestCandidateSoFar = null;
 
           for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
                if (attempt > 0) {
@@ -278,6 +279,10 @@ export function DataProvider({ children }) {
                });
      
                config = candidates.length > 0 ? candidates[0] : null;
+               
+               if (config) {
+                   bestCandidateSoFar = config;
+               }
 
                // Parse to check timestamp inside
                if (config && minRequiredTimestamp > 0) {
@@ -304,6 +309,11 @@ export function DataProvider({ children }) {
                }
 
                if (config) break; // Found good config
+          }
+          
+          if (!config && bestCandidateSoFar) {
+              console.warn(`[RolesConfig] Consistency Timeout. Returning best available candidate.`);
+              config = bestCandidateSoFar;
           }
 
           if (!config) {
