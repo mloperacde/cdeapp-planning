@@ -362,6 +362,8 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
     onSuccess: (data, variables) => {
       queryClient.setQueryData([queryKeyName], variables);
       queryClient.invalidateQueries({ queryKey: [queryKeyName] });
+      // Force remove queries to ensure no stale data remains in cache
+      queryClient.removeQueries({ queryKey: [queryKeyName], exact: true }); 
       toast.success("Cambios guardados y verificados (v8)");
     },
     onError: (e) => {
@@ -381,11 +383,29 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
 // Background cleanup helper
 async function cleanupOldVersions(configKey, keepMasterId) {
     try {
-        const matches = await base44.entities.AppConfig.filter({ key: configKey });
-        if (!matches) return;
+        console.log(`[Cleanup] Starting aggressive cleanup for ${configKey}, keeping ${keepMasterId}`);
+        
+        // 1. Find ALL candidates (Filter + Recent List)
+        const [byKey, byConfigKey, recentItems] = await Promise.all([
+             base44.entities.AppConfig.filter({ key: configKey }).catch(() => []),
+             base44.entities.AppConfig.filter({ config_key: configKey }).catch(() => []),
+             base44.entities.AppConfig.list('-updated_at', 100).catch(() => [])
+        ]);
 
+        let matches = [...(byKey || []), ...(byConfigKey || [])];
+        const recentMatches = recentItems.filter(r => r.key === configKey || r.config_key === configKey);
+        matches = [...matches, ...recentMatches];
+
+        // Deduplicate by ID
+        matches = Array.from(new Map(matches.map(item => [item.id, item])).values());
+        
+        if (!matches || matches.length === 0) return;
+
+        let deletedCount = 0;
         for (const m of matches) {
             if (m.id === keepMasterId) continue;
+            
+            console.log(`[Cleanup] Deleting obsolete master: ${m.id}`);
             
             // Delete chunks if v8/v7.1
             try {
@@ -421,7 +441,9 @@ async function cleanupOldVersions(configKey, keepMasterId) {
             } catch(e) {}
 
             await base44.entities.AppConfig.delete(m.id).catch(()=>{});
+            deletedCount++;
         }
+        console.log(`[Cleanup] Deleted ${deletedCount} obsolete records.`);
     } catch(e) {
         console.warn("Cleanup error", e);
     }
