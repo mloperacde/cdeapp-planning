@@ -510,8 +510,36 @@ async function cleanupOldVersions(configKey, keepMasterId) {
         
         if (!matches || matches.length === 0) return;
 
-        // Filter items to delete (Everything that is NOT the keepMasterId)
-        const toDelete = matches.filter(m => m.id !== keepMasterId);
+        // SORT BY TIMESTAMP (Newest First) to ensure we keep the true latest backups
+        matches.sort((a, b) => {
+             const getTs = (item) => {
+                try {
+                    const val = item.value || item.description || item.app_subtitle;
+                    if (val && val.startsWith('{')) {
+                        const p = JSON.parse(val);
+                        if (p._ts) return p._ts;
+                        if (p.timestamp) return p.timestamp;
+                    }
+                } catch(e) {}
+                const d = new Date(item.updated_at || item.created_at || 0);
+                return isNaN(d.getTime()) ? 0 : d.getTime();
+             };
+             return getTs(b) - getTs(a);
+        });
+
+        // SAFETY NET: Keep the current Master AND the immediate previous version (Backup)
+        // This prevents "Empty State" if the new master is not yet indexed or fails to load.
+        const toKeepIds = new Set([keepMasterId]);
+        
+        // Find the most recent record that is NOT the current master
+        const backupRecord = matches.find(m => m.id !== keepMasterId);
+        if (backupRecord) {
+            console.log(`[Cleanup] Keeping backup record: ${backupRecord.id}`);
+            toKeepIds.add(backupRecord.id);
+        }
+
+        // Filter items to delete (Everything that is NOT in toKeepIds)
+        const toDelete = matches.filter(m => !toKeepIds.has(m.id));
 
         if (toDelete.length > 0) {
             console.log(`[Cleanup] Found ${toDelete.length} obsolete masters to delete.`);

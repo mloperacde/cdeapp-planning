@@ -232,13 +232,19 @@ export function DataProvider({ children }) {
                   
                   // RETRY LOGIC FOR DIRECT FETCH
                   let directRecord = null;
-                  for (let i = 0; i < 3; i++) {
+                  for (let i = 0; i < 5; i++) {
                       try {
                           directRecord = await base44.entities.AppConfig.get(lastSaveId);
                           if (directRecord) break;
                       } catch (e) {
+                          // If 404, it's deleted/missing. Don't retry.
+                          if (e.message && e.message.includes('404')) {
+                              console.warn(`DataProvider: Direct fetch 404 (Not Found) for ${lastSaveId}. Removing stale ID.`);
+                              localStorage.removeItem('last_save_id_roles_config');
+                              break;
+                          }
                           console.warn(`DataProvider: Direct fetch attempt ${i+1} failed`, e);
-                          await new Promise(r => setTimeout(r, 500));
+                          await new Promise(r => setTimeout(r, 1000));
                       }
                   }
 
@@ -345,6 +351,13 @@ export function DataProvider({ children }) {
           }
           
           if (!config && bestCandidateSoFar) {
+              if (minRequiredTimestamp > 0) {
+                  // CRITICAL FIX: If we expect new data but timed out, THROW to prevent reverting to old data.
+                  // This keeps useRolesManager from overwriting the local optimistic state with stale server data.
+                  const msg = `[RolesConfig] Consistency Failure: Required TS ${minRequiredTimestamp} not found.`;
+                  console.error(msg);
+                  throw new Error(msg);
+              }
               console.warn(`[RolesConfig] Consistency Timeout. Returning best available candidate.`);
               config = bestCandidateSoFar;
           }
