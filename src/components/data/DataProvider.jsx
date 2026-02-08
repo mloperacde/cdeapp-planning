@@ -336,6 +336,7 @@ export function DataProvider({ children }) {
               console.warn(`[RolesConfig] Consistency Timeout. Returning best available candidate.`);
               config = bestCandidateSoFar;
           }
+          } // End if (!config)
 
           if (!config) {
               // Silently fail or debug log
