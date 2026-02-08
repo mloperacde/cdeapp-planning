@@ -220,28 +220,69 @@ export function DataProvider({ children }) {
       try {
           console.log("DataProvider: Buscando configuración de roles (Aggressive)...");
           
-          // ESTRATEGIA AGRESIVA DE LECTURA (Paralela)
-          // Ejecutamos Filter y List Scan simultáneamente para vencer la consistencia eventual
-          const [byConfigKey, byKey, recentItems] = await Promise.all([
-             base44.entities.AppConfig.filter({ config_key: 'roles_config' }).catch(() => []),
-             base44.entities.AppConfig.filter({ key: 'roles_config' }).catch(() => []),
-             base44.entities.AppConfig.list('-updated_at', 50).catch(() => [])
-          ]);
+          // CLIENT-SIDE CONSISTENCY CHECK
+          // If we recently saved data, ensure we don't return older data.
+          let minRequiredTimestamp = 0;
+          try {
+              const localTs = localStorage.getItem('last_save_ts_roles_config');
+              if (localTs) minRequiredTimestamp = parseInt(localTs, 10);
+          } catch(e) {}
 
-          // Recolectar candidatos
-          let candidates = [...(byConfigKey || []), ...(byKey || [])];
-          
-          // Buscar en lista reciente (para vencer lag de indexación)
-          const recentCandidates = recentItems.filter(r => r.key === 'roles_config' || r.config_key === 'roles_config');
-          candidates = [...candidates, ...recentCandidates];
-          
-          // Deduplicar por ID
-          candidates = Array.from(new Map(candidates.map(c => [c.id, c])).values());
+          const MAX_RETRIES = 5;
+          const RETRY_DELAY = 1000;
 
-          // Ordenar por fecha de actualización (más reciente primero)
-          candidates.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+          let config = null;
 
-          let config = candidates.length > 0 ? candidates[0] : null;
+          for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+               if (attempt > 0) {
+                   console.log(`[RolesConfig] Attempt ${attempt}: Data stale or missing, retrying in ${RETRY_DELAY}ms...`);
+                   await new Promise(r => setTimeout(r, RETRY_DELAY));
+               }
+
+               // ESTRATEGIA AGRESIVA DE LECTURA (Paralela)
+               const [byConfigKey, byKey, recentItems] = await Promise.all([
+                  base44.entities.AppConfig.filter({ config_key: 'roles_config' }).catch(() => []),
+                  base44.entities.AppConfig.filter({ key: 'roles_config' }).catch(() => []),
+                  base44.entities.AppConfig.list('-updated_at', 50).catch(() => [])
+               ]);
+     
+               // Recolectar candidatos
+               let candidates = [...(byConfigKey || []), ...(byKey || [])];
+               
+               // Buscar en lista reciente (para vencer lag de indexación)
+               const recentCandidates = recentItems.filter(r => r.key === 'roles_config' || r.config_key === 'roles_config');
+               candidates = [...candidates, ...recentCandidates];
+               
+               // Deduplicar por ID
+               candidates = Array.from(new Map(candidates.map(c => [c.id, c])).values());
+     
+               // Ordenar por fecha de actualización (más reciente primero)
+               candidates.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+     
+               config = candidates.length > 0 ? candidates[0] : null;
+
+               // Parse to check timestamp inside
+               if (config && minRequiredTimestamp > 0) {
+                    let ts = new Date(config.updated_at).getTime();
+                    
+                    // Try to find internal timestamp
+                    let val = config.value || config.description || config.app_subtitle;
+                    if (val && (val.startsWith('{') || val.includes('_ts'))) {
+                        try {
+                           const p = JSON.parse(val);
+                           if (p._ts) ts = p._ts;
+                        } catch(e) {}
+                    }
+
+                    if (ts < minRequiredTimestamp) {
+                         console.warn(`[RolesConfig] Found TS ${ts} < Required ${minRequiredTimestamp}. Retrying...`);
+                         config = null; // Force retry
+                         continue;
+                    }
+               }
+
+               if (config) break; // Found good config
+          }
 
           if (!config) {
               // Silently fail or debug log

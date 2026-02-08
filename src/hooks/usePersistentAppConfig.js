@@ -27,178 +27,207 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
       try {
         console.log(`[Config] Fetching ${configKey} (v8 Aggressive Strategy)...`);
         
-        // ESTRATEGIA AGRESIVA DE LECTURA (Paralela)
-        // Ejecutamos Filter y List Scan simultáneamente para vencer la consistencia eventual
-        const [byKey, byConfigKey, recentItems] = await Promise.all([
-             base44.entities.AppConfig.filter({ key: configKey }).catch(e => { console.warn("Filter key failed", e); return []; }),
-             base44.entities.AppConfig.filter({ config_key: configKey }).catch(e => { console.warn("Filter config_key failed", e); return []; }),
-             base44.entities.AppConfig.list('-updated_at', 50).catch(e => { console.warn("List scan failed", e); return []; })
-        ]);
+        // CLIENT-SIDE CONSISTENCY CHECK
+        // If we recently saved data, ensure we don't return older data.
+        let minRequiredTimestamp = 0;
+        try {
+            const localTs = localStorage.getItem(`last_save_ts_${configKey}`);
+            if (localTs) minRequiredTimestamp = parseInt(localTs, 10);
+        } catch(e) {}
 
-        let matches = [...(byKey || []), ...(byConfigKey || [])];
+        const MAX_RETRIES = 5;
+        const RETRY_DELAY = 1000;
 
-        // Merge manual matches from recent list (Critical for eventual consistency)
-        const manualMatches = recentItems.filter(item => 
-            item.key === configKey || item.config_key === configKey
-        );
-        
-        if (manualMatches.length > 0) {
-            // console.log(`[Config] Found ${manualMatches.length} candidates via List Scan`);
-            matches = [...matches, ...manualMatches];
-        }
-
-        // Deduplicate matches by ID
-        matches = Array.from(new Map(matches.map(item => [item.id, item])).values());
-
-        if (!matches || matches.length === 0) {
-          console.log(`[Config] No config found for ${configKey}, using initial data.`);
-          return initialData;
-        }
-
-        // Paso 2: Encontrar el Maestro más reciente (Internal Timestamp)
-        const candidates = [];
-        for (const match of matches) {
-            let record = match;
-            // Force GET if shallow
-            if (!record.value && !record.description) {
-                try {
-                    const full = await base44.entities.AppConfig.get(match.id);
-                    if (full) record = full;
-                } catch(e) {}
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                console.log(`[Config] Attempt ${attempt}: Data stale (TS < ${minRequiredTimestamp}), retrying in ${RETRY_DELAY}ms...`);
+                await new Promise(r => setTimeout(r, RETRY_DELAY));
             }
 
-            // Extract content
-            let jsonString = record.value;
-            if (!isValidJsonString(jsonString) && isValidJsonString(record.description)) jsonString = record.description;
-            if (!isValidJsonString(jsonString) && isValidJsonString(record.app_subtitle)) jsonString = record.app_subtitle;
-
-            if (isValidJsonString(jsonString)) {
-                try {
-                    const parsed = JSON.parse(jsonString);
-                    let timestamp = new Date(record.updated_at).getTime();
-                    let isChunked = false;
-                    let chunkIds = []; // v8 Feature
-                    let chunkCount = 0; // Legacy
-                    let useVersionedKeys = false; // v7.1
-                    let content = parsed;
-
-                    // v8 Envelope
-                    if (parsed._v === 8) {
-                        timestamp = parsed._ts;
-                        isChunked = parsed._is_chunked;
-                        chunkIds = parsed._chunk_ids || [];
-                        content = parsed.data;
-                    }
-                    // v7.1 Envelope
-                    else if (parsed._ts) {
-                        timestamp = parsed._ts;
-                        content = parsed.data;
-                        isChunked = parsed._is_chunked;
-                        if (isChunked) chunkCount = parsed._chunk_count;
-                        useVersionedKeys = parsed._use_versioned_keys || false;
-                    } 
-                    // v6 Legacy
-                    else if (parsed.timestamp && parsed.is_chunked) {
-                        timestamp = parsed.timestamp;
-                        isChunked = true;
-                        chunkCount = parsed.count;
-                    }
-
-                    candidates.push({
-                        id: record.id,
-                        timestamp,
-                        isChunked,
-                        chunkIds,
-                        chunkCount,
-                        useVersionedKeys,
-                        content,
-                        version: parsed._v || 7
-                    });
-                } catch(e) { console.warn(`Failed to parse ${record.id}`, e); }
+            // ESTRATEGIA AGRESIVA DE LECTURA (Paralela)
+            const [byKey, byConfigKey, recentItems] = await Promise.all([
+                 base44.entities.AppConfig.filter({ key: configKey }).catch(() => []),
+                 base44.entities.AppConfig.filter({ config_key: configKey }).catch(() => []),
+                 base44.entities.AppConfig.list('-updated_at', 50).catch(() => [])
+            ]);
+    
+            let matches = [...(byKey || []), ...(byConfigKey || [])];
+    
+            // Merge manual matches from recent list
+            const manualMatches = recentItems.filter(item => 
+                item.key === configKey || item.config_key === configKey
+            );
+            
+            if (manualMatches.length > 0) {
+                matches = [...matches, ...manualMatches];
             }
-        }
-
-        if (candidates.length === 0) return initialData;
-
-        // Sort by Internal Timestamp (Descending)
-        candidates.sort((a, b) => b.timestamp - a.timestamp);
-        const winner = candidates[0];
-        
-        console.log(`[Config] Winner: ${winner.id} (v${winner.version}, ts: ${winner.timestamp})`);
-
-        // Paso 3: Recuperar Chunks
-        if (winner.isChunked) {
-             let fullJson = "";
-
-             // v8 Strategy: Direct ID Fetching (FAST & RELIABLE)
-             if (winner.version === 8 && winner.chunkIds.length > 0) {
-                 console.log(`[Config] Fetching ${winner.chunkIds.length} chunks by ID...`);
-                 
-                 // Fetch in parallel
-                 const chunkPromises = winner.chunkIds.map(id => base44.entities.AppConfig.get(id).catch(e => null));
-                 const chunkResults = await Promise.all(chunkPromises);
-
-                 const chunks = chunkResults.map(c => {
-                     if (!c) return "";
-                     let val = c.value;
-                     if (!val && c.description) val = c.description;
-                     if (!val && c.app_subtitle && c.app_subtitle !== "chunk") val = c.app_subtitle;
-                     return val || "";
-                 });
-
-                 // Verify integrity
-                 if (chunks.some(c => !c)) {
-                     console.error("[Config] CRITICAL: One or more v8 chunks missing!");
-                     // Fallback to initial data rather than partial data
-                     // But try to join what we have just in case? No, strict integrity.
-                 }
-                 fullJson = chunks.join('');
-             }
-             // Legacy Strategies (v7/v6)
-             else {
-                 console.log(`[Config] Legacy Chunk Fetching...`);
-                 const chunks = [];
-                 for (let i = 0; i < winner.chunkCount; i++) {
-                    let chunkKey = winner.useVersionedKeys 
-                        ? `${configKey}_${winner.timestamp}_chunk_${i}`
-                        : `${configKey}_chunk_${i}`;
-                    
-                    let chunkMatches = [];
+    
+            // Deduplicate matches by ID
+            matches = Array.from(new Map(matches.map(item => [item.id, item])).values());
+    
+            if (!matches || matches.length === 0) {
+              if (minRequiredTimestamp > 0 && attempt < MAX_RETRIES) continue; // Retry if we expect data
+              console.log(`[Config] No config found for ${configKey}, using initial data.`);
+              return initialData;
+            }
+    
+            // Paso 2: Encontrar el Maestro más reciente (Internal Timestamp)
+            const candidates = [];
+            for (const match of matches) {
+                let record = match;
+                // Force GET if shallow
+                if (!record.value && !record.description) {
                     try {
-                        const cKey = await base44.entities.AppConfig.filter({ key: chunkKey });
-                        if (cKey) chunkMatches = [...chunkMatches, ...cKey];
+                        const full = await base44.entities.AppConfig.get(match.id);
+                        if (full) record = full;
                     } catch(e) {}
-                    
-                    if (chunkMatches.length > 0) {
-                        chunkMatches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-                        let chunkMatch = chunkMatches[0];
-                        try {
-                            const fullChunk = await base44.entities.AppConfig.get(chunkMatch.id);
-                            if (fullChunk) chunkMatch = fullChunk;
-                        } catch (e) {}
-                        
-                        let chunkVal = chunkMatch.value;
-                        if (!chunkVal && chunkMatch.description) chunkVal = chunkMatch.description;
-                        if (!chunkVal && chunkMatch.app_subtitle && chunkMatch.app_subtitle !== "chunk") chunkVal = chunkMatch.app_subtitle;
-                        chunks.push(chunkVal || "");
-                    } else {
-                        chunks.push("");
-                    }
-                 }
-                 fullJson = chunks.join('');
-             }
-             
-             try {
-                if (!fullJson) throw new Error("Empty JSON");
-                return JSON.parse(fullJson);
-             } catch(e) {
-                 console.error("Reassembly failed", e);
+                }
+    
+                // Extract content
+                let jsonString = record.value;
+                if (!isValidJsonString(jsonString) && isValidJsonString(record.description)) jsonString = record.description;
+                if (!isValidJsonString(jsonString) && isValidJsonString(record.app_subtitle)) jsonString = record.app_subtitle;
+    
+                if (isValidJsonString(jsonString)) {
+                    try {
+                        const parsed = JSON.parse(jsonString);
+                        let timestamp = new Date(record.updated_at).getTime();
+                        let isChunked = false;
+                        let chunkIds = []; 
+                        let chunkCount = 0;
+                        let useVersionedKeys = false;
+                        let content = parsed;
+                        let version = parsed._v || 7;
+    
+                        // v8 Envelope
+                        if (parsed._v === 8) {
+                            timestamp = parsed._ts;
+                            isChunked = parsed._is_chunked;
+                            chunkIds = parsed._chunk_ids || [];
+                            content = parsed.data;
+                        }
+                        // v7.1 Envelope
+                        else if (parsed._ts) {
+                            timestamp = parsed._ts;
+                            content = parsed.data;
+                            isChunked = parsed._is_chunked;
+                            if (isChunked) chunkCount = parsed._chunk_count;
+                            useVersionedKeys = parsed._use_versioned_keys || false;
+                        } 
+                        // v6 Legacy
+                        else if (parsed.timestamp && parsed.is_chunked) {
+                            timestamp = parsed.timestamp;
+                            isChunked = true;
+                            chunkCount = parsed.count;
+                        }
+    
+                        candidates.push({
+                            id: record.id,
+                            timestamp,
+                            isChunked,
+                            chunkIds,
+                            chunkCount,
+                            useVersionedKeys,
+                            content,
+                            version
+                        });
+                    } catch(e) { console.warn(`Failed to parse ${record.id}`, e); }
+                }
+            }
+    
+            if (candidates.length === 0) {
+                 if (minRequiredTimestamp > 0 && attempt < MAX_RETRIES) continue;
                  return initialData;
-             }
-        }
+            }
+    
+            // Sort by Internal Timestamp (Descending)
+            candidates.sort((a, b) => b.timestamp - a.timestamp);
+            const winner = candidates[0];
+            
+            // CHECK CONSISTENCY
+            if (minRequiredTimestamp > 0 && winner.timestamp < minRequiredTimestamp) {
+                console.warn(`[Config] Found winner TS ${winner.timestamp} < Required ${minRequiredTimestamp}. Retrying...`);
+                continue; // Retry loop
+            }
 
-        if (isArray && !Array.isArray(winner.content)) return initialData;
-        return winner.content;
+            console.log(`[Config] Winner: ${winner.id} (v${winner.version}, ts: ${winner.timestamp})`);
+    
+            // Paso 3: Recuperar Chunks
+            if (winner.isChunked) {
+                 let fullJson = "";
+    
+                 // v8 Strategy: Direct ID Fetching (FAST & RELIABLE)
+                 if (winner.version === 8 && winner.chunkIds.length > 0) {
+                     console.log(`[Config] Fetching ${winner.chunkIds.length} chunks by ID...`);
+                     
+                     // Fetch in parallel
+                     const chunkPromises = winner.chunkIds.map(id => base44.entities.AppConfig.get(id).catch(e => null));
+                     const chunkResults = await Promise.all(chunkPromises);
+    
+                     const chunks = chunkResults.map(c => {
+                         if (!c) return "";
+                         let val = c.value;
+                         if (!val && c.description) val = c.description;
+                         if (!val && c.app_subtitle && c.app_subtitle !== "chunk") val = c.app_subtitle;
+                         return val || "";
+                     });
+    
+                     // Verify integrity
+                     if (chunks.some(c => !c)) {
+                         console.error("[Config] CRITICAL: One or more v8 chunks missing!");
+                         if (attempt < MAX_RETRIES) continue; // Retry might find missing chunks? Unlikely for ID fetch but good practice
+                     }
+                     fullJson = chunks.join('');
+                 }
+                 // Legacy Strategies (v7/v6)
+                 else {
+                     console.log(`[Config] Legacy Chunk Fetching...`);
+                     const chunks = [];
+                     for (let i = 0; i < winner.chunkCount; i++) {
+                        let chunkKey = winner.useVersionedKeys 
+                            ? `${configKey}_${winner.timestamp}_chunk_${i}`
+                            : `${configKey}_chunk_${i}`;
+                        
+                        let chunkMatches = [];
+                        try {
+                            const cKey = await base44.entities.AppConfig.filter({ key: chunkKey });
+                            if (cKey) chunkMatches = [...chunkMatches, ...cKey];
+                        } catch(e) {}
+                        
+                        if (chunkMatches.length > 0) {
+                            chunkMatches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                            let chunkMatch = chunkMatches[0];
+                            try {
+                                const fullChunk = await base44.entities.AppConfig.get(chunkMatch.id);
+                                if (fullChunk) chunkMatch = fullChunk;
+                            } catch (e) {}
+                            
+                            let chunkVal = chunkMatch.value;
+                            if (!chunkVal && chunkMatch.description) chunkVal = chunkMatch.description;
+                            if (!chunkVal && chunkMatch.app_subtitle && chunkMatch.app_subtitle !== "chunk") chunkVal = chunkMatch.app_subtitle;
+                            chunks.push(chunkVal || "");
+                        } else {
+                            chunks.push("");
+                        }
+                     }
+                     fullJson = chunks.join('');
+                 }
+                 
+                 try {
+                    if (!fullJson) throw new Error("Empty JSON");
+                    return JSON.parse(fullJson);
+                 } catch(e) {
+                     console.error("Reassembly failed", e);
+                     if (attempt < MAX_RETRIES) continue;
+                     return initialData;
+                 }
+            }
+    
+            if (isArray && !Array.isArray(winner.content)) return initialData;
+            return winner.content;
+        } // End Retry Loop
+        
+        return initialData; // Should theoretically not reach here if loop works right
 
       } catch (e) {
         console.error(`Error fetching ${configKey}`, e);
@@ -298,6 +327,14 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
       // 3. VERIFICATION (Read-Back Check)
       if (newMasterId) {
           console.log(`[Config] Verifying write integrity for ${newMasterId}...`);
+          // Store Local Timestamp for Client-Side Consistency Check
+          try {
+             if (typeof localStorage !== 'undefined') {
+                 localStorage.setItem(`last_save_ts_${configKey}`, timestamp.toString());
+                 console.log(`[Config] Saved local consistency timestamp: ${timestamp}`);
+             }
+          } catch(e) {}
+          
           try {
               const verifyMaster = await base44.entities.AppConfig.get(newMasterId);
               if (!verifyMaster) throw new Error("Master record not found after write");
