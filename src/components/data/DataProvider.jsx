@@ -257,24 +257,46 @@ export function DataProvider({ children }) {
                candidates = Array.from(new Map(candidates.map(c => [c.id, c])).values());
      
                // Ordenar por fecha de actualización (más reciente primero)
-               candidates.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+               // FIX: Handle invalid dates and prioritize internal timestamps
+               candidates.sort((a, b) => {
+                   const getTs = (item) => {
+                       // 1. Try internal timestamp (most reliable)
+                       try {
+                           const val = item.value || item.description || item.app_subtitle;
+                           if (val && val.startsWith('{')) {
+                               const p = JSON.parse(val);
+                               if (p._ts) return p._ts;
+                               if (p.timestamp) return p.timestamp;
+                           }
+                       } catch(e) {}
+                       
+                       // 2. Fallback to record timestamp
+                       const d = new Date(item.updated_at || item.created_at || 0);
+                       return isNaN(d.getTime()) ? 0 : d.getTime();
+                   };
+                   return getTs(b) - getTs(a);
+               });
      
                config = candidates.length > 0 ? candidates[0] : null;
 
                // Parse to check timestamp inside
                if (config && minRequiredTimestamp > 0) {
-                    let ts = new Date(config.updated_at).getTime();
+                    let ts = 0;
+                    try {
+                        const val = config.value || config.description || config.app_subtitle;
+                        if (val && val.startsWith('{')) {
+                             const p = JSON.parse(val);
+                             if (p._ts) ts = p._ts;
+                        }
+                    } catch(e) {}
                     
-                    // Try to find internal timestamp
-                    let val = config.value || config.description || config.app_subtitle;
-                    if (val && (val.startsWith('{') || val.includes('_ts'))) {
-                        try {
-                           const p = JSON.parse(val);
-                           if (p._ts) ts = p._ts;
-                        } catch(e) {}
+                    // Fallback if no internal ts
+                    if (ts === 0) {
+                        const d = new Date(config.updated_at);
+                        if (!isNaN(d.getTime())) ts = d.getTime();
                     }
 
-                    if (ts < minRequiredTimestamp) {
+                    if (ts > 0 && ts < minRequiredTimestamp) {
                          console.warn(`[RolesConfig] Found TS ${ts} < Required ${minRequiredTimestamp}. Retrying...`);
                          config = null; // Force retry
                          continue;

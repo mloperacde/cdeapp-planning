@@ -42,50 +42,75 @@ export default function PersistenceDebugger() {
           // Deduplicate
           const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
 
-          // Analyze Content
-          const analyzed = unique.map(record => {
-              let contentStatus = "Unknown";
-              let version = "Unknown";
-              let timestamp = "Unknown";
-              let chunkCount = 0;
-              let isChunked = false;
+          // Analyze each record
+            const analyzed = await Promise.all(unique.map(async (record) => {
+                let contentStatus = "Unknown";
+                let version = "Unknown";
+                let timestamp = "Unknown";
+                let chunkCount = 0;
+                let isChunked = false;
+                let chunkVerification = "N/A";
 
-              let val = record.value || record.description || record.app_subtitle;
-              if (val && (val.startsWith('{') || val.startsWith('['))) {
-                  try {
-                      const parsed = JSON.parse(val);
-                      if (parsed._v) version = `v${parsed._v}`;
-                      else if (parsed.timestamp) version = "v6/Legacy";
-                      else version = "Raw JSON";
+                let val = record.value || record.description || record.app_subtitle;
+                if (val && (val.startsWith('{') || val.startsWith('['))) {
+                    try {
+                        const parsed = JSON.parse(val);
+                        if (parsed._v) version = `v${parsed._v}`;
+                        else if (parsed.timestamp) version = "v6/Legacy";
+                        else version = "Raw JSON";
 
-                      if (parsed._ts) timestamp = new Date(parsed._ts).toLocaleString();
-                      else if (parsed.timestamp) timestamp = new Date(parsed.timestamp).toLocaleString();
-                      
-                      if (parsed._is_chunked) {
-                          isChunked = true;
-                          chunkCount = parsed._chunk_ids ? parsed._chunk_ids.length : (parsed.count || 0);
-                      }
-                      contentStatus = "Valid JSON";
-                  } catch(e) {
-                      contentStatus = "Invalid JSON";
-                  }
-              } else {
-                  contentStatus = val ? "Raw Text" : "Empty";
-              }
+                        if (parsed._ts) timestamp = new Date(parsed._ts).toLocaleString();
+                        else if (parsed.timestamp) timestamp = new Date(parsed.timestamp).toLocaleString();
+                        
+                        if (parsed._is_chunked) {
+                            isChunked = true;
+                            chunkCount = parsed._chunk_ids ? parsed._chunk_ids.length : (parsed.count || 0);
+                            
+                            // VERIFY CHUNKS EXISTENCE
+                            if (parsed._chunk_ids && parsed._chunk_ids.length > 0) {
+                                try {
+                                    const chunkPromises = parsed._chunk_ids.map(id => base44.entities.AppConfig.get(id).catch(() => null));
+                                    const chunks = await Promise.all(chunkPromises);
+                                    const found = chunks.filter(c => c !== null).length;
+                                    if (found === parsed._chunk_ids.length) {
+                                        chunkVerification = "✅ All Found";
+                                    } else {
+                                        chunkVerification = `❌ ${found}/${parsed._chunk_ids.length} Found`;
+                                    }
+                                } catch (e) {
+                                    chunkVerification = "❌ Error Checking";
+                                }
+                            }
+                        }
+                        contentStatus = "Valid JSON";
+                    } catch(e) {
+                        contentStatus = "Invalid JSON";
+                    }
+                } else {
+                    contentStatus = val ? "Raw Text" : "Empty";
+                }
 
-              return {
-                  ...record,
-                  analysis: {
-                      version,
-                      timestamp,
-                      contentStatus,
-                      isChunked,
-                      chunkCount
-                  }
-              };
-          });
+                // Handle Invalid Date from server
+                let updatedStr = "Missing/Invalid";
+                try {
+                    if (record.updated_at) updatedStr = new Date(record.updated_at).toLocaleString();
+                } catch(e) {}
 
-          allFound = [...allFound, ...analyzed];
+                return {
+                    ...record,
+                    analysis: {
+                        version,
+                        timestamp,
+                        contentStatus,
+                        isChunked,
+                        chunkCount,
+                        chunkVerification, // New field
+                        rawUpdated: record.updated_at // Debug field
+                    }
+                };
+            }));
+
+            allFound = [...allFound, ...analyzed];
       }
 
       // Sort by updated_at desc
@@ -336,12 +361,13 @@ export default function PersistenceDebugger() {
                                       <div className="flex flex-col gap-1">
                                           <span className="font-bold">{r.analysis.version}</span>
                                           <span className="text-slate-500">TS: {r.analysis.timestamp}</span>
+                                          <span className="text-slate-500">Updated: {r.analysis.rawUpdated || "N/A"}</span>
                                           <span className={`px-1 rounded text-white text-[10px] w-fit ${r.analysis.contentStatus === 'Valid JSON' ? 'bg-green-500' : 'bg-red-500'}`}>
                                               {r.analysis.contentStatus}
                                           </span>
                                           {r.analysis.isChunked && (
                                               <span className="bg-purple-100 text-purple-800 px-1 rounded text-[10px] w-fit">
-                                                  Chunks: {r.analysis.chunkCount}
+                                                  Chunks: {r.analysis.chunkCount} ({r.analysis.chunkVerification})
                                               </span>
                                           )}
                                       </div>
