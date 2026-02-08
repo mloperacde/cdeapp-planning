@@ -383,7 +383,7 @@ export function DataProvider({ children }) {
                 }
             }
 
-            const parsed = JSON.parse(jsonString);
+            let parsed = JSON.parse(jsonString);
             
             // v8 SUPPORT: Direct ID Linking
             if (parsed._v === 8 && parsed._chunk_ids && Array.isArray(parsed._chunk_ids)) {
@@ -404,15 +404,13 @@ export function DataProvider({ children }) {
 
                      try {
                          const reassembled = JSON.parse(fullString);
-                         // Handle v2 compression inside v8 payload if necessary
+                         // Handle v2 compression inside v8 payload
                          if (reassembled.v === 2 && reassembled.r) {
-                             // Use v2 logic below
-                             parsed.v = 2; 
-                             parsed.r = reassembled.r;
-                             parsed.d = reassembled.d;
-                             parsed.ua = reassembled.ua;
-                             // Fall through to v2 logic
+                             // Update parsed to point to the reassembled v2 object
+                             // so it falls through to the v2 decompression logic below
+                             parsed = reassembled;
                          } else {
+                             // If not v2, return as is
                              return reassembled;
                          }
                      } catch(e) {
