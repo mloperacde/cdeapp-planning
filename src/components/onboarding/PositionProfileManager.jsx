@@ -35,6 +35,9 @@ const INITIAL_PROFILES = {
     title: "Técnico de Proceso",
     mission: "El Técnico de Proceso es el máximo responsable operativo de una línea de fabricación. Su función es garantizar la excelencia en el envasado mediante el manejo técnico avanzado (cambio de formato, limpieza, montaje y arranque), la resolución proactiva de averías y la gestión directa del equipo humano asignado. Es el garante del cumplimiento de los estándares de calidad, seguridad y orden (GMP) en su área de influencia.",
     training_summary: "El plan de formación se estructura en 4 fases progresivas diseñadas para garantizar una integración segura y eficiente. Comienza con una inmersión en cultura y seguridad (Semana 1), avanza hacia el control de procesos y gestión (Semana 2), profundiza en aspectos técnicos y mantenimiento (Semanas 3-4), y culmina con la autonomía operativa y liderazgo (Mes 2).",
+    section5_title: "Protocolos y Estándares",
+    section6_title: "Estándares de Relevo (Handover)",
+    section7_title: "Guía de Resolución de Averías",
     onboarding: [
       { 
         phase: "Semana 1", 
@@ -187,6 +190,11 @@ export default function PositionProfileManager({ trainingResources = [] }) {
           });
         }
 
+        // Migration: Add default section titles if missing
+        if (!profileData.section5_title) profileData.section5_title = "Protocolos y Estándares";
+        if (!profileData.section6_title) profileData.section6_title = "Estándares de Relevo (Handover)";
+        if (!profileData.section7_title) profileData.section7_title = "Guía de Resolución de Averías";
+
        setLocalProfile(profileData);
        setHasChanges(false);
        
@@ -234,6 +242,9 @@ export default function PositionProfileManager({ trainingResources = [] }) {
         mission: "",
         onboarding: [],
         responsibilities: [],
+        section5_title: "Protocolos y Estándares",
+        section6_title: "Estándares de Relevo (Handover)",
+        section7_title: "Guía de Resolución de Averías",
         protocols: [],
         handover: [],
         troubleshooting: []
@@ -286,7 +297,9 @@ export default function PositionProfileManager({ trainingResources = [] }) {
           <title>Plan de Onboarding - ${selectedProfile.title}</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-            h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
+            .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e40af; padding-bottom: 10px; margin-bottom: 20px; }
+            .logo { max-height: 60px; }
+            .main-title { color: #1e40af; margin: 0; font-size: 24px; }
             h2 { color: #1e3a8a; margin-top: 25px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; font-size: 18px; }
             h3 { color: #475569; font-size: 16px; margin-top: 15px; }
             .section { margin-bottom: 20px; }
@@ -298,13 +311,18 @@ export default function PositionProfileManager({ trainingResources = [] }) {
             .signature-line { width: 45%; text-align: center; border-top: 1px solid #333; margin-top: 50px; padding-top: 10px; }
             .page-break { page-break-before: always; }
             @media print {
+              @page { size: portrait; margin: 15mm; }
               body { font-size: 12pt; }
               .no-print { display: none; }
             }
           </style>
         </head>
         <body>
-          <h1>${selectedProfile.title}</h1>
+          <div class="header-container">
+            <h1 class="main-title">${selectedProfile.title}</h1>
+            <img src="/logo-cde.png" alt="Logo" class="logo" onerror="this.style.display='none'" />
+          </div>
+          
           <div class="section">
             <h2>1. Descripción y Misión</h2>
             <div class="mission">${selectedProfile.mission || 'Sin definir'}</div>
@@ -368,7 +386,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
           </div>
 
           <div class="section">
-            <h2>5. Protocolos y Estándares</h2>
+            <h2>5. ${selectedProfile.section5_title || 'Protocolos y Estándares'}</h2>
             <ul>
               ${(selectedProfile.protocols || []).map(p => `
                 <li><strong>${p.title}:</strong> ${p.description}</li>
@@ -377,7 +395,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
           </div>
 
           <div class="section">
-            <h2>6. Relevos y Orden</h2>
+            <h2>6. ${selectedProfile.section6_title || 'Estándares de Relevo (Handover)'}</h2>
             <ul>
               ${(selectedProfile.handover || []).map(h => `<li>${h}</li>`).join('')}
             </ul>
@@ -386,7 +404,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
            <div class="page-break"></div>
 
           <div class="section">
-            <h2>7. Guía de Resolución de Averías</h2>
+            <h2>7. ${selectedProfile.section7_title || 'Guía de Resolución de Averías'}</h2>
             <table>
               <thead>
                 <tr>
@@ -744,7 +762,11 @@ export default function PositionProfileManager({ trainingResources = [] }) {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="bg-yellow-50 text-yellow-700">5. Protocolos</Badge>
-                    <h3 className="font-semibold text-lg">Protocolos y Estándares</h3>
+                    <Input 
+                      value={selectedProfile.section5_title || "Protocolos y Estándares"} 
+                      onChange={(e) => handleUpdateProfile('section5_title', e.target.value)}
+                      className="font-semibold text-lg h-auto border-transparent hover:border-input px-0 focus-visible:ring-0"
+                    />
                   </div>
                   
                   {(selectedProfile.protocols || []).map((proto, idx) => (
@@ -780,7 +802,11 @@ export default function PositionProfileManager({ trainingResources = [] }) {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="bg-red-50 text-red-700">6. Relevos</Badge>
-                    <h3 className="font-semibold text-lg">Estándares de Relevo (Handover)</h3>
+                    <Input 
+                      value={selectedProfile.section6_title || "Estándares de Relevo (Handover)"} 
+                      onChange={(e) => handleUpdateProfile('section6_title', e.target.value)}
+                      className="font-semibold text-lg h-auto border-transparent hover:border-input px-0 focus-visible:ring-0"
+                    />
                   </div>
                   <Textarea 
                     value={(selectedProfile.handover || []).join('\n')}
@@ -796,7 +822,11 @@ export default function PositionProfileManager({ trainingResources = [] }) {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                      <Badge variant="outline" className="bg-gray-50 text-gray-700">7. Averías</Badge>
-                     <h3 className="font-semibold text-lg">Guía de Resolución de Averías</h3>
+                     <Input 
+                       value={selectedProfile.section7_title || "Guía de Resolución de Averías"} 
+                       onChange={(e) => handleUpdateProfile('section7_title', e.target.value)}
+                       className="font-semibold text-lg h-auto border-transparent hover:border-input px-0 focus-visible:ring-0"
+                     />
                   </div>
                   
                   <Table>
