@@ -8,18 +8,28 @@ import IncentiveEvaluation from "../components/incentives/IncentiveEvaluation";
  
 export default function IncentiveManagementPage() {
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-emerald-600" />
-            Gestión de Incentivos
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Sistema completo de gestión de incentivos y evaluación de objetivos
-          </p>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header Estándar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Gestión de Incentivos
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Sistema completo de gestión de incentivos y evaluación de objetivos
+            </p>
+          </div>
         </div>
+        <div className="flex items-center gap-2">
+          {/* Actions can be added here if needed */}
+        </div>
+      </div>
 
+      <div className="w-full">
         <Tabs defaultValue="plans" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="plans">

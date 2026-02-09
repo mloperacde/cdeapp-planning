@@ -182,21 +182,27 @@ export default function ShiftHandoverPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <ArrowLeftRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <ArrowLeftRight className="w-8 h-8 text-blue-600" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Información Traspaso de Turno
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Registra observaciones y información relevante en el cambio de turno
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleClear}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleClear}
+            size="sm"
+            className="h-8 gap-2"
               variant="outline"
               className="border-red-200 hover:bg-red-50"
             >

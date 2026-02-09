@@ -171,26 +171,29 @@ export default function DocumentManagementPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-
-        
-
-        <div className="flex justify-between items-center mb-8">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header Estándar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <FileText className="w-8 h-8 text-blue-600" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Gestión Documental
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Repositorio centralizado con control de versiones y permisos
             </p>
           </div>
-          <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Subir Documento
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowForm(true)} size="sm" className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Subir Documento</span>
           </Button>
         </div>
+      </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">

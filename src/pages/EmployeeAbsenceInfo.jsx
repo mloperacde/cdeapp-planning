@@ -21,36 +21,41 @@ export default function EmployeeAbsenceInfoPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6 print:hidden">
-          <Link to={createPageUrl("AbsenceTypeInfo")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Configuración
-            </Button>
-          </Link>
-        </div>
-
-        <div className="flex justify-between items-center mb-8 print:mb-4">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header Estándar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3 print:text-2xl">
-              <FileText className="w-8 h-8 text-blue-600 print:hidden" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Guía de Permisos y Ausencias
             </h1>
-            <p className="text-slate-600 mt-1 print:text-sm">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Información para empleados sobre tipos de ausencias y permisos
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link to={createPageUrl("AbsenceTypeInfo")}>
+            <Button variant="ghost" size="sm" className="h-8 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Volver a Configuración</span>
+            </Button>
+          </Link>
           <Button
             onClick={handleDownloadPDF}
-            className="bg-blue-600 hover:bg-blue-700 print:hidden"
+            size="sm"
+            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Descargar PDF
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Descargar PDF</span>
           </Button>
         </div>
+      </div>
 
+      <div className="w-full mx-auto">
         {/* Introducción */}
         <Card className="mb-6 bg-blue-50 border-2 border-blue-300 print:border print:border-blue-300">
           <CardContent className="p-6">

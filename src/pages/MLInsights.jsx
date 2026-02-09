@@ -93,28 +93,36 @@ export default function MLInsightsPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header Estándar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Brain className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <Brain className="w-8 h-8 text-blue-600" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Análisis Predictivo ML
             </h1>
-            <p className="text-slate-600 mt-1">
-              Machine Learning para predicción de rotación, optimización de turnos y detección de cuellos de botella
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Predicción de rotación, optimización de turnos y detección de cuellos de botella
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
             onClick={handleGeneratePredictions}
             disabled={isGenerating}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            size="sm"
+            className="h-8 gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            {isGenerating ? "Analizando..." : "Generar Análisis ML"}
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">{isGenerating ? "Analizando..." : "Generar Análisis ML"}</span>
           </Button>
         </div>
+      </div>
 
+      <div className="w-full">
         {/* Estadísticas Rápidas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">

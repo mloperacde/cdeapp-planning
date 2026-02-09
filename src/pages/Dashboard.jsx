@@ -5,7 +5,7 @@ import {
   CalendarDays, 
   Wrench, 
   Settings, 
-  AlertCircle
+  LayoutDashboard
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -94,19 +94,26 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6 md:p-8 h-full overflow-auto">
-      <div className="max-w-7xl mx-auto">
-        
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Bienvenido{user?.full_name ? `, ${user.full_name}` : ''}
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Panel de control principal
-          </p>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <LayoutDashboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Panel de Control
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Bienvenido{user?.full_name ? `, ${user.full_name}` : ''}
+            </p>
+          </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -156,7 +163,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="mb-8">
+        <div>
           <h2 className="text-xl font-semibold text-slate-900 mb-4">Accesos Rápidos</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {quickActions.map((action) => {
@@ -180,7 +187,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 h-[600px]">
                 <ShiftSwapWidget />
             </div>

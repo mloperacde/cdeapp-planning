@@ -25,14 +25,22 @@ import CdeAppSyncPanel from "./CdeAppSyncPanel";
 
 export default function MigrationDashboard() {
   return (
-    <div className="space-y-6 container mx-auto p-6 max-w-6xl">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          Panel de Migración y Salud de Datos
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400">
-          Herramientas para diagnosticar y reparar inconsistencias estructurales en la base de datos.
-        </p>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header Estándar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Database className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Panel de Migración y Salud de Datos
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Herramientas para diagnosticar y reparar inconsistencias estructurales en la base de datos
+            </p>
+          </div>
+        </div>
       </div>
 
       <Tabs defaultValue="skills" className="w-full">

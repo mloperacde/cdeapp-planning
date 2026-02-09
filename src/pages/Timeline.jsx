@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
 import { useAppData } from "../components/data/DataProvider";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import WorkCalendar from "../components/absences/WorkCalendar";
@@ -70,28 +69,25 @@ export default function Timeline() {
   }, [employees]);
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-background dark:via-background dark:to-background">
-      <div className="container mx-auto px-4 py-8 md:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-10"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-            Planning / Línea de Tiempo
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-lg mt-2">
-            Visualiza la disponibilidad de empleados
-          </p>
-        </motion.div>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <CalendarDays className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Planning / Línea de Tiempo
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Visualiza la disponibilidad de empleados
+            </p>
+          </div>
+        </div>
+      </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="space-y-6"
-        >
+      <div className="flex-1 overflow-auto space-y-6">
           <Card className="bg-white/80 dark:bg-card/80 backdrop-blur-sm shadow-xl border-0">
             <TimelineControls
               viewMode={viewMode}

@@ -92,37 +92,44 @@ export default function DailyPlanningPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to={createPageUrl("Dashboard")}>
-            <Button type="button" variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al Dashboard
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mb-8 flex items-center justify-between">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <Calendar className="w-8 h-8 text-blue-600" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Planning Diario
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Planificación diaria de producción, mantenimiento, almacén y calidad
             </p>
           </div>
-          <Button
+        </div>
+        <div className="flex items-center gap-2">
+           <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleCallSchedulingAssistant}
             disabled={isCalling}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+            className="h-8 gap-2 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800"
           >
-            <Sparkles className="w-5 h-5 mr-2" />
-            {isCalling ? "Generando..." : "Asistente Programación IA"}
+            <Sparkles className="w-4 h-4" />
+            {isCalling ? "Generando..." : "Asistente IA"}
           </Button>
+          <Link to={createPageUrl("Dashboard")}>
+            <Button type="button" variant="ghost" size="sm" className="h-8 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
+          </Link>
         </div>
+      </div>
+      
+      <div className="flex flex-col gap-6">
 
         {/* Filtros Globales */}
         <Card className="mb-6 shadow-lg border-0 bg-white dark:bg-card/80 backdrop-blur-sm">

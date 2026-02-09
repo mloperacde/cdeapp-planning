@@ -308,31 +308,32 @@ export default function ShiftManagersPage() {
 
   if (activeView === "absences") {
     return (
-      <div className="p-6 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header Compacto - Vista Ausencias */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <ArrowLeftRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                  Gestión de Ausencias
-                </h1>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                  Vista detallada de ausencias y solicitudes
-                </p>
-              </div>
+      <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+        {/* Standard Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <ArrowLeftRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setActiveView("dashboard")}>
-                <ArrowLeft className="w-3 h-3 mr-1" />
-                Volver al Dashboard
-              </Button>
-              <ThemeToggle />
+            <div>
+              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                Gestión de Ausencias
+              </h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                Vista detallada de ausencias y solicitudes
+              </p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" className="h-8 gap-2" onClick={() => setActiveView("dashboard")}>
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
+            <ThemeToggle />
+          </div>
+        </div>
+        
+        <div className="flex flex-col gap-6">
           <UnifiedAbsenceManager sourceContext="shift_manager" />
         </div>
       </div>
@@ -340,33 +341,34 @@ export default function ShiftManagersPage() {
   }
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Compacto */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <LayoutDashboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                Panel de Control - Jefes de Turno
-              </h1>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                Vista general y acceso rápido a gestión de turnos
-              </p>
-            </div>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <LayoutDashboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="flex items-center gap-2">
-            <Link to={createPageUrl("Dashboard")}>
-              <Button variant="ghost" size="sm" className="h-8 text-xs">
-                <ArrowLeft className="w-3 h-3 mr-1" />
-                Volver
-              </Button>
-            </Link>
-            <ThemeToggle />
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Panel de Control - Jefes de Turno
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Vista general y acceso rápido a gestión de turnos
+            </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Link to={createPageUrl("Dashboard")}>
+            <Button type="button" variant="ghost" size="sm" className="h-8 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </Button>
+          </Link>
+          <ThemeToggle />
+        </div>
+      </div>
+      
+      <div className="flex flex-col gap-6">
 
         {/* Toolbar Unificada */}
         <div className="flex flex-col sm:flex-row gap-4 shrink-0 mb-6 justify-between items-center">

@@ -238,18 +238,28 @@ export default function MachineDailyPlanningPage() {
   const alreadySelectedIds = planningData.maquinas_planificadas.map(m => m.machine_id);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <Factory className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
-            Planificación Diaria de Máquinas
-          </h1>
-          <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 mt-1">
-            Planifica qué máquinas arrancar según disponibilidad de personal
-          </p>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Factory className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Planificación Diaria de Máquinas
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Planifica qué máquinas arrancar según disponibilidad de personal
+            </p>
+          </div>
         </div>
+        <div className="flex items-center gap-2">
+            {/* Actions if any */}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-6">
 
         {/* Opciones de borrador */}
         {showDraftOptions && (

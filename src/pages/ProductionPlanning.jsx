@@ -653,27 +653,35 @@ export default function ProductionPlanningPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 flex flex-col min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 flex-shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <Factory className="w-8 h-8 text-blue-600" />
-            Planificación de Producción
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Gestión de órdenes de trabajo y previsión de recursos
-          </p>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Header Section Compact */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Factory className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Planificación de Producción
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Gestión de órdenes de trabajo y previsión de recursos
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button 
             onClick={() => queryClient.invalidateQueries({ queryKey: ['workOrders'] })}
             variant="outline"
-            className="border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            size="sm"
+            className="h-8 text-xs border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
             title="Recargar datos de la base de datos"
           >
-            <RefreshCw className="w-4 h-4" />
-            <span className="ml-2 hidden md:inline">Recargar</span>
+            <RefreshCw className="w-3 h-3 mr-1.5" />
+            <span className="hidden md:inline">Recargar</span>
           </Button>
+        </div>
+      </div>
           
           <Link to="/OrderImport">
              <Button variant="secondary" className="bg-green-600 hover:bg-green-700 text-white border-0">

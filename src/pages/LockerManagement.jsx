@@ -660,31 +660,32 @@ export default function LockerManagementPage() {
   );
 
   return (
-    <div className="p-6 md:p-8 relative">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link to={createPageUrl("ShiftManagers")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Jefes de Turno
-            </Button>
-          </Link>
-        </div>
-
-        <div className="flex justify-between items-start mb-8">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header Estándar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <KeyRound className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <KeyRound className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Gestión de Taquillas
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Configura vestuarios y asigna taquillas a empleados
             </p>
           </div>
-          <div className="flex gap-2">
-            <ThemeToggle />
-          </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Link to={createPageUrl("ShiftManagers")}>
+            <Button variant="ghost" size="sm" className="h-8 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </Button>
+          </Link>
+          <ThemeToggle />
+        </div>
+      </div>
 
         <div className="flex flex-col sm:flex-row gap-4 shrink-0 mb-6">
           <div className="relative flex-1">

@@ -470,29 +470,43 @@ export default function ProcessConfigurationPage() {
   };
 
   return (
-    <div className="space-y-6 p-6 md:p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <Link to={createPageUrl("MachineManagement")}>
-          <Button variant="ghost" className="mb-2">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver a Máquinas
-          </Button>
-        </Link>
-      </div>
-
-      <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-          <div className="flex justify-between items-center">
-            <CardTitle>Configuración de Procesos</CardTitle>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Cog className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Configuración de Procesos
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Gestiona los procesos productivos y sus asignaciones
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+            <Link to={createPageUrl("MachineManagement")}>
+            <Button variant="ghost" size="sm" className="h-8 gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Volver</span>
+            </Button>
+            </Link>
             <Button
               onClick={() => setShowForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              size="sm"
+              className="h-8 gap-2 bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo Proceso
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nuevo Proceso</span>
             </Button>
-          </div>
-        </CardHeader>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-6">
+      
+      <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
         <CardContent className="p-6">
           <Tabs defaultValue="machines" className="w-full">
             <TabsList className="mb-4">

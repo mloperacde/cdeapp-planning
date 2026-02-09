@@ -300,31 +300,37 @@ export default function EmployeeOnboardingPage() {
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <UserPlus className="w-8 h-8 text-blue-600" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-2">
               Onboarding
-              <Badge variant="outline" className="text-xs font-normal ml-2 bg-blue-50">
-                 Recursos: {trainingResources.length}
+              <Badge variant="outline" className="text-[10px] font-normal bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 h-5 px-1.5">
+                 {trainingResources.length} Recursos
               </Badge>
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Gestiona incorporaciones y planes de acogida
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
-            onClick={() => { setSelectedOnboarding(null); setActiveTab("wizard"); }} // Navigate to wizard tab for new onboarding
-            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => { setSelectedOnboarding(null); setActiveTab("wizard"); }}
+            size="sm"
+            className="h-8 bg-blue-600 hover:bg-blue-700 text-xs"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-3 h-3 mr-1.5" />
             Nuevo Onboarding
           </Button>
         </div>
+      </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
@@ -904,7 +910,6 @@ export default function EmployeeOnboardingPage() {
         </Tabs>
 
 
-      </div>
     </div>
   );
 }

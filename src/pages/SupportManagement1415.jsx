@@ -292,46 +292,54 @@ export default function SupportManagement1415Page() {
   }, [savedTasks, selectedDate, employees]);
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 print:hidden">
-          <Link to={createPageUrl("ShiftManagers")}>
-            <Button variant="ghost" className="mb-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Jefes de Turno
-            </Button>
-          </Link>
-        </div>
-
-        <div className="flex justify-between items-center mb-8 print:mb-4">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header Estándar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3 print:text-2xl">
-              <Clock className="w-8 h-8 text-blue-600 print:hidden" />
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Apoyos 14-15h
             </h1>
-            <p className="text-slate-600 mt-1 print:text-sm">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Asignación de tareas para franja horaria 14:00-15:00h
             </p>
           </div>
-          <div className="flex gap-2 print:hidden">
+        </div>
+        <div className="flex items-center gap-2">
+          <Link to={createPageUrl("ShiftManagers")}>
+            <Button variant="ghost" size="sm" className="h-8 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </Button>
+          </Link>
+          <div className="flex gap-2">
             <Button
               onClick={() => setShowPrintView(!showPrintView)}
               variant="outline"
+              size="sm"
+              className="h-8 gap-2"
               disabled={allAssignedTasks.length === 0}
             >
-              {showPrintView ? 'Volver a Edición' : 'Vista Previa'}
+              {showPrintView ? 'Editar' : 'Vista Previa'}
             </Button>
             {showPrintView && (
               <Button
                 onClick={handlePrint}
-                className="bg-blue-600 hover:bg-blue-700"
+                size="sm"
+                className="h-8 gap-2 bg-blue-600 hover:bg-blue-700"
               >
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">Imprimir</span>
               </Button>
             )}
           </div>
         </div>
+      </div>
+
+      <div className="w-full">
 
         {!showPrintView ? (
           <>

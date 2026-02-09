@@ -206,13 +206,9 @@ export default function AbsenceManagementPage() {
   const topDeptMonth = monthlyDeptAbsenteeism[0];
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <UserX className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -254,8 +250,8 @@ export default function AbsenceManagementPage() {
           )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="flex w-full flex-nowrap overflow-x-auto mb-4 md:mb-6 h-auto bg-white dark:bg-slate-800/50">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-6">
+          <TabsList className="flex w-full flex-nowrap overflow-x-auto h-auto bg-white dark:bg-slate-800/50">
             <TabsTrigger value="dashboard" className="flex-1 py-2" type="button"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
             <TabsTrigger value="list" className="flex-1 py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
             
@@ -425,7 +421,6 @@ export default function AbsenceManagementPage() {
             <AdvancedReportGenerator />
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 }

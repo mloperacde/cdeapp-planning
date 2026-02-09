@@ -170,23 +170,31 @@ export default function DailyShiftPlanningPage() {
     };
 
     return (
-        <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
-
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-                        <Briefcase className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
-                        Planificación Diaria de Turno
-                    </h1>
-                    <p className="text-sm md:text-base text-slate-500 dark:text-slate-400">Resumen de máquinas con órdenes asignadas y gestión de personal. La asignación de personas la realiza el agente IA.</p>
+        <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+            {/* Standard Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                        <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                            Planificación Diaria de Turno
+                        </h1>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                            Resumen de máquinas con órdenes asignadas y gestión de personal
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-4">
-                     <Button onClick={() => saveMutation.mutate()} className="bg-green-600 hover:bg-green-700 text-white">
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Confirmar Planificación
+                <div className="flex items-center gap-2">
+                     <Button onClick={() => saveMutation.mutate()} size="sm" className="h-8 gap-2 bg-green-600 hover:bg-green-700 text-white">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Confirmar Planificación</span>
                     </Button>
                 </div>
             </div>
+
+            <div className="flex flex-col gap-6">
 
             {/* Controls */}
             <Card className="bg-slate-50 dark:bg-slate-800/50 border-blue-100 dark:border-blue-800">
@@ -324,5 +332,6 @@ export default function DailyShiftPlanningPage() {
                 })}
             </div>
         </div>
+    </div>
     );
 }

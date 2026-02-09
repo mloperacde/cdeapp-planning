@@ -549,10 +549,10 @@ export default function DailyProductionPlanningPage() {
   // --- Render ---
 
   return (
-    <div className="flex flex-col h-full w-full max-w-full bg-slate-50/50 dark:bg-background overflow-hidden">
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-hidden">
       
       {/* Fixed Header Section */}
-      <div className="flex-none p-4 md:p-6 space-y-4 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-10 shadow-sm">
+      <div className="flex-none space-y-4 z-10">
         {/* Header Compacto */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="flex items-center gap-3">
@@ -773,7 +773,7 @@ export default function DailyProductionPlanningPage() {
       </div>
       
       {/* Scrollable Main Content */}
-      <div className="flex-1 min-h-0 p-4 md:p-6 pt-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           
           {/* Left Column: Machine Catalog */}

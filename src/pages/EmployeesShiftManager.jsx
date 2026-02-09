@@ -208,19 +208,23 @@ export default function EmployeesShiftManagerPage() {
   }, [effectiveEmployees]);
 
   return (
-    <div className="p-6 md:p-8 h-full overflow-auto">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              Personal de Fabricación
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
-              Gestión de operarios y jefes de turno
-            </p>
-          </div>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+        {/* Header Estándar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                Gestión de Turnos
+              </h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                Administra los turnos y contratos de los empleados
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {/* ThemeToggle removido - disponible en Layout */}
           </div>
         </div>
