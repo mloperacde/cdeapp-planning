@@ -11,6 +11,7 @@ import { createPageUrl } from "@/utils";
 import WorkCalendar from "../components/absences/WorkCalendar";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { motion } from "framer-motion";
 
 export default function Timeline() {
   const now = new Date();

@@ -202,13 +202,12 @@ export default function ShiftHandoverPage() {
           <Button
             onClick={handleClear}
             size="sm"
-            className="h-8 gap-2"
-              variant="outline"
-              className="border-red-200 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Limpiar
-            </Button>
+            variant="outline"
+            className="h-8 gap-2 border-red-200 hover:bg-red-50"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Limpiar
+          </Button>
             <Button
               onClick={handleSave}
               disabled={saveHandoverMutation.isPending}
