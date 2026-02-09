@@ -256,7 +256,6 @@ export default function EmailNotificationsPage() {
             )}
           </CardContent>
         </Card>
-      </div>
 
       {showForm && (
         <Dialog open={true} onOpenChange={handleClose}>

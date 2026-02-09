@@ -420,97 +420,102 @@ export default function ShiftPlanningPage() {
   }, [savedPlannings]);
 
   return (
-    <div className="space-y-6 p-6 md:p-8 max-w-[1800px] mx-auto">
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <Users className="w-6 h-6 text-blue-600" />
-                  Planificación de Turnos
-                </CardTitle>
-                <p className="text-sm text-slate-500 mt-1">
-                  Asigna empleados a máquinas - {format(selectedDate, "dd/MM/yyyy")} - {selectedShift} - {selectedTeam === "all" ? "Todos" : teams.find(t => String(t.id) === String(selectedTeam))?.team_name}
-                </p>
-              </div>
-
-              <Button 
-                variant="outline"
-                onClick={() => setShowHistory(!showHistory)}
-                className="gap-2"
-              >
-                <History className="w-4 h-4" />
-                {showHistory ? "Ocultar" : "Ver"} Historial
-              </Button>
-            </div>
-
-            {/* Filtros y controles */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[200px] justify-start">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(selectedDate, "dd/MM/yyyy", { locale: es })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Select value={selectedShift} onValueChange={setSelectedShift}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={shifts.MORNING || "Mañana"}>☀️ {shifts.MORNING || "Mañana"}</SelectItem>
-                  <SelectItem value={shifts.AFTERNOON || "Tarde"}>🌅 {shifts.AFTERNOON || "Tarde"}</SelectItem>
-                  {shifts.NIGHT && <SelectItem value={shifts.NIGHT}>🌙 {shifts.NIGHT}</SelectItem>}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Seleccionar equipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los Equipos</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.team_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar empleado..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              <Button 
-                onClick={() => saveMutation.mutate()}
-                className="bg-green-600 hover:bg-green-700"
-                disabled={saveMutation.isPending}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saveMutation.isPending ? "Guardando..." : "Guardar"}
-              </Button>
-            </div>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Header Section Compact */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
-        </CardHeader>
-        <CardContent className="p-6">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Planificación de Turnos
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
+               Asigna empleados a máquinas - {format(selectedDate, "dd/MM/yyyy")} - {selectedShift} - {selectedTeam === "all" ? "Todos" : teams.find(t => String(t.id) === String(selectedTeam))?.team_name}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+            className="gap-2"
+          >
+            <History className="w-4 h-4" />
+            {showHistory ? "Ocultar" : "Ver"} Historial
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter Section */}
+      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[200px] justify-start">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(selectedDate, "dd/MM/yyyy", { locale: es })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                locale={es}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Select value={selectedShift} onValueChange={setSelectedShift}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={shifts.MORNING || "Mañana"}>☀️ {shifts.MORNING || "Mañana"}</SelectItem>
+              <SelectItem value={shifts.AFTERNOON || "Tarde"}>🌅 {shifts.AFTERNOON || "Tarde"}</SelectItem>
+              {shifts.NIGHT && <SelectItem value={shifts.NIGHT}>🌙 {shifts.NIGHT}</SelectItem>}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Seleccionar equipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los Equipos</SelectItem>
+              {teams.map(team => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.team_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar empleado..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <Button 
+            onClick={() => saveMutation.mutate()}
+            className="bg-green-600 hover:bg-green-700"
+            disabled={saveMutation.isPending}
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saveMutation.isPending ? "Guardando..." : "Guardar"}
+          </Button>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 min-h-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex flex-col">
+         <div className="p-6 h-full overflow-y-auto">
           {showHistory && (
             <Card className="mb-6 bg-slate-50 border-slate-200">
               <CardHeader>
@@ -775,8 +780,8 @@ export default function ShiftPlanningPage() {
               </div>
             </div>
           </DragDropContext>
-        </CardContent>
-      </Card>
+         </div>
+      </div>
     </div>
   );
 }

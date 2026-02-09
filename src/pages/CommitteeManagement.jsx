@@ -247,7 +247,6 @@ export default function CommitteeManagementPage() {
             }}
           />
         )}
-      </div>
     </div>
   );
 }
