@@ -261,6 +261,7 @@ function createMockBase44() {
 }
 
 export const APP_ID = appParams.appId || "690cdd4205782920ba2297c8";
+const HARDCODED_TOKEN = "9841e97309b042b8be82e6c7846d03e4";
 
 // Determinar Base URL para evitar CORS en entornos de Preview
 let apiBaseUrl = undefined;
@@ -282,7 +283,7 @@ export const base44 = useMockApi
   ? createMockBase44()
   : createClient({
       appId: APP_ID,
-      token: appParams.token, // INJECT TOKEN EXPLICITLY
+      token: appParams.token || HARDCODED_TOKEN, // INJECT TOKEN EXPLICITLY (Fallback to Hardcoded)
       requiresAuth: true,
       baseUrl: apiBaseUrl // Inject calculated Base URL
     });
