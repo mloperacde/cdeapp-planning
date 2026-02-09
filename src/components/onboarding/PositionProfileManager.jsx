@@ -312,15 +312,20 @@ export default function PositionProfileManager({ trainingResources = [] }) {
             .page-break { page-break-before: always; }
             @media print {
               @page { size: portrait; margin: 15mm; }
-              body { font-size: 12pt; }
+              body { font-size: 11pt; }
               .no-print { display: none; }
+              .section { page-break-inside: avoid; margin-bottom: 20px; }
+              table { page-break-inside: avoid; width: 100%; }
+              tr { page-break-inside: avoid; }
+              h2, h3 { page-break-after: avoid; }
+              ul, li { page-break-inside: avoid; }
             }
           </style>
         </head>
         <body>
           <div class="header-container">
             <h1 class="main-title">${selectedProfile.title}</h1>
-            <img src="/logo-cde.png" alt="Logo" class="logo" onerror="this.style.display='none'" />
+            <img src="/logo2.png" alt="Logo" class="logo" onerror="this.style.display='none'" />
           </div>
           
           <div class="section">
