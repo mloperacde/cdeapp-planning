@@ -289,6 +289,9 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     const iframe = iframeRef.current;
     if (!iframe) return;
     
+    // Construct absolute URL for the logo to ensure it loads inside the iframe
+    const logoUrl = `${window.location.origin}/logo2.png`;
+    
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`
@@ -325,7 +328,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
         <body>
           <div class="header-container">
             <h1 class="main-title">${selectedProfile.title}</h1>
-            <img src="/logo2.png" alt="Logo" class="logo" onerror="this.style.display='none'" />
+            <img src="${logoUrl}" alt="Logo" class="logo" />
           </div>
           
           <div class="section">
