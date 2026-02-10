@@ -26,6 +26,7 @@ import {
   Briefcase, CheckCircle2, AlertTriangle, BookOpen, PenTool, RefreshCw 
 } from "lucide-react";
 import { toast } from "sonner";
+import TrainingPlansBuilder from "./TrainingPlansBuilder";
 
 // Initial Seed Data based on User Request
 const INITIAL_PROFILES = {
@@ -538,15 +539,48 @@ export default function PositionProfileManager({ trainingResources = [] }) {
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-1">
             {profiles && Object.values(profiles).map(profile => (
-              <Button
-                key={profile.id}
-                variant={selectedProfileId === profile.id ? "secondary" : "ghost"}
-                className="w-full justify-start text-sm truncate"
-                onClick={() => setSelectedProfileId(profile.id)}
-              >
-                <Briefcase className="w-4 h-4 mr-2 opacity-70" />
-                {profile.title}
-              </Button>
+              <div key={profile.id} className="group relative">
+                <Button
+                  variant={selectedProfileId === profile.id ? "secondary" : "ghost"}
+                  className="w-full justify-start text-sm truncate pr-20"
+                  onClick={() => setSelectedProfileId(profile.id)}
+                >
+                  <Briefcase className="w-4 h-4 mr-2 opacity-70" />
+                  {profile.title}
+                </Button>
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newName = prompt("Nombre del puesto clonado:", profile.title + " (Copia)");
+                      if (!newName) return;
+                      const newId = newName.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+                      const clonedProfile = JSON.parse(JSON.stringify(profile));
+                      clonedProfile.id = newId;
+                      clonedProfile.title = newName;
+                      const newProfiles = { ...profiles, [newId]: clonedProfile };
+                      saveProfilesMutation.mutate(newProfiles);
+                      setSelectedProfileId(newId);
+                      toast.success("Perfil clonado correctamente");
+                    }}
+                    title="Clonar puesto"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={(e) => handleDeleteProfile(e, profile.id)}
+                    title="Eliminar puesto"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </ScrollArea>
@@ -973,48 +1007,12 @@ export default function PositionProfileManager({ trainingResources = [] }) {
       <iframe ref={iframeRef} className="hidden" />
       </div>
 
-      {/* Training Plans Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-             <BookOpen className="w-5 h-5 text-blue-600" />
-             Catálogo de Planes de Formación
-          </CardTitle>
-          <CardDescription>
-            Formaciones disponibles para asignar a los planes de onboarding
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {trainingPlans.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Formación</TableHead>
-                  <TableHead>Colectivo</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {trainingPlans.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.title}</TableCell>
-                    <TableCell>{t.colectivo || "-"}</TableCell>
-                    <TableCell>{t.fecha}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{t.estado}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-             <div className="text-center py-4 text-slate-500 text-sm">
-                No hay planes de formación registrados en el sistema.
-             </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Training Plans Builder */}
+      <TrainingPlansBuilder 
+        trainingResources={trainingResources} 
+        trainingDocs={trainingDocs}
+        trainingPlans={trainingPlans}
+      />
     </div>
   );
 }
