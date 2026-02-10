@@ -197,10 +197,6 @@ export default function EmployeeOnboardingPage() {
     },
   });
 
-  const createTrainingResourceMutation = {
-    mutate: (data) => saveTrainingResourcesMutation.mutate(data)
-  };
-
   const getEmployeeName = (employeeId) => {
     const emp = employees.find(e => e.id === employeeId);
     return emp?.nombre || "Empleado desconocido";
@@ -278,6 +274,11 @@ export default function EmployeeOnboardingPage() {
     [trainingResources]
   );
 
+  const trainingPlans = useMemo(
+    () => (trainingResources || []).filter(r => r.type === "training_plan"),
+    [trainingResources]
+  );
+
   const handleAddDoc = async () => {
     if (!newDoc.title || !newDoc.url) {
       toast.error("Título y URL son obligatorios");
@@ -295,7 +296,7 @@ export default function EmployeeOnboardingPage() {
     setNewDoc({ title: "", description: "", url: "" });
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Documento añadido correctamente");
     } catch (error) {
       console.error("Error añadiendo documento:", error);
@@ -309,7 +310,7 @@ export default function EmployeeOnboardingPage() {
     const updatedResources = trainingResources.filter(r => r.id !== docId);
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Documento eliminado correctamente");
     } catch (error) {
       console.error("Error eliminando documento:", error);
@@ -323,7 +324,7 @@ export default function EmployeeOnboardingPage() {
     const updatedResources = trainingResources.filter(r => r.id !== trainingId);
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Formación eliminada correctamente");
     } catch (error) {
       console.error("Error eliminando formación:", error);
@@ -353,7 +354,7 @@ export default function EmployeeOnboardingPage() {
     });
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Formación añadida correctamente");
     } catch (error) {
       console.error("Error añadiendo formación:", error);
@@ -738,7 +739,11 @@ export default function EmployeeOnboardingPage() {
           </TabsContent>
 
           <TabsContent value="profiles" className="space-y-6">
-             <PositionProfileManager trainingResources={trainingResources} />
+             <PositionProfileManager 
+               trainingResources={trainingResources}
+               trainingDocs={trainingDocs}
+               trainingPlans={trainingPlans}
+             />
           </TabsContent>
 
 
