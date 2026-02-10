@@ -48,6 +48,7 @@ import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
 import OnboardingAIAssistant from "../components/onboarding/OnboardingAIAssistant";
 import PositionProfileManager from "../components/onboarding/PositionProfileManager";
+import TrainingPlansBuilder from "../components/onboarding/TrainingPlansBuilder";
 
 const EMPTY_ARRAY = [];
 
@@ -104,47 +105,38 @@ export default function EmployeeOnboardingPage() {
     initialData: [],
   });
 
-  const { data: trainingResources, isLoading: trainingLoading } = useQuery({
+  const { data: trainingResources, isLoading: trainingLoading, refetch: refetchTrainingResources } = useQuery({
     queryKey: ['trainingResources'],
     queryFn: async () => {
       try {
-        console.log("📖 Cargando recursos de formación...");
         const results = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
-        console.log("📦 Registros encontrados:", results?.length || 0);
         
         if (!results || results.length === 0) {
-          console.log("ℹ️ No hay recursos guardados");
           return [];
         }
         
         const record = results[0];
-        console.log("📄 Usando registro:", record.id);
-        
-        const jsonString = record.value || record.app_subtitle || record.description;
+        const jsonString = record.value || record.app_subtitle;
         
         if (!jsonString) {
-          console.log("⚠️ Registro sin contenido");
           return [];
         }
         
         const parsed = JSON.parse(jsonString);
-        const resources = Array.isArray(parsed) ? parsed : [];
-        console.log(`✅ Cargados ${resources.length} recursos de formación`);
-        return resources;
+        return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
-        console.error('❌ Error cargando recursos de formación:', error);
+        console.error('Error cargando recursos de formación:', error);
         return [];
       }
     },
     initialData: [],
-    staleTime: 60000, // 1 minuto
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const saveTrainingResourcesMutation = useMutation({
     mutationFn: async (updatedResources) => {
-      console.log("💾 Guardando recursos de formación...", updatedResources);
-      
       const payload = {
         config_key: 'onboarding_training_resources',
         app_name: 'Training Resources',
@@ -153,39 +145,33 @@ export default function EmployeeOnboardingPage() {
       };
 
       const existing = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
-      console.log("📦 Registros existentes encontrados:", existing?.length || 0);
       
       if (existing && existing.length > 0) {
         const mainRecord = existing[0];
-        console.log("✏️ Actualizando registro:", mainRecord.id);
         const updated = await base44.entities.AppConfig.update(mainRecord.id, payload);
         
         const obsoleteRecords = existing.slice(1);
         if (obsoleteRecords.length > 0) {
-          console.log(`🗑️ Eliminando ${obsoleteRecords.length} duplicados...`);
           for (const obsolete of obsoleteRecords) {
             try {
               await base44.entities.AppConfig.delete(obsolete.id);
             } catch (err) {
-              console.warn('No se pudo eliminar duplicado:', obsolete.id, err);
+              console.warn('No se pudo eliminar duplicado:', obsolete.id);
             }
           }
         }
         
-        console.log("✅ Guardado exitoso");
         return updated;
       } else {
-        console.log("✨ Creando nuevo registro");
-        const created = await base44.entities.AppConfig.create(payload);
-        console.log("✅ Creado exitoso:", created.id);
-        return created;
+        return await base44.entities.AppConfig.create(payload);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainingResources'] });
+      refetchTrainingResources();
     },
     onError: (error) => {
-      console.error('❌ Error guardando recursos:', error);
+      console.error('Error guardando recursos:', error);
       toast.error('Error al guardar: ' + error.message);
     }
   });
@@ -196,10 +182,6 @@ export default function EmployeeOnboardingPage() {
       queryClient.invalidateQueries({ queryKey: ['employeeOnboardings'] });
     },
   });
-
-  const createTrainingResourceMutation = {
-    mutate: (data) => saveTrainingResourcesMutation.mutate(data)
-  };
 
   const getEmployeeName = (employeeId) => {
     const emp = employees.find(e => e.id === employeeId);
@@ -278,6 +260,11 @@ export default function EmployeeOnboardingPage() {
     [trainingResources]
   );
 
+  const trainingPlans = useMemo(
+    () => (trainingResources || []).filter(r => r.type === "training_plan"),
+    [trainingResources]
+  );
+
   const handleAddDoc = async () => {
     if (!newDoc.title || !newDoc.url) {
       toast.error("Título y URL son obligatorios");
@@ -295,7 +282,7 @@ export default function EmployeeOnboardingPage() {
     setNewDoc({ title: "", description: "", url: "" });
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Documento añadido correctamente");
     } catch (error) {
       console.error("Error añadiendo documento:", error);
@@ -309,7 +296,7 @@ export default function EmployeeOnboardingPage() {
     const updatedResources = trainingResources.filter(r => r.id !== docId);
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Documento eliminado correctamente");
     } catch (error) {
       console.error("Error eliminando documento:", error);
@@ -323,7 +310,7 @@ export default function EmployeeOnboardingPage() {
     const updatedResources = trainingResources.filter(r => r.id !== trainingId);
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Formación eliminada correctamente");
     } catch (error) {
       console.error("Error eliminando formación:", error);
@@ -353,7 +340,7 @@ export default function EmployeeOnboardingPage() {
     });
     
     try {
-      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      await saveTrainingResourcesMutation.mutateAsync(updatedResources);
       toast.success("Formación añadida correctamente");
     } catch (error) {
       console.error("Error añadiendo formación:", error);
@@ -417,7 +404,7 @@ export default function EmployeeOnboardingPage() {
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-2">
               Onboarding
               <Badge variant="outline" className="text-[10px] font-normal bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 h-5 px-1.5">
-                 {trainingResources.length} Recursos
+                 {(trainingResources || []).length} Recursos
               </Badge>
             </h1>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
@@ -738,7 +725,11 @@ export default function EmployeeOnboardingPage() {
           </TabsContent>
 
           <TabsContent value="profiles" className="space-y-6">
-             <PositionProfileManager trainingResources={trainingResources} />
+             <PositionProfileManager 
+               trainingResources={trainingResources}
+               trainingDocs={trainingDocs}
+               trainingPlans={trainingPlans}
+             />
           </TabsContent>
 
 
@@ -751,7 +742,7 @@ export default function EmployeeOnboardingPage() {
           </TabsContent>
 
           <TabsContent value="training" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-slate-100">
                   <CardTitle>Documentos de formaciones</CardTitle>
@@ -852,128 +843,12 @@ export default function EmployeeOnboardingPage() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-slate-100">
-                  <CardTitle>Plan de formaciones</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                    <div className="space-y-1 md:col-span-2">
-                      <Label>Formación</Label>
-                      <Input
-                        placeholder="Nombre de la formación"
-                        value={newTraining.title}
-                        onChange={(e) =>
-                          setNewTraining((prev) => ({
-                            ...prev,
-                            title: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Colectivo</Label>
-                      <Input
-                        placeholder="Ej: Operarios, Mandos intermedios..."
-                        value={newTraining.colectivo}
-                        onChange={(e) =>
-                          setNewTraining((prev) => ({
-                            ...prev,
-                            colectivo: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Fecha</Label>
-                      <Input
-                        type="date"
-                        value={newTraining.fecha}
-                        onChange={(e) =>
-                          setNewTraining((prev) => ({
-                            ...prev,
-                            fecha: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Estado</Label>
-                      <Select
-                        value={newTraining.estado}
-                        onValueChange={(value) =>
-                          setNewTraining((prev) => ({ ...prev, estado: value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Pendiente">Pendiente</SelectItem>
-                          <SelectItem value="Programado">Programado</SelectItem>
-                          <SelectItem value="Realizado">Realizado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="md:col-span-4 flex justify-end">
-                      <Button
-                        type="button"
-                        onClick={handleAddTraining}
-                        disabled={!newTraining.title || !newTraining.fecha}
-                      >
-                        Añadir formación
-                      </Button>
-                    </div>
-                  </div>
-
-                  {trainings.length > 0 ? (
-                    <div className="mt-4">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50">
-                              <TableHead>Formación</TableHead>
-                              <TableHead>Colectivo</TableHead>
-                              <TableHead>Fecha</TableHead>
-                              <TableHead>Estado</TableHead>
-                              <TableHead className="w-[100px]">Acciones</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {trainings.map((t) => (
-                              <TableRow key={t.id}>
-                                <TableCell>{t.title}</TableCell>
-                                <TableCell>{t.colectivo || "-"}</TableCell>
-                                <TableCell>{t.fecha}</TableCell>
-                                <TableCell>
-                                  <Badge className="bg-slate-100 text-slate-800">
-                                    {t.estado}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => handleDeleteTraining(t.id)}
-                                    title="Eliminar formación"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-8 text-center py-8 border-2 border-dashed border-slate-200 rounded-lg">
-                      <p className="text-sm text-slate-500">No hay planes de formación configurados</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <TrainingPlansBuilder 
+                trainingResources={trainingResources} 
+                trainingDocs={trainingDocs}
+                trainingPlans={trainingPlans}
+                onSave={(updatedResources) => saveTrainingResourcesMutation.mutate(updatedResources)}
+              />
             </div>
           </TabsContent>
 

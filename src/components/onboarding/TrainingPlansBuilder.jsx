@@ -1,6 +1,4 @@
 import React, { useState, useRef } from "react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -24,13 +16,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { BookOpen, Plus, Trash2, Upload, FileText, Edit } from "lucide-react";
 import { toast } from "sonner";
+import { base44 } from "@/api/base44Client";
 
-export default function TrainingPlansBuilder({ trainingResources, trainingDocs, trainingPlans }) {
-  const queryClient = useQueryClient();
+export default function TrainingPlansBuilder({ trainingResources, trainingDocs, trainingPlans, onSave }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [planForm, setPlanForm] = useState({
@@ -42,38 +32,6 @@ export default function TrainingPlansBuilder({ trainingResources, trainingDocs, 
     files: []
   });
   const fileInputRef = useRef(null);
-
-  const saveResourcesMutation = useMutation({
-    mutationFn: async (updatedResources) => {
-      const payload = {
-        config_key: 'onboarding_training_resources',
-        app_name: 'Training Resources',
-        value: JSON.stringify(updatedResources),
-        app_subtitle: JSON.stringify(updatedResources),
-      };
-
-      const existing = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
-      if (existing && existing.length > 0) {
-        const mainRecord = existing[0];
-        await base44.entities.AppConfig.update(mainRecord.id, payload);
-        
-        const obsoleteRecords = existing.slice(1);
-        for (const obsolete of obsoleteRecords) {
-          try {
-            await base44.entities.AppConfig.delete(obsolete.id);
-          } catch (err) {
-            console.warn('No se pudo eliminar duplicado:', obsolete.id, err);
-          }
-        }
-        return mainRecord;
-      } else {
-        return base44.entities.AppConfig.create(payload);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trainingResources'] });
-    },
-  });
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -123,7 +81,7 @@ export default function TrainingPlansBuilder({ trainingResources, trainingDocs, 
       toast.success("Plan creado correctamente");
     }
 
-    saveResourcesMutation.mutate(updatedResources);
+    onSave(updatedResources);
     setIsDialogOpen(false);
     resetForm();
   };
@@ -145,7 +103,7 @@ export default function TrainingPlansBuilder({ trainingResources, trainingDocs, 
     if (!window.confirm("¿Estás seguro de eliminar este plan de formación?")) return;
     
     const updatedResources = trainingResources.filter(r => r.id !== planId);
-    saveResourcesMutation.mutate(updatedResources);
+    onSave(updatedResources);
     toast.success("Plan eliminado correctamente");
   };
 
@@ -161,19 +119,19 @@ export default function TrainingPlansBuilder({ trainingResources, trainingDocs, 
     });
   };
 
-  const plans = trainingResources.filter(r => r.type === 'training_plan');
+  const plans = (trainingPlans || []);
 
   return (
-    <Card>
+    <Card className="lg:col-span-2">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-blue-600" />
-              Catálogo de Planes de Formación
+              Constructor de Planes de Formación
             </CardTitle>
             <CardDescription>
-              Construye planes completos con documentos y materiales de formación
+              Crea planes completos con documentos y materiales de formación
             </CardDescription>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -239,7 +197,7 @@ export default function TrainingPlansBuilder({ trainingResources, trainingDocs, 
                   <Label className="text-base font-semibold">Documentos del Catálogo</Label>
                   <ScrollArea className="h-[150px] border rounded-md p-3">
                     <div className="space-y-2">
-                      {trainingDocs.length > 0 ? trainingDocs.map(doc => (
+                      {trainingDocs && trainingDocs.length > 0 ? trainingDocs.map(doc => (
                         <div key={doc.id} className="flex items-center gap-2">
                           <Checkbox 
                             checked={planForm.documents.includes(doc.id)}
@@ -259,7 +217,7 @@ export default function TrainingPlansBuilder({ trainingResources, trainingDocs, 
                         </div>
                       )) : (
                         <p className="text-sm text-slate-500 text-center">
-                          No hay documentos en el catálogo. Ve a la pestaña "Formaciones" para añadir documentos.
+                          No hay documentos en el catálogo. Ve a "Documentos de formaciones" para añadir documentos.
                         </p>
                       )}
                     </div>
@@ -366,7 +324,7 @@ export default function TrainingPlansBuilder({ trainingResources, trainingDocs, 
                             <p className="text-xs font-semibold text-slate-500 mb-1">Documentos del Catálogo ({plan.documents.length})</p>
                             <ul className="space-y-1">
                               {plan.documents.map(docId => {
-                                const doc = trainingDocs.find(d => d.id === docId);
+                                const doc = trainingDocs?.find(d => d.id === docId);
                                 return doc ? (
                                   <li key={docId} className="text-xs flex items-center gap-1">
                                     <FileText className="w-3 h-3 text-blue-600" />
