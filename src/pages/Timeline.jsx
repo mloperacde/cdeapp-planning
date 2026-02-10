@@ -88,7 +88,11 @@ export default function Timeline() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto space-y-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex-1 overflow-auto space-y-6"
+      >
           <Card className="bg-white/80 dark:bg-card/80 backdrop-blur-sm shadow-xl border-0">
             <TimelineControls
               viewMode={viewMode}

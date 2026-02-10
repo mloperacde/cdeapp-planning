@@ -48,6 +48,7 @@ import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 import { useLockerData } from "@/hooks/useLockerData";
 import { base44 } from "@/api/base44Client";
+import { cleanLockerNumber } from "@/utils";
 
 const EMPTY_ARRAY = [];
 
