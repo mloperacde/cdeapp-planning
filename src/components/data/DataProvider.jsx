@@ -213,415 +213,56 @@ export function DataProvider({ children }) {
     retry: 0,
   });
 
-  // 13. CONFIGURACIÓN DE ROLES - Cache 5 min
+  // 13. CONFIGURACIÓN DE ROLES - Simple y directa
   const rolesConfigQuery = useQuery({
     queryKey: ['rolesConfig'],
     queryFn: async () => {
       if (isLocal) return null;
       try {
-          console.log("DataProvider: Buscando configuración de roles (Aggressive)...");
+          console.log("DataProvider: Cargando configuración de roles...");
           
           let config = null;
 
-          // ESTRATEGIA v9: DIRECT ID FETCH (Bypass Indexing Lag)
-          // Si acabamos de guardar, sabemos el ID exacto. Intentemos recuperarlo directamente.
-          try {
-              const lastSaveId = localStorage.getItem('last_save_id_roles_config');
-              if (lastSaveId) {
-                  console.log(`DataProvider: Intentando recuperación directa por ID conocido (${lastSaveId})...`);
-                  
-                  // RETRY LOGIC FOR DIRECT FETCH
-                  let directRecord = null;
-                  for (let i = 0; i < 5; i++) {
-                      try {
-                          directRecord = await base44.entities.AppConfig.get(lastSaveId);
-                          if (directRecord) break;
-                      } catch (e) {
-                          // If 404, it's deleted/missing. Don't retry.
-                          if (e.message && e.message.includes('404')) {
-                              console.warn(`DataProvider: Direct fetch 404 (Not Found) for ${lastSaveId}. Removing stale ID.`);
-                              localStorage.removeItem('last_save_id_roles_config');
-                              break;
-                          }
-                          console.warn(`DataProvider: Direct fetch attempt ${i+1} failed`, e);
-                          await new Promise(r => setTimeout(r, 1000));
-                      }
-                  }
-
-                  if (directRecord && (directRecord.key === 'roles_config' || directRecord.config_key === 'roles_config')) {
-                        console.log("DataProvider: ¡Recuperación directa exitosa (Master Record)!");
-                        config = directRecord;
-                        // Nota: El toast se moverá al final para confirmar que los datos son válidos
-                    }
-              }
-          } catch (e) {
-              console.warn("DataProvider: Error en recuperación directa", e);
-          }
-
-          if (!config) {
-              // CLIENT-SIDE CONSISTENCY CHECK
-              // If we recently saved data, ensure we don't return older data.
-              let minRequiredTimestamp = 0;
-          try {
-              const localTs = localStorage.getItem('last_save_ts_roles_config');
-              if (localTs) minRequiredTimestamp = parseInt(localTs, 10);
-          } catch(e) {}
-
-          const MAX_RETRIES = 10;
-          const RETRY_DELAY = 1000;
-
-          // Remove local 'config' shadowing to ensure we update the outer variable
-          let bestCandidateSoFar = null;
-
-          for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-               if (attempt > 0) {
-                   console.log(`[RolesConfig] Attempt ${attempt}: Data stale or missing, retrying in ${RETRY_DELAY}ms...`);
-                   await new Promise(r => setTimeout(r, RETRY_DELAY));
-               }
-
-               // ESTRATEGIA AGRESIVA DE LECTURA (Paralela)
-               const [byConfigKey, byKey, recentItems] = await Promise.all([
-                  base44.entities.AppConfig.filter({ config_key: 'roles_config' }).catch(() => []),
-                  base44.entities.AppConfig.filter({ key: 'roles_config' }).catch(() => []),
-                  base44.entities.AppConfig.list('-updated_at', 50).catch(() => [])
-               ]);
-     
-               // Recolectar candidatos
-               let candidates = [...(byConfigKey || []), ...(byKey || [])];
-               
-               // Buscar en lista reciente (para vencer lag de indexación)
-               const recentCandidates = recentItems.filter(r => r.key === 'roles_config' || r.config_key === 'roles_config');
-               candidates = [...candidates, ...recentCandidates];
-               
-               // Deduplicar por ID
-               candidates = Array.from(new Map(candidates.map(c => [c.id, c])).values());
-     
-               // Ordenar por fecha de actualización (más reciente primero)
-               // FIX: Handle invalid dates and prioritize internal timestamps
-               candidates.sort((a, b) => {
-                   const getTs = (item) => {
-                       // 1. Try internal timestamp (most reliable)
-                       try {
-                           const val = item.value || item.description || item.app_subtitle;
-                           if (val && val.startsWith('{')) {
-                               const p = JSON.parse(val);
-                               if (p._ts) return p._ts;
-                               if (p.timestamp) return p.timestamp;
-                           }
-                       } catch(e) {}
-                       
-                       // 2. Fallback to record timestamp
-                       const d = new Date(item.updated_at || item.created_at || 0);
-                       return isNaN(d.getTime()) ? 0 : d.getTime();
-                   };
-                   return getTs(b) - getTs(a);
-               });
-     
-               config = candidates.length > 0 ? candidates[0] : null;
-               
-               if (config) {
-                   bestCandidateSoFar = config;
-               }
-
-               // Parse to check timestamp inside
-               if (config && minRequiredTimestamp > 0) {
-                    let ts = 0;
-                    try {
-                        const val = config.value || config.description || config.app_subtitle;
-                        if (val && val.startsWith('{')) {
-                             const p = JSON.parse(val);
-                             if (p._ts) ts = p._ts;
-                        }
-                    } catch(e) {}
-                    
-                    // Fallback if no internal ts
-                    if (ts === 0) {
-                        const d = new Date(config.updated_at);
-                        if (!isNaN(d.getTime())) ts = d.getTime();
-                    }
-
-                    if (ts > 0 && ts < minRequiredTimestamp) {
-                         console.warn(`[RolesConfig] Found TS ${ts} < Required ${minRequiredTimestamp}. Retrying...`);
-                         config = null; // Force retry
-                         continue;
-                    }
-               }
-
-               if (config) break; // Found good config
+          // ESTRATEGIA SIMPLE: Buscar por config_key
+          const results = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+          console.log("DataProvider: Resultados de búsqueda:", results);
+          
+          if (!results || results.length === 0) {
+              console.log("DataProvider: No se encontró configuración de roles");
+              return null;
           }
           
-          if (!config && bestCandidateSoFar) {
-              if (minRequiredTimestamp > 0) {
-                  // CRITICAL FIX: If we expect new data but timed out, THROW to prevent reverting to old data.
-                  // This keeps useRolesManager from overwriting the local optimistic state with stale server data.
-                  const msg = `[RolesConfig] Consistency Failure: Required TS ${minRequiredTimestamp} not found.`;
-                  console.error(msg);
-                  throw new Error(msg);
-              }
-              console.warn(`[RolesConfig] Consistency Timeout. Returning best available candidate.`);
-              config = bestCandidateSoFar;
-          }
-          } // End if (!config)
+          // Tomar el primer resultado (debería haber solo uno)
+          config = results[0];
+          console.log("DataProvider: Configuración encontrada:", config.id);
 
           if (!config) {
-              // Silently fail or debug log
+              console.log("DataProvider: No se encontró configuración");
               return null;
           }
 
-          if (!config?.value) {
-              // INFO: Esto es normal si el backend rechaza el payload en 'value' pero lo aceptó en 'description'
-              const hasDescriptionBackup = config?.description && config.description.startsWith('{');
-              const hasLocalBackup = typeof localStorage !== 'undefined' && localStorage.getItem('roles_config_backup');
-              
-              if (hasDescriptionBackup) {
-                  config.value = config.description;
-              } 
-              else if (hasLocalBackup) {
-                  const localBackup = localStorage.getItem('roles_config_backup');
-                  if (localBackup && localBackup.startsWith('{')) {
-                       config.value = localBackup;
-                  }
-              }
-              
-              if (!config.value) {
-                   console.debug("DataProvider: Configuración de roles no inicializada (usando defaults).");
-                   return {
-                       roles: {
-                           admin: { permissions: { isAdmin: true } },
-                           user: { permissions: { isAdmin: false } }
-                       },
-                       user_assignments: {}
-                   };
-              }
+          if (!config.value) {
+              console.log("DataProvider: Config sin valor, usando defaults");
+              return null;
           }
 
+          // Parsear JSON simple
           try {
-            let jsonString = config.value;
-            
-            // DETECCIÓN INTELIGENTE DE FORMATO
-            // Si no parece JSON (no empieza por {), asumimos que es Base64 y decodificamos
-            if (jsonString && !jsonString.trim().startsWith('{')) {
-                try {
-                    jsonString = decodeURIComponent(escape(atob(jsonString)));
-                } catch (e) {
-                    // Fail silently or debug
-                }
-            }
-
-            let parsed = JSON.parse(jsonString);
-            
-            // v8 SUPPORT: Direct ID Linking
-            if (parsed._v === 8 && parsed._chunk_ids && Array.isArray(parsed._chunk_ids)) {
-                 try {
-                     // Robust Chunk Fetching with Retries
-                     const fetchChunkWithRetry = async (id, retries = 3) => {
-                         for (let i = 0; i < retries; i++) {
-                             try {
-                                 const c = await base44.entities.AppConfig.get(id);
-                                 if (c) return c;
-                             } catch (e) {
-                                 console.warn(`[DataProvider] Chunk ${id} fetch failed (attempt ${i+1})`, e);
-                                 await new Promise(r => setTimeout(r, 500));
-                             }
-                         }
-                         return null;
-                     };
-
-                     const chunkPromises = parsed._chunk_ids.map(id => fetchChunkWithRetry(id));
-                     const chunkResults = await Promise.all(chunkPromises);
-                     
-                     let fullString = "";
-                     let missingChunks = false;
-                     
-                     chunkResults.forEach((res, idx) => {
-                         if (res && (res.value || res.description)) {
-                             fullString += (res.value || res.description);
-                         } else {
-                             console.warn(`[DataProvider] Missing chunk ${idx} (${parsed._chunk_ids[idx]})`);
-                             missingChunks = true;
-                         }
-                     });
-                     
-                     if (missingChunks || !fullString) {
-                         console.error("[DataProvider] Incomplete v8 data. Missing chunks.");
-                         // If v9 direct fetch was used, this is a critical failure. 
-                         // But we can't fall back to search because search will likely yield old data.
-                         // Return parsed.data (likely null) is the only safe option unless we want to try "Search" as a desperate fallback?
-                         // Let's stick to null but log heavily.
-                         return parsed.data || null;
-                     }
-
-                     try {
-                         const reassembled = JSON.parse(fullString);
-                         // Success!
-                         if (config.id === localStorage.getItem('last_save_id_roles_config')) {
-                             toast.success("⚡ Roles sincronizados y verificados (v9)", { duration: 2000, id: 'roles-sync-success' });
-                         }
-
-                         // Handle v2 compression inside v8 payload
-                         if (reassembled.v === 2 && reassembled.r) {
-                             // Update parsed to point to the reassembled v2 object
-                             // so it falls through to the v2 decompression logic below
-                             parsed = reassembled;
-                         } else {
-                             // If not v2, return as is
-                             return reassembled;
-                         }
-                     } catch(e) {
-                         console.warn("Failed to parse reassembled v8 content", e);
-                         return parsed.data || null;
-                     }
-
-                 } catch(e) {
-                     console.error("[DataProvider] v8 Chunk retrieval failed", e);
-                     return parsed.data || null;
-                 }
-            }
-
-            // LÓGICA DE REENSAMBLADO DE CHUNKS (v3)
-            if (parsed.v === 3 && parsed.is_chunked) {
-                try {
-                    // Fetch all chunks in parallel
-                    const chunkPromises = [];
-                    for(let i = 0; i < parsed.total_chunks; i++) {
-                        chunkPromises.push(base44.entities.AppConfig.filter({ config_key: `roles_config_chunk_${i}` }));
-                    }
-                    
-                    const chunkResults = await Promise.all(chunkPromises);
-                    let fullString = "";
-                    
-                    chunkResults.forEach((res, idx) => {
-                        if (res && res.length > 0 && res[0].value) {
-                            fullString += res[0].value;
-                        } else {
-                            throw new Error(`Falta el chunk ${idx}`);
-                        }
-                    });
-                    
-                    // Parseamos el string completo (que debería ser un v2 compressed config)
-                    const reassembled = JSON.parse(fullString);
-                    
-                    // Si es v2, lo procesamos con la lógica de v2
-                    if (reassembled.v === 2) {
-                         // Recursive call logic or just proceed to v2 block below?
-                         // Better to just update parsed variable and fall through
-                         // parsed = reassembled; // Can't reassign const
-                         
-                         // Quick hack: Execute v2 logic here
-                         const dictionary = reassembled.d;
-                         const roles = {};
-                         Object.keys(reassembled.r).forEach(roleId => {
-                            const cRole = reassembled.r[roleId];
-                            const page_permissions = {};
-                            if (cRole.pp) {
-                                cRole.pp.forEach(idx => {
-                                    if (dictionary[idx]) page_permissions[dictionary[idx]] = true;
-                                });
-                            }
-                            roles[roleId] = {
-                                name: cRole.n,
-                                is_strict: !!cRole.s,
-                                permissions: cRole.p || {},
-                                page_permissions,
-                                isSystem: cRole.sys
-                            };
-                        });
-                        return { roles, user_assignments: reassembled.ua || {} };
-                    }
-                    
-                    return reassembled;
-
-                } catch (chunkError) {
-                    console.error("DataProvider: Error reensamblando chunks", chunkError);
-                    // Fallback a backup local si existe
-                    const localBackup = typeof localStorage !== 'undefined' ? localStorage.getItem('roles_config_backup') : null;
-                    if (localBackup) {
-                         console.warn("DataProvider: Usando backup local tras fallo de chunks.");
-                         // El backup local es el string v2 comprimido
-                         const backupParsed = JSON.parse(localBackup);
-                         if (backupParsed.v === 2) {
-                             // Copiar lógica v2... (DRY violation but safe)
-                             const dictionary = backupParsed.d;
-                             const roles = {};
-                             Object.keys(backupParsed.r).forEach(roleId => {
-                                const cRole = backupParsed.r[roleId];
-                                const page_permissions = {};
-                                if (cRole.pp) {
-                                    cRole.pp.forEach(idx => {
-                                        if (dictionary[idx]) page_permissions[dictionary[idx]] = true;
-                                    });
-                                }
-                                roles[roleId] = {
-                                    name: cRole.n,
-                                    is_strict: !!cRole.s,
-                                    permissions: cRole.p || {},
-                                    page_permissions,
-                                    isSystem: cRole.sys
-                                };
-                            });
-                            return { roles, user_assignments: backupParsed.ua || {} };
-                         }
-                    }
-                    return null;
-                }
-            }
-
-            // LÓGICA DE DESCOMPRESIÓN (v2)
-            if (parsed.v === 2 && parsed.r && parsed.d) {
-                console.log("DataProvider: Detectada configuración comprimida (v2). Descomprimiendo...");
-                const dictionary = parsed.d;
-                const roles = {};
-                
-                Object.keys(parsed.r).forEach(roleId => {
-                    const cRole = parsed.r[roleId];
-                    const page_permissions = {};
-                    if (cRole.pp) {
-                        cRole.pp.forEach(idx => {
-                            if (dictionary[idx]) {
-                                page_permissions[dictionary[idx]] = true;
-                            }
-                        });
-                    }
-                    
-                    roles[roleId] = {
-                        name: cRole.n,
-                        is_strict: !!cRole.s,
-                        permissions: cRole.p || {},
-                        page_permissions,
-                        isSystem: cRole.sys // Opcional, si lo guardamos
-                    };
-                });
-                
-                const decompressed = {
-                    roles,
-                    user_assignments: parsed.ua || {}
-                };
-                console.log(`DataProvider: Descompresión exitosa. Roles: ${Object.keys(roles).length}`);
-                return decompressed;
-            }
-
-            console.log(`DataProvider: Configuración parseada correctamente. Roles: ${Object.keys(parsed.roles || {}).length}, Asignaciones: ${Object.keys(parsed.user_assignments || {}).length}`);
+            const parsed = JSON.parse(config.value);
+            console.log(`DataProvider: Config parseada. Roles: ${Object.keys(parsed.roles || {}).length}`);
             return parsed;
-          } catch (parseError) {
-            console.error("CRITICAL: Error parsing roles_config JSON:", parseError, "Raw value:", config.value);
-            // Intentar recuperar si es un problema de doble stringify
-            try {
-               const doubleParsed = JSON.parse(JSON.parse(config.value));
-               console.warn("Recovered roles_config from double-stringified JSON");
-               return doubleParsed;
-            } catch(e) {
-               // Fallback final: devolver null para evitar crash, pero loguear fuerte
-               return null;
-            }
+          } catch (error) {
+            console.error("DataProvider: Error parseando JSON:", error);
+            return null;
           }
         } catch (err) {
           console.error('Error loading roles configuration:', err);
           return null;
         }
     },
-    staleTime: 0, // Desactivar cache para asegurar que siempre se obtenga la última versión
-    gcTime: 0,    // No mantener en memoria basura
-    refetchOnWindowFocus: true, // Refrescar al volver a la ventana
+    staleTime: 0, // Siempre refrescar
+    gcTime: 0,
+    refetchOnWindowFocus: true
   });
 
   // 14. BRANDING - Cache 1 hora (cambia poco) -> Ahora staleTime 0 para debug y reactividad inmediata

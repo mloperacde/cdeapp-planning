@@ -156,36 +156,47 @@ export function useRolesManager() {
     setIsDirty(true);
   }, []);
 
-  // SAVE - Simplificado sin chunks ni v8
+  // SAVE - Ultra simple y directo
   const saveConfig = useCallback(async () => {
     if (!localConfig) return;
     
     setIsSaving(true);
+    console.log("💾 Guardando configuración...", localConfig);
+    
     try {
-      // Buscar registro existente
+      // 1. Buscar registro existente
       const existing = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
+      console.log("📦 Registros existentes:", existing);
       
-      // Preparar payload simple
+      // 2. Preparar payload
       const payload = {
         config_key: 'roles_config',
         value: JSON.stringify(localConfig)
       };
 
+      let savedRecord = null;
       if (existing && existing.length > 0) {
         // Update
-        await base44.entities.AppConfig.update(existing[0].id, payload);
+        console.log("📝 Actualizando registro existente:", existing[0].id);
+        savedRecord = await base44.entities.AppConfig.update(existing[0].id, payload);
       } else {
         // Create
-        await base44.entities.AppConfig.create(payload);
+        console.log("✨ Creando nuevo registro");
+        savedRecord = await base44.entities.AppConfig.create(payload);
       }
-
-      // Refrescar desde servidor
-      await refetchRolesConfig();
       
-      toast.success("✓ Configuración guardada exitosamente");
+      console.log("✅ Guardado exitoso:", savedRecord);
+
+      // 3. Actualizar estado local como servidor
+      setServerConfig(JSON.parse(JSON.stringify(localConfig)));
       setIsDirty(false);
+      
+      // 4. Refrescar desde servidor para confirmar
+      setTimeout(() => refetchRolesConfig(), 500);
+      
+      toast.success("✓ Configuración guardada correctamente");
     } catch (error) {
-      console.error("Error guardando configuración:", error);
+      console.error("❌ Error guardando:", error);
       toast.error("Error al guardar: " + error.message);
     } finally {
       setIsSaving(false);
