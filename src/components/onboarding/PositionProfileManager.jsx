@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,16 +141,78 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     return (trainingResources || []).filter(r => r.type === 'training');
   }, [trainingResources]);
 
-  const { 
-    data: profiles, 
-    save: saveProfiles,
-    isSaving 
-  } = usePersistentAppConfig(
-    'position_profiles_v1',
-    INITIAL_PROFILES,
-    'positionProfiles',
-    false
-  );
+  const { data: profiles, isLoading: profilesLoading } = useQuery({
+    queryKey: ['positionProfiles'],
+    queryFn: async () => {
+      try {
+        const results = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
+        
+        if (!results || results.length === 0) {
+          return INITIAL_PROFILES;
+        }
+        
+        // Usar solo el más reciente (primero)
+        const record = results[0];
+        const jsonString = record.value || record.app_subtitle || record.description;
+        
+        if (!jsonString) {
+          return INITIAL_PROFILES;
+        }
+        
+        const parsed = JSON.parse(jsonString);
+        return parsed || INITIAL_PROFILES;
+      } catch (error) {
+        console.error('Error cargando perfiles:', error);
+        return INITIAL_PROFILES;
+      }
+    },
+    initialData: INITIAL_PROFILES,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+
+  const saveProfilesMutation = useMutation({
+    mutationFn: async (updatedProfiles) => {
+      const payload = {
+        config_key: 'position_profiles_v1',
+        app_name: 'Position Profiles',
+        value: JSON.stringify(updatedProfiles),
+        app_subtitle: JSON.stringify(updatedProfiles),
+      };
+
+      const existing = await base44.entities.AppConfig.filter({ config_key: 'position_profiles_v1' });
+      
+      if (existing && existing.length > 0) {
+        // Actualizar el primero
+        const mainRecord = existing[0];
+        await base44.entities.AppConfig.update(mainRecord.id, payload);
+        
+        // ELIMINAR duplicados obsoletos
+        const obsoleteRecords = existing.slice(1);
+        for (const obsolete of obsoleteRecords) {
+          try {
+            await base44.entities.AppConfig.delete(obsolete.id);
+          } catch (err) {
+            console.warn('No se pudo eliminar duplicado:', obsolete.id, err);
+          }
+        }
+        
+        return mainRecord;
+      } else {
+        return base44.entities.AppConfig.create(payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['positionProfiles'] });
+      toast.success('Perfil guardado correctamente');
+    },
+    onError: (error) => {
+      console.error('Error guardando perfil:', error);
+      toast.error('Error al guardar perfil');
+    }
+  });
+
+  const isSaving = saveProfilesMutation.isPending;
 
   // Sync logic: Only update local state if ID changed OR server data is new (and we haven't edited)
   useEffect(() => {
@@ -212,7 +273,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
       [selectedProfileId]: localProfile
     };
     
-    saveProfiles(newProfiles);
+    saveProfilesMutation.mutate(newProfiles);
     setHasChanges(false);
   };
 
@@ -255,7 +316,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
       [id]: newProfile
     };
 
-    saveProfiles(newProfiles);
+    saveProfilesMutation.mutate(newProfiles);
     setSelectedProfileId(id);
   };
 
@@ -272,7 +333,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
     const newProfiles = { ...profiles };
     delete newProfiles[profileId];
     
-    saveProfiles(newProfiles);
+    saveProfilesMutation.mutate(newProfiles);
     
     // Select another profile if we deleted the current one
     if (selectedProfileId === profileId) {
