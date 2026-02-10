@@ -6,22 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Factory, Wrench, Package, ClipboardCheck, Sparkles, ArrowLeft } from "lucide-react";
+import { Calendar, ClipboardCheck, Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
-import ProductionPlanningTab from "../components/dailyplanning/ProductionPlanningTab";
-import MaintenancePlanningTab from "../components/dailyplanning/MaintenancePlanningTab";
-import WarehousePlanningTab from "../components/dailyplanning/WarehousePlanningTab";
 import QualityPlanningTab from "../components/dailyplanning/QualityPlanningTab";
 
-
-export default function DailyPlanningPage() {
+export default function QualityPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTeam, setSelectedTeam] = useState('');
-  const [activeTab, setActiveTab] = useState('production');
   const [isCalling, setIsCalling] = useState(false);
 
   const { data: teams = [] } = useQuery({
@@ -41,14 +35,9 @@ export default function DailyPlanningPage() {
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
     initialData: [],
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 0,
     refetchOnMount: true,
   });
-
-  // Debug logging
-  console.log('DailyPlanning: Loaded schedules:', teamSchedules.length);
-  console.log('DailyPlanning: Selected Date:', selectedDate);
-
 
   // Get shift for selected date and team
   const selectedShift = useMemo(() => {
@@ -97,14 +86,14 @@ export default function DailyPlanningPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <ClipboardCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Planning Diario
+              Planning de Calidad
             </h1>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-              Planificación diaria de producción, mantenimiento, almacén y calidad
+              Planificación diaria de tareas de calidad
             </p>
           </div>
         </div>
@@ -196,67 +185,19 @@ export default function DailyPlanningPage() {
                 <p><strong>📅 Fecha:</strong> {format(new Date(selectedDate), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</p>
                 <p><strong>👥 Equipo:</strong> {getTeamName(selectedTeam)}</p>
                 <p><strong>⏰ Turno:</strong> {selectedShift || 'Pendiente de asignar'}</p>
-                <p className="text-xs mt-2 text-blue-700">
-                  Configura la planificación para cada departamento usando las pestañas abajo
-                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabs para diferentes departamentos */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="production" className="flex items-center gap-2" type="button">
-              <Factory className="w-4 h-4" />
-              Fabricación
-            </TabsTrigger>
-            <TabsTrigger value="maintenance" className="flex items-center gap-2" type="button">
-              <Wrench className="w-4 h-4" />
-              Mantenimiento
-            </TabsTrigger>
-            <TabsTrigger value="warehouse" className="flex items-center gap-2" type="button">
-              <Package className="w-4 h-4" />
-              Almacén
-            </TabsTrigger>
-            <TabsTrigger value="quality" className="flex items-center gap-2" type="button">
-              <ClipboardCheck className="w-4 h-4" />
-              Calidad
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="production">
-            <ProductionPlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-
-          <TabsContent value="maintenance">
-            <MaintenancePlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-
-          <TabsContent value="warehouse">
-            <WarehousePlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-
-          <TabsContent value="quality">
-            <QualityPlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-        </Tabs>
+        {/* Contenido Calidad */}
+        <QualityPlanningTab
+            selectedDate={selectedDate}
+            selectedTeam={selectedTeam}
+            selectedShift={selectedShift}
+            teams={teams}
+            teamSchedules={teamSchedules}
+        />
       </div>
     </div>
   );

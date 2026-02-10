@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { format, startOfWeek } from "date-fns";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Save, Trash2, Edit, Wrench } from "lucide-react";
+import { Plus, Save, Trash2, Edit, Wrench, Clock, ArrowRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table.jsx";
 
-export default function MaintenancePlanningTab({ selectedDate, selectedTeam, selectedShift }) {
+export default function MaintenancePlanningTab({ selectedDate, selectedTeam, selectedShift, teams = [], teamSchedules = [] }) {
   const [showForm, setShowForm] = useState(false);
   const [editingPlanning, setEditingPlanning] = useState(null);
   const queryClient = useQueryClient();
@@ -115,6 +114,21 @@ export default function MaintenancePlanningTab({ selectedDate, selectedTeam, sel
     setShowForm(true);
   };
 
+  const handleAdd14hTask = (employeeId) => {
+    setEditingPlanning(null);
+    setFormData({
+        employee_id: employeeId || "",
+        funcion_asignada: "",
+        area_responsabilidad: "",
+        prioridad: "Media",
+        maquinas_asignadas: [],
+        notas: "Tarea de refuerzo/solape",
+        hora_inicio: "14:00",
+        hora_fin: "15:00",
+      });
+      setShowForm(true);
+  }
+
   const handleClose = () => {
     setShowForm(false);
     setEditingPlanning(null);
@@ -141,30 +155,122 @@ export default function MaintenancePlanningTab({ selectedDate, selectedTeam, sel
     }
   };
 
-  const filteredPlannings = plannings.filter(
-    p => p.fecha === selectedDate && p.team_key === selectedTeam
-  );
+  // Identify Tarde Team
+  const tardeTeam = useMemo(() => {
+    if (!selectedDate || teamSchedules.length === 0) return null;
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    
+    const schedule = teamSchedules.find(s => 
+      s.fecha_inicio_semana === weekStartStr && s.turno === 'Tarde'
+    );
+    return teams.find(t => t.team_key === schedule?.team_key);
+  }, [selectedDate, teamSchedules, teams]);
 
+  // Filter Employees
   const maintenanceEmployees = employees.filter(emp => 
     emp.departamento === "MANTENIMIENTO" && 
     emp.disponibilidad === "Disponible" &&
     emp.incluir_en_planning !== false
   );
 
+  const employees14h = useMemo(() => {
+    if (!tardeTeam) return [];
+    return maintenanceEmployees.filter(emp => emp.equipo === tardeTeam.team_name);
+  }, [maintenanceEmployees, tardeTeam]);
+
+  const filteredPlannings = plannings.filter(
+    p => p.fecha === selectedDate && p.team_key === selectedTeam
+  );
+
+  // Plannings specifically for 14h slot (heuristic: starts at 14:00)
+  const plannings14h = filteredPlannings.filter(p => p.hora_inicio === '14:00');
+
   const getEmployeeName = (id) => employees.find(e => e.id === id)?.nombre || 'N/A';
-  const getMachineName = (id) => machines.find(m => m.id === id)?.alias || id;
 
   return (
     <div className="space-y-6">
+        
+      {/* Module 14:00 - 15:00 */}
+      <Card className="shadow-lg border-0 bg-gradient-to-r from-indigo-50 to-blue-50 border-l-4 border-l-indigo-500">
+        <CardHeader className="border-b border-indigo-100 pb-3">
+             <CardTitle className="flex items-center gap-2 text-indigo-900 text-lg">
+              <Clock className="w-5 h-5 text-indigo-600" />
+              Planificación 14:00 a 15:00 (Incorporación Turno Tarde)
+            </CardTitle>
+            <p className="text-xs text-indigo-600 font-medium">
+                {tardeTeam ? `Personal del ${tardeTeam.team_name}` : 'No se detectó turno de tarde'}
+            </p>
+        </CardHeader>
+        <CardContent className="p-4">
+            {employees14h.length === 0 ? (
+                <p className="text-sm text-slate-500 italic">No hay empleados de turno tarde disponibles para mostrar.</p>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {employees14h.map(emp => {
+                        const task = filteredPlannings.find(p => p.employee_id === emp.id && (p.hora_inicio === '14:00' || (p.hora_inicio <= '14:00' && p.hora_fin >= '15:00')));
+                        return (
+                            <div key={emp.id} className="flex flex-col gap-2 p-3 bg-white rounded-lg border border-indigo-100 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-start">
+                                    <span className="font-semibold text-sm text-slate-800">{emp.nombre}</span>
+                                    {task ? (
+                                        <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px]">Asignado</Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="text-slate-400 text-[10px]">Sin tarea</Badge>
+                                    )}
+                                </div>
+                                
+                                {task ? (
+                                    <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded">
+                                        <p className="font-medium truncate">{task.funcion_asignada}</p>
+                                        <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                                            <Clock className="w-3 h-3"/> {task.hora_inicio} - {task.hora_fin}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="w-full text-xs h-7 border border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50"
+                                        onClick={() => handleAdd14hTask(emp.id)}
+                                    >
+                                        <Plus className="w-3 h-3 mr-1"/> Asignar Tarea 14h
+                                    </Button>
+                                )}
+                                {task && (
+                                     <Button 
+                                        variant="link" 
+                                        size="sm" 
+                                        className="text-[10px] h-auto p-0 self-end text-indigo-600"
+                                        onClick={() => handleEdit(task)}
+                                    >
+                                        Editar
+                                    </Button>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </CardContent>
+      </Card>
+
+      {/* General Assignment */}
       <Card className="shadow-lg border-0 bg-gradient-to-br from-orange-50 to-amber-50">
         <CardHeader className="border-b border-orange-100">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2 text-orange-900">
               <Wrench className="w-6 h-6" />
-              Planificación de Mantenimiento - {selectedShift || 'Sin turno'}
+              Asignación General de Tareas - {selectedShift || 'Sin turno'}
             </CardTitle>
             <Button
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                  setEditingPlanning(null);
+                  setFormData({ ...formData, employee_id: "", hora_inicio: "", hora_fin: "" }); // Reset
+                  setShowForm(true);
+              }}
               className="bg-orange-600 hover:bg-orange-700"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -263,7 +369,7 @@ export default function MaintenancePlanningTab({ selectedDate, selectedTeam, sel
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label>Empleado *</Label>
                   <Select
                     value={formData.employee_id}

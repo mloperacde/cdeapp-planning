@@ -59,7 +59,9 @@ import Breaks from './pages/Breaks';
 import CalidadSkills from './pages/CalidadSkills';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
-import DailyPlanning from './pages/DailyPlanning';
+import MaintenancePlanningPage from './pages/MaintenancePlanningPage';
+import WarehousePlanningPage from './pages/WarehousePlanningPage';
+import QualityPlanningPage from './pages/QualityPlanningPage';
 import DailyProductionPlanningPage from './pages/DailyProductionPlanningPage';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
@@ -101,7 +103,6 @@ import SupportManagement1415 from './pages/SupportManagement1415';
 import Timeline from './pages/Timeline';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import DailyPlanning from './pages/DailyPlanning';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
@@ -121,7 +122,9 @@ export const PAGES = {
     "CalidadSkills": CalidadSkills,
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
-    "DailyPlanning": DailyPlanning,
+    "MaintenancePlanningPage": MaintenancePlanningPage,
+    "WarehousePlanningPage": WarehousePlanningPage,
+    "QualityPlanningPage": QualityPlanningPage,
     "DailyProductionPlanningPage": DailyProductionPlanningPage,
     "DailyShiftPlanning": DailyShiftPlanning,
     "Dashboard": Dashboard,
@@ -163,7 +166,6 @@ export const PAGES = {
     "Timeline": Timeline,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "DailyPlanning": DailyPlanning,
     "DailyShiftPlanning": DailyShiftPlanning,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,

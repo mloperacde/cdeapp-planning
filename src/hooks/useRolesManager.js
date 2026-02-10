@@ -69,7 +69,6 @@ export const DEFAULT_ROLES_CONFIG = {
       },
       page_permissions: {
         '/Dashboard': true,
-        '/DailyPlanning': true,
         '/EmployeesShiftManager': true,
         '/ProductionPlanning': true,
         '/OrderImport': true,
@@ -98,6 +97,7 @@ export const DEFAULT_ROLES_CONFIG = {
       },
       page_permissions: {
         '/Dashboard': true,
+        '/QualityPlanningPage': true,
         '/QualityControl': true,
         '/Reports': true,
         '/CalidadSkills': true
@@ -119,6 +119,7 @@ export const DEFAULT_ROLES_CONFIG = {
       },
       page_permissions: {
         '/Dashboard': true,
+        '/MaintenancePlanningPage': true,
         '/MaintenanceTracking': true,
         '/MachineManagement': true,
         '/Reports': true,
@@ -144,7 +145,6 @@ export const DEFAULT_ROLES_CONFIG = {
         '/Dashboard': true,
         '/DailyProductionPlanningPage': true,
         '/EmployeesShiftManager': true,
-        '/DailyPlanning': true,
         '/ProductionPlanning': true,
         '/Reports': true,
         '/PlanificacionSkills': true

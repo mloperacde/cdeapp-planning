@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,22 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Factory, Wrench, Package, ClipboardCheck, Sparkles, ArrowLeft } from "lucide-react";
+import { Calendar, Wrench, Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
-import ProductionPlanningTab from "../../components/dailyplanning/ProductionPlanningTab";
-import MaintenancePlanningTab from "../../components/dailyplanning/MaintenancePlanningTab";
-import WarehousePlanningTab from "../../components/dailyplanning/WarehousePlanningTab";
-import QualityPlanningTab from "../../components/dailyplanning/QualityPlanningTab";
+import MaintenancePlanningTab from "../components/dailyplanning/MaintenancePlanningTab";
 
-
-export default function DailyPlanningPage() {
+export default function MaintenancePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedTeam, setSelectedTeam] = useState('team_1');
-  const [activeTab, setActiveTab] = useState('production');
+  const [selectedTeam, setSelectedTeam] = useState('');
   const [isCalling, setIsCalling] = useState(false);
 
   const { data: teams = [] } = useQuery({
@@ -30,10 +24,19 @@ export default function DailyPlanningPage() {
     initialData: [],
   });
 
+  // Set default team when teams are loaded
+  useEffect(() => {
+    if (teams.length > 0 && !selectedTeam) {
+        setSelectedTeam(teams[0].team_key);
+    }
+  }, [teams, selectedTeam]);
+
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
-    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
     initialData: [],
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Get shift for selected date and team
@@ -41,8 +44,11 @@ export default function DailyPlanningPage() {
     const team = teams.find(t => t.team_key === selectedTeam);
     if (!team) return null;
 
-    const weekStart = new Date(selectedDate);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekStart.getDay() === 0 ? -6 : 1));
+    // Parse date explicitly to avoid timezone issues with Mondays
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    
+    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
 
     const schedule = teamSchedules.find(
@@ -76,40 +82,43 @@ export default function DailyPlanningPage() {
 
   return (
     <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
-      {/* Header Estándar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <Wrench className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Planning Diario
+              Planning de Mantenimiento
             </h1>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-              Planificación diaria de producción, mantenimiento, almacén y calidad
+              Planificación diaria de tareas de mantenimiento
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" size="sm" className="h-8 gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Volver</span>
-            </Button>
-          </Link>
-          <Button
+           <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleCallSchedulingAssistant}
             disabled={isCalling}
-            size="sm"
-            className="h-8 gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+            className="h-8 gap-2 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800"
           >
             <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">{isCalling ? "Generando..." : "Asistente IA"}</span>
+            {isCalling ? "Generando..." : "Asistente IA"}
           </Button>
+          <Link to={createPageUrl("Dashboard")}>
+            <Button type="button" variant="ghost" size="sm" className="h-8 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
+          </Link>
         </div>
       </div>
+      
+      <div className="flex flex-col gap-6">
 
         {/* Filtros Globales */}
         <Card className="mb-6 shadow-lg border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
@@ -176,67 +185,20 @@ export default function DailyPlanningPage() {
                 <p><strong>📅 Fecha:</strong> {format(new Date(selectedDate), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</p>
                 <p><strong>👥 Equipo:</strong> {getTeamName(selectedTeam)}</p>
                 <p><strong>⏰ Turno:</strong> {selectedShift || 'Pendiente de asignar'}</p>
-                <p className="text-xs mt-2 text-blue-700">
-                  Configura la planificación para cada departamento usando las pestañas abajo
-                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabs para diferentes departamentos */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="production" className="flex items-center gap-2" type="button">
-              <Factory className="w-4 h-4" />
-              Fabricación
-            </TabsTrigger>
-            <TabsTrigger value="maintenance" className="flex items-center gap-2" type="button">
-              <Wrench className="w-4 h-4" />
-              Mantenimiento
-            </TabsTrigger>
-            <TabsTrigger value="warehouse" className="flex items-center gap-2" type="button">
-              <Package className="w-4 h-4" />
-              Almacén
-            </TabsTrigger>
-            <TabsTrigger value="quality" className="flex items-center gap-2" type="button">
-              <ClipboardCheck className="w-4 h-4" />
-              Calidad
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="production">
-            <ProductionPlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-
-          <TabsContent value="maintenance">
-            <MaintenancePlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-
-          <TabsContent value="warehouse">
-            <WarehousePlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-
-          <TabsContent value="quality">
-            <QualityPlanningTab
-              selectedDate={selectedDate}
-              selectedTeam={selectedTeam}
-              selectedShift={selectedShift}
-            />
-          </TabsContent>
-        </Tabs>
+        {/* Contenido Mantenimiento */}
+        <MaintenancePlanningTab
+            selectedDate={selectedDate}
+            selectedTeam={selectedTeam}
+            selectedShift={selectedShift}
+            teams={teams}
+            teamSchedules={teamSchedules}
+        />
+      </div>
     </div>
   );
 }

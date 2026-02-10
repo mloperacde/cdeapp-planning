@@ -25,7 +25,6 @@ export const MENU_STRUCTURE = [
   
   // Planificación
   { name: 'Personal Fabricación', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Planificación' },
-  { name: 'Planning Diario', icon: Calendar, path: '/DailyPlanning', category: 'Planificación' },
   { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
   { name: 'Importar Órdenes', icon: Download, path: '/OrderImport', category: 'Planificación' },
   { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
@@ -40,13 +39,16 @@ export const MENU_STRUCTURE = [
   { name: 'Fabricación - Habilidades', icon: Award, path: '/FabricacionSkills', category: 'Fabricación' },
   
   // Mantenimiento
+  { name: 'Planning Mantenimiento', icon: Calendar, path: '/MaintenancePlanningPage', category: 'Mantenimiento' },
   { name: 'Seguimiento', icon: Wrench, path: '/MaintenanceTracking', category: 'Mantenimiento' },
   { name: 'Mantenimiento - Habilidades', icon: Award, path: '/MantenimientoSkills', category: 'Mantenimiento' },
 
   // Almacén
+  { name: 'Planning Almacén', icon: Calendar, path: '/WarehousePlanningPage', category: 'Almacén' },
   { name: 'Almacén - Habilidades', icon: Award, path: '/AlmacenSkills', category: 'Almacén' },
 
   // Calidad
+  { name: 'Planning Calidad', icon: Calendar, path: '/QualityPlanningPage', category: 'Calidad' },
   { name: 'Calidad - Habilidades', icon: Award, path: '/CalidadSkills', category: 'Calidad' },
   
   // Análisis

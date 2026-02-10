@@ -9,7 +9,9 @@ import AttendanceManagement from "./AttendanceManagement";
 import BrandingConfig from "./BrandingConfig";
 import CommitteeManagement from "./CommitteeManagement";
 import Configuration from "./Configuration";
-import DailyPlanning from "./DailyPlanning";
+import MaintenancePlanningPage from "./MaintenancePlanningPage";
+import WarehousePlanningPage from "./WarehousePlanningPage";
+import QualityPlanningPage from "./QualityPlanningPage";
 import DailyProductionPlanningPage from "./DailyProductionPlanningPage";
 import DailyShiftPlanning from "./DailyShiftPlanning";
 import Dashboard from "./Dashboard";
@@ -87,7 +89,9 @@ const PAGES = {
   BrandingConfig: BrandingConfig,
   CommitteeManagement: CommitteeManagement,
   Configuration: Configuration,
-  DailyPlanning: DailyPlanning,
+  MaintenancePlanningPage: MaintenancePlanningPage,
+  WarehousePlanningPage: WarehousePlanningPage,
+  QualityPlanningPage: QualityPlanningPage,
   DailyProductionPlanningPage: DailyProductionPlanningPage,
   DailyShiftPlanning: DailyShiftPlanning,
   DocumentManagement: DocumentManagement,
@@ -192,7 +196,9 @@ function PagesContent() {
                 <Route path="/AbsenceTypeConfig" element={<AbsenceTypeConfig />} />
                 <Route path="/AbsenceConfiguration" element={<AbsenceTypeConfig />} />
                 <Route path="/AbsenceConfigurationTab" element={<AbsenceTypeConfig />} />
-                <Route path="/DailyPlanning" element={<DailyPlanning />} />
+                <Route path="/MaintenancePlanningPage" element={<MaintenancePlanningPage />} />
+                <Route path="/WarehousePlanningPage" element={<WarehousePlanningPage />} />
+                <Route path="/QualityPlanningPage" element={<QualityPlanningPage />} />
                 <Route path="/DailyProductionPlanningPage" element={<DailyProductionPlanningPage />} />
                 <Route path="/DailyShiftPlanning" element={<DailyShiftPlanning />} />
                 
