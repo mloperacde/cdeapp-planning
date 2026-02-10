@@ -147,25 +147,48 @@ export default function ProcessConfigurationPage() {
     }).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
   }, [processes, processFilters]);
 
-  const handleDragEnd = async (result, machineId) => {
+  const handleDragEnd = async (result) => {
     if (!result.destination) return;
 
-    const machineProcs = getMachineProcesses(machineId);
-    const items = Array.from(machineProcs);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    if (result.type === 'MACHINE') {
+        const items = Array.from(filteredMachines);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
 
-    // Update orden for all items
-    const updates = items.map((item, index) => 
-      base44.entities.MachineProcess.update(item.id, { orden: index })
-    );
+        const updates = items.map((item, index) => 
+          base44.entities.MachineMasterDatabase.update(item.id, { orden_visualizacion: index + 1 })
+        );
 
-    try {
-      await Promise.all(updates);
-      queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
-      toast.success("Orden actualizado");
-    } catch {
-      toast.error("Error al actualizar orden");
+        try {
+          await Promise.all(updates);
+          queryClient.invalidateQueries({ queryKey: ['machines'] });
+          toast.success("Orden de máquinas actualizado");
+        } catch {
+          toast.error("Error al actualizar orden");
+        }
+        return;
+    }
+
+    if (result.type === 'PROCESS') {
+        // Parse machine ID from droppableId "machine-{id}"
+        const machineId = result.source.droppableId.replace('machine-', '');
+        const machineProcs = getMachineProcesses(machineId);
+        const items = Array.from(machineProcs);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
+
+        // Update orden for all items
+        const updates = items.map((item, index) => 
+          base44.entities.MachineProcess.update(item.id, { orden: index })
+        );
+
+        try {
+          await Promise.all(updates);
+          queryClient.invalidateQueries({ queryKey: ['machineProcesses'] });
+          toast.success("Orden actualizado");
+        } catch {
+          toast.error("Error al actualizar orden");
+        }
     }
   };
 
@@ -344,26 +367,7 @@ export default function ProcessConfigurationPage() {
     });
   };
 
-  const handleMachineDragEnd = async (result) => {
-    if (!result.destination) return;
 
-    const items = Array.from(filteredMachines);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    // Update orden for all machines
-    const updates = items.map((item, index) => 
-      base44.entities.MachineMasterDatabase.update(item.id, { orden_visualizacion: index + 1 })
-    );
-
-    try {
-      await Promise.all(updates);
-      queryClient.invalidateQueries({ queryKey: ['machines'] });
-      toast.success("Orden de máquinas actualizado");
-    } catch {
-      toast.error("Error al actualizar orden");
-    }
-  };
 
   const handleCopyProcess = (machine, mp) => {
     const otherMachines = machines.filter(m => m.id !== machine.id);
@@ -632,7 +636,7 @@ export default function ProcessConfigurationPage() {
               No se encontraron máquinas con los filtros seleccionados
             </div>
           ) : (
-            <DragDropContext onDragEnd={handleMachineDragEnd}>
+            <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="machines-list" type="MACHINE">
                 {(provided, snapshot) => (
                   <div 

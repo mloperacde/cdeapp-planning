@@ -37,6 +37,7 @@ export default function ProductionPlanningPage() {
   const [selectedMachine, setSelectedMachine] = useState("all");
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Data Fetching
   const { data: machines = [] } = useQuery({
@@ -64,7 +65,10 @@ export default function ProductionPlanningPage() {
 
   const { data: workOrders = [] } = useQuery({
     queryKey: ['workOrders'],
-    queryFn: () => base44.entities.WorkOrder.list(),
+    queryFn: async () => {
+      if (!base44.entities.WorkOrder) return [];
+      return await base44.entities.WorkOrder.list();
+    },
   });
 
   const { data: processes = [] } = useQuery({
@@ -135,6 +139,11 @@ export default function ProductionPlanningPage() {
 
   const handleSyncCdeApp = async () => {
     setIsSyncing(true);
+    let toastId;
+    
+    // Función helper de normalización estricta para matching
+    const normalizeKey = (str) => String(str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
     toast.info("Conectando con CDEApp...");
     
     try {

@@ -48,7 +48,6 @@ import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 import { useLockerData } from "@/hooks/useLockerData";
 import { base44 } from "@/api/base44Client";
-import { cleanLockerNumber } from "@/utils";
 
 const EMPTY_ARRAY = [];
 
@@ -71,14 +70,14 @@ export default function LockerManagementPage() {
   const queryClient = useQueryClient();
   
   const {
-    employees,
-    lockerAssignments,
-    teams,
-    lockerRoomConfigs,
-    isLoading,
+    employees = [],
+    lockerAssignments = [],
+    teams = [],
+    lockerRoomConfigs = [],
+    isLoading = false,
     saveAssignments,
     isSaving
-  } = useLockerData();
+  } = useLockerData() || {};
 
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
@@ -534,39 +533,42 @@ export default function LockerManagementPage() {
 
   const stats = useMemo(() => {
     // Contar solo empleados activos en Employee entity
-    const activeEmployees = employees.filter(emp => 
+    const activeEmployees = (employees || []).filter(emp => 
       (emp.estado_empleado || "Alta") === "Alta"
     );
     
-    const conTaquilla = lockerAssignments.filter(la => {
+    const conTaquilla = (lockerAssignments || []).filter(la => {
       // Verificar que el empleado exista y esté activo
       const employee = activeEmployees.find(e => String(e.id) === String(la.employee_id));
       if (!employee) return false;
       
-      const tieneTaquilla = cleanLockerNumber(la.numero_taquilla_actual) !== "";
+      const numeroTaquilla = la.numero_taquilla_actual;
+      const tieneTaquilla = numeroTaquilla !== null && numeroTaquilla !== undefined && cleanLockerNumber(numeroTaquilla) !== "";
       const requiere = la.requiere_taquilla !== false;
       return tieneTaquilla && requiere;
     }).length;
 
     const sinTaquilla = activeEmployees.filter(emp => {
-      const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
+      const assignment = (lockerAssignments || []).find(la => String(la.employee_id) === String(emp.id));
       if (!assignment) return true;
       if (assignment.requiere_taquilla === false) return false;
-      const tieneTaquilla = assignment.numero_taquilla_actual && 
-                           String(assignment.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
+      const numeroTaquilla = assignment.numero_taquilla_actual;
+      const tieneTaquilla = numeroTaquilla !== null && numeroTaquilla !== undefined && 
+                           String(numeroTaquilla).replace(/['"''‚„]/g, '').trim() !== "";
       return !tieneTaquilla;
     }).length;
 
-    const pendientesNotificacion = lockerAssignments.filter(la => {
+    const pendientesNotificacion = (lockerAssignments || []).filter(la => {
       const employee = activeEmployees.find(e => String(e.id) === String(la.employee_id));
       if (!employee) return false;
       
-      const tieneTaquilla = la.numero_taquilla_actual && 
-                           String(la.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
+      const numeroTaquilla = la.numero_taquilla_actual;
+      const tieneTaquilla = numeroTaquilla !== null && numeroTaquilla !== undefined && 
+                           String(numeroTaquilla).replace(/['"''‚„]/g, '').trim() !== "";
       return !la.notificacion_enviada && tieneTaquilla && la.requiere_taquilla !== false;
     }).length;
 
-    const cambiosPendientes = Object.values(editingAssignments).filter(ea => {
+    const cambiosPendientes = Object.values(editingAssignments || {}).filter(ea => {
       const tieneNuevaTaquilla = ea.numero_taquilla_nuevo && 
                                 ea.numero_taquilla_nuevo.trim() !== "";
       const esDiferente = ea.numero_taquilla_nuevo !== ea.numero_taquilla_actual;
@@ -1325,7 +1327,6 @@ export default function LockerManagementPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
 
       {showHistory && selectedEmployee && (
         <Dialog open={true} onOpenChange={setShowHistory}>

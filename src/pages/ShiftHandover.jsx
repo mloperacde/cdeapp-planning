@@ -49,7 +49,10 @@ export default function ShiftHandoverPage() {
 
   const { data: handovers } = useQuery({
     queryKey: ['shiftHandovers', selectedDate, turnoSaliente, turnoEntrante],
-    queryFn: () => base44.entities.ShiftHandover.list(),
+    queryFn: () => {
+      if (!base44.entities.ShiftHandover) return [];
+      return base44.entities.ShiftHandover.list();
+    },
     initialData: [],
   });
 
@@ -413,7 +416,6 @@ export default function ShiftHandoverPage() {
             </p>
           </div>
         )}
-      </div>
     </div>
   );
 }

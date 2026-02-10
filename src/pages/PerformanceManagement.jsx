@@ -47,7 +47,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
  
 import { Link } from "react-router-dom";
-import { createPageUrl, getEmployeeName } from "@/utils";
+import { createPageUrl } from "@/utils";
 
 export default function PerformanceManagementPage() {
   const [activeTab, setActiveTab] = useState("reviews");

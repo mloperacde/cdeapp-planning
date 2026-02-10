@@ -126,6 +126,5 @@ export default function Timeline() {
           <WorkCalendar />
         </motion.div>
       </div>
-    </div>
   );
 }

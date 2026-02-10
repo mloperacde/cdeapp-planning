@@ -59,6 +59,22 @@ export default function DocumentManagementPage() {
     initialData: []
   });
 
+  const getEntityName = (doc) => {
+    if (!doc.entidad_asociada_id) return null;
+    
+    if (doc.tipo_entidad_asociada === 'MAQUINA') {
+      const machine = machines.find(m => m.id === doc.entidad_asociada_id);
+      return machine ? (machine.nombre || machine.codigo) : 'Máquina desconocida';
+    }
+    
+    if (doc.tipo_entidad_asociada === 'EMPLEADO') {
+      const emp = employees.find(e => e.id === doc.entidad_asociada_id);
+      return emp ? (emp.nombre || emp.name) : 'Empleado desconocido';
+    }
+    
+    return doc.entidad_asociada_id;
+  };
+
   const categories = useMemo(() => {
     return [...new Set(documents.map(d => d.categoria).filter(Boolean))].sort();
   }, [documents]);
