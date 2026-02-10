@@ -22,18 +22,118 @@ import { useRolesManager } from '@/components/hooks/useRolesManager';
 import { ROLE_PERMISSIONS } from '@/components/permissions/usePermissions';
 import { toast } from "sonner";
 
-// Definición de permisos y sus etiquetas legibles
-const PERMISSION_LABELS = {
-  isAdmin: "Administrador Total",
-  canViewSalary: "Ver Salarios",
-  canViewPersonalData: "Ver Datos Personales",
-  canViewBankingData: "Ver Datos Bancarios",
-  canEditEmployees: "Editar Empleados",
-  canApproveAbsences: "Aprobar Ausencias",
-  canManageMachines: "Gestionar Máquinas",
-  canViewReports: "Ver Informes",
-  canConfigureSystem: "Configurar Sistema",
+// Definición de permisos y sus etiquetas legibles - ORGANIZADOS POR CATEGORÍAS
+const PERMISSION_CATEGORIES = {
+  system: {
+    label: "Sistema y Administración",
+    permissions: {
+      isAdmin: "Administrador Total (Full Access)",
+      canConfigureSystem: "Configurar Sistema",
+      canManageUsers: "Gestionar Usuarios y Roles",
+      canViewAuditLogs: "Ver Registros de Auditoría",
+      canModifySecuritySettings: "Modificar Configuración de Seguridad",
+      canAccessBackendFunctions: "Acceder a Funciones Backend"
+    }
+  },
+  hr: {
+    label: "Recursos Humanos",
+    permissions: {
+      canViewPersonalData: "Ver Datos Personales",
+      canEditPersonalData: "Editar Datos Personales",
+      canViewSalary: "Ver Información Salarial",
+      canEditSalary: "Editar Información Salarial",
+      canViewBankingData: "Ver Datos Bancarios",
+      canEditBankingData: "Editar Datos Bancarios",
+      canEditEmployees: "Editar Perfiles de Empleados",
+      canViewSensitiveDocuments: "Ver Documentos Confidenciales",
+      canManageContracts: "Gestionar Contratos",
+      canViewPerformanceReviews: "Ver Evaluaciones de Desempeño",
+      canEditPerformanceReviews: "Editar Evaluaciones de Desempeño",
+      canManageTraining: "Gestionar Formación y Capacitación"
+    }
+  },
+  absences: {
+    label: "Ausencias y Asistencia",
+    permissions: {
+      canViewOwnAbsences: "Ver Ausencias Propias",
+      canCreateOwnAbsences: "Crear Ausencias Propias",
+      canViewAllAbsences: "Ver Todas las Ausencias",
+      canApproveAbsences: "Aprobar/Rechazar Ausencias",
+      canDeleteAbsences: "Eliminar Ausencias",
+      canViewAttendance: "Ver Registros de Asistencia",
+      canManageVacationBalance: "Gestionar Saldos de Vacaciones",
+      canOverrideAbsenceRules: "Sobrepasar Reglas de Ausencias"
+    }
+  },
+  production: {
+    label: "Producción y Planificación",
+    permissions: {
+      canViewPlanning: "Ver Planificación",
+      canEditPlanning: "Editar Planificación",
+      canScheduleProduction: "Programar Órdenes de Producción",
+      canModifyProductionOrders: "Modificar Órdenes Activas",
+      canViewProductionCosts: "Ver Costos de Producción",
+      canAccessShiftPlanning: "Acceder a Planificación de Turnos",
+      canAssignOperators: "Asignar Operadores a Máquinas"
+    }
+  },
+  machines: {
+    label: "Máquinas y Mantenimiento",
+    permissions: {
+      canViewMachines: "Ver Información de Máquinas",
+      canManageMachines: "Gestionar Configuración de Máquinas",
+      canViewMachineCosts: "Ver Costos de Máquinas",
+      canScheduleMaintenance: "Programar Mantenimiento",
+      canApproveMaintenance: "Aprobar Mantenimiento",
+      canViewMaintenanceHistory: "Ver Historial de Mantenimiento",
+      canEditMaintenanceRecords: "Editar Registros de Mantenimiento",
+      canAccessMachineDiagnostics: "Acceder a Diagnósticos de Máquinas"
+    }
+  },
+  quality: {
+    label: "Calidad y Control",
+    permissions: {
+      canViewQualityData: "Ver Datos de Calidad",
+      canRecordQualityInspections: "Registrar Inspecciones de Calidad",
+      canApproveQualityReports: "Aprobar Informes de Calidad",
+      canAccessNonConformities: "Acceder a No Conformidades"
+    }
+  },
+  warehouse: {
+    label: "Almacén e Inventario",
+    permissions: {
+      canViewInventory: "Ver Inventario",
+      canManageInventory: "Gestionar Inventario",
+      canViewInventoryCosts: "Ver Costos de Inventario",
+      canApproveOrders: "Aprobar Pedidos",
+      canReceiveGoods: "Recepcionar Mercancía",
+      canShipGoods: "Despachar Mercancía"
+    }
+  },
+  reports: {
+    label: "Informes y Análisis",
+    permissions: {
+      canViewReports: "Ver Informes Básicos",
+      canViewAdvancedReports: "Ver Informes Avanzados",
+      canViewFinancialReports: "Ver Informes Financieros",
+      canAccessAnalytics: "Acceder a Analytics y KPIs",
+      canExportData: "Exportar Datos",
+      canAccessRealTimeData: "Acceder a Datos en Tiempo Real"
+    }
+  }
 };
+
+// Función helper para obtener todos los permisos en formato plano
+const getAllPermissions = () => {
+  const allPerms = {};
+  Object.values(PERMISSION_CATEGORIES).forEach(category => {
+    Object.assign(allPerms, category.permissions);
+  });
+  return allPerms;
+};
+
+// Legacy compatibility
+const PERMISSION_LABELS = getAllPermissions();
 
 // Helper para calcular permisos efectivos (Simulación)
 const calculateEffectivePermissions = (roleId, rolesConfig) => {
@@ -446,78 +546,85 @@ export default function AppUserManagement() {
               </Button>
             </CardHeader>
             <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px] bg-slate-50 dark:bg-slate-900 sticky left-0 z-10">Permiso</TableHead>
-                    {roleKeys.map(roleId => (
-                     <TableHead key={roleId} className="text-center min-w-[120px]">
-                       <div className="flex flex-col items-center gap-1">
-                         <span className="font-bold">{localConfig.roles[roleId].name}</span>
-                         {localConfig.roles[roleId].parent_role && (
-                           <Badge variant="outline" className="text-[9px] px-1 py-0">
-                             ← {localConfig.roles[localConfig.roles[roleId].parent_role]?.name}
-                           </Badge>
-                         )}
-                         <div className="flex gap-1">
-                           {!localConfig.roles[roleId].isSystem && (
-                             <>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="h-5 w-5 text-blue-400 hover:text-blue-600"
-                                 onClick={() => {
-                                   setRoleToClone(roleId);
-                                   setCloneName(localConfig.roles[roleId].name + " (Copia)");
-                                   setCloneId(roleId + "_copy");
-                                   setIsCloneDialogOpen(true);
-                                 }}
-                                 title="Clonar rol"
-                               >
-                                 <Copy className="w-3 h-3" />
-                               </Button>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="h-5 w-5 text-red-400 hover:text-red-600"
-                                 onClick={() => handleDeleteRoleWrapper(roleId)}
-                                 title="Eliminar rol"
-                               >
-                                 <Trash2 className="w-3 h-3" />
-                               </Button>
-                             </>
-                           )}
-                         </div>
-                       </div>
-                     </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Object.entries(PERMISSION_LABELS).map(([permKey, label]) => (
-                    <TableRow key={permKey}>
-                      <TableCell className="font-medium bg-slate-50 dark:bg-slate-900 sticky left-0 z-10 border-r">
-                        {label}
-                        <p className="text-xs text-slate-400 font-normal">{permKey}</p>
-                      </TableCell>
-                      {roleKeys.map(roleId => {
-                        const isChecked = localConfig.roles[roleId].permissions[permKey];
-                        const isLocked = roleId === 'admin'; 
-                        
-                        return (
-                          <TableCell key={`${roleId}-${permKey}`} className="text-center">
-                            <Checkbox 
-                              checked={isLocked ? true : isChecked}
-                              disabled={isLocked}
-                              onCheckedChange={(checked) => updatePermission(roleId, permKey, checked)}
-                            />
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ScrollArea className="h-[700px]">
+              <div className="space-y-6">
+                {Object.entries(PERMISSION_CATEGORIES).map(([categoryKey, category]) => (
+                  <div key={categoryKey} className="border rounded-lg p-4 bg-white">
+                    <h3 className="font-bold text-lg mb-4 text-slate-700 flex items-center gap-2 pb-2 border-b">
+                      <Shield className="w-5 h-5 text-blue-600" />
+                      {category.label}
+                    </h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[280px] bg-slate-50 dark:bg-slate-900 sticky left-0 z-10">Permiso</TableHead>
+                          {roleKeys.map(roleId => (
+                            <TableHead key={roleId} className="text-center min-w-[100px]">
+                              <div className="flex flex-col items-center gap-1">
+                                <span className="font-bold text-xs">{localConfig.roles[roleId].name}</span>
+                                {categoryKey === 'system' && !localConfig.roles[roleId].isSystem && (
+                                  <div className="flex gap-1 mt-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-5 w-5 text-blue-400 hover:text-blue-600"
+                                      onClick={() => {
+                                        setRoleToClone(roleId);
+                                        setCloneName(localConfig.roles[roleId].name + " (Copia)");
+                                        setCloneId(roleId + "_copy");
+                                        setIsCloneDialogOpen(true);
+                                      }}
+                                      title="Clonar rol"
+                                    >
+                                      <Copy className="w-3 h-3" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-5 w-5 text-red-400 hover:text-red-600"
+                                      onClick={() => handleDeleteRoleWrapper(roleId)}
+                                      title="Eliminar rol"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(category.permissions).map(([permKey, label]) => (
+                          <TableRow key={permKey}>
+                            <TableCell className="font-medium bg-slate-50 dark:bg-slate-900 sticky left-0 z-10 border-r">
+                              <div className="flex flex-col">
+                                <span className="text-sm">{label}</span>
+                                <code className="text-[10px] text-slate-400 font-mono">{permKey}</code>
+                              </div>
+                            </TableCell>
+                            {roleKeys.map(roleId => {
+                              const isChecked = localConfig.roles[roleId].permissions[permKey];
+                              const isLocked = roleId === 'admin' && permKey === 'isAdmin';
+
+                              return (
+                                <TableCell key={`${roleId}-${permKey}`} className="text-center">
+                                  <Checkbox 
+                                    checked={isLocked ? true : (isChecked || false)}
+                                    disabled={isLocked}
+                                    onCheckedChange={(checked) => updatePermission(roleId, permKey, checked)}
+                                  />
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ))}
+              </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
@@ -965,12 +1072,13 @@ export default function AppUserManagement() {
                         </div>
                     </div>
 
-                    {/* 3. Effective Permissions Simulation */}
+                    {/* 3. Effective Permissions Simulation - Organizado por Categorías */}
                     <div className="space-y-3">
                         <h4 className="font-semibold flex items-center gap-2">
                             <Shield className="w-4 h-4" /> Permisos Efectivos (Simulación)
                         </h4>
-                        <div className="bg-slate-50 p-4 rounded-lg border text-sm space-y-2">
+                        <ScrollArea className="h-[500px]">
+                        <div className="bg-slate-50 p-4 rounded-lg border text-sm space-y-4">
                             {(() => {
                                 // Recalcular ID efectivo para usar en permisos
                                 const email = selectedUser.email?.toLowerCase();
@@ -993,21 +1101,39 @@ export default function AppUserManagement() {
                                 const perms = calculateEffectivePermissions(effectiveRoleId, localConfig);
                                 
                                 return (
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                                            <div key={key} className="flex items-center justify-between">
-                                                <span>{label}</span>
-                                                {perms[key] ? (
-                                                    <CheckCircle className="w-4 h-4 text-green-500" />
-                                                ) : (
-                                                    <X className="w-4 h-4 text-slate-300" />
-                                                )}
-                                            </div>
-                                        ))}
+                                    <div className="space-y-4">
+                                        {Object.entries(PERMISSION_CATEGORIES).map(([catKey, category]) => {
+                                            const categoryPerms = Object.entries(category.permissions);
+                                            const enabledCount = categoryPerms.filter(([key]) => perms[key]).length;
+                                            
+                                            return (
+                                                <div key={catKey} className="border rounded-lg p-3 bg-white">
+                                                    <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                                                        <h5 className="font-semibold text-xs text-slate-700">{category.label}</h5>
+                                                        <Badge variant="outline" className={enabledCount > 0 ? "text-green-600 border-green-200" : "text-slate-400"}>
+                                                            {enabledCount}/{categoryPerms.length}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-1.5">
+                                                        {categoryPerms.map(([key, label]) => (
+                                                            <div key={key} className="flex items-center justify-between text-xs">
+                                                                <span className="truncate">{label}</span>
+                                                                {perms[key] ? (
+                                                                    <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0 ml-2" />
+                                                                ) : (
+                                                                    <X className="w-3.5 h-3.5 text-slate-300 flex-shrink-0 ml-2" />
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             })()}
                         </div>
+                        </ScrollArea>
                     </div>
 
                     {/* 4. Page Access */}
