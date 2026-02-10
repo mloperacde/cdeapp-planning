@@ -1007,12 +1007,73 @@ export default function PositionProfileManager({ trainingResources = [] }) {
       <iframe ref={iframeRef} className="hidden" />
       </div>
 
-      {/* Training Plans Builder */}
-      <TrainingPlansBuilder 
-        trainingResources={trainingResources} 
-        trainingDocs={trainingDocs}
-        trainingPlans={trainingPlans}
-      />
+      {/* Training Plans Catalog Display */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-blue-600" />
+                Catálogo de Planes de Formación Disponibles
+              </CardTitle>
+              <CardDescription>
+                Planes configurados que puedes asignar a los perfiles de puesto
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {trainingPlans && trainingPlans.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {trainingPlans.map((plan) => (
+                <Card key={plan.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold">{plan.title}</h4>
+                        {plan.duration && (
+                          <Badge variant="outline" className="text-xs">
+                            {plan.duration}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {plan.colectivo && (
+                        <Badge className="bg-purple-100 text-purple-800 text-xs">
+                          {plan.colectivo}
+                        </Badge>
+                      )}
+                      
+                      {plan.description && (
+                        <p className="text-sm text-slate-600">{plan.description}</p>
+                      )}
+
+                      <div className="flex gap-4 text-xs text-slate-500 pt-2">
+                        {plan.documents && plan.documents.length > 0 && (
+                          <span>📄 {plan.documents.length} documentos</span>
+                        )}
+                        {plan.files && plan.files.length > 0 && (
+                          <span>📎 {plan.files.length} archivos</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg bg-slate-50">
+              <BookOpen className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+              <p className="text-slate-500 text-sm mb-2">
+                No hay planes de formación configurados
+              </p>
+              <p className="text-xs text-slate-400">
+                Ve a la pestaña "Formaciones" para crear planes de formación
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
