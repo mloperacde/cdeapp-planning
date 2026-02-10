@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Shield, Users, Save, Plus, Trash2, AlertCircle, RotateCcw, Factory, Search, X, Lock, CheckCircle, ArrowLeft, UserCog, Eye, Key } from "lucide-react";
+import { Shield, Users, Save, Plus, Trash2, AlertCircle, RotateCcw, Factory, Search, X, Lock, CheckCircle, ArrowLeft, UserCog, Eye, Key, Copy, GitBranch, Database } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
@@ -77,10 +77,13 @@ export default function AppUserManagement() {
     isSaving,
     isLoading,
     updatePermission,
-    updatePagePermission, // Usado en la pestaña de navegación (opcional si se mantiene)
-    setRoleMode, // Usado para bloqueos masivos
+    updatePagePermission,
+    updateFieldPermission, // NEW
+    updateParentRole, // NEW
+    setRoleMode,
     updateUserAssignment,
     addRole,
+    cloneRole, // NEW
     deleteRole,
     saveConfig,
     resetConfig,
@@ -91,6 +94,17 @@ export default function AppUserManagement() {
   const [isNewRoleOpen, setIsNewRoleOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleId, setNewRoleId] = useState("");
+  const [parentRoleForNew, setParentRoleForNew] = useState(null);
+  
+  // Estados para clonar
+  const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+  const [roleToClone, setRoleToClone] = useState(null);
+  const [cloneName, setCloneName] = useState("");
+  const [cloneId, setCloneId] = useState("");
+  
+  // Estados para field permissions
+  const [isFieldPermissionsOpen, setIsFieldPermissionsOpen] = useState(false);
+  const [selectedRoleForFields, setSelectedRoleForFields] = useState(null);
   
   // Inspector de Usuario
   const [selectedUser, setSelectedUser] = useState(null);
@@ -152,11 +166,25 @@ export default function AppUserManagement() {
 
   const handleCreateRole = () => {
       try {
-          addRole(newRoleName, newRoleId);
+          addRole(newRoleName, newRoleId, parentRoleForNew);
           setIsNewRoleOpen(false);
           setNewRoleName("");
           setNewRoleId("");
+          setParentRoleForNew(null);
           toast.success("Rol creado provisionalmente. Recuerda guardar.");
+      } catch (e) {
+          toast.error(e.message);
+      }
+  };
+
+  const handleCloneRole = () => {
+      try {
+          cloneRole(roleToClone, cloneName, cloneId);
+          setIsCloneDialogOpen(false);
+          setRoleToClone(null);
+          setCloneName("");
+          setCloneId("");
+          toast.success("Rol clonado exitosamente. Recuerda guardar.");
       } catch (e) {
           toast.error(e.message);
       }
@@ -248,15 +276,21 @@ export default function AppUserManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[900px]">
           <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="w-4 h-4" /> Usuarios y Accesos
+            <Users className="w-4 h-4" /> Usuarios
           </TabsTrigger>
           <TabsTrigger value="matrix" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" /> Definición de Roles
+            <Shield className="w-4 h-4" /> Roles
           </TabsTrigger>
           <TabsTrigger value="navigation" className="flex items-center gap-2">
             <Factory className="w-4 h-4" /> Páginas
+          </TabsTrigger>
+          <TabsTrigger value="fields" className="flex items-center gap-2">
+            <Database className="w-4 h-4" /> Campos
+          </TabsTrigger>
+          <TabsTrigger value="hierarchy" className="flex items-center gap-2">
+            <GitBranch className="w-4 h-4" /> Herencia
           </TabsTrigger>
         </TabsList>
 
@@ -417,21 +451,45 @@ export default function AppUserManagement() {
                   <TableRow>
                     <TableHead className="w-[200px] bg-slate-50 dark:bg-slate-900 sticky left-0 z-10">Permiso</TableHead>
                     {roleKeys.map(roleId => (
-                      <TableHead key={roleId} className="text-center min-w-[100px]">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="font-bold">{localConfig.roles[roleId].name}</span>
-                          {!localConfig.roles[roleId].isSystem && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 text-red-400 hover:text-red-600"
-                              onClick={() => handleDeleteRoleWrapper(roleId)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableHead>
+                     <TableHead key={roleId} className="text-center min-w-[120px]">
+                       <div className="flex flex-col items-center gap-1">
+                         <span className="font-bold">{localConfig.roles[roleId].name}</span>
+                         {localConfig.roles[roleId].parent_role && (
+                           <Badge variant="outline" className="text-[9px] px-1 py-0">
+                             ← {localConfig.roles[localConfig.roles[roleId].parent_role]?.name}
+                           </Badge>
+                         )}
+                         <div className="flex gap-1">
+                           {!localConfig.roles[roleId].isSystem && (
+                             <>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-5 w-5 text-blue-400 hover:text-blue-600"
+                                 onClick={() => {
+                                   setRoleToClone(roleId);
+                                   setCloneName(localConfig.roles[roleId].name + " (Copia)");
+                                   setCloneId(roleId + "_copy");
+                                   setIsCloneDialogOpen(true);
+                                 }}
+                                 title="Clonar rol"
+                               >
+                                 <Copy className="w-3 h-3" />
+                               </Button>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-5 w-5 text-red-400 hover:text-red-600"
+                                 onClick={() => handleDeleteRoleWrapper(roleId)}
+                                 title="Eliminar rol"
+                               >
+                                 <Trash2 className="w-3 h-3" />
+                               </Button>
+                             </>
+                           )}
+                         </div>
+                       </div>
+                     </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -526,6 +584,249 @@ export default function AppUserManagement() {
                </ScrollArea>
             </CardContent>
            </Card>
+        </TabsContent>
+
+        {/* --- PESTAÑA CAMPOS (Field Level Permissions) --- */}
+        <TabsContent value="fields">
+          <Card>
+            <CardHeader>
+              <CardTitle>Permisos a Nivel de Campo</CardTitle>
+              <CardDescription>
+                Define permisos granulares de lectura/escritura para campos específicos de entidades.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Select value={selectedRoleForFields || ""} onValueChange={setSelectedRoleForFields}>
+                  <SelectTrigger className="w-[300px]">
+                    <SelectValue placeholder="Selecciona un rol..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleKeys.map(key => (
+                      <SelectItem key={key} value={key}>
+                        {localConfig.roles[key].name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectedRoleForFields && (
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <h3 className="font-semibold">Configuración de Campos - {localConfig.roles[selectedRoleForFields].name}</h3>
+                    
+                    {/* Ejemplo: EmployeeMasterDatabase */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm text-slate-600">EmployeeMasterDatabase</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {['salario_anual', 'iban', 'dni', 'nuss', 'fecha_nacimiento'].map(field => {
+                          const fieldPerms = localConfig.roles[selectedRoleForFields].field_permissions?.EmployeeMasterDatabase?.[field] || {};
+                          
+                          return (
+                            <div key={field} className="border rounded p-3 space-y-2">
+                              <div className="font-medium text-sm">{field}</div>
+                              <div className="flex gap-4 text-xs">
+                                <label className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={fieldPerms.read || false}
+                                    onCheckedChange={(checked) => 
+                                      updateFieldPermission(selectedRoleForFields, 'EmployeeMasterDatabase', field, 'read', checked)
+                                    }
+                                  />
+                                  Lectura
+                                </label>
+                                <label className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={fieldPerms.write || false}
+                                    onCheckedChange={(checked) => 
+                                      updateFieldPermission(selectedRoleForFields, 'EmployeeMasterDatabase', field, 'write', checked)
+                                    }
+                                  />
+                                  Escritura
+                                </label>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Ejemplo: MachineMasterDatabase */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm text-slate-600">MachineMasterDatabase</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {['codigo_maquina', 'estado_operativo', 'ultimo_mantenimiento'].map(field => {
+                          const fieldPerms = localConfig.roles[selectedRoleForFields].field_permissions?.MachineMasterDatabase?.[field] || {};
+                          
+                          return (
+                            <div key={field} className="border rounded p-3 space-y-2">
+                              <div className="font-medium text-sm">{field}</div>
+                              <div className="flex gap-4 text-xs">
+                                <label className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={fieldPerms.read || false}
+                                    onCheckedChange={(checked) => 
+                                      updateFieldPermission(selectedRoleForFields, 'MachineMasterDatabase', field, 'read', checked)
+                                    }
+                                  />
+                                  Lectura
+                                </label>
+                                <label className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={fieldPerms.write || false}
+                                    onCheckedChange={(checked) => 
+                                      updateFieldPermission(selectedRoleForFields, 'MachineMasterDatabase', field, 'write', checked)
+                                    }
+                                  />
+                                  Escritura
+                                </label>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-slate-500 bg-blue-50 p-3 rounded border border-blue-200">
+                      <strong>Nota:</strong> Los permisos de campo complementan los permisos generales. 
+                      Si el rol no tiene acceso general a la entidad, estos permisos no tendrán efecto.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* --- PESTAÑA HERENCIA (Role Hierarchy) --- */}
+        <TabsContent value="hierarchy">
+          <Card>
+            <CardHeader>
+              <CardTitle>Jerarquía y Herencia de Roles</CardTitle>
+              <CardDescription>
+                Define relaciones padre-hijo entre roles. Los roles hijos heredan automáticamente los permisos del padre.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Visual Hierarchy Tree */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold">Árbol de Herencia</h3>
+                  <div className="border rounded-lg p-4 bg-slate-50">
+                    {roleKeys.filter(k => !localConfig.roles[k].parent_role).map(rootRole => (
+                      <div key={rootRole} className="space-y-2">
+                        <div className="flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm">
+                          <Shield className="w-5 h-5 text-blue-600" />
+                          <div className="flex-1">
+                            <div className="font-bold">{localConfig.roles[rootRole].name}</div>
+                            <div className="text-xs text-slate-500">{rootRole}</div>
+                          </div>
+                          {localConfig.roles[rootRole].isSystem && (
+                            <Badge variant="secondary" className="text-xs">Sistema</Badge>
+                          )}
+                        </div>
+                        
+                        {/* Children */}
+                        <div className="ml-8 space-y-2">
+                          {roleKeys.filter(k => localConfig.roles[k].parent_role === rootRole).map(childRole => (
+                            <div key={childRole} className="flex items-center gap-3 p-3 bg-white border border-blue-200 rounded-lg">
+                              <div className="text-blue-400">└─</div>
+                              <GitBranch className="w-4 h-4 text-blue-500" />
+                              <div className="flex-1">
+                                <div className="font-medium">{localConfig.roles[childRole].name}</div>
+                                <div className="text-xs text-slate-500">{childRole}</div>
+                              </div>
+                              <Select 
+                                value={localConfig.roles[childRole].parent_role || "none"}
+                                onValueChange={(val) => updateParentRole(childRole, val === "none" ? null : val)}
+                              >
+                                <SelectTrigger className="w-[200px] h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Sin padre</SelectItem>
+                                  {roleKeys.filter(k => k !== childRole).map(k => (
+                                    <SelectItem key={k} value={k}>{localConfig.roles[k].name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Orphan roles (no parent set) */}
+                    {roleKeys.filter(k => !localConfig.roles[k].parent_role && !localConfig.roles[k].isSystem).length === 0 && (
+                      <div className="text-center py-8 text-slate-400">
+                        No hay roles personalizados sin padre
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Config table */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold">Configuración de Herencia</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Rol</TableHead>
+                        <TableHead>Rol Padre</TableHead>
+                        <TableHead>Permisos Heredados</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {roleKeys.map(roleId => {
+                        const role = localConfig.roles[roleId];
+                        const parentRole = role.parent_role ? localConfig.roles[role.parent_role] : null;
+                        const inheritedCount = parentRole ? Object.values(parentRole.permissions).filter(Boolean).length : 0;
+                        
+                        return (
+                          <TableRow key={roleId}>
+                            <TableCell className="font-medium">{role.name}</TableCell>
+                            <TableCell>
+                              {role.isSystem ? (
+                                <Badge variant="secondary">Rol del Sistema</Badge>
+                              ) : (
+                                <Select 
+                                  value={role.parent_role || "none"}
+                                  onValueChange={(val) => updateParentRole(roleId, val === "none" ? null : val)}
+                                >
+                                  <SelectTrigger className="w-[200px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">-- Sin Padre --</SelectItem>
+                                    {roleKeys.filter(k => k !== roleId && !localConfig.roles[k].isSystem).map(k => (
+                                      <SelectItem key={k} value={k}>{localConfig.roles[k].name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {parentRole ? (
+                                <Badge variant="outline" className="text-green-600 border-green-200">
+                                  {inheritedCount} permisos heredados
+                                </Badge>
+                              ) : (
+                                <span className="text-slate-400 text-sm">Sin herencia</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="text-xs text-slate-500 bg-amber-50 p-3 rounded border border-amber-200">
+                  <strong>Importante:</strong> Los roles hijos heredan TODOS los permisos del padre automáticamente.
+                  Puedes sobrescribir permisos específicos en el rol hijo. No se permiten ciclos de herencia.
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -764,7 +1065,7 @@ export default function AppUserManagement() {
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Crear Nuevo Rol</DialogTitle>
-                <DialogDescription>Define un identificador único y un nombre visible.</DialogDescription>
+                <DialogDescription>Define un identificador único, nombre visible y opcionalmente un rol padre.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -776,10 +1077,64 @@ export default function AppUserManagement() {
                     <Input value={newRoleId} onChange={(e) => setNewRoleId(e.target.value)} placeholder="Ej. external_auditor" />
                     <p className="text-xs text-slate-500">Solo letras minúsculas y guiones bajos.</p>
                 </div>
+                <div className="space-y-2">
+                    <Label>Rol Padre (Herencia)</Label>
+                    <Select value={parentRoleForNew || "none"} onValueChange={(val) => setParentRoleForNew(val === "none" ? null : val)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sin herencia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Sin Herencia --</SelectItem>
+                        {roleKeys.map(key => (
+                          <SelectItem key={key} value={key}>{localConfig.roles[key].name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      Si seleccionas un padre, el nuevo rol heredará todos sus permisos automáticamente.
+                    </p>
+                </div>
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsNewRoleOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreateRole}>Crear Rol</Button>
+                <Button onClick={handleCreateRole}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear Rol
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- CLONE DIALOG --- */}
+      <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Clonar Rol</DialogTitle>
+                <DialogDescription>
+                  Crea una copia exacta del rol "{roleToClone ? localConfig.roles[roleToClone]?.name : ''}" con un nuevo nombre.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label>Nombre del Nuevo Rol</Label>
+                    <Input value={cloneName} onChange={(e) => setCloneName(e.target.value)} placeholder="Ej. Auditor Junior" />
+                </div>
+                <div className="space-y-2">
+                    <Label>Identificador (ID)</Label>
+                    <Input value={cloneId} onChange={(e) => setCloneId(e.target.value)} placeholder="Ej. auditor_junior" />
+                    <p className="text-xs text-slate-500">Solo letras minúsculas y guiones bajos.</p>
+                </div>
+                <div className="bg-blue-50 p-3 rounded border border-blue-200 text-sm">
+                  <strong>Se clonarán:</strong> Todos los permisos, configuración de páginas y campos. 
+                  La herencia NO se clona automáticamente.
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCloneDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleCloneRole}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Clonar Rol
+                </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

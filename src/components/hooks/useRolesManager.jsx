@@ -20,6 +20,8 @@ const DEFAULT_CONFIG = {
         canConfigureSystem: true,
       },
       page_permissions: {},
+      field_permissions: {}, // NEW: permisos a nivel de campo
+      parent_role: null, // NEW: herencia de roles
       isSystem: true
     },
     user: {
@@ -37,6 +39,8 @@ const DEFAULT_CONFIG = {
         canConfigureSystem: false,
       },
       page_permissions: { "/Dashboard": true },
+      field_permissions: {},
+      parent_role: null,
       isSystem: true
     }
   },
@@ -92,6 +96,48 @@ export function useRolesManager() {
     setIsDirty(true);
   }, []);
 
+  // NEW: Update field permission
+  const updateFieldPermission = useCallback((roleId, entityName, fieldName, permissionType, value) => {
+    setLocalConfig(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (next.roles[roleId]) {
+        if (!next.roles[roleId].field_permissions) {
+          next.roles[roleId].field_permissions = {};
+        }
+        if (!next.roles[roleId].field_permissions[entityName]) {
+          next.roles[roleId].field_permissions[entityName] = {};
+        }
+        if (!next.roles[roleId].field_permissions[entityName][fieldName]) {
+          next.roles[roleId].field_permissions[entityName][fieldName] = {};
+        }
+        next.roles[roleId].field_permissions[entityName][fieldName][permissionType] = value;
+      }
+      return next;
+    });
+    setIsDirty(true);
+  }, []);
+
+  // NEW: Update parent role (cambiar herencia)
+  const updateParentRole = useCallback((roleId, parentRoleId) => {
+    setLocalConfig(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (next.roles[roleId]) {
+        // Prevenir ciclos de herencia
+        let checkCycle = parentRoleId;
+        while (checkCycle) {
+          if (checkCycle === roleId) {
+            throw new Error("No puedes crear ciclos de herencia");
+          }
+          checkCycle = next.roles[checkCycle]?.parent_role;
+        }
+        
+        next.roles[roleId].parent_role = parentRoleId || null;
+      }
+      return next;
+    });
+    setIsDirty(true);
+  }, []);
+
   // Set role mode (strict/permissive)
   const setRoleMode = useCallback((roleId, isStrict) => {
     setLocalConfig(prev => {
@@ -119,21 +165,63 @@ export function useRolesManager() {
     setIsDirty(true);
   }, []);
 
-  // Add role
-  const addRole = useCallback((name, id) => {
+  // Add role con soporte de herencia
+  const addRole = useCallback((name, id, parentRole = null) => {
     if (!name || !id) throw new Error("Nombre e ID son obligatorios");
     if (!/^[a-z0-9_]+$/.test(id)) throw new Error("ID solo puede contener letras minúsculas, números y guiones bajos");
     
     setLocalConfig(prev => {
       if (prev.roles[id]) throw new Error("Ya existe un rol con ese ID");
       const next = JSON.parse(JSON.stringify(prev));
+      
+      // Configuración base
+      let baseConfig = {
+        permissions: {},
+        page_permissions: { "/Dashboard": true },
+        field_permissions: {}
+      };
+      
+      // Si hay rol padre, heredar su configuración
+      if (parentRole && next.roles[parentRole]) {
+        baseConfig = {
+          permissions: { ...next.roles[parentRole].permissions },
+          page_permissions: { ...next.roles[parentRole].page_permissions },
+          field_permissions: { ...next.roles[parentRole].field_permissions }
+        };
+      }
+      
       next.roles[id] = {
         name,
         is_strict: true,
-        permissions: {},
-        page_permissions: { "/Dashboard": true },
+        ...baseConfig,
+        parent_role: parentRole,
         isSystem: false
       };
+      return next;
+    });
+    setIsDirty(true);
+  }, []);
+
+  // Clone role - clonar rol existente
+  const cloneRole = useCallback((sourceRoleId, newName, newId) => {
+    if (!newName || !newId) throw new Error("Nombre e ID son obligatorios");
+    if (!/^[a-z0-9_]+$/.test(newId)) throw new Error("ID solo puede contener letras minúsculas, números y guiones bajos");
+    
+    setLocalConfig(prev => {
+      if (prev.roles[newId]) throw new Error("Ya existe un rol con ese ID");
+      if (!prev.roles[sourceRoleId]) throw new Error("Rol origen no existe");
+      
+      const next = JSON.parse(JSON.stringify(prev));
+      const sourceRole = next.roles[sourceRoleId];
+      
+      // Clonar todo excepto isSystem y nombre
+      next.roles[newId] = {
+        ...JSON.parse(JSON.stringify(sourceRole)),
+        name: newName,
+        isSystem: false,
+        parent_role: null // Los clones no heredan automáticamente
+      };
+      
       return next;
     });
     setIsDirty(true);
@@ -251,9 +339,12 @@ export function useRolesManager() {
     isLoading: rolesConfigLoading,
     updatePermission,
     updatePagePermission,
+    updateFieldPermission, // NEW
+    updateParentRole, // NEW
     setRoleMode,
     updateUserAssignment,
     addRole,
+    cloneRole, // NEW
     deleteRole,
     saveConfig,
     resetConfig,
