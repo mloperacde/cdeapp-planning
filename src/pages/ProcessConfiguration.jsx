@@ -836,6 +836,7 @@ export default function ProcessConfigurationPage() {
           </Tabs>
         </CardContent>
       </Card>
+      </div>
 
       {/* Form Dialog */}
       {showForm && (

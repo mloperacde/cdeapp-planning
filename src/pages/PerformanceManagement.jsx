@@ -573,7 +573,6 @@ export default function PerformanceManagementPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
 
       {/* Formulario de Evaluación */}
       {showReviewForm && (
