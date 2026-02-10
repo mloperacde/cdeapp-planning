@@ -172,19 +172,8 @@ export default function DocumentManagementPage() {
     return <Badge className={config}>{estado}</Badge>;
   };
 
-  const getEntityName = (doc) => {
-    if (!doc.entidad_asociada_id) return null;
-    
-    if (doc.tipo_entidad_asociada === "Machine") {
-      const machine = machines.find(m => m.id === doc.entidad_asociada_id);
-      return machine?.nombre;
-    }
-    if (doc.tipo_entidad_asociada === "Employee") {
-      const employee = employees.find(e => e.id === doc.entidad_asociada_id);
-      return employee?.nombre;
-    }
-    return null;
-  };
+  // Permissions
+  const permissions = usePermissions('DocumentManagement');
 
   return (
     <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
@@ -391,7 +380,7 @@ export default function DocumentManagementPage() {
             </Card>
           )}
         </div>
-      </div>
+      {/* Removed early closing div */}
 
       {showForm && (
         <EnhancedDocumentForm

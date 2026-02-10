@@ -113,13 +113,6 @@ export default function EmployeesShiftManagerPage() {
     staleTime: 5 * 60 * 1000 
   });
 
-  const [filters, setFilters] = useState({});
-  const [visibleColumns, setVisibleColumns] = useState(
-    Object.keys(ALL_COLUMNS).reduce((acc, key) => ({ ...acc, [key]: ALL_COLUMNS[key].default }), {})
-  );
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(50);
-
   // Strict Filter: Only FABRICACION
   const effectiveEmployees = useMemo(() => {
     return allEmployees.filter(emp => emp.departamento === 'FABRICACION');
