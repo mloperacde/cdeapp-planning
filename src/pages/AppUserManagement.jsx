@@ -18,7 +18,7 @@ import { Shield, Users, Save, Plus, Trash2, AlertCircle, RotateCcw, Factory, Sea
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
-import { useRolesManager } from '@/hooks/useRolesManager';
+import { useRolesManager } from '@/components/hooks/useRolesManager';
 import { ROLE_PERMISSIONS } from '@/components/permissions/usePermissions';
 import { toast } from "sonner";
 
