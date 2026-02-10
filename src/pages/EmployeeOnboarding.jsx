@@ -48,6 +48,7 @@ import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
 import OnboardingAIAssistant from "../components/onboarding/OnboardingAIAssistant";
 import PositionProfileManager from "../components/onboarding/PositionProfileManager";
+import TrainingPlansBuilder from "../components/onboarding/TrainingPlansBuilder";
 
 const EMPTY_ARRAY = [];
 
