@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Factory, Plus, RefreshCw, DownloadCloud } from "lucide-react";
+import { Factory, Plus, RefreshCw, DownloadCloud, AlertCircle } from "lucide-react";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import WorkOrderForm from "../components/planning/WorkOrderForm";
