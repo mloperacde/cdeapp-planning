@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,6 @@ import {
   Briefcase,
   Upload,
   Trash2,
-  Database,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -49,7 +48,6 @@ import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import OnboardingDashboard from "../components/onboarding/OnboardingDashboard";
 import OnboardingAIAssistant from "../components/onboarding/OnboardingAIAssistant";
 import PositionProfileManager from "../components/onboarding/PositionProfileManager";
-import PersistenceDebugger from "../components/debug/PersistenceDebugger";
 
 const EMPTY_ARRAY = [];
 
@@ -106,15 +104,45 @@ export default function EmployeeOnboardingPage() {
     initialData: [],
   });
 
-  const { 
-    data: trainingResources, 
-    save: saveTrainingResources 
-  } = usePersistentAppConfig(
-    'onboarding_training_resources',
-    EMPTY_ARRAY,
-    'onboardingTrainingResources',
-    true
-  );
+  const { data: trainingResources, isLoading: trainingLoading } = useQuery({
+    queryKey: ['trainingResources'],
+    queryFn: async () => {
+      const results = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      if (!results || results.length === 0) return [];
+      
+      const record = results[0];
+      const jsonString = record.value || record.app_subtitle || record.description;
+      if (!jsonString) return [];
+      
+      try {
+        return JSON.parse(jsonString);
+      } catch {
+        return [];
+      }
+    },
+    initialData: [],
+  });
+
+  const saveTrainingResourcesMutation = useMutation({
+    mutationFn: async (updatedResources) => {
+      const payload = {
+        config_key: 'onboarding_training_resources',
+        app_name: 'Training Resources',
+        app_subtitle: JSON.stringify(updatedResources),
+      };
+
+      const existing = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      if (existing && existing.length > 0) {
+        return base44.entities.AppConfig.update(existing[0].id, payload);
+      } else {
+        return base44.entities.AppConfig.create(payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainingResources'] });
+      toast.success('Recursos guardados correctamente');
+    },
+  });
 
   const deleteOnboardingMutation = useMutation({
     mutationFn: (id) => base44.entities.EmployeeOnboarding.delete(id),
@@ -123,9 +151,8 @@ export default function EmployeeOnboardingPage() {
     },
   });
 
-  // Adapter for existing code
   const createTrainingResourceMutation = {
-    mutate: saveTrainingResources
+    mutate: (data) => saveTrainingResourcesMutation.mutate(data)
   };
 
   const getEmployeeName = (employeeId) => {
@@ -331,7 +358,7 @@ export default function EmployeeOnboardingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -351,10 +378,6 @@ export default function EmployeeOnboardingPage() {
             <TabsTrigger value="ai">
               <Bot className="w-4 h-4 mr-2" />
               Asistente IA
-            </TabsTrigger>
-            <TabsTrigger value="debug" className="text-amber-600">
-              <Database className="w-4 h-4 mr-2" />
-              Debug
             </TabsTrigger>
           </TabsList>
 
@@ -904,9 +927,6 @@ export default function EmployeeOnboardingPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="debug">
-             <PersistenceDebugger />
-          </TabsContent>
         </Tabs>
 
 
