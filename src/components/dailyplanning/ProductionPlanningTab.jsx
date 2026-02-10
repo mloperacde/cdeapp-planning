@@ -39,14 +39,11 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: plannings = [] } = useQuery({
-    queryKey: ['machinePlannings', selectedDate, selectedTeam],
-    queryFn: () => base44.entities.MachinePlanning.filter({ 
-      fecha_planificacion: selectedDate, 
-      team_key: selectedTeam 
-    }),
-    initialData: [],
-    enabled: machines.length > 0, // Stagger: Wait for Machines
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    staleTime: Infinity, // Forever
+    gcTime: Infinity,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     refetchOnMount: false,
@@ -94,11 +91,14 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     refetchOnReconnect: false,
   });
 
-  const { data: teams = [] } = useQuery({
-    queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
-    staleTime: Infinity, // Forever
-    gcTime: Infinity,
+  const { data: plannings = [] } = useQuery({
+    queryKey: ['machinePlannings', selectedDate, selectedTeam],
+    queryFn: () => base44.entities.MachinePlanning.filter({ 
+      fecha_planificacion: selectedDate, 
+      team_key: selectedTeam 
+    }),
+    initialData: [],
+    enabled: machines.length > 0, // Stagger: Wait for Machines
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     refetchOnMount: false,
@@ -265,7 +265,7 @@ export default function ProductionPlanningTab({ selectedDate, selectedTeam, sele
     createPlanningMutation.mutate({
         machine_id: machine.id,
         machine_nombre: machine.alias,
-        machine_codigo: machine.codigo_maquina, // Ensure correct field mapping from machine object
+        machine_codigo: machine.codigo, // Ensure correct field mapping from machine object
         fecha_planificacion: selectedDate,
         team_key: selectedTeam,
         operadores_necesarios: 1,
