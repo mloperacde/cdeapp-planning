@@ -213,49 +213,29 @@ export function DataProvider({ children }) {
     retry: 0,
   });
 
-  // 13. CONFIGURACIÓN DE ROLES - Simple y directa
+  // 13. CONFIGURACIÓN DE ROLES
   const rolesConfigQuery = useQuery({
     queryKey: ['rolesConfig'],
     queryFn: async () => {
       if (isLocal) return null;
       try {
-          console.log("DataProvider: Cargando configuración de roles...");
-          
-          let config = null;
-
-          // ESTRATEGIA SIMPLE: Buscar por config_key
           const results = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
-          console.log("DataProvider: Resultados de búsqueda:", results);
           
           if (!results || results.length === 0) {
-              console.log("DataProvider: No se encontró configuración de roles");
               return null;
           }
           
-          // Tomar el primer resultado (debería haber solo uno)
-          config = results[0];
-          console.log("DataProvider: Configuración encontrada:", config.id);
+          const config = results[0];
+          if (!config) return null;
 
-          if (!config) {
-              console.log("DataProvider: No se encontró configuración");
-              return null;
-          }
-
-          // Intentar value, luego app_subtitle, luego description (fallbacks del backend)
           let jsonString = config.value || config.app_subtitle || config.description;
-          
-          if (!jsonString) {
-              console.log("DataProvider: Config sin datos, usando defaults");
-              return null;
-          }
+          if (!jsonString) return null;
 
-          // Parsear JSON
           try {
             const parsed = JSON.parse(jsonString);
-            console.log(`DataProvider: Config cargada. Roles: ${Object.keys(parsed.roles || {}).length}`);
             return parsed;
           } catch (error) {
-            console.error("DataProvider: Error parseando JSON:", error);
+            console.error("Error parseando roles config:", error);
             return null;
           }
         } catch (err) {
@@ -263,25 +243,18 @@ export function DataProvider({ children }) {
           return null;
         }
     },
-    staleTime: 0, // Siempre refrescar
-    gcTime: 0,
-    refetchOnWindowFocus: true
+    staleTime: 5 * 60 * 1000, // 5 minutos - evitar recargas constantes
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false
   });
 
-  // 14. BRANDING - Cache 1 hora (cambia poco) -> Ahora staleTime 0 para debug y reactividad inmediata
+  // 14. BRANDING
   const brandingConfigQuery = useQuery({
     queryKey: ['brandingConfig'],
     queryFn: async () => {
       if (isLocal) return null;
       try {
         const configs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
-        // Log para depuración
-        // console.log("DataProvider: Branding Configs found:", configs);
-        
-        // Si hay múltiples, intentamos encontrar el más reciente por updated_at o created_at
-        // O simplemente tomamos el último de la lista si asumimos orden de inserción
-        // Pero para seguridad, tomamos el primero que suele ser el "activo" si la lógica de update es correcta.
-        // MEJORA: Ordenar por fecha de actualización descendente para tomar siempre el último modificado.
         
         if (!configs || configs.length === 0) return null;
 
@@ -290,14 +263,12 @@ export function DataProvider({ children }) {
                 const date = new Date(d.updated_at || d.created_at || 0);
                 return isNaN(date.getTime()) ? 0 : date.getTime();
             };
-            return getTs(b) - getTs(a); // Descendente (más nuevo primero)
+            return getTs(b) - getTs(a);
         });
 
         const config = sortedConfigs[0];
-        
         if (!config) return null;
 
-        // Priorizamos el campo 'value' con JSON
         if (config.value) {
           try {
             return JSON.parse(config.value);
@@ -307,16 +278,15 @@ export function DataProvider({ children }) {
           }
         }
         
-        // Fallback: retornamos el objeto completo si no tiene value (legacy o error)
         return config;
       } catch (err) {
         console.warn('No branding configuration found');
         return null;
       }
     },
-    staleTime: 0, // Siempre fresco para asegurar cambios inmediatos
+    staleTime: 10 * 60 * 1000, // 10 minutos
     gcTime: 24 * 60 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 
   const allAbsenceTypes = absenceTypesQuery.data || [];

@@ -108,72 +108,85 @@ export default function EmployeeOnboardingPage() {
     queryKey: ['trainingResources'],
     queryFn: async () => {
       try {
+        console.log("📖 Cargando recursos de formación...");
         const results = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+        console.log("📦 Registros encontrados:", results?.length || 0);
         
         if (!results || results.length === 0) {
+          console.log("ℹ️ No hay recursos guardados");
           return [];
         }
         
-        // Si hay múltiples, usar el más reciente (primero en la lista)
         const record = results[0];
+        console.log("📄 Usando registro:", record.id);
+        
         const jsonString = record.value || record.app_subtitle || record.description;
         
         if (!jsonString) {
+          console.log("⚠️ Registro sin contenido");
           return [];
         }
         
         const parsed = JSON.parse(jsonString);
-        return Array.isArray(parsed) ? parsed : [];
+        const resources = Array.isArray(parsed) ? parsed : [];
+        console.log(`✅ Cargados ${resources.length} recursos de formación`);
+        return resources;
       } catch (error) {
-        console.error('Error cargando recursos de formación:', error);
+        console.error('❌ Error cargando recursos de formación:', error);
         return [];
       }
     },
     initialData: [],
-    staleTime: 30000, // 30 segundos
+    staleTime: 60000, // 1 minuto
     refetchOnWindowFocus: false,
   });
 
   const saveTrainingResourcesMutation = useMutation({
     mutationFn: async (updatedResources) => {
+      console.log("💾 Guardando recursos de formación...", updatedResources);
+      
       const payload = {
         config_key: 'onboarding_training_resources',
         app_name: 'Training Resources',
         value: JSON.stringify(updatedResources),
-        app_subtitle: JSON.stringify(updatedResources), // Fallback para compatibilidad
+        app_subtitle: JSON.stringify(updatedResources),
       };
 
-      // Obtener TODOS los registros existentes con esta clave
       const existing = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      console.log("📦 Registros existentes encontrados:", existing?.length || 0);
       
       if (existing && existing.length > 0) {
-        // Actualizar el PRIMERO (más reciente)
         const mainRecord = existing[0];
-        await base44.entities.AppConfig.update(mainRecord.id, payload);
+        console.log("✏️ Actualizando registro:", mainRecord.id);
+        const updated = await base44.entities.AppConfig.update(mainRecord.id, payload);
         
-        // ELIMINAR todos los duplicados obsoletos
         const obsoleteRecords = existing.slice(1);
-        for (const obsolete of obsoleteRecords) {
-          try {
-            await base44.entities.AppConfig.delete(obsolete.id);
-          } catch (err) {
-            console.warn('No se pudo eliminar duplicado:', obsolete.id, err);
+        if (obsoleteRecords.length > 0) {
+          console.log(`🗑️ Eliminando ${obsoleteRecords.length} duplicados...`);
+          for (const obsolete of obsoleteRecords) {
+            try {
+              await base44.entities.AppConfig.delete(obsolete.id);
+            } catch (err) {
+              console.warn('No se pudo eliminar duplicado:', obsolete.id, err);
+            }
           }
         }
         
-        return mainRecord;
+        console.log("✅ Guardado exitoso");
+        return updated;
       } else {
-        // Crear nuevo registro
-        return base44.entities.AppConfig.create(payload);
+        console.log("✨ Creando nuevo registro");
+        const created = await base44.entities.AppConfig.create(payload);
+        console.log("✅ Creado exitoso:", created.id);
+        return created;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainingResources'] });
-      toast.success('Recursos guardados correctamente');
     },
     onError: (error) => {
-      console.error('Error guardando recursos:', error);
-      toast.error('Error al guardar recursos');
+      console.error('❌ Error guardando recursos:', error);
+      toast.error('Error al guardar: ' + error.message);
     }
   });
 
@@ -265,8 +278,11 @@ export default function EmployeeOnboardingPage() {
     [trainingResources]
   );
 
-  const handleAddDoc = () => {
-    if (!newDoc.title || !newDoc.url) return;
+  const handleAddDoc = async () => {
+    if (!newDoc.title || !newDoc.url) {
+      toast.error("Título y URL son obligatorios");
+      return;
+    }
     
     const doc = {
       id: crypto.randomUUID(),
@@ -277,25 +293,49 @@ export default function EmployeeOnboardingPage() {
 
     const updatedResources = [...trainingResources, doc];
     setNewDoc({ title: "", description: "", url: "" });
-    createTrainingResourceMutation.mutate(updatedResources);
-  };
-
-  const handleDeleteDoc = (docId) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este recurso de formación?")) {
-      const updatedResources = trainingResources.filter(r => r.id !== docId);
-      createTrainingResourceMutation.mutate(updatedResources);
+    
+    try {
+      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      toast.success("Documento añadido correctamente");
+    } catch (error) {
+      console.error("Error añadiendo documento:", error);
+      toast.error("Error al guardar el documento");
     }
   };
 
-  const handleDeleteTraining = (trainingId) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar esta formación?")) {
-      const updatedResources = trainingResources.filter(r => r.id !== trainingId);
-      createTrainingResourceMutation.mutate(updatedResources);
+  const handleDeleteDoc = async (docId) => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar este recurso de formación?")) return;
+    
+    const updatedResources = trainingResources.filter(r => r.id !== docId);
+    
+    try {
+      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      toast.success("Documento eliminado correctamente");
+    } catch (error) {
+      console.error("Error eliminando documento:", error);
+      toast.error("Error al eliminar el documento");
     }
   };
 
-  const handleAddTraining = () => {
-    if (!newTraining.title || !newTraining.fecha) return;
+  const handleDeleteTraining = async (trainingId) => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar esta formación?")) return;
+    
+    const updatedResources = trainingResources.filter(r => r.id !== trainingId);
+    
+    try {
+      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      toast.success("Formación eliminada correctamente");
+    } catch (error) {
+      console.error("Error eliminando formación:", error);
+      toast.error("Error al eliminar la formación");
+    }
+  };
+
+  const handleAddTraining = async () => {
+    if (!newTraining.title || !newTraining.fecha) {
+      toast.error("Título y fecha son obligatorios");
+      return;
+    }
     
     const training = {
       id: crypto.randomUUID(),
@@ -311,7 +351,14 @@ export default function EmployeeOnboardingPage() {
       fecha: "",
       estado: "Pendiente",
     });
-    createTrainingResourceMutation.mutate(updatedResources);
+    
+    try {
+      await createTrainingResourceMutation.mutateAsync(updatedResources);
+      toast.success("Formación añadida correctamente");
+    } catch (error) {
+      console.error("Error añadiendo formación:", error);
+      toast.error("Error al guardar la formación");
+    }
   };
 
   const handleTabChange = (value) => {
