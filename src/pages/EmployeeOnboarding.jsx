@@ -116,7 +116,7 @@ export default function EmployeeOnboardingPage() {
         }
         
         const record = results[0];
-        const jsonString = record.value || record.app_subtitle || record.description;
+        const jsonString = record.value || record.app_subtitle;
         
         if (!jsonString) {
           return [];
@@ -130,8 +130,9 @@ export default function EmployeeOnboardingPage() {
       }
     },
     initialData: [],
-    staleTime: 10000,
+    staleTime: 0,
     refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const saveTrainingResourcesMutation = useMutation({
@@ -741,7 +742,7 @@ export default function EmployeeOnboardingPage() {
           </TabsContent>
 
           <TabsContent value="training" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-slate-100">
                   <CardTitle>Documentos de formaciones</CardTitle>
