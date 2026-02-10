@@ -168,10 +168,13 @@ export function useRolesManager() {
       const existing = await base44.entities.AppConfig.filter({ config_key: 'roles_config' });
       console.log("📦 Registros existentes:", existing);
       
-      // 2. Preparar payload
+      // 2. Preparar payload - usar app_subtitle como fallback por limitación del backend
+      const configJson = JSON.stringify(localConfig);
       const payload = {
         config_key: 'roles_config',
-        value: JSON.stringify(localConfig)
+        app_name: 'Roles Configuration',
+        app_subtitle: configJson, // Backend acepta este campo para JSON grandes
+        value: configJson.length < 1000 ? configJson : null // Solo si es pequeño
       };
 
       let savedRecord = null;
