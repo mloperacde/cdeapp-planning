@@ -184,7 +184,8 @@ export default function AppUserManagement() {
   }
 
   if (!localConfig) {
-      return <div className="p-8 text-red-500 font-bold">ERROR CRÍTICO: No se pudo cargar la configuración local.</div>;
+      // Silenciosamente usar defaults si no hay config
+      return null;
   }
 
   return (

@@ -241,15 +241,18 @@ export function DataProvider({ children }) {
               return null;
           }
 
-          if (!config.value) {
-              console.log("DataProvider: Config sin valor, usando defaults");
+          // Intentar value, luego app_subtitle, luego description (fallbacks del backend)
+          let jsonString = config.value || config.app_subtitle || config.description;
+          
+          if (!jsonString) {
+              console.log("DataProvider: Config sin datos, usando defaults");
               return null;
           }
 
-          // Parsear JSON simple
+          // Parsear JSON
           try {
-            const parsed = JSON.parse(config.value);
-            console.log(`DataProvider: Config parseada. Roles: ${Object.keys(parsed.roles || {}).length}`);
+            const parsed = JSON.parse(jsonString);
+            console.log(`DataProvider: Config cargada. Roles: ${Object.keys(parsed.roles || {}).length}`);
             return parsed;
           } catch (error) {
             console.error("DataProvider: Error parseando JSON:", error);
