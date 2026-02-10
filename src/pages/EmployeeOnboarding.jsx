@@ -107,20 +107,31 @@ export default function EmployeeOnboardingPage() {
   const { data: trainingResources, isLoading: trainingLoading } = useQuery({
     queryKey: ['trainingResources'],
     queryFn: async () => {
-      const results = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
-      if (!results || results.length === 0) return [];
-      
-      const record = results[0];
-      const jsonString = record.value || record.app_subtitle || record.description;
-      if (!jsonString) return [];
-      
       try {
-        return JSON.parse(jsonString);
-      } catch {
+        const results = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+        
+        if (!results || results.length === 0) {
+          return [];
+        }
+        
+        // Si hay múltiples, usar el más reciente (primero en la lista)
+        const record = results[0];
+        const jsonString = record.value || record.app_subtitle || record.description;
+        
+        if (!jsonString) {
+          return [];
+        }
+        
+        const parsed = JSON.parse(jsonString);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.error('Error cargando recursos de formación:', error);
         return [];
       }
     },
     initialData: [],
+    staleTime: 30000, // 30 segundos
+    refetchOnWindowFocus: false,
   });
 
   const saveTrainingResourcesMutation = useMutation({
@@ -128,13 +139,31 @@ export default function EmployeeOnboardingPage() {
       const payload = {
         config_key: 'onboarding_training_resources',
         app_name: 'Training Resources',
-        app_subtitle: JSON.stringify(updatedResources),
+        value: JSON.stringify(updatedResources),
+        app_subtitle: JSON.stringify(updatedResources), // Fallback para compatibilidad
       };
 
+      // Obtener TODOS los registros existentes con esta clave
       const existing = await base44.entities.AppConfig.filter({ config_key: 'onboarding_training_resources' });
+      
       if (existing && existing.length > 0) {
-        return base44.entities.AppConfig.update(existing[0].id, payload);
+        // Actualizar el PRIMERO (más reciente)
+        const mainRecord = existing[0];
+        await base44.entities.AppConfig.update(mainRecord.id, payload);
+        
+        // ELIMINAR todos los duplicados obsoletos
+        const obsoleteRecords = existing.slice(1);
+        for (const obsolete of obsoleteRecords) {
+          try {
+            await base44.entities.AppConfig.delete(obsolete.id);
+          } catch (err) {
+            console.warn('No se pudo eliminar duplicado:', obsolete.id, err);
+          }
+        }
+        
+        return mainRecord;
       } else {
+        // Crear nuevo registro
         return base44.entities.AppConfig.create(payload);
       }
     },
@@ -142,6 +171,10 @@ export default function EmployeeOnboardingPage() {
       queryClient.invalidateQueries({ queryKey: ['trainingResources'] });
       toast.success('Recursos guardados correctamente');
     },
+    onError: (error) => {
+      console.error('Error guardando recursos:', error);
+      toast.error('Error al guardar recursos');
+    }
   });
 
   const deleteOnboardingMutation = useMutation({
