@@ -689,8 +689,6 @@ export default function ProductionPlanningPage() {
             <RefreshCw className="w-3 h-3 mr-1.5" />
             <span className="hidden md:inline">Recargar</span>
           </Button>
-        </div>
-      </div>
           
           <Link to="/OrderImport">
              <Button variant="secondary" className="bg-green-600 hover:bg-green-700 text-white border-0">
