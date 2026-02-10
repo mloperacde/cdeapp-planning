@@ -139,7 +139,7 @@ export default function PositionProfileManager({ trainingResources = [] }) {
   }, [trainingResources]);
 
   const trainingPlans = useMemo(() => {
-    return (trainingResources || []).filter(r => r.type === 'training');
+    return (trainingResources || []).filter(r => r.type === 'training_plan');
   }, [trainingResources]);
 
   const { data: profiles, isLoading: profilesLoading } = useQuery({
