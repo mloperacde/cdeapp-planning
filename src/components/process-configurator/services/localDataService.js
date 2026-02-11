@@ -154,21 +154,36 @@ export const localDataService = {
         let addedCount = 0;
         let updatedCount = 0;
 
+        // Helper to find value by multiple keys (case-insensitive)
+        const getValue = (obj, keys) => {
+            if (!obj) return null;
+            const objKeys = Object.keys(obj);
+            for (const key of keys) {
+                // Exact match
+                if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+                // Case-insensitive match
+                const foundKey = objKeys.find(k => k.toLowerCase() === key.toLowerCase());
+                if (foundKey && obj[foundKey] !== undefined && obj[foundKey] !== null) return obj[foundKey];
+            }
+            return null;
+        };
+
         apiArticles.forEach(apiArt => {
-            const existing = existingMap.get(apiArt.code);
+            const code = getValue(apiArt, ['code', 'codigo', 'id', 'article_code']) || `unknown_${Date.now()}`;
+            const existing = existingMap.get(code);
             
-            // Map API fields to internal fields
+            // Map API fields to internal fields with robust fallback
             const mappedArticle = {
-                id: existing ? existing.id : `art_${apiArt.id || apiArt.code || Date.now()}`,
-                code: apiArt.code,
-                name: apiArt.name || apiArt.description || apiArt.code,
-                description: apiArt.description || "",
-                client: apiArt.client_name || apiArt.client || "",
-                reference: apiArt.reference || "",
-                type: apiArt.type || apiArt.family || "",
-                process_code: apiArt.process_code || null,
-                operators_required: parseInt(apiArt.operators_required || apiArt.operators || 1),
-                total_time_seconds: parseFloat(apiArt.total_time_seconds || 0),
+                id: existing ? existing.id : `art_${code}`,
+                code: code,
+                name: getValue(apiArt, ['name', 'nombre', 'description', 'descripcion', 'desc']) || code,
+                description: getValue(apiArt, ['description', 'descripcion', 'desc']) || "",
+                client: getValue(apiArt, ['client_name', 'client', 'cliente', 'customer', 'nombre_cliente']) || "",
+                reference: getValue(apiArt, ['reference', 'referencia', 'ref', 'code_ref']) || "",
+                type: getValue(apiArt, ['type', 'tipo', 'family', 'familia', 'category', 'categoria', 'typology', 'tipologia']) || "",
+                process_code: getValue(apiArt, ['process_code', 'process', 'proceso', 'codigo_proceso']) || null,
+                operators_required: parseInt(getValue(apiArt, ['operators_required', 'operators', 'operarios', 'people', 'personas', 'resources', 'required_operators']) || 1),
+                total_time_seconds: parseFloat(getValue(apiArt, ['total_time_seconds', 'total_time', 'time', 'tiempo']) || 0),
                 updated_at: new Date().toISOString()
             };
 
