@@ -1095,12 +1095,11 @@ export default function DepartmentPositionManager() {
                 </p>
               </div>
             )}
-          </Card>
             </Card>
-          </div>
-        </div>
-        
-        {/* Puestos Vacantes - Ahora debajo del main content */}
+            </div>
+            </div>
+
+            {/* Puestos Vacantes - Ahora debajo del main content */}
         {vacanciesByDept.length > 0 && (
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-3 px-4 py-3">
