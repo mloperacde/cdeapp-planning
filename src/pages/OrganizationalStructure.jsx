@@ -21,6 +21,7 @@ import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import { StructureConfig, AssignmentsConfig, TasksConfig } from "../components/config/ManufacturingStructureConfig";
 import DepartmentVerificationPanel from "../components/hr/DepartmentVerificationPanel";
 import TeamVerificationPanel from "../components/hr/TeamVerificationPanel";
+import MachineRoomAssignment from "../components/config/MachineRoomAssignment";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -276,23 +277,31 @@ function ManufacturingConfigWrapper() {
       </div>
 
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
           <TabsTrigger value="structure" className="flex items-center gap-2">
             <Factory className="w-4 h-4" />
-            Estructura (Áreas/Salas)
+            Áreas/Salas
+          </TabsTrigger>
+          <TabsTrigger value="machines" className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            Máquinas
           </TabsTrigger>
           <TabsTrigger value="assignments" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Asignaciones Jefes
+            Jefes Turno
           </TabsTrigger>
           <TabsTrigger value="tasks" className="flex items-center gap-2">
             <ClipboardList className="w-4 h-4" />
-            Escaleta de Tareas
+            Escaleta
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="structure">
           <StructureConfig config={config} setConfig={setConfig} />
+        </TabsContent>
+
+        <TabsContent value="machines">
+          <MachineRoomAssignment config={config} />
         </TabsContent>
 
         <TabsContent value="assignments">
