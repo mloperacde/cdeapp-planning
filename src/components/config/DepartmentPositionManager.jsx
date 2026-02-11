@@ -112,13 +112,24 @@ export default function DepartmentPositionManager() {
       const payload = { ...data };
       if (payload.parent_id === "root") payload.parent_id = null;
       
+      // Set parent_name based on parent_id
+      if (payload.parent_id) {
+        const parentDept = departments.find(d => d.id === payload.parent_id);
+        payload.parent_name = parentDept?.name || null;
+      } else {
+        payload.parent_name = null;
+      }
+      
       if (data.id) {
         return base44.entities.Department.update(data.id, payload);
       }
       return base44.entities.Department.create(payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['departments'] });
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      // Recalculate all total_employee_count
+      await recalculateEmployeeCounts();
       toast.success("Departamento guardado correctamente");
       setIsDeptDialogOpen(false);
     }
@@ -170,10 +181,21 @@ export default function DepartmentPositionManager() {
       // Prevent moving to self or own descendant (simple check)
       // Ideally we check descendants here, but for now we rely on UI filtering
       const payload = { parent_id: newParentId === "root" ? null : newParentId };
+      
+      // Set parent_name based on newParentId
+      if (newParentId && newParentId !== "root") {
+        const parentDept = departments.find(d => d.id === newParentId);
+        payload.parent_name = parentDept?.name || null;
+      } else {
+        payload.parent_name = null;
+      }
+      
       return base44.entities.Department.update(id, payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['departments'] });
+      // Recalculate all total_employee_count after move
+      await recalculateEmployeeCounts();
       toast.success("Departamento movido correctamente");
       setIsMoveDialogOpen(false);
       setDeptToMove(null);
@@ -184,12 +206,50 @@ export default function DepartmentPositionManager() {
     mutationFn: async ({ id, departamento, puesto }) => {
       return base44.entities.EmployeeMasterDatabase.update(id, { departamento, puesto });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      // Recalculate all total_employee_count after employee assignment change
+      await recalculateEmployeeCounts();
       toast.success("Empleado asignado correctamente");
       setIsEmpDialogOpen(false);
     }
   });
+
+  // Function to recursively calculate total employee count
+  const recalculateEmployeeCounts = async () => {
+    const currentDepts = await base44.entities.Department.list();
+    const currentEmps = await base44.entities.EmployeeMasterDatabase.list();
+    
+    const calculateCount = (deptId, depts, emps) => {
+      const dept = depts.find(d => d.id === deptId);
+      if (!dept) return 0;
+      
+      // Direct employees in this department
+      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
+      const directCount = emps.filter(e => 
+        (e.departamento || "").trim().toUpperCase() === normalizedDeptName
+      ).length;
+      
+      // Children's counts
+      const children = depts.filter(d => d.parent_id === deptId);
+      const childrenCount = children.reduce((sum, child) => 
+        sum + calculateCount(child.id, depts, emps), 0
+      );
+      
+      return directCount + childrenCount;
+    };
+    
+    // Update all departments with their total counts
+    const updates = currentDepts.map(dept => {
+      const totalCount = calculateCount(dept.id, currentDepts, currentEmps);
+      return base44.entities.Department.update(dept.id, { 
+        total_employee_count: totalCount 
+      });
+    });
+    
+    await Promise.all(updates);
+    await queryClient.invalidateQueries({ queryKey: ['departments'] });
+  };
 
   // Handlers
   const toggleExpand = (deptId) => {
@@ -610,15 +670,30 @@ export default function DepartmentPositionManager() {
           </div>
         </div>
         
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 ml-auto md:ml-0"
-          onClick={() => setIsSyncDialogOpen(true)}
-        >
-          <RefreshCw className="w-3.5 h-3.5 mr-2" />
-          Sincronizar
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+            onClick={() => setIsSyncDialogOpen(true)}
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-2" />
+            Sincronizar Estructura
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+            onClick={async () => {
+              toast.info("Recalculando conteos...");
+              await recalculateEmployeeCounts();
+              toast.success("Conteos actualizados");
+            }}
+          >
+            <Users className="w-3.5 h-3.5 mr-2" />
+            Recalcular Conteos
+          </Button>
+        </div>
       </div>
 
       {viewMode === "editor" ? (
@@ -672,10 +747,10 @@ export default function DepartmentPositionManager() {
                         <h3 className="text-2xl font-bold text-slate-900">{selectedDept.name}</h3>
                         <div className="flex items-center gap-2 text-slate-500 text-sm">
                           <Badge variant="outline" className="bg-white">{selectedDept.code || "N/A"}</Badge>
-                          {selectedDept.parent_id && (
+                          {selectedDept.parent_name && (
                             <>
                               <ArrowRight className="w-3 h-3" />
-                              <span>{departments.find(d => d.id === selectedDept.parent_id)?.name}</span>
+                              <span>{selectedDept.parent_name}</span>
                             </>
                           )}
                         </div>
@@ -707,8 +782,9 @@ export default function DepartmentPositionManager() {
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <Users className="w-4 h-4 text-slate-400" />
-                      <span className="font-medium">Headcount Total:</span>
-                      <span>{deptPositions.reduce((acc, p) => acc + (p.max_headcount || 0), 0)}</span>
+                      <span className="font-medium">Empleados Totales:</span>
+                      <span className="font-bold text-indigo-600">{selectedDept.total_employee_count || 0}</span>
+                      <span className="text-xs text-slate-400">(incl. sub-depts)</span>
                     </div>
                   </div>
                 </div>
