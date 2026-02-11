@@ -371,7 +371,20 @@ export default function OrganizationalChart({
         </TooltipProvider>
       </div>
 
-      <div className="overflow-auto flex-1 p-8" style={{ cursor: 'move' }}>
+      <div 
+        className="overflow-auto flex-1 p-8" 
+        style={{ cursor: 'grab' }}
+        onMouseDown={(e) => {
+          if (e.target.tagName === 'DIV' && e.target.className.includes('overflow-auto')) {
+            e.target.style.cursor = 'grabbing';
+          }
+        }}
+        onMouseUp={(e) => {
+          if (e.target.tagName === 'DIV') {
+            e.target.style.cursor = 'grab';
+          }
+        }}
+      >
         <div 
           className="min-w-max flex justify-center origin-top transition-transform duration-200 ease-out"
           style={{ transform: `scale(${zoom})` }}

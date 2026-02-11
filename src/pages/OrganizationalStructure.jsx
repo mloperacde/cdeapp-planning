@@ -27,9 +27,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
 export default function OrganizationalStructure() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const tabFromUrl = urlParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl || "departments");
+  const [activeTab, setActiveTab] = useState("departments");
 
   return (
     <AdminOnly message="Solo administradores pueden configurar la estructura organizativa">
