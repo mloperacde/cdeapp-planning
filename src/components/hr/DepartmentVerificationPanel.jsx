@@ -30,12 +30,19 @@ export default function DepartmentVerificationPanel() {
   const recalculateMutation = useMutation({
     mutationFn: async () => {
       setRecalculating(true);
-      const response = await base44.functions.invoke('recalculateDepartmentData', {});
-      return response.data;
+      const [deptResponse, posResponse] = await Promise.all([
+        base44.functions.invoke('recalculateDepartmentData', {}),
+        base44.functions.invoke('syncPositionDepartmentNames', {})
+      ]);
+      return {
+        departments: deptResponse.data,
+        positions: posResponse.data
+      };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
-      toast.success(data.message || 'Datos recalculados correctamente');
+      queryClient.invalidateQueries({ queryKey: ['positions'] });
+      toast.success(`${data.departments.message} y ${data.positions.message}`);
       setRecalculating(false);
     },
     onError: (error) => {
