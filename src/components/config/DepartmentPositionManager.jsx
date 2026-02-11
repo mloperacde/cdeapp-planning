@@ -49,6 +49,7 @@ import OrganizationalChart from "../hr/OrganizationalChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import EmployeeSearchSelect from "../common/EmployeeSearchSelect";
 
 export default function DepartmentPositionManager() {
   const queryClient = useQueryClient();
@@ -80,7 +81,11 @@ export default function DepartmentPositionManager() {
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
+    queryFn: async () => {
+      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
+      // Solo mostrar empleados activos
+      return all.filter(emp => emp.estado_empleado === 'Alta');
+    },
   });
 
   // Derived State
@@ -900,53 +905,57 @@ export default function DepartmentPositionManager() {
 
                   {/* Employees Tab */}
                   <TabsContent value="employees" className="flex-1 p-6 overflow-hidden flex flex-col mt-0 data-[state=inactive]:hidden">
-                    <div className="flex justify-between items-center mb-4">
-                       <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                          <Users className="w-5 h-5 text-slate-500" />
-                          Empleados Asignados
-                       </h4>
-                       <Button size="sm" onClick={() => { setEmpToEdit(null); setIsEmpDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                          <UserCircle className="w-4 h-4 mr-2" /> Asignar Empleado
-                       </Button>
-                    </div>
+                   <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                         <Users className="w-5 h-5 text-slate-500" />
+                         Empleados en {selectedDept.name}
+                      </h4>
+                      <Button size="sm" onClick={() => { setEmpToEdit(null); setIsEmpDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                         <UserCircle className="w-4 h-4 mr-2" /> Asignar/Mover Empleado
+                      </Button>
+                   </div>
 
-                    <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
-                       <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                          <div className="col-span-4">Nombre</div>
-                          <div className="col-span-4">Puesto Actual</div>
-                          <div className="col-span-2">Estado</div>
-                          <div className="col-span-2 text-right">Acciones</div>
-                       </div>
-                       <ScrollArea className="flex-1">
-                          {deptEmployees.length > 0 ? (
-                             <div className="divide-y divide-slate-100">
-                                {deptEmployees.map(emp => (
-                                   <div key={emp.id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors">
-                                      <div className="col-span-4 font-medium text-slate-900">{emp.nombre}</div>
-                                      <div className="col-span-4 text-sm text-slate-600">{emp.puesto || "-"}</div>
-                                      <div className="col-span-2">
-                                         <Badge variant={emp.estado_empleado === "Alta" ? "success" : "secondary"} className="text-xs">
-                                            {emp.estado_empleado || "N/A"}
-                                         </Badge>
-                                      </div>
-                                      <div className="col-span-2 flex justify-end">
-                                         <Button variant="ghost" size="sm" className="h-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" 
-                                            onClick={() => { setEmpToEdit(emp); setIsEmpDialogOpen(true); }}>
-                                            <Edit className="w-3.5 h-3.5 mr-1" /> Cambiar
-                                         </Button>
-                                      </div>
-                                   </div>
-                                ))}
-                             </div>
-                          ) : (
-                             <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
-                                <Users className="w-8 h-8 mb-2 opacity-20" />
-                                <p>No hay empleados asignados a este departamento.</p>
-                                <Button variant="link" onClick={() => setIsEmpDialogOpen(true)}>Asignar ahora</Button>
-                             </div>
-                          )}
-                       </ScrollArea>
-                    </div>
+                   <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
+                      <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                         <div className="col-span-1">Código</div>
+                         <div className="col-span-3">Nombre</div>
+                         <div className="col-span-3">Puesto Actual</div>
+                         <div className="col-span-2">Tipo Turno</div>
+                         <div className="col-span-1">Equipo</div>
+                         <div className="col-span-2 text-right">Acciones</div>
+                      </div>
+                      <ScrollArea className="flex-1">
+                         {deptEmployees.length > 0 ? (
+                            <div className="divide-y divide-slate-100">
+                               {deptEmployees.map(emp => (
+                                  <div key={emp.id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors">
+                                     <div className="col-span-1 text-xs text-slate-500 font-mono">{emp.codigo_empleado || '-'}</div>
+                                     <div className="col-span-3 font-medium text-slate-900">{emp.nombre}</div>
+                                     <div className="col-span-3 text-sm text-slate-600">{emp.puesto || "-"}</div>
+                                     <div className="col-span-2 text-xs">
+                                       <Badge variant="outline" className="text-xs">
+                                         {emp.tipo_turno || "N/A"}
+                                       </Badge>
+                                     </div>
+                                     <div className="col-span-1 text-xs text-slate-600">{emp.equipo || '-'}</div>
+                                     <div className="col-span-2 flex justify-end gap-1">
+                                        <Button variant="ghost" size="sm" className="h-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" 
+                                           onClick={() => { setEmpToEdit(emp); setIsEmpDialogOpen(true); }}>
+                                           <Edit className="w-3.5 h-3.5 mr-1" /> Editar
+                                        </Button>
+                                     </div>
+                                  </div>
+                               ))}
+                            </div>
+                         ) : (
+                            <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
+                               <Users className="w-8 h-8 mb-2 opacity-20" />
+                               <p>No hay empleados asignados a este departamento.</p>
+                               <Button variant="link" onClick={() => { setEmpToEdit(null); setIsEmpDialogOpen(true); }}>Asignar ahora</Button>
+                            </div>
+                         )}
+                      </ScrollArea>
+                   </div>
                   </TabsContent>
                 </Tabs>
               </div>
@@ -1021,18 +1030,12 @@ export default function DepartmentPositionManager() {
               </div>
               <div className="space-y-2">
                 <Label>Responsable</Label>
-                <Select value={deptForm.manager_id} onValueChange={val => setDeptForm({...deptForm, manager_id: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="h-[200px]">
-                      {employees.map(e => (
-                        <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
-                      ))}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
+                <EmployeeSearchSelect 
+                  value={deptForm.manager_id}
+                  onValueChange={val => setDeptForm({...deptForm, manager_id: val})}
+                  employees={employees}
+                  placeholder="Buscar responsable..."
+                />
               </div>
             </div>
 
@@ -1153,65 +1156,97 @@ export default function DepartmentPositionManager() {
 
       {/* Employee Assignment Dialog */}
       <Dialog open={isEmpDialogOpen} onOpenChange={setIsEmpDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{empToEdit ? "Cambiar Puesto/Dept" : "Asignar Empleado"}</DialogTitle>
+            <DialogTitle>{empToEdit ? "Cambiar Departamento/Puesto" : "Asignar Empleado"}</DialogTitle>
             <DialogDescription>
-              Asignar empleado al departamento <strong>{selectedDept?.name}</strong>
+              {empToEdit ? 'Mover empleado a otro departamento y asignar puesto' : `Asignar empleado al departamento ${selectedDept?.name}`}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
              {!empToEdit && (
-                <div className="space-y-2">
-                  <Label>Seleccionar Empleado</Label>
-                  <Select onValueChange={(val) => {
+               <div className="space-y-2">
+                 <Label>Seleccionar Empleado</Label>
+                 <EmployeeSearchSelect 
+                   value=""
+                   onValueChange={(val) => {
                      const emp = employees.find(e => e.id === val);
                      setEmpToEdit(emp);
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Buscar empleado..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <ScrollArea className="h-[200px]">
-                        {employees
-                          .sort((a,b) => a.nombre.localeCompare(b.nombre))
-                          .map(e => (
-                          <SelectItem key={e.id} value={e.id}>
-                             {e.nombre} 
-                             {e.departamento ? ` (${e.departamento})` : ''}
-                          </SelectItem>
-                        ))}
-                      </ScrollArea>
-                    </SelectContent>
-                  </Select>
-                </div>
+                   }}
+                   employees={employees}
+                   placeholder="Buscar empleado..."
+                   showDepartment={true}
+                 />
+               </div>
              )}
 
              {empToEdit && (
-                <div className="p-3 bg-slate-50 rounded border mb-2">
-                   <p className="text-sm font-medium">{empToEdit.nombre}</p>
-                   <p className="text-xs text-slate-500">
-                      Actual: {empToEdit.departamento || "Sin Dept"} - {empToEdit.puesto || "Sin Puesto"}
-                   </p>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-2">
+                   <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{empToEdit.nombre}</p>
+                        <p className="text-xs text-slate-600 mt-1">Código: {empToEdit.codigo_empleado || 'N/A'}</p>
+                      </div>
+                      <Badge className="bg-blue-600">Editando</Badge>
+                   </div>
+                   <div className="grid grid-cols-2 gap-3 text-xs bg-white p-2 rounded border">
+                      <div>
+                        <span className="text-slate-500">Dept Actual:</span>
+                        <p className="font-medium text-slate-900">{empToEdit.departamento || "Sin Dept"}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Puesto Actual:</span>
+                        <p className="font-medium text-slate-900">{empToEdit.puesto || "Sin Puesto"}</p>
+                      </div>
+                   </div>
                 </div>
              )}
 
-             <div className="space-y-2">
-                <Label>Puesto en {selectedDept?.name}</Label>
-                <Select 
-                   value={empToEdit?.tempPuesto} 
-                   onValueChange={(val) => setEmpToEdit({...empToEdit, tempPuesto: val})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar puesto..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none_assigned">-- Sin Puesto Específico --</SelectItem>
-                    {deptPositions.map(p => (
-                       <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                   <Label>Nuevo Departamento</Label>
+                   <Select 
+                      value={empToEdit?.tempDepartamento || selectedDeptId} 
+                      onValueChange={(val) => {
+                        const dept = departments.find(d => d.id === val);
+                        setEmpToEdit({...empToEdit, tempDepartamento: dept?.name, tempDepartamentoId: val});
+                        // Reset puesto when changing department
+                        if (val !== selectedDeptId) {
+                          setEmpToEdit(prev => ({...prev, tempPuesto: ''}));
+                        }
+                      }}
+                   >
+                     <SelectTrigger>
+                       <SelectValue placeholder="Seleccionar departamento..." />
+                     </SelectTrigger>
+                     <SelectContent>
+                       {departments.map(d => (
+                          <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                   <Label>Puesto en el Departamento</Label>
+                   <Select 
+                      value={empToEdit?.tempPuesto} 
+                      onValueChange={(val) => setEmpToEdit({...empToEdit, tempPuesto: val})}
+                   >
+                     <SelectTrigger>
+                       <SelectValue placeholder="Seleccionar puesto..." />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="none_assigned">-- Sin Puesto Específico --</SelectItem>
+                       {(empToEdit?.tempDepartamento 
+                          ? positions.filter(p => p.department_name === empToEdit.tempDepartamento)
+                          : deptPositions
+                       ).map(p => (
+                          <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                </div>
              </div>
           </div>
           <DialogFooter>
@@ -1219,15 +1254,20 @@ export default function DepartmentPositionManager() {
              <Button 
                onClick={() => {
                   if (!empToEdit) return;
+                  const targetDept = empToEdit.tempDepartamento || selectedDept.name;
+                  const targetPuesto = empToEdit.tempPuesto === "none_assigned" ? "" : (empToEdit.tempPuesto || "");
+                  
                   updateEmployeeMutation.mutate({
                      id: empToEdit.id,
-                     departamento: selectedDept.name,
-                     puesto: empToEdit.tempPuesto === "none_assigned" ? "" : (empToEdit.tempPuesto || "")
+                     departamento: targetDept,
+                     puesto: targetPuesto
                   });
                }} 
                disabled={!empToEdit}
+               className="bg-green-600 hover:bg-green-700"
              >
-               Confirmar Asignación
+               <Save className="w-4 h-4 mr-2" />
+               Guardar Cambios
              </Button>
           </DialogFooter>
         </DialogContent>
