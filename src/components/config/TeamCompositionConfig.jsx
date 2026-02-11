@@ -4,12 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Filter, User, Settings, ArrowRightLeft } from "lucide-react";
+import { Filter, User, Settings, ArrowRightLeft, Building2, Briefcase, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function TeamCompositionConfig() {
   const [selectedDept, setSelectedDept] = useState("all");
+  const [selectedTeamKey, setSelectedTeamKey] = useState("team_1");
+  const [expandedDepts, setExpandedDepts] = useState(new Set());
   const queryClient = useQueryClient();
 
   const { data: employees = [] } = useQuery({
@@ -22,46 +24,99 @@ export default function TeamCompositionConfig() {
     queryFn: () => base44.entities.TeamConfig.list(),
   });
 
-  const departments = useMemo(() => {
-    const depts = new Set();
-    employees.forEach(emp => {
-      if (emp.departamento) depts.add(emp.departamento);
-    });
-    return Array.from(depts).sort();
-  }, [employees]);
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => base44.entities.Department.list(),
+  });
 
-  // Structure: { deptName: { teamName: { puesto: [employees] } } }
-  const deptData = useMemo(() => {
-    const data = {}; 
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions'],
+    queryFn: () => base44.entities.Position.list(),
+  });
+
+  const selectedTeam = teams.find(t => t.team_key === selectedTeamKey);
+  
+  const teamEmployees = useMemo(() => 
+    employees.filter(e => e.team_key === selectedTeamKey && e.estado_empleado === 'Alta'),
+  [employees, selectedTeamKey]);
+
+  // Agrupar empleados del equipo por departamento y puesto
+  const employeesByStructure = useMemo(() => {
+    const result = {};
     
-    // Initialize structure
+    teamEmployees.forEach(emp => {
+      const deptName = (emp.departamento || "SIN DEPARTAMENTO").trim().toUpperCase();
+      const posName = (emp.puesto || "SIN PUESTO").trim().toUpperCase();
+      
+      if (!result[deptName]) {
+        result[deptName] = {};
+      }
+      if (!result[deptName][posName]) {
+        result[deptName][posName] = [];
+      }
+      result[deptName][posName].push(emp);
+    });
+    
+    return result;
+  }, [teamEmployees]);
+
+  // Calcular vacantes
+  const vacanciesByDept = useMemo(() => {
+    const result = [];
+    
     departments.forEach(dept => {
-        data[dept] = { "Sin Equipo": {} };
-        teams.forEach(t => {
-            data[dept][t.team_name] = {};
-        });
-    });
-
-    employees.forEach(emp => {
-        const dept = emp.departamento || "Sin Departamento";
-        const team = emp.equipo || "Sin Equipo";
-        const puesto = emp.puesto || "Sin Puesto";
-
-        // Handle case where dept might not be in initial list (e.g. "Sin Departamento")
-        if (!data[dept]) {
-             data[dept] = { "Sin Equipo": {} };
-             teams.forEach(t => data[dept][t.team_name] = {});
+      const deptPositions = positions.filter(p => p.department_id === dept.id);
+      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
+      
+      const deptEmps = teamEmployees.filter(e => 
+        (e.departamento || "").trim().toUpperCase() === normalizedDeptName
+      );
+      
+      const vacancies = [];
+      
+      deptPositions.forEach(pos => {
+        const assignedCount = deptEmps.filter(e => {
+          const empPuesto = (e.puesto || "").trim().toUpperCase();
+          const posName = (pos.name || "").trim().toUpperCase();
+          return empPuesto === posName;
+        }).length;
+        
+        const vacantSlots = (pos.max_headcount || 1) - assignedCount;
+        
+        if (vacantSlots > 0) {
+          vacancies.push({
+            position: pos.name,
+            vacantSlots,
+            maxHeadcount: pos.max_headcount || 1,
+            assignedCount,
+            orden: pos.orden || 0
+          });
         }
-        
-        // Handle case where team name might not be in teams list
-        if (!data[dept][team]) data[dept][team] = {}; 
-        
-        if (!data[dept][team][puesto]) data[dept][team][puesto] = [];
-        data[dept][team][puesto].push(emp);
+      });
+      
+      if (vacancies.length > 0) {
+        result.push({
+          department: dept.name,
+          departmentId: dept.id,
+          color: dept.color,
+          orden: dept.orden || 0,
+          vacancies: vacancies.sort((a, b) => a.orden - b.orden)
+        });
+      }
     });
+    
+    return result.sort((a, b) => a.orden - b.orden);
+  }, [departments, positions, teamEmployees]);
 
-    return data;
-  }, [employees, teams, departments]);
+  const toggleDept = (deptName) => {
+    const newSet = new Set(expandedDepts);
+    if (newSet.has(deptName)) {
+      newSet.delete(deptName);
+    } else {
+      newSet.add(deptName);
+    }
+    setExpandedDepts(newSet);
+  };
 
   const updateEmployeeMutation = useMutation({
     mutationFn: async ({ employeeId, equipo, team_id, team_key }) => {
@@ -80,34 +135,6 @@ export default function TeamCompositionConfig() {
     }
   });
 
-  const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ employeeIds, newTeam, team_id, team_key }) => {
-       // Process in batches of 5 to avoid rate limits
-       const BATCH_SIZE = 5;
-       const results = [];
-       for (let i = 0; i < employeeIds.length; i += BATCH_SIZE) {
-         const batch = employeeIds.slice(i, i + BATCH_SIZE);
-         const batchResults = await Promise.all(
-           batch.map(id => base44.entities.EmployeeMasterDatabase.update(id, { 
-             equipo: newTeam,
-             team_id: team_id || null,
-             team_key: team_key || null
-           }))
-         );
-         results.push(...batchResults);
-         if (i + BATCH_SIZE < employeeIds.length) await new Promise(r => setTimeout(r, 200));
-       }
-       return results;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast.success("Empleados migrados correctamente");
-    },
-    onError: (err) => {
-        toast.error("Error al migrar empleados: " + err.message);
-    }
-  });
-
   const handleTeamChange = (employeeId, newTeamName) => {
     const teamValue = newTeamName === "Sin Equipo" ? "" : newTeamName;
     const teamObj = teams.find(t => t.team_name === teamValue);
@@ -120,178 +147,201 @@ export default function TeamCompositionConfig() {
     });
   };
 
-  const handleBulkMove = (employeeIds, newTeamName) => {
-     const teamValue = newTeamName === "Sin Equipo" ? "" : newTeamName;
-     const teamObj = teams.find(t => t.team_name === teamValue);
-
-     bulkUpdateMutation.mutate({ 
-       employeeIds, 
-       newTeam: teamValue,
-       team_id: teamObj ? teamObj.id : null,
-       team_key: teamObj ? teamObj.team_key : null
-     });
+  const toggleDept = (deptName) => {
+    const newSet = new Set(expandedDepts);
+    if (newSet.has(deptName)) {
+      newSet.delete(deptName);
+    } else {
+      newSet.add(deptName);
+    }
+    setExpandedDepts(newSet);
   };
 
-  const filteredDepartments = selectedDept === "all" ? departments : [selectedDept];
-
   return (
-    <Card className="border-0 shadow-sm">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Composición de Equipos por Departamento</CardTitle>
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <Select value={selectedDept} onValueChange={setSelectedDept}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Filtrar por departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los departamentos</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        {filteredDepartments.map(dept => {
-            const teamGroups = deptData[dept];
-            if (!teamGroups) return null;
-
-            // Identify orphan teams for this department
-            const deptTeamNames = Object.keys(teamGroups);
-            const validTeamNames = new Set(teams.map(t => t.team_name));
-            validTeamNames.add("Sin Equipo");
-            
-            const orphanTeams = deptTeamNames.filter(name => !validTeamNames.has(name));
-
-            return (
-                <div key={dept} className="space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-800 border-b pb-2">{dept}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {/* Render Team Columns */}
-                        {teams.map(team => (
-                            <TeamColumn 
-                                key={team.id}
-                                teamName={team.team_name}
-                                color={team.color}
-                                groups={teamGroups[team.team_name] || {}}
-                                allTeams={teams}
-                                onMove={handleTeamChange}
-                                onBulkMove={handleBulkMove}
-                            />
-                        ))}
-                        
-                        {/* Render Orphan Columns */}
-                        {orphanTeams.map(orphanName => (
-                            <TeamColumn 
-                                key={orphanName}
-                                teamName={orphanName}
-                                color="red" // Force red for orphans
-                                groups={teamGroups[orphanName] || {}}
-                                allTeams={teams}
-                                onMove={handleTeamChange}
-                                onBulkMove={handleBulkMove}
-                                isOrphan={true}
-                            />
-                        ))}
-
-                        {/* Render Unassigned Column */}
-                        <TeamColumn 
-                            teamName="Sin Equipo"
-                            color="slate"
-                            groups={teamGroups["Sin Equipo"] || {}}
-                            allTeams={teams}
-                            onMove={handleTeamChange}
-                            onBulkMove={handleBulkMove}
-                            isUnassigned
-                        />
-                    </div>
-                </div>
-            );
-        })}
-      </CardContent>
-    </Card>
-  );
-}
-
-function TeamColumn({ teamName, color, groups, allTeams, onMove, onBulkMove, isUnassigned, isOrphan }) {
-    const totalEmployees = Object.values(groups).reduce((acc, curr) => acc + curr.length, 0);
-    const borderColor = isOrphan ? "border-red-200" : (isUnassigned ? "border-slate-200" : `border-${color}-200`);
-    const bgColor = isOrphan ? "bg-red-50" : (isUnassigned ? "bg-slate-50" : `bg-${color}-50`);
-    const headerColor = isOrphan ? "text-red-700" : (isUnassigned ? "text-slate-700" : `text-${color}-800`);
-
-    const getAllEmployeeIds = () => {
-        return Object.values(groups).flat().map(e => e.id);
-    };
-
-    return (
-        <div className={`rounded-lg border ${borderColor} flex flex-col h-full`}>
-            <div className={`p-3 ${bgColor} border-b ${borderColor} flex justify-between items-center group/header`}>
-                <div className="flex flex-col">
-                    <h4 className={`font-semibold ${headerColor}`}>{teamName}</h4>
-                    {isOrphan && <span className="text-xs text-red-500">Equipo no encontrado</span>}
-                </div>
-                <div className="flex items-center gap-2">
-                    {totalEmployees > 0 && onBulkMove && (
-                        <Select onValueChange={(val) => onBulkMove(getAllEmployeeIds(), val)}>
-                            <SelectTrigger className="w-[24px] h-[24px] p-0 border-0 bg-transparent shadow-none opacity-0 group-hover/header:opacity-100 transition-opacity">
-                                <ArrowRightLeft className="w-4 h-4 text-slate-400 hover:text-slate-700" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Sin Equipo">Mover todos a Sin Equipo</SelectItem>
-                                {allTeams.filter(t => t.team_name !== teamName).map(t => (
-                                    <SelectItem key={t.id} value={t.team_name}>Mover todos a {t.team_name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                    <Badge variant={isUnassigned ? "secondary" : (isOrphan ? "destructive" : "default")} className={(!isUnassigned && !isOrphan) ? `bg-${color}-600` : ""}>
-                        {totalEmployees}
-                    </Badge>
-                </div>
+    <div className="space-y-6">
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Composición de Equipo</CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-slate-500" />
+                <Select value={selectedTeamKey} onValueChange={setSelectedTeamKey}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map(team => (
+                      <SelectItem key={team.id} value={team.team_key}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }}></div>
+                          {team.team_name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant="secondary" className="font-semibold">
+                {teamEmployees.length} empleados
+              </Badge>
             </div>
-            <ScrollArea className="flex-1 p-3 h-[400px]">
-                {Object.entries(groups).length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center italic py-4">Sin miembros</p>
-                ) : (
-                    <div className="space-y-4">
-                        {Object.entries(groups).sort().map(([puesto, employees]) => (
-                            <div key={puesto}>
-                                <p className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">{puesto}</p>
-                                <div className="space-y-1">
-                                    {employees.sort((a,b) => a.nombre.localeCompare(b.nombre)).map(emp => (
-                                        <div key={emp.id} className="grid grid-cols-[1fr_auto] gap-2 items-center bg-white p-2 rounded shadow-sm border border-slate-100 group">
-                                            <div className="flex items-center gap-2 overflow-hidden min-w-0">
-                                                <User className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                                                <span className="text-sm truncate" title={emp.nombre}>{emp.nombre}</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[500px]">
+            {Object.keys(employeesByStructure).length > 0 ? (
+              <div className="space-y-3">
+                {Object.entries(employeesByStructure)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([deptName, positions]) => {
+                    const isExpanded = expandedDepts.has(deptName);
+                    const deptEmployees = Object.values(positions).flat();
+                    const dept = departments.find(d => 
+                      (d.name || "").trim().toUpperCase() === deptName
+                    );
+                    
+                    return (
+                      <div key={deptName} className="border rounded-lg bg-white overflow-hidden">
+                        <button
+                          onClick={() => toggleDept(deptName)}
+                          className="w-full p-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {dept?.color && (
+                              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: dept.color }}></div>
+                            )}
+                            <Building2 className="w-5 h-5 text-slate-500" />
+                            <span className="font-semibold text-slate-900">{deptName}</span>
+                            <Badge variant="secondary" className="ml-2">
+                              {deptEmployees.length}
+                            </Badge>
+                          </div>
+                          {isExpanded ? (
+                            <ChevronDown className="w-5 h-5 text-slate-400" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-slate-400" />
+                          )}
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="border-t">
+                            {Object.entries(positions)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .map(([posName, emps]) => (
+                                <div key={posName} className="bg-slate-50">
+                                  <div className="px-4 py-2 bg-slate-100 flex items-center gap-2 border-b">
+                                    <Briefcase className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-medium text-slate-700">{posName}</span>
+                                    <Badge variant="outline" className="ml-auto text-xs">
+                                      {emps.length}
+                                    </Badge>
+                                  </div>
+                                  <div className="divide-y">
+                                    {emps.map(emp => (
+                                      <div
+                                        key={emp.id}
+                                        className="p-3 flex items-center justify-between hover:bg-white transition-colors group"
+                                      >
+                                        <div className="flex items-center gap-3 flex-1">
+                                          <div className="p-2 rounded-full" style={{ backgroundColor: `${selectedTeam?.color}20` }}>
+                                            <User className="w-4 h-4" style={{ color: selectedTeam?.color }} />
+                                          </div>
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium text-sm text-slate-900">{emp.nombre}</span>
+                                              <Badge variant="outline" className="text-xs">{emp.codigo_empleado}</Badge>
                                             </div>
-                                            
-                                            <Select 
-                                                value={isUnassigned ? "Sin Equipo" : teamName} 
-                                                onValueChange={(val) => onMove(emp.id, val)}
-                                            >
-                                                <SelectTrigger className="w-[24px] h-[24px] p-0 border-0 shadow-none">
-                                                    <ArrowRightLeft className="w-4 h-4 text-slate-400 hover:text-slate-600" /> 
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {isOrphan && <SelectItem value={teamName} disabled>{teamName} (Actual)</SelectItem>}
-                                                    <SelectItem value="Sin Equipo">Sin Equipo</SelectItem>
-                                                    {allTeams.map(t => (
-                                                        <SelectItem key={t.id} value={t.team_name}>{t.team_name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            {emp.tipo_turno && (
+                                              <div className="text-xs text-slate-500 mt-0.5">
+                                                {emp.tipo_turno}
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
+                                        <Select 
+                                          value={selectedTeamKey} 
+                                          onValueChange={(val) => handleTeamChange(emp.id, teams.find(t => t.team_key === val)?.team_name || "Sin Equipo")}
+                                        >
+                                          <SelectTrigger className="w-[24px] h-[24px] p-0 border-0 shadow-none opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ArrowRightLeft className="w-4 h-4 text-slate-400 hover:text-slate-600" /> 
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="Sin Equipo">Sin Equipo</SelectItem>
+                                            {teams.map(t => (
+                                              <SelectItem key={t.id} value={t.team_key}>{t.team_name}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
                                     ))}
+                                  </div>
                                 </div>
-                            </div>
-                        ))}
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              <div className="text-center py-20 text-slate-400">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No hay empleados asignados a este equipo</p>
+              </div>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Puestos Vacantes */}
+      {vacanciesByDept.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <CardTitle className="text-lg">Puestos Vacantes en {selectedTeam?.team_name}</CardTitle>
+              </div>
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                {vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0)} vacantes
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-64">
+              <div className="space-y-3">
+                {vacanciesByDept.map(dept => (
+                  <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
+                    <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }}></div>
+                      <span className="font-semibold text-sm text-slate-900">{dept.department}</span>
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        {dept.vacancies.length} vacantes
+                      </Badge>
                     </div>
-                )}
+                    <div className="p-2 space-y-1">
+                      {dept.vacancies.map((vac, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs bg-white p-2 rounded border">
+                          <span className="font-medium text-slate-700">{vac.position}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-500">
+                              {vac.assignedCount}/{vac.maxHeadcount}
+                            </span>
+                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-xs">
+                              {vac.vacantSlots} vacante{vac.vacantSlots > 1 ? 's' : ''}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </ScrollArea>
-        </div>
-    );
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 }
