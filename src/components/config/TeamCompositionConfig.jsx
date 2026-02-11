@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Filter, User, Settings, ArrowRightLeft, Building2, Briefcase, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
+import { Filter, User, Users, Settings, ArrowRightLeft, Building2, Briefcase, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -145,16 +145,6 @@ export default function TeamCompositionConfig() {
       team_id: teamObj ? teamObj.id : null,
       team_key: teamObj ? teamObj.team_key : null
     });
-  };
-
-  const toggleDept = (deptName) => {
-    const newSet = new Set(expandedDepts);
-    if (newSet.has(deptName)) {
-      newSet.delete(deptName);
-    } else {
-      newSet.add(deptName);
-    }
-    setExpandedDepts(newSet);
   };
 
   return (
