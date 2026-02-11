@@ -20,6 +20,7 @@ import TeamManagementConfig from "../components/config/TeamManagementConfig";
 import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import { StructureConfig, AssignmentsConfig, TasksConfig } from "../components/config/ManufacturingStructureConfig";
 import DepartmentVerificationPanel from "../components/hr/DepartmentVerificationPanel";
+import TeamVerificationPanel from "../components/hr/TeamVerificationPanel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -149,18 +150,35 @@ export default function OrganizationalStructure() {
               </TabsContent>
 
               <TabsContent value="verification" className="m-0 h-full">
-                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-full flex flex-col">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-full flex flex-col overflow-hidden">
                   <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-3 px-4 shrink-0">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <ClipboardList className="w-4 h-4 text-green-600" />
-                      Verificación de Cambios
+                      Verificación y Validación
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Verifica que los campos parent_name y total_employee_count funcionan correctamente
+                      Verifica la consistencia de departamentos y equipos
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-0 overflow-y-auto">
-                    <DepartmentVerificationPanel />
+                    <Tabs defaultValue="departments" className="w-full">
+                      <TabsList className="w-full grid grid-cols-2 m-4 mb-2">
+                        <TabsTrigger value="departments">
+                          <Building2 className="w-4 h-4 mr-2" />
+                          Departamentos
+                        </TabsTrigger>
+                        <TabsTrigger value="teams">
+                          <Users className="w-4 h-4 mr-2" />
+                          Equipos
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="departments">
+                        <DepartmentVerificationPanel />
+                      </TabsContent>
+                      <TabsContent value="teams">
+                        <TeamVerificationPanel />
+                      </TabsContent>
+                    </Tabs>
                   </CardContent>
                 </Card>
               </TabsContent>
