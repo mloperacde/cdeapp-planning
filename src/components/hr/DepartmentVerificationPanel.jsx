@@ -1,12 +1,17 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Users, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, AlertCircle, Users, Building2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import OrganizationalChart from "./OrganizationalChart";
 
 export default function DepartmentVerificationPanel() {
+  const queryClient = useQueryClient();
+  const [recalculating, setRecalculating] = useState(false);
+
   const { data: departments = [], isLoading: loadingDepts } = useQuery({
     queryKey: ['departments'],
     queryFn: () => base44.entities.Department.list(),
@@ -22,6 +27,23 @@ export default function DepartmentVerificationPanel() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
   });
 
+  const recalculateMutation = useMutation({
+    mutationFn: async () => {
+      setRecalculating(true);
+      const response = await base44.functions.invoke('recalculateDepartmentData', {});
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success(data.message || 'Datos recalculados correctamente');
+      setRecalculating(false);
+    },
+    onError: (error) => {
+      toast.error('Error al recalcular: ' + error.message);
+      setRecalculating(false);
+    }
+  });
+
   if (loadingDepts) {
     return <div className="p-6 text-center">Cargando datos...</div>;
   }
@@ -35,6 +57,18 @@ export default function DepartmentVerificationPanel() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Botón de recálculo */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={() => recalculateMutation.mutate()}
+          disabled={recalculating}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${recalculating ? 'animate-spin' : ''}`} />
+          {recalculating ? 'Recalculando...' : 'Recalcular Datos'}
+        </Button>
+      </div>
+
       {/* Panel de verificación */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
