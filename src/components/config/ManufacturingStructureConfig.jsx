@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Factory, Clock, RefreshCw, GripVertical, Pencil, X } from "lucide-react";
+import { Plus, Trash2, Factory, Clock, RefreshCw, GripVertical, Pencil, X, Cog } from "lucide-react";
 import { cdeApi } from "@/services/cdeApi";
+import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
@@ -30,9 +31,30 @@ const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now()
 export function StructureConfig({ config, setConfig }) {
   const [newAreaName, setNewAreaName] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingMachines, setIsSyncingMachines] = useState(false);
   const [editingArea, setEditingArea] = useState(null); // { id, name }
   const [editingRoom, setEditingRoom] = useState(null); // { areaId, roomId, name }
   const [isAddingRoom, setIsAddingRoom] = useState(null); // areaId
+
+  const handleSyncMachines = async () => {
+    try {
+      setIsSyncingMachines(true);
+      toast.info("Sincronizando máquinas desde API...");
+      
+      const response = await base44.functions.invoke('syncMachinesFromApi', {});
+      
+      if (response.data.success) {
+        toast.success(response.data.message);
+      } else {
+        throw new Error(response.data.error || 'Error al sincronizar máquinas');
+      }
+    } catch (error) {
+      console.error("Sync machines error:", error);
+      toast.error(`Error al sincronizar máquinas: ${error.message}`);
+    } finally {
+      setIsSyncingMachines(false);
+    }
+  };
 
   const handleSyncRooms = async () => {
     try {
@@ -247,7 +269,16 @@ export function StructureConfig({ config, setConfig }) {
                 className="border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 whitespace-nowrap"
             >
                 <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                Sincronizar
+                Sincronizar Salas
+            </Button>
+            <Button
+                onClick={handleSyncMachines}
+                disabled={isSyncingMachines}
+                variant="outline"
+                className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 whitespace-nowrap"
+            >
+                <Cog className={`w-4 h-4 mr-2 ${isSyncingMachines ? 'animate-spin' : ''}`} />
+                Sincronizar Máquinas
             </Button>
         </div>
       </div>
@@ -570,7 +601,7 @@ function LeaderAssignment({ leaderName, shift, config, onToggle, onEmployeeSelec
 }
 
 export function TasksConfig({ config, setConfig }) {
-  const [newTask, setNewTask] = useState({ time: "", description: "", role: "Todos" });
+  const [newTask, setNewTask] = useState({ time: "", description: "", role: "Todos", subdepartment: "" });
 
   const addTask = () => {
     if (!newTask.time || !newTask.description) return;
@@ -578,7 +609,7 @@ export function TasksConfig({ config, setConfig }) {
       ...prev,
       tasks: [...prev.tasks, { id: generateId(), ...newTask }].sort((a, b) => a.time.localeCompare(b.time))
     }));
-    setNewTask({ time: "", description: "", role: "Todos" });
+    setNewTask({ time: "", description: "", role: "Todos", subdepartment: "" });
   };
 
   const deleteTask = (id) => {
@@ -595,7 +626,7 @@ export function TasksConfig({ config, setConfig }) {
         <CardDescription>Define las tareas y horarios para los Jefes de Equipo</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-lg border">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end bg-slate-50 p-4 rounded-lg border">
           <div className="space-y-2">
             <Label>Hora</Label>
             <Input 
@@ -607,10 +638,39 @@ export function TasksConfig({ config, setConfig }) {
           <div className="space-y-2 md:col-span-2">
             <Label>Tarea / Descripción</Label>
             <Input 
-              placeholder="Descripción de la tarea de supervisión" 
+              placeholder="Descripción de la tarea" 
               value={newTask.description} 
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} 
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Rol</Label>
+            <Select value={newTask.role} onValueChange={(val) => setNewTask({ ...newTask, role: val })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todos">Todos</SelectItem>
+                <SelectItem value="Jefe Turno">Jefe Turno</SelectItem>
+                <SelectItem value="Responsable Área">Responsable Área</SelectItem>
+                <SelectItem value="Calidad">Calidad</SelectItem>
+                <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Área/Sala</Label>
+            <Select value={newTask.subdepartment} onValueChange={(val) => setNewTask({ ...newTask, subdepartment: val })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>Todas las áreas</SelectItem>
+                {config.areas?.map(area => (
+                  <SelectItem key={area.id} value={area.name}>{area.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Button onClick={addTask} className="w-full">
@@ -622,19 +682,33 @@ export function TasksConfig({ config, setConfig }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">Hora</TableHead>
+              <TableHead className="w-[80px]">Hora</TableHead>
               <TableHead>Tarea</TableHead>
-              <TableHead className="w-[100px] text-right">Acciones</TableHead>
+              <TableHead className="w-[120px]">Rol</TableHead>
+              <TableHead className="w-[120px]">Área/Sala</TableHead>
+              <TableHead className="w-[80px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {config.tasks.map(task => (
               <TableRow key={task.id}>
-                <TableCell className="font-medium flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-500" />
-                  {task.time}
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-500" />
+                    {task.time}
+                  </div>
                 </TableCell>
                 <TableCell>{task.description}</TableCell>
+                <TableCell>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                    {task.role || 'Todos'}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs text-slate-600">
+                    {task.subdepartment || 'Todas'}
+                  </span>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteTask(task.id)}>
                     <Trash2 className="w-4 h-4" />
