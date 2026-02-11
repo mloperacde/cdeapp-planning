@@ -810,7 +810,8 @@ export default function DepartmentPositionManager() {
       </div>
 
       {viewMode === "editor" ? (
-        <div className="flex-1 flex gap-6 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+          <div className="flex-1 flex gap-6 overflow-hidden">
           {/* Left Sidebar: Tree View */}
           <Card className="w-1/3 min-w-[300px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
             <div className="p-4 border-b border-slate-100 flex gap-2">
@@ -1070,6 +1071,56 @@ export default function DepartmentPositionManager() {
               </div>
             )}
           </Card>
+          </div>
+          
+          {/* Puestos Vacantes */}
+          {vacanciesByDept.length > 0 && (
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                    <CardTitle className="text-lg">Puestos Vacantes</CardTitle>
+                  </div>
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                    {vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0)} vacantes
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[200px]">
+                  <div className="space-y-4">
+                    {vacanciesByDept.map(dept => (
+                      <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
+                        <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }}></div>
+                          <span className="font-semibold text-sm text-slate-900">{dept.department}</span>
+                          <Badge variant="outline" className="ml-auto text-xs">
+                            {dept.vacancies.length} vacantes
+                          </Badge>
+                        </div>
+                        <div className="p-2 space-y-1">
+                          {dept.vacancies.map((vac, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-xs bg-white p-2 rounded border">
+                              <span className="font-medium text-slate-700">{vac.position}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-500">
+                                  {vac.assignedCount}/{vac.maxHeadcount}
+                                </span>
+                                <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-xs">
+                                  {vac.vacantSlots} vacante{vac.vacantSlots > 1 ? 's' : ''}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
         </div>
       ) : (
         <OrganizationalChart 
