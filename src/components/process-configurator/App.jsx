@@ -10,7 +10,7 @@ import DataManagement from "./DataManagement";
 
 function App() {
   return (
-    <div className="ProcessConfiguratorApp">
+    <div className="ProcessConfiguratorApp h-full">
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
