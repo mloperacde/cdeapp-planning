@@ -247,7 +247,6 @@ export const localDataService = {
                 let foundProcesses = [];
                 
                 // Try Matrix parsing FIRST
-                // We don't restrict by column count anymore to support small matrices
                 foundProcesses = this._parseProcessesFromMatrix(data, activities);
                 
                 // If successful, we might need to backfill activities that don't exist yet
