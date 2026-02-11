@@ -22,7 +22,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { 
   Plus, 
   Search, 
@@ -36,7 +44,8 @@ import {
   RefreshCw,
   DownloadCloud,
   AlertTriangle,
-  Building2
+  Building2,
+  Bug
 } from "lucide-react";
 
 // const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
@@ -47,6 +56,7 @@ export default function Articles() {
   const [searchTerm, setSearchTerm] = useState("");
   const [uploading, setUploading] = useState(false);
   const [filterNoProcess, setFilterNoProcess] = useState(false);
+  const [selectedRawData, setSelectedRawData] = useState(null);
 
   useEffect(() => {
     fetchArticles();
@@ -444,6 +454,13 @@ export default function Articles() {
                               <Trash2 className="h-4 w-4 mr-2" />
                               Eliminar
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => setSelectedRawData(article.raw_data || article)}
+                            >
+                              <Bug className="h-4 w-4 mr-2 text-muted-foreground" />
+                              <span className="text-muted-foreground">Ver Datos Raw</span>
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -455,6 +472,22 @@ export default function Articles() {
           </CardContent>
         </Card>
       )}
+
+      {/* Raw Data Debug Dialog */}
+      <Dialog open={!!selectedRawData} onOpenChange={(open) => !open && setSelectedRawData(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Datos Originales (Raw)</DialogTitle>
+            <DialogDescription>
+              Estructura exacta recibida de la API para este artículo.
+              Usa esta información para ajustar el mapeo de campos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-slate-950 text-slate-50 p-4 rounded-md font-mono text-xs overflow-x-auto">
+            <pre>{JSON.stringify(selectedRawData, null, 2)}</pre>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

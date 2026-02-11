@@ -205,7 +205,8 @@ export const localDataService = {
                 process_code: getValue(apiArt, ['process_code', 'process', 'proceso', 'codigo_proceso']) || null,
                 operators_required: parseInt(getValue(apiArt, ['operators_required', 'operators', 'operarios', 'people', 'personas', 'resources', 'required_operators']) || 1),
                 total_time_seconds: parseFloat(getValue(apiArt, ['total_time_seconds', 'total_time', 'time', 'tiempo']) || 0),
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
+                raw_data: apiArt // Store full raw object for debugging/fallback
             };
 
             if (existing) {
