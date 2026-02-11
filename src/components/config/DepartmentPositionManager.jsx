@@ -120,13 +120,28 @@ export default function DepartmentPositionManager() {
         payload.parent_name = null;
       }
       
-      if (data.id) {
-        return base44.entities.Department.update(data.id, payload);
+      const result = data.id 
+        ? await base44.entities.Department.update(data.id, payload)
+        : await base44.entities.Department.create(payload);
+      
+      // If department name changed, update all positions' department_name
+      if (data.id && data.name) {
+        const oldDept = departments.find(d => d.id === data.id);
+        if (oldDept && oldDept.name !== data.name) {
+          const deptPositions = positions.filter(p => p.department_id === data.id);
+          await Promise.all(
+            deptPositions.map(pos => 
+              base44.entities.Position.update(pos.id, { department_name: data.name })
+            )
+          );
+        }
       }
-      return base44.entities.Department.create(payload);
+      
+      return result;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['departments'] });
+      await queryClient.invalidateQueries({ queryKey: ['positions'] });
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
       // Recalculate all total_employee_count
       await recalculateEmployeeCounts();
@@ -146,10 +161,17 @@ export default function DepartmentPositionManager() {
 
   const posMutation = useMutation({
     mutationFn: async (data) => {
+      // Add department_name for easier querying
+      const department = departments.find(d => d.id === data.department_id);
+      const payload = {
+        ...data,
+        department_name: department?.name || null
+      };
+      
       if (data.id) {
-        return base44.entities.Position.update(data.id, data);
+        return base44.entities.Position.update(data.id, payload);
       }
-      return base44.entities.Position.create(data);
+      return base44.entities.Position.create(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
@@ -168,7 +190,11 @@ export default function DepartmentPositionManager() {
 
   const movePosMutation = useMutation({
     mutationFn: async ({ id, newDeptId }) => {
-      return base44.entities.Position.update(id, { department_id: newDeptId });
+      const newDept = departments.find(d => d.id === newDeptId);
+      return base44.entities.Position.update(id, { 
+        department_id: newDeptId,
+        department_name: newDept?.name || null
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
@@ -399,6 +425,7 @@ export default function DepartmentPositionManager() {
             await base44.entities.Position.create({
               name: posData.name,
               department_id: deptId,
+              department_name: deptData.name,
               max_headcount: posData.count, // Set initial headcount to current employee count
               level: "Mid"
             });
