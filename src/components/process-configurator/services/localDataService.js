@@ -140,8 +140,29 @@ export const localDataService = {
             return this.getArticles();
         }
 
-        const apiArticles = await response.json();
-        console.log("API Articles raw:", apiArticles);
+        let apiArticles = await response.json();
+        
+        // Handle common API envelopes (e.g. { data: [...], results: [...] })
+        if (!Array.isArray(apiArticles)) {
+            if (apiArticles.data && Array.isArray(apiArticles.data)) {
+                apiArticles = apiArticles.data;
+            } else if (apiArticles.results && Array.isArray(apiArticles.results)) {
+                apiArticles = apiArticles.results;
+            } else if (apiArticles.items && Array.isArray(apiArticles.items)) {
+                apiArticles = apiArticles.items;
+            } else {
+                // Last ditch: try to find the first array property
+                const arrayProp = Object.values(apiArticles).find(val => Array.isArray(val));
+                if (arrayProp) {
+                    apiArticles = arrayProp;
+                } else {
+                    console.error("Could not find array in API response:", apiArticles);
+                    return this.getArticles();
+                }
+            }
+        }
+
+        console.log(`Found ${apiArticles.length} articles from API.`);
 
         const localArticles = await this.getArticles();
         
