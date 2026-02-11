@@ -19,6 +19,7 @@ import DepartmentPositionManager from "../components/config/DepartmentPositionMa
 import TeamManagementConfig from "../components/config/TeamManagementConfig";
 import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import { StructureConfig, AssignmentsConfig, TasksConfig } from "../components/config/ManufacturingStructureConfig";
+import DepartmentVerificationPanel from "../components/hr/DepartmentVerificationPanel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -71,6 +72,10 @@ export default function OrganizationalStructure() {
               <TabsTrigger value="manufacturing" className="flex-1 text-xs py-1.5">
                 <Factory className="w-3 h-3 mr-2" />
                 Fabricación
+              </TabsTrigger>
+              <TabsTrigger value="verification" className="flex-1 text-xs py-1.5">
+                <ClipboardList className="w-3 h-3 mr-2" />
+                Verificación
               </TabsTrigger>
             </TabsList>
 
@@ -139,6 +144,23 @@ export default function OrganizationalStructure() {
                   </CardHeader>
                   <CardContent className="p-4 overflow-y-auto">
                     <ManufacturingConfigWrapper />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="verification" className="m-0 h-full">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-full flex flex-col">
+                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-3 px-4 shrink-0">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <ClipboardList className="w-4 h-4 text-green-600" />
+                      Verificación de Cambios
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Verifica que los campos parent_name y total_employee_count funcionan correctamente
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0 overflow-y-auto">
+                    <DepartmentVerificationPanel />
                   </CardContent>
                 </Card>
               </TabsContent>

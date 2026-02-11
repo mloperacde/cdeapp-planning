@@ -59,9 +59,6 @@ import Breaks from './pages/Breaks';
 import CalidadSkills from './pages/CalidadSkills';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
-import MaintenancePlanningPage from './pages/MaintenancePlanningPage';
-import WarehousePlanningPage from './pages/WarehousePlanningPage';
-import QualityPlanningPage from './pages/QualityPlanningPage';
 import DailyProductionPlanningPage from './pages/DailyProductionPlanningPage';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
@@ -80,6 +77,7 @@ import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
+import MaintenancePlanningPage from './pages/MaintenancePlanningPage';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MantenimientoSkills from './pages/MantenimientoSkills';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
@@ -92,6 +90,7 @@ import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionDashboard from './pages/ProductionDashboard';
 import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
+import QualityPlanningPage from './pages/QualityPlanningPage';
 import Reports from './pages/Reports';
 import RulesAndTemplates from './pages/RulesAndTemplates';
 import ShiftAssignmentsPage from './pages/ShiftAssignmentsPage';
@@ -101,6 +100,7 @@ import ShiftPlanning from './pages/ShiftPlanning';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import Timeline from './pages/Timeline';
+import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
@@ -122,9 +122,6 @@ export const PAGES = {
     "CalidadSkills": CalidadSkills,
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
-    "MaintenancePlanningPage": MaintenancePlanningPage,
-    "WarehousePlanningPage": WarehousePlanningPage,
-    "QualityPlanningPage": QualityPlanningPage,
     "DailyProductionPlanningPage": DailyProductionPlanningPage,
     "DailyShiftPlanning": DailyShiftPlanning,
     "Dashboard": Dashboard,
@@ -143,6 +140,7 @@ export const PAGES = {
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
     "MachineMaster": MachineMaster,
+    "MaintenancePlanningPage": MaintenancePlanningPage,
     "MaintenanceTracking": MaintenanceTracking,
     "MantenimientoSkills": MantenimientoSkills,
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
@@ -155,6 +153,7 @@ export const PAGES = {
     "ProductionDashboard": ProductionDashboard,
     "ProductionPlanning": ProductionPlanning,
     "QualityControl": QualityControl,
+    "QualityPlanningPage": QualityPlanningPage,
     "Reports": Reports,
     "RulesAndTemplates": RulesAndTemplates,
     "ShiftAssignmentsPage": ShiftAssignmentsPage,
@@ -164,6 +163,7 @@ export const PAGES = {
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
     "Timeline": Timeline,
+    "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
     "DailyShiftPlanning": DailyShiftPlanning,
