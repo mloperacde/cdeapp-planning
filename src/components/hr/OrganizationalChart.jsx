@@ -79,23 +79,21 @@ export default function OrganizationalChart({
       const dept = departments.find(d => d.id === deptId);
       if (!dept) return { employees: 0, headcount: 0 };
 
-      // Direct counts
+      // Use stored total_employee_count for employees
+      const totalEmp = dept.total_employee_count || 0;
+
+      // Calculate headcount (positions) recursively
       const directPos = positions.filter(p => p.department_id === deptId);
       const directHC = directPos.reduce((acc, p) => acc + (p.max_headcount || 0), 0);
-      // Match by name as per current system convention
-      const directEmp = employees.filter(e => e.departamento === dept.name).length;
 
-      // Children counts
+      // Children headcount
       const children = departments.filter(d => d.parent_id === deptId);
-      
-      let totalEmp = directEmp;
-      let totalHC = directHC;
-
-      children.forEach(child => {
+      const childrenHC = children.reduce((sum, child) => {
         const childStats = calculateStats(child.id);
-        totalEmp += childStats.employees;
-        totalHC += childStats.headcount;
-      });
+        return sum + childStats.headcount;
+      }, 0);
+
+      const totalHC = directHC + childrenHC;
 
       stats[deptId] = { employees: totalEmp, headcount: totalHC };
       return stats[deptId];
