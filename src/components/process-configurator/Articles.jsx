@@ -328,6 +328,7 @@ export default function Articles() {
                     <TableHead>Nombre</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead className="text-center">Operarios</TableHead>
                     <TableHead>Proceso</TableHead>
                     <TableHead className="text-center">Tiempo</TableHead>
                     <TableHead className="w-[80px]">Acciones</TableHead>
@@ -378,6 +379,12 @@ export default function Articles() {
                         ) : (
                           <span className="text-muted-foreground text-xs">-</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm">{article.operators_required || 1}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {article.process_code ? (

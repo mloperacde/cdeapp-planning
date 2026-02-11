@@ -60,13 +60,15 @@ export default function DataManagement() {
     try {
       const activities = await localDataService.fetchApiActivities();
       const processes = await localDataService.fetchApiProcesses();
+      const articles = await localDataService.fetchApiArticles(); // Added article sync
       
       toast.success(
-        `Sincronización (API/Local): ${activities.length} actividades, ${processes.length} procesos`
+        `Sincronización (API/Local): ${activities.length} act, ${processes.length} proc, ${articles.length} art`
       );
       fetchData();
     } catch (error) {
       toast.error("Error al sincronizar");
+      console.error(error);
     } finally {
       setLoading(false);
     }

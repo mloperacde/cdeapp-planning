@@ -128,6 +128,72 @@ export const localDataService = {
     }
   },
 
+  async fetchApiArticles() {
+    try {
+        const response = await fetch(`${API_URL}/articles`).catch(err => {
+             console.warn("API not reachable, using local data only:", err);
+             return null;
+        });
+
+        if (!response || !response.ok) {
+            console.warn('Failed to fetch articles from API or offline');
+            return this.getArticles();
+        }
+
+        const apiArticles = await response.json();
+        console.log("API Articles raw:", apiArticles);
+
+        const localArticles = await this.getArticles();
+        
+        // Merge strategy: API is source of truth for incoming data, but preserve local edits if needed?
+        // For now, we will UPSERT based on 'code' or 'id'
+        
+        const mergedArticles = [...localArticles];
+        const existingMap = new Map(localArticles.map(a => [a.code, a]));
+
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        apiArticles.forEach(apiArt => {
+            const existing = existingMap.get(apiArt.code);
+            
+            // Map API fields to internal fields
+            const mappedArticle = {
+                id: existing ? existing.id : `art_${apiArt.id || apiArt.code || Date.now()}`,
+                code: apiArt.code,
+                name: apiArt.name || apiArt.description || apiArt.code,
+                description: apiArt.description || "",
+                client: apiArt.client_name || apiArt.client || "",
+                reference: apiArt.reference || "",
+                type: apiArt.type || apiArt.family || "",
+                process_code: apiArt.process_code || null,
+                operators_required: parseInt(apiArt.operators_required || apiArt.operators || 1),
+                total_time_seconds: parseFloat(apiArt.total_time_seconds || 0),
+                updated_at: new Date().toISOString()
+            };
+
+            if (existing) {
+                // Update existing (merge fields, preferring API for master data)
+                Object.assign(existing, mappedArticle);
+                updatedCount++;
+            } else {
+                // Add new
+                mergedArticles.push(mappedArticle);
+                existingMap.set(mappedArticle.code, mappedArticle);
+                addedCount++;
+            }
+        });
+
+        console.log(`Synced Articles: ${addedCount} added, ${updatedCount} updated.`);
+        localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(mergedArticles));
+        
+        return mergedArticles;
+    } catch (error) {
+        console.error("Error syncing articles with API:", error);
+        return this.getArticles();
+    }
+  },
+
   async processExcel(file) {
     await delay(500);
     return new Promise((resolve, reject) => {
