@@ -610,6 +610,14 @@ export const localDataService = {
     return null;
   },
 
+  async createArticle(data) {
+    return this.saveArticle(data);
+  },
+
+  async updateArticle(id, data) {
+    return this.saveArticle({ ...data, id });
+  },
+
   async saveArticle(articleData) {
     await delay();
     let articles = await this.getArticles();

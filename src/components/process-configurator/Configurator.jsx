@@ -49,6 +49,7 @@ export default function Configurator() {
     description: "",
     client: "",
     reference: "",
+    type: "",
     process_code: null,
     selected_activities: [],
     operators_required: 1
@@ -81,6 +82,7 @@ export default function Configurator() {
             description: article.description || "",
             client: article.client || "",
             reference: article.reference || "",
+            type: article.type || "",
             process_code: article.process_code || null,
             selected_activities: article.selected_activities || [],
             operators_required: article.operators_required || 1
@@ -125,8 +127,8 @@ export default function Configurator() {
     
     setFormData(prev => ({
       ...prev,
-      selected_activities: newSelected,
-      process_code: null // Clear process when manually selecting
+      selected_activities: newSelected
+      // Don't clear process_code, allow "Process + Extra"
     }));
     
     calculateTime(newSelected);
@@ -342,6 +344,16 @@ export default function Configurator() {
                     data-testid="article-reference-input"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Tipo</Label>
+                  <Input
+                    id="type"
+                    placeholder="Ej: Sobres, Frascos..."
+                    value={formData.type}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                    data-testid="article-type-input"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>
@@ -385,26 +397,19 @@ export default function Configurator() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="process" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="process" data-testid="tab-process">
-                    Proceso Predefinido
-                  </TabsTrigger>
-                  <TabsTrigger value="manual" data-testid="tab-manual">
-                    Selección Manual
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="process" className="space-y-4">
+              <div className="space-y-6">
+                {/* Process Selector */}
+                <div className="space-y-2">
+                  <Label>Proceso Base</Label>
                   <Select
                     value={formData.process_code || "manual"}
                     onValueChange={handleProcessSelect}
                   >
                     <SelectTrigger data-testid="process-select">
-                      <SelectValue placeholder="Selecciona un proceso" />
+                      <SelectValue placeholder="Selecciona un proceso base" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="manual">-- Selección Manual --</SelectItem>
+                      <SelectItem value="manual">-- Sin Proceso Base (Manual) --</SelectItem>
                       {processes.map((process) => (
                         <SelectItem key={process.id} value={process.code}>
                           <span className="flex items-center gap-2">
@@ -417,58 +422,33 @@ export default function Configurator() {
                       ))}
                     </SelectContent>
                   </Select>
-
+                  
                   {formData.process_code && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-sm">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <p className="text-sm font-medium text-green-800">
-                          Proceso {formData.process_code} seleccionado
-                        </p>
-                      </div>
-                      <p className="text-sm text-green-700">
-                        {formData.selected_activities.length} actividades incluidas
-                      </p>
+                    <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span>Proceso <strong>{formData.process_code}</strong> seleccionado como base. Puedes añadir o quitar actividades libremente.</span>
                     </div>
                   )}
+                </div>
 
-                  {/* Quick process list */}
-                  <div className="mt-4">
-                    <p className="text-sm text-muted-foreground mb-2">Procesos disponibles:</p>
-                    <ScrollArea className="h-[200px]">
-                      <div className="flex flex-wrap gap-2">
-                        {processes.slice(0, 50).map((process) => (
-                          <Button
-                            key={process.id}
-                            variant={formData.process_code === process.code ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handleProcessSelect(process.code)}
-                            className="font-mono"
-                            data-testid={`quick-process-${process.code}`}
-                          >
-                            {process.code}
-                          </Button>
-                        ))}
-                        {processes.length > 50 && (
-                          <span className="text-sm text-muted-foreground self-center">
-                            +{processes.length - 50} más
-                          </span>
-                        )}
-                      </div>
-                    </ScrollArea>
+                {/* Activity List */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Actividades del Proceso</Label>
+                    <Badge variant="outline">
+                      {formData.selected_activities.length} seleccionadas
+                    </Badge>
                   </div>
-                </TabsContent>
-
-                <TabsContent value="manual" className="space-y-4">
+                  
                   {activities.length === 0 ? (
-                    <div className="empty-state py-8">
-                      <AlertCircle className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                    <div className="empty-state py-8 border-2 border-dashed rounded-lg text-center">
+                      <AlertCircle className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
                       <p className="text-muted-foreground">
                         No hay actividades cargadas. Sube un archivo Excel primero.
                       </p>
                     </div>
                   ) : (
-                    <ScrollArea className="h-[400px] pr-4">
+                    <ScrollArea className="h-[400px] border rounded-md p-4">
                       <div className="space-y-2">
                         {activities.map((activity) => (
                           <div
@@ -488,16 +468,16 @@ export default function Configurator() {
                             />
                             <label
                               htmlFor={activity.id}
-                              className="flex-1 cursor-pointer"
+                              className="flex-1 cursor-pointer select-none"
                             >
                               <div className="flex items-center justify-between">
                                 <div>
                                   <span className="font-mono text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded mr-2">
                                     {activity.number}
                                   </span>
-                                  <span className="font-medium">{activity.name}</span>
+                                  <span className="font-medium text-sm">{activity.name}</span>
                                 </div>
-                                <Badge variant="outline" className="ml-2">
+                                <Badge variant="outline" className="ml-2 shrink-0">
                                   {activity.time_seconds}s
                                 </Badge>
                               </div>
@@ -507,8 +487,8 @@ export default function Configurator() {
                       </div>
                     </ScrollArea>
                   )}
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

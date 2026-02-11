@@ -140,6 +140,8 @@ export default function Articles() {
               client: String(r.client || r.client_name || r.Cliente || ''),
               process_code: finalProcess,
               reference: String(r.reference || r.Referencia || ''),
+              type: String(r.type || r.Type || r.Tipo || r.Familia || r.Family || '').trim(),
+              operators_required: parseInt(r.operators || r.Operarios || r.Personas || 1),
               total_time_seconds: parseFloat(r.total_time_seconds || r.Tiempo || 0)
           };
       }).filter(a => a.name || a.code);
@@ -325,6 +327,7 @@ export default function Articles() {
                     <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Proceso</TableHead>
                     <TableHead className="text-center">Tiempo</TableHead>
                     <TableHead className="w-[80px]">Acciones</TableHead>
@@ -365,6 +368,15 @@ export default function Articles() {
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {article.type ? (
+                          <Badge variant="secondary" className="font-normal">
+                            {article.type}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">-</span>
                         )}
                       </TableCell>
                       <TableCell>
