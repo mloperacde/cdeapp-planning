@@ -101,7 +101,6 @@ function GeneralTeamConfig() {
         console.log("Detected team name changes:", nameChanges);
         
         // Fetch all employees to find matches
-        // Add timestamp to bust potential cache
         let allEmployees = [];
         try {
             allEmployees = await base44.entities.EmployeeMasterDatabase.list({ 
@@ -135,8 +134,8 @@ function GeneralTeamConfig() {
               id: emp.id,
               data: { 
                 equipo: change.newName.trim(),
-                team_key: target ? target.team_key : undefined,
-                team_id: target ? target.id : undefined
+                team_key: target ? target.team_key : null,
+                team_id: target ? target.id : null
               },
               name: emp.nombre
             });
@@ -408,7 +407,10 @@ function RotationCalendarConfig() {
             <div>Semana</div>
             <div>Fecha Inicio</div>
             {teams.slice(0, 2).map(team => (
-              <div key={team.id} style={{ color: team.color }}>{team.team_name}</div>
+              <div key={team.id} className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }}></div>
+                <span style={{ color: team.color }}>{team.team_name}</span>
+              </div>
             ))}
           </div>
           <div className="max-h-[600px] overflow-y-auto">
@@ -418,24 +420,38 @@ function RotationCalendarConfig() {
                 <div className="text-slate-500">
                   {week.displayDate} - {week.endDate}
                 </div>
-                {teams.slice(0, 2).map(team => (
-                  <div key={team.id}>
-                    <Select 
-                      value={getShift(week.startDate, team.team_key)} 
-                      onValueChange={(v) => handleShiftChange(week.startDate, team.team_key, v)}
-                    >
-                      <SelectTrigger className="w-32 h-8">
-                        <SelectValue placeholder="-" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={shifts.MORNING || "Mañana"}>{shifts.MORNING || "Mañana"}</SelectItem>
-                        <SelectItem value={shifts.AFTERNOON || "Tarde"}>{shifts.AFTERNOON || "Tarde"}</SelectItem>
-                        {shifts.NIGHT && <SelectItem value={shifts.NIGHT}>{shifts.NIGHT}</SelectItem>}
-                        <SelectItem value="Descanso">Descanso</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+                {teams.slice(0, 2).map(team => {
+                  const currentShift = getShift(week.startDate, team.team_key);
+                  const isMorning = currentShift === (shifts.MORNING || "Mañana");
+                  const isAfternoon = currentShift === (shifts.AFTERNOON || "Tarde");
+                  const isRest = currentShift === "Descanso";
+                  
+                  return (
+                    <div key={team.id}>
+                      <Select 
+                        value={currentShift} 
+                        onValueChange={(v) => handleShiftChange(week.startDate, team.team_key, v)}
+                      >
+                        <SelectTrigger 
+                          className="w-32 h-8"
+                          style={{
+                            backgroundColor: isMorning ? `${team.color}20` : isAfternoon ? `${team.color}10` : isRest ? '#f1f5f9' : 'white',
+                            borderColor: team.color,
+                            color: currentShift ? team.color : 'inherit'
+                          }}
+                        >
+                          <SelectValue placeholder="-" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={shifts.MORNING || "Mañana"}>{shifts.MORNING || "Mañana"}</SelectItem>
+                          <SelectItem value={shifts.AFTERNOON || "Tarde"}>{shifts.AFTERNOON || "Tarde"}</SelectItem>
+                          {shifts.NIGHT && <SelectItem value={shifts.NIGHT}>{shifts.NIGHT}</SelectItem>}
+                          <SelectItem value="Descanso">Descanso</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
