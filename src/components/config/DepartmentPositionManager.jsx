@@ -67,6 +67,7 @@ export default function DepartmentPositionManager() {
   const [activeTab, setActiveTab] = useState("positions");
   const [isEmpDialogOpen, setIsEmpDialogOpen] = useState(false);
   const [empToEdit, setEmpToEdit] = useState(null);
+  const [showVacancies, setShowVacancies] = useState(false);
 
   // Queries
   const { data: departments = [] } = useQuery({
@@ -94,12 +95,88 @@ export default function DepartmentPositionManager() {
   [departments, selectedDeptId]);
 
   const deptPositions = useMemo(() => 
-    positions.filter(p => p.department_id === selectedDeptId),
+    positions.filter(p => p.department_id === selectedDeptId).sort((a, b) => (a.orden || 0) - (b.orden || 0)),
   [positions, selectedDeptId]);
+  
+  // Calcular vacantes por departamento
+  const vacanciesByDept = useMemo(() => {
+    const result = [];
+    
+    departments.forEach(dept => {
+      const deptPositions = positions.filter(p => p.department_id === dept.id);
+      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
+      
+      // Empleados del departamento
+      let deptEmps = [];
+      
+      // Casos especiales para Producción T1 y T2
+      if (normalizedDeptName === "PRODUCCIÓN T1" || normalizedDeptName === "PRODUCCIÓN T1.1") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_1";
+        });
+      } else if (normalizedDeptName === "PRODUCCIÓN T2" || normalizedDeptName === "PRODUCCIÓN T2.2") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_2";
+        });
+      } else {
+        deptEmps = employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
+      }
+      
+      const vacancies = [];
+      
+      deptPositions.forEach(pos => {
+        const assignedCount = deptEmps.filter(e => {
+          const empPuesto = (e.puesto || "").trim().toUpperCase();
+          const posName = (pos.name || "").trim().toUpperCase();
+          return empPuesto === posName;
+        }).length;
+        
+        const vacantSlots = (pos.max_headcount || 1) - assignedCount;
+        
+        if (vacantSlots > 0) {
+          vacancies.push({
+            position: pos.name,
+            vacantSlots,
+            maxHeadcount: pos.max_headcount || 1,
+            assignedCount
+          });
+        }
+      });
+      
+      if (vacancies.length > 0) {
+        result.push({
+          department: dept.name,
+          departmentId: dept.id,
+          color: dept.color,
+          vacancies
+        });
+      }
+    });
+    
+    return result;
+  }, [departments, positions, employees]);
 
   const deptEmployees = useMemo(() => {
     if (!selectedDept) return [];
     const normalizedDeptName = (selectedDept.name || "").trim().toUpperCase();
+    
+    // Casos especiales para Producción T1 y T2
+    if (normalizedDeptName === "PRODUCCIÓN T1" || normalizedDeptName === "PRODUCCIÓN T1.1") {
+      return employees.filter(e => {
+        const empDept = (e.departamento || "").trim().toUpperCase();
+        return empDept === "PRODUCCIÓN" && e.team_key === "team_1";
+      });
+    }
+    
+    if (normalizedDeptName === "PRODUCCIÓN T2" || normalizedDeptName === "PRODUCCIÓN T2.2") {
+      return employees.filter(e => {
+        const empDept = (e.departamento || "").trim().toUpperCase();
+        return empDept === "PRODUCCIÓN" && e.team_key === "team_2";
+      });
+    }
+    
     return employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
   }, [employees, selectedDept]);
 
@@ -312,6 +389,7 @@ export default function DepartmentPositionManager() {
       code: dept.code,
       parent_id: dept.parent_id || "root",
       manager_id: dept.manager_id || "",
+      manager_id_2: dept.manager_id_2 || "",
       color: dept.color || "#3b82f6"
     });
     setIsDeptDialogOpen(true);
@@ -319,12 +397,14 @@ export default function DepartmentPositionManager() {
 
   const handleCreatePos = () => {
     if (!selectedDeptId) return;
+    const maxOrden = Math.max(0, ...deptPositions.map(p => p.orden || 0));
     setPosForm({
       name: "",
       department_id: selectedDeptId,
       max_headcount: 1,
       level: "Mid",
-      description: ""
+      description: "",
+      orden: maxOrden + 1
     });
     setEditingPos(null);
     setIsPosDialogOpen(true);
@@ -337,7 +417,8 @@ export default function DepartmentPositionManager() {
       department_id: pos.department_id,
       max_headcount: pos.max_headcount || 1,
       level: pos.level || "Mid",
-      description: pos.description || ""
+      description: pos.description || "",
+      orden: pos.orden || 0
     });
     setEditingPos(pos);
     setIsPosDialogOpen(true);
@@ -452,11 +533,11 @@ export default function DepartmentPositionManager() {
 
   // Forms State
   const [deptForm, setDeptForm] = useState({
-    name: "", code: "", parent_id: "root", manager_id: "", color: "#3b82f6"
+    name: "", code: "", parent_id: "root", manager_id: "", manager_id_2: "", color: "#3b82f6"
   });
 
   const [posForm, setPosForm] = useState({
-    name: "", department_id: "", max_headcount: 1, level: "Mid", description: ""
+    name: "", department_id: "", max_headcount: 1, level: "Mid", description: "", orden: 0
   });
 
   // Helper to prevent cycles when moving
@@ -798,26 +879,33 @@ export default function DepartmentPositionManager() {
                     </div>
                   </div>
 
-                  <div className="flex gap-6 text-sm">
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <UserCircle className="w-4 h-4 text-slate-400" />
-                      <span className="font-medium">Responsable:</span>
-                      {selectedDept.manager_id 
-                        ? <span className="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">{employees.find(e => e.id === selectedDept.manager_id)?.nombre}</span>
-                        : <span className="text-slate-400 italic">Sin asignar</span>
-                      }
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Briefcase className="w-4 h-4 text-slate-400" />
-                      <span className="font-medium">Puestos:</span>
-                      <span>{deptPositions.length}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Users className="w-4 h-4 text-slate-400" />
-                      <span className="font-medium">Empleados Totales:</span>
-                      <span className="font-bold text-indigo-600">{selectedDept.total_employee_count || 0}</span>
-                      <span className="text-xs text-slate-400">(incl. sub-depts)</span>
-                    </div>
+                  <div className="flex gap-6 text-sm flex-wrap">
+                   <div className="flex items-center gap-2 text-slate-600">
+                     <UserCircle className="w-4 h-4 text-slate-400" />
+                     <span className="font-medium">Responsable:</span>
+                     {selectedDept.manager_id 
+                       ? <span className="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">{employees.find(e => e.id === selectedDept.manager_id)?.nombre}</span>
+                       : <span className="text-slate-400 italic">Sin asignar</span>
+                     }
+                   </div>
+                   {selectedDept.manager_id_2 && (
+                     <div className="flex items-center gap-2 text-slate-600">
+                       <UserCircle className="w-4 h-4 text-slate-400" />
+                       <span className="font-medium">Responsable 2:</span>
+                       <span className="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">{employees.find(e => e.id === selectedDept.manager_id_2)?.nombre}</span>
+                     </div>
+                   )}
+                   <div className="flex items-center gap-2 text-slate-600">
+                     <Briefcase className="w-4 h-4 text-slate-400" />
+                     <span className="font-medium">Puestos:</span>
+                     <span>{deptPositions.length}</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-slate-600">
+                     <Users className="w-4 h-4 text-slate-400" />
+                     <span className="font-medium">Empleados Totales:</span>
+                     <span className="font-bold text-indigo-600">{selectedDept.total_employee_count || 0}</span>
+                     <span className="text-xs text-slate-400">(incl. sub-depts)</span>
+                   </div>
                   </div>
                 </div>
 
@@ -927,7 +1015,18 @@ export default function DepartmentPositionManager() {
                       <ScrollArea className="flex-1">
                          {deptEmployees.length > 0 ? (
                             <div className="divide-y divide-slate-100">
-                               {deptEmployees.map(emp => (
+                               {deptEmployees
+                                 .sort((a, b) => {
+                                   // Ordenar por puesto
+                                   const posA = deptPositions.find(p => p.name === a.puesto);
+                                   const posB = deptPositions.find(p => p.name === b.puesto);
+                                   const ordenA = posA?.orden || 999;
+                                   const ordenB = posB?.orden || 999;
+                                   if (ordenA !== ordenB) return ordenA - ordenB;
+                                   // Si mismo puesto, por nombre
+                                   return (a.nombre || '').localeCompare(b.nombre || '');
+                                 })
+                                 .map(emp => (
                                   <div key={emp.id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors">
                                      <div className="col-span-1 text-xs text-slate-500 font-mono">{emp.codigo_empleado || '-'}</div>
                                      <div className="col-span-3 font-medium text-slate-900">{emp.nombre}</div>
@@ -1011,30 +1110,40 @@ export default function DepartmentPositionManager() {
               </div>
             </div>
             
+            <div className="space-y-2">
+              <Label>Padre</Label>
+              <Select value={deptForm.parent_id} onValueChange={val => setDeptForm({...deptForm, parent_id: val})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Raíz" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="root">-- Raíz --</SelectItem>
+                  {departments
+                    .filter(d => d.id !== deptForm.id)
+                    .map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Padre</Label>
-                <Select value={deptForm.parent_id} onValueChange={val => setDeptForm({...deptForm, parent_id: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Raíz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="root">-- Raíz --</SelectItem>
-                    {departments
-                      .filter(d => d.id !== deptForm.id)
-                      .map(d => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Responsable</Label>
+                <Label>Responsable Principal</Label>
                 <EmployeeSearchSelect 
                   value={deptForm.manager_id}
                   onValueChange={val => setDeptForm({...deptForm, manager_id: val})}
                   employees={employees}
                   placeholder="Buscar responsable..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Responsable 2 (Opcional)</Label>
+                <EmployeeSearchSelect 
+                  value={deptForm.manager_id_2}
+                  onValueChange={val => setDeptForm({...deptForm, manager_id_2: val})}
+                  employees={employees}
+                  placeholder="Buscar segundo responsable..."
                 />
               </div>
             </div>
@@ -1105,9 +1214,20 @@ export default function DepartmentPositionManager() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Descripción</Label>
-              <Input value={posForm.description} onChange={e => setPosForm({...posForm, description: e.target.value})} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Descripción</Label>
+                <Input value={posForm.description} onChange={e => setPosForm({...posForm, description: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Orden de visualización</Label>
+                <Input 
+                  type="number" 
+                  min="0"
+                  value={posForm.orden} 
+                  onChange={e => setPosForm({...posForm, orden: parseInt(e.target.value) || 0})} 
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
