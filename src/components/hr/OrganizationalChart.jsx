@@ -371,7 +371,7 @@ export default function OrganizationalChart({
         </TooltipProvider>
       </div>
 
-      <div className="overflow-auto flex-1 p-8 cursor-grab active:cursor-grabbing">
+      <div className="overflow-auto flex-1 p-8" style={{ cursor: 'move' }}>
         <div 
           className="min-w-max flex justify-center origin-top transition-transform duration-200 ease-out"
           style={{ transform: `scale(${zoom})` }}

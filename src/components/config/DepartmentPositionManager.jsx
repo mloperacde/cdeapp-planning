@@ -813,7 +813,7 @@ export default function DepartmentPositionManager() {
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           <div className="flex-1 flex gap-6 overflow-hidden">
           {/* Left Sidebar: Tree View */}
-          <Card className="w-1/3 min-w-[300px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+          <Card className="w-2/5 min-w-[350px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
             <div className="p-4 border-b border-slate-100 flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -1088,7 +1088,7 @@ export default function DepartmentPositionManager() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[200px]">
+                <ScrollArea className="h-[150px]">
                   <div className="space-y-4">
                     {vacanciesByDept.map(dept => (
                       <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
