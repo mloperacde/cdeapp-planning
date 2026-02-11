@@ -191,7 +191,7 @@ export default function DepartmentPositionManager() {
   // Mutations
   const deptMutation = useMutation({
     mutationFn: async (data) => {
-      const payload = { ...data };
+      const payload = { ...data, name: data.name?.toUpperCase() };
       if (payload.parent_id === "root") payload.parent_id = null;
       
       // Set parent_name based on parent_id
@@ -202,21 +202,29 @@ export default function DepartmentPositionManager() {
         payload.parent_name = null;
       }
       
+      const oldDept = data.id ? departments.find(d => d.id === data.id) : null;
       const result = data.id 
         ? await base44.entities.Department.update(data.id, payload)
         : await base44.entities.Department.create(payload);
       
-      // If department name changed, update all positions' department_name
-      if (data.id && data.name) {
-        const oldDept = departments.find(d => d.id === data.id);
-        if (oldDept && oldDept.name !== data.name) {
-          const deptPositions = positions.filter(p => p.department_id === data.id);
-          await Promise.all(
-            deptPositions.map(pos => 
-              base44.entities.Position.update(pos.id, { department_name: data.name })
-            )
-          );
-        }
+      // Si el nombre cambió, sincronizar con empleados
+      if (data.id && oldDept && oldDept.name !== payload.name) {
+        const deptPositions = positions.filter(p => p.department_id === data.id);
+        await Promise.all(
+          deptPositions.map(pos => 
+            base44.entities.Position.update(pos.id, { department_name: payload.name })
+          )
+        );
+        
+        // Actualizar empleados
+        const empToUpdate = await base44.entities.EmployeeMasterDatabase.filter({
+          departamento: oldDept.name
+        });
+        await Promise.all(
+          empToUpdate.map(emp => 
+            base44.entities.EmployeeMasterDatabase.update(emp.id, { departamento: payload.name })
+          )
+        );
       }
       
       return result;
@@ -225,7 +233,6 @@ export default function DepartmentPositionManager() {
       await queryClient.invalidateQueries({ queryKey: ['departments'] });
       await queryClient.invalidateQueries({ queryKey: ['positions'] });
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
-      // Recalculate all total_employee_count
       await recalculateEmployeeCounts();
       toast.success("Departamento guardado correctamente");
       setIsDeptDialogOpen(false);
@@ -243,17 +250,33 @@ export default function DepartmentPositionManager() {
 
   const posMutation = useMutation({
     mutationFn: async (data) => {
-      // Add department_name for easier querying
       const department = departments.find(d => d.id === data.department_id);
+      const oldPos = data.id ? positions.find(p => p.id === data.id) : null;
       const payload = {
         ...data,
+        name: data.name?.toUpperCase(),
         department_name: department?.name || null
       };
       
-      if (data.id) {
-        return base44.entities.Position.update(data.id, payload);
+      const result = data.id
+        ? await base44.entities.Position.update(data.id, payload)
+        : await base44.entities.Position.create(payload);
+      
+      // Si el nombre cambió, actualizar empleados
+      if (data.id && oldPos && oldPos.name !== payload.name) {
+        const empToUpdate = await base44.entities.EmployeeMasterDatabase.filter({
+          puesto: oldPos.name,
+          departamento: department?.name
+        });
+        await Promise.all(
+          empToUpdate.map(emp => 
+            base44.entities.EmployeeMasterDatabase.update(emp.id, { puesto: payload.name })
+          )
+        );
+        await queryClient.invalidateQueries({ queryKey: ['employees'] });
       }
-      return base44.entities.Position.create(payload);
+      
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
@@ -312,11 +335,13 @@ export default function DepartmentPositionManager() {
 
   const updateEmployeeMutation = useMutation({
     mutationFn: async ({ id, departamento, puesto }) => {
-      return base44.entities.EmployeeMasterDatabase.update(id, { departamento, puesto });
+      return base44.entities.EmployeeMasterDatabase.update(id, { 
+        departamento: departamento?.toUpperCase(), 
+        puesto: puesto?.toUpperCase() 
+      });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
-      // Recalculate all total_employee_count after employee assignment change
       await recalculateEmployeeCounts();
       toast.success("Empleado asignado correctamente");
       setIsEmpDialogOpen(false);
