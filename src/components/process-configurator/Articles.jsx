@@ -45,7 +45,15 @@ import {
   DownloadCloud,
   AlertTriangle,
   Building2,
-  Bug
+  Bug,
+  CheckCircle2,
+  XCircle,
+  Printer,
+  Zap,
+  Tag,
+  Layers,
+  Box,
+  Ban
 } from "lucide-react";
 
 // const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
@@ -161,6 +169,16 @@ export default function Articles() {
               type: String(r.type || r.Type || r.Tipo || r.Familia || r.Family || '').trim(),
               operators_required: finalOperators,
               total_time_seconds: finalTime,
+              // Nuevos campos de API
+              active: r.status === true || r.status === 'true' || r.status === 1,
+              status_article: r.statusArticle || existingArticle?.status_article || 'PENDIENTE',
+              injet: r.injet === true || r.injet === 'true',
+              laser: r.laser === true || r.laser === 'true',
+              etiquetado: r.etiquetado === true || r.etiquetado === 'true',
+              celo: r.celo === true || r.celo === 'true',
+              unid_box: parseInt(r.unidBox || existingArticle?.unid_box || 0),
+              unid_pallet: parseInt(r.unidPallet || existingArticle?.unid_pallet || 0),
+              multi_unid: parseInt(r.multiUnid || existingArticle?.multi_unid || 0),
               raw_data: r
           };
       }).filter(a => a.name || a.code);
@@ -344,9 +362,11 @@ export default function Articles() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Código</TableHead>
+                    <TableHead>Estado</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Características</TableHead>
                     <TableHead className="text-center">Operarios</TableHead>
                     <TableHead>Proceso</TableHead>
                     <TableHead className="text-center">Tiempo</TableHead>
@@ -357,13 +377,31 @@ export default function Articles() {
                   {filteredArticles.map((article) => (
                     <TableRow 
                       key={article.id} 
-                      className={`table-row-hover ${!article.process_code ? 'bg-orange-50/50' : ''}`}
+                      className={`table-row-hover ${!article.active ? 'opacity-60 bg-slate-50' : ''} ${!article.process_code ? 'bg-orange-50/50' : ''}`}
                       data-testid={`article-row-${article.id}`}
                     >
                       <TableCell>
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {article.code || '-'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-mono text-sm text-muted-foreground">
+                            {article.code || '-'}
+                          </span>
+                          {!article.active && (
+                             <Badge variant="outline" className="w-fit text-[10px] px-1 h-5 text-slate-500 border-slate-300">
+                               INACTIVO
+                             </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={article.status_article === 'PENDIENTE' ? 'outline' : 'default'}
+                          className={`
+                            ${article.status_article === 'PENDIENTE' ? 'text-amber-600 border-amber-300 bg-amber-50' : ''}
+                            ${article.status_article === 'AUTORIZADO' ? 'bg-green-600 hover:bg-green-700' : ''}
+                          `}
+                        >
+                          {article.status_article || 'DESC'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div>
@@ -392,12 +430,29 @@ export default function Articles() {
                       </TableCell>
                       <TableCell>
                         {article.type ? (
-                          <Badge variant="secondary" className="font-normal">
-                            {article.type}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="secondary" className="font-normal w-fit">
+                              {article.type}
+                            </Badge>
+                            {(article.unid_box > 0 || article.unid_pallet > 0) && (
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground" title="Unidades por Caja / Pallet">
+                                <span className="flex items-center gap-0.5"><Box className="w-3 h-3"/> {article.unid_box}</span>
+                                <span className="flex items-center gap-0.5"><Layers className="w-3 h-3"/> {article.unid_pallet}</span>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-muted-foreground text-xs">-</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 flex-wrap max-w-[120px]">
+                          {article.injet && <div title="Injet" className="bg-blue-100 p-1 rounded text-blue-700"><Printer className="w-3.5 h-3.5"/></div>}
+                          {article.laser && <div title="Laser" className="bg-red-100 p-1 rounded text-red-700"><Zap className="w-3.5 h-3.5"/></div>}
+                          {article.etiquetado && <div title="Etiquetado" className="bg-green-100 p-1 rounded text-green-700"><Tag className="w-3.5 h-3.5"/></div>}
+                          {article.celo && <div title="Celo" className="bg-purple-100 p-1 rounded text-purple-700"><Layers className="w-3.5 h-3.5"/></div>}
+                          {!article.injet && !article.laser && !article.etiquetado && !article.celo && <span className="text-xs text-muted-foreground">-</span>}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
