@@ -174,12 +174,19 @@ export default function Articles() {
           if (!articleType) {
             const prefix = code.substring(0, 2).toUpperCase();
             const prefix3 = code.substring(0, 3).toUpperCase();
+            const prefix4 = code.substring(0, 4).toUpperCase();
             
             if (prefix === 'FR') articleType = 'Frasco';
             else if (prefix === 'SA') articleType = 'Sachet';
             else if (prefix === 'TA') articleType = 'Tarro';
             else if (prefix3 === 'BOL') articleType = 'Bolsa';
             else if (prefix === 'BO') articleType = 'Bote';
+            else if (prefix === 'ES') articleType = 'Estuche';
+            else if (prefix3 === 'ENV') articleType = 'Envase';
+            else if (prefix === 'DP') articleType = 'Diptico';
+            else if (prefix === 'ST') articleType = 'Sachet Toallita';
+            else if (prefix === 'TU') articleType = 'Tubo';
+            else if (prefix4 === 'EASY') articleType = 'Easysnap';
           }
 
           return {
