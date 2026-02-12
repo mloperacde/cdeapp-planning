@@ -526,7 +526,7 @@ export default function Configurator() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="manual">-- Sin Proceso Base (Manual) --</SelectItem>
-                      {processes.map((process) => (
+                      {processes.filter(p => p.code).map((process) => (
                         <SelectItem key={process.id} value={process.code}>
                           <span className="flex items-center gap-2">
                             <span className="font-mono font-bold">{process.code}</span>
