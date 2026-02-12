@@ -311,15 +311,81 @@ function RotationCalendarConfig() {
   const [pendingChanges, setPendingChanges] = useState({});
 
   const handleShiftChange = (weekStartDate, teamKey, shift) => {
-    const key = `${weekStartDate}_${teamKey}`;
-    setPendingChanges(prev => ({
-      ...prev,
-      [key]: {
-        team_key: teamKey,
+    // 1. Find the week index
+    const startWeekIndex = generatedWeeks.findIndex(w => w.startDate === weekStartDate);
+    if (startWeekIndex === -1) return;
+
+    const MORNING = shifts.MORNING || "Mañana";
+    const AFTERNOON = shifts.AFTERNOON || "Tarde";
+    
+    // Helper to swap shifts
+    const swap = (s) => {
+      if (s === MORNING) return AFTERNOON;
+      if (s === AFTERNOON) return MORNING;
+      return s; 
+    };
+
+    const team1 = teams[0];
+    const team2 = teams[1];
+    
+    // If we have fewer than 2 teams, just update the single cell
+    if (teams.length < 2) {
+         const key = `${weekStartDate}_${teamKey}`;
+         setPendingChanges(prev => ({
+           ...prev,
+           [key]: { team_key: teamKey, fecha_inicio_semana: weekStartDate, turno: shift }
+         }));
+         return;
+    }
+
+    // Determine values for start week
+    // We use the NEW value for the edited team, and the EXISTING value for the other
+    let val1, val2;
+    if (team1.team_key === teamKey) {
+        val1 = shift;
+        val2 = getShift(weekStartDate, team2.team_key);
+    } else {
+        val1 = getShift(weekStartDate, team1.team_key);
+        val2 = shift;
+    }
+
+    const newChanges = { ...pendingChanges };
+
+    // Update the start week explicitly
+    newChanges[`${weekStartDate}_${team1.team_key}`] = {
+        team_key: team1.team_key,
         fecha_inicio_semana: weekStartDate,
-        turno: shift
-      }
-    }));
+        turno: val1
+    };
+    newChanges[`${weekStartDate}_${team2.team_key}`] = {
+        team_key: team2.team_key,
+        fecha_inicio_semana: weekStartDate,
+        turno: val2
+    };
+
+    // Propagate forward to all subsequent weeks
+    for (let i = startWeekIndex + 1; i < generatedWeeks.length; i++) {
+        const week = generatedWeeks[i];
+        const distance = i - startWeekIndex;
+        const isSameParity = distance % 2 === 0;
+
+        const next1 = isSameParity ? val1 : swap(val1);
+        const next2 = isSameParity ? val2 : swap(val2);
+
+        newChanges[`${week.startDate}_${team1.team_key}`] = {
+            team_key: team1.team_key,
+            fecha_inicio_semana: week.startDate,
+            turno: next1
+        };
+        newChanges[`${week.startDate}_${team2.team_key}`] = {
+            team_key: team2.team_key,
+            fecha_inicio_semana: week.startDate,
+            turno: next2
+        };
+    }
+
+    setPendingChanges(newChanges);
+    toast.info("Calendario recalculado automáticamente a partir de esta semana");
   };
 
   const getShift = (weekStartDate, teamKey) => {

@@ -940,7 +940,7 @@ export default function DepartmentPositionManager() {
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           <div className="flex-1 flex gap-6 overflow-hidden">
           {/* Left Sidebar: Tree View */}
-          <Card className="w-1/3 min-w-[320px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+          <Card className="flex-1 min-w-[320px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
             <div className="p-4 border-b border-slate-100 flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -1202,10 +1202,16 @@ export default function DepartmentPositionManager() {
 
             {/* Puestos Vacantes - Ahora debajo del main content */}
         {vacanciesByDept.length > 0 && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-3 px-4 py-3">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm transition-all duration-300">
+            <CardHeader 
+              className="pb-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => setShowVacancies(!showVacancies)}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <div className={`transition-transform duration-200 ${showVacancies ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="w-5 h-5 text-slate-400" />
+                  </div>
                   <AlertCircle className="w-5 h-5 text-amber-600" />
                   <CardTitle className="text-base">Puestos Vacantes en Toda la Estructura</CardTitle>
                 </div>
@@ -1214,33 +1220,35 @@ export default function DepartmentPositionManager() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="px-4">
-              <ScrollArea className="h-[140px]">
-                <div className="grid grid-cols-3 gap-3">
-                  {vacanciesByDept.map(dept => (
-                    <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
-                      <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
-                        <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
-                        <Badge variant="outline" className="text-[10px] px-1 py-0">
-                          {dept.vacancies.length}
-                        </Badge>
+            {showVacancies && (
+              <CardContent className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200">
+                <ScrollArea className="h-[140px]">
+                  <div className="grid grid-cols-3 gap-3">
+                    {vacanciesByDept.map(dept => (
+                      <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
+                        <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
+                          <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">
+                            {dept.vacancies.length}
+                          </Badge>
+                        </div>
+                        <div className="p-2 space-y-1">
+                          {dept.vacancies.map((vac, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
+                              <span className="font-medium text-slate-700 truncate max-w-[100px]" title={vac.position}>{vac.position}</span>
+                              <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
+                                {vac.vacantSlots}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="p-2 space-y-1">
-                        {dept.vacancies.map((vac, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
-                            <span className="font-medium text-slate-700 truncate max-w-[100px]" title={vac.position}>{vac.position}</span>
-                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
-                              {vac.vacantSlots}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            )}
           </Card>
         )}
         </div>
