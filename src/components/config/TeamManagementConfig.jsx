@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Calendar, Settings, Save, RefreshCw, ArrowRightLeft } from "lucide-react";
+import { Users, Calendar, Settings, Save, RefreshCw, ArrowRightLeft, ArrowDownCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, addWeeks, getISOWeek, startOfYear, addDays, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -374,6 +374,62 @@ function RotationCalendarConfig() {
     toast.info("Rotación generada. Revise y guarde los cambios.");
   };
 
+  const handlePropagateRotation = (startWeekIndex) => {
+    if (teams.length < 2) {
+      toast.error("Se requieren al menos 2 equipos para la rotación.");
+      return;
+    }
+
+    const startWeek = generatedWeeks[startWeekIndex];
+    const team1 = teams[0];
+    const team2 = teams[1];
+    
+    // Get current shifts for the starting week
+    const shift1 = getShift(startWeek.startDate, team1.team_key);
+    const shift2 = getShift(startWeek.startDate, team2.team_key);
+
+    if (!shift1 || !shift2) {
+      toast.error("Defina los turnos de ambos equipos en esta semana para usarla como base.");
+      return;
+    }
+
+    const MORNING = shifts.MORNING || "Mañana";
+    const AFTERNOON = shifts.AFTERNOON || "Tarde";
+
+    const swap = (s) => {
+      if (s === MORNING) return AFTERNOON;
+      if (s === AFTERNOON) return MORNING;
+      return s; 
+    };
+
+    const newChanges = { ...pendingChanges };
+
+    // Recalculate ALL weeks based on the selected week parity
+    generatedWeeks.forEach((week, index) => {
+      // Calculate distance
+      const distance = Math.abs(index - startWeekIndex);
+      const isSameParity = distance % 2 === 0;
+
+      const nextShift1 = isSameParity ? shift1 : swap(shift1);
+      const nextShift2 = isSameParity ? shift2 : swap(shift2);
+
+      newChanges[`${week.startDate}_${team1.team_key}`] = {
+        team_key: team1.team_key,
+        fecha_inicio_semana: week.startDate,
+        turno: nextShift1
+      };
+      
+      newChanges[`${week.startDate}_${team2.team_key}`] = {
+        team_key: team2.team_key,
+        fecha_inicio_semana: week.startDate,
+        turno: nextShift2
+      };
+    });
+
+    setPendingChanges(newChanges);
+    toast.success(`Rotación recalculada usando la Semana ${startWeek.weekNumber} como base.`);
+  };
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader>
@@ -403,7 +459,7 @@ function RotationCalendarConfig() {
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
-          <div className="grid grid-cols-4 bg-slate-100 p-3 font-semibold text-sm">
+          <div className="grid grid-cols-[80px_1fr_1fr_1fr_50px] bg-slate-100 p-3 font-semibold text-sm gap-2">
             <div>Semana</div>
             <div>Fecha Inicio</div>
             {teams.slice(0, 2).map(team => (
@@ -412,13 +468,14 @@ function RotationCalendarConfig() {
                 <span style={{ color: team.color }}>{team.team_name}</span>
               </div>
             ))}
+            <div className="text-center">Ext.</div>
           </div>
           <div className="max-h-[600px] overflow-y-auto">
-            {generatedWeeks.map((week) => (
-              <div key={week.startDate} className="grid grid-cols-4 p-3 border-t text-sm items-center hover:bg-slate-50">
-                <div className="font-medium">Semana {week.weekNumber}</div>
-                <div className="text-slate-500">
-                  {week.displayDate} - {week.endDate}
+            {generatedWeeks.map((week, index) => (
+              <div key={week.startDate} className="grid grid-cols-[80px_1fr_1fr_1fr_50px] p-3 border-t text-sm items-center hover:bg-slate-50 gap-2">
+                <div className="font-medium">Sem {week.weekNumber}</div>
+                <div className="text-slate-500 truncate">
+                  {week.displayDate}
                 </div>
                 {teams.slice(0, 2).map(team => {
                   const currentShift = getShift(week.startDate, team.team_key);
@@ -433,7 +490,7 @@ function RotationCalendarConfig() {
                         onValueChange={(v) => handleShiftChange(week.startDate, team.team_key, v)}
                       >
                         <SelectTrigger 
-                          className="w-32 h-8"
+                          className="w-full h-8"
                           style={{
                             backgroundColor: isMorning ? `${team.color}20` : isAfternoon ? `${team.color}10` : isRest ? '#f1f5f9' : 'white',
                             borderColor: team.color,
@@ -452,6 +509,17 @@ function RotationCalendarConfig() {
                     </div>
                   );
                 })}
+                <div className="flex justify-center">
+                   <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                    title="Usar esta semana como base y recalcular todo el año" 
+                    onClick={() => handlePropagateRotation(index)}
+                   >
+                     <ArrowDownCircle className="w-4 h-4" />
+                   </Button>
+                </div>
               </div>
             ))}
           </div>
