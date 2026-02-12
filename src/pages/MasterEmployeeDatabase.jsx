@@ -45,12 +45,15 @@ import {
   UserX,
   UserCheck,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Download
 } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineDisplayVerification from "../components/verification/MachineDisplayVerification";
+import * as XLSX from 'xlsx';
+import { toast } from "sonner";
 
 // Definición completa de columnas disponibles
 const ALL_COLUMNS = {
@@ -149,6 +152,118 @@ export default function MasterEmployeeDatabasePage() {
   const isHrModuleAllowed = permissions.canAccessPage 
     ? permissions.canAccessPage('/MasterEmployeeDatabase') 
     : (permissions.role === "hr_manager" || permissions.isAdmin);
+
+  const handleExportToExcel = () => {
+    try {
+      // Preparar los datos para exportar
+      const dataToExport = filteredEmployees.map(emp => ({
+        'Código Empleado': emp.codigo_empleado || '',
+        'Nombre': emp.nombre || '',
+        'Estado': emp.estado_empleado || '',
+        'Departamento': emp.departamento || '',
+        'Puesto': emp.puesto || '',
+        'Categoría': emp.categoria || '',
+        'Fecha Alta': emp.fecha_alta ? format(new Date(emp.fecha_alta), 'dd/MM/yyyy') : '',
+        'Fecha Baja': emp.fecha_baja ? format(new Date(emp.fecha_baja), 'dd/MM/yyyy') : '',
+        'Motivo Baja': emp.motivo_baja || '',
+        'Fecha Nacimiento': emp.fecha_nacimiento ? format(new Date(emp.fecha_nacimiento), 'dd/MM/yyyy') : '',
+        'DNI': emp.dni || '',
+        'NUSS': emp.nuss || '',
+        'Sexo': emp.sexo || '',
+        'Nacionalidad': emp.nacionalidad || '',
+        'Dirección': emp.direccion || '',
+        'Formación': emp.formacion || '',
+        'Email': emp.email || '',
+        'Teléfono Móvil': emp.telefono_movil || '',
+        'Contacto Emergencia Nombre': emp.contacto_emergencia_nombre || '',
+        'Contacto Emergencia Teléfono': emp.contacto_emergencia_telefono || '',
+        'Contacto Emergencia Relación': emp.contacto_emergencia_relacion || '',
+        'IBAN': emp.iban || '',
+        'SWIFT/BIC': emp.swift_bic || '',
+        'Banco': emp.banco_nombre || '',
+        'Tipo Jornada': emp.tipo_jornada || '',
+        'Horas Jornada': emp.num_horas_jornada || '',
+        'Tipo Turno': emp.tipo_turno || '',
+        'Equipo': emp.equipo || '',
+        'Team ID': emp.team_id || '',
+        'Team Key': emp.team_key || '',
+        'Team Fixed': emp.team_fixed ? 'Sí' : 'No',
+        'Horario Mañana Inicio': emp.horario_manana_inicio || '',
+        'Horario Mañana Fin': emp.horario_manana_fin || '',
+        'Horario Tarde Inicio': emp.horario_tarde_inicio || '',
+        'Horario Tarde Fin': emp.horario_tarde_fin || '',
+        'Turno Partido Entrada 1': emp.turno_partido_entrada1 || '',
+        'Turno Partido Salida 1': emp.turno_partido_salida1 || '',
+        'Turno Partido Entrada 2': emp.turno_partido_entrada2 || '',
+        'Turno Partido Salida 2': emp.turno_partido_salida2 || '',
+        'Taquilla Vestuario': emp.taquilla_vestuario || '',
+        'Taquilla Número': emp.taquilla_numero || '',
+        'Disponibilidad': emp.disponibilidad || '',
+        'Ausencia Inicio': emp.ausencia_inicio ? format(new Date(emp.ausencia_inicio), 'dd/MM/yyyy HH:mm') : '',
+        'Ausencia Fin': emp.ausencia_fin ? format(new Date(emp.ausencia_fin), 'dd/MM/yyyy HH:mm') : '',
+        'Ausencia Motivo': emp.ausencia_motivo || '',
+        'Incluir en Planning': emp.incluir_en_planning ? 'Sí' : 'No',
+        'Tipo Contrato': emp.tipo_contrato || '',
+        'Código Contrato': emp.codigo_contrato || '',
+        'Fecha Fin Contrato': emp.fecha_fin_contrato ? format(new Date(emp.fecha_fin_contrato), 'dd/MM/yyyy') : '',
+        'Empresa ETT': emp.empresa_ett || '',
+        'Salario Anual': emp.salario_anual || '',
+        'Evaluación Responsable': emp.evaluacion_responsable || '',
+        'Propuesta Cambio Categoría': emp.propuesta_cambio_categoria || '',
+        'Propuesta Cambio Quién': emp.propuesta_cambio_quien || '',
+        'Horas Causa Mayor Consumidas': emp.horas_causa_mayor_consumidas || 0,
+        'Horas Causa Mayor Límite': emp.horas_causa_mayor_limite || '',
+        'Último Reset Causa Mayor': emp.ultimo_reset_causa_mayor ? format(new Date(emp.ultimo_reset_causa_mayor), 'dd/MM/yyyy') : '',
+        'Máquina 1': emp.maquina_1 || '',
+        'Máquina 2': emp.maquina_2 || '',
+        'Máquina 3': emp.maquina_3 || '',
+        'Máquina 4': emp.maquina_4 || '',
+        'Máquina 5': emp.maquina_5 || '',
+        'Máquina 6': emp.maquina_6 || '',
+        'Máquina 7': emp.maquina_7 || '',
+        'Máquina 8': emp.maquina_8 || '',
+        'Máquina 9': emp.maquina_9 || '',
+        'Máquina 10': emp.maquina_10 || '',
+        'Tasa Absentismo': emp.tasa_absentismo || '',
+        'Horas No Trabajadas': emp.horas_no_trabajadas || 0,
+        'Horas Deberían Trabajarse': emp.horas_deberian_trabajarse || 0,
+        'Última Actualización Absentismo': emp.ultima_actualizacion_absentismo ? format(new Date(emp.ultima_actualizacion_absentismo), 'dd/MM/yyyy') : '',
+        'Employee ID': emp.employee_id || '',
+        'Estado Sincronización': emp.estado_sincronizacion || '',
+        'Último Sincronizado': emp.ultimo_sincronizado ? format(new Date(emp.ultimo_sincronizado), 'dd/MM/yyyy HH:mm') : '',
+        'ID Sistema': emp.id || '',
+        'Fecha Creación': emp.created_date ? format(new Date(emp.created_date), 'dd/MM/yyyy HH:mm') : '',
+        'Fecha Actualización': emp.updated_date ? format(new Date(emp.updated_date), 'dd/MM/yyyy HH:mm') : '',
+        'Creado Por': emp.created_by || ''
+      }));
+
+      // Crear el libro de Excel
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Empleados');
+
+      // Ajustar anchos de columna
+      const colWidths = Object.keys(dataToExport[0] || {}).map(key => ({
+        wch: Math.max(key.length, 15)
+      }));
+      ws['!cols'] = colWidths;
+
+      // Generar nombre de archivo con fecha
+      const fileName = `Empleados_Master_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+
+      // Descargar el archivo
+      XLSX.writeFile(wb, fileName);
+
+      toast.success(`Exportados ${dataToExport.length} empleados a Excel`, {
+        description: fileName
+      });
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al exportar a Excel', {
+        description: error.message
+      });
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.EmployeeMasterDatabase.delete(id),
@@ -433,6 +548,17 @@ export default function MasterEmployeeDatabasePage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <Button
+            onClick={handleExportToExcel}
+            size="sm"
+            variant="outline"
+            className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 h-9 px-3"
+            disabled={filteredEmployees.length === 0}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Exportar</span>
+          </Button>
 
           {canCreateEmployee && (
             <Button
