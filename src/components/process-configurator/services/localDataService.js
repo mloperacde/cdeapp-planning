@@ -289,7 +289,59 @@ export const localDataService = {
             // Parse PROCESOS sheet
             if (sheetProcesses) {
               const data = XLSX.utils.sheet_to_json(sheetProcesses, { header: 1 });
-              processes = this._parseProcessesFromData(data);
+              
+              // Mapeo específico solicitado: Columna A (0) = Actividades, Columna B (1) = Código Proceso
+              processes = [];
+              data.forEach(row => {
+                  if (!row || row.length < 2) return;
+                  
+                  const activitiesRaw = row[0]; // Col A
+                  const codeRaw = row[1];       // Col B
+                  
+                  if (codeRaw !== undefined && codeRaw !== null) {
+                      const processCode = String(codeRaw).trim();
+                      if (!processCode) return;
+                      
+                      // Parse activities from Col A
+                      let activityRefs = [];
+                      if (activitiesRaw !== undefined && activitiesRaw !== null) {
+                          const strVal = String(activitiesRaw);
+                          // Split by common separators (space, comma, hyphen, etc.)
+                          // Filter for valid numbers
+                          const tokens = strVal.split(/[\s,.-]+/);
+                          const numberSet = new Set();
+                          
+                          tokens.forEach(token => {
+                              const trimmed = token.trim();
+                              // Ensure it is a pure number
+                              if (!isNaN(Number(trimmed)) && trimmed !== "") {
+                                  numberSet.add(Number(trimmed));
+                              }
+                          });
+                          
+                          // Sort for consistency
+                          activityRefs = Array.from(numberSet).sort((a, b) => a - b);
+                      }
+                      
+                      // Solo agregamos si tiene actividades válidas
+                      if (activityRefs.length > 0) {
+                          processes.push({
+                              id: `proc_${processCode.replace(/\s+/g, '_')}`,
+                              code: processCode,
+                              name: processCode, // Use code as name by default
+                              activity_numbers: activityRefs,
+                              activities_count: activityRefs.length,
+                              total_time_seconds: 0 // Will be calculated later
+                          });
+                      }
+                  }
+              });
+
+              // Fallback logic if strict mapping failed
+              if (processes.length === 0 && data.length > 0) {
+                   console.warn("Mapeo estricto PROCESOS (A=Actividades, B=Código) sin resultados. Usando detección automática...");
+                   processes = this._parseProcessesFromData(data);
+              }
             }
 
             // Parse LISTADO DE PROCESOS sheet
