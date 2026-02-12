@@ -123,7 +123,7 @@ export default function Dashboard() {
               Distribución de artículos según su tipo
             </CardDescription>
           </CardHeader>
-          <CardContent className="h-[400px]">
+          <CardContent className="h-[500px]">
             {stats.articles_by_type && stats.articles_by_type.length > 0 ? (
               <div className="flex items-center h-full">
                 {/* Legend (Left Side) */}
@@ -160,6 +160,7 @@ export default function Dashboard() {
                         dataKey="value"
                         nameKey="name"
                         stroke="none"
+                        label={({ name }) => name}
                       >
                         {stats.articles_by_type.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -189,7 +190,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-0">
             {stats.articles_by_client && stats.articles_by_client.length > 0 ? (
-               <ScrollArea className="h-[400px] w-full px-6 pb-6">
+               <ScrollArea className="h-[500px] w-full px-6 pb-6">
                   <div className="space-y-4 pt-2">
                     {stats.articles_by_client
                       .sort((a, b) => b.value - a.value)

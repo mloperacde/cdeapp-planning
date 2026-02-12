@@ -18,6 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -62,6 +69,8 @@ export default function Articles() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterClient, setFilterClient] = useState("all");
   const [uploading, setUploading] = useState(false);
   const [filterNoProcess, setFilterNoProcess] = useState(false);
   const [selectedRawData, setSelectedRawData] = useState(null);
@@ -220,6 +229,9 @@ export default function Articles() {
     return `${mins}m ${secs.toFixed(0)}s`;
   };
 
+  const uniqueTypes = Array.from(new Set(articles.map(a => a.type).filter(Boolean))).sort();
+  const uniqueClients = Array.from(new Set(articles.map(a => a.client).filter(Boolean))).sort();
+
   const filteredArticles = articles.filter(article => {
     const matchesSearch = 
       article.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -227,9 +239,11 @@ export default function Articles() {
       article.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       article.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesFilter = filterNoProcess ? !article.process_code : true;
+    const matchesType = filterType === "all" || article.type === filterType;
+    const matchesClient = filterClient === "all" || article.client === filterClient;
+    const matchesNoProcess = filterNoProcess ? !article.process_code : true;
     
-    return matchesSearch && matchesFilter;
+    return matchesSearch && matchesType && matchesClient && matchesNoProcess;
   });
 
   const articlesWithoutProcess = articles.filter(a => !a.process_code).length;
@@ -322,16 +336,42 @@ export default function Articles() {
         </Card>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, código o cliente..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-          data-testid="search-input"
-        />
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, código o cliente..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+            data-testid="search-input"
+          />
+        </div>
+        
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Tipo de Artículo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los tipos</SelectItem>
+            {uniqueTypes.map(type => (
+              <SelectItem key={type} value={type}>{type}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterClient} onValueChange={setFilterClient}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Cliente" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los clientes</SelectItem>
+            {uniqueClients.map(client => (
+              <SelectItem key={client} value={client}>{client}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Articles List */}
