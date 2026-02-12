@@ -123,7 +123,7 @@ export default function Dashboard() {
               Distribución de artículos según su tipo
             </CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[400px]">
             {stats.articles_by_type && stats.articles_by_type.length > 0 ? (
               <div className="flex items-center h-full">
                 {/* Legend (Left Side) */}
@@ -147,7 +147,7 @@ export default function Dashboard() {
                 </div>
                 
                 {/* Pie Chart (Right Side) */}
-                <div className="w-2/3 h-full">
+                <div className="w-2/3 h-full flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -158,6 +158,7 @@ export default function Dashboard() {
                         outerRadius={90}
                         paddingAngle={2}
                         dataKey="value"
+                        nameKey="name"
                         stroke="none"
                       >
                         {stats.articles_by_type.map((entry, index) => (
@@ -188,7 +189,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-0">
             {stats.articles_by_client && stats.articles_by_client.length > 0 ? (
-               <ScrollArea className="h-[300px] w-full px-6 pb-6">
+               <ScrollArea className="h-[400px] w-full px-6 pb-6">
                   <div className="space-y-4 pt-2">
                     {stats.articles_by_client
                       .sort((a, b) => b.value - a.value)
@@ -209,7 +210,7 @@ export default function Dashboard() {
                   </div>
                </ScrollArea>
             ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              <div className="flex items-center justify-center h-[400px] text-muted-foreground">
                 No hay datos disponibles
               </div>
             )}
