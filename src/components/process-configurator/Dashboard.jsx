@@ -3,25 +3,24 @@ import { Link } from "react-router-dom";
 import { localDataService } from "./services/localDataService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { 
   Settings, 
   Clock, 
   Package,
-  Plus
+  Plus,
+  Building2
 } from "lucide-react";
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
+  PieChart, 
+  Pie, 
   Tooltip, 
-  Legend, 
   ResponsiveContainer,
   Cell
 } from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1', '#a4de6c', '#d0ed57'];
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -116,7 +115,7 @@ export default function Dashboard() {
 
       {/* Charts Section */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Left Panel: Articles by Type */}
+        {/* Left Panel: Articles by Type (Pie Chart + Legend) */}
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Artículos por Tipo</CardTitle>
@@ -126,27 +125,53 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="h-[300px]">
             {stats.articles_by_type && stats.articles_by_type.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stats.articles_by_type}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" allowDecimals={false} />
-                  <YAxis dataKey="name" type="category" width={100} />
-                  <Tooltip 
-                    formatter={(value) => [`${value} artículos`, 'Cantidad']}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="value" name="Cantidad" fill="#8884d8" radius={[0, 4, 4, 0]}>
-                    {stats.articles_by_type.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="flex items-center h-full">
+                {/* Legend (Left Side) */}
+                <div className="w-1/3 h-full overflow-y-auto pr-2 space-y-3 pt-4">
+                  {stats.articles_by_type.map((entry, index) => (
+                    <div key={`legend-${index}`} className="flex items-center text-sm group">
+                      <div 
+                        className="w-3 h-3 rounded-full mr-2 shrink-0 transition-transform group-hover:scale-125" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }} 
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-muted-foreground truncate max-w-[100px]" title={entry.name}>
+                          {entry.name}
+                        </span>
+                        <span className="font-bold text-lg leading-none">
+                          {entry.value}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Pie Chart (Right Side) */}
+                <div className="w-2/3 h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.articles_by_type}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {stats.articles_by_type.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => [`${value} artículos`, 'Cantidad']}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 No hay datos disponibles
@@ -155,36 +180,36 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        {/* Right Panel: Articles by Client */}
+        {/* Right Panel: Articles by Client (Read Mode / List) */}
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Artículos por Cliente</CardTitle>
-            <CardDescription>Conteo de artículos agrupados por cliente</CardDescription>
+            <CardDescription>Lista detallada de clientes</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="p-0">
             {stats.articles_by_client && stats.articles_by_client.length > 0 ? (
-               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stats.articles_by_client}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip 
-                    formatter={(value) => [`${value} artículos`, 'Cantidad']}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="value" name="Cantidad" fill="#82ca9d" radius={[4, 4, 0, 0]}>
-                    {stats.articles_by_client.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+               <ScrollArea className="h-[300px] w-full px-6 pb-6">
+                  <div className="space-y-4 pt-2">
+                    {stats.articles_by_client
+                      .sort((a, b) => b.value - a.value)
+                      .map((entry, index) => (
+                        <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-muted/30 p-2 rounded-lg transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 p-2 rounded-full text-primary">
+                              <Building2 className="h-4 w-4" />
+                            </div>
+                            <span className="font-medium text-sm text-foreground/80">{entry.name}</span>
+                          </div>
+                          <Badge variant="secondary" className="font-bold ml-2">
+                            {entry.value}
+                          </Badge>
+                        </div>
+                      ))
+                    }
+                  </div>
+               </ScrollArea>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                 No hay datos disponibles
               </div>
             )}
