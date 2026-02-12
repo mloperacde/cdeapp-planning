@@ -96,10 +96,10 @@ export default function Articles() {
     try {
       // 1. Obtener artículos actuales para preservar asignaciones manuales
       const currentArticles = await localDataService.getArticles();
-      const processMap = new Map();
+      const articleMap = new Map();
       currentArticles.forEach(a => {
-        if (a.code && a.process_code) {
-          processMap.set(a.code.trim().toLowerCase(), a.process_code);
+        if (a.code) {
+          articleMap.set(a.code.trim().toLowerCase(), a);
         }
       });
 
@@ -135,24 +135,33 @@ export default function Articles() {
 
       // Mapear a estructura interna
       const mappedArticles = rows.map(r => {
-          const code = String(r.code || r.article_code || r.Codigo || r['Artículo'] || r.Articulo || '').trim();
+          const code = String(r.CodeCentral || r.code || r.article_code || r.Codigo || r['Artículo'] || r.Articulo || '').trim();
           const name = String(r.name || r.article_name || r.Nombre || r['Descripción'] || r.Descripcion || '').trim();
           
-          // Preservar proceso manual si existe
-          const apiProcess = String(r.process_code || r.process || r.Proceso || '');
-          const existingProcess = processMap.get(code.toLowerCase());
-          const finalProcess = existingProcess || apiProcess;
+          // Recuperar datos existentes
+          const existingArticle = articleMap.get(code.toLowerCase());
+
+          // Mapeo de campos API nuevos
+          const client = String(r.customer_name || r.client || r.client_name || r.Cliente || existingArticle?.client || '');
+          const reference = String(r.CodeClient || r.reference || r.Referencia || existingArticle?.reference || '');
+
+          // Preservar datos locales (Proceso, Operarios, Tiempo)
+          // La API no envía estos datos, así que priorizamos lo local o defaults
+          const finalProcess = existingArticle?.process_code || String(r.process_code || r.process || r.Proceso || '');
+          const finalOperators = existingArticle?.operators_required || parseInt(r.operators || r.Operarios || r.Personas || 1);
+          const finalTime = existingArticle?.total_time_seconds || parseFloat(r.total_time_seconds || r.Tiempo || 0);
 
           return {
-              id: String(r.id || r.article_id || r.Id || r.ID || Math.random().toString(36).substr(2, 9)),
+              id: String(r.id || existingArticle?.id || Math.random().toString(36).substr(2, 9)),
               code: code,
               name: name,
-              client: String(r.client || r.client_name || r.Cliente || ''),
+              client: client,
               process_code: finalProcess,
-              reference: String(r.reference || r.Referencia || ''),
+              reference: reference,
               type: String(r.type || r.Type || r.Tipo || r.Familia || r.Family || '').trim(),
-              operators_required: parseInt(r.operators || r.Operarios || r.Personas || 1),
-              total_time_seconds: parseFloat(r.total_time_seconds || r.Tiempo || 0)
+              operators_required: finalOperators,
+              total_time_seconds: finalTime,
+              raw_data: r
           };
       }).filter(a => a.name || a.code);
 
@@ -160,9 +169,9 @@ export default function Articles() {
       setArticles(mappedArticles);
       
       // Calcular estadísticas
-      const preservedCount = mappedArticles.filter(a => processMap.has(a.code.toLowerCase()) && a.process_code === processMap.get(a.code.toLowerCase())).length;
+      const preservedCount = mappedArticles.filter(a => articleMap.has(a.code.toLowerCase())).length;
       
-      toast.success(`${mappedArticles.length} artículos sincronizados. ${preservedCount} asignaciones de proceso preservadas.`);
+      toast.success(`${mappedArticles.length} artículos sincronizados. ${preservedCount} artículos actualizados preservando datos locales.`);
     } catch (error) {
       console.error("Sync error:", error);
       toast.error("Error al sincronizar artículos: " + error.message);

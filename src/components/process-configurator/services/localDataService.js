@@ -682,18 +682,17 @@ export const localDataService = {
     throw new Error("Proceso no encontrado");
   },
 
-  // --- Articles ---
-
-  async saveArticles(articles) {
-    await delay();
-    localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
-    return articles;
-  },
-
+  // --- Article Management ---
   async getArticles() {
-    await delay();
+    await delay(200);
     const data = localStorage.getItem(STORAGE_KEYS.ARTICLES);
     return data ? JSON.parse(data) : [];
+  },
+
+  async saveArticles(articles) {
+    await delay(300);
+    localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
+    return articles;
   },
 
   async getArticle(id) {
@@ -758,10 +757,11 @@ export const localDataService = {
   },
 
   async deleteArticle(id) {
-    await delay();
-    let articles = await this.getArticles();
-    articles = articles.filter(a => a.id !== id);
-    localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
+    await delay(200);
+    const articles = await this.getArticles();
+    const newArticles = articles.filter(a => a.id !== id);
+    localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(newArticles));
+    return true;
   },
 
   // --- Stats ---
