@@ -253,7 +253,37 @@ export const localDataService = {
             // Parse ACTIVIDADES sheet
             if (sheetActivities) {
               const data = XLSX.utils.sheet_to_json(sheetActivities, { header: 1 });
-              activities = this._parseActivitiesFromData(data);
+              
+              // Mapeo específico solicitado: Columna A (0) = Nombre, Columna B (1) = Código
+              activities = [];
+              data.forEach(row => {
+                  if (!row || row.length < 2) return;
+                  
+                  const nameRaw = row[0]; // Col A
+                  const codeRaw = row[1]; // Col B
+                  
+                  // El código debe ser numérico (regla del proyecto)
+                  if (codeRaw !== undefined && codeRaw !== null) {
+                      const strVal = String(codeRaw).trim();
+                      if (strVal === "") return;
+                      
+                      const number = Number(strVal);
+                      if (!isNaN(number)) {
+                          activities.push({
+                              id: `act_${number}`,
+                              number: number,
+                              name: nameRaw ? String(nameRaw).trim() : `Actividad ${number}`,
+                              time_seconds: 0
+                          });
+                      }
+                  }
+              });
+              
+              // Fallback si no se encontró nada (por si acaso el usuario se equivocó y usa el formato antiguo)
+              if (activities.length === 0 && data.length > 0) {
+                  console.warn("Mapeo estricto (A=Nombre, B=Código) no produjo resultados. Intentando detección automática...");
+                  activities = this._parseActivitiesFromData(data);
+              }
             }
             
             // Parse PROCESOS sheet
