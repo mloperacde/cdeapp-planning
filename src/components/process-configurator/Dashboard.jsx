@@ -4,15 +4,24 @@ import { localDataService } from "./services/localDataService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  BarChart3, 
   Settings, 
-  FileText, 
   Clock, 
-  Users, 
-  TrendingUp, 
   Package,
   Plus
 } from "lucide-react";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Cell
+} from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -20,7 +29,9 @@ export default function Dashboard() {
     processes_count: 0,
     articles_count: 0,
     average_time_seconds: 0,
-    recent_articles: []
+    recent_articles: [],
+    articles_by_type: [],
+    articles_by_client: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +74,7 @@ export default function Dashboard() {
         </Button>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -102,72 +114,80 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      {/* Charts Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Left Panel: Articles by Type */}
+        <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Artículos Recientes</CardTitle>
+            <CardTitle>Artículos por Tipo</CardTitle>
             <CardDescription>
-              Últimos artículos configurados en el sistema
+              Distribución de artículos según su tipo
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {(stats.recent_articles || []).length === 0 ? (
-              <div className="empty-state py-8 text-center flex flex-col items-center">
-                <Package className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">No hay artículos configurados</p>
-                <Button asChild variant="outline" size="sm" className="mt-4">
-                  <Link to="/NewProcessConfigurator/configurator">Crear primero</Link>
-                </Button>
-              </div>
+          <CardContent className="h-[300px]">
+            {stats.articles_by_type && stats.articles_by_type.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={stats.articles_by_type}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" width={100} />
+                  <Tooltip 
+                    formatter={(value) => [`${value} artículos`, 'Cantidad']}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="value" name="Cantidad" fill="#8884d8" radius={[0, 4, 4, 0]}>
+                    {stats.articles_by_type.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             ) : (
-              <div className="space-y-3">
-                {(stats.recent_articles || []).map((article) => (
-                  <Link 
-                    key={article.id} 
-                    to={`/NewProcessConfigurator/configurator/${article.id}`}
-                    className="flex items-center justify-between p-3 rounded-sm border hover:bg-accent transition-colors"
-                    data-testid={`recent-article-${article.id}`}
-                  >
-                    <div>
-                      <p className="font-medium">{article.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatTime(article.total_time_seconds)} • {article.operators_required} operario(s)
-                      </p>
-                    </div>
-                    <div className="text-xs px-2 py-1 rounded-sm bg-muted">
-                      {article.process_code || "Manual"}
-                    </div>
-                  </Link>
-                ))}
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No hay datos disponibles
               </div>
             )}
           </CardContent>
         </Card>
         
-        <Card className="col-span-3">
+        {/* Right Panel: Articles by Client */}
+        <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Acciones Rápidas</CardTitle>
-            <CardDescription>Accesos directos a funciones comunes</CardDescription>
+            <CardTitle>Artículos por Cliente</CardTitle>
+            <CardDescription>Conteo de artículos agrupados por cliente</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-             <Button asChild variant="ghost" className="w-full justify-start">
-              <Link to="/NewProcessConfigurator/data-management">
-                <FileText className="mr-2 h-4 w-4" />
-                Importar Excel de Datos
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" className="w-full justify-start">
-              <Link to="/NewProcessConfigurator/compare">
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Comparar Artículos
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" className="w-full justify-start">
-              <Link to="/NewProcessConfigurator/articles">
-                <ListChecks className="mr-2 h-4 w-4" />
-                Ver todos los artículos
-              </Link>
-            </Button>
+          <CardContent className="h-[300px]">
+            {stats.articles_by_client && stats.articles_by_client.length > 0 ? (
+               <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={stats.articles_by_client}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip 
+                    formatter={(value) => [`${value} artículos`, 'Cantidad']}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="value" name="Cantidad" fill="#82ca9d" radius={[4, 4, 0, 0]}>
+                    {stats.articles_by_client.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No hay datos disponibles
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

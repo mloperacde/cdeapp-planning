@@ -1012,12 +1012,28 @@ export const localDataService = {
     const totalTime = articles.reduce((sum, a) => sum + (a.total_time_seconds || 0), 0);
     const avgTime = articles.length > 0 ? totalTime / articles.length : 0;
 
+    // Calculate Articles by Type
+    const articlesByType = {};
+    articles.forEach(a => {
+      const type = a.type || 'Sin Tipo';
+      articlesByType[type] = (articlesByType[type] || 0) + 1;
+    });
+
+    // Calculate Articles by Client
+    const articlesByClient = {};
+    articles.forEach(a => {
+      const client = a.client || 'Sin Cliente';
+      articlesByClient[client] = (articlesByClient[client] || 0) + 1;
+    });
+
     return {
       activities_count: activities.length,
       processes_count: processes.length,
       articles_count: articles.length,
       average_time_seconds: avgTime,
-      recent_articles: articles.slice(-5).reverse()
+      recent_articles: articles.slice(-5).reverse(),
+      articles_by_type: Object.entries(articlesByType).map(([name, value]) => ({ name, value })),
+      articles_by_client: Object.entries(articlesByClient).map(([name, value]) => ({ name, value }))
     };
   },
   
