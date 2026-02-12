@@ -1097,7 +1097,6 @@ export default function DepartmentPositionManager() {
             )}
             </Card>
             </div>
-            </div>
 
             {/* Puestos Vacantes - Ahora debajo del main content */}
         {vacanciesByDept.length > 0 && (
@@ -1142,6 +1141,7 @@ export default function DepartmentPositionManager() {
             </CardContent>
           </Card>
         )}
+        </div>
       ) : (
         <OrganizationalChart 
           data={{ departments, positions, employees }}
