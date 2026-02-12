@@ -159,6 +159,20 @@ export default function Articles() {
           const finalOperators = existingArticle?.operators_required || parseInt(r.operators || r.Operarios || r.Personas || 1);
           const finalTime = existingArticle?.total_time_seconds || parseFloat(r.total_time_seconds || r.Tiempo || 0);
 
+          // Inferir tipo de artículo basado en el código
+          let articleType = String(r.type || r.Type || r.Tipo || r.Familia || r.Family || '').trim();
+          
+          if (!articleType) {
+            const prefix = code.substring(0, 2).toUpperCase();
+            const prefix3 = code.substring(0, 3).toUpperCase();
+            
+            if (prefix === 'FR') articleType = 'Frasco';
+            else if (prefix === 'SA') articleType = 'Sachet';
+            else if (prefix === 'TA') articleType = 'Tarro';
+            else if (prefix3 === 'BOL') articleType = 'Bolsa';
+            else if (prefix === 'BO') articleType = 'Bote';
+          }
+
           return {
               id: String(r.id || existingArticle?.id || Math.random().toString(36).substr(2, 9)),
               code: code,
@@ -166,7 +180,7 @@ export default function Articles() {
               client: client,
               process_code: finalProcess,
               reference: reference,
-              type: String(r.type || r.Type || r.Tipo || r.Familia || r.Family || '').trim(),
+              type: articleType,
               operators_required: finalOperators,
               total_time_seconds: finalTime,
               // Nuevos campos de API
@@ -362,13 +376,12 @@ export default function Articles() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Código</TableHead>
-                    <TableHead>Estado</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Características</TableHead>
-                    <TableHead className="text-center">Operarios</TableHead>
                     <TableHead>Proceso</TableHead>
+                    <TableHead className="text-center">Operarios</TableHead>
                     <TableHead className="text-center">Tiempo</TableHead>
                     <TableHead className="w-[80px]">Acciones</TableHead>
                   </TableRow>
@@ -390,18 +403,12 @@ export default function Articles() {
                                INACTIVO
                              </Badge>
                           )}
+                          {article.status_article === 'PENDIENTE' && (
+                             <Badge variant="outline" className="w-fit text-[10px] px-1 h-5 text-amber-600 border-amber-300 bg-amber-50">
+                               PENDIENTE
+                             </Badge>
+                          )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={article.status_article === 'PENDIENTE' ? 'outline' : 'default'}
-                          className={`
-                            ${article.status_article === 'PENDIENTE' ? 'text-amber-600 border-amber-300 bg-amber-50' : ''}
-                            ${article.status_article === 'AUTORIZADO' ? 'bg-green-600 hover:bg-green-700' : ''}
-                          `}
-                        >
-                          {article.status_article || 'DESC'}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div>
@@ -454,20 +461,18 @@ export default function Articles() {
                           {!article.injet && !article.laser && !article.etiquetado && !article.celo && <span className="text-xs text-muted-foreground">-</span>}
                         </div>
                       </TableCell>
+                      <TableCell>
+                        {article.process_code ? (
+                          <Badge variant="default">{article.process_code}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Sin asignar</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Users className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="text-sm">{article.operators_required || 1}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {article.process_code ? (
-                          <Badge variant="default">{article.process_code}</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-orange-600 border-orange-300">
-                            Sin proceso
-                          </Badge>
-                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">

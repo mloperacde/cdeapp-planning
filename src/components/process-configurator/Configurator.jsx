@@ -52,7 +52,17 @@ export default function Configurator() {
     type: "",
     process_code: null,
     selected_activities: [],
-    operators_required: 1
+    operators_required: 1,
+    // Nuevos campos
+    active: true,
+    status_article: "PENDIENTE",
+    injet: false,
+    laser: false,
+    etiquetado: false,
+    celo: false,
+    unid_box: 0,
+    unid_pallet: 0,
+    multi_unid: 1
   });
 
   // Calculated values
@@ -85,7 +95,17 @@ export default function Configurator() {
             type: article.type || "",
             process_code: article.process_code || null,
             selected_activities: article.selected_activities || [],
-            operators_required: article.operators_required || 1
+            operators_required: article.operators_required || 1,
+            // Nuevos campos mapeados
+            active: article.active !== undefined ? article.active : true,
+            status_article: article.status_article || "PENDIENTE",
+            injet: !!article.injet,
+            laser: !!article.laser,
+            etiquetado: !!article.etiquetado,
+            celo: !!article.celo,
+            unid_box: article.unid_box || 0,
+            unid_pallet: article.unid_pallet || 0,
+            multi_unid: article.multi_unid || 1
           });
           setCalculatedTime(article.total_time_seconds || 0);
           setSelectedActivitiesDetail(article.activities_detail || []);
@@ -377,6 +397,102 @@ export default function Configurator() {
                   className="w-32"
                   data-testid="operators-input"
                 />
+              </div>
+
+              {/* Nuevos campos de características */}
+              <div className="pt-4 border-t">
+                <h4 className="text-sm font-semibold mb-3">Características de Producción</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="injet" 
+                      checked={formData.injet}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, injet: checked }))}
+                    />
+                    <Label htmlFor="injet" className="cursor-pointer">Injet</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="laser" 
+                      checked={formData.laser}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, laser: checked }))}
+                    />
+                    <Label htmlFor="laser" className="cursor-pointer">Laser</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="etiquetado" 
+                      checked={formData.etiquetado}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, etiquetado: checked }))}
+                    />
+                    <Label htmlFor="etiquetado" className="cursor-pointer">Etiquetado</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="celo" 
+                      checked={formData.celo}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, celo: checked }))}
+                    />
+                    <Label htmlFor="celo" className="cursor-pointer">Celo</Label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="unid_box">Unidades / Caja</Label>
+                    <Input
+                      id="unid_box"
+                      type="number"
+                      value={formData.unid_box}
+                      onChange={(e) => setFormData(prev => ({ ...prev, unid_box: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unid_pallet">Unidades / Pallet</Label>
+                    <Input
+                      id="unid_pallet"
+                      type="number"
+                      value={formData.unid_pallet}
+                      onChange={(e) => setFormData(prev => ({ ...prev, unid_pallet: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="multi_unid">Multi Unid</Label>
+                    <Input
+                      id="multi_unid"
+                      type="number"
+                      value={formData.multi_unid}
+                      onChange={(e) => setFormData(prev => ({ ...prev, multi_unid: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Estado del Artículo</Label>
+                    <Select
+                      value={formData.status_article}
+                      onValueChange={(val) => setFormData(prev => ({ ...prev, status_article: val }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
+                        <SelectItem value="AUTORIZADO">AUTORIZADO</SelectItem>
+                        <SelectItem value="OBSOLETO">OBSOLETO</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center space-x-2 h-full pt-6">
+                    <Checkbox 
+                      id="active" 
+                      checked={formData.active}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))}
+                    />
+                    <Label htmlFor="active" className="cursor-pointer font-medium">Artículo Activo</Label>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
