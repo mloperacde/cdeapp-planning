@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { base44 } from '@/api/base44Client';
 
 const STORAGE_KEYS = {
   ACTIVITIES: 'pc_activities',
@@ -9,41 +10,156 @@ const STORAGE_KEYS = {
 // Helper to simulate async delay
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
-const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000') + '/api';
-
 export const localDataService = {
+  // --- API Persistence Helpers ---
+
+  async _findEntity(entityName, criteria) {
+      try {
+          // Use filter method from base44 client
+          // Note: Real SDK might behave differently than Mock. 
+          // We assume filter returns an array of matches.
+          const results = await base44.entities[entityName].filter(criteria);
+          return results && results.length > 0 ? results[0] : null;
+      } catch (error) {
+          console.warn(`Failed to find ${entityName} with criteria ${JSON.stringify(criteria)}:`, error);
+          return null;
+      }
+  },
+
+  async saveActivityToApi(activity) {
+      try {
+          // Check if exists by number
+          const existing = await this._findEntity('Activity', { number: activity.number });
+          
+          if (existing) {
+              console.log(`Updating Activity ${activity.number}...`);
+              return await base44.entities.Activity.update(existing.id, {
+                  name: activity.name,
+                  time_seconds: activity.time_seconds
+              });
+          } else {
+              console.log(`Creating Activity ${activity.number}...`);
+              return await base44.entities.Activity.create({
+                  number: activity.number,
+                  name: activity.name,
+                  time_seconds: activity.time_seconds
+              });
+          }
+      } catch (error) {
+          console.error(`Failed to save Activity ${activity.number}:`, error);
+          throw error;
+      }
+  },
+
+  async saveProcessToApi(process) {
+      try {
+          const existing = await this._findEntity('Process', { code: process.code });
+          
+          const payload = {
+              code: process.code,
+              name: process.name,
+              activity_numbers: process.activity_numbers, // Ensure backend handles array
+              // API might expect relation IDs instead of numbers, but we'll try sending numbers 
+              // as per user's "Guardar en BD" request implies data preservation.
+              // If backend has strict schema, this might need adjustment.
+          };
+
+          if (existing) {
+              return await base44.entities.Process.update(existing.id, payload);
+          } else {
+              return await base44.entities.Process.create(payload);
+          }
+      } catch (error) {
+          console.error(`Failed to save Process ${process.code}:`, error);
+          throw error;
+      }
+  },
+
+  async saveArticleToApi(article) {
+      try {
+          const existing = await this._findEntity('Article', { code: article.code });
+          
+          // Clean payload (remove UI-only fields if necessary, but base44 SDK usually ignores extras)
+          // We send everything relevant
+          const payload = {
+              code: article.code,
+              name: article.name,
+              description: article.description,
+              client: article.client,
+              reference: article.reference,
+              type: article.type,
+              process_code: article.process_code,
+              operators_required: article.operators_required,
+              total_time_seconds: article.total_time_seconds,
+              active: article.active,
+              status_article: article.status_article,
+              injet: article.injet,
+              laser: article.laser,
+              etiquetado: article.etiquetado,
+              celo: article.celo,
+              unid_box: article.unid_box,
+              unid_pallet: article.unid_pallet,
+              multi_unid: article.multi_unid
+          };
+
+          if (existing) {
+              return await base44.entities.Article.update(existing.id, payload);
+          } else {
+              return await base44.entities.Article.create(payload);
+          }
+      } catch (error) {
+          console.error(`Failed to save Article ${article.code}:`, error);
+          throw error;
+      }
+  },
+
+  async deleteArticleFromApi(id) {
+      try {
+          // If id starts with 'art_', it's a local ID. We need the backend ID.
+          // However, if we loaded from API, the 'id' field in memory IS the backend ID 
+          // (because we mapped it in fetchApiArticles, see below).
+          // Wait, in fetchApiArticles I mapped `id: existing ? existing.id : 'art_' + code`.
+          // So if it came from API, it has a backend ID.
+          // If it's local-only (art_...), we can't delete from backend (it's not there).
+          
+          if (String(id).startsWith('art_')) {
+              console.warn("Skipping API delete for local-only ID:", id);
+              return;
+          }
+          
+          return await base44.entities.Article.delete(id);
+      } catch (error) {
+          console.error(`Failed to delete Article ${id}:`, error);
+          throw error;
+      }
+  },
+
   // --- Data Management (Excel Parsing) ---
   
   // New method to fetch master activities from API
   async fetchApiActivities() {
       try {
-          const response = await fetch(`${API_URL}/activities`).catch(err => {
-              console.warn("API not reachable, using local data only:", err);
-              return null;
-          });
+          // Use list() from base44 client
+          // We fetch all (limit 1000 for now, might need pagination loop for production)
+          const apiActivities = await base44.entities.Activity.list(undefined, 1000) || [];
           
-          if (!response || !response.ok) {
-              console.warn('Failed to fetch from API or offline');
-              return this.getActivities();
-          }
-          
-          const apiActivities = await response.json();
+          console.log(`Fetched ${apiActivities.length} activities from API`);
           
           // Merge with local data
-          const localActivities = await this.getActivities();
+          const localActivities = await this.getLocalActivities();
           const localMap = new Map(localActivities.map(a => [a.number.toString(), a]));
           
           const merged = apiActivities.map(apiAct => {
               const local = localMap.get(apiAct.number.toString());
               return {
-                  id: `act_${apiAct.number}`,
+                  id: apiAct.id, // Use backend ID
                   number: apiAct.number,
-                  name: apiAct.name, // API is source of truth for names
-                  time_seconds: local?.time_seconds || apiAct.time_seconds || 0 // Local is source of truth for time (if > 0)
+                  name: apiAct.name, 
+                  time_seconds: apiAct.time_seconds || local?.time_seconds || 0 
               };
           });
 
-          // Add local-only activities (from Excel) that are not in API
+          // Add local-only activities
           const apiNumbers = new Set(apiActivities.map(a => a.number.toString()));
           localActivities.forEach(local => {
               if (!apiNumbers.has(local.number.toString())) {
@@ -54,30 +170,18 @@ export const localDataService = {
           localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(merged));
           return merged;
       } catch (error) {
-          console.error("Error syncing with API:", error);
-          // Return local data on error instead of throwing
-          return this.getActivities();
+          console.error("Error syncing activities with API:", error);
+          return this.getLocalActivities();
       }
   },
 
   async fetchApiProcesses() {
     try {
-        // Ensure activities are synced first to have proper linking
-        const activities = await this.getActivities();
+        const activities = await this.getLocalActivities();
         const activityMap = new Map(activities.map(a => [a.number.toString(), a]));
 
-        const response = await fetch(`${API_URL}/processes`).catch(err => {
-             console.warn("API not reachable, using local data only:", err);
-             return null;
-        });
-
-        if (!response || !response.ok) {
-            console.warn('Failed to fetch processes from API or offline');
-            return this.getProcesses();
-        }
-
-        const apiProcesses = await response.json();
-        console.log("API Processes raw:", apiProcesses);
+        const apiProcesses = await base44.entities.Process.list(undefined, 1000) || [];
+        console.log(`Fetched ${apiProcesses.length} processes from API`);
 
         // Convert API format to internal format
         const convertedProcesses = apiProcesses.map(p => {
@@ -95,7 +199,7 @@ export const localDataService = {
             });
 
             return {
-                id: `proc_${pCode.replace(/\s+/g, '_')}`,
+                id: p.id, // Use backend ID
                 code: pCode,
                 name: p.name || pCode,
                 activity_numbers: activityRefs,
@@ -106,68 +210,35 @@ export const localDataService = {
         });
 
         // Merge with local processes
-        const localProcesses = await this.getProcesses();
-        // Normalize codes to strings for comparison
+        const localProcesses = await this.getLocalProcesses();
         const existingCodes = new Set(localProcesses.map(p => String(p.code)));
+        const apiCodes = new Set(convertedProcesses.map(p => p.code));
+
+        // Add API processes that aren't in local (or update them?)
+        // Better: Rebuild list from API + Local-Only
         
-        let addedCount = 0;
-        convertedProcesses.forEach(proc => {
-            if (!existingCodes.has(proc.code)) {
-                localProcesses.push(proc);
-                addedCount++;
+        const merged = [...convertedProcesses];
+        
+        localProcesses.forEach(local => {
+            if (!apiCodes.has(local.code)) {
+                merged.push(local);
             }
         });
         
-        console.log(`Added ${addedCount} new processes from API`);
-
-        localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(localProcesses));
-        return localProcesses;
+        localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(merged));
+        return merged;
     } catch (error) {
         console.error("Error syncing processes with API:", error);
-        return this.getProcesses();
+        return this.getLocalProcesses();
     }
   },
 
   async fetchApiArticles() {
     try {
-        const response = await fetch(`${API_URL}/articles`).catch(err => {
-             console.warn("API not reachable, using local data only:", err);
-             return null;
-        });
+        const apiArticles = await base44.entities.Article.list(undefined, 1000) || [];
+        console.log(`Fetched ${apiArticles.length} articles from API`);
 
-        if (!response || !response.ok) {
-            console.warn('Failed to fetch articles from API or offline');
-            return this.getArticles();
-        }
-
-        let apiArticles = await response.json();
-        
-        // Handle common API envelopes (e.g. { data: [...], results: [...] })
-        if (!Array.isArray(apiArticles)) {
-            if (apiArticles.data && Array.isArray(apiArticles.data)) {
-                apiArticles = apiArticles.data;
-            } else if (apiArticles.results && Array.isArray(apiArticles.results)) {
-                apiArticles = apiArticles.results;
-            } else if (apiArticles.items && Array.isArray(apiArticles.items)) {
-                apiArticles = apiArticles.items;
-            } else {
-                // Last ditch: try to find the first array property
-                const arrayProp = Object.values(apiArticles).find(val => Array.isArray(val));
-                if (arrayProp) {
-                    apiArticles = arrayProp;
-                } else {
-                    console.error("Could not find array in API response:", apiArticles);
-                    return this.getArticles();
-                }
-            }
-        }
-
-        console.log(`Found ${apiArticles.length} articles from API.`);
-
-        const localArticles = await this.getArticles();
-        
-        // Merge strategy: API is source of truth for incoming data, but preserve local edits if needed?
-        // For now, we will UPSERT based on 'code' or 'id'
+        const localArticles = await this.getLocalArticles();
         
         const mergedArticles = [...localArticles];
         const existingMap = new Map(localArticles.map(a => [a.code, a]));
@@ -180,9 +251,7 @@ export const localDataService = {
             if (!obj) return null;
             const objKeys = Object.keys(obj);
             for (const key of keys) {
-                // Exact match
                 if (obj[key] !== undefined && obj[key] !== null) return obj[key];
-                // Case-insensitive match
                 const foundKey = objKeys.find(k => k.toLowerCase() === key.toLowerCase());
                 if (foundKey && obj[foundKey] !== undefined && obj[foundKey] !== null) return obj[foundKey];
             }
@@ -193,28 +262,37 @@ export const localDataService = {
             const code = getValue(apiArt, ['code', 'codigo', 'id', 'article_code']) || `unknown_${Date.now()}`;
             const existing = existingMap.get(code);
             
-            // Map API fields to internal fields with robust fallback
+            // Map API fields
             const mappedArticle = {
-                id: existing ? existing.id : `art_${code}`,
+                id: apiArt.id, // Use backend ID
                 code: code,
-                name: getValue(apiArt, ['name', 'nombre', 'description', 'descripcion', 'desc']) || code,
-                description: getValue(apiArt, ['description', 'descripcion', 'desc']) || "",
-                client: getValue(apiArt, ['client_name', 'client', 'cliente', 'customer', 'nombre_cliente']) || "",
-                reference: getValue(apiArt, ['reference', 'referencia', 'ref', 'code_ref']) || "",
-                type: getValue(apiArt, ['type', 'tipo', 'family', 'familia', 'category', 'categoria', 'typology', 'tipologia']) || "",
-                process_code: getValue(apiArt, ['process_code', 'process', 'proceso', 'codigo_proceso']) || null,
-                operators_required: parseInt(getValue(apiArt, ['operators_required', 'operators', 'operarios', 'people', 'personas', 'resources', 'required_operators']) || 1),
-                total_time_seconds: parseFloat(getValue(apiArt, ['total_time_seconds', 'total_time', 'time', 'tiempo']) || 0),
+                name: getValue(apiArt, ['name', 'nombre']) || code,
+                description: getValue(apiArt, ['description', 'descripcion']) || "",
+                client: getValue(apiArt, ['client_name', 'client', 'cliente']) || "",
+                reference: getValue(apiArt, ['reference', 'referencia']) || "",
+                type: getValue(apiArt, ['type', 'tipo']) || "",
+                process_code: getValue(apiArt, ['process_code', 'process']) || null,
+                operators_required: parseInt(getValue(apiArt, ['operators_required', 'operators']) || 1),
+                total_time_seconds: parseFloat(getValue(apiArt, ['total_time_seconds', 'total_time']) || 0),
                 updated_at: new Date().toISOString(),
-                raw_data: apiArt // Store full raw object for debugging/fallback
+                // Map new fields
+                active: getValue(apiArt, ['active', 'activo']) !== false,
+                status_article: getValue(apiArt, ['status_article', 'status']) || "PENDIENTE",
+                injet: !!getValue(apiArt, ['injet']),
+                laser: !!getValue(apiArt, ['laser']),
+                etiquetado: !!getValue(apiArt, ['etiquetado']),
+                celo: !!getValue(apiArt, ['celo']),
+                unid_box: parseInt(getValue(apiArt, ['unid_box']) || 0),
+                unid_pallet: parseInt(getValue(apiArt, ['unid_pallet']) || 0),
+                multi_unid: parseInt(getValue(apiArt, ['multi_unid']) || 1),
+                
+                raw_data: apiArt
             };
 
             if (existing) {
-                // Update existing (merge fields, preferring API for master data)
                 Object.assign(existing, mappedArticle);
                 updatedCount++;
             } else {
-                // Add new
                 mergedArticles.push(mappedArticle);
                 existingMap.set(mappedArticle.code, mappedArticle);
                 addedCount++;
@@ -227,7 +305,7 @@ export const localDataService = {
         return mergedArticles;
     } catch (error) {
         console.error("Error syncing articles with API:", error);
-        return this.getArticles();
+        return this.getLocalArticles();
     }
   },
 
@@ -483,6 +561,23 @@ export const localDataService = {
           if (activities.length > 0) localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
           if (processes.length > 0) localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(processes));
 
+          // --- API Persistence (New) ---
+          // Save imported data to backend for persistence
+          try {
+             if (activities.length > 0) {
+                 console.log(`Syncing ${activities.length} activities to API...`);
+                 // Use Promise.allSettled to ensure partial failures don't block everything
+                 await Promise.allSettled(activities.map(a => this.saveActivityToApi(a)));
+             }
+             if (processes.length > 0) {
+                 console.log(`Syncing ${processes.length} processes to API...`);
+                 await Promise.allSettled(processes.map(p => this.saveProcessToApi(p)));
+             }
+             console.log("Excel data synced to API successfully");
+          } catch (apiErr) {
+             console.error("Failed to sync Excel data to API:", apiErr);
+          }
+
           resolve({
             activities_count: activities.length,
             processes_count: processes.length
@@ -737,16 +832,26 @@ export const localDataService = {
 
   // --- Activities & Processes ---
 
-  async getActivities() {
+  async getLocalActivities() {
     await delay();
     const data = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
     return data ? JSON.parse(data) : [];
   },
 
-  async getProcesses() {
+  async getActivities() {
+      // Always try to sync with API first for persistence
+      return this.fetchApiActivities();
+  },
+
+  async getLocalProcesses() {
     await delay();
     const data = localStorage.getItem(STORAGE_KEYS.PROCESSES);
     return data ? JSON.parse(data) : [];
+  },
+
+  async getProcesses() {
+      // Always try to sync with API first
+      return this.fetchApiProcesses();
   },
 
   async getProcess(code) {
@@ -765,15 +870,40 @@ export const localDataService = {
   },
 
   // --- Article Management ---
-  async getArticles() {
+  async getLocalArticles() {
     await delay(200);
     const data = localStorage.getItem(STORAGE_KEYS.ARTICLES);
     return data ? JSON.parse(data) : [];
   },
 
+  async getArticles() {
+      // Always try to sync with API first
+      return this.fetchApiArticles();
+  },
+
   async saveArticles(articles) {
     await delay(300);
     localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
+    
+    // Add API persistence for bulk save
+    if (articles.length > 0) {
+        console.log(`Syncing ${articles.length} articles to API...`);
+        try {
+            // Use Promise.allSettled to ensure partial failures don't block everything
+            // We might want to limit concurrency here if the list is huge, but for now strict parallel is fine
+            const results = await Promise.allSettled(articles.map(a => this.saveArticleToApi(a)));
+            
+            const failed = results.filter(r => r.status === 'rejected');
+            if (failed.length > 0) {
+                console.warn(`Failed to sync ${failed.length} articles to API. First error:`, failed[0].reason);
+            } else {
+                console.log("All articles synced to API successfully");
+            }
+        } catch (e) {
+            console.error("Critical error syncing articles batch to API:", e);
+        }
+    }
+    
     return articles;
   },
 
@@ -803,10 +933,10 @@ export const localDataService = {
 
   async saveArticle(articleData) {
     await delay();
-    let articles = await this.getArticles();
+    let articles = await this.getLocalArticles();
     
     // Calculate total time
-    const allActivities = await this.getActivities();
+    const allActivities = await this.getLocalActivities();
     const activityMap = new Map(allActivities.map(a => [a.id, a]));
     
     let totalTime = 0;
@@ -815,34 +945,59 @@ export const localDataService = {
       if (act) totalTime += act.time_seconds;
     });
     
-    const newArticle = {
+    // Determine ID and basic structure
+    let newArticle = {
       ...articleData,
       total_time_seconds: totalTime,
       updated_at: new Date().toISOString()
     };
 
-    if (articleData.id) {
+    if (!newArticle.id) {
+         newArticle.id = `art_${Date.now()}`;
+         newArticle.created_at = new Date().toISOString();
+    }
+
+    // Persist to API FIRST to get the real ID if possible
+    try {
+        const savedApiArticle = await this.saveArticleToApi(newArticle);
+        if (savedApiArticle && savedApiArticle.id) {
+             console.log(`Article saved to API, got ID: ${savedApiArticle.id}`);
+             newArticle.id = savedApiArticle.id; // Use backend ID
+             // Also update other fields that backend might have normalized
+             newArticle.updated_at = savedApiArticle.updated_at || newArticle.updated_at;
+        }
+    } catch (e) {
+        console.error("Failed to save article to API (continuing with local save):", e);
+    }
+
+    // Update Local Storage
+    const index = articles.findIndex(a => a.id === newArticle.id || a.code === newArticle.code);
+    if (index !== -1) {
       // Update
-      const index = articles.findIndex(a => a.id === articleData.id);
-      if (index !== -1) {
-        articles[index] = { ...articles[index], ...newArticle };
-      }
+      articles[index] = { ...articles[index], ...newArticle };
     } else {
       // Create
-      newArticle.id = `art_${Date.now()}`;
-      newArticle.created_at = new Date().toISOString();
       articles.push(newArticle);
     }
 
     localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
+
     return newArticle;
   },
 
   async deleteArticle(id) {
     await delay(200);
-    const articles = await this.getArticles();
+    // Delete from API first
+    try {
+        await this.deleteArticleFromApi(id);
+    } catch (e) {
+        console.error("Failed to delete article from API:", e);
+    }
+
+    const articles = await this.getLocalArticles();
     const newArticles = articles.filter(a => a.id !== id);
     localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(newArticles));
+    
     return true;
   },
 
@@ -867,8 +1022,9 @@ export const localDataService = {
   },
   
   async calculateTime(activityIds) {
-    await delay(100);
-    const allActivities = await this.getActivities();
+    // Use local data for performance (avoiding API call on every checkbox toggle)
+    // Data should be fresh enough from initial page load sync
+    const allActivities = await this.getLocalActivities();
     const activityMap = new Map(allActivities.map(a => [a.id, a]));
     
     let totalTime = 0;
