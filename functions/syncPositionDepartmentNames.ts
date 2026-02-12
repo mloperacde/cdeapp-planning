@@ -24,7 +24,8 @@ Deno.serve(async (req) => {
                         id: position.id,
                         name: position.name,
                         oldDeptName: position.department_name,
-                        newDeptName: department.name
+                        newDeptName: department.name,
+                        department_id: position.department_id
                     });
                 }
             }
@@ -34,7 +35,8 @@ Deno.serve(async (req) => {
         const results = [];
         for (const update of updates) {
             await base44.asServiceRole.entities.Position.update(update.id, {
-                department_name: update.newDeptName?.toUpperCase()
+                department_name: update.newDeptName?.toUpperCase(),
+                department_id: update.department_id
             });
             results.push({
                 position: update.name,

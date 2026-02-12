@@ -588,6 +588,8 @@ export default function DepartmentPositionManager() {
 
       // 3. Normalize Positions (and their department_name ref)
       const posUpdates = allPos.map(async (pos) => {
+        if (!pos.department_id) return;
+
         const normalizedName = (pos.name || "").trim().toUpperCase();
         // Find parent dept in updated list
         const parentDept = finalDepts.find(d => d.id === pos.department_id);
@@ -596,7 +598,8 @@ export default function DepartmentPositionManager() {
         if (pos.name !== normalizedName || pos.department_name !== normalizedDeptName) {
            await base44.entities.Position.update(pos.id, { 
              name: normalizedName,
-             department_name: normalizedDeptName
+             department_name: normalizedDeptName,
+             department_id: pos.department_id
            });
            updatedPosCount++;
         }
