@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
         const results = [];
         for (const update of updates) {
             await base44.asServiceRole.entities.Position.update(update.id, {
-                department_name: update.newDeptName
+                department_name: update.newDeptName?.toUpperCase()
             });
             results.push({
                 position: update.name,

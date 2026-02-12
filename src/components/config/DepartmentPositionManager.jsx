@@ -10,7 +10,7 @@ import {
   Plus, Trash2, Edit, Save, X, Users, Briefcase, 
   ChevronRight, ChevronDown, Building2, UserCircle,
   FolderTree, Layout, Search, ArrowRight, Settings2,
-  MoreHorizontal, GripVertical, RefreshCw, CheckCircle2, AlertCircle
+  MoreHorizontal, GripVertical, RefreshCw, CheckCircle2, AlertCircle, Loader2, AlertTriangle
 } from "lucide-react";
 import {
   Dialog,
@@ -471,7 +471,7 @@ export default function DepartmentPositionManager() {
       if (!deptMap.has(dKey)) {
         const existingDept = departments.find(d => normalize(d.name) === dKey);
         deptMap.set(dKey, {
-          name: dNameRaw, // Use first found casing
+          name: dNameRaw.toUpperCase(), // Force Uppercase
           key: dKey,
           count: 0,
           positions: new Map(),
@@ -490,7 +490,7 @@ export default function DepartmentPositionManager() {
           : null;
 
         deptEntry.positions.set(pKey, {
-          name: pNameRaw,
+          name: pNameRaw.toUpperCase(), // Force Uppercase
           key: pKey,
           count: 0,
           existingId: existingPos?.id,
@@ -553,6 +553,85 @@ export default function DepartmentPositionManager() {
       toast.error("Error durante la sincronización");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const [isNormalizing, setIsNormalizing] = useState(false);
+
+  const normalizeAllData = async () => {
+    if (!confirm("Esta acción convertirá TODOS los nombres de departamentos, puestos y empleados a MAYÚSCULAS. ¿Desea continuar?")) return;
+    
+    setIsNormalizing(true);
+    try {
+      toast.info("Iniciando normalización masiva...");
+      
+      // 1. Fetch current data
+      const allDepts = await base44.entities.Department.list();
+      const allPos = await base44.entities.Position.list();
+      const allEmps = await base44.entities.EmployeeMasterDatabase.list();
+      
+      let updatedDeptsCount = 0;
+      let updatedPosCount = 0;
+      let updatedEmpsCount = 0;
+
+      // 2. Normalize Departments
+      const deptUpdates = allDepts.map(async (dept) => {
+        const normalizedName = (dept.name || "").trim().toUpperCase();
+        if (dept.name !== normalizedName) {
+           await base44.entities.Department.update(dept.id, { name: normalizedName });
+           updatedDeptsCount++;
+           return { ...dept, name: normalizedName };
+        }
+        return dept;
+      });
+      const finalDepts = await Promise.all(deptUpdates);
+
+      // 3. Normalize Positions (and their department_name ref)
+      const posUpdates = allPos.map(async (pos) => {
+        const normalizedName = (pos.name || "").trim().toUpperCase();
+        // Find parent dept in updated list
+        const parentDept = finalDepts.find(d => d.id === pos.department_id);
+        const normalizedDeptName = parentDept ? (parentDept.name || "").trim().toUpperCase() : null;
+
+        if (pos.name !== normalizedName || pos.department_name !== normalizedDeptName) {
+           await base44.entities.Position.update(pos.id, { 
+             name: normalizedName,
+             department_name: normalizedDeptName
+           });
+           updatedPosCount++;
+        }
+      });
+      await Promise.all(posUpdates);
+
+      // 4. Normalize Employees
+      // Process in chunks to avoid overwhelming the API
+      const chunkSize = 20;
+      for (let i = 0; i < allEmps.length; i += chunkSize) {
+        const chunk = allEmps.slice(i, i + chunkSize);
+        await Promise.all(chunk.map(async (emp) => {
+           const normDept = (emp.departamento || "").trim().toUpperCase();
+           const normPuesto = (emp.puesto || "").trim().toUpperCase();
+           
+           if ((emp.departamento && emp.departamento !== normDept) || (emp.puesto && emp.puesto !== normPuesto)) {
+             await base44.entities.EmployeeMasterDatabase.update(emp.id, {
+               departamento: normDept,
+               puesto: normPuesto
+             });
+             updatedEmpsCount++;
+           }
+        }));
+      }
+
+      await queryClient.invalidateQueries();
+      await recalculateEmployeeCounts();
+      
+      toast.success(`Normalización completa: ${updatedDeptsCount} Depts, ${updatedPosCount} Puestos, ${updatedEmpsCount} Empleados actualizados.`);
+
+    } catch (e) {
+      console.error(e);
+      toast.error("Error al normalizar datos: " + e.message);
+    } finally {
+      setIsNormalizing(false);
     }
   };
 
@@ -812,6 +891,16 @@ export default function DepartmentPositionManager() {
           <Button 
             variant="outline" 
             size="sm" 
+            className="h-8 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+            disabled={isNormalizing}
+            onClick={normalizeAllData}
+          >
+            {isNormalizing ? <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Settings2 className="w-3.5 h-3.5 mr-2" />}
+            {isNormalizing ? "Normalizando..." : "Normalizar Mayúsculas"}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
             className="h-8 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
             onClick={() => setIsSyncDialogOpen(true)}
           >
@@ -830,6 +919,16 @@ export default function DepartmentPositionManager() {
           >
             <Users className="w-3.5 h-3.5 mr-2" />
             Recalcular Conteos
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
+            onClick={normalizeAllData}
+            disabled={isNormalizing}
+          >
+            {isNormalizing ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5 mr-2" />}
+            Normalizar DB
           </Button>
         </div>
       </div>

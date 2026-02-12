@@ -205,6 +205,11 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       // Clean data before sending (remove system fields that might cause issues if present)
       const { id, created_date, updated_date, created_by, ...cleanData } = data;
 
+      // Enforce Uppercase for critical fields (Synchronization Guarantee)
+      if (cleanData.nombre) cleanData.nombre = cleanData.nombre.toUpperCase();
+      if (cleanData.departamento) cleanData.departamento = cleanData.departamento.toUpperCase();
+      if (cleanData.puesto) cleanData.puesto = cleanData.puesto.toUpperCase();
+
       // Audit Logging - Wrapped in try/catch to prevent blocking save
       try {
         if (currentUser?.email) {

@@ -113,7 +113,12 @@ export default function MasterEmployeeImport() {
               } else if (key === 'incluir_en_planning') {
                 employeeData[key] = ['true', '1', 'si', 'sí', 'yes', 'True', 'TRUE'].includes(trimmedValue);
               } else {
-                employeeData[key] = trimmedValue;
+                // Enforce Uppercase for critical fields
+                if (['nombre', 'departamento', 'puesto'].includes(key.toLowerCase())) {
+                  employeeData[key] = trimmedValue.toUpperCase();
+                } else {
+                  employeeData[key] = trimmedValue;
+                }
               }
             }
           });

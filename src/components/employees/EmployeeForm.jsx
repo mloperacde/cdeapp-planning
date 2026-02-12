@@ -249,6 +249,12 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     mutationFn: async (data) => {
       // Si es turno fijo, no debe tener equipo asignado
       const finalData = { ...data };
+
+      // Enforce Uppercase for critical fields
+      if (finalData.nombre) finalData.nombre = finalData.nombre.toUpperCase();
+      if (finalData.departamento) finalData.departamento = finalData.departamento.toUpperCase();
+      if (finalData.puesto) finalData.puesto = finalData.puesto.toUpperCase();
+
       if (data.tipo_turno === "Fijo Mañana" || data.tipo_turno === "Fijo Tarde") {
         finalData.equipo = "";
       }

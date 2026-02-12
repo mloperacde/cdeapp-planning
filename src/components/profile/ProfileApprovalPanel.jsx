@@ -58,8 +58,16 @@ export default function ProfileApprovalPanel() {
       // Actualizar el empleado con el nuevo valor
       const employee = employees.find(e => e.id === request.employee_id);
       if (employee) {
+        let finalValue = request.valor_solicitado;
+        const field = request.campo_modificado;
+        
+        // Enforce uppercase for critical fields
+        if (["nombre", "departamento", "puesto", "categoria", "equipo"].includes(field) && typeof finalValue === "string") {
+          finalValue = finalValue.toUpperCase();
+        }
+
         await base44.entities.EmployeeMasterDatabase.update(request.employee_id, {
-          [request.campo_modificado]: request.valor_solicitado
+          [field]: finalValue
         });
       }
 

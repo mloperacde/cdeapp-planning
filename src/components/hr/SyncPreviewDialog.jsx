@@ -174,6 +174,13 @@ export default function SyncPreviewDialog({ masterEmployees, employees, open, on
               dataToUpdate[f.field] = f.after;
             });
 
+            // Enforce uppercase for critical fields
+            ['nombre', 'departamento', 'puesto', 'categoria', 'equipo'].forEach(field => {
+              if (dataToUpdate[field] && typeof dataToUpdate[field] === 'string') {
+                dataToUpdate[field] = dataToUpdate[field].toUpperCase();
+              }
+            });
+
             await base44.entities.EmployeeMasterDatabase.update(change.employeeId, dataToUpdate);
 
             await base44.entities.EmployeeMasterDatabase.update(change.masterId, {

@@ -32,7 +32,7 @@ export default function MasterEmployeeBulkEditDialog({ selectedIds, open, onClos
         
         const batchPromises = batch.map(async (id) => {
           try {
-            const result = await base44.entities.EmployeeMasterDatabase.update(id, { departamento: newDept });
+            const result = await base44.entities.EmployeeMasterDatabase.update(id, { departamento: newDept?.toUpperCase() });
             return { status: 'fulfilled', value: result, id };
           } catch (err) {
             console.error(`Error actualizando empleado ${id}:`, err);

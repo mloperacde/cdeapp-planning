@@ -60,6 +60,9 @@ Deno.serve(async (req) => {
           // No existe - migrar a master
           const newRecord = await base44.asServiceRole.entities.EmployeeMasterDatabase.create({
             ...legacyEmp,
+            nombre: legacyEmp.nombre?.toUpperCase(),
+            departamento: legacyEmp.departamento?.toUpperCase(),
+            puesto: legacyEmp.puesto?.toUpperCase(),
             id: undefined, // Generar nuevo ID
             created_date: undefined,
             updated_date: undefined,
