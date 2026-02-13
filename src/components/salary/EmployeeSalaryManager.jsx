@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, DollarSign, Plus, Eye, TrendingUp } from "lucide-react";
 import EmployeeSalaryDetail from "./EmployeeSalaryDetail";
-import React from "react";
 
 export default function EmployeeSalaryManager() {
   const [searchTerm, setSearchTerm] = useState("");
