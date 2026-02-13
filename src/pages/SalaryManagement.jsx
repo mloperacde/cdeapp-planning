@@ -19,7 +19,7 @@ export default function SalaryManagement() {
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-background overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-card border-b border-slate-200 dark:border-border p-4 shadow-sm">
+      <div className="bg-white dark:bg-card border-b border-slate-200 dark:border-border p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
             <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
@@ -36,58 +36,91 @@ export default function SalaryManagement() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden flex flex-col">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="bg-white dark:bg-card border-b border-slate-200 dark:border-border px-4">
-            <TabsList className="w-full justify-start h-12 overflow-x-auto">
-              <TabsTrigger value="setup" className="gap-2">
-                <Upload className="w-4 h-4" />
-                Configuración Inicial
-              </TabsTrigger>
-              <TabsTrigger value="employees" className="gap-2">
+          <div className="bg-white dark:bg-card border-b border-slate-200 dark:border-border px-6 py-4">
+            <TabsList className="w-full justify-start h-auto p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl gap-1 flex-wrap">
+              <TabsTrigger 
+                value="employees" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <DollarSign className="w-4 h-4" />
                 Salarios Empleados
               </TabsTrigger>
-              <TabsTrigger value="summary" className="gap-2">
+              <TabsTrigger 
+                value="summary" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <Building2 className="w-4 h-4" />
                 Resumen Departamentos
               </TabsTrigger>
-              <TabsTrigger value="components" className="gap-2">
+              <TabsTrigger 
+                value="components" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <Settings className="w-4 h-4" />
                 Componentes Salariales
               </TabsTrigger>
-              <TabsTrigger value="categories" className="gap-2">
+              <TabsTrigger 
+                value="categories" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <Award className="w-4 h-4" />
                 Categorías Profesionales
               </TabsTrigger>
-              <TabsTrigger value="seniority" className="gap-2">
+              <TabsTrigger 
+                value="seniority" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <TrendingUp className="w-4 h-4" />
                 Bandas de Antigüedad
               </TabsTrigger>
-              <TabsTrigger value="policies" className="gap-2">
+              <TabsTrigger 
+                value="policies" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <TrendingUp className="w-4 h-4" />
                 Políticas Retributivas
               </TabsTrigger>
-              <TabsTrigger value="rules" className="gap-2">
+              <TabsTrigger 
+                value="rules" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <Zap className="w-4 h-4" />
                 Reglas Automáticas
               </TabsTrigger>
-              <TabsTrigger value="payroll" className="gap-2">
+              <TabsTrigger 
+                value="payroll" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <FileText className="w-4 h-4" />
                 Procesamiento Nóminas
               </TabsTrigger>
-              <TabsTrigger value="approvals" className="gap-2">
+              <TabsTrigger 
+                value="approvals" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <CheckSquare className="w-4 h-4" />
                 Aprobaciones
               </TabsTrigger>
-              <TabsTrigger value="audit" className="gap-2">
+              <TabsTrigger 
+                value="audit" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
                 <History className="w-4 h-4" />
                 Auditoría
+              </TabsTrigger>
+              <TabsTrigger 
+                value="setup" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
+                <Upload className="w-4 h-4" />
+                Configuración Inicial
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-auto p-6">
             <TabsContent value="setup" className="mt-0 h-full">
               <InitialSalarySetup />
             </TabsContent>
