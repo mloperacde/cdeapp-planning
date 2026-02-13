@@ -489,6 +489,5 @@ export default function DataManagement() {
         </CardContent>
       </Card>
     </div>
-  </div>
   );
 }

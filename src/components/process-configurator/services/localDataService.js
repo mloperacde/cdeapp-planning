@@ -15,6 +15,7 @@ export const localDataService = {
 
   async _findEntity(entityName, criteria) {
       try {
+          if (!base44.entities?.[entityName]) return null;
           // Use filter method from base44 client
           // Note: Real SDK might behave differently than Mock. 
           // We assume filter returns an array of matches.
@@ -139,6 +140,7 @@ export const localDataService = {
   // New method to fetch master activities from API
   async fetchApiActivities() {
       try {
+          if (!base44.entities?.Activity) return this.getLocalActivities();
           // Use list() from base44 client
           // We fetch all (limit 1000 for now, might need pagination loop for production)
           const apiActivities = await base44.entities.Activity.list(undefined, 1000) || [];
@@ -235,6 +237,7 @@ export const localDataService = {
 
   async fetchApiArticles() {
     try {
+        if (!base44.entities?.Article) return this.getLocalArticles();
         const apiArticles = await base44.entities.Article.list(undefined, 1000) || [];
         console.log(`Fetched ${apiArticles.length} articles from API`);
 

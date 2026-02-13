@@ -74,6 +74,43 @@ function createMockBase44() {
          }));
          modified = true;
      }
+
+    // Seed Activity, Process, Article if empty
+    if (!db.Activity || db.Activity.length === 0) {
+        console.log("Seeding Activity mock data...");
+        db.Activity = [
+            { id: generateId(), number: 1, name: "Actividad 1", time_seconds: 10, created_at: new Date().toISOString() },
+            { id: generateId(), number: 2, name: "Actividad 2", time_seconds: 20, created_at: new Date().toISOString() }
+        ];
+        modified = true;
+    }
+    
+    if (!db.Process || db.Process.length === 0) {
+        console.log("Seeding Process mock data...");
+        db.Process = [
+            { id: generateId(), code: "A", name: "Proceso A", activity_numbers: [1, 2], created_at: new Date().toISOString() }
+        ];
+        modified = true;
+    }
+
+    if (!db.Article || db.Article.length === 0) {
+        console.log("Seeding Article mock data...");
+        db.Article = [
+            { id: generateId(), code: "FR001", name: "Frasco 001", type: "Frasco", client: "Cliente A", created_at: new Date().toISOString() },
+            { id: generateId(), code: "SA001", name: "Sachet 001", type: "Sachet", client: "Cliente B", created_at: new Date().toISOString() },
+            { id: generateId(), code: "TA001", name: "Tarro 001", type: "Tarro", client: "Cliente A", created_at: new Date().toISOString() },
+            { id: generateId(), code: "BOL001", name: "Bolsa 001", type: "Bolsa", client: "Cliente C", created_at: new Date().toISOString() },
+            // Test Inference (Missing Type)
+            { id: generateId(), code: "BO001", name: "Bote 001", client: "Cliente B", created_at: new Date().toISOString() }, 
+            { id: generateId(), code: "ES001", name: "Estuche 001", client: "Cliente A", created_at: new Date().toISOString() },
+            { id: generateId(), code: "ENV001", name: "Envase 001", client: "Cliente C", created_at: new Date().toISOString() },
+            { id: generateId(), code: "DP001", name: "Diptico 001", client: "Cliente B", created_at: new Date().toISOString() },
+            { id: generateId(), code: "ST001", name: "Sachet Toallita 001", client: "Cliente A", created_at: new Date().toISOString() },
+            { id: generateId(), code: "TU001", name: "Tubo 001", client: "Cliente C", created_at: new Date().toISOString() },
+            { id: generateId(), code: "EASY001", name: "Easysnap 001", client: "Cliente B", created_at: new Date().toISOString() }
+        ];
+        modified = true;
+    }
      
      // Seed Employee/EmployeeMasterDatabase if empty to ensure names resolve
      if ((!db.Employee || db.Employee.length === 0) || (!db.EmployeeMasterDatabase || db.EmployeeMasterDatabase.length === 0)) {
