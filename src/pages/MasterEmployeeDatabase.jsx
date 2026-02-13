@@ -61,7 +61,7 @@ const ALL_COLUMNS = {
   departamento: { label: "Departamento", default: true },
   puesto: { label: "Puesto", default: true },
   categoria: { label: "Categoría", default: false },
-  estado_empleado: { label: "Estado", default: true },
+  estado_empleado: { label: "Estado", default: false },
   fecha_alta: { label: "Fecha Alta", default: false },
   fecha_baja: { label: "Fecha Baja", default: false },
   motivo_baja: { label: "Motivo Baja", default: false },
@@ -74,8 +74,8 @@ const ALL_COLUMNS = {
   telefono_movil: { label: "Móvil", default: false },
   tipo_jornada: { label: "Jornada", default: false },
   num_horas_jornada: { label: "Horas/Sem", default: false },
-  tipo_turno: { label: "Turno", default: false },
-  equipo: { label: "Equipo", default: false },
+  tipo_turno: { label: "Turno", default: true },
+  equipo: { label: "Equipo", default: true },
   tipo_contrato: { label: "Contrato", default: false },
   codigo_contrato: { label: "Cód. Contrato", default: false },
   fecha_fin_contrato: { label: "Fin Contrato", default: false },
@@ -85,8 +85,8 @@ const ALL_COLUMNS = {
   taquilla_vestuario: { label: "Vestuario", default: false },
   taquilla_numero: { label: "Taquilla", default: false },
   disponibilidad: { label: "Disponibilidad", default: false },
-  estado_sincronizacion: { label: "Sync Status", default: true },
-  ultimo_sincronizado: { label: "Últ. Sync", default: true },
+  estado_sincronizacion: { label: "Sync Status", default: false },
+  ultimo_sincronizado: { label: "Últ. Sync", default: false },
   acciones: { label: "Acciones", default: true }
 };
 
