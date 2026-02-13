@@ -14,7 +14,7 @@ import DepartmentSalarySummary from "@/components/salary/DepartmentSalarySummary
 import InitialSalarySetup from "@/components/salary/InitialSalarySetup";
 
 export default function SalaryManagement() {
-  const [activeTab, setActiveTab] = useState("setup");
+  const [activeTab, setActiveTab] = useState("employees");
 
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-background overflow-hidden">
@@ -130,6 +130,10 @@ export default function SalaryManagement() {
 
             <TabsContent value="audit" className="mt-0 h-full">
               <SalaryAuditHistory />
+            </TabsContent>
+
+            <TabsContent value="setup" className="mt-0 h-full">
+              <InitialSalarySetup />
             </TabsContent>
           </div>
         </Tabs>
