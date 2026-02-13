@@ -4,21 +4,27 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, History } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, History, AlertCircle } from "lucide-react";
+import SalaryAuditHistory from "./SalaryAuditHistory";
+import { useAppData } from "@/components/data/DataProvider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export default function EmployeeSalaryDetail({ employee, onBack }) {
   const queryClient = useQueryClient();
+  const { user } = useAppData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [formData, setFormData] = useState({
     component_id: "",
     amount: 0,
-    start_date: format(new Date(), 'yyyy-MM-dd')
+    start_date: format(new Date(), 'yyyy-MM-dd'),
+    change_reason: ""
   });
 
   const { data: components = [] } = useQuery({
@@ -43,18 +49,50 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
   });
 
   const addComponentMutation = useMutation({
-    mutationFn: (data) => base44.entities.EmployeeSalary.create({
-      ...data,
-      employee_id: employee.id,
-      employee_name: employee.nombre,
-      employee_code: employee.codigo_empleado,
-      is_current: true
-    }),
+    mutationFn: async (data) => {
+      const component = components.find(c => c.id === data.component_id);
+      
+      // Crear solicitud de cambio
+      const request = await base44.entities.SalaryChangeRequest.create({
+        employee_id: employee.id,
+        employee_name: employee.nombre,
+        request_type: "Nuevo Componente",
+        component_id: data.component_id,
+        component_name: component.name,
+        current_amount: 0,
+        requested_amount: data.amount,
+        change_reason: data.change_reason || "Nuevo componente salarial",
+        effective_date: data.start_date,
+        requested_by: user.id,
+        requested_by_name: user.full_name,
+        request_date: new Date().toISOString(),
+        status: "Pendiente"
+      });
+
+      // Log de auditoría
+      await base44.entities.SalaryAuditLog.create({
+        entity_type: "EmployeeSalary",
+        entity_id: request.id,
+        action: "create",
+        employee_id: employee.id,
+        employee_name: employee.nombre,
+        new_value: `${component.name}: ${data.amount}€`,
+        change_amount: data.amount,
+        change_reason: data.change_reason || "Nuevo componente salarial",
+        changed_by: user.id,
+        changed_by_name: user.full_name,
+        change_date: new Date().toISOString(),
+        request_id: request.id
+      });
+
+      return request;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employeeSalaries'] });
-      toast.success("Componente añadido");
+      queryClient.invalidateQueries({ queryKey: ['salaryChangeRequests'] });
+      toast.success("Solicitud de cambio creada y pendiente de aprobación");
       setIsAddDialogOpen(false);
-      setFormData({ component_id: "", amount: 0, start_date: format(new Date(), 'yyyy-MM-dd') });
+      setFormData({ component_id: "", amount: 0, start_date: format(new Date(), 'yyyy-MM-dd'), change_reason: "" });
     },
   });
 
@@ -74,28 +112,44 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
       toast.error("Selecciona un componente y un importe válido");
       return;
     }
-
-    const component = components.find(c => c.id === formData.component_id);
-    addComponentMutation.mutate({
-      ...formData,
-      component_name: component.name,
-      component_code: component.code
-    });
+    if (!formData.change_reason?.trim()) {
+      toast.error("Debes justificar el cambio");
+      return;
+    }
+    addComponentMutation.mutate(formData);
   };
 
   const totalSalary = currentSalaries.reduce((sum, s) => sum + (s.amount || 0), 0);
 
+  if (showHistory) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" onClick={() => setShowHistory(false)}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver a Detalles
+        </Button>
+        <SalaryAuditHistory employeeId={employee.id} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold">{employee.nombre}</h2>
-          <p className="text-slate-500">{employee.puesto} - {employee.departamento}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">{employee.nombre}</h2>
+            <p className="text-slate-500">{employee.puesto} - {employee.departamento}</p>
+          </div>
         </div>
+        <Button variant="outline" onClick={() => setShowHistory(true)} className="gap-2">
+          <History className="w-4 h-4" />
+          Ver Historial
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -222,6 +276,24 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
                 value={formData.start_date}
                 onChange={(e) => setFormData({...formData, start_date: e.target.value})}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Justificación del Cambio *</Label>
+              <Textarea
+                value={formData.change_reason}
+                onChange={(e) => setFormData({...formData, change_reason: e.target.value})}
+                placeholder="Explica el motivo de este nuevo componente..."
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">
+                <p className="font-medium mb-1">Flujo de Aprobación</p>
+                <p>Esta solicitud será enviada para aprobación antes de aplicarse al empleado.</p>
+              </div>
             </div>
           </div>
 

@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, FileText, TrendingUp, Award, Settings } from "lucide-react";
+import { DollarSign, FileText, TrendingUp, Award, Settings, CheckSquare, History } from "lucide-react";
 import SalaryComponentsManager from "@/components/salary/SalaryComponentsManager";
 import CompensationPolicyManager from "@/components/salary/CompensationPolicyManager";
 import SalaryCategoryManager from "@/components/salary/SalaryCategoryManager";
 import EmployeeSalaryManager from "@/components/salary/EmployeeSalaryManager";
 import PayrollProcessing from "@/components/salary/PayrollProcessing";
+import SalaryApprovalFlow from "@/components/salary/SalaryApprovalFlow";
+import SalaryAuditHistory from "@/components/salary/SalaryAuditHistory";
 
 export default function SalaryManagement() {
   const [activeTab, setActiveTab] = useState("employees");
@@ -55,6 +57,14 @@ export default function SalaryManagement() {
                 <FileText className="w-4 h-4" />
                 Procesamiento Nóminas
               </TabsTrigger>
+              <TabsTrigger value="approvals" className="gap-2">
+                <CheckSquare className="w-4 h-4" />
+                Aprobaciones
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="gap-2">
+                <History className="w-4 h-4" />
+                Auditoría
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -77,6 +87,14 @@ export default function SalaryManagement() {
 
             <TabsContent value="payroll" className="mt-0 h-full">
               <PayrollProcessing />
+            </TabsContent>
+
+            <TabsContent value="approvals" className="mt-0 h-full">
+              <SalaryApprovalFlow />
+            </TabsContent>
+
+            <TabsContent value="audit" className="mt-0 h-full">
+              <SalaryAuditHistory />
             </TabsContent>
           </div>
         </Tabs>

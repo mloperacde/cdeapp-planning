@@ -103,10 +103,10 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
+import SalaryManagement from './pages/SalaryManagement';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
-import SalaryManagement from './pages/SalaryManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -167,10 +167,10 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
+    "SalaryManagement": SalaryManagement,
     "DailyShiftPlanning": DailyShiftPlanning,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
-    "SalaryManagement": SalaryManagement,
 }
 
 export const pagesConfig = {
