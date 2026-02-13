@@ -107,6 +107,7 @@ import SalaryManagement from './pages/SalaryManagement';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
+import SenioritySettings from './pages/SenioritySettings';
 import __Layout from './Layout.jsx';
 
 
@@ -171,6 +172,7 @@ export const PAGES = {
     "DailyShiftPlanning": DailyShiftPlanning,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
+    "SenioritySettings": SenioritySettings,
 }
 
 export const pagesConfig = {
