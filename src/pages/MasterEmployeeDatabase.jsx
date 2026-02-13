@@ -47,7 +47,8 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  ShieldCheck
+  ShieldCheck,
+  Clock
 } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
@@ -110,7 +111,7 @@ export default function MasterEmployeeDatabasePage() {
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -556,6 +557,20 @@ export default function MasterEmployeeDatabasePage() {
         )}
 
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <Button
+            variant={filters.estado_empleado === 'Excedencia' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilters(prev => ({ 
+              ...prev, 
+              estado_empleado: prev.estado_empleado === 'Excedencia' ? 'all' : 'Excedencia' 
+            }))}
+            className={`h-9 px-3 ${filters.estado_empleado === 'Excedencia' ? 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600'}`}
+            title="Ver solo empleados en excedencia"
+          >
+            <Clock className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Excedencias</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
