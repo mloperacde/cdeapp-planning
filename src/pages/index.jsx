@@ -54,6 +54,7 @@ import MessagingConfiguration from "./MessagingConfiguration";
 import RulesAndTemplates from "./RulesAndTemplates";
 import OrganizationalStructure from "./OrganizationalStructure";
 import MigrationDashboard from "../components/config/MigrationDashboard";
+import SalaryManagement from "./SalaryManagement";
 import DireccionSkills from "./DireccionSkills";
 import PlanificacionSkills from "./PlanificacionSkills";
 import FabricacionSkills from "./FabricacionSkills";
@@ -121,6 +122,8 @@ const PAGES = {
   ShiftAssignmentsPage: ShiftAssignmentsPage,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
+  SalaryManagement: SalaryManagement,
+  SenioritySettings: SenioritySettings,
 
   Timeline: Timeline,
   WorkCalendarConfig: WorkCalendarConfig,
@@ -258,6 +261,8 @@ function PagesContent() {
                 <Route path="/ShiftAssignmentsPage" element={<ShiftAssignmentsPage />} />
                 
                 <Route path="/SkillMatrix" element={<SkillMatrix />} />
+                <Route path="/SalaryManagement" element={<SalaryManagement />} />
+                <Route path="/SenioritySettings" element={<SenioritySettings />} />
                 <Route path="/DireccionSkills" element={<DireccionSkills />} />
                 <Route path="/PlanificacionSkills" element={<PlanificacionSkills />} />
                 <Route path="/FabricacionSkills" element={<FabricacionSkills />} />

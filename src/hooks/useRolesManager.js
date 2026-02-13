@@ -49,6 +49,8 @@ export const DEFAULT_ROLES_CONFIG = {
         '/AttendanceManagement': true,
         '/CommitteeManagement': true,
         '/IncentiveManagement': true,
+        '/SalaryManagement': true,
+        '/SenioritySettings': true,
         '/Reports': true,
         '/EmployeeAbsenceInfo': true
       }
