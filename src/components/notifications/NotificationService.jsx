@@ -253,3 +253,168 @@ export async function notifySupervisorsAbsenceRequest(absenceId, employeeName) {
     console.error("Error notificando a supervisores:", error);
   }
 }
+
+/**
+ * NOTIFICACIONES DE SALARIOS Y NÓMINAS
+ */
+
+/**
+ * Notifica nueva solicitud de cambio salarial
+ */
+export async function notifySalaryChangeRequest(requestId, employeeName, requestType) {
+  try {
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
+    const hrTeam = employees.filter(e => 
+      e.departamento === 'RRHH' || 
+      e.puesto?.toLowerCase().includes('recursos humanos')
+    );
+
+    for (const hr of hrTeam) {
+      await sendPushNotification({
+        destinatarioId: hr.id,
+        tipo: 'salario',
+        titulo: '💰 Nueva Solicitud de Cambio Salarial',
+        mensaje: `${employeeName} - ${requestType} pendiente de aprobación`,
+        prioridad: 'alta',
+        referenciaTipo: 'SalaryChangeRequest',
+        referenciaId: requestId,
+        accionUrl: '/SalaryManagement?tab=approvals'
+      });
+    }
+  } catch (error) {
+    console.error("Error notificando solicitud de cambio salarial:", error);
+  }
+}
+
+/**
+ * Notifica cambio salarial aprobado
+ */
+export async function notifySalaryChangeApproved(employeeId, employeeName, changeDescription) {
+  try {
+    await sendPushNotification({
+      destinatarioId: employeeId,
+      tipo: 'salario',
+      titulo: '✅ Cambio Salarial Aprobado',
+      mensaje: `Tu solicitud de ${changeDescription} ha sido aprobada`,
+      prioridad: 'alta',
+      accionUrl: '/SalaryManagement'
+    });
+  } catch (error) {
+    console.error("Error notificando aprobación:", error);
+  }
+}
+
+/**
+ * Notifica cambio salarial rechazado
+ */
+export async function notifySalaryChangeRejected(employeeId, employeeName, changeDescription, reason) {
+  try {
+    await sendPushNotification({
+      destinatarioId: employeeId,
+      tipo: 'salario',
+      titulo: '❌ Cambio Salarial Rechazado',
+      mensaje: `Tu solicitud de ${changeDescription} ha sido rechazada. ${reason ? 'Motivo: ' + reason : ''}`,
+      prioridad: 'alta',
+      accionUrl: '/SalaryManagement'
+    });
+  } catch (error) {
+    console.error("Error notificando rechazo:", error);
+  }
+}
+
+/**
+ * Notifica nóminas calculadas listas para validación
+ */
+export async function notifyPayrollCalculated(period, employeeCount) {
+  try {
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
+    const hrTeam = employees.filter(e => 
+      e.departamento === 'RRHH' || 
+      e.puesto?.toLowerCase().includes('recursos humanos')
+    );
+
+    for (const hr of hrTeam) {
+      await sendPushNotification({
+        destinatarioId: hr.id,
+        tipo: 'nomina',
+        titulo: '📊 Nóminas Calculadas',
+        mensaje: `${employeeCount} nóminas de ${period} listas para validación`,
+        prioridad: 'alta',
+        referenciaTipo: 'PayrollRecord',
+        accionUrl: '/SalaryManagement?tab=payroll'
+      });
+    }
+  } catch (error) {
+    console.error("Error notificando nóminas calculadas:", error);
+  }
+}
+
+/**
+ * Notifica anomalías en ausencias
+ */
+export async function notifyAbsenceAnomaly(employeeName, anomalyDescription) {
+  try {
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
+    const hrTeam = employees.filter(e => 
+      e.departamento === 'RRHH' || 
+      e.puesto?.toLowerCase().includes('recursos humanos')
+    );
+
+    for (const hr of hrTeam) {
+      await sendPushNotification({
+        destinatarioId: hr.id,
+        tipo: 'alerta',
+        titulo: '⚠️ Anomalía Detectada en Ausencias',
+        mensaje: `${employeeName}: ${anomalyDescription}`,
+        prioridad: 'media',
+        accionUrl: '/AbsenceManagement'
+      });
+    }
+  } catch (error) {
+    console.error("Error notificando anomalía:", error);
+  }
+}
+
+/**
+ * Notifica mantenimiento del sistema
+ */
+export async function notifySystemMaintenance(message, startTime) {
+  try {
+    const employees = await base44.entities.EmployeeMasterDatabase.list();
+    const hrTeam = employees.filter(e => 
+      e.departamento === 'RRHH' || 
+      e.puesto?.toLowerCase().includes('recursos humanos')
+    );
+
+    for (const hr of hrTeam) {
+      await sendPushNotification({
+        destinatarioId: hr.id,
+        tipo: 'sistema',
+        titulo: '🔧 Mantenimiento del Sistema',
+        mensaje: `${message} - Inicio: ${startTime}`,
+        prioridad: 'media'
+      });
+    }
+  } catch (error) {
+    console.error("Error notificando mantenimiento:", error);
+  }
+}
+
+/**
+ * Obtiene notificaciones de RRHH no leídas
+ */
+export async function getHRNotifications(employeeId) {
+  try {
+    const notifications = await base44.entities.PushNotification.filter({
+      destinatario_id: employeeId,
+      leida: false
+    }, '-created_date', 100);
+    
+    return notifications.filter(n => 
+      ['salario', 'nomina', 'alerta', 'sistema', 'ausencia'].includes(n.tipo)
+    );
+  } catch (error) {
+    console.error("Error obteniendo notificaciones de RRHH:", error);
+    return [];
+  }
+}
