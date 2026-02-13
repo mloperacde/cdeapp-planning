@@ -46,7 +46,8 @@ import {
   UserCheck,
   ChevronDown,
   ChevronUp,
-  Download
+  Download,
+  ShieldCheck
 } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
@@ -151,6 +152,44 @@ export default function MasterEmployeeDatabasePage() {
   const isHrModuleAllowed = permissions.canAccessPage 
     ? permissions.canAccessPage('/MasterEmployeeDatabase') 
     : (permissions.role === "hr_manager" || permissions.isAdmin);
+
+  const handleCheckIntegrity = async () => {
+    toast.promise(
+      async () => {
+        // Fetch all employees freshly
+        const allEmployees = await base44.entities.EmployeeMasterDatabase.list(undefined, 5000);
+        
+        // Group by codigo_empleado
+        const codeMap = new Map();
+        const duplicates = [];
+        
+        allEmployees.forEach(emp => {
+          if (!emp.codigo_empleado) return;
+          const code = emp.codigo_empleado.trim().toUpperCase();
+          
+          if (codeMap.has(code)) {
+            duplicates.push({
+              code,
+              employees: [codeMap.get(code), emp]
+            });
+          } else {
+            codeMap.set(code, emp);
+          }
+        });
+        
+        if (duplicates.length > 0) {
+          throw new Error(`Se encontraron ${duplicates.length} códigos duplicados: ${duplicates.map(d => d.code).join(', ')}`);
+        }
+        
+        return "Base de datos verificada: No se encontraron códigos duplicados.";
+      },
+      {
+        loading: 'Verificando integridad de datos...',
+        success: (msg) => msg,
+        error: (err) => err.message
+      }
+    );
+  };
 
   const handleExportToExcel = () => {
     try {
@@ -554,10 +593,24 @@ export default function MasterEmployeeDatabasePage() {
             variant="outline"
             className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 h-9 px-3"
             disabled={filteredEmployees.length === 0}
+            title="Exportar a Excel"
           >
             <Download className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Exportar</span>
           </Button>
+
+          {isHrModuleAllowed && (
+            <Button
+              onClick={handleCheckIntegrity}
+              size="sm"
+              variant="outline"
+              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 h-9 px-3"
+              title="Verificar Integridad"
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Verificar</span>
+            </Button>
+          )}
 
           {canCreateEmployee && (
             <Button

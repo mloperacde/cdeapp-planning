@@ -210,6 +210,22 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       if (cleanData.departamento) cleanData.departamento = cleanData.departamento.toUpperCase();
       if (cleanData.puesto) cleanData.puesto = cleanData.puesto.toUpperCase();
 
+      // VALIDACIÓN DE DUPLICADOS (CÓDIGO DE EMPLEADO)
+      if (cleanData.codigo_empleado) {
+        // Verificar si existe otro empleado con el mismo código
+        // Nota: Idealmente esto sería un .list({ codigo_empleado: ... }) si la API lo soporta eficientemente,
+        // pero .list() + find es seguro para bases de datos de tamaño moderado (< 10k registros)
+        const allEmployees = await base44.entities.EmployeeMasterDatabase.list();
+        const duplicate = allEmployees.find(e => 
+          e.codigo_empleado === cleanData.codigo_empleado && 
+          e.id !== employee?.id // Excluir el propio registro si estamos editando
+        );
+        
+        if (duplicate) {
+          throw new Error(`El código de empleado "${cleanData.codigo_empleado}" ya está en uso por: ${duplicate.nombre}. No se permiten duplicados.`);
+        }
+      }
+
       // Audit Logging - Wrapped in try/catch to prevent blocking save
       try {
         if (currentUser?.email) {
