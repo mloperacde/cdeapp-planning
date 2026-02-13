@@ -23,7 +23,9 @@ import {
   UserPlus,
   Target,
   Bell,
-  MessageSquare
+  MessageSquare,
+  DollarSign,
+  Award
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
@@ -34,6 +36,8 @@ export const MENU_STRUCTURE = [
   { name: 'Empleados (Master)', path: '/MasterEmployeeDatabase', icon: Users, category: 'Recursos Humanos' },
   { name: 'Onboarding', path: '/EmployeeOnboarding', icon: UserPlus, category: 'Recursos Humanos' },
   { name: 'Ausencias', path: '/AbsenceManagement', icon: Calendar, category: 'Recursos Humanos' },
+  { name: 'Salarios y Nóminas', path: '/SalaryManagement', icon: DollarSign, category: 'Recursos Humanos' },
+  { name: 'Antigüedad', path: '/SenioritySettings', icon: Award, category: 'Recursos Humanos' },
   { name: 'Comités', path: '/CommitteeManagement', icon: Shield, category: 'Recursos Humanos' },
   { name: 'Incentivos', path: '/IncentiveManagement', icon: Target, category: 'Recursos Humanos' },
   { name: 'Taquillas', path: '/LockerManagement', icon: Package, category: 'Recursos Humanos' },
