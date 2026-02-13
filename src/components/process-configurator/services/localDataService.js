@@ -832,6 +832,54 @@ export const localDataService = {
 
   // --- Activities & Processes ---
 
+  async saveActivities(activities) {
+    await delay(300);
+    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+    
+    // Add API persistence for bulk save
+    if (activities.length > 0) {
+        console.log(`Syncing ${activities.length} activities to API...`);
+        try {
+            const results = await Promise.allSettled(activities.map(a => this.saveActivityToApi(a)));
+            
+            const failed = results.filter(r => r.status === 'rejected');
+            if (failed.length > 0) {
+                console.warn(`Failed to sync ${failed.length} activities to API. First error:`, failed[0].reason);
+            } else {
+                console.log("All activities synced to API successfully");
+            }
+        } catch (e) {
+            console.error("Critical error syncing activities batch to API:", e);
+        }
+    }
+    
+    return activities;
+  },
+
+  async saveProcesses(processes) {
+    await delay(300);
+    localStorage.setItem(STORAGE_KEYS.PROCESSES, JSON.stringify(processes));
+    
+    // Add API persistence for bulk save
+    if (processes.length > 0) {
+        console.log(`Syncing ${processes.length} processes to API...`);
+        try {
+            const results = await Promise.allSettled(processes.map(p => this.saveProcessToApi(p)));
+            
+            const failed = results.filter(r => r.status === 'rejected');
+            if (failed.length > 0) {
+                console.warn(`Failed to sync ${failed.length} processes to API. First error:`, failed[0].reason);
+            } else {
+                console.log("All processes synced to API successfully");
+            }
+        } catch (e) {
+            console.error("Critical error syncing processes batch to API:", e);
+        }
+    }
+    
+    return processes;
+  },
+
   async getLocalActivities() {
     await delay();
     const data = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
@@ -885,19 +933,109 @@ export const localDataService = {
     await delay(300);
     localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
     
-    // Add API persistence for bulk save
+    // Add API persistence for bulk save with Smart Diff/Upsert Strategy
     if (articles.length > 0) {
         console.log(`Syncing ${articles.length} articles to API...`);
         try {
-            // Use Promise.allSettled to ensure partial failures don't block everything
-            // We might want to limit concurrency here if the list is huge, but for now strict parallel is fine
-            const results = await Promise.allSettled(articles.map(a => this.saveArticleToApi(a)));
-            
-            const failed = results.filter(r => r.status === 'rejected');
-            if (failed.length > 0) {
-                console.warn(`Failed to sync ${failed.length} articles to API. First error:`, failed[0].reason);
+            // 1. Fetch ALL existing articles from API to minimize read operations
+            // (Assuming reasonable count, e.g. < 5000)
+            const existingApiArticles = await base44.entities.Article.list(undefined, 5000) || [];
+            const existingMap = new Map();
+            existingApiArticles.forEach(a => {
+                // Map by code (primary key for sync)
+                if (a.code) existingMap.set(String(a.code).trim(), a);
+                // Fallback: Map by ID if code missing? Unlikely for articles.
+            });
+
+            const promises = [];
+            let created = 0;
+            let updated = 0;
+            let skipped = 0;
+
+            // Helper to find value by multiple keys (case-insensitive)
+            const getValue = (obj, keys) => {
+                if (!obj) return null;
+                const objKeys = Object.keys(obj);
+                for (const key of keys) {
+                    if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+                    const foundKey = objKeys.find(k => k.toLowerCase() === key.toLowerCase());
+                    if (foundKey && obj[foundKey] !== undefined && obj[foundKey] !== null) return obj[foundKey];
+                }
+                return null;
+            };
+
+            for (const article of articles) {
+                const codeRaw = getValue(article, ['code', 'codigo', 'article_code', 'id']);
+                const code = String(codeRaw || article.code || "").trim();
+                
+                if (!code) continue; // Skip invalid articles
+
+                const existing = existingMap.get(code);
+
+                // Prepare Payload with Flexible Mapping
+                const payload = {
+                    code: code,
+                    name: getValue(article, ['name', 'nombre']) || article.name || code,
+                    description: getValue(article, ['description', 'descripcion']) || article.description || "",
+                    client: getValue(article, ['client', 'cliente', 'client_name']) || article.client || "",
+                    reference: getValue(article, ['reference', 'referencia']) || article.reference || "",
+                    type: getValue(article, ['type', 'tipo']) || article.type || "",
+                    process_code: getValue(article, ['process_code', 'process', 'proceso']) || article.process_code || null,
+                    operators_required: parseInt(getValue(article, ['operators_required', 'operators', 'operarios']) || article.operators_required || 1),
+                    total_time_seconds: parseFloat(getValue(article, ['total_time_seconds', 'total_time', 'tiempo']) || article.total_time_seconds || 0),
+                    active: getValue(article, ['active', 'activo']) !== false,
+                    status_article: getValue(article, ['status_article', 'status', 'estado']) || article.status_article || "PENDIENTE",
+                    injet: !!getValue(article, ['injet']),
+                    laser: !!getValue(article, ['laser']),
+                    etiquetado: !!getValue(article, ['etiquetado']),
+                    celo: !!getValue(article, ['celo']),
+                    unid_box: parseInt(getValue(article, ['unid_box']) || article.unid_box || 0),
+                    unid_pallet: parseInt(getValue(article, ['unid_pallet']) || article.unid_pallet || 0),
+                    multi_unid: parseInt(getValue(article, ['multi_unid']) || article.multi_unid || 1)
+                };
+
+                if (existing) {
+                    // Diff Check: Only update if fields changed
+                    const hasChanges = Object.keys(payload).some(key => {
+                        const newVal = payload[key];
+                        const oldVal = existing[key];
+                        
+                        // Strict equality check first
+                        if (newVal === oldVal) return false;
+                        
+                        // Loose equality for falsy values (null vs undefined vs "")
+                        if (!newVal && !oldVal) return false;
+                        
+                        // Number comparison (handle string numbers)
+                        if (typeof newVal === 'number' && Number(oldVal) === newVal) return false;
+                        
+                        return true;
+                    });
+
+                    if (hasChanges) {
+                        promises.push(base44.entities.Article.update(existing.id, payload));
+                        updated++;
+                    } else {
+                        skipped++;
+                    }
+                } else {
+                    promises.push(base44.entities.Article.create(payload));
+                    created++;
+                }
+            }
+
+            // Execute writes in parallel
+            if (promises.length > 0) {
+                const results = await Promise.allSettled(promises);
+                
+                const failed = results.filter(r => r.status === 'rejected');
+                if (failed.length > 0) {
+                    console.warn(`Failed to sync ${failed.length} articles to API. First error:`, failed[0].reason);
+                } else {
+                    console.log(`All articles synced to API successfully. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}`);
+                }
             } else {
-                console.log("All articles synced to API successfully");
+                console.log(`Sync complete. No changes detected (${skipped} skipped).`);
             }
         } catch (e) {
             console.error("Critical error syncing articles batch to API:", e);

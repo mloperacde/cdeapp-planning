@@ -32,6 +32,7 @@ import {
 export default function DataManagement() {
   const [activities, setActivities] = useState([]);
   const [processes, setProcesses] = useState([]);
+  const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -42,12 +43,14 @@ export default function DataManagement() {
 
   const fetchData = async () => {
     try {
-      const [activitiesData, processesData] = await Promise.all([
+      const [activitiesData, processesData, articlesData] = await Promise.all([
         localDataService.getActivities(),
-        localDataService.getProcesses()
+        localDataService.getProcesses(),
+        localDataService.getArticles()
       ]);
       setActivities(Array.isArray(activitiesData) ? activitiesData : []);
       setProcesses(Array.isArray(processesData) ? processesData : []);
+      setArticles(Array.isArray(articlesData) ? articlesData : []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -407,5 +410,6 @@ export default function DataManagement() {
         </CardContent>
       </Card>
     </div>
+  </div>
   );
 }

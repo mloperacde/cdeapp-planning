@@ -9,8 +9,8 @@ import {
 
 const navItems = [
   { path: "/NewProcessConfigurator", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/NewProcessConfigurator/configurator", icon: Settings2, label: "Configurador" },
   { path: "/NewProcessConfigurator/articles", icon: Package, label: "Artículos" },
+  { path: "/NewProcessConfigurator/configurator", icon: Settings2, label: "Configurador" },
   { path: "/NewProcessConfigurator/compare", icon: GitCompare, label: "Comparar" },
   { path: "/NewProcessConfigurator/data", icon: Database, label: "Datos Excel" },
 ];
