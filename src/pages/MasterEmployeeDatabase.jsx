@@ -51,7 +51,6 @@ import {
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
 import AdvancedSearch from "../components/common/AdvancedSearch";
-import MachineDisplayVerification from "../components/verification/MachineDisplayVerification";
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 
@@ -850,11 +849,6 @@ export default function MasterEmployeeDatabasePage() {
               setEmployeeToEdit(null);
             }}
           />
-          {employeeToEdit && (
-            <div className="fixed bottom-4 right-4 max-w-md z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-              <MachineDisplayVerification employeeId={employeeToEdit.id} />
-            </div>
-          )}
         </>
       )}
 
