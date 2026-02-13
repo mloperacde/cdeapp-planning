@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -306,7 +307,52 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   });
 
   const isBaja = formData.estado_empleado === "Baja";
+  const isExcedencia = formData.estado_empleado === "Excedencia";
   const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
+
+  // Calcular duración de excedencia automáticamente
+  useEffect(() => {
+    if (isExcedencia && formData.fecha_inicio_excedencia && formData.fecha_fin_excedencia) {
+      const inicio = new Date(formData.fecha_inicio_excedencia);
+      const fin = new Date(formData.fecha_fin_excedencia);
+      
+      if (!isNaN(inicio) && !isNaN(fin) && fin > inicio) {
+        // Diferencia en milisegundos
+        const diffTime = Math.abs(fin - inicio);
+        // Diferencia en días
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Calcular años, meses y días aproximados
+        let years = fin.getFullYear() - inicio.getFullYear();
+        let months = fin.getMonth() - inicio.getMonth();
+        let days = fin.getDate() - inicio.getDate();
+        
+        if (days < 0) {
+            months--;
+            // Días del mes anterior
+            const prevMonth = new Date(fin.getFullYear(), fin.getMonth(), 0).getDate();
+            days += prevMonth;
+        }
+        
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+        
+        let durationText = "";
+        if (years > 0) durationText += `${years} año${years > 1 ? 's' : ''} `;
+        if (months > 0) durationText += `${months} mes${months > 1 ? 'es' : ''} `;
+        if (days > 0) durationText += `${days} día${days > 1 ? 's' : ''}`;
+        
+        if (!durationText) durationText = "0 días";
+        
+        // Solo actualizar si es diferente para evitar loops
+        if (formData.duracion_excedencia !== durationText.trim()) {
+            setFormData(prev => ({ ...prev, duracion_excedencia: durationText.trim() }));
+        }
+      }
+    }
+  }, [formData.fecha_inicio_excedencia, formData.fecha_fin_excedencia, isExcedencia]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -418,6 +464,40 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     </SelectContent>
                   </Select>
                 </div>
+
+                {isExcedencia && (
+                  <Card className="col-span-1 md:col-span-2 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                    <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-amber-900 dark:text-amber-100">Fecha Inicio Excedencia</Label>
+                        <Input
+                          type="date"
+                          value={formData.fecha_inicio_excedencia || ""}
+                          onChange={(e) => setFormData({ ...formData, fecha_inicio_excedencia: e.target.value })}
+                          className="border-amber-200 dark:border-amber-800 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-amber-900 dark:text-amber-100">Fecha Fin Excedencia</Label>
+                        <Input
+                          type="date"
+                          value={formData.fecha_fin_excedencia || ""}
+                          onChange={(e) => setFormData({ ...formData, fecha_fin_excedencia: e.target.value })}
+                          className="border-amber-200 dark:border-amber-800 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-amber-900 dark:text-amber-100">Duración (Calculada)</Label>
+                        <Input
+                          value={formData.duracion_excedencia || ""}
+                          readOnly
+                          className="bg-amber-100/50 dark:bg-amber-900/40 border-amber-200 dark:border-amber-800 font-medium text-amber-800 dark:text-amber-200 cursor-not-allowed"
+                          placeholder="Automático..."
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {isBaja && (
                   <>
