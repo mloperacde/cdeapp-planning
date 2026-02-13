@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, History, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, History, AlertCircle, Edit } from "lucide-react";
 import SalaryAuditHistory from "./SalaryAuditHistory";
 import { useAppData } from "@/components/data/DataProvider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -96,6 +96,13 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
     },
   });
 
+  const [editingComponent, setEditingComponent] = useState(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    amount: 0,
+    change_reason: ""
+  });
+
   const removeComponentMutation = useMutation({
     mutationFn: (id) => base44.entities.EmployeeSalary.update(id, {
       is_current: false,
@@ -106,6 +113,74 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
       toast.success("Componente eliminado");
     },
   });
+
+  const editComponentMutation = useMutation({
+    mutationFn: async (data) => {
+      // Crear solicitud de cambio
+      const request = await base44.entities.SalaryChangeRequest.create({
+        employee_id: employee.id,
+        employee_name: employee.nombre,
+        request_type: "Modificación Componente",
+        component_id: editingComponent.component_id,
+        component_name: editingComponent.component_name,
+        current_amount: editingComponent.amount,
+        requested_amount: data.amount,
+        change_reason: data.change_reason,
+        effective_date: format(new Date(), 'yyyy-MM-dd'),
+        requested_by: user.id,
+        requested_by_name: user.full_name,
+        request_date: new Date().toISOString(),
+        status: "Pendiente"
+      });
+
+      // Log de auditoría
+      await base44.entities.SalaryAuditLog.create({
+        entity_type: "EmployeeSalary",
+        entity_id: request.id,
+        action: "update",
+        employee_id: employee.id,
+        employee_name: employee.nombre,
+        old_value: `${editingComponent.component_name}: ${editingComponent.amount}€`,
+        new_value: `${editingComponent.component_name}: ${data.amount}€`,
+        change_amount: data.amount - editingComponent.amount,
+        change_reason: data.change_reason,
+        changed_by: user.id,
+        changed_by_name: user.full_name,
+        change_date: new Date().toISOString(),
+        request_id: request.id
+      });
+
+      return request;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employeeSalaries'] });
+      queryClient.invalidateQueries({ queryKey: ['salaryChangeRequests'] });
+      toast.success("Solicitud de cambio creada y pendiente de aprobación");
+      setIsEditDialogOpen(false);
+      setEditingComponent(null);
+    },
+  });
+
+  const handleEditComponent = (salary) => {
+    setEditingComponent(salary);
+    setEditFormData({
+      amount: salary.amount,
+      change_reason: ""
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (editFormData.amount <= 0) {
+      toast.error("El importe debe ser mayor que 0");
+      return;
+    }
+    if (!editFormData.change_reason?.trim()) {
+      toast.error("Debes justificar el cambio");
+      return;
+    }
+    editComponentMutation.mutate(editFormData);
+  };
 
   const handleAddComponent = () => {
     if (!formData.component_id || formData.amount <= 0) {
@@ -202,6 +277,13 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
                   <div className="text-right">
                     <div className="text-2xl font-bold text-emerald-600">{salary.amount}€</div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEditComponent(salary)}
+                  >
+                    <Edit className="w-4 h-4 text-blue-500" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -303,6 +385,60 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
             </Button>
             <Button onClick={handleAddComponent} disabled={addComponentMutation.isPending}>
               {addComponentMutation.isPending ? "Añadiendo..." : "Añadir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Componente Salarial</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+              <div className="font-medium mb-1">{editingComponent?.component_name}</div>
+              <div className="text-sm text-slate-500">
+                Importe actual: <span className="font-semibold text-emerald-600">{editingComponent?.amount}€</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nuevo Importe (€) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={editFormData.amount}
+                onChange={(e) => setEditFormData({...editFormData, amount: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Justificación del Cambio *</Label>
+              <Textarea
+                value={editFormData.change_reason}
+                onChange={(e) => setEditFormData({...editFormData, change_reason: e.target.value})}
+                placeholder="Explica el motivo de este cambio..."
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">
+                <p className="font-medium mb-1">Flujo de Aprobación</p>
+                <p>Esta solicitud será enviada para aprobación antes de aplicarse.</p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={editComponentMutation.isPending}>
+              {editComponentMutation.isPending ? "Guardando..." : "Guardar Cambios"}
             </Button>
           </DialogFooter>
         </DialogContent>
