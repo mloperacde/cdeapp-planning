@@ -93,6 +93,8 @@ import QualityControl from './pages/QualityControl';
 import QualityPlanningPage from './pages/QualityPlanningPage';
 import Reports from './pages/Reports';
 import RulesAndTemplates from './pages/RulesAndTemplates';
+import SalaryManagement from './pages/SalaryManagement';
+import SenioritySettings from './pages/SenioritySettings';
 import ShiftAssignmentsPage from './pages/ShiftAssignmentsPage';
 import ShiftHandover from './pages/ShiftHandover';
 import ShiftManagers from './pages/ShiftManagers';
@@ -103,8 +105,6 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import SalaryManagement from './pages/SalaryManagement';
-import SenioritySettings from './pages/SenioritySettings';
 import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
@@ -158,6 +158,8 @@ export const PAGES = {
     "QualityPlanningPage": QualityPlanningPage,
     "Reports": Reports,
     "RulesAndTemplates": RulesAndTemplates,
+    "SalaryManagement": SalaryManagement,
+    "SenioritySettings": SenioritySettings,
     "ShiftAssignmentsPage": ShiftAssignmentsPage,
     "ShiftHandover": ShiftHandover,
     "ShiftManagers": ShiftManagers,
@@ -168,8 +170,6 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "SalaryManagement": SalaryManagement,
-    "SenioritySettings": SenioritySettings,
     "DailyShiftPlanning": DailyShiftPlanning,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, FileText, TrendingUp, Award, Settings, CheckSquare, History } from "lucide-react";
+import { DollarSign, FileText, TrendingUp, Award, Settings, CheckSquare, History, Upload, Building2, Zap } from "lucide-react";
 import SalaryComponentsManager from "@/components/salary/SalaryComponentsManager";
 import CompensationPolicyManager from "@/components/salary/CompensationPolicyManager";
 import SalaryCategoryManager from "@/components/salary/SalaryCategoryManager";
@@ -9,9 +8,13 @@ import EmployeeSalaryManager from "@/components/salary/EmployeeSalaryManager";
 import PayrollProcessing from "@/components/salary/PayrollProcessing";
 import SalaryApprovalFlow from "@/components/salary/SalaryApprovalFlow";
 import SalaryAuditHistory from "@/components/salary/SalaryAuditHistory";
+import SeniorityBandManager from "@/components/salary/SeniorityBandManager";
+import AutomaticSalaryRules from "@/components/salary/AutomaticSalaryRules";
+import DepartmentSalarySummary from "@/components/salary/DepartmentSalarySummary";
+import InitialSalarySetup from "@/components/salary/InitialSalarySetup";
 
 export default function SalaryManagement() {
-  const [activeTab, setActiveTab] = useState("employees");
+  const [activeTab, setActiveTab] = useState("setup");
 
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-background overflow-hidden">
@@ -36,10 +39,18 @@ export default function SalaryManagement() {
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="bg-white dark:bg-card border-b border-slate-200 dark:border-border px-4">
-            <TabsList className="w-full justify-start h-12">
+            <TabsList className="w-full justify-start h-12 overflow-x-auto">
+              <TabsTrigger value="setup" className="gap-2">
+                <Upload className="w-4 h-4" />
+                Configuración Inicial
+              </TabsTrigger>
               <TabsTrigger value="employees" className="gap-2">
                 <DollarSign className="w-4 h-4" />
                 Salarios Empleados
+              </TabsTrigger>
+              <TabsTrigger value="summary" className="gap-2">
+                <Building2 className="w-4 h-4" />
+                Resumen Departamentos
               </TabsTrigger>
               <TabsTrigger value="components" className="gap-2">
                 <Settings className="w-4 h-4" />
@@ -49,9 +60,17 @@ export default function SalaryManagement() {
                 <Award className="w-4 h-4" />
                 Categorías Profesionales
               </TabsTrigger>
+              <TabsTrigger value="seniority" className="gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Bandas de Antigüedad
+              </TabsTrigger>
               <TabsTrigger value="policies" className="gap-2">
                 <TrendingUp className="w-4 h-4" />
                 Políticas Retributivas
+              </TabsTrigger>
+              <TabsTrigger value="rules" className="gap-2">
+                <Zap className="w-4 h-4" />
+                Reglas Automáticas
               </TabsTrigger>
               <TabsTrigger value="payroll" className="gap-2">
                 <FileText className="w-4 h-4" />
@@ -69,8 +88,16 @@ export default function SalaryManagement() {
           </div>
 
           <div className="flex-1 overflow-auto p-4">
+            <TabsContent value="setup" className="mt-0 h-full">
+              <InitialSalarySetup />
+            </TabsContent>
+
             <TabsContent value="employees" className="mt-0 h-full">
               <EmployeeSalaryManager />
+            </TabsContent>
+
+            <TabsContent value="summary" className="mt-0 h-full">
+              <DepartmentSalarySummary />
             </TabsContent>
 
             <TabsContent value="components" className="mt-0 h-full">
@@ -81,8 +108,16 @@ export default function SalaryManagement() {
               <SalaryCategoryManager />
             </TabsContent>
 
+            <TabsContent value="seniority" className="mt-0 h-full">
+              <SeniorityBandManager />
+            </TabsContent>
+
             <TabsContent value="policies" className="mt-0 h-full">
               <CompensationPolicyManager />
+            </TabsContent>
+
+            <TabsContent value="rules" className="mt-0 h-full">
+              <AutomaticSalaryRules />
             </TabsContent>
 
             <TabsContent value="payroll" className="mt-0 h-full">
