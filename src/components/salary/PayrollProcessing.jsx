@@ -12,6 +12,7 @@ import { FileText, Calculator, History, Play, Download, CheckCircle } from "luci
 import PayrollSimulator from "./PayrollSimulator";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { notifyPayrollCalculated } from "../notifications/NotificationService";
 
 export default function PayrollProcessing() {
   const queryClient = useQueryClient();
@@ -27,7 +28,12 @@ export default function PayrollProcessing() {
     mutationFn: async (period) => {
       toast.info("Iniciando procesamiento masivo...");
       // Aquí iría la llamada a la función backend cuando la creemos
-      return { processed: 0 };
+      const processed = 0;
+      
+      // Notificar al equipo de RRHH
+      await notifyPayrollCalculated(period, processed);
+      
+      return { processed };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payrollRecords'] });

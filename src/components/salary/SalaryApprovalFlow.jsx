@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAppData } from "@/components/data/DataProvider";
+import { notifySalaryChangeApproved, notifySalaryChangeRejected } from "../notifications/NotificationService";
 
 export default function SalaryApprovalFlow() {
   const queryClient = useQueryClient();
@@ -64,6 +65,13 @@ export default function SalaryApprovalFlow() {
         change_date: new Date().toISOString(),
         request_id: requestId
       });
+
+      // Notificar al empleado
+      await notifySalaryChangeApproved(
+        request.employee_id,
+        request.employee_name,
+        request.request_type
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['salaryChangeRequests'] });
@@ -105,6 +113,14 @@ export default function SalaryApprovalFlow() {
         change_date: new Date().toISOString(),
         request_id: requestId
       });
+
+      // Notificar al empleado
+      await notifySalaryChangeRejected(
+        request.employee_id,
+        request.employee_name,
+        request.request_type,
+        reason
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['salaryChangeRequests'] });
