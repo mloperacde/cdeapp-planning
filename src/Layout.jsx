@@ -19,6 +19,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ThemeToggle from '@/components/common/ThemeToggle';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
+import NotificationBadge from '@/components/notifications/NotificationBadge';
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -111,7 +112,8 @@ export default function Layout({ children, currentPageName }) {
               <h1 className="font-bold text-lg text-white truncate">{branding?.app_name || 'CDE PlanApp'}</h1>
               <p className="text-xs text-slate-400 truncate">{branding?.app_subtitle || 'Sistema de Gestión'}</p>
             </div>
-          </div>
+            </div>
+            <NotificationBadge currentEmployee={user} />
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden text-white"
@@ -133,6 +135,9 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex-1 text-left">
                   <p className="text-sm font-semibold text-white">{user?.full_name || 'Usuario'}</p>
                   <p className="text-xs text-slate-400">{isAdmin ? 'Administrador' : 'Usuario'}</p>
+                </div>
+                <div className="mr-2">
+                  <NotificationBadge currentEmployee={user} />
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400" />
               </button>
