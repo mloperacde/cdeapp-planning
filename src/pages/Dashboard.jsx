@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Users, 
@@ -8,19 +8,22 @@ import {
   LayoutDashboard,
   AlertCircle
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useAppData } from "../components/data/DataProvider";
 import TimelineControls from "../components/timeline/TimelineControls";
 import TimelineView from "../components/timeline/TimelineView";
 import WorkCalendar from "../components/absences/WorkCalendar";
 import ShiftSwapWidget from "../components/dashboard/ShiftSwapWidget";
+import NotificationCenter from "../components/notifications/NotificationCenter";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
 export default function Dashboard() {
   const { user, employees, absences, maintenance: maintenanceSchedules } = useAppData();
+  const [searchParams] = useSearchParams();
+  const showNotifications = searchParams.get('notifications') === 'true';
 
   const stats = useMemo(() => {
     const today = new Date();
@@ -112,6 +115,10 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {showNotifications && user && (
+        <NotificationCenter currentEmployee={user} />
+      )}
 
       <div className="flex flex-col gap-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
