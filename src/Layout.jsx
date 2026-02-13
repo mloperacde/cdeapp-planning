@@ -113,7 +113,6 @@ export default function Layout({ children, currentPageName }) {
               <p className="text-xs text-slate-400 truncate">{branding?.app_subtitle || 'Sistema de Gestión'}</p>
             </div>
             </div>
-            <NotificationBadge currentEmployee={user} />
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden text-white"
@@ -124,24 +123,22 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Info del usuario */}
         <div className="p-4 border-b border-slate-800 dark:border-border">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 hover:bg-slate-800 dark:hover:bg-accent/10 p-2 rounded-lg transition-colors">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-blue-600 text-white font-semibold">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-semibold text-white">{user?.full_name || 'Usuario'}</p>
-                  <p className="text-xs text-slate-400">{isAdmin ? 'Administrador' : 'Usuario'}</p>
-                </div>
-                <div className="mr-2">
-                  <NotificationBadge currentEmployee={user} />
-                </div>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              </button>
-            </DropdownMenuTrigger>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex-1 flex items-center gap-3 hover:bg-slate-800 dark:hover:bg-accent/10 p-2 rounded-lg transition-colors">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-blue-600 text-white font-semibold">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-semibold text-white">{user?.full_name || 'Usuario'}</p>
+                    <p className="text-xs text-slate-400">{isAdmin ? 'Administrador' : 'Usuario'}</p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                </button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="start">
               <DropdownMenuItem className="cursor-pointer">
                 <UserIcon className="mr-2 h-4 w-4" />
@@ -162,8 +159,10 @@ export default function Layout({ children, currentPageName }) {
                 <span>Cerrar Sesión</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+            </DropdownMenu>
+            <NotificationBadge currentEmployee={user} />
+            </div>
+            </div>
 
         {/* Navegación por categorías */}
         <nav className="mt-4 flex-1 overflow-y-auto px-2 pb-4">
