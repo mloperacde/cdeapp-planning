@@ -6,28 +6,20 @@ import { toast } from 'sonner';
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
 export const SyncService = {
-  async syncAll(background = true) {
-    const logs = [];
+  async syncAll(scheduled = false) {
     const log = (msg) => {
       console.log(`[SyncService] ${msg}`);
-      logs.push(msg);
+      if (!scheduled) toast(msg);
     };
 
-    if (!background) toast.info("Iniciando sincronización completa...");
-
-    try {
-      await this.syncMachines(log);
-      await this.syncRooms(log);
-      await this.syncArticles(log);
-      await this.syncOrders(log);
-
-      if (!background) toast.success("Sincronización completa finalizada.");
-      return { success: true, logs };
-    } catch (error) {
-      console.error("Sync Error:", error);
-      if (!background) toast.error("Error durante la sincronización.");
-      return { success: false, logs, error };
-    }
+    log("Starting full sync...");
+    
+    // Run in sequence or parallel? Sequence is safer for logging.
+    await this.syncRooms(log);
+    await this.syncMachines(log);
+    await this.syncArticles(log); // Added Article Sync
+    
+    log("Sync completed.");
   },
 
   async syncMachines(log) {
@@ -188,30 +180,58 @@ export const SyncService = {
   async syncArticles(log) {
     log("Syncing Articles...");
     try {
-      const response = await cdeApp.syncArticles();
-      let rows = [];
-      if (response && response.headers && Array.isArray(response.headers)) {
-          if (Array.isArray(response.data)) {
-               rows = response.data.map(r => {
-                   const obj = {};
-                   response.headers.forEach((h, i) => obj[h] = r[i]);
-                   return obj;
-               });
-          } else if (Array.isArray(response.rows)) {
-               rows = response.rows;
-          }
-      } else if (Array.isArray(response)) {
-          rows = response;
-      } else if (response && Array.isArray(response.data)) {
-          rows = response.data;
+      const articles = await cdeApp.syncArticles();
+      const articleList = Array.isArray(articles) ? articles : (articles.data || []);
+      
+      if (articleList.length === 0) {
+        log("No articles found in CDEApp.");
+        return;
       }
 
-      if (rows.length > 0) {
-          await localDataService.saveArticles(rows);
-          log(`Articles: ${rows.length} synced.`);
-      } else {
-          log("No articles found.");
-      }
+      // Map to internal format if necessary, though localDataService handles flexible keys.
+      // We apply the type inference logic here if type is missing or needs standardizing?
+      // Actually, let's just pass the data and let localDataService handle persistence.
+      // But we might want to ensure fields like 'code' are present.
+      
+      const mappedArticles = articleList.map(a => {
+          const code = String(a.code || a.id || "").trim();
+          let articleType = a.type || a.article_type || "";
+          
+          if (!articleType && code) {
+              const prefix = code.substring(0, 2).toUpperCase();
+              const prefix3 = code.substring(0, 3).toUpperCase();
+              const prefix4 = code.substring(0, 4).toUpperCase();
+              
+              if (prefix === 'FR') articleType = 'Frasco';
+              else if (prefix === 'SA') articleType = 'Sachet';
+              else if (prefix === 'TA') articleType = 'Tarro';
+              else if (prefix3 === 'BOL') articleType = 'Bolsa';
+              else if (prefix === 'BO') articleType = 'Bote';
+              else if (prefix === 'ES') articleType = 'Estuche';
+              else if (prefix3 === 'ENV') articleType = 'Envase';
+              else if (prefix === 'DP') articleType = 'Diptico';
+              else if (prefix === 'ST') articleType = 'Sachet Toallita';
+              else if (prefix === 'TU') articleType = 'Tubo';
+              else if (prefix4 === 'EASY') articleType = 'Easysnap';
+          }
+
+          return {
+            code: code,
+            name: a.name || a.description,
+            client: a.client || a.client_name,
+            type: articleType, 
+            characteristics: a.characteristics || "",
+            process_code: a.process_code || a.process || "",
+            operators_required: a.operators_required || a.operator_cost || 1, // Use correct field
+            total_time_seconds: a.total_time_seconds || a.time_seconds || 0,
+            ...a
+          };
+      });
+
+      // Use localDataService to save, which includes Smart Diff & Upsert logic
+      await localDataService.saveArticles(mappedArticles);
+      
+      log(`Articles: ${mappedArticles.length} processed and synced.`);
     } catch (error) {
       log(`Error syncing articles: ${error.message}`);
     }

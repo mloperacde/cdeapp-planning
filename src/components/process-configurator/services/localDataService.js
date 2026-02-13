@@ -263,6 +263,27 @@ export const localDataService = {
             const existing = existingMap.get(code);
             
             // Map API fields
+            let articleType = getValue(apiArt, ['type', 'tipo']) || "";
+            
+            // Fallback: Infer type from code if missing
+            if (!articleType && code) {
+                const prefix = code.substring(0, 2).toUpperCase();
+                const prefix3 = code.substring(0, 3).toUpperCase();
+                const prefix4 = code.substring(0, 4).toUpperCase();
+                
+                if (prefix === 'FR') articleType = 'Frasco';
+                else if (prefix === 'SA') articleType = 'Sachet';
+                else if (prefix === 'TA') articleType = 'Tarro';
+                else if (prefix3 === 'BOL') articleType = 'Bolsa';
+                else if (prefix === 'BO') articleType = 'Bote';
+                else if (prefix === 'ES') articleType = 'Estuche';
+                else if (prefix3 === 'ENV') articleType = 'Envase';
+                else if (prefix === 'DP') articleType = 'Diptico';
+                else if (prefix === 'ST') articleType = 'Sachet Toallita';
+                else if (prefix === 'TU') articleType = 'Tubo';
+                else if (prefix4 === 'EASY') articleType = 'Easysnap';
+            }
+
             const mappedArticle = {
                 id: apiArt.id, // Use backend ID
                 code: code,
@@ -270,10 +291,10 @@ export const localDataService = {
                 description: getValue(apiArt, ['description', 'descripcion']) || "",
                 client: getValue(apiArt, ['client_name', 'client', 'cliente']) || "",
                 reference: getValue(apiArt, ['reference', 'referencia']) || "",
-                type: getValue(apiArt, ['type', 'tipo']) || "",
+                type: articleType,
                 process_code: getValue(apiArt, ['process_code', 'process']) || null,
-                operators_required: parseInt(getValue(apiArt, ['operators_required', 'operators']) || 1),
-                total_time_seconds: parseFloat(getValue(apiArt, ['total_time_seconds', 'total_time']) || 0),
+                operators_required: parseInt(getValue(apiArt, ['operators_required', 'operators', 'operator_cost']) || 1),
+                total_time_seconds: parseFloat(getValue(apiArt, ['total_time_seconds', 'total_time', 'time_seconds']) || 0),
                 updated_at: new Date().toISOString(),
                 // Map new fields
                 active: getValue(apiArt, ['active', 'activo']) !== false,
@@ -621,23 +642,35 @@ export const localDataService = {
       if (!row || row.length === 0) continue;
 
       // Ensure we have at least a number/code
-      const numberRaw = activityNumIdx !== -1 ? row[activityNumIdx] : row[0]; // Fallback to col 0
+      // User Spec: Col A (0) = Name, Col B (1) = Code.
+      // If headers detected, use them. Else use specific user mapping.
+      
+      let numberRaw, nameRaw, timeVal;
+
+      if (activityNumIdx !== -1) {
+          // Headers detected
+          numberRaw = row[activityNumIdx];
+          nameRaw = activityNameIdx !== -1 ? row[activityNameIdx] : (row[1] || `Actividad ${numberRaw}`);
+          timeVal = activityTimeIdx !== -1 ? row[activityTimeIdx] : row[2];
+      } else {
+          // No headers or fallback -> User Spec: Col A=Name, Col B=Code
+          nameRaw = row[0];
+          numberRaw = row[1];
+          timeVal = row[2];
+      }
       
       // LOGIC: Activities are named with numbers.
       // We accept strings that look like numbers (e.g. "1", "10")
       if (numberRaw !== undefined && numberRaw !== null) {
          // Check if it's a valid number (strict check)
-         // parseFloat parses "1A" as 1, which is bad. We want strict numbers.
          const strVal = numberRaw.toString().trim();
          const isNumeric = !isNaN(Number(strVal)) && strVal !== "";
          
          if (!isNumeric) continue; // Skip if not a strict number
 
          const number = Number(strVal);
-
-        const name = activityNameIdx !== -1 ? row[activityNameIdx] : (row[1] || `Actividad ${number}`);
-        const timeVal = activityTimeIdx !== -1 ? row[activityTimeIdx] : row[2];
-        const time = parseFloat(timeVal) || 0;
+         const name = nameRaw ? String(nameRaw).trim() : `Actividad ${number}`;
+         const time = parseFloat(timeVal) || 0;
 
         activities.push({
           id: `act_${number}`,
@@ -671,7 +704,17 @@ export const localDataService = {
       const row = jsonData[i];
       if (!row || row.length === 0) continue;
 
-      const name = processNameIdx !== -1 ? row[processNameIdx] : row[0]; // Fallback to col 0
+      let name, activityRefsRaw;
+
+      if (processNameIdx !== -1) {
+          // Headers detected
+          name = row[processNameIdx];
+          activityRefsRaw = processActivitiesIdx !== -1 ? row[processActivitiesIdx] : row[1];
+      } else {
+          // No headers or fallback -> User Spec: Col A=Activities, Col B=Process Code
+          activityRefsRaw = row[0];
+          name = row[1];
+      }
       
       // LOGIC: Processes are named with letters or combinations of letters.
       // We validate that the name contains letters.
@@ -937,6 +980,12 @@ export const localDataService = {
     if (articles.length > 0) {
         console.log(`Syncing ${articles.length} articles to API...`);
         try {
+            // Check if Article entity is available
+            if (!base44.entities?.Article) {
+                console.warn("Entity 'Article' not found in base44 client. Skipping API sync.");
+                return articles;
+            }
+
             // 1. Fetch ALL existing articles from API to minimize read operations
             // (Assuming reasonable count, e.g. < 5000)
             const existingApiArticles = await base44.entities.Article.list(undefined, 5000) || [];
@@ -972,6 +1021,26 @@ export const localDataService = {
 
                 const existing = existingMap.get(code);
 
+                // Ensure Type is populated
+                let articleType = getValue(article, ['type', 'tipo']) || article.type || "";
+                if (!articleType) {
+                    const prefix = code.substring(0, 2).toUpperCase();
+                    const prefix3 = code.substring(0, 3).toUpperCase();
+                    const prefix4 = code.substring(0, 4).toUpperCase();
+                    
+                    if (prefix === 'FR') articleType = 'Frasco';
+                    else if (prefix === 'SA') articleType = 'Sachet';
+                    else if (prefix === 'TA') articleType = 'Tarro';
+                    else if (prefix3 === 'BOL') articleType = 'Bolsa';
+                    else if (prefix === 'BO') articleType = 'Bote';
+                    else if (prefix === 'ES') articleType = 'Estuche';
+                    else if (prefix3 === 'ENV') articleType = 'Envase';
+                    else if (prefix === 'DP') articleType = 'Diptico';
+                    else if (prefix === 'ST') articleType = 'Sachet Toallita';
+                    else if (prefix === 'TU') articleType = 'Tubo';
+                    else if (prefix4 === 'EASY') articleType = 'Easysnap';
+                }
+
                 // Prepare Payload with Flexible Mapping
                 const payload = {
                     code: code,
@@ -979,9 +1048,9 @@ export const localDataService = {
                     description: getValue(article, ['description', 'descripcion']) || article.description || "",
                     client: getValue(article, ['client', 'cliente', 'client_name']) || article.client || "",
                     reference: getValue(article, ['reference', 'referencia']) || article.reference || "",
-                    type: getValue(article, ['type', 'tipo']) || article.type || "",
+                    type: articleType,
                     process_code: getValue(article, ['process_code', 'process', 'proceso']) || article.process_code || null,
-                    operators_required: parseInt(getValue(article, ['operators_required', 'operators', 'operarios']) || article.operators_required || 1),
+                    operators_required: parseInt(getValue(article, ['operators_required', 'operators', 'operarios', 'operator_cost']) || article.operators_required || 1),
                     total_time_seconds: parseFloat(getValue(article, ['total_time_seconds', 'total_time', 'tiempo']) || article.total_time_seconds || 0),
                     active: getValue(article, ['active', 'activo']) !== false,
                     status_article: getValue(article, ['status_article', 'status', 'estado']) || article.status_article || "PENDIENTE",

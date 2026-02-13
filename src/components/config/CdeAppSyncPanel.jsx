@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { cdeApp } from "@/api/cdeAppClient";
 import { base44 } from "@/api/base44Client";
+import { localDataService } from "@/components/process-configurator/services/localDataService";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -117,6 +118,48 @@ export default function CdeAppSyncPanel() {
     } catch (e) {
       addLog(`Error en Máquinas: ${e.message}`, "error");
       toast.error("Error sincronizando máquinas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncArticles = async () => {
+    setLoading(true);
+    addLog("Iniciando sincronización de Artículos...", "info");
+    try {
+      const articles = await cdeApp.syncArticles();
+      const articleList = Array.isArray(articles) ? articles : (articles.data || []);
+      
+      if (articleList.length === 0) {
+        addLog("No se encontraron artículos en CDEApp.", "warning");
+        setStep(4);
+        return;
+      }
+
+      addLog(`Obtenidos ${articleList.length} artículos. Procesando...`, "info");
+
+      // Map to internal format
+      const mappedArticles = articleList.map(a => ({
+          code: a.code || a.id,
+          name: a.name || a.description,
+          client: a.client || a.client_name,
+          type: a.type || a.article_type, 
+          characteristics: a.characteristics || "",
+          process_code: a.process_code || a.process || "",
+          operator_cost: a.operator_cost || 0,
+          time_seconds: a.time_seconds || 0,
+          ...a
+      }));
+
+      // Use localDataService to save (Smart Diff/Upsert)
+      await localDataService.saveArticles(mappedArticles);
+
+      addLog(`Artículos sincronizados correctamente.`, "success");
+      queryClient.invalidateQueries(['articles']);
+      setStep(4); // Move to next
+    } catch (e) {
+      addLog(`Error en Artículos: ${e.message}`, "error");
+      toast.error("Error sincronizando artículos");
     } finally {
       setLoading(false);
     }
@@ -314,7 +357,7 @@ export default function CdeAppSyncPanel() {
         <div className="space-y-4">
           <h3 className="text-sm font-medium">Proceso de Sincronización</h3>
           
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
              {/* Step 1: Rooms */}
              <Card className={`border-l-4 ${step >= 0 ? 'border-l-blue-500' : 'border-l-slate-200'} bg-slate-50`}>
                  <CardContent className="p-4">
@@ -356,22 +399,43 @@ export default function CdeAppSyncPanel() {
                  </CardContent>
              </Card>
 
-             {/* Step 3: Productions */}
+             {/* Step 3: Articles */}
              <Card className={`border-l-4 ${step >= 2 ? 'border-l-blue-500' : 'border-l-slate-200'} bg-slate-50`}>
                  <CardContent className="p-4">
                      <div className="flex justify-between items-start mb-2">
-                         <span className="font-semibold text-sm">3. Producciones</span>
+                         <span className="font-semibold text-sm">3. Artículos</span>
                          {step > 3 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+                     </div>
+                     <p className="text-xs text-slate-500 mb-4">Actualiza base de datos de artículos.</p>
+                     <Button 
+                        size="sm" 
+                        className="w-full" 
+                        onClick={syncArticles}
+                        disabled={loading || step < 3 || !apiKey}
+                        variant={step < 3 ? "ghost" : "default"}
+                     >
+                        {loading && step === 3 ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
+                        Sincronizar Artículos
+                     </Button>
+                 </CardContent>
+             </Card>
+
+             {/* Step 4: Productions */}
+             <Card className={`border-l-4 ${step >= 3 ? 'border-l-blue-500' : 'border-l-slate-200'} bg-slate-50`}>
+                 <CardContent className="p-4">
+                     <div className="flex justify-between items-start mb-2">
+                         <span className="font-semibold text-sm">4. Producciones</span>
+                         {step > 4 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
                      </div>
                      <p className="text-xs text-slate-500 mb-4">Importa órdenes de trabajo.</p>
                      <Button 
                         size="sm" 
                         className="w-full" 
                         onClick={syncProductions}
-                        disabled={loading || step < 3 || !apiKey}
-                        variant={step < 3 ? "ghost" : "default"}
+                        disabled={loading || step < 4 || !apiKey}
+                        variant={step < 4 ? "ghost" : "default"}
                      >
-                        {loading && step === 3 ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
+                        {loading && step === 4 ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
                         Sincronizar Producciones
                      </Button>
                  </CardContent>

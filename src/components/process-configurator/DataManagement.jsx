@@ -30,6 +30,7 @@ import {
 // const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`; // Removed API constant
 
 export default function DataManagement() {
+  // Force refresh
   const [activities, setActivities] = useState([]);
   const [processes, setProcesses] = useState([]);
   const [articles, setArticles] = useState([]);
@@ -274,9 +275,87 @@ export default function DataManagement() {
             </div>
           </CardContent>
         </Card>
+
+        <Card data-testid="articles-stat-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Artículos Cargados</p>
+                <p className="text-3xl font-bold mt-1">{articles.length}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-sm">
+                <FileSpreadsheet className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Data Tables */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Articles Table (Top Priority) */}
+        <Card data-testid="articles-table-card">
+          <CardHeader>
+            <CardTitle className="text-lg">Artículos</CardTitle>
+            <CardDescription>
+              Lista de artículos con sus características y procesos asignados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             {articles.length === 0 ? (
+              <div className="empty-state py-8">
+                <AlertCircle className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">No hay artículos cargados</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">Código</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Características</TableHead>
+                      <TableHead>Proceso</TableHead>
+                      <TableHead>Operario</TableHead>
+                      <TableHead className="text-right">Tiempo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {articles.map((article) => (
+                      <TableRow key={article.code}>
+                        <TableCell className="font-mono font-medium">{article.code}</TableCell>
+                        <TableCell>{article.name}</TableCell>
+                        <TableCell>{article.client}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{article.type}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={article.characteristics}>
+                          {article.characteristics}
+                        </TableCell>
+                        <TableCell>
+                          {article.process_code ? (
+                            <Badge variant="secondary" className="font-mono">
+                              {article.process_code}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{article.operators_required || article.operator_cost || 1}</TableCell>
+                        <TableCell className="text-right">{formatTime(article.total_time_seconds || article.time_seconds)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Activities Table */}
         <Card data-testid="activities-table-card">
