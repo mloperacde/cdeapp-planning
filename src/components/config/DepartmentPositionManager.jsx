@@ -1263,18 +1263,10 @@ export default function DepartmentPositionManager() {
                           <div className="divide-y divide-slate-100">
                             {deptPositions.map(pos => (
                               <div 
-                                key={pos.id} 
-                                draggable
-                                onDragStart={(e) => {
-                                  e.stopPropagation();
-                                  setDraggedItem({ type: 'pos', id: pos.id, data: pos });
-                                  e.dataTransfer.setData('text/plain', pos.id);
-                                  e.dataTransfer.effectAllowed = 'move';
-                                }}
-                                className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors group cursor-grab active:cursor-grabbing"
+                                key={pos.id}
+                                className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-slate-50 transition-colors group"
                               >
                                 <div className="col-span-4 font-medium text-slate-900 flex items-center gap-2">
-                                  <GripVertical className="w-4 h-4 text-slate-300 cursor-grab active:cursor-grabbing" />
                                   {pos.name}
                                 </div>
                                 <div className="col-span-2">
