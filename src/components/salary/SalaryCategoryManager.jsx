@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,14 @@ import { Plus, Edit, Trash2, Award, TrendingUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 export default function SalaryCategoryManager() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -26,12 +28,32 @@ export default function SalaryCategoryManager() {
     salary_range: { min: 0, max: 0, target: 0 },
     required_experience_years: 0,
     is_active: true,
-    order: 0
+    order: 0,
+    department: ""
   });
 
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => base44.entities.Department.list(),
+  });
+
+  useEffect(() => {
+    if (!selectedDepartment && departments.length > 0) {
+      setSelectedDepartment(departments[0].name || "");
+    }
+  }, [departments, selectedDepartment]);
+
   const { data: categories = [] } = useQuery({
-    queryKey: ['salaryCategories'],
-    queryFn: () => base44.entities.SalaryCategory.list('level'),
+    queryKey: ['salaryCategories', selectedDepartment],
+    queryFn: async () => {
+      if (!selectedDepartment) return [];
+      try {
+        return await base44.entities.SalaryCategory.filter({ department: selectedDepartment });
+      } catch {
+        return await base44.entities.SalaryCategory.list('level');
+      }
+    },
+    enabled: true
   });
 
   const saveMutation = useMutation({
@@ -61,7 +83,8 @@ export default function SalaryCategoryManager() {
       setEditingCategory(category);
       setFormData({
         ...category,
-        salary_range: category.salary_range || { min: 0, max: 0, target: 0 }
+        salary_range: category.salary_range || { min: 0, max: 0, target: 0 },
+        department: category.department || selectedDepartment || ""
       });
     } else {
       setEditingCategory(null);
@@ -74,7 +97,8 @@ export default function SalaryCategoryManager() {
         salary_range: { min: 0, max: 0, target: 0 },
         required_experience_years: 0,
         is_active: true,
-        order: categories.length
+        order: categories.length,
+        department: selectedDepartment || ""
       });
     }
     setIsDialogOpen(true);
@@ -90,7 +114,11 @@ export default function SalaryCategoryManager() {
       toast.error("Nombre y código son obligatorios");
       return;
     }
-    saveMutation.mutate(formData);
+    if (!formData.department) {
+      toast.error("Selecciona un departamento");
+      return;
+    }
+    saveMutation.mutate({ ...formData, department: formData.department });
   };
 
   const getLevelColor = (level) => {
@@ -113,16 +141,35 @@ export default function SalaryCategoryManager() {
               <Award className="w-5 h-5 text-purple-600" />
               Categorías Profesionales
             </CardTitle>
-            <Button onClick={() => handleOpenDialog()} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nueva Categoría
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="w-64">
+                <Label className="text-xs text-slate-500 mb-1 block">Departamento</Label>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar departamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map(d => (
+                      <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={() => handleOpenDialog()} className="gap-2" disabled={!selectedDepartment}>
+                <Plus className="w-4 h-4" />
+                Nueva Categoría
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[calc(100vh-280px)]">
-            <div className="space-y-3">
-              {categories.map((category) => (
+          {!selectedDepartment && (
+            <div className="text-sm text-slate-500">Selecciona un departamento para gestionar sus categorías profesionales.</div>
+          )}
+          {selectedDepartment && (
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              <div className="space-y-3">
+                {categories.map((category) => (
                 <Card key={category.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
@@ -135,6 +182,9 @@ export default function SalaryCategoryManager() {
                           <Badge variant="outline" className="font-mono text-xs">
                             {category.code}
                           </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {category.department || selectedDepartment}
+                            </Badge>
                           {!category.is_active && (
                             <Badge variant="destructive">Inactivo</Badge>
                           )}
@@ -192,19 +242,20 @@ export default function SalaryCategoryManager() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))}
 
-              {categories.length === 0 && (
-                <div className="text-center py-12 text-slate-400">
-                  <Award className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>No hay categorías profesionales configuradas</p>
-                  <Button variant="link" onClick={() => handleOpenDialog()}>
-                    Crear la primera
-                  </Button>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+                {categories.length === 0 && (
+                  <div className="text-center py-12 text-slate-400">
+                    <Award className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No hay categorías profesionales configuradas para {selectedDepartment}</p>
+                    <Button variant="link" onClick={() => handleOpenDialog()}>
+                      Crear la primera
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
         </CardContent>
       </Card>
 
@@ -217,7 +268,20 @@ export default function SalaryCategoryManager() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Departamento *</Label>
+                <Select value={formData.department} onValueChange={(v) => setFormData({ ...formData, department: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map(d => (
+                      <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Nombre *</Label>
                 <Input
