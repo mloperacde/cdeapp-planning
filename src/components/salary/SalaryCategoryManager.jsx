@@ -37,6 +37,12 @@ export default function SalaryCategoryManager() {
     queryFn: () => base44.entities.Department.list(),
   });
 
+  const normalizeDeptName = (name) => (name || "").toString().trim().toUpperCase();
+  const findDeptByName = (name) => {
+    const target = normalizeDeptName(name);
+    return departments.find(d => normalizeDeptName(d.name) === target) || null;
+  };
+
   useEffect(() => {
     if (!selectedDepartment && departments.length > 0) {
       setSelectedDepartment(departments[0].name || "");
@@ -49,17 +55,19 @@ export default function SalaryCategoryManager() {
       if (!selectedDepartment) return [];
       let res = [];
       try {
-        res = await base44.entities.SalaryCategory.filter({ department: selectedDepartment });
+        const dept = findDeptByName(selectedDepartment);
+        const normalized = normalizeDeptName(selectedDepartment);
+        const all = await base44.entities.SalaryCategory.list('level');
+        res = all.filter(c => {
+          const cDept = c.department || c.department_name || "";
+          const cNorm = c.department_normalized || normalizeDeptName(cDept);
+          const matchesName = cDept === selectedDepartment || normalizeDeptName(cDept) === normalized;
+          const matchesId = !!dept && (c.department_id === dept.id);
+          const matchesNorm = cNorm === normalized;
+          return matchesName || matchesId || matchesNorm;
+        });
       } catch {
         res = [];
-      }
-      if (!Array.isArray(res) || res.length === 0) {
-        try {
-          const all = await base44.entities.SalaryCategory.list('level');
-          res = all.filter(c => (c.department || "") === selectedDepartment || (!c.department && !!selectedDepartment));
-        } catch {
-          res = [];
-        }
       }
       return res;
     },
@@ -88,10 +96,18 @@ export default function SalaryCategoryManager() {
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
+      const dept = findDeptByName(data.department || data.department_name || selectedDepartment);
+      const payload = {
+        ...data,
+        department: data.department || data.department_name || selectedDepartment,
+        department_name: data.department || data.department_name || selectedDepartment,
+        department_normalized: normalizeDeptName(data.department || data.department_name || selectedDepartment),
+        department_id: dept?.id || data.department_id || null
+      };
       if (editingCategory) {
-        return base44.entities.SalaryCategory.update(editingCategory.id, data);
+        return base44.entities.SalaryCategory.update(editingCategory.id, payload);
       }
-      return base44.entities.SalaryCategory.create(data);
+      return base44.entities.SalaryCategory.create(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -118,7 +134,8 @@ export default function SalaryCategoryManager() {
       setFormData({
         ...category,
         salary_range: category.salary_range || { min: 0, max: 0, target: 0 },
-        department: category.department || selectedDepartment || ""
+        department: category.department || category.department_name || selectedDepartment || "",
+        department_id: category.department_id || findDeptByName(category.department || category.department_name || selectedDepartment || "")?.id || null
       });
     } else {
       setEditingCategory(null);
@@ -132,7 +149,8 @@ export default function SalaryCategoryManager() {
         required_experience_years: 0,
         is_active: true,
         order: categories.length,
-        department: selectedDepartment || ""
+        department: selectedDepartment || "",
+        department_id: findDeptByName(selectedDepartment || "")?.id || null
       });
     }
     setIsDialogOpen(true);
@@ -152,7 +170,14 @@ export default function SalaryCategoryManager() {
       toast.error("Selecciona un departamento");
       return;
     }
-    saveMutation.mutate({ ...formData, department: formData.department });
+    const dept = findDeptByName(formData.department);
+    saveMutation.mutate({
+      ...formData,
+      department: formData.department,
+      department_name: formData.department,
+      department_normalized: normalizeDeptName(formData.department),
+      department_id: dept?.id || null
+    });
   };
 
   const getLevelColor = (level) => {
@@ -217,7 +242,7 @@ export default function SalaryCategoryManager() {
                             {category.code}
                           </Badge>
                             <Badge variant="secondary" className="text-xs">
-                              {category.department || selectedDepartment}
+                              {departments.find(d => d.id === category.department_id)?.name || category.department || category.department_name || selectedDepartment}
                             </Badge>
                           {!category.is_active && (
                             <Badge variant="destructive">Inactivo</Badge>
@@ -347,7 +372,13 @@ export default function SalaryCategoryManager() {
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Departamento *</Label>
-                <Select value={formData.department} onValueChange={(v) => setFormData({ ...formData, department: v })}>
+                <Select
+                  value={formData.department}
+                  onValueChange={(v) => {
+                    const d = findDeptByName(v);
+                    setFormData({ ...formData, department: v, department_id: d?.id || null });
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
