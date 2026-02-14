@@ -47,6 +47,20 @@ export default function SalaryCategoryManager() {
     return departments.find(d => normalizeDeptName(d.name) === target) || null;
   };
 
+  const normalizeCategoryRecord = (cat) => {
+    const dName = (cat.department || cat.department_name || "").toString().trim();
+    const dObj = !dName && cat.department_id ? departments.find(d => d.id === cat.department_id) : null;
+    const finalDept = dName || dObj?.name || "";
+    const finalNorm = finalDept ? normalizeDeptName(finalDept) : (cat.department_normalized || "");
+    return {
+      ...cat,
+      department: finalDept || cat.department || cat.department_name || "",
+      department_name: finalDept || cat.department_name || "",
+      department_normalized: finalNorm || "",
+      department_id: cat.department_id || dObj?.id || null
+    };
+  };
+
   const fetchStoreCategories = async () => {
     try {
       const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
@@ -264,7 +278,7 @@ export default function SalaryCategoryManager() {
       };
       db.forEach(c => put(c, 'db'));
       store.forEach(c => put(c, 'store'));
-      const merged = Array.from(unionMap.values());
+      const merged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
       if (selectedDepartment === "__ALL__") {
         setUsingFallback(!dbOk);
         return merged;
@@ -305,7 +319,7 @@ export default function SalaryCategoryManager() {
       };
       db.forEach(c => put(c, 'db'));
       store.forEach(c => put(c, 'store'));
-      const merged = Array.from(unionMap.values());
+      const merged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
       setUsingFallback(!dbOk);
       return merged;
     },
