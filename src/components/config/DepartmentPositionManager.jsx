@@ -937,7 +937,7 @@ export default function DepartmentPositionManager() {
     return (
       <div className="select-none">
         <ContextMenu>
-          <ContextMenuTrigger>
+          <ContextMenuTrigger asChild>
             <div 
               draggable
               onDragStart={handleDragStart}
