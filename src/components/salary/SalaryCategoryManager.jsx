@@ -340,8 +340,9 @@ export default function SalaryCategoryManager() {
   }, [currentAssignments]);
 
   const categoriesByDept = useMemo(() => {
+    const source = selectedDepartment === "__ALL__" ? categories : allCategories;
     const map = new Map();
-    allCategories.forEach(c => {
+    source.forEach(c => {
       const dept = (c.department || c.department_name || "Sin departamento").toString();
       if (!map.has(dept)) map.set(dept, []);
       map.get(dept).push(c);
@@ -352,7 +353,7 @@ export default function SalaryCategoryManager() {
       map.set(k, arr);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [allCategories]);
+  }, [allCategories, categories, selectedDepartment]);
 
   const sortedCategories = useMemo(() => {
     const arr = [...categories];
@@ -641,7 +642,7 @@ export default function SalaryCategoryManager() {
                               onClick={() => handleOpenDialog(c)}
                               title="Editar / Asignar departamento"
                             >
-                              {(c.level ? `L${c.level} - ` : "") + c.name} ({count})
+                              {((c.code || "").toString().trim().toUpperCase() || (c.name || "")).toString()} ({count})
                             </Badge>
                           );
                         })}
