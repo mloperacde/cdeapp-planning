@@ -690,9 +690,21 @@ export default function SalaryCategoryManager() {
                       {cats.map(c => {
                         const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${(c.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || '')}`) ?? 0;
                         return (
-                          <Badge key={c.id} variant="secondary" className="text-xs">
-                            {(c.level ? `L${c.level} - ` : "") + c.name} ({count})
-                          </Badge>
+                          <div key={c.id || `${(c.code || '').toString().trim().toUpperCase()}|${(c.name || '').toString().trim().toUpperCase()}`} className="flex items-center gap-2">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs cursor-pointer hover:bg-slate-200"
+                              onClick={() => handleOpenDialog(c)}
+                              title="Editar / Asignar departamento"
+                            >
+                              {(c.level ? `L${c.level} - ` : "") + c.name} ({count})
+                            </Badge>
+                            {dept === "Sin departamento" && (
+                              <Button size="xs" variant="outline" onClick={() => handleOpenDialog(c)}>
+                                Asignar
+                              </Button>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
