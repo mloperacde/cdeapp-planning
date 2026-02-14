@@ -394,6 +394,58 @@ function TeamsMigrationPanel() {
       }
   };
 
+  const normalizeTurnos = async () => {
+    setMigrating(true);
+    try {
+      // 1) Ensure TeamConfig mapping: team_1 -> "Turno 1", team_2 -> "Turno 2"
+      const teams = await base44.entities.TeamConfig.list();
+      const norm = (s) => (s || "").toString().trim().toLowerCase();
+      const t1 = teams.find(t => t.team_key === "team_1");
+      const t2 = teams.find(t => t.team_key === "team_2");
+      if (t1 && t1.team_name !== "Turno 1") {
+        await base44.entities.TeamConfig.update(t1.id, { team_name: "Turno 1" });
+      }
+      if (t2 && t2.team_name !== "Turno 2") {
+        await base44.entities.TeamConfig.update(t2.id, { team_name: "Turno 2" });
+      }
+      const team1Id = t1 ? t1.id : (teams.find(t => t.team_key === "team_1")?.id);
+      const team2Id = t2 ? t2.id : (teams.find(t => t.team_key === "team_2")?.id);
+
+      // 2) Migrate employees so that:
+      //    equipo="Turno 1" => team_key="team_1" (team_id=t1.id)
+      //    equipo="Turno 2" => team_key="team_2" (team_id=t2.id)
+      const employees = await base44.entities.EmployeeMasterDatabase.list(undefined, 5000);
+      const toUpdate = employees.filter(e => {
+        const eq = norm(e.equipo);
+        if (eq === "turno 1") return e.team_key !== "team_1" || norm(e.equipo) !== "turno 1" || String(e.team_id || "") !== String(team1Id || "");
+        if (eq === "turno 2") return e.team_key !== "team_2" || norm(e.equipo) !== "turno 2" || String(e.team_id || "") !== String(team2Id || "");
+        return false;
+      }).map(e => {
+        const eq = norm(e.equipo);
+        if (eq === "turno 1") {
+          return { id: e.id, data: { equipo: "Turno 1", team_key: "team_1", team_id: team1Id || null } };
+        }
+        // turno 2
+        return { id: e.id, data: { equipo: "Turno 2", team_key: "team_2", team_id: team2Id || null } };
+      });
+
+      let success = 0;
+      for (let i = 0; i < toUpdate.length; i += 10) {
+        const chunk = toUpdate.slice(i, i + 10);
+        await Promise.all(chunk.map(u => base44.entities.EmployeeMasterDatabase.update(u.id, u.data)));
+        success += chunk.length;
+      }
+
+      toast.success(`Normalización completada: ${success} empleados actualizados.`);
+      await analyzeTeams();
+    } catch (e) {
+      console.error(e);
+      toast.error("Error al normalizar Turno 1/2");
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -407,6 +459,10 @@ function TeamsMigrationPanel() {
             <Button onClick={analyzeTeams} disabled={analyzing || migrating}>
                 {analyzing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Users className="w-4 h-4 mr-2" />}
                 Analizar Vinculaciones
+            </Button>
+            <Button onClick={normalizeTurnos} disabled={migrating} variant="outline">
+                {migrating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
+                Normalizar Turno 1/2
             </Button>
             
             {analysis && (
