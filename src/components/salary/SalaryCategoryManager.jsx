@@ -362,7 +362,7 @@ export default function SalaryCategoryManager() {
   };
 
   const categoriesByDept = useMemo(() => {
-    const source = selectedDepartment === "__ALL__" ? categories : allCategories;
+    const source = selectedDepartment === "__ALL__" ? allCategories : categories;
     const map = new Map();
     source.forEach(c => {
       const dept = getDeptNameForCat(c);
@@ -642,9 +642,7 @@ export default function SalaryCategoryManager() {
           {selectedDepartment === "__ALL__" && (
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-4">
-                {categoriesByDept
-                  .filter(([dept]) => dept !== "Sin departamento")
-                  .map(([dept, cats]) => (
+                {categoriesByDept.map(([dept, cats]) => (
                   <div key={dept} className="border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -695,11 +693,11 @@ export default function SalaryCategoryManager() {
                             {category.code}
                           </Badge>
                           <Badge variant="secondary" className="text-xs">
-                            {(categoryCounts.byId.get(category.id) ?? categoryCounts.byNameDept.get(`${(category.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(category.department || category.department_name || selectedDepartment)}`) ?? 0)} empleados
+                            {(categoryCounts.byId.get(category.id) ?? categoryCounts.byNameDept.get(`${(category.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(getDeptNameForCat(category))}`) ?? 0)} empleados
                           </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {departments.find(d => d.id === category.department_id)?.name || category.department || category.department_name || selectedDepartment}
-                            </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {getDeptNameForCat(category)}
+                          </Badge>
                           {!category.is_active && (
                             <Badge variant="destructive">Inactivo</Badge>
                           )}
