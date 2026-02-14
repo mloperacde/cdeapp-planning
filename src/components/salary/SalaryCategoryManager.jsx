@@ -61,6 +61,50 @@ export default function SalaryCategoryManager() {
     };
   };
 
+  const consolidateByBaseKey = (arr) => {
+    const getBaseKey = (x) =>
+      `${(x.code || "").toString().trim().toUpperCase()}|${(x.name || "").toString().trim().toUpperCase()}`;
+    const hasDept = (x) => {
+      const s = (x.department || x.department_name || "").toString().trim();
+      return Boolean(s) || Boolean(x.department_id);
+    };
+    const score = (x) => (x.id ? 2 : 0) + (hasDept(x) ? 1 : 0);
+    const bestByKey = new Map();
+    const bestDeptByKey = new Map();
+    for (const item of arr) {
+      const key = getBaseKey(item);
+      if (!key.trim()) continue;
+      const normalized = normalizeCategoryRecord(item);
+      const prev = bestByKey.get(key);
+      if (!prev || score(normalized) > score(prev)) {
+        bestByKey.set(key, normalized);
+      }
+      // track any department information available in the group
+      if (hasDept(normalized)) {
+        const deptName = (normalized.department || normalized.department_name).toString();
+        if (deptName) bestDeptByKey.set(key, deptName);
+      }
+    }
+    // finalize and fill missing department from group knowledge
+    const result = [];
+    for (const [key, item] of bestByKey.entries()) {
+      if (!item.department && !item.department_name && bestDeptByKey.has(key)) {
+        const deptName = bestDeptByKey.get(key);
+        const dObj = findDeptByName(deptName);
+        result.push({
+          ...item,
+          department: deptName,
+          department_name: deptName,
+          department_normalized: normalizeDeptName(deptName),
+          department_id: item.department_id || dObj?.id || null
+        });
+      } else {
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
   const fetchStoreCategories = async () => {
     try {
       const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
@@ -272,13 +316,23 @@ export default function SalaryCategoryManager() {
       store = await fetchStoreCategories();
       const unionMap = new Map();
       const put = (c, source) => {
-        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
-        // prefer db over store
-        if (!unionMap.has(key) || source === 'db') unionMap.set(key, c);
+        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${(c.name || "").toString().trim().toUpperCase()}`;
+        // prefer db over store; prefer record with department fields
+        if (!unionMap.has(key)) {
+          unionMap.set(key, c);
+        } else if (source === 'db') {
+          unionMap.set(key, c);
+        } else {
+          const prev = unionMap.get(key);
+          const prevHasDept = Boolean((prev.department || prev.department_name || "").toString().trim()) || Boolean(prev.department_id);
+          const currHasDept = Boolean((c.department || c.department_name || "").toString().trim()) || Boolean(c.department_id);
+          if (!prevHasDept && currHasDept) unionMap.set(key, c);
+        }
       };
       db.forEach(c => put(c, 'db'));
       store.forEach(c => put(c, 'store'));
-      const merged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
+      const baseMerged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
+      const merged = consolidateByBaseKey(baseMerged);
       if (selectedDepartment === "__ALL__") {
         setUsingFallback(!dbOk);
         return merged;
@@ -314,12 +368,22 @@ export default function SalaryCategoryManager() {
       store = await fetchStoreCategories();
       const unionMap = new Map();
       const put = (c, source) => {
-        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
-        if (!unionMap.has(key) || source === 'db') unionMap.set(key, c);
+        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${(c.name || "").toString().trim().toUpperCase()}`;
+        if (!unionMap.has(key)) {
+          unionMap.set(key, c);
+        } else if (source === 'db') {
+          unionMap.set(key, c);
+        } else {
+          const prev = unionMap.get(key);
+          const prevHasDept = Boolean((prev.department || prev.department_name || "").toString().trim()) || Boolean(prev.department_id);
+          const currHasDept = Boolean((c.department || c.department_name || "").toString().trim()) || Boolean(c.department_id);
+          if (!prevHasDept && currHasDept) unionMap.set(key, c);
+        }
       };
       db.forEach(c => put(c, 'db'));
       store.forEach(c => put(c, 'store'));
-      const merged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
+      const baseMerged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
+      const merged = consolidateByBaseKey(baseMerged);
       setUsingFallback(!dbOk);
       return merged;
     },
