@@ -135,10 +135,12 @@ export default function SalaryCategoryManager() {
       const res = merged.filter(c => {
         const cDept = c.department || c.department_name || "";
         const cNorm = c.department_normalized || normalizeDeptName(cDept);
+        const hasDept = Boolean((cDept && cDept.trim()) || c.department_id || (cNorm && cNorm.trim()));
         const matchesName = cDept === selectedDepartment || normalizeDeptName(cDept) === normalized;
         const matchesId = !!dept && (c.department_id === dept.id);
         const matchesNorm = cNorm === normalized;
-        return matchesName || matchesId || matchesNorm;
+        // Mostrar categorías "huérfanas" (sin departamento) para poder reasignarlas
+        return matchesName || matchesId || matchesNorm || !hasDept;
       });
       setUsingFallback(!dbOk);
       return res;
