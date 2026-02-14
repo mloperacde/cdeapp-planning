@@ -279,6 +279,10 @@ function TeamsMigrationPanel() {
   const [analyzing, setAnalyzing] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [analysis, setAnalysis] = useState(null);
+  const [employeesData, setEmployeesData] = useState([]);
+  const [teamConfigsData, setTeamConfigsData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const normalize = (s) => (s || "").toString().trim().toLowerCase();
 
   useEffect(() => {
     analyzeTeams();
@@ -289,6 +293,8 @@ function TeamsMigrationPanel() {
     try {
         const employees = await base44.entities.EmployeeMasterDatabase.list(undefined, 2000);
         const teamConfigs = await base44.entities.TeamConfig.list();
+        setEmployeesData(employees);
+        setTeamConfigsData(teamConfigs);
         
         let mappedCount = 0;
         let unmappedCount = 0;
@@ -412,6 +418,55 @@ function TeamsMigrationPanel() {
                     </Badge>
                 </div>
             )}
+        </div>
+
+        <div className="border rounded-md p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Input 
+              placeholder="Buscar empleado por nombre (p. ej., Cristina Sanches Arguelles)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {searchTerm && (
+            <ScrollArea className="h-[220px] border rounded-md p-2">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-2 py-2">Empleado</th>
+                    <th className="px-2 py-2">Equipo</th>
+                    <th className="px-2 py-2">team_key</th>
+                    <th className="px-2 py-2">Esperado</th>
+                    <th className="px-2 py-2">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employeesData
+                    .filter(e => normalize(e.nombre).includes(normalize(searchTerm)))
+                    .map(emp => {
+                      const match = teamConfigsData.find(t => normalize(t.team_name) === normalize(emp.equipo));
+                      const expectedKey = match?.team_key || null;
+                      const ok = !emp.equipo ? false : emp.team_key === expectedKey;
+                      return (
+                        <tr key={emp.id} className="border-b">
+                          <td className="px-2 py-2 font-medium">{emp.nombre}</td>
+                          <td className="px-2 py-2">{emp.equipo || "-"}</td>
+                          <td className="px-2 py-2 font-mono text-xs">{emp.team_key || "-"}</td>
+                          <td className="px-2 py-2 font-mono text-xs">{expectedKey || "-"}</td>
+                          <td className="px-2 py-2">
+                            {ok ? (
+                              <Badge variant="secondary">Correcto</Badge>
+                            ) : (
+                              <Badge variant="destructive">Desajuste</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </ScrollArea>
+          )}
         </div>
 
         {analysis?.needsUpdateCount > 0 && (

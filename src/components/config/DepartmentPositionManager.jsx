@@ -1062,6 +1062,22 @@ export default function DepartmentPositionManager() {
                 <span className="hidden xl:inline">Nuevo</span>
               </Button>
             </div>
+            <div 
+              className="mx-3 my-2 p-2 border-2 border-dashed rounded text-xs text-slate-500 bg-slate-50 hover:bg-slate-100"
+              onDragOver={(e) => {
+                if (!draggedItem || draggedItem.type !== 'dept') return;
+                e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (!draggedItem || draggedItem.type !== 'dept') return;
+                if (!draggedItem.data?.parent_id) return; // ya es raíz
+                moveDeptMutation.mutate({ id: draggedItem.id, newParentId: "root" });
+                setDraggedItem(null);
+              }}
+            >
+              Soltar aquí para mover a raíz
+            </div>
             <ScrollArea className="flex-1 p-3">
               <div className="space-y-1">
                 {departments
