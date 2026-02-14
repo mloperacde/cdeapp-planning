@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -47,14 +47,44 @@ export default function SalaryCategoryManager() {
     queryKey: ['salaryCategories', selectedDepartment],
     queryFn: async () => {
       if (!selectedDepartment) return [];
+      let res = [];
       try {
-        return await base44.entities.SalaryCategory.filter({ department: selectedDepartment });
+        res = await base44.entities.SalaryCategory.filter({ department: selectedDepartment });
       } catch {
-        return await base44.entities.SalaryCategory.list('level');
+        res = [];
       }
+      if (!Array.isArray(res) || res.length === 0) {
+        try {
+          const all = await base44.entities.SalaryCategory.list('level');
+          res = all.filter(c => (c.department || "") === selectedDepartment || (!c.department && !!selectedDepartment));
+        } catch {
+          res = [];
+        }
+      }
+      return res;
     },
     enabled: true
   });
+
+  const { data: allCategories = [] } = useQuery({
+    queryKey: ['salaryCategoriesAll'],
+    queryFn: () => base44.entities.SalaryCategory.list('level'),
+  });
+
+  const categoriesByDept = useMemo(() => {
+    const map = new Map();
+    allCategories.forEach(c => {
+      const dept = (c.department || "Sin departamento").toString();
+      if (!map.has(dept)) map.set(dept, []);
+      map.get(dept).push(c);
+    });
+    // sort categories by level then name
+    for (const [k, arr] of map.entries()) {
+      arr.sort((a, b) => (a.level || 0) - (b.level || 0) || (a.name || "").localeCompare(b.name || ""));
+      map.set(k, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [allCategories]);
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
@@ -64,7 +94,9 @@ export default function SalaryCategoryManager() {
       return base44.entities.SalaryCategory.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['salaryCategories'] });
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
+      });
       toast.success(editingCategory ? "Categoría actualizada" : "Categoría creada");
       handleCloseDialog();
     },
@@ -73,7 +105,9 @@ export default function SalaryCategoryManager() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.SalaryCategory.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['salaryCategories'] });
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
+      });
       toast.success("Categoría eliminada");
     },
   });
@@ -256,6 +290,48 @@ export default function SalaryCategoryManager() {
               </div>
             </ScrollArea>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-indigo-600" />
+            Estructura: Departamentos y Categorías
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[calc(100vh-360px)]">
+            <div className="space-y-4">
+              {categoriesByDept.map(([dept, cats]) => (
+                <div key={dept} className="border rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{dept}</Badge>
+                      <span className="text-xs text-slate-500">{cats.length} categorías</span>
+                    </div>
+                    {departments.find(d => d.name === dept) && (
+                      <Badge variant="outline" className="text-xs">Configurado</Badge>
+                    )}
+                  </div>
+                  {cats.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {cats.map(c => (
+                        <Badge key={c.id} variant="secondary" className="text-xs">
+                          {c.level ? `L${c.level} - ` : ""}{c.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-400">Sin categorías</div>
+                  )}
+                </div>
+              ))}
+              {categoriesByDept.length === 0 && (
+                <div className="text-sm text-slate-500">No hay categorías registradas.</div>
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 
