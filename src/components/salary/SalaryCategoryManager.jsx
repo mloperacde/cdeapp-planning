@@ -339,11 +339,19 @@ export default function SalaryCategoryManager() {
     return { byId, byNameDept };
   }, [currentAssignments]);
 
+  const getDeptNameForCat = (c) => {
+    return (
+      (c.department || c.department_name) ||
+      (departments.find(d => d.id === c.department_id)?.name) ||
+      "Sin departamento"
+    ).toString();
+  };
+
   const categoriesByDept = useMemo(() => {
     const source = selectedDepartment === "__ALL__" ? categories : allCategories;
     const map = new Map();
     source.forEach(c => {
-      const dept = (c.department || c.department_name || "Sin departamento").toString();
+      const dept = getDeptNameForCat(c);
       if (!map.has(dept)) map.set(dept, []);
       map.get(dept).push(c);
     });
@@ -353,7 +361,7 @@ export default function SalaryCategoryManager() {
       map.set(k, arr);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [allCategories, categories, selectedDepartment]);
+  }, [allCategories, categories, selectedDepartment, departments]);
 
   const sortedCategories = useMemo(() => {
     const arr = [...categories];
@@ -633,7 +641,8 @@ export default function SalaryCategoryManager() {
                     {cats.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {cats.map(c => {
-                          const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${(c.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || '')}`) ?? 0;
+                          const deptKey = normalizeDeptName(getDeptNameForCat(c));
+                          const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${(c.name || '').toString().trim().toUpperCase()}|${deptKey}`) ?? 0;
                           return (
                             <Badge
                               key={c.id || `${(c.code || '').toString().trim().toUpperCase()}|${(c.name || '').toString().trim().toUpperCase()}`}
