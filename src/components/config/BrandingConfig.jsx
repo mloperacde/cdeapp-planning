@@ -32,31 +32,18 @@ export default function BrandingConfig() {
     gcTime: 0
   });
 
-  const [formData, setFormData] = useState({
-    app_name: "CdeApp Planning",
-    app_subtitle: "Gestión de Empleados y Planificador",
+  const [formData, setFormData] = React.useState({
+    app_name: "CDE PlanApp",
+    app_subtitle: "Sistema de Gestión",
     primary_color: "#3B82F6",
     logo_url: ""
   });
 
   React.useEffect(() => {
-    if (brandingConfig?.value) {
-      try {
-        const parsed = JSON.parse(brandingConfig.value);
-        setFormData({
-          app_name: parsed.app_name || "CdeApp Planning",
-          app_subtitle: parsed.app_subtitle || "Gestión de Empleados y Planificador",
-          primary_color: parsed.primary_color || "#3B82F6",
-          logo_url: parsed.logo_url || ""
-        });
-      } catch (e) {
-        console.error("Error parsing branding config", e);
-      }
-    } else if (brandingConfig) {
-      // Fallback para estructura antigua (si existiera)
+    if (brandingConfig) {
       setFormData({
-        app_name: brandingConfig.app_name || "CdeApp Planning",
-        app_subtitle: brandingConfig.app_subtitle || "Gestión de Empleados y Planificador",
+        app_name: brandingConfig.app_name || "CDE PlanApp",
+        app_subtitle: brandingConfig.app_subtitle || "Sistema de Gestión",
         primary_color: brandingConfig.primary_color || "#3B82F6",
         logo_url: brandingConfig.logo_url || ""
       });
@@ -67,46 +54,49 @@ export default function BrandingConfig() {
     mutationFn: async (data) => {
       const payload = {
         config_key: 'branding',
-        value: JSON.stringify(data),
-        description: 'Configuración de Marca y Apariencia',
+        app_name: data.app_name,
+        app_subtitle: data.app_subtitle,
+        primary_color: data.primary_color,
+        logo_url: data.logo_url,
         updated_by: currentUser?.email,
         updated_by_name: currentUser?.full_name
       };
 
-      // Lógica robusta: buscar configuraciones existentes frescas
       const currentConfigs = await base44.entities.AppConfig.filter({ config_key: 'branding' });
       
       if (currentConfigs && currentConfigs.length > 0) {
-        // Ordenar por fecha de actualización descendente para encontrar la más reciente
         currentConfigs.sort((a, b) => {
-            const dateA = new Date(a.updated_at || a.created_at || 0);
-            const dateB = new Date(b.updated_at || b.created_at || 0);
+            const dateA = new Date(a.updated_date || a.created_date || 0);
+            const dateB = new Date(b.updated_date || b.created_date || 0);
             return dateB - dateA;
         });
 
         const targetId = currentConfigs[0].id;
-        console.log(`BrandingConfig: Actualizando configuración existente (ID: ${targetId})`);
 
-        // Limpieza proactiva de duplicados si existen
+        // Limpieza de duplicados
         if (currentConfigs.length > 1) {
-             console.warn(`BrandingConfig: Detectados ${currentConfigs.length - 1} duplicados. Eliminando...`);
              for (let i = 1; i < currentConfigs.length; i++) {
                  try {
                     await base44.entities.AppConfig.delete(currentConfigs[i].id);
-                 } catch (e) { console.warn("Error eliminando duplicado", e); }
+                 } catch (e) { 
+                   console.warn("Error eliminando duplicado", e); 
+                 }
              }
         }
 
         return await base44.entities.AppConfig.update(targetId, payload);
       } else {
-        console.log("BrandingConfig: Creando nueva configuración");
         return await base44.entities.AppConfig.create(payload);
       }
     },
     onSuccess: () => {
       toast.success("Configuración de marca guardada correctamente");
       queryClient.invalidateQueries({ queryKey: ['appConfig'] });
-      queryClient.invalidateQueries({ queryKey: ['brandingConfig'] }); // Invalidar DataProvider también
+      queryClient.invalidateQueries({ queryKey: ['brandingConfig'] });
+      // Recargar la página para aplicar cambios en el layout
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     },
     onError: (error) => {
       toast.error(`Error al guardar: ${error.message}`);
@@ -262,7 +252,7 @@ export default function BrandingConfig() {
               <Input
                 value={formData.app_name}
                 onChange={(e) => setFormData({...formData, app_name: e.target.value})}
-                placeholder="CdeApp Planning"
+                placeholder="CDE PlanApp"
               />
             </div>
 
@@ -271,7 +261,7 @@ export default function BrandingConfig() {
               <Input
                 value={formData.app_subtitle}
                 onChange={(e) => setFormData({...formData, app_subtitle: e.target.value})}
-                placeholder="Gestión de Empleados y Planificador"
+                placeholder="Sistema de Gestión"
               />
             </div>
           </div>
