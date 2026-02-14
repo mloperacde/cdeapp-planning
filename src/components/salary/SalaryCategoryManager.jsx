@@ -211,7 +211,27 @@ export default function SalaryCategoryManager() {
     if (!updated) {
       next.push({ id: safeCat.id || Math.random().toString(36).slice(2), ...safeCat, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
     }
-    await writeStoreCategories(next);
+    // Dedupe por (code|name): si existe versión con y sin departamento, conservar la que TIENE departamento
+    const makeBaseKey = (x) => `${(x.code || "").toString().trim().toUpperCase()}|${(x.name || "").toString().trim().toUpperCase()}`;
+    const groups = new Map();
+    for (const item of next) {
+      const bk = makeBaseKey(item);
+      if (!bk) continue;
+      if (!groups.has(bk)) groups.set(bk, []);
+      groups.get(bk).push(item);
+    }
+    const toRemoveIds = new Set();
+    for (const [_, list] of groups.entries()) {
+      if (list.length <= 1) continue;
+      const withDept = list.filter(x => (x.department || x.department_name || "").toString().trim());
+      const withoutDept = list.filter(x => !(x.department || x.department_name || "").toString().trim());
+      if (withDept.length > 0 && withoutDept.length > 0) {
+        // Mantener el más reciente con departamento, eliminar los sin departamento
+        withoutDept.forEach(x => { if (x.id) toRemoveIds.add(x.id); });
+      }
+    }
+    const deduped = next.filter(x => !toRemoveIds.has(x.id));
+    await writeStoreCategories(deduped);
   };
 
   const removeFromStore = async (id) => {
@@ -484,7 +504,25 @@ export default function SalaryCategoryManager() {
         const deptStr = (x.department || x.department_name || "").toString().trim();
         return !(deptStr) && !x.department_id;
       };
-      const next = arr.filter(x => !isOrphanLocal(x));
+      // Además, si existe duplicado por (code|name) y una tiene departamento, eliminar la que no lo tenga
+      const makeBaseKey = (x) => `${(x.code || "").toString().trim().toUpperCase()}|${(x.name || "").toString().trim().toUpperCase()}`;
+      const groups = new Map();
+      for (const item of arr) {
+        const bk = makeBaseKey(item);
+        if (!bk) continue;
+        if (!groups.has(bk)) groups.set(bk, []);
+        groups.get(bk).push(item);
+      }
+      const toRemoveIds = new Set();
+      for (const [_, list] of groups.entries()) {
+        if (list.length <= 1) continue;
+        const withDept = list.filter(x => (x.department || x.department_name || "").toString().trim());
+        const withoutDept = list.filter(x => !(x.department || x.department_name || "").toString().trim());
+        if (withDept.length > 0 && withoutDept.length > 0) {
+          withoutDept.forEach(x => { if (x.id) toRemoveIds.add(x.id); });
+        }
+      }
+      const next = arr.filter(x => !isOrphanLocal(x) && !toRemoveIds.has(x.id));
       await writeStoreCategories(next);
       return true;
     },
