@@ -69,6 +69,8 @@ export default function DepartmentPositionManager() {
   const [empToEdit, setEmpToEdit] = useState(null);
   const [showVacancies, setShowVacancies] = useState(false);
   const [localOrder, setLocalOrder] = useState(new Map());
+  const [hoveredDeptId, setHoveredDeptId] = useState(null);
+  const [pointerDragging, setPointerDragging] = useState(false);
 
   const normalizeTxt = (s) =>
     (s || "")
@@ -127,6 +129,60 @@ export default function DepartmentPositionManager() {
     });
     setLocalOrder(m);
   }, [departments]);
+
+  const beginPointerDrag = useCallback((dept) => {
+    setDraggedItem({ type: 'dept', id: dept.id, data: dept });
+    setPointerDragging(true);
+    const onMove = (e) => {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (!el) {
+        setHoveredDeptId(null);
+        return;
+      }
+      const target = el.closest?.('[data-dept-id], [data-drop-root]');
+      if (!target) {
+        setHoveredDeptId(null);
+        return;
+      }
+      if (target.hasAttribute('data-dept-id')) {
+        const id = target.getAttribute('data-dept-id');
+        setHoveredDeptId(id);
+      } else {
+        setHoveredDeptId('root-drop');
+      }
+    };
+    const onUp = (e) => {
+      const did = draggedItem?.id || dept.id;
+      const hoverId = hoveredDeptId;
+      setPointerDragging(false);
+      setHoveredDeptId(null);
+      setDraggedItem(null);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (!did) return;
+      if (!hoverId) return;
+      if (hoverId === 'root-drop') {
+        const d = departments.find(x => x.id === did);
+        if (!d) return;
+        if (!d.parent_id) return;
+        moveDeptMutation.mutate({ id: did, newParentId: "root" });
+        return;
+      }
+      if (hoverId === did) return;
+      const target = departments.find(x => x.id === hoverId);
+      const dragged = departments.find(x => x.id === did);
+      if (!target || !dragged) return;
+      const pDragged = dragged.parent_id || null;
+      const pTarget = target.parent_id || null;
+      if (pDragged === pTarget) {
+        reorderSiblings(pTarget, did, target.id);
+      } else {
+        moveDeptMutation.mutate({ id: did, newParentId: target.id });
+      }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [departments, draggedItem, hoveredDeptId]);
 
   // Derived State
   const selectedDept = useMemo(() => 
@@ -944,10 +1000,16 @@ export default function DepartmentPositionManager() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              onMouseDown={(e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                beginPointerDrag(dept);
+              }}
+              data-dept-id={dept.id}
               className={`
                 flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-all group
                 ${isSelected ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100 text-slate-700"}
-                ${isDragOver ? "bg-indigo-50 border-2 border-indigo-500 border-dashed" : "border-2 border-transparent"}
+                ${(isDragOver || hoveredDeptId === dept.id) ? "bg-indigo-50 border-2 border-indigo-500 border-dashed" : "border-2 border-transparent"}
                 ${draggedItem?.id === dept.id ? "opacity-50" : ""}
               `}
               onClick={() => setSelectedDeptId(dept.id)}
@@ -1164,6 +1226,7 @@ export default function DepartmentPositionManager() {
             </div>
             <div 
               className="mx-3 my-2 p-2 border-2 border-dashed rounded text-xs text-slate-500 bg-slate-50 hover:bg-slate-100"
+              data-drop-root
               onDragOver={(e) => {
                 if (!draggedItem || draggedItem.type !== 'dept') return;
                 e.preventDefault();
