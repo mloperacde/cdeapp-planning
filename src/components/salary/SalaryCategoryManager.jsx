@@ -478,26 +478,14 @@ export default function SalaryCategoryManager() {
   const cleanupMutation = useMutation({
     mutationFn: async () => {
       await backupStoreCategories();
-      const targets = orphanCategories;
-      for (const c of targets) {
-        try {
-          if (c.id) await base44.entities.SalaryCategory.delete(c.id);
-        } catch {
-        }
-      }
-      try {
-        const arr = await fetchStoreCategories();
-        const next = arr.filter(x => {
-          const hasDept = Boolean((x.department || x.department_name || "").toString().trim()) || Boolean(x.department_id);
-          const isOrphan = !hasDept;
-          if (x.id) {
-            return !targets.find(t => t.id === x.id) && !isOrphan;
-          }
-          return !isOrphan;
-        });
-        await writeStoreCategories(next);
-      } catch {
-      }
+      // Recalcular huérfanas desde el almacén actual para evitar borrar reasignadas por id
+      const arr = await fetchStoreCategories();
+      const isOrphanLocal = (x) => {
+        const deptStr = (x.department || x.department_name || "").toString().trim();
+        return !(deptStr) && !x.department_id;
+      };
+      const next = arr.filter(x => !isOrphanLocal(x));
+      await writeStoreCategories(next);
       return true;
     },
     onSuccess: () => {
