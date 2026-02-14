@@ -83,6 +83,108 @@ export default function SalaryCategoryManager() {
     }
   };
 
+  const backupStoreCategories = async () => {
+    try {
+      const arr = await fetchStoreCategories();
+      const serialized = JSON.stringify({ timestamp: new Date().toISOString(), data: arr });
+      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store_backup" });
+      const record = store[0];
+      const payloadCfg = {
+        config_key: "salary_categories_store_backup",
+        value: serialized,
+        description: serialized,
+        app_subtitle: serialized
+      };
+      if (record?.id) {
+        await base44.entities.AppConfig.update(record.id, payloadCfg);
+      } else {
+        await base44.entities.AppConfig.create(payloadCfg);
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const fetchBackup = async () => {
+    try {
+      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store_backup" });
+      const record = store[0];
+      if (!record) return null;
+      let raw = record.value || record.description || record.app_subtitle || "";
+      if (typeof raw === "string") {
+        try { return JSON.parse(raw); } catch { return null; }
+      }
+      return raw;
+    } catch {
+      return null;
+    }
+  };
+
+  const getDefaultRestoreDepartment = () => {
+    // Prioridad: PRODUCCIÓN/PRODUCCION -> selectedDepartment -> primero de la lista
+    const findByName = (name) => departments.find(d => normalizeDeptName(d.name) === normalizeDeptName(name));
+    return (
+      findByName("PRODUCCIÓN") ||
+      findByName("PRODUCCION") ||
+      (selectedDepartment ? findByName(selectedDepartment) : null) ||
+      departments[0] ||
+      null
+    );
+  };
+
+  const restoreFromBackup = async () => {
+    try {
+      const backup = await fetchBackup();
+      if (!backup?.data) {
+        toast.error("No hay copia de seguridad para restaurar");
+        return;
+      }
+      const dept = getDefaultRestoreDepartment();
+      const assigned = backup.data.map(c => {
+        const base = { ...c };
+        const d = c.department || c.department_name || c.department_id ? findDeptByName(c.department || c.department_name) : dept;
+        return {
+          ...base,
+          department: d?.name || dept?.name || base.department || base.department_name || "",
+          department_name: d?.name || dept?.name || base.department || base.department_name || "",
+          department_normalized: normalizeDeptName(d?.name || dept?.name || base.department || base.department_name || ""),
+          department_id: d?.id || dept?.id || base.department_id || null,
+          updated_at: new Date().toISOString()
+        };
+      });
+      // Fusionar con lo actual sin duplicar
+      const current = await fetchStoreCategories();
+      const unionMap = new Map();
+      const put = (c, source) => {
+        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
+        if (!unionMap.has(key) || source === 'restore') unionMap.set(key, c);
+      };
+      current.forEach(c => put(c, 'current'));
+      assigned.forEach(c => put(c, 'restore'));
+      const merged = Array.from(unionMap.values());
+      await writeStoreCategories(merged);
+      // Intentar upsert en entidad si está disponible
+      try {
+        for (const c of assigned) {
+          if (c.id) {
+            await base44.entities.SalaryCategory.update(c.id, c);
+          } else {
+            const created = await base44.entities.SalaryCategory.create(c);
+            c.id = created?.id || c.id;
+          }
+        }
+      } catch {
+        // Ignorar si la entidad no está disponible
+      }
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
+      });
+      toast.success(`Categorías restauradas y asignadas a ${getDefaultRestoreDepartment()?.name || 'departamento por defecto'}`);
+    } catch {
+      toast.error("No se pudo restaurar la copia de seguridad");
+    }
+  };
+
   const upsertStoreCategory = async (cat) => {
     const arr = await fetchStoreCategories();
     const key = cat.id || `${(cat.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(cat.department || cat.department_name || "")}|${(cat.name || "").toString().trim().toUpperCase()}`;
@@ -360,6 +462,7 @@ export default function SalaryCategoryManager() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
+      await backupStoreCategories();
       const targets = orphanCategories;
       for (const c of targets) {
         try {
@@ -544,6 +647,9 @@ export default function SalaryCategoryManager() {
               <Badge variant="destructive" className="text-xs">{orphanCategories.length} sin departamento</Badge>
               <Button variant="outline" size="sm" onClick={() => cleanupMutation.mutate()} disabled={cleanupMutation.isPending}>
                 Limpiar huérfanas
+              </Button>
+              <Button variant="secondary" size="sm" onClick={restoreFromBackup}>
+                Restaurar últimas
               </Button>
             </div>
           )}
