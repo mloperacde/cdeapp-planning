@@ -264,11 +264,11 @@ export default function PayrollSimulator() {
                 ))}
                 <div className="flex justify-between p-2 bg-white border rounded">
                   <span>Bruto Base (8h)</span>
-                  <span className="font-medium">{simulation.grossBase.toFixed(2)}€</span>
+                  <span className="font-medium">{simulation.grossBase.toFixed(2)}€ · {(simulation.grossBase * 14).toFixed(2)}€/año</span>
                 </div>
                 <div className="flex justify-between p-2 bg-white border rounded">
                   <span>Bruto Ajustado por Jornada</span>
-                  <span className="font-medium">{simulation.grossAdjusted.toFixed(2)}€</span>
+                  <span className="font-medium">{simulation.grossAdjusted.toFixed(2)}€ · {(simulation.grossAdjusted * 14).toFixed(2)}€/año</span>
                 </div>
                 <div className="flex justify-between p-3 bg-emerald-50 border-2 border-emerald-200 rounded font-semibold">
                   <span>BRUTO DEL PERIODO (ajustado y prorrateado)</span>

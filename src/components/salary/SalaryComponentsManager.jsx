@@ -320,6 +320,17 @@ export default function SalaryComponentsManager() {
                   value={formData.default_value}
                   onChange={(e) => setFormData({...formData, default_value: parseFloat(e.target.value) || 0})}
                 />
+                <div className="text-[11px] text-slate-500">
+                  {formData.periodicity === "Anual" ? (
+                    <>
+                      Mensual estimado: {(Number(formData.default_value || 0) / 14).toFixed(2)}€
+                    </>
+                  ) : (
+                    <>
+                      Anual estimado: {(Number(formData.default_value || 0) * 14).toFixed(2)}€
+                    </>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Periodicidad</Label>
@@ -335,6 +346,13 @@ export default function SalaryComponentsManager() {
                     <SelectItem value="Única">Única</SelectItem>
                   </SelectContent>
                 </Select>
+                <div className="text-[11px] text-slate-500">
+                  {formData.periodicity === "Anual" ? (
+                    <>Se mostrará mensual dividiendo entre 14</>
+                  ) : (
+                    <>Se mostrará anual multiplicando por 14</>
+                  )}
+                </div>
               </div>
             </div>
 

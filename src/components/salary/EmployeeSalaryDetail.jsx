@@ -240,6 +240,7 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
             <div className="text-sm text-slate-500 mb-1">Salario Ajustado (Mensual)</div>
             <div className="text-3xl font-bold text-emerald-600">{adjustedTotal.toFixed(2)}€</div>
             <div className="text-xs text-slate-500 mt-1">Base 8h: {totalSalary.toFixed(2)}€ • Jornada: {hoursPerDay}h/día</div>
+            <div className="text-xs text-slate-500 mt-1">Anual: {(adjustedTotal * 14).toFixed(2)}€</div>
           </CardContent>
         </Card>
         <Card>
@@ -284,6 +285,7 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <div className="text-2xl font-bold text-emerald-600">{salary.amount}€</div>
+                    <div className="text-[11px] text-slate-500">Anual: {(salary.amount * 14).toFixed(2)}€</div>
                   </div>
                   <Button
                     variant="ghost"

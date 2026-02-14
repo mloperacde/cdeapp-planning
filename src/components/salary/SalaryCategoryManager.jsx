@@ -421,12 +421,18 @@ export default function SalaryCategoryManager() {
                                 {category.salary_range?.min || 0}€ - {category.salary_range?.max || 0}€
                               </span>
                             </div>
+                            <div className="text-[11px] text-slate-500 ml-6">
+                              {(category.salary_range?.min || 0) * 14}€ - {(category.salary_range?.max || 0) * 14}€/año
+                            </div>
                           </div>
                           <div>
                             <span className="text-xs text-slate-500 block mb-1">Salario Objetivo</span>
-                            <span className="font-semibold text-emerald-600">
+                            <div className="font-semibold text-emerald-600">
                               {category.salary_range?.target || 0}€
-                            </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {(category.salary_range?.target || 0) * 14}€/año
+                            </div>
                           </div>
                           <div>
                             <span className="text-xs text-slate-500 block mb-1">Experiencia Requerida</span>

@@ -174,6 +174,9 @@ export default function EmployeeSalaryManager() {
                       <div className="text-[11px] text-slate-500">
                         Base (8h): {employee.totalSalary.toFixed(2)}€ • Jornada: {employee.hoursPerDay}h/día
                       </div>
+                      <div className="text-[11px] text-slate-500">
+                        Anual: {(((employee.adjustedSalary || employee.totalSalary)) * 14).toFixed(2)}€
+                      </div>
                     </div>
                     <Badge variant="secondary">
                       {employee.componentCount} componentes
