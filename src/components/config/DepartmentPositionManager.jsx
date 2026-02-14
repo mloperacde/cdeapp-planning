@@ -68,6 +68,7 @@ export default function DepartmentPositionManager() {
   const [isEmpDialogOpen, setIsEmpDialogOpen] = useState(false);
   const [empToEdit, setEmpToEdit] = useState(null);
   const [showVacancies, setShowVacancies] = useState(false);
+  const [localOrder, setLocalOrder] = useState(new Map());
 
   const normalizeTxt = (s) =>
     (s || "")
@@ -117,6 +118,15 @@ export default function DepartmentPositionManager() {
   });
 
   const [mainTab, setMainTab] = useState("departments");
+  
+  useEffect(() => {
+    const m = new Map();
+    departments.forEach(d => {
+      const val = Number.isFinite(d.orden) ? d.orden : (d.orden ? Number(d.orden) : undefined);
+      if (val !== undefined) m.set(d.id, val);
+    });
+    setLocalOrder(m);
+  }, [departments]);
 
   // Derived State
   const selectedDept = useMemo(() => 
@@ -567,6 +577,9 @@ export default function DepartmentPositionManager() {
     const newOrder = sameParent.filter(d => d.id !== draggedId);
     const idx = newOrder.findIndex(d => d.id === targetId);
     newOrder.splice(idx + 1, 0, dragged);
+    const nextLocal = new Map(localOrder);
+    newOrder.forEach((d, i) => nextLocal.set(d.id, i));
+    setLocalOrder(nextLocal);
     let updated = 0;
     for (let i = 0; i < newOrder.length; i++) {
       const d = newOrder[i];
@@ -1012,7 +1025,12 @@ export default function DepartmentPositionManager() {
         {isExpanded && hasChildren && (
           <div className="mt-1 ml-3 pl-3 border-l border-slate-200">
             {children
-              .sort((a, b) => (a.orden || 0) - (b.orden || 0) || (a.name || "").localeCompare(b.name || ""))
+              .sort((a, b) => {
+                const ao = localOrder.get(a.id) ?? (a.orden || 0);
+                const bo = localOrder.get(b.id) ?? (b.orden || 0);
+                if (ao !== bo) return ao - bo;
+                return (a.name || "").localeCompare(b.name || "");
+              })
               .map(child => (
               <DeptTreeItem key={child.id} dept={child} level={level + 1} />
             ))}
@@ -1154,7 +1172,12 @@ export default function DepartmentPositionManager() {
               <div className="space-y-1">
                 {departments
                   .filter(d => !d.parent_id)
-                  .sort((a, b) => (a.orden || 0) - (b.orden || 0) || (a.name || "").localeCompare(b.name || ""))
+                  .sort((a, b) => {
+                    const ao = localOrder.get(a.id) ?? (a.orden || 0);
+                    const bo = localOrder.get(b.id) ?? (b.orden || 0);
+                    if (ao !== bo) return ao - bo;
+                    return (a.name || "").localeCompare(b.name || "");
+                  })
                   .map(dept => (
                     <DeptTreeItem key={dept.id} dept={dept} />
                   ))}
