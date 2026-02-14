@@ -186,19 +186,30 @@ export default function SalaryCategoryManager() {
   };
 
   const upsertStoreCategory = async (cat) => {
+    // Asegurar campos de departamento completos antes de persistir
+    const deptName = (cat.department || cat.department_name || selectedDepartment || "").toString();
+    const deptObj = findDeptByName(deptName);
+    const normalizedDept = normalizeDeptName(deptName);
+    const safeCat = {
+      ...cat,
+      department: deptName,
+      department_name: deptName,
+      department_normalized: normalizedDept,
+      department_id: cat.department_id || deptObj?.id || null,
+    };
     const arr = await fetchStoreCategories();
-    const key = cat.id || `${(cat.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(cat.department || cat.department_name || "")}|${(cat.name || "").toString().trim().toUpperCase()}`;
+    const key = safeCat.id || `${(safeCat.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(safeCat.department || safeCat.department_name || "")}|${(safeCat.name || "").toString().trim().toUpperCase()}`;
     let updated = false;
     const next = arr.map(c => {
       const k = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
       if (k === key) {
         updated = true;
-        return { ...c, ...cat, updated_at: new Date().toISOString() };
+        return { ...c, ...safeCat, updated_at: new Date().toISOString() };
       }
       return c;
     });
     if (!updated) {
-      next.push({ id: cat.id || Math.random().toString(36).slice(2), ...cat, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      next.push({ id: safeCat.id || Math.random().toString(36).slice(2), ...safeCat, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
     }
     await writeStoreCategories(next);
   };
@@ -330,13 +341,17 @@ export default function SalaryCategoryManager() {
         department_id: dept?.id || data.department_id || null
       };
       try {
-        const result = editingCategory
+        const dbResult = editingCategory
           ? await base44.entities.SalaryCategory.update(editingCategory.id, payload)
           : await base44.entities.SalaryCategory.create(payload);
-        // Espejar siempre en la configuración para garantizar lectura en fallback
-        await upsertStoreCategory({ ...(result || payload) });
+        // Combinar resultado DB con payload para no perder campos de departamento
+        const merged = { ...payload, ...(dbResult || {}) };
+        if (!merged.department_name) merged.department_name = merged.department || selectedDepartment || "";
+        if (!merged.department_normalized) merged.department_normalized = normalizeDeptName(merged.department || merged.department_name || "");
+        if (!merged.department_id && dept?.id) merged.department_id = dept.id;
+        await upsertStoreCategory(merged);
         setUsingFallback(false);
-        return result || payload;
+        return merged;
       } catch {
         try {
           await upsertStoreCategory(payload);
