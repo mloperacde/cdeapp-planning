@@ -30,10 +30,18 @@ export default function EmployeeSalaryManager() {
   const employeesWithSalary = useMemo(() => {
     return employees.map(emp => {
       const salaries = employeeSalaries.filter(s => s.employee_id === emp.id);
-      const totalSalary = salaries.reduce((sum, s) => sum + (s.amount || 0), 0);
+      const baseTotal = salaries.reduce((sum, s) => sum + (s.amount || 0), 0);
+      const hours = typeof emp.num_horas_jornada === 'number' && emp.num_horas_jornada > 0 
+        ? emp.num_horas_jornada 
+        : parseFloat(emp.num_horas_jornada) || 8;
+      const factor = Math.max(0, hours / 8);
+      const adjustedTotal = baseTotal * factor;
       return {
         ...emp,
-        totalSalary,
+        totalSalary: baseTotal,
+        adjustedSalary: adjustedTotal,
+        hoursPerDay: hours,
+        factor,
         componentCount: salaries.length
       };
     });
@@ -51,7 +59,7 @@ export default function EmployeeSalaryManager() {
       if (!summary[dept]) {
         summary[dept] = { total: 0, count: 0 };
       }
-      summary[dept].total += emp.totalSalary;
+      summary[dept].total += (typeof emp.adjustedSalary === 'number' ? emp.adjustedSalary : emp.totalSalary);
       summary[dept].count += 1;
     });
     return Object.entries(summary).map(([dept, data]) => ({
@@ -159,10 +167,13 @@ export default function EmployeeSalaryManager() {
 
                   <div className="mt-4 pt-4 border-t flex items-center justify-between">
                     <div>
-                      <span className="text-xs text-slate-500 block">Salario Total</span>
+                      <span className="text-xs text-slate-500 block">Salario Total Ajustado</span>
                       <span className="text-lg font-bold text-emerald-600">
-                        {employee.totalSalary.toFixed(2)}€
+                        {(employee.adjustedSalary || employee.totalSalary).toFixed(2)}€
                       </span>
+                      <div className="text-[11px] text-slate-500">
+                        Base (8h): {employee.totalSalary.toFixed(2)}€ • Jornada: {employee.hoursPerDay}h/día
+                      </div>
                     </div>
                     <Badge variant="secondary">
                       {employee.componentCount} componentes

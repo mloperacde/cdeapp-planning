@@ -19,6 +19,7 @@ export default function SalaryCategoryManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [usingFallback, setUsingFallback] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -43,12 +44,6 @@ export default function SalaryCategoryManager() {
     return departments.find(d => normalizeDeptName(d.name) === target) || null;
   };
 
-  useEffect(() => {
-    if (!selectedDepartment && departments.length > 0) {
-      setSelectedDepartment(departments[0].name || "");
-    }
-  }, [departments, selectedDepartment]);
-
   const { data: categories = [] } = useQuery({
     queryKey: ['salaryCategories', selectedDepartment],
     queryFn: async () => {
@@ -66,8 +61,32 @@ export default function SalaryCategoryManager() {
           const matchesNorm = cNorm === normalized;
           return matchesName || matchesId || matchesNorm;
         });
+        setUsingFallback(false);
       } catch {
-        res = [];
+        try {
+          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+          const record = store[0];
+          let arr = [];
+          if (record) {
+            let raw = record.value || record.description || record.app_subtitle || "[]";
+            if (typeof raw === "string") {
+              try { arr = JSON.parse(raw); } catch { arr = []; }
+            } else if (Array.isArray(raw)) {
+              arr = raw;
+            }
+          }
+          const normalized = normalizeDeptName(selectedDepartment);
+          res = arr.filter(c => {
+            const cDept = c.department || c.department_name || "";
+            const cNorm = c.department_normalized || normalizeDeptName(cDept);
+            const deptIdMatch = !!findDeptByName(selectedDepartment)?.id && c.department_id === findDeptByName(selectedDepartment)?.id;
+            return cDept === selectedDepartment || normalizeDeptName(cDept) === normalized || cNorm === normalized || deptIdMatch;
+          });
+          setUsingFallback(true);
+        } catch {
+          res = [];
+          setUsingFallback(true);
+        }
       }
       return res;
     },
@@ -76,8 +95,61 @@ export default function SalaryCategoryManager() {
 
   const { data: allCategories = [] } = useQuery({
     queryKey: ['salaryCategoriesAll'],
-    queryFn: () => base44.entities.SalaryCategory.list('level'),
+    queryFn: async () => {
+      try {
+        const all = await base44.entities.SalaryCategory.list('level');
+        setUsingFallback(false);
+        return all;
+      } catch {
+        try {
+          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+          const record = store[0];
+          let arr = [];
+          if (record) {
+            let raw = record.value || record.description || record.app_subtitle || "[]";
+            if (typeof raw === "string") {
+              try { arr = JSON.parse(raw); } catch { arr = []; }
+            } else if (Array.isArray(raw)) {
+              arr = raw;
+            }
+          }
+          setUsingFallback(true);
+          return arr;
+        } catch {
+          setUsingFallback(true);
+          return [];
+        }
+      }
+    },
   });
+
+  const { data: currentAssignments = [] } = useQuery({
+    queryKey: ['employeeCategoryAssignments'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.EmployeeCategory.filter({ is_current: true });
+      } catch {
+        return [];
+      }
+    }
+  });
+
+  const categoryCounts = useMemo(() => {
+    const byId = new Map();
+    const byNameDept = new Map();
+    currentAssignments.forEach(a => {
+      if (a.category_id) {
+        byId.set(a.category_id, (byId.get(a.category_id) || 0) + 1);
+      }
+      const nm = (a.category_name || a.name || "").toString().trim().toUpperCase();
+      const dept = normalizeDeptName(a.department || a.department_name || "");
+      if (nm) {
+        const k = `${nm}|${dept}`;
+        byNameDept.set(k, (byNameDept.get(k) || 0) + 1);
+      }
+    });
+    return { byId, byNameDept };
+  }, [currentAssignments]);
 
   const categoriesByDept = useMemo(() => {
     const map = new Map();
@@ -95,7 +167,7 @@ export default function SalaryCategoryManager() {
   }, [allCategories]);
 
   const saveMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       const dept = findDeptByName(data.department || data.department_name || selectedDepartment);
       const payload = {
         ...data,
@@ -104,10 +176,50 @@ export default function SalaryCategoryManager() {
         department_normalized: normalizeDeptName(data.department || data.department_name || selectedDepartment),
         department_id: dept?.id || data.department_id || null
       };
-      if (editingCategory) {
-        return base44.entities.SalaryCategory.update(editingCategory.id, payload);
+      try {
+        if (editingCategory) {
+          return await base44.entities.SalaryCategory.update(editingCategory.id, payload);
+        }
+        return await base44.entities.SalaryCategory.create(payload);
+      } catch {
+        try {
+          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+          const record = store[0];
+          let arr = [];
+          let appConfigId = null;
+          if (record) {
+            appConfigId = record.id;
+            let raw = record.value || record.description || record.app_subtitle || "[]";
+            if (typeof raw === "string") {
+              try { arr = JSON.parse(raw); } catch { arr = []; }
+            } else if (Array.isArray(raw)) {
+              arr = raw;
+            }
+          }
+          if (editingCategory) {
+            arr = arr.map(c => c.id === editingCategory.id ? { ...c, ...payload, updated_at: new Date().toISOString() } : c);
+          } else {
+            const id = Math.random().toString(36).slice(2);
+            arr.push({ id, ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+          }
+          const serialized = JSON.stringify(arr);
+          const payloadCfg = {
+            config_key: "salary_categories_store",
+            value: serialized,
+            description: serialized,
+            app_subtitle: serialized
+          };
+          if (appConfigId) {
+            await base44.entities.AppConfig.update(appConfigId, payloadCfg);
+          } else {
+            await base44.entities.AppConfig.create(payloadCfg);
+          }
+          setUsingFallback(true);
+          return payload;
+        } catch {
+          throw new Error("No se pudo guardar la categoría");
+        }
       }
-      return base44.entities.SalaryCategory.create(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -116,16 +228,59 @@ export default function SalaryCategoryManager() {
       toast.success(editingCategory ? "Categoría actualizada" : "Categoría creada");
       handleCloseDialog();
     },
+    onError: () => {
+      toast.error("Error al guardar la categoría");
+    }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.SalaryCategory.delete(id),
+    mutationFn: async (id) => {
+      try {
+        return await base44.entities.SalaryCategory.delete(id);
+      } catch {
+        try {
+          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+          const record = store[0];
+          let arr = [];
+          let appConfigId = null;
+          if (record) {
+            appConfigId = record.id;
+            let raw = record.value || record.description || record.app_subtitle || "[]";
+            if (typeof raw === "string") {
+              try { arr = JSON.parse(raw); } catch { arr = []; }
+            } else if (Array.isArray(raw)) {
+              arr = raw;
+            }
+          }
+          arr = arr.filter(c => c.id !== id);
+          const serialized = JSON.stringify(arr);
+          const payloadCfg = {
+            config_key: "salary_categories_store",
+            value: serialized,
+            description: serialized,
+            app_subtitle: serialized
+          };
+          if (appConfigId) {
+            await base44.entities.AppConfig.update(appConfigId, payloadCfg);
+          } else {
+            await base44.entities.AppConfig.create(payloadCfg);
+          }
+          setUsingFallback(true);
+          return { success: true };
+        } catch {
+          throw new Error("No se pudo eliminar la categoría");
+        }
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
       });
       toast.success("Categoría eliminada");
     },
+    onError: () => {
+      toast.error("Error al eliminar la categoría");
+    }
   });
 
   const handleOpenDialog = (category = null) => {
@@ -241,6 +396,9 @@ export default function SalaryCategoryManager() {
                           <Badge variant="outline" className="font-mono text-xs">
                             {category.code}
                           </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {(categoryCounts.byId.get(category.id) ?? categoryCounts.byNameDept.get(`${(category.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(category.department || category.department_name || selectedDepartment)}`) ?? 0)} empleados
+                          </Badge>
                             <Badge variant="secondary" className="text-xs">
                               {departments.find(d => d.id === category.department_id)?.name || category.department || category.department_name || selectedDepartment}
                             </Badge>
@@ -315,6 +473,9 @@ export default function SalaryCategoryManager() {
               </div>
             </ScrollArea>
           )}
+          {usingFallback && selectedDepartment && (
+            <div className="mt-2 text-xs text-amber-600">Mostrando datos persistidos en configuración mientras la entidad SalaryCategory no está disponible.</div>
+          )}
         </CardContent>
       </Card>
 
@@ -341,11 +502,14 @@ export default function SalaryCategoryManager() {
                   </div>
                   {cats.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {cats.map(c => (
-                        <Badge key={c.id} variant="secondary" className="text-xs">
-                          {c.level ? `L${c.level} - ` : ""}{c.name}
-                        </Badge>
-                      ))}
+                      {cats.map(c => {
+                        const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${(c.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || '')}`) ?? 0;
+                        return (
+                          <Badge key={c.id} variant="secondary" className="text-xs">
+                            {(c.level ? `L${c.level} - ` : "") + c.name} ({count})
+                          </Badge>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-xs text-slate-400">Sin categorías</div>
@@ -357,6 +521,9 @@ export default function SalaryCategoryManager() {
               )}
             </div>
           </ScrollArea>
+          {usingFallback && (
+            <div className="mt-2 text-xs text-amber-600">Vista generada desde configuración persistida.</div>
+          )}
         </CardContent>
       </Card>
 

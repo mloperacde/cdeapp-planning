@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -194,7 +194,14 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
     addComponentMutation.mutate(formData);
   };
 
-  const totalSalary = currentSalaries.reduce((sum, s) => sum + (s.amount || 0), 0);
+  const totalSalary = useMemo(() => currentSalaries.reduce((sum, s) => sum + (s.amount || 0), 0), [currentSalaries]);
+  const hoursPerDay = useMemo(() => {
+    if (typeof employee.num_horas_jornada === 'number' && employee.num_horas_jornada > 0) return employee.num_horas_jornada;
+    const parsed = parseFloat(employee.num_horas_jornada);
+    return isNaN(parsed) || parsed <= 0 ? 8 : parsed;
+  }, [employee]);
+  const jornadaFactor = useMemo(() => Math.max(0, hoursPerDay / 8), [hoursPerDay]);
+  const adjustedTotal = useMemo(() => totalSalary * jornadaFactor, [totalSalary, jornadaFactor]);
 
   if (showHistory) {
     return (
@@ -230,8 +237,9 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
-            <div className="text-sm text-slate-500 mb-1">Salario Total Mensual</div>
-            <div className="text-3xl font-bold text-emerald-600">{totalSalary.toFixed(2)}€</div>
+            <div className="text-sm text-slate-500 mb-1">Salario Ajustado (Mensual)</div>
+            <div className="text-3xl font-bold text-emerald-600">{adjustedTotal.toFixed(2)}€</div>
+            <div className="text-xs text-slate-500 mt-1">Base 8h: {totalSalary.toFixed(2)}€ • Jornada: {hoursPerDay}h/día</div>
           </CardContent>
         </Card>
         <Card>

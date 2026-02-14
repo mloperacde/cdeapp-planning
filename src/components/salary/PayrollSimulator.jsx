@@ -64,6 +64,12 @@ export default function PayrollSimulator() {
     
     setTimeout(() => {
       const employee = employees.find(e => e.id === selectedEmployeeId);
+      const hours = (() => {
+        if (typeof employee?.num_horas_jornada === 'number' && employee.num_horas_jornada > 0) return employee.num_horas_jornada;
+        const parsed = parseFloat(employee?.num_horas_jornada);
+        return isNaN(parsed) || parsed <= 0 ? 8 : parsed;
+      })();
+      const jornadaFactor = Math.max(0, hours / 8);
       
       // Calcular días trabajados
       const start = new Date(periodStart);
@@ -80,11 +86,12 @@ export default function PayrollSimulator() {
 
       const workedDays = totalDays - unpaidAbsenceDays;
       
-      // Calcular bruto
-      const grossSalary = salaryComponents.reduce((sum, comp) => sum + (comp.amount || 0), 0);
+      // Calcular bruto base (8h) y ajustado por jornada
+      const grossBase = salaryComponents.reduce((sum, comp) => sum + (comp.amount || 0), 0);
+      const grossAdjusted = grossBase * jornadaFactor;
       
       // Prorrateado por días trabajados
-      const proportionalGross = (grossSalary * workedDays) / totalDays;
+      const proportionalGross = (grossAdjusted * workedDays) / totalDays;
       
       // Deducciones simuladas
       const irpfRate = proportionalGross > 2000 ? 0.15 : proportionalGross > 1500 ? 0.12 : 0.10;
@@ -106,6 +113,10 @@ export default function PayrollSimulator() {
         totalDays,
         workedDays,
         absenceDays: unpaidAbsenceDays,
+        hoursPerDay: hours,
+        jornadaFactor,
+        grossBase,
+        grossAdjusted,
         components: salaryComponents.map(c => ({
           name: c.component_name,
           amount: c.amount
@@ -238,6 +249,9 @@ export default function PayrollSimulator() {
                     <span className="text-red-600">Ausencias: <strong>{simulation.absenceDays}</strong></span>
                   )}
                 </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  Jornada: <strong>{simulation.hoursPerDay}h/día</strong> • Factor: <strong>{simulation.jornadaFactor.toFixed(3)}</strong>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -248,8 +262,16 @@ export default function PayrollSimulator() {
                     <span className="font-medium">{comp.amount.toFixed(2)}€</span>
                   </div>
                 ))}
+                <div className="flex justify-between p-2 bg-white border rounded">
+                  <span>Bruto Base (8h)</span>
+                  <span className="font-medium">{simulation.grossBase.toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between p-2 bg-white border rounded">
+                  <span>Bruto Ajustado por Jornada</span>
+                  <span className="font-medium">{simulation.grossAdjusted.toFixed(2)}€</span>
+                </div>
                 <div className="flex justify-between p-3 bg-emerald-50 border-2 border-emerald-200 rounded font-semibold">
-                  <span>SALARIO BRUTO</span>
+                  <span>BRUTO DEL PERIODO (ajustado y prorrateado)</span>
                   <span className="text-emerald-700">{simulation.grossSalary.toFixed(2)}€</span>
                 </div>
               </div>
