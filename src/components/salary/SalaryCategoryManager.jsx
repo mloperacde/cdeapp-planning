@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Edit, Trash2, Award, TrendingUp } from "lucide-react";
+import { Plus, Edit, Trash2, Award, TrendingUp, ArrowUp, ArrowDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -348,11 +348,50 @@ export default function SalaryCategoryManager() {
     });
     // sort categories by level then name
     for (const [k, arr] of map.entries()) {
-      arr.sort((a, b) => (a.level || 0) - (b.level || 0) || (a.name || "").localeCompare(b.name || ""));
+      arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.level || 0) - (b.level || 0) || (a.name || "").localeCompare(b.name || ""));
       map.set(k, arr);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [allCategories]);
+
+  const sortedCategories = useMemo(() => {
+    const arr = [...categories];
+    arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.level ?? 0) - (b.level ?? 0) || (a.name || "").localeCompare(b.name || ""));
+    return arr;
+  }, [categories]);
+
+  const moveMutation = useMutation({
+    mutationFn: async ({ a, b }) => {
+      try {
+        if (a?.id) await base44.entities.SalaryCategory.update(a.id, a);
+        if (b?.id) await base44.entities.SalaryCategory.update(b.id, b);
+      } catch {
+        /* ignore backend failures */
+      }
+      await upsertStoreCategory(a);
+      if (b) await upsertStoreCategory(b);
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
+      });
+    }
+  });
+
+  const handleMove = (cat, direction) => {
+    const deptName = (cat.department || cat.department_name || "").toString();
+    const sameDept = categories.filter(c => (c.department || c.department_name || "") === deptName);
+    const list = [...sameDept].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.level ?? 0) - (b.level ?? 0));
+    const idx = list.findIndex(c => c.id === cat.id);
+    if (idx === -1) return;
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const neighbor = list[targetIdx];
+    const a = { ...cat, order: neighbor.order ?? targetIdx };
+    const b = { ...neighbor, order: cat.order ?? idx };
+    moveMutation.mutate({ a, b });
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -543,7 +582,7 @@ export default function SalaryCategoryManager() {
 
   return (
     <div className="h-full">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="space-y-4">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -577,10 +616,48 @@ export default function SalaryCategoryManager() {
           {!selectedDepartment && (
             <div className="text-sm text-slate-500">Selecciona un departamento para gestionar sus categorías profesionales.</div>
           )}
-          {selectedDepartment && (
+          {selectedDepartment === "__ALL__" && (
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              <div className="space-y-4">
+                {categoriesByDept
+                  .filter(([dept]) => dept !== "Sin departamento")
+                  .map(([dept, cats]) => (
+                  <div key={dept} className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{dept}</Badge>
+                        <span className="text-xs text-slate-500">{cats.length} categorías</span>
+                      </div>
+                    </div>
+                    {cats.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {cats.map(c => {
+                          const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${(c.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || '')}`) ?? 0;
+                          return (
+                            <Badge
+                              key={c.id || `${(c.code || '').toString().trim().toUpperCase()}|${(c.name || '').toString().trim().toUpperCase()}`}
+                              variant="secondary"
+                              className="text-xs cursor-pointer hover:bg-slate-200"
+                              onClick={() => handleOpenDialog(c)}
+                              title="Editar / Asignar departamento"
+                            >
+                              {(c.level ? `L${c.level} - ` : "") + c.name} ({count})
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400">Sin categorías</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+          {selectedDepartment && selectedDepartment !== "__ALL__" && (
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-3">
-                {categories.map((category) => (
+                {sortedCategories.map((category, index) => (
                 <Card key={category.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
@@ -643,6 +720,24 @@ export default function SalaryCategoryManager() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          disabled={index === 0}
+                          onClick={() => handleMove(category, 'up')}
+                          title="Subir"
+                        >
+                          <ArrowUp className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={index === sortedCategories.length - 1}
+                          onClick={() => handleMove(category, 'down')}
+                          title="Bajar"
+                        >
+                          <ArrowDown className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleOpenDialog(category)}
                         >
                           <Edit className="w-4 h-4" />
@@ -676,105 +771,8 @@ export default function SalaryCategoryManager() {
               </div>
             </ScrollArea>
           )}
-          {usingFallback && selectedDepartment && (
+          {usingFallback && selectedDepartment && selectedDepartment !== "__ALL__" && (
             <div className="mt-2 text-xs text-amber-600">Mostrando datos persistidos en configuración mientras la entidad SalaryCategory no está disponible.</div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-indigo-600" />
-            Estructura: Departamentos y Categorías
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            {orphanCategories.length > 0 && (
-              <>
-                <Badge variant="destructive" className="text-xs">{orphanCategories.length} sin departamento</Badge>
-                <Button variant="outline" size="sm" onClick={() => cleanupMutation.mutate()} disabled={cleanupMutation.isPending}>
-                  Limpiar huérfanas
-                </Button>
-              </>
-            )}
-            <Button variant="secondary" size="sm" onClick={restoreFromBackup}>
-              Restaurar últimas
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[calc(100vh-360px)]">
-            <div className="space-y-4">
-              {categoriesByDept.map(([dept, cats]) => (
-                <div key={dept} className="border rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{dept}</Badge>
-                      <span className="text-xs text-slate-500">{cats.length} categorías</span>
-                    </div>
-                    {departments.find(d => d.name === dept) && (
-                      <Badge variant="outline" className="text-xs">Configurado</Badge>
-                    )}
-                  </div>
-                  {cats.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {cats.map(c => {
-                        const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${(c.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || '')}`) ?? 0;
-                        return (
-                          <div key={c.id || `${(c.code || '').toString().trim().toUpperCase()}|${(c.name || '').toString().trim().toUpperCase()}`} className="flex items-center gap-2">
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-slate-200"
-                              onClick={() => handleOpenDialog(c)}
-                              title="Editar / Asignar departamento"
-                            >
-                              {(c.level ? `L${c.level} - ` : "") + c.name} ({count})
-                            </Badge>
-                            {dept === "Sin departamento" && (
-                              <>
-                                <Button size="xs" variant="outline" onClick={() => handleOpenDialog(c)}>
-                                  Asignar
-                                </Button>
-                                <Button
-                                  size="xs"
-                                  variant="destructive"
-                                  onClick={async () => {
-                                    const arr = await fetchStoreCategories();
-                                    const next = arr.filter(x => {
-                                      const sameById = x.id && c.id && x.id === c.id;
-                                      const sameByKey =
-                                        (x.code || '').toString().trim().toUpperCase() === (c.code || '').toString().trim().toUpperCase() &&
-                                        (x.name || '').toString().trim().toUpperCase() === (c.name || '').toString().trim().toUpperCase() &&
-                                        !(x.department || x.department_name);
-                                      return !(sameById || sameByKey);
-                                    });
-                                    await writeStoreCategories(next);
-                                    queryClient.invalidateQueries({
-                                      predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
-                                    });
-                                    toast.success("Eliminado de 'Sin departamento'");
-                                  }}
-                                >
-                                  Borrar
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-slate-400">Sin categorías</div>
-                  )}
-                </div>
-              ))}
-              {categoriesByDept.length === 0 && (
-                <div className="text-sm text-slate-500">No hay categorías registradas.</div>
-              )}
-            </div>
-          </ScrollArea>
-          {usingFallback && (
-            <div className="mt-2 text-xs text-amber-600">Vista generada desde configuración persistida.</div>
           )}
         </CardContent>
       </Card>
