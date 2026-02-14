@@ -209,6 +209,10 @@ export default function DepartmentPositionManager() {
     return employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
   }, [employees, selectedDept]);
 
+  const totalVacancies = useMemo(() => 
+    vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0)
+  , [vacanciesByDept]);
+
   const consolidatePositionsMutation = useMutation({
     mutationFn: async () => {
       const [allPos, allEmps, allDepts] = await Promise.all([
@@ -1145,6 +1149,7 @@ export default function DepartmentPositionManager() {
                     <TabsList>
                       <TabsTrigger value="positions">Puestos ({deptPositions.length})</TabsTrigger>
                       <TabsTrigger value="employees">Empleados ({deptEmployees.length})</TabsTrigger>
+                      <TabsTrigger value="vacancies">Vacantes ({totalVacancies})</TabsTrigger>
                     </TabsList>
                   </div>
 
@@ -1296,6 +1301,45 @@ export default function DepartmentPositionManager() {
                       </ScrollArea>
                    </div>
                   </TabsContent>
+                  
+                  <TabsContent value="vacancies" className="flex-1 p-6 overflow-hidden flex flex-col mt-0 data-[state=inactive]:hidden">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5 text-amber-600" />
+                        Puestos Vacantes en Toda la Estructura
+                      </h4>
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                        {totalVacancies} vacantes
+                      </Badge>
+                    </div>
+                    <div className="flex-1 border rounded-lg bg-white overflow-hidden shadow-sm p-4">
+                      <ScrollArea className="h-full">
+                        <div className="grid grid-cols-3 gap-3">
+                          {vacanciesByDept.map(dept => (
+                            <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
+                              <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
+                                <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                  {dept.vacancies.length}
+                                </Badge>
+                              </div>
+                              <div className="p-2 space-y-1">
+                                {dept.vacancies.map((vac, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
+                                    <span className="font-medium text-slate-700 truncate max-w-[100px]" title={vac.position}>{vac.position}</span>
+                                    <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
+                                      {vac.vacantSlots}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  </TabsContent>
                 </Tabs>
               </div>
             ) : (
@@ -1312,57 +1356,7 @@ export default function DepartmentPositionManager() {
             </Card>
             </div>
 
-            {/* Puestos Vacantes - Ahora debajo del main content */}
-        {vacanciesByDept.length > 0 && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm transition-all duration-300">
-            <CardHeader 
-              className="pb-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => setShowVacancies(!showVacancies)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`transition-transform duration-200 ${showVacancies ? 'rotate-180' : ''}`}>
-                    <ChevronDown className="w-5 h-5 text-slate-400" />
-                  </div>
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                  <CardTitle className="text-base">Puestos Vacantes en Toda la Estructura</CardTitle>
-                </div>
-                <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                  {vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0)} vacantes
-                </Badge>
-              </div>
-            </CardHeader>
-            {showVacancies && (
-              <CardContent className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200">
-                <ScrollArea className="h-[140px]">
-                  <div className="grid grid-cols-3 gap-3">
-                    {vacanciesByDept.map(dept => (
-                      <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
-                        <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
-                          <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">
-                            {dept.vacancies.length}
-                          </Badge>
-                        </div>
-                        <div className="p-2 space-y-1">
-                          {dept.vacancies.map((vac, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
-                              <span className="font-medium text-slate-700 truncate max-w-[100px]" title={vac.position}>{vac.position}</span>
-                              <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
-                                {vac.vacantSlots}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            )}
-          </Card>
-        )}
+        
         </div>
       ) : (
         <OrganizationalChart 
