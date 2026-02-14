@@ -285,6 +285,28 @@ function TeamsMigrationPanel() {
   const [searchTerm, setSearchTerm] = useState("");
   const normalize = (s) => (s || "").toString().trim().toLowerCase();
   const autoRunRef = React.useRef(false);
+  const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+  const updateEmployeeWithRetry = async (id, data, maxRetries = 5) => {
+    let attempt = 0;
+    let delay = 500;
+    while (attempt < maxRetries) {
+      try {
+        await base44.entities.EmployeeMasterDatabase.update(id, data);
+        return true;
+      } catch (e) {
+        const msg = String(e?.message || "");
+        const isRate = msg.includes("429") || msg.toLowerCase().includes("rate limit");
+        attempt++;
+        if (isRate && attempt < maxRetries) {
+          await sleep(delay);
+          delay = Math.min(delay * 2, 5000);
+          continue;
+        }
+        return false;
+      }
+    }
+    return false;
+  };
 
   useEffect(() => {
     analyzeTeams();
@@ -404,12 +426,8 @@ function TeamsMigrationPanel() {
       const norm = (s) => (s || "").toString().trim().toLowerCase();
       const t1 = teams.find(t => t.team_key === "team_1");
       const t2 = teams.find(t => t.team_key === "team_2");
-      if (t1 && t1.team_name !== "Turno 1") {
-        await base44.entities.TeamConfig.update(t1.id, { team_name: "Turno 1" });
-      }
-      if (t2 && t2.team_name !== "Turno 2") {
-        await base44.entities.TeamConfig.update(t2.id, { team_name: "Turno 2" });
-      }
+      if (t1 && t1.team_name !== "Turno 1") await updateEmployeeWithRetry(t1.id, { team_name: "Turno 1" });
+      if (t2 && t2.team_name !== "Turno 2") await updateEmployeeWithRetry(t2.id, { team_name: "Turno 2" });
       const team1Id = t1 ? t1.id : (teams.find(t => t.team_key === "team_1")?.id);
       const team2Id = t2 ? t2.id : (teams.find(t => t.team_key === "team_2")?.id);
 
@@ -432,13 +450,18 @@ function TeamsMigrationPanel() {
       });
 
       let success = 0;
-      for (let i = 0; i < toUpdate.length; i += 10) {
-        const chunk = toUpdate.slice(i, i + 10);
-        await Promise.all(chunk.map(u => base44.entities.EmployeeMasterDatabase.update(u.id, u.data)));
-        success += chunk.length;
+      let failed = 0;
+      for (const u of toUpdate) {
+        const ok = await updateEmployeeWithRetry(u.id, u.data);
+        if (ok) success++; else failed++;
+        await sleep(150);
       }
 
-      toast.success(`Normalización completada: ${success} empleados actualizados.`);
+      if (failed > 0) {
+        toast.warning(`Normalización parcial: ${success} actualizados, ${failed} fallidos (reintentos agotados).`);
+      } else {
+        toast.success(`Normalización completada: ${success} empleados actualizados.`);
+      }
       await analyzeTeams();
     } catch (e) {
       console.error(e);
