@@ -69,6 +69,29 @@ export default function DepartmentPositionManager() {
   const [empToEdit, setEmpToEdit] = useState(null);
   const [showVacancies, setShowVacancies] = useState(false);
 
+  const normalizeTxt = (s) =>
+    (s || "")
+      .toString()
+      .trim()
+      .replace(/\s+/g, " ")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+
+  const canonicalPosName = (s) => {
+    let n = normalizeTxt(s);
+    // Unificar LÍNEA/LINEA
+    n = n.replace(/L[IÍ]NEA/g, "LINEA");
+    // Unificar género/forma OPERARIO/A
+    if (/\bOPERARI([OA])\b/.test(n) || n.includes("OPERARIO/A")) {
+      n = n.replace(/\bOPERARIA\b/g, "OPERARIO/A")
+           .replace(/\bOPERARIO\b/g, "OPERARIO/A");
+    }
+    // Unificar RESPONSABLE/SEGUNDA variantes con/ sin tilde ya cubierto por normalizeTxt
+    n = n.replace(/\s+/g, " ").trim();
+    return n;
+  };
+
   // Queries
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
@@ -185,29 +208,6 @@ export default function DepartmentPositionManager() {
     
     return employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
   }, [employees, selectedDept]);
-
-  const normalizeTxt = (s) =>
-    (s || "")
-      .toString()
-      .trim()
-      .replace(/\s+/g, " ")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toUpperCase();
-
-  const canonicalPosName = (s) => {
-    let n = normalizeTxt(s);
-    // Unificar LÍNEA/LINEA
-    n = n.replace(/L[IÍ]NEA/g, "LINEA");
-    // Unificar género/forma OPERARIO/A
-    if (/\bOPERARI([OA])\b/.test(n) || n.includes("OPERARIO/A")) {
-      n = n.replace(/\bOPERARIA\b/g, "OPERARIO/A")
-           .replace(/\bOPERARIO\b/g, "OPERARIO/A");
-    }
-    // Unificar RESPONSABLE/SEGUNDA variantes con/ sin tilde ya cubierto por normalizeTxt
-    n = n.replace(/\s+/g, " ").trim();
-    return n;
-  };
 
   const consolidatePositionsMutation = useMutation({
     mutationFn: async () => {
