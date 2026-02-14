@@ -21,6 +21,7 @@ export default function CdeAppSyncPanel() {
   const [step, setStep] = useState(0); // 0: Config, 1: Rooms, 2: Machines, 3: Productions
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState([]);
+  const isEnvKey = Boolean(import.meta.env?.VITE_CDEAPP_API_KEY);
   
   const addLog = (msg, type = "info") => {
     setLogs(prev => [...prev, { time: new Date(), msg, type }]);
