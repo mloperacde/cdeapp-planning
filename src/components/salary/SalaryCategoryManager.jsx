@@ -642,17 +642,19 @@ export default function SalaryCategoryManager() {
             <Award className="w-5 h-5 text-indigo-600" />
             Estructura: Departamentos y Categorías
           </CardTitle>
-          {orphanCategories.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Badge variant="destructive" className="text-xs">{orphanCategories.length} sin departamento</Badge>
-              <Button variant="outline" size="sm" onClick={() => cleanupMutation.mutate()} disabled={cleanupMutation.isPending}>
-                Limpiar huérfanas
-              </Button>
-              <Button variant="secondary" size="sm" onClick={restoreFromBackup}>
-                Restaurar últimas
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {orphanCategories.length > 0 && (
+              <>
+                <Badge variant="destructive" className="text-xs">{orphanCategories.length} sin departamento</Badge>
+                <Button variant="outline" size="sm" onClick={() => cleanupMutation.mutate()} disabled={cleanupMutation.isPending}>
+                  Limpiar huérfanas
+                </Button>
+              </>
+            )}
+            <Button variant="secondary" size="sm" onClick={restoreFromBackup}>
+              Restaurar últimas
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[calc(100vh-360px)]">
