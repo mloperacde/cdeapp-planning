@@ -180,6 +180,88 @@ export default function DepartmentPositionManager() {
     return employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
   }, [employees, selectedDept]);
 
+  const normalizeTxt = (s) =>
+    (s || "")
+      .toString()
+      .trim()
+      .replace(/\s+/g, " ")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+
+  const consolidatePositionsMutation = useMutation({
+    mutationFn: async () => {
+      const [allPos, allEmps, allDepts] = await Promise.all([
+        base44.entities.Position.list(),
+        base44.entities.EmployeeMasterDatabase.list(),
+        base44.entities.Department.list(),
+      ]);
+      const deptNameById = new Map(allDepts.map(d => [d.id, d.name]));
+      const keyOf = (p) => `${p.department_id || "NONE"}|${normalizeTxt(p.name)}`;
+      const groups = new Map();
+      for (const p of allPos) {
+        const k = keyOf(p);
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(p);
+      }
+      let movedEmployees = 0;
+      let deletedPositions = 0;
+      for (const [k, arr] of groups.entries()) {
+        if (arr.length <= 1) continue;
+        const canonical = arr.reduce((best, cur) => {
+          const score = (cur.max_headcount || 0);
+          const bestScore = (best.max_headcount || 0);
+          return score > bestScore ? cur : best;
+        }, arr[0]);
+        const dName = deptNameById.get(canonical.department_id) || canonical.department_name || "";
+        for (const dup of arr) {
+          if (dup.id === canonical.id) continue;
+          const dupNameNorm = normalizeTxt(dup.name);
+          const canonicalName = canonical.name;
+          // Reasignar empleados cuyo puesto coincide con el duplicado
+          const impacted = allEmps.filter(e => 
+            normalizeTxt(e.puesto) === dupNameNorm &&
+            normalizeTxt(e.departamento) === normalizeTxt(dName)
+          );
+          for (const emp of impacted) {
+            await base44.entities.EmployeeMasterDatabase.update(emp.id, { puesto: canonicalName });
+            movedEmployees++;
+          }
+          // Eliminar puesto duplicado
+          await base44.entities.Position.delete(dup.id);
+          deletedPositions++;
+        }
+      }
+      return { movedEmployees, deletedPositions };
+    },
+    onSuccess: async ({ movedEmployees, deletedPositions }) => {
+      await queryClient.invalidateQueries({ queryKey: ['positions'] });
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success(`Consolidación completada: ${deletedPositions} puestos duplicados eliminados, ${movedEmployees} empleados reasignados`);
+    },
+    onError: () => {
+      toast.error("No se pudo consolidar puestos duplicados");
+    }
+  });
+
+  const autoConsolidatedRef = React.useRef(false);
+  useEffect(() => {
+    if (autoConsolidatedRef.current) return;
+    if (!positions || positions.length === 0) return;
+    // Detectar duplicados por (department_id|name normalizado)
+    const seen = new Set();
+    const dup = new Set();
+    for (const p of positions) {
+      const k = `${p.department_id || "NONE"}|${normalizeTxt(p.name)}`;
+      if (seen.has(k)) dup.add(k);
+      else seen.add(k);
+    }
+    if (dup.size > 0) {
+      autoConsolidatedRef.current = true;
+      consolidatePositionsMutation.mutate();
+    }
+  }, [positions]);
+
   // Expand root departments by default
   useEffect(() => {
     if (departments.length > 0 && expandedDepts.size === 0) {
@@ -1053,9 +1135,14 @@ export default function DepartmentPositionManager() {
                         <Briefcase className="w-5 h-5 text-slate-500" />
                         Puestos Definidos
                       </h4>
-                      <Button size="sm" onClick={handleCreatePos} className="bg-indigo-600 hover:bg-indigo-700">
-                        <Plus className="w-4 h-4 mr-2" /> Añadir Puesto
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => consolidatePositionsMutation.mutate()}>
+                          Consolidar duplicados
+                        </Button>
+                        <Button size="sm" onClick={handleCreatePos} className="bg-indigo-600 hover:bg-indigo-700">
+                          <Plus className="w-4 h-4 mr-2" /> Añadir Puesto
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
@@ -1126,9 +1213,14 @@ export default function DepartmentPositionManager() {
                          <Users className="w-5 h-5 text-slate-500" />
                          Empleados en {selectedDept.name}
                       </h4>
-                      <Button size="sm" onClick={() => { setEmpToEdit(null); setIsEmpDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                         <UserCircle className="w-4 h-4 mr-2" /> Asignar/Mover Empleado
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="destructive" className="bg-amber-100 text-amber-700 border-amber-200">
+                          {deptEmployees.filter(e => !normalizeTxt(e.puesto)).length} sin puesto
+                        </Badge>
+                        <Button size="sm" onClick={() => { setEmpToEdit(null); setIsEmpDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                           <UserCircle className="w-4 h-4 mr-2" /> Asignar/Mover Empleado
+                        </Button>
+                      </div>
                    </div>
 
                    <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
