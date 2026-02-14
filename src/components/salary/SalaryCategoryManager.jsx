@@ -47,6 +47,15 @@ export default function SalaryCategoryManager() {
     return departments.find(d => normalizeDeptName(d.name) === target) || null;
   };
 
+  const normalizeText = (s) =>
+    (s || "")
+      .toString()
+      .trim()
+      .replace(/\s+/g, " ")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+
   const normalizeCategoryRecord = (cat) => {
     const dName = (cat.department || cat.department_name || "").toString().trim();
     const dObj = !dName && cat.department_id ? departments.find(d => d.id === cat.department_id) : null;
@@ -63,7 +72,7 @@ export default function SalaryCategoryManager() {
 
   const consolidateByBaseKey = (arr) => {
     const getBaseKey = (x) =>
-      `${(x.code || "").toString().trim().toUpperCase()}|${(x.name || "").toString().trim().toUpperCase()}`;
+      `${normalizeText(x.code)}|${normalizeText(x.name)}`;
     const hasDept = (x) => {
       const s = (x.department || x.department_name || "").toString().trim();
       return Boolean(s) || Boolean(x.department_id);
@@ -316,7 +325,7 @@ export default function SalaryCategoryManager() {
       store = await fetchStoreCategories();
       const unionMap = new Map();
       const put = (c, source) => {
-        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${(c.name || "").toString().trim().toUpperCase()}`;
+        const key = `${normalizeText(c.code)}|${normalizeText(c.name)}`;
         // prefer db over store; prefer record with department fields
         if (!unionMap.has(key)) {
           unionMap.set(key, c);
@@ -368,7 +377,7 @@ export default function SalaryCategoryManager() {
       store = await fetchStoreCategories();
       const unionMap = new Map();
       const put = (c, source) => {
-        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${(c.name || "").toString().trim().toUpperCase()}`;
+        const key = `${normalizeText(c.code)}|${normalizeText(c.name)}`;
         if (!unionMap.has(key)) {
           unionMap.set(key, c);
         } else if (source === 'db') {
@@ -407,7 +416,7 @@ export default function SalaryCategoryManager() {
       if (a.category_id) {
         byId.set(a.category_id, (byId.get(a.category_id) || 0) + 1);
       }
-      const nm = (a.category_name || a.name || "").toString().trim().toUpperCase();
+      const nm = normalizeText(a.category_name || a.name || "");
       const dept = normalizeDeptName(a.department || a.department_name || "");
       if (nm) {
         const k = `${nm}|${dept}`;
