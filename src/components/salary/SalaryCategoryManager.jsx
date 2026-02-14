@@ -18,7 +18,7 @@ export default function SalaryCategoryManager() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState("__ALL__");
   const [usingFallback, setUsingFallback] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -265,6 +265,10 @@ export default function SalaryCategoryManager() {
       db.forEach(c => put(c, 'db'));
       store.forEach(c => put(c, 'store'));
       const merged = Array.from(unionMap.values());
+      if (selectedDepartment === "__ALL__") {
+        setUsingFallback(!dbOk);
+        return merged;
+      }
       const res = merged.filter(c => {
         const cDept = c.department || c.department_name || "";
         const cNorm = c.department_normalized || normalizeDeptName(cDept);
@@ -338,7 +342,7 @@ export default function SalaryCategoryManager() {
   const categoriesByDept = useMemo(() => {
     const map = new Map();
     allCategories.forEach(c => {
-      const dept = (c.department || "Sin departamento").toString();
+      const dept = (c.department || c.department_name || "Sin departamento").toString();
       if (!map.has(dept)) map.set(dept, []);
       map.get(dept).push(c);
     });
@@ -555,13 +559,14 @@ export default function SalaryCategoryManager() {
                     <SelectValue placeholder="Seleccionar departamento" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__ALL__">Todos</SelectItem>
                     {departments.map(d => (
                       <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={() => handleOpenDialog()} className="gap-2" disabled={!selectedDepartment}>
+              <Button onClick={() => handleOpenDialog()} className="gap-2" disabled={!selectedDepartment || selectedDepartment === "__ALL__"}>
                 <Plus className="w-4 h-4" />
                 Nueva Categoría
               </Button>
@@ -726,9 +731,33 @@ export default function SalaryCategoryManager() {
                               {(c.level ? `L${c.level} - ` : "") + c.name} ({count})
                             </Badge>
                             {dept === "Sin departamento" && (
-                              <Button size="xs" variant="outline" onClick={() => handleOpenDialog(c)}>
-                                Asignar
-                              </Button>
+                              <>
+                                <Button size="xs" variant="outline" onClick={() => handleOpenDialog(c)}>
+                                  Asignar
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="destructive"
+                                  onClick={async () => {
+                                    const arr = await fetchStoreCategories();
+                                    const next = arr.filter(x => {
+                                      const sameById = x.id && c.id && x.id === c.id;
+                                      const sameByKey =
+                                        (x.code || '').toString().trim().toUpperCase() === (c.code || '').toString().trim().toUpperCase() &&
+                                        (x.name || '').toString().trim().toUpperCase() === (c.name || '').toString().trim().toUpperCase() &&
+                                        !(x.department || x.department_name);
+                                      return !(sameById || sameByKey);
+                                    });
+                                    await writeStoreCategories(next);
+                                    queryClient.invalidateQueries({
+                                      predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
+                                    });
+                                    toast.success("Eliminado de 'Sin departamento'");
+                                  }}
+                                >
+                                  Borrar
+                                </Button>
+                              </>
                             )}
                           </div>
                         );
