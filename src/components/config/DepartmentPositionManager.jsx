@@ -116,6 +116,8 @@ export default function DepartmentPositionManager() {
     },
   });
 
+  const [mainTab, setMainTab] = useState("departments");
+
   // Derived State
   const selectedDept = useMemo(() => 
     departments.find(d => d.id === selectedDeptId), 
@@ -286,11 +288,11 @@ export default function DepartmentPositionManager() {
     }
   }, [positions]);
 
-  // Expand root departments by default
+  // Expand all departments by default
   useEffect(() => {
     if (departments.length > 0 && expandedDepts.size === 0) {
-      const roots = departments.filter(d => !d.parent_id).map(d => d.id);
-      setExpandedDepts(new Set(roots));
+      const allIds = departments.map(d => d.id);
+      setExpandedDepts(new Set(allIds));
     }
   }, [departments]);
 
@@ -524,6 +526,54 @@ export default function DepartmentPositionManager() {
       color: dept.color || "#3b82f6"
     });
     setIsDeptDialogOpen(true);
+  };
+
+  const updateDeptWithRetry = async (id, data, maxRetries = 5) => {
+    let attempt = 0;
+    let delay = 400;
+    while (attempt < maxRetries) {
+      try {
+        await base44.entities.Department.update(id, data);
+        return true;
+      } catch (e) {
+        const msg = String(e?.message || "");
+        const rate = msg.includes("429") || msg.toLowerCase().includes("rate limit");
+        attempt++;
+        if (rate && attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, delay));
+          delay = Math.min(delay * 2, 4000);
+          continue;
+        }
+        return false;
+      }
+    }
+    return false;
+  };
+
+  const reorderSiblings = async (parentId, draggedId, targetId) => {
+    const sameParent = departments
+      .filter(d => (d.parent_id || null) === (parentId || null))
+      .sort((a, b) => (a.orden || 0) - (b.orden || 0) || (a.name || "").localeCompare(b.name || ""));
+    const dragged = sameParent.find(d => d.id === draggedId);
+    const target = sameParent.find(d => d.id === targetId);
+    if (!dragged || !target) return;
+    const newOrder = sameParent.filter(d => d.id !== draggedId);
+    const idx = newOrder.findIndex(d => d.id === targetId);
+    newOrder.splice(idx + 1, 0, dragged);
+    let updated = 0;
+    for (let i = 0; i < newOrder.length; i++) {
+      const d = newOrder[i];
+      const desired = i;
+      if ((d.orden || 0) !== desired) {
+        const ok = await updateDeptWithRetry(d.id, { orden: desired });
+        if (ok) updated++;
+        await new Promise(r => setTimeout(r, 120));
+      }
+    }
+    if (updated > 0) {
+      await queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success("Orden actualizado");
+    }
   };
 
   const handleCreatePos = () => {
@@ -849,11 +899,13 @@ export default function DepartmentPositionManager() {
                 toast.error("No se puede mover un departamento dentro de su descendiente");
                 return;
             }
-            if (draggedItem.data.parent_id === dept.id) return; // No change
-
-            moveDeptMutation.mutate({ id: draggedItem.id, newParentId: dept.id });
+            if (draggedItem.data.parent_id === dept.parent_id) {
+                reorderSiblings(dept.parent_id || null, draggedItem.id, dept.id);
+            } else {
+                moveDeptMutation.mutate({ id: draggedItem.id, newParentId: dept.id });
+            }
         } else if (draggedItem.type === 'pos') {
-            if (draggedItem.data.department_id === dept.id) return; // No change
+            if (draggedItem.data.department_id === dept.id) return; 
             movePosMutation.mutate({ id: draggedItem.id, newDeptId: dept.id });
         }
         
@@ -950,7 +1002,9 @@ export default function DepartmentPositionManager() {
         
         {isExpanded && hasChildren && (
           <div className="mt-1 ml-3 pl-3 border-l border-slate-200">
-            {children.map(child => (
+            {children
+              .sort((a, b) => (a.orden || 0) - (b.orden || 0) || (a.name || "").localeCompare(b.name || ""))
+              .map(child => (
               <DeptTreeItem key={child.id} dept={child} level={level + 1} />
             ))}
           </div>
@@ -1044,7 +1098,16 @@ export default function DepartmentPositionManager() {
 
       {viewMode === "editor" ? (
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-          <div className="flex-1 flex gap-6 overflow-hidden">
+          <div className="px-3 pt-2">
+            <Tabs value={mainTab} onValueChange={setMainTab}>
+              <TabsList>
+                <TabsTrigger value="departments">Departamentos</TabsTrigger>
+                <TabsTrigger value="vacancies">Vacantes ({totalVacancies})</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <Tabs value={mainTab} onValueChange={setMainTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsContent value="departments" className="flex-1 flex gap-6 overflow-hidden data-[state=inactive]:hidden">
           {/* Left Sidebar: Tree View */}
           <Card className="flex-1 min-w-[320px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
             <div className="p-4 border-b border-slate-100 flex gap-2">
@@ -1081,7 +1144,8 @@ export default function DepartmentPositionManager() {
             <ScrollArea className="flex-1 p-3">
               <div className="space-y-1">
                 {departments
-                  .filter(d => !d.parent_id) // Roots
+                  .filter(d => !d.parent_id)
+                  .sort((a, b) => (a.orden || 0) - (b.orden || 0) || (a.name || "").localeCompare(b.name || ""))
                   .map(dept => (
                     <DeptTreeItem key={dept.id} dept={dept} />
                   ))}
@@ -1165,7 +1229,6 @@ export default function DepartmentPositionManager() {
                     <TabsList>
                       <TabsTrigger value="positions">Puestos ({deptPositions.length})</TabsTrigger>
                       <TabsTrigger value="employees">Empleados ({deptEmployees.length})</TabsTrigger>
-                      <TabsTrigger value="vacancies">Vacantes ({totalVacancies})</TabsTrigger>
                     </TabsList>
                   </div>
 
@@ -1317,45 +1380,6 @@ export default function DepartmentPositionManager() {
                       </ScrollArea>
                    </div>
                   </TabsContent>
-                  
-                  <TabsContent value="vacancies" className="flex-1 p-6 overflow-hidden flex flex-col mt-0 data-[state=inactive]:hidden">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                        Puestos Vacantes en Toda la Estructura
-                      </h4>
-                      <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                        {totalVacancies} vacantes
-                      </Badge>
-                    </div>
-                    <div className="flex-1 border rounded-lg bg-white overflow-hidden shadow-sm p-4">
-                      <ScrollArea className="h-full">
-                        <div className="grid grid-cols-3 gap-3">
-                          {vacanciesByDept.map(dept => (
-                            <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
-                              <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
-                                <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
-                                <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                  {dept.vacancies.length}
-                                </Badge>
-                              </div>
-                              <div className="p-2 space-y-1">
-                                {dept.vacancies.map((vac, idx) => (
-                                  <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
-                                    <span className="font-medium text-slate-700 truncate max-w-[100px]" title={vac.position}>{vac.position}</span>
-                                    <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
-                                      {vac.vacantSlots}
-                                    </Badge>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  </TabsContent>
                 </Tabs>
               </div>
             ) : (
@@ -1370,7 +1394,46 @@ export default function DepartmentPositionManager() {
               </div>
             )}
             </Card>
+          </TabsContent>
+          <TabsContent value="vacancies" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                Puestos Vacantes en Toda la Estructura
+              </h4>
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                {totalVacancies} vacantes
+              </Badge>
             </div>
+            <div className="flex-1 border rounded-lg bg-white overflow-hidden shadow-sm p-4">
+              <ScrollArea className="h-full">
+                <div className="grid grid-cols-3 gap-3">
+                  {vacanciesByDept.map(dept => (
+                    <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
+                      <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
+                        <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
+                        <Badge variant="outline" className="text-[10px] px-1 py-0">
+                          {dept.vacancies.length}
+                        </Badge>
+                      </div>
+                      <div className="p-2 space-y-1">
+                        {dept.vacancies.map((vac, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
+                            <span className="font-medium text-slate-700 truncate max-w-[100px]" title={vac.position}>{vac.position}</span>
+                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
+                              {vac.vacantSlots}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </TabsContent>
+          </Tabs>
 
         
         </div>
