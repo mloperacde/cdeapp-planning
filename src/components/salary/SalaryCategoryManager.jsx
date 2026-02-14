@@ -44,50 +44,55 @@ export default function SalaryCategoryManager() {
     return departments.find(d => normalizeDeptName(d.name) === target) || null;
   };
 
+  const fetchStoreCategories = async () => {
+    try {
+      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+      const record = store[0];
+      if (!record) return [];
+      let raw = record.value || record.description || record.app_subtitle || "[]";
+      if (typeof raw === "string") {
+        try { return JSON.parse(raw) || []; } catch { return []; }
+      }
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  };
+
   const { data: categories = [] } = useQuery({
     queryKey: ['salaryCategories', selectedDepartment],
     queryFn: async () => {
       if (!selectedDepartment) return [];
-      let res = [];
+      const dept = findDeptByName(selectedDepartment);
+      const normalized = normalizeDeptName(selectedDepartment);
+      let db = [];
+      let store = [];
+      let dbOk = false;
       try {
-        const dept = findDeptByName(selectedDepartment);
-        const normalized = normalizeDeptName(selectedDepartment);
-        const all = await base44.entities.SalaryCategory.list('level');
-        res = all.filter(c => {
-          const cDept = c.department || c.department_name || "";
-          const cNorm = c.department_normalized || normalizeDeptName(cDept);
-          const matchesName = cDept === selectedDepartment || normalizeDeptName(cDept) === normalized;
-          const matchesId = !!dept && (c.department_id === dept.id);
-          const matchesNorm = cNorm === normalized;
-          return matchesName || matchesId || matchesNorm;
-        });
-        setUsingFallback(false);
+        db = await base44.entities.SalaryCategory.list('level');
+        dbOk = true;
       } catch {
-        try {
-          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
-          const record = store[0];
-          let arr = [];
-          if (record) {
-            let raw = record.value || record.description || record.app_subtitle || "[]";
-            if (typeof raw === "string") {
-              try { arr = JSON.parse(raw); } catch { arr = []; }
-            } else if (Array.isArray(raw)) {
-              arr = raw;
-            }
-          }
-          const normalized = normalizeDeptName(selectedDepartment);
-          res = arr.filter(c => {
-            const cDept = c.department || c.department_name || "";
-            const cNorm = c.department_normalized || normalizeDeptName(cDept);
-            const deptIdMatch = !!findDeptByName(selectedDepartment)?.id && c.department_id === findDeptByName(selectedDepartment)?.id;
-            return cDept === selectedDepartment || normalizeDeptName(cDept) === normalized || cNorm === normalized || deptIdMatch;
-          });
-          setUsingFallback(true);
-        } catch {
-          res = [];
-          setUsingFallback(true);
-        }
+        db = [];
       }
+      store = await fetchStoreCategories();
+      const unionMap = new Map();
+      const put = (c, source) => {
+        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
+        // prefer db over store
+        if (!unionMap.has(key) || source === 'db') unionMap.set(key, c);
+      };
+      db.forEach(c => put(c, 'db'));
+      store.forEach(c => put(c, 'store'));
+      const merged = Array.from(unionMap.values());
+      const res = merged.filter(c => {
+        const cDept = c.department || c.department_name || "";
+        const cNorm = c.department_normalized || normalizeDeptName(cDept);
+        const matchesName = cDept === selectedDepartment || normalizeDeptName(cDept) === normalized;
+        const matchesId = !!dept && (c.department_id === dept.id);
+        const matchesNorm = cNorm === normalized;
+        return matchesName || matchesId || matchesNorm;
+      });
+      setUsingFallback(!dbOk);
       return res;
     },
     enabled: true
@@ -96,30 +101,26 @@ export default function SalaryCategoryManager() {
   const { data: allCategories = [] } = useQuery({
     queryKey: ['salaryCategoriesAll'],
     queryFn: async () => {
+      let db = [];
+      let store = [];
+      let dbOk = false;
       try {
-        const all = await base44.entities.SalaryCategory.list('level');
-        setUsingFallback(false);
-        return all;
+        db = await base44.entities.SalaryCategory.list('level');
+        dbOk = true;
       } catch {
-        try {
-          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
-          const record = store[0];
-          let arr = [];
-          if (record) {
-            let raw = record.value || record.description || record.app_subtitle || "[]";
-            if (typeof raw === "string") {
-              try { arr = JSON.parse(raw); } catch { arr = []; }
-            } else if (Array.isArray(raw)) {
-              arr = raw;
-            }
-          }
-          setUsingFallback(true);
-          return arr;
-        } catch {
-          setUsingFallback(true);
-          return [];
-        }
+        db = [];
       }
+      store = await fetchStoreCategories();
+      const unionMap = new Map();
+      const put = (c, source) => {
+        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
+        if (!unionMap.has(key) || source === 'db') unionMap.set(key, c);
+      };
+      db.forEach(c => put(c, 'db'));
+      store.forEach(c => put(c, 'store'));
+      const merged = Array.from(unionMap.values());
+      setUsingFallback(!dbOk);
+      return merged;
     },
   });
 
