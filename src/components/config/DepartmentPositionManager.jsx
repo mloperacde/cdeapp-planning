@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { 
   Plus, Trash2, Edit, Save, X, Users, Briefcase, 
   ChevronRight, ChevronDown, Building2, UserCircle,
-  FolderTree, Layout, Search, ArrowRight, Settings2,
+  FolderTree, Layout, Search, ArrowRight, ArrowUp, ArrowDown, Settings2,
   MoreHorizontal, GripVertical, RefreshCw, CheckCircle2, AlertCircle, Loader2, AlertTriangle
 } from "lucide-react";
 import {
@@ -652,6 +652,41 @@ export default function DepartmentPositionManager() {
     }
   };
 
+  const moveSiblingRelative = async (parentId, deptId, delta) => {
+    const sameParent = departments
+      .filter(d => (d.parent_id || null) === (parentId || null))
+      .sort((a, b) => {
+        const ao = localOrder.get(a.id) ?? (a.orden || 0);
+        const bo = localOrder.get(b.id) ?? (b.orden || 0);
+        if (ao !== bo) return ao - bo;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+    const idx = sameParent.findIndex(d => d.id === deptId);
+    if (idx < 0) return;
+    const newIdx = Math.max(0, Math.min(sameParent.length - 1, idx + delta));
+    if (newIdx === idx) return;
+    const newOrder = [...sameParent];
+    const [item] = newOrder.splice(idx, 1);
+    newOrder.splice(newIdx, 0, item);
+    const nextLocal = new Map(localOrder);
+    newOrder.forEach((d, i) => nextLocal.set(d.id, i));
+    setLocalOrder(nextLocal);
+    let updated = 0;
+    for (let i = 0; i < newOrder.length; i++) {
+      const d = newOrder[i];
+      const desired = i;
+      if ((d.orden || 0) !== desired) {
+        const ok = await updateDeptWithRetry(d.id, { orden: desired });
+        if (ok) updated++;
+        await new Promise(r => setTimeout(r, 120));
+      }
+    }
+    if (updated > 0) {
+      await queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success("Orden actualizado");
+    }
+  };
+
   const handleCreatePos = () => {
     if (!selectedDeptId) return;
     const maxOrden = Math.max(0, ...deptPositions.map(p => p.orden || 0));
@@ -1038,6 +1073,27 @@ export default function DepartmentPositionManager() {
               <div className="flex-1 truncate flex items-center justify-between">
                 <span className="font-medium">{dept.name}</span>
                 {dept.code && <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{dept.code}</span>}
+              </div>
+
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  title="Subir"
+                  onClick={(e) => { e.stopPropagation(); moveSiblingRelative(dept.parent_id || null, dept.id, -1); }}
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  title="Bajar"
+                  onClick={(e) => { e.stopPropagation(); moveSiblingRelative(dept.parent_id || null, dept.id, 1); }}
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </Button>
               </div>
 
               <DropdownMenu>
