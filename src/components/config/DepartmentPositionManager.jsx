@@ -429,6 +429,13 @@ export default function DepartmentPositionManager() {
         payload.parent_name = null;
       }
       
+      // Assign default order at the end of the target group
+      const targetParent = payload.parent_id ?? null;
+      const siblings = departments
+        .filter(d => (d.parent_id ?? null) === targetParent && d.id !== id);
+      const maxOrden = siblings.reduce((m, s) => Math.max(m, Number.isFinite(s.orden) ? s.orden : (s.orden ? Number(s.orden) : 0)), -1);
+      payload.orden = maxOrden + 1;
+
       return base44.entities.Department.update(id, payload);
     },
     onSuccess: async () => {
@@ -899,7 +906,9 @@ export default function DepartmentPositionManager() {
                 toast.error("No se puede mover un departamento dentro de su descendiente");
                 return;
             }
-            if (draggedItem.data.parent_id === dept.parent_id) {
+            const parentDragged = (draggedItem.data.parent_id ?? null);
+            const parentTarget = (dept.parent_id ?? null);
+            if (parentDragged === parentTarget) {
                 reorderSiblings(dept.parent_id || null, draggedItem.id, dept.id);
             } else {
                 moveDeptMutation.mutate({ id: draggedItem.id, newParentId: dept.id });
