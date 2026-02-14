@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import {
   Plus, Trash2, Edit, Save, X, Users, Briefcase, 
   ChevronRight, ChevronDown, Building2, UserCircle,
   FolderTree, Layout, Search, ArrowRight, ArrowUp, ArrowDown, Settings2,
-  MoreHorizontal, GripVertical, RefreshCw, CheckCircle2, AlertCircle, Loader2, AlertTriangle
+  MoreHorizontal, RefreshCw, CheckCircle2, AlertCircle, Loader2, AlertTriangle
 } from "lucide-react";
 import {
   Dialog,
@@ -69,8 +69,6 @@ export default function DepartmentPositionManager() {
   const [empToEdit, setEmpToEdit] = useState(null);
   const [showVacancies, setShowVacancies] = useState(false);
   const [localOrder, setLocalOrder] = useState(new Map());
-  const [hoveredDeptId, setHoveredDeptId] = useState(null);
-  const [pointerDragging, setPointerDragging] = useState(false);
 
   const normalizeTxt = (s) =>
     (s || "")
@@ -130,59 +128,7 @@ export default function DepartmentPositionManager() {
     setLocalOrder(m);
   }, [departments]);
 
-  const beginPointerDrag = useCallback((dept) => {
-    setDraggedItem({ type: 'dept', id: dept.id, data: dept });
-    setPointerDragging(true);
-    const onMove = (e) => {
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (!el) {
-        setHoveredDeptId(null);
-        return;
-      }
-      const target = el.closest?.('[data-dept-id], [data-drop-root]');
-      if (!target) {
-        setHoveredDeptId(null);
-        return;
-      }
-      if (target.hasAttribute('data-dept-id')) {
-        const id = target.getAttribute('data-dept-id');
-        setHoveredDeptId(id);
-      } else {
-        setHoveredDeptId('root-drop');
-      }
-    };
-    const onUp = (e) => {
-      const did = draggedItem?.id || dept.id;
-      const hoverId = hoveredDeptId;
-      setPointerDragging(false);
-      setHoveredDeptId(null);
-      setDraggedItem(null);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      if (!did) return;
-      if (!hoverId) return;
-      if (hoverId === 'root-drop') {
-        const d = departments.find(x => x.id === did);
-        if (!d) return;
-        if (!d.parent_id) return;
-        moveDeptMutation.mutate({ id: did, newParentId: "root" });
-        return;
-      }
-      if (hoverId === did) return;
-      const target = departments.find(x => x.id === hoverId);
-      const dragged = departments.find(x => x.id === did);
-      if (!target || !dragged) return;
-      const pDragged = dragged.parent_id || null;
-      const pTarget = target.parent_id || null;
-      if (pDragged === pTarget) {
-        reorderSiblings(pTarget, did, target.id);
-      } else {
-        moveDeptMutation.mutate({ id: did, newParentId: target.id });
-      }
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, [departments, draggedItem, hoveredDeptId]);
+  // DnD desactivado: solo flechas para reordenar
 
   // Derived State
   const selectedDept = useMemo(() => 
@@ -964,101 +910,21 @@ export default function DepartmentPositionManager() {
     const isExpanded = expandedDepts.has(dept.id);
     const isSelected = selectedDeptId === dept.id;
 
-    // Drag Handlers
-    const handleDragStart = (e) => {
-        e.stopPropagation();
-        setDraggedItem({ type: 'dept', id: dept.id, data: dept });
-        e.dataTransfer.setData('text/plain', dept.id);
-        e.dataTransfer.effectAllowed = 'move';
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (!draggedItem) return;
-
-        // Validation
-        if (draggedItem.type === 'dept') {
-            if (draggedItem.id === dept.id) return; // Can't drop on self
-            // Check descendant
-            const descendants = getDescendantIds(draggedItem.id, departments);
-            if (descendants.has(dept.id)) return; // Can't drop on descendant
-        }
-        
-        setIsDragOver(true);
-        e.dataTransfer.dropEffect = 'move';
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-
-        if (!draggedItem) return;
-
-        if (draggedItem.type === 'dept') {
-            if (draggedItem.id === dept.id) return;
-            const descendants = getDescendantIds(draggedItem.id, departments);
-            if (descendants.has(dept.id)) {
-                toast.error("No se puede mover un departamento dentro de su descendiente");
-                return;
-            }
-            const parentDragged = (draggedItem.data.parent_id ?? null);
-            const parentTarget = (dept.parent_id ?? null);
-            if (parentDragged === parentTarget) {
-                reorderSiblings(dept.parent_id || null, draggedItem.id, dept.id);
-            } else {
-                moveDeptMutation.mutate({ id: draggedItem.id, newParentId: dept.id });
-            }
-        } else if (draggedItem.type === 'pos') {
-            if (draggedItem.data.department_id === dept.id) return; 
-            movePosMutation.mutate({ id: draggedItem.id, newDeptId: dept.id });
-        }
-        
-        setDraggedItem(null);
-    };
+    // DnD desactivado: no se definen handlers
 
     return (
       <div className="select-none">
         <ContextMenu>
           <ContextMenuTrigger asChild>
             <div 
-              draggable
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onMouseDown={(e) => {
-                if (e.button !== 0) return;
-                e.preventDefault();
-                beginPointerDrag(dept);
-              }}
-              data-dept-id={dept.id}
               className={`
                 flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-all group
                 ${isSelected ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100 text-slate-700"}
-                ${(isDragOver || hoveredDeptId === dept.id) ? "bg-indigo-50 border-2 border-indigo-500 border-dashed" : "border-2 border-transparent"}
-                ${draggedItem?.id === dept.id ? "opacity-50" : ""}
+                border-2 border-transparent
               `}
               onClick={() => setSelectedDeptId(dept.id)}
             >
-              <div 
-                className="h-6 flex items-center px-1 mr-1 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100"
-                draggable
-                onDragStart={handleDragStart}
-                onDragEnd={() => setDraggedItem(null)}
-                onClick={(e) => e.stopPropagation()}
-                title="Arrastrar para mover"
-              >
-                <GripVertical className="w-4 h-4" />
-              </div>
+              
               <div 
                 className="p-1 rounded-sm hover:bg-slate-200 text-slate-400"
                 onClick={(e) => { e.stopPropagation(); toggleExpand(dept.id); }}
@@ -1109,13 +975,7 @@ export default function DepartmentPositionManager() {
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditDept(dept); }}>
                     <Edit className="w-4 h-4 mr-2" /> Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setDeptToMove(dept); 
-                    setIsMoveDialogOpen(true); 
-                  }}>
-                    <ArrowRight className="w-4 h-4 mr-2" /> Mover a...
-                  </DropdownMenuItem>
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="text-red-600 focus:text-red-600" 
@@ -1134,12 +994,7 @@ export default function DepartmentPositionManager() {
             <ContextMenuItem onClick={() => handleEditDept(dept)}>
               <Edit className="w-4 h-4 mr-2" /> Editar
             </ContextMenuItem>
-            <ContextMenuItem onClick={() => {
-               setDeptToMove(dept); 
-               setIsMoveDialogOpen(true);
-            }}>
-              <ArrowRight className="w-4 h-4 mr-2" /> Mover a...
-            </ContextMenuItem>
+            
             <ContextMenuSeparator />
             <ContextMenuItem 
               className="text-red-600 focus:text-red-600"
@@ -1280,23 +1135,7 @@ export default function DepartmentPositionManager() {
                 <span className="hidden xl:inline">Nuevo</span>
               </Button>
             </div>
-            <div 
-              className="mx-3 my-2 p-2 border-2 border-dashed rounded text-xs text-slate-500 bg-slate-50 hover:bg-slate-100"
-              data-drop-root
-              onDragOver={(e) => {
-                if (!draggedItem || draggedItem.type !== 'dept') return;
-                e.preventDefault();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (!draggedItem || draggedItem.type !== 'dept') return;
-                if (!draggedItem.data?.parent_id) return; // ya es raíz
-                moveDeptMutation.mutate({ id: draggedItem.id, newParentId: "root" });
-                setDraggedItem(null);
-              }}
-            >
-              Soltar aquí para mover a raíz
-            </div>
+            
             <ScrollArea className="flex-1 p-3">
               <div className="space-y-1">
                 {departments
