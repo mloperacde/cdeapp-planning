@@ -38,7 +38,10 @@ export default function SalaryCategoryManager() {
     queryFn: () => base44.entities.Department.list(),
   });
 
-  const normalizeDeptName = (name) => (name || "").toString().trim().toUpperCase();
+  const normalizeDeptName = (name) => {
+    const s = (name || "").toString().trim().replace(/\s+/g, " ");
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  };
   const findDeptByName = (name) => {
     const target = normalizeDeptName(name);
     return departments.find(d => normalizeDeptName(d.name) === target) || null;
@@ -57,6 +60,51 @@ export default function SalaryCategoryManager() {
     } catch {
       return [];
     }
+  };
+
+  const writeStoreCategories = async (arr) => {
+    try {
+      const serialized = JSON.stringify(arr);
+      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+      const record = store[0];
+      const payloadCfg = {
+        config_key: "salary_categories_store",
+        value: serialized,
+        description: serialized,
+        app_subtitle: serialized
+      };
+      if (record?.id) {
+        await base44.entities.AppConfig.update(record.id, payloadCfg);
+      } else {
+        await base44.entities.AppConfig.create(payloadCfg);
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const upsertStoreCategory = async (cat) => {
+    const arr = await fetchStoreCategories();
+    const key = cat.id || `${(cat.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(cat.department || cat.department_name || "")}|${(cat.name || "").toString().trim().toUpperCase()}`;
+    let updated = false;
+    const next = arr.map(c => {
+      const k = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
+      if (k === key) {
+        updated = true;
+        return { ...c, ...cat, updated_at: new Date().toISOString() };
+      }
+      return c;
+    });
+    if (!updated) {
+      next.push({ id: cat.id || Math.random().toString(36).slice(2), ...cat, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+    }
+    await writeStoreCategories(next);
+  };
+
+  const removeFromStore = async (id) => {
+    const arr = await fetchStoreCategories();
+    const next = arr.filter(c => c.id !== id);
+    await writeStoreCategories(next);
   };
 
   const { data: categories = [] } = useQuery({
@@ -178,43 +226,16 @@ export default function SalaryCategoryManager() {
         department_id: dept?.id || data.department_id || null
       };
       try {
-        if (editingCategory) {
-          return await base44.entities.SalaryCategory.update(editingCategory.id, payload);
-        }
-        return await base44.entities.SalaryCategory.create(payload);
+        const result = editingCategory
+          ? await base44.entities.SalaryCategory.update(editingCategory.id, payload)
+          : await base44.entities.SalaryCategory.create(payload);
+        // Espejar siempre en la configuración para garantizar lectura en fallback
+        await upsertStoreCategory({ ...(result || payload) });
+        setUsingFallback(false);
+        return result || payload;
       } catch {
         try {
-          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
-          const record = store[0];
-          let arr = [];
-          let appConfigId = null;
-          if (record) {
-            appConfigId = record.id;
-            let raw = record.value || record.description || record.app_subtitle || "[]";
-            if (typeof raw === "string") {
-              try { arr = JSON.parse(raw); } catch { arr = []; }
-            } else if (Array.isArray(raw)) {
-              arr = raw;
-            }
-          }
-          if (editingCategory) {
-            arr = arr.map(c => c.id === editingCategory.id ? { ...c, ...payload, updated_at: new Date().toISOString() } : c);
-          } else {
-            const id = Math.random().toString(36).slice(2);
-            arr.push({ id, ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
-          }
-          const serialized = JSON.stringify(arr);
-          const payloadCfg = {
-            config_key: "salary_categories_store",
-            value: serialized,
-            description: serialized,
-            app_subtitle: serialized
-          };
-          if (appConfigId) {
-            await base44.entities.AppConfig.update(appConfigId, payloadCfg);
-          } else {
-            await base44.entities.AppConfig.create(payloadCfg);
-          }
+          await upsertStoreCategory(payload);
           setUsingFallback(true);
           return payload;
         } catch {
@@ -237,35 +258,12 @@ export default function SalaryCategoryManager() {
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       try {
-        return await base44.entities.SalaryCategory.delete(id);
+        const res = await base44.entities.SalaryCategory.delete(id);
+        await removeFromStore(id);
+        return res;
       } catch {
         try {
-          const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
-          const record = store[0];
-          let arr = [];
-          let appConfigId = null;
-          if (record) {
-            appConfigId = record.id;
-            let raw = record.value || record.description || record.app_subtitle || "[]";
-            if (typeof raw === "string") {
-              try { arr = JSON.parse(raw); } catch { arr = []; }
-            } else if (Array.isArray(raw)) {
-              arr = raw;
-            }
-          }
-          arr = arr.filter(c => c.id !== id);
-          const serialized = JSON.stringify(arr);
-          const payloadCfg = {
-            config_key: "salary_categories_store",
-            value: serialized,
-            description: serialized,
-            app_subtitle: serialized
-          };
-          if (appConfigId) {
-            await base44.entities.AppConfig.update(appConfigId, payloadCfg);
-          } else {
-            await base44.entities.AppConfig.create(payloadCfg);
-          }
+          await removeFromStore(id);
           setUsingFallback(true);
           return { success: true };
         } catch {
