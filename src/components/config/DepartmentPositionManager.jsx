@@ -84,8 +84,12 @@ export default function DepartmentPositionManager() {
     queryKey: ['employees'],
     queryFn: async () => {
       const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
-      // Solo mostrar empleados activos
-      return all.filter(emp => emp.estado_empleado === 'Alta');
+      // Solo mostrar empleados activos (permitir 'ALTA' o 'ACTIVO')
+      const isActive = (s) => {
+        const v = (s || "").toString().trim().toUpperCase();
+        return v === "ALTA" || v === "ACTIVO";
+      };
+      return all.filter(emp => isActive(emp.estado_empleado));
     },
   });
 
@@ -128,12 +132,14 @@ export default function DepartmentPositionManager() {
       
       deptPositions.forEach(pos => {
         const assignedCount = deptEmps.filter(e => {
-          const empPuesto = (e.puesto || "").trim().toUpperCase();
-          const posName = (pos.name || "").trim().toUpperCase();
+          const empPuesto = canonicalPosName(e.puesto || "");
+          const posName = canonicalPosName(pos.name || "");
           return empPuesto === posName;
         }).length;
         
-        const vacantSlots = (pos.max_headcount || 1) - assignedCount;
+        const headcount = Number.isFinite(pos.max_headcount) ? (pos.max_headcount || 0) : (pos.max_headcount ? Number(pos.max_headcount) : 0);
+        if (headcount <= 0) return; // no mostrar vacantes para puestos sin cupo
+        const vacantSlots = headcount - assignedCount;
         
         if (vacantSlots > 0) {
           vacancies.push({
@@ -189,6 +195,20 @@ export default function DepartmentPositionManager() {
       .replace(/[\u0300-\u036f]/g, "")
       .toUpperCase();
 
+  const canonicalPosName = (s) => {
+    let n = normalizeTxt(s);
+    // Unificar LÍNEA/LINEA
+    n = n.replace(/L[IÍ]NEA/g, "LINEA");
+    // Unificar género/forma OPERARIO/A
+    if (/\bOPERARI([OA])\b/.test(n) || n.includes("OPERARIO/A")) {
+      n = n.replace(/\bOPERARIA\b/g, "OPERARIO/A")
+           .replace(/\bOPERARIO\b/g, "OPERARIO/A");
+    }
+    // Unificar RESPONSABLE/SEGUNDA variantes con/ sin tilde ya cubierto por normalizeTxt
+    n = n.replace(/\s+/g, " ").trim();
+    return n;
+  };
+
   const consolidatePositionsMutation = useMutation({
     mutationFn: async () => {
       const [allPos, allEmps, allDepts] = await Promise.all([
@@ -197,7 +217,7 @@ export default function DepartmentPositionManager() {
         base44.entities.Department.list(),
       ]);
       const deptNameById = new Map(allDepts.map(d => [d.id, d.name]));
-      const keyOf = (p) => `${p.department_id || "NONE"}|${normalizeTxt(p.name)}`;
+      const keyOf = (p) => `${p.department_id || "NONE"}|${canonicalPosName(p.name)}`;
       const groups = new Map();
       for (const p of allPos) {
         const k = keyOf(p);
@@ -216,11 +236,11 @@ export default function DepartmentPositionManager() {
         const dName = deptNameById.get(canonical.department_id) || canonical.department_name || "";
         for (const dup of arr) {
           if (dup.id === canonical.id) continue;
-          const dupNameNorm = normalizeTxt(dup.name);
+          const dupNameNorm = canonicalPosName(dup.name);
           const canonicalName = canonical.name;
           // Reasignar empleados cuyo puesto coincide con el duplicado
           const impacted = allEmps.filter(e => 
-            normalizeTxt(e.puesto) === dupNameNorm &&
+            canonicalPosName(e.puesto) === dupNameNorm &&
             normalizeTxt(e.departamento) === normalizeTxt(dName)
           );
           for (const emp of impacted) {
@@ -1238,8 +1258,8 @@ export default function DepartmentPositionManager() {
                                {deptEmployees
                                  .sort((a, b) => {
                                    // Ordenar por puesto
-                                   const posA = deptPositions.find(p => p.name === a.puesto);
-                                   const posB = deptPositions.find(p => p.name === b.puesto);
+                                  const posA = deptPositions.find(p => canonicalPosName(p.name) === canonicalPosName(a.puesto));
+                                  const posB = deptPositions.find(p => canonicalPosName(p.name) === canonicalPosName(b.puesto));
                                    const ordenA = posA?.orden || 999;
                                    const ordenB = posB?.orden || 999;
                                    if (ordenA !== ordenB) return ordenA - ordenB;
