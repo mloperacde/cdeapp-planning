@@ -939,6 +939,8 @@ export default function DepartmentPositionManager() {
         <ContextMenu>
           <ContextMenuTrigger>
             <div 
+              draggable
+              onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
