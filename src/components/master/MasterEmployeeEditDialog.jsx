@@ -83,6 +83,63 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     queryFn: () => base44.entities.Position.list(),
   });
 
+  const normalizeDept = (name) =>
+    (name || "")
+      .toString()
+      .trim()
+      .replace(/\s+/g, " ")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+
+  const isProduction = normalizeDept(formData?.departamento) === "PRODUCCION";
+
+  const fetchStoreCategories = async () => {
+    try {
+      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+      const record = store[0];
+      if (!record) return [];
+      const raw = record.value || record.description || record.app_subtitle || "[]";
+      return typeof raw === "string" ? JSON.parse(raw || "[]") : (Array.isArray(raw) ? raw : []);
+    } catch {
+      return [];
+    }
+  };
+
+  const { data: prodCategories = [] } = useQuery({
+    queryKey: ['salaryCategories_production'],
+    queryFn: async () => {
+      let db = [];
+      try {
+        db = await base44.entities.SalaryCategory.list('level');
+      } catch {
+        db = [];
+      }
+      let store = [];
+      try {
+        store = await fetchStoreCategories();
+      } catch {
+        store = [];
+      }
+      const all = [...db, ...store];
+      return all
+        .filter(c => normalizeDept(c.department || c.department_name) === "PRODUCCION")
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.level ?? 0) - (b.level ?? 0) || (a.name || "").localeCompare(b.name || ""));
+    },
+    enabled: open,
+    staleTime: 0,
+  });
+
+  const normalizeLegacyCategory = (val) => {
+    if (val == null) return val;
+    const s = (val || "").toString().trim().toUpperCase();
+    const digits = s.match(/\d+/)?.[0];
+    if (digits && ["1","2","3","4"].includes(digits)) {
+      return `CATEGORIA ${digits}`;
+    }
+    return s;
+  };
+
   // Derived state for filtering positions based on selected department
   const filteredPositions = useMemo(() => {
     if (!formData.departamento) return [];
@@ -122,6 +179,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       
       // Empezar con datos base del empleado
       const updatedFormData = { ...sourceData };
+      if (normalizeDept(updatedFormData.departamento) === "PRODUCCION") {
+        updatedFormData.categoria = normalizeLegacyCategory(updatedFormData.categoria);
+      }
       
       // PRIORIZAR EmployeeMachineSkill sobre campos legacy maquina_X
       // Esto asegura que siempre mostramos los datos correctos de la tabla normalizada
@@ -291,6 +351,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       queryClient.invalidateQueries({ queryKey: ['allEmployeesMaster'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['salaryCategories_production'] });
       queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
       queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
@@ -750,11 +811,35 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
                 <div className="space-y-2">
                   <Label>Categoría</Label>
-                  <Input
-                    value={formData.categoria || ""}
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                    placeholder="Ej: Categoría 1, S/C"
-                  />
+                  {isProduction ? (
+                    <Select
+                      value={formData.categoria || ""}
+                      onValueChange={(value) => setFormData({ ...formData, categoria: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar categoría (Producción)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {prodCategories.length > 0 ? (
+                          prodCategories.map(c => (
+                            <SelectItem key={(c.id || c.code || c.name)} value={c.name}>
+                              {c.name} {c.code ? `(${c.code})` : ""}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-sm text-muted-foreground">
+                            No hay categorías configuradas para PRODUCCIÓN
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={formData.categoria || ""}
+                      onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                      placeholder="Ej: Categoría 1, S/C"
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
