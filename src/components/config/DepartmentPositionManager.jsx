@@ -939,8 +939,6 @@ export default function DepartmentPositionManager() {
         <ContextMenu>
           <ContextMenuTrigger>
             <div 
-              draggable
-              onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -952,6 +950,16 @@ export default function DepartmentPositionManager() {
               `}
               onClick={() => setSelectedDeptId(dept.id)}
             >
+              <div 
+                className="h-6 flex items-center px-1 mr-1 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100"
+                draggable
+                onDragStart={handleDragStart}
+                onDragEnd={() => setDraggedItem(null)}
+                onClick={(e) => e.stopPropagation()}
+                title="Arrastrar para mover"
+              >
+                <GripVertical className="w-4 h-4" />
+              </div>
               <div 
                 className="p-1 rounded-sm hover:bg-slate-200 text-slate-400"
                 onClick={(e) => { e.stopPropagation(); toggleExpand(dept.id); }}
