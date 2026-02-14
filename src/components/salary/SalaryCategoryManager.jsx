@@ -347,8 +347,55 @@ export default function SalaryCategoryManager() {
     return colors[level - 1] || colors[0];
   };
 
+  const orphanCategories = useMemo(() => {
+    return allCategories.filter(c => {
+      const deptStr = (c.department || c.department_name || "").toString().trim();
+      const hasDept = Boolean(deptStr) || Boolean(c.department_id);
+      const keyName = (c.name || "").toString().trim().toUpperCase();
+      const deptNorm = normalizeDeptName(c.department || c.department_name || "");
+      const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${keyName}|${deptNorm}`) ?? 0;
+      return !hasDept && count === 0;
+    });
+  }, [allCategories, categoryCounts]);
+
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      const targets = orphanCategories;
+      for (const c of targets) {
+        try {
+          if (c.id) await base44.entities.SalaryCategory.delete(c.id);
+        } catch {
+        }
+      }
+      try {
+        const arr = await fetchStoreCategories();
+        const next = arr.filter(x => {
+          const hasDept = Boolean((x.department || x.department_name || "").toString().trim()) || Boolean(x.department_id);
+          const isOrphan = !hasDept;
+          if (x.id) {
+            return !targets.find(t => t.id === x.id) && !isOrphan;
+          }
+          return !isOrphan;
+        });
+        await writeStoreCategories(next);
+      } catch {
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
+      });
+      toast.success("Categorías sin departamento eliminadas");
+    },
+    onError: () => {
+      toast.error("No se pudieron limpiar las categorías huérfanas");
+    }
+  });
+
   return (
-    <div className="h-full flex flex-col gap-4">
+    <div className="h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -492,6 +539,14 @@ export default function SalaryCategoryManager() {
             <Award className="w-5 h-5 text-indigo-600" />
             Estructura: Departamentos y Categorías
           </CardTitle>
+          {orphanCategories.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Badge variant="destructive" className="text-xs">{orphanCategories.length} sin departamento</Badge>
+              <Button variant="outline" size="sm" onClick={() => cleanupMutation.mutate()} disabled={cleanupMutation.isPending}>
+                Limpiar huérfanas
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[calc(100vh-360px)]">
@@ -533,6 +588,7 @@ export default function SalaryCategoryManager() {
           )}
         </CardContent>
       </Card>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
