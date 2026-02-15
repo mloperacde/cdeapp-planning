@@ -160,6 +160,30 @@ export default function DepartmentPositionManager() {
   }, [employees, selectedDept]);
 
   // (Eliminado) Total de vacantes globales
+  const employeeCountByDept = useMemo(() => {
+    const map = new Map();
+    departments.forEach(dept => {
+      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
+      let deptEmps;
+
+      if (normalizedDeptName === "PRODUCCIÓN T1" || normalizedDeptName === "PRODUCCIÓN T1.1") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_1";
+        });
+      } else if (normalizedDeptName === "PRODUCCIÓN T2" || normalizedDeptName === "PRODUCCIÓN T2.2") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_2";
+        });
+      } else {
+        deptEmps = employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
+      }
+
+      map.set(dept.id, deptEmps.length);
+    });
+    return map;
+  }, [departments, employees]);
 
   const consolidatePositionsMutation = useMutation({
     mutationFn: async () => {
@@ -423,6 +447,9 @@ export default function DepartmentPositionManager() {
       code: "",
       parent_id: parentId || "root",
       manager_id: "",
+      manager_id_2: "",
+      manager_id_3: "",
+      manager_id_4: "",
       color: "#3b82f6"
     });
     setIsDeptDialogOpen(true);
@@ -436,6 +463,8 @@ export default function DepartmentPositionManager() {
       parent_id: dept.parent_id || "root",
       manager_id: dept.manager_id || "",
       manager_id_2: dept.manager_id_2 || "",
+      manager_id_3: dept.manager_id_3 || "",
+      manager_id_4: dept.manager_id_4 || "",
       color: dept.color || "#3b82f6"
     });
     setIsDeptDialogOpen(true);
@@ -558,7 +587,14 @@ export default function DepartmentPositionManager() {
 
   // Forms State
   const [deptForm, setDeptForm] = useState({
-    name: "", code: "", parent_id: "root", manager_id: "", manager_id_2: "", color: "#3b82f6"
+    name: "",
+    code: "",
+    parent_id: "root",
+    manager_id: "",
+    manager_id_2: "",
+    manager_id_3: "",
+    manager_id_4: "",
+    color: "#3b82f6"
   });
 
   const [posForm, setPosForm] = useState({
@@ -614,6 +650,7 @@ export default function DepartmentPositionManager() {
 
     const isExpanded = expandedDepts.has(dept.id);
     const isSelected = selectedDeptId === dept.id;
+    const employeeCount = employeeCountByDept.get(dept.id) ?? 0;
 
     // DnD desactivado: no se definen handlers
 
@@ -641,9 +678,19 @@ export default function DepartmentPositionManager() {
               
               <div className="w-2 h-8 rounded-full mr-1 shrink-0" style={{ backgroundColor: dept.color }}></div>
               
-              <div className="flex-1 truncate flex items-center justify-between">
-                <span className="font-medium">{dept.name}</span>
-                {dept.code && <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{dept.code}</span>}
+              <div className="flex-1 truncate flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-medium truncate">{dept.name}</span>
+                  {dept.code && (
+                    <span className="ml-1 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                      {dept.code}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-xs text-slate-500">
+                  <Users className="w-3 h-3 text-slate-400" />
+                  <span>{employeeCount}</span>
+                </div>
               </div>
 
               <div className="flex gap-1 opacity-0 group-hover:opacity-100">
@@ -861,6 +908,24 @@ export default function DepartmentPositionManager() {
                        <span className="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">{employees.find(e => e.id === selectedDept.manager_id_2)?.nombre}</span>
                      </div>
                    )}
+                  {selectedDept.manager_id_3 && (
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <UserCircle className="w-4 h-4 text-slate-400" />
+                      <span className="font-medium">Responsable 3:</span>
+                      <span className="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">
+                        {employees.find(e => e.id === selectedDept.manager_id_3)?.nombre}
+                      </span>
+                    </div>
+                  )}
+                  {selectedDept.manager_id_4 && (
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <UserCircle className="w-4 h-4 text-slate-400" />
+                      <span className="font-medium">Responsable 4:</span>
+                      <span className="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">
+                        {employees.find(e => e.id === selectedDept.manager_id_4)?.nombre}
+                      </span>
+                    </div>
+                  )}
                    <div className="flex items-center gap-2 text-slate-600">
                      <Briefcase className="w-4 h-4 text-slate-400" />
                      <span className="font-medium">Puestos:</span>
@@ -1118,6 +1183,24 @@ export default function DepartmentPositionManager() {
                   onValueChange={val => setDeptForm({...deptForm, manager_id_2: val})}
                   employees={employees}
                   placeholder="Buscar segundo responsable..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Responsable 3 (Opcional)</Label>
+                <EmployeeSearchSelect 
+                  value={deptForm.manager_id_3}
+                  onValueChange={val => setDeptForm({...deptForm, manager_id_3: val})}
+                  employees={employees}
+                  placeholder="Buscar tercer responsable..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Responsable 4 (Opcional)</Label>
+                <EmployeeSearchSelect 
+                  value={deptForm.manager_id_4}
+                  onValueChange={val => setDeptForm({...deptForm, manager_id_4: val})}
+                  employees={employees}
+                  placeholder="Buscar cuarto responsable..."
                 />
               </div>
             </div>
