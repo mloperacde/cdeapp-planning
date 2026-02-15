@@ -768,13 +768,6 @@ export default function DepartmentPositionManager() {
       <div className="flex-1 min-h-0 flex flex-col">
       {viewMode === "editor" ? (
         <div className="flex-1 min-h-0 flex flex-col gap-4">
-          <div className="px-3 pt-2">
-            <Tabs value={mainTab} onValueChange={setMainTab}>
-              <TabsList>
-                <TabsTrigger value="departments">Departamentos</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
           <Tabs value={mainTab} onValueChange={setMainTab} className="flex-1 min-h-0 flex flex-col">
           <TabsContent value="departments" className="flex flex-1 min-h-0 gap-6 items-stretch data-[state=inactive]:hidden">
           {/* Left Sidebar: Tree View */}
