@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { Badge } from "@/components/ui/badge";
-import { Search, Save } from "lucide-react";
+import { Search, Save, Edit3, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getEmployeeDefaultMachineExperience } from "@/lib/domain/planning";
@@ -24,6 +24,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
     const [filters, setFilters] = useState({});
     const [editingState, setEditingState] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
+    const [editingPositionId, setEditingPositionId] = useState(null);
     const pageSize = 20;
 
     // Fetch Data
@@ -339,7 +340,57 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                         </TableCell>
                                         <TableCell>{emp.equipo}</TableCell>
                                         <TableCell>
-                                            <Badge variant="outline" className="font-normal text-[10px]">{emp.puesto}</Badge>
+                                            {editingPositionId === emp.id ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        value={editingState[emp.id]?.puesto ?? emp.puesto ?? ""}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            setEditingState(prev => ({
+                                                                ...prev,
+                                                                [emp.id]: {
+                                                                    ...(prev[emp.id] || {}),
+                                                                    puesto: value
+                                                                }
+                                                            }));
+                                                        }}
+                                                        className="h-7 text-xs"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant="outline"
+                                                        className="h-7 w-7"
+                                                        onClick={() => setEditingPositionId(null)}
+                                                    >
+                                                        <History className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="outline" className="font-normal text-[10px]">
+                                                        {emp.puesto}
+                                                    </Badge>
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-7 w-7 text-slate-500 hover:text-slate-900"
+                                                        onClick={() => {
+                                                            setEditingPositionId(emp.id);
+                                                            setEditingState(prev => ({
+                                                                ...prev,
+                                                                [emp.id]: {
+                                                                    ...(prev[emp.id] || {}),
+                                                                    puesto: emp.puesto || ""
+                                                                }
+                                                            }));
+                                                        }}
+                                                    >
+                                                        <Edit3 className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </TableCell>
                                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => {
                                            // Get from EmployeeMachineSkill first, fallback to legacy
