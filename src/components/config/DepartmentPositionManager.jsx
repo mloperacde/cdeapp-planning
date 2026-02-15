@@ -1105,7 +1105,7 @@ export default function DepartmentPositionManager() {
           </Button>
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto" style={{ maxHeight: 'calc(100vh - 56px)' }}>
       {viewMode === "editor" ? (
         <div className="flex-1 min-h-0 flex flex-col gap-4">
           <div className="px-3 pt-2">
