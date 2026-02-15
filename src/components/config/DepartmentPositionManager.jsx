@@ -1151,7 +1151,7 @@ export default function DepartmentPositionManager() {
                   ))}
                 
                 {departments.length === 0 && (
-                  <div className="text-center py-10 text-slate-400 text-sm">
+                  <div className="text-center py-10 text-slate-400 text-[11px]">
                     No hay departamentos.<br/>Crea el primero para empezar.
                   </div>
                 )}
@@ -1171,8 +1171,8 @@ export default function DepartmentPositionManager() {
                         <Building2 className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold text-slate-900">{selectedDept.name}</h3>
-                        <div className="flex items-center gap-2 text-slate-500 text-sm">
+                        <h3 className="text-lg font-bold text-slate-900">{selectedDept.name}</h3>
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px]">
                           <Badge variant="outline" className="bg-white">{selectedDept.code || "N/A"}</Badge>
                           {selectedDept.parent_name && (
                             <>
@@ -1193,7 +1193,7 @@ export default function DepartmentPositionManager() {
                     </div>
                   </div>
 
-                  <div className="flex gap-6 text-sm flex-wrap">
+                  <div className="flex gap-6 text-[11px] flex-wrap">
                    <div className="flex items-center gap-2 text-slate-600">
                      <UserCircle className="w-4 h-4 text-slate-400" />
                      <span className="font-medium">Responsable:</span>
@@ -1218,7 +1218,7 @@ export default function DepartmentPositionManager() {
                      <Users className="w-4 h-4 text-slate-400" />
                      <span className="font-medium">Empleados Totales:</span>
                      <span className="font-bold text-indigo-600">{selectedDept.total_employee_count || 0}</span>
-                     <span className="text-xs text-slate-400">(incl. sub-depts)</span>
+                    <span className="text-[10px] text-slate-400">(incl. sub-depts)</span>
                    </div>
                   </div>
                 </div>
@@ -1235,7 +1235,7 @@ export default function DepartmentPositionManager() {
                   {/* Positions Tab */}
                   <TabsContent value="positions" className="p-6 flex flex-col mt-0 data-[state=inactive]:hidden">
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
                         <Briefcase className="w-5 h-5 text-slate-500" />
                         Puestos Definidos
                       </h4>
@@ -1250,7 +1250,7 @@ export default function DepartmentPositionManager() {
                     </div>
 
                     <div className="border rounded-lg bg-white flex flex-col shadow-sm">
-                      <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                         <div className="col-span-4">Nombre del Puesto</div>
                         <div className="col-span-2">Nivel</div>
                         <div className="col-span-2 text-center">Headcount</div>
@@ -1270,14 +1270,14 @@ export default function DepartmentPositionManager() {
                                   {pos.name}
                                 </div>
                                 <div className="col-span-2">
-                                  <Badge variant="secondary" className="font-normal text-xs bg-slate-100 text-slate-600">
+                                  <Badge variant="secondary" className="font-normal text-[10px] bg-slate-100 text-slate-600">
                                     {pos.level || "Mid"}
                                   </Badge>
                                 </div>
                                 <div className="col-span-2 text-center">
-                                  <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs">{pos.max_headcount || 1}</span>
+                                  <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-[10px]">{pos.max_headcount || 1}</span>
                                 </div>
-                                <div className="col-span-3 text-sm text-slate-500 truncate" title={pos.description}>
+                                <div className="col-span-3 text-[11px] text-slate-500 truncate" title={pos.description}>
                                   {pos.description || "-"}
                                 </div>
                                 <div className="col-span-1 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
