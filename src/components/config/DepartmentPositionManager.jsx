@@ -1053,7 +1053,7 @@ export default function DepartmentPositionManager() {
           <Tabs value={mainTab} onValueChange={setMainTab} className="flex-1 min-h-0 flex flex-col">
           <TabsContent value="departments" className="flex gap-6 min-h-0 data-[state=inactive]:hidden">
           {/* Left Sidebar: Tree View */}
-          <Card className="flex-1 min-h-0 min-w-[320px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="flex-none w-full lg:w-[46%] xl:w-[50%] min-w-[420px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <div className="p-4 border-b border-slate-100 flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -1094,7 +1094,7 @@ export default function DepartmentPositionManager() {
           </Card>
 
           {/* Right Panel: Details & Positions */}
-          <Card className="flex-1 min-h-0 flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="flex-1 min-w-0 min-h-0 flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             {selectedDept ? (
               <div className="flex flex-col">
                 {/* Header Info */}

@@ -4,6 +4,7 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { 
   Building2, 
   Users, 
@@ -28,6 +29,102 @@ import { toast } from "sonner";
 
 export default function OrganizationalStructure() {
   const [activeTab, setActiveTab] = useState("departments");
+
+  // Datos base para Vacantes
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments_vacancies_page'],
+    queryFn: () => base44.entities.Department.list(),
+  });
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions_vacancies_page'],
+    queryFn: () => base44.entities.Position.list(),
+  });
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees_vacancies_page'],
+    queryFn: async () => {
+      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
+      const isActive = (s) => {
+        const v = (s || "").toString().trim().toUpperCase();
+        return v === "ALTA" || v === "ACTIVO";
+      };
+      return all.filter(emp => isActive(emp.estado_empleado));
+    },
+  });
+
+  const normalizeTxt = (s) =>
+    (s || "")
+      .toString()
+      .trim()
+      .replace(/\s+/g, " ")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+
+  const canonicalPosName = (s) => {
+    let n = normalizeTxt(s);
+    n = n.replace(/L[IÍ]NEA/g, "LINEA");
+    if (/\bOPERARI([OA])\b/.test(n) || n.includes("OPERARIO/A")) {
+      n = n.replace(/\bOPERARIA\b/g, "OPERARIO/A")
+           .replace(/\bOPERARIO\b/g, "OPERARIO/A");
+    }
+    n = n.replace(/\s+/g, " ").trim();
+    return n;
+  };
+
+  const vacanciesByDept = React.useMemo(() => {
+    const result = [];
+    departments.forEach(dept => {
+      const deptPositions = positions.filter(p => p.department_id === dept.id);
+      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
+      let deptEmps = [];
+      if (normalizedDeptName === "PRODUCCIÓN T1" || normalizedDeptName === "PRODUCCIÓN T1.1") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_1";
+        });
+      } else if (normalizedDeptName === "PRODUCCIÓN T2" || normalizedDeptName === "PRODUCCIÓN T2.2") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_2";
+        });
+      } else {
+        deptEmps = employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
+      }
+      const vacancies = [];
+      deptPositions.forEach(pos => {
+        const assignedCount = deptEmps.filter(e => {
+          const empPuesto = canonicalPosName(e.puesto || "");
+          const posName = canonicalPosName(pos.name || "");
+          return empPuesto === posName;
+        }).length;
+        const headcount = Number.isFinite(pos.max_headcount) ? (pos.max_headcount || 0) : (pos.max_headcount ? Number(pos.max_headcount) : 0);
+        if (headcount <= 0) return;
+        const vacantSlots = headcount - assignedCount;
+        if (vacantSlots > 0) {
+          vacancies.push({
+            position: pos.name,
+            vacantSlots,
+            maxHeadcount: pos.max_headcount || 1,
+            assignedCount
+          });
+        }
+      });
+      if (vacancies.length > 0) {
+        result.push({
+          department: dept.name,
+          departmentId: dept.id,
+          color: dept.color,
+          vacancies
+        });
+      }
+    });
+    return result;
+  }, [departments, positions, employees]);
+
+  const totalVacancies = React.useMemo(
+    () => vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0),
+    [vacanciesByDept]
+  );
 
   return (
     <AdminOnly message="Solo administradores pueden configurar la estructura organizativa">
@@ -65,6 +162,10 @@ export default function OrganizationalStructure() {
                 <Building2 className="w-3 h-3 mr-2" />
                 Departamentos
               </TabsTrigger>
+              <TabsTrigger value="vacancies" className="flex-1 text-xs py-1.5">
+                <Briefcase className="w-3 h-3 mr-2" />
+                Vacantes
+              </TabsTrigger>
               <TabsTrigger value="teams" className="flex-1 text-xs py-1.5">
                 <Users className="w-3 h-3 mr-2" />
                 Equipos
@@ -93,6 +194,50 @@ export default function OrganizationalStructure() {
                   </CardHeader>
                   <CardContent className="p-0 flex-1 overflow-hidden">
                     <DepartmentPositionManager />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="vacancies" className="m-0 h-full">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-full flex flex-col">
+                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-3 px-4 shrink-0">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Briefcase className="w-4 h-4 text-amber-600" />
+                      Puestos Vacantes en Toda la Estructura
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Resumen de puestos con cupo disponible por departamento
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                        {totalVacancies} vacantes
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {vacanciesByDept.map(dept => (
+                        <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
+                          <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
+                            <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">
+                              {dept.vacancies.length}
+                            </Badge>
+                          </div>
+                          <div className="p-2 space-y-1">
+                            {dept.vacancies.map((vac, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
+                                <span className="font-medium text-slate-700 truncate max-w-[140px]" title={vac.position}>{vac.position}</span>
+                                <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
+                                  {vac.vacantSlots}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
