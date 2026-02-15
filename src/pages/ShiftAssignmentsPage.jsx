@@ -365,13 +365,10 @@ export default function ShiftAssignmentsPage() {
   };
 
   const isEmployeeAvailable = (e, dateStr, teamId) => {
-       // 1. Department (Relaxed for debugging/broader compatibility)
-       // if (normalize(e.departamento) !== "fabricacion") return false;
-       
-       // 2. Availability (Relaxed)
-       // if (normalize(e.disponibilidad) !== "disponible") return false;
+       const dept = normalize(e.departamento);
+       if (dept !== "produccion") return false;
 
-       // 3. Absence
+       // Absence
        if (e.ausencia_inicio) {
             const checkDate = new Date(dateStr);
             checkDate.setHours(0, 0, 0, 0);
