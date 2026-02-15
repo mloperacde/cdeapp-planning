@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Filter, User, Users, Settings, ArrowRightLeft, Building2, Briefcase, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
+import { Filter, User, Users, Settings, ArrowRightLeft, Building2, Briefcase, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -283,55 +283,6 @@ export default function TeamCompositionConfig() {
           </ScrollArea>
         </CardContent>
       </Card>
-
-      {/* Puestos Vacantes */}
-      {vacanciesByDept.length > 0 && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-600" />
-                <CardTitle className="text-lg">Puestos Vacantes en {selectedTeam?.team_name}</CardTitle>
-              </div>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                {vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0)} vacantes
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-64">
-              <div className="space-y-3">
-                {vacanciesByDept.map(dept => (
-                  <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
-                    <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }}></div>
-                      <span className="font-semibold text-sm text-slate-900">{dept.department}</span>
-                      <Badge variant="outline" className="ml-auto text-xs">
-                        {dept.vacancies.length} vacantes
-                      </Badge>
-                    </div>
-                    <div className="p-2 space-y-1">
-                      {dept.vacancies.map((vac, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs bg-white p-2 rounded border">
-                          <span className="font-medium text-slate-700">{vac.position}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-500">
-                              {vac.assignedCount}/{vac.maxHeadcount}
-                            </span>
-                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-xs">
-                              {vac.vacantSlots} vacante{vac.vacantSlots > 1 ? 's' : ''}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

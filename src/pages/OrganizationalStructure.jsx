@@ -20,7 +20,6 @@ import DepartmentPositionManager from "../components/config/DepartmentPositionMa
 import TeamManagementConfig from "../components/config/TeamManagementConfig";
 import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import { StructureConfig, AssignmentsConfig, TasksConfig } from "../components/config/ManufacturingStructureConfig";
-import TeamVerificationPanel from "../components/hr/TeamVerificationPanel";
 import MachineRoomAssignment from "../components/config/MachineRoomAssignment";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -248,9 +247,8 @@ export default function OrganizationalStructure() {
                       Configura turnos rotativos, composición de equipos y calendarios
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 overflow-y-auto space-y-6">
+                  <CardContent className="p-4 overflow-y-auto">
                     <TeamManagementConfig />
-                    <TeamVerificationPanel />
                   </CardContent>
                 </Card>
               </TabsContent>
