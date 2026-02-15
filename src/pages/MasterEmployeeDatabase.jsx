@@ -78,6 +78,7 @@ const ALL_COLUMNS = {
   num_horas_jornada: { label: "Horas/Sem", default: false },
   tipo_turno: { label: "Turno", default: true },
   equipo: { label: "Equipo", default: true },
+  incluir_en_planning: { label: "Incluir en planning", default: false },
   tipo_contrato: { label: "Contrato", default: false },
   codigo_contrato: { label: "Cód. Contrato", default: false },
   fecha_fin_contrato: { label: "Fin Contrato", default: false },
@@ -522,10 +523,19 @@ export default function MasterEmployeeDatabasePage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Buscar empleado por nombre, código, puesto..."
-            className="pl-9 h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+            className="pl-9 pr-8 h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             value={filters.searchTerm || ""}
             onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
           />
+          {filters.searchTerm && (
+            <button
+              type="button"
+              className="absolute right-2 top-2.5 h-4 w-4 flex items-center justify-center text-slate-400 hover:text-slate-600"
+              onClick={() => setFilters(prev => ({ ...prev, searchTerm: "" }))}
+            >
+              <span className="text-lg leading-none">&times;</span>
+            </button>
+          )}
         </div>
         
         {selectedIds.size > 0 && (
@@ -805,6 +815,19 @@ export default function MasterEmployeeDatabasePage() {
                     )}
                     {visibleColumns.equipo && (
                       <TableCell className="py-0.5 px-3 text-[10px] text-slate-600 dark:text-slate-400 truncate max-w-[100px]">{emp.equipo || '-'}</TableCell>
+                    )}
+                    {visibleColumns.incluir_en_planning && (
+                      <TableCell className="py-0.5 px-3 text-[10px] text-slate-600 dark:text-slate-400 text-center">
+                        {emp.incluir_en_planning === false ? (
+                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-red-200 text-red-600 bg-red-50 dark:border-red-800 dark:text-red-300 dark:bg-red-900/20 rounded-sm">
+                            No
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-emerald-200 text-emerald-700 bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:bg-emerald-900/20 rounded-sm">
+                            Sí
+                          </Badge>
+                        )}
+                      </TableCell>
                     )}
                     {visibleColumns.tipo_contrato && (
                       <TableCell className="py-0.5 px-3 text-[10px] text-slate-600 dark:text-slate-400 truncate max-w-[120px]">{emp.tipo_contrato || '-'}</TableCell>
