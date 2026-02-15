@@ -409,7 +409,7 @@ function ManufacturingConfigWrapper() {
         </TabsContent>
 
         <TabsContent value="assignments">
-          <AssignmentsConfig config={config} setConfig={setConfig} employees={employees} />
+          <AssignmentsConfig config={config} setConfig={setConfig} employees={employees} teams={teams} />
         </TabsContent>
 
         <TabsContent value="tasks">

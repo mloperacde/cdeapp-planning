@@ -421,9 +421,66 @@ export function StructureConfig({ config, setConfig }) {
   );
 }
 
-export function AssignmentsConfig({ config, setConfig, employees = [] }) {
+export function AssignmentsConfig({ config, setConfig, employees = [], teams = [] }) {
   // Predefined shift leaders as per request, but allowing dynamic later if needed
-  
+  const computeLeaderDefs = () => {
+    const areas = (config?.areas || []).slice(0, 2);
+    const validTeams = (teams || [])
+      .slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      .slice(0, 2);
+
+    const defs = [];
+    validTeams.forEach((team, tIdx) => {
+      const shift = tIdx === 0 ? 'shift1' : 'shift2';
+      areas.forEach((area) => {
+        const leaderName = `Responsable (${team.name}) Area (${area.name})`;
+        defs.push({ shift, leaderName });
+      });
+    });
+    return defs;
+  };
+
+  const leaderDefs = computeLeaderDefs();
+
+  const getLeaderSlots = (leaderMap) => {
+    const slots = [];
+    const sortedDefs = leaderDefs.slice().sort((a, b) => {
+      if (a.shift === b.shift) return a.leaderName.localeCompare(b.leaderName);
+      return a.shift.localeCompare(b.shift);
+    });
+    for (const def of sortedDefs) {
+      slots.push(leaderMap?.[def.leaderName] || '');
+    }
+    // Ensure four slots (siempre 4 jefes de turno)
+    while (slots.length < 4) slots.push('');
+    return slots.slice(0, 4);
+  };
+
+  const syncDepartmentLeaders = async () => {
+    try {
+      const deptList = await base44.entities.Department.list();
+      const produccion = deptList.find(
+        (d) => (d.name || '').toUpperCase() === 'PRODUCCIÓN' || (d.name || '').toUpperCase() === 'PRODUCCION'
+      );
+      if (!produccion) return;
+      const leaderMap = config?.assignments?.shift1?.leaderMap || {};
+      const leaderMap2 = config?.assignments?.shift2?.leaderMap || {};
+      const merged = { ...leaderMap, ...leaderMap2 };
+      const [slot1, slot2, slot3, slot4] = getLeaderSlots(merged);
+      const payload = {
+        manager_id: slot1 || null,
+        manager_id_2: slot2 || null,
+        manager_id_3: slot3 || null,
+        manager_id_4: slot4 || null,
+      };
+      await base44.entities.Department.update(produccion.id, payload);
+    } catch (e) {
+      // Silently ignore sync errors but notify user
+      toast.error('No se pudo sincronizar los jefes de turno con el departamento PRODUCCIÓN');
+    }
+  };
+
   const updateAssignment = (shift, leaderName, areaId, checked) => {
     setConfig(prev => {
       const shiftConfig = prev.assignments[shift] || { leaders: [], areas: {}, leaderMap: {} };
@@ -469,6 +526,8 @@ export function AssignmentsConfig({ config, setConfig, employees = [] }) {
             }
         };
     });
+    // Best-effort sync with Department PRODUCCIÓN
+    syncDepartmentLeaders();
   };
 
   return (
@@ -480,22 +539,19 @@ export function AssignmentsConfig({ config, setConfig, employees = [] }) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <LeaderAssignment 
-              leaderName="Responsable T1 (Isa)" 
-              shift="shift1" 
-              config={config} 
-              onToggle={updateAssignment} 
-              onEmployeeSelect={updateLeaderMap}
-              employees={employees}
-            />
-            <LeaderAssignment 
-              leaderName="Responsable T1 (Carlos)" 
-              shift="shift1" 
-              config={config} 
-              onToggle={updateAssignment} 
-              onEmployeeSelect={updateLeaderMap}
-              employees={employees}
-            />
+            {leaderDefs
+              .filter(d => d.shift === 'shift1')
+              .map(d => (
+                <LeaderAssignment
+                  key={`${d.shift}-${d.leaderName}`}
+                  leaderName={d.leaderName}
+                  shift={d.shift}
+                  config={config}
+                  onToggle={updateAssignment}
+                  onEmployeeSelect={updateLeaderMap}
+                  employees={employees}
+                />
+              ))}
           </div>
         </CardContent>
       </Card>
@@ -507,22 +563,19 @@ export function AssignmentsConfig({ config, setConfig, employees = [] }) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <LeaderAssignment 
-              leaderName="Responsable T2 (Sara)" 
-              shift="shift2" 
-              config={config} 
-              onToggle={updateAssignment} 
-              onEmployeeSelect={updateLeaderMap}
-              employees={employees}
-            />
-            <LeaderAssignment 
-              leaderName="Responsable T2 (Ivan)" 
-              shift="shift2" 
-              config={config} 
-              onToggle={updateAssignment} 
-              onEmployeeSelect={updateLeaderMap}
-              employees={employees}
-            />
+            {leaderDefs
+              .filter(d => d.shift === 'shift2')
+              .map(d => (
+                <LeaderAssignment
+                  key={`${d.shift}-${d.leaderName}`}
+                  leaderName={d.leaderName}
+                  shift={d.shift}
+                  config={config}
+                  onToggle={updateAssignment}
+                  onEmployeeSelect={updateLeaderMap}
+                  employees={employees}
+                />
+              ))}
           </div>
         </CardContent>
       </Card>

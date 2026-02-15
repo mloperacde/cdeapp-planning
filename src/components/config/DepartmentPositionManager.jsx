@@ -285,6 +285,15 @@ export default function DepartmentPositionManager() {
         ? await base44.entities.Department.update(data.id, payload)
         : await base44.entities.Department.create(payload);
       
+      // Warn if backend dropped extended manager fields
+      if ((payload.manager_id_3 || payload.manager_id_4) && result) {
+        const lost3 = payload.manager_id_3 && !result.manager_id_3;
+        const lost4 = payload.manager_id_4 && !result.manager_id_4;
+        if (lost3 || lost4) {
+          toast.warning("El backend no guardó Responsable 3/4. Se recomienda configurar desde 'Fabricación > Jefes Turno' para sincronizar con PRODUCCIÓN.");
+        }
+      }
+      
       // Si el nombre cambió, sincronizar con empleados
       if (data.id && oldDept && oldDept.name !== payload.name) {
         const deptPositions = positions.filter(p => p.department_id === data.id);
