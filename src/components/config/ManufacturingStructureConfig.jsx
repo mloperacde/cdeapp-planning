@@ -39,15 +39,39 @@ export function StructureConfig({ config, setConfig }) {
   const handleSyncMachines = async () => {
     try {
       setIsSyncingMachines(true);
-      toast.info("Sincronizando máquinas desde API...");
-      
-      const response = await base44.functions.invoke('syncMachinesFromApi', {});
-      
-      if (response.data.success) {
-        toast.success(response.data.message);
-      } else {
-        throw new Error(response.data.error || 'Error al sincronizar máquinas');
+      toast.info("Importando máquinas desde catálogo maestro...");
+
+      const masterList = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      const machines = Array.isArray(masterList) ? masterList : [];
+
+      if (!machines.length) {
+        toast.info("No se encontraron máquinas en el catálogo maestro.");
+        return;
       }
+
+      const withAlias = machines.map(m => {
+        const sala = (m.ubicacion || '').trim();
+        const codigo = (m.codigo_maquina || m.codigo || '').trim();
+        const nombreBase = (m.nombre_maquina || m.nombre || '').trim();
+        const parts = [sala, codigo].filter(Boolean);
+        const prefix = parts.join(" ");
+        const alias = prefix ? `(${prefix} - ${nombreBase})` : nombreBase;
+
+        return {
+          id: m.id,
+          codigo_maquina: codigo,
+          nombre_maquina: m.nombre_maquina || m.nombre || '',
+          nombre: alias,
+          ubicacion: sala
+        };
+      });
+
+      if (!withAlias.length) {
+        toast.info("Catálogo maestro de máquinas vacío.");
+        return;
+      }
+
+      toast.success(`Catálogo de máquinas sincronizado: ${withAlias.length} máquinas disponibles.`);
     } catch (error) {
       console.error("Sync machines error:", error);
       toast.error(`Error al sincronizar máquinas: ${error.message}`);

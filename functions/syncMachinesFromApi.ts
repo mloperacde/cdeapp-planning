@@ -9,9 +9,9 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
-        // Fetch machines from CDE API
-        const apiUrl = 'https://cdeapp.es/api/maquinas';
-        const apiKey = Deno.env.get('CdeApp');
+        // Fetch machines from CDE API (usar mismo endpoint que cdeApi.getMachines)
+        const apiUrl = 'https://cdeapp.es/api/v1/sync-machines';
+        const apiKey = Deno.env.get('CdeApp') || Deno.env.get('CDEAPP_API_KEY');
 
         if (!apiKey) {
             return Response.json({ 
@@ -21,9 +21,10 @@ Deno.serve(async (req) => {
         }
 
         const response = await fetch(apiUrl, {
+            method: 'GET',
             headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
+                'X-API-Key': apiKey,
+                'Accept': 'application/json'
             }
         });
 
@@ -39,9 +40,9 @@ Deno.serve(async (req) => {
 
         const apiMachines = apiData.data;
 
-        // Fetch existing machines
         const existingMachines = await base44.asServiceRole.entities.MachineMasterDatabase.list();
-        const existingMap = new Map(existingMachines.map(m => [m.codigo_maquina, m]));
+        const existingByExternalId = new Map(existingMachines.map(m => [String(m.id_base44 || "").trim(), m]));
+        const existingByCodigo = new Map(existingMachines.map(m => [String(m.codigo_maquina || "").trim(), m]));
 
         const results = {
             created: [],
@@ -51,38 +52,51 @@ Deno.serve(async (req) => {
 
         for (const apiMachine of apiMachines) {
             try {
+                const externalId = String(apiMachine.external_id || "").trim();
+                const codigo = String(apiMachine.codigo || "").trim();
+                const nombreCorto = (apiMachine.nombre || "").trim();
+                const sala = (apiMachine.sala || apiMachine.ubicacion || "").trim();
+
+                const prefixParts = [sala, codigo].filter(Boolean);
+                const prefix = prefixParts.join(" ");
+                const alias = prefix ? `(${prefix} - ${nombreCorto})` : nombreCorto;
+
                 const machineData = {
-                    codigo_maquina: String(apiMachine.external_id),
-                    nombre: apiMachine.nombre,
-                    tipo: apiMachine.tipo || 'Otro',
-                    descripcion: apiMachine.descripcion,
-                    ubicacion: apiMachine.ubicacion,
-                    estado_operativo: apiMachine.estado || 'Operativa'
+                    id_base44: externalId || undefined,
+                    codigo_maquina: codigo,
+                    nombre_maquina: nombreCorto,
+                    nombre: alias,
+                    descripcion: alias,
+                    ubicacion: sala,
+                    tipo: apiMachine.tipo || "General",
+                    ultimo_sincronizado: new Date().toISOString(),
+                    estado_sincronizacion: "Sincronizado"
                 };
 
-                const existing = existingMap.get(machineData.codigo_maquina);
+                let existing = externalId ? existingByExternalId.get(externalId) : undefined;
+                if (!existing && codigo) {
+                    existing = existingByCodigo.get(codigo);
+                }
 
                 if (existing) {
-                    // Update existing machine
-                    await base44.asServiceRole.entities.MachineMasterDatabase.update(existing.id, {
-                        ...machineData,
-                        estado_sincronizacion: 'Sincronizado',
-                        ultimo_sincronizado: new Date().toISOString()
-                    });
+                    await base44.asServiceRole.entities.MachineMasterDatabase.update(existing.id, machineData);
                     results.updated.push(machineData.nombre);
                 } else {
-                    // Create new machine
                     await base44.asServiceRole.entities.MachineMasterDatabase.create({
                         ...machineData,
-                        estado_sincronizacion: 'Sincronizado',
-                        ultimo_sincronizado: new Date().toISOString()
+                        orden_visualizacion: 999,
+                        estado_produccion: "Sin Producción",
+                        estado_disponibilidad: "Disponible",
+                        imagenes: [],
+                        archivos_adjuntos: [],
+                        programa_mantenimiento: ""
                     });
                     results.created.push(machineData.nombre);
                 }
             } catch (error) {
                 results.errors.push({
                     machine: apiMachine.nombre,
-                    error: error.message
+                    error: (error as Error).message
                 });
             }
         }
