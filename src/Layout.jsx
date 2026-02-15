@@ -93,7 +93,7 @@ export default function Layout({ children, currentPageName }) {
       )}
       
       {/* Sidebar */}
-      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-card text-white transition-all duration-300 overflow-visible overflow-x-hidden fixed md:relative z-40 h-full flex-shrink-0 flex flex-col border-r border-slate-800 dark:border-border`}>
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-card text-white transition-all duration-300 overflow-visible overflow-x-hidden fixed md:fixed z-40 h-screen flex-shrink-0 flex flex-col border-r border-slate-800 dark:border-border`}>
         {/* Logo y título */}
         <div className="p-4 border-b border-slate-800 dark:border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -165,7 +165,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
 
         {/* Navegación por categorías */}
-        <nav className="mt-4 flex-1 px-2 pb-4 overflow-visible overflow-x-hidden">
+        <nav className="mt-4 flex-1 px-2 pb-4 overflow-y-auto overflow-x-hidden">
           {Object.entries(groupedMenu).map(([category, items]) => (
             <div key={category} className="mb-2">
               <button
@@ -209,7 +209,7 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       {/* Contenido principal */}
-      <div className="flex-1 min-w-0 bg-slate-50 dark:bg-background overflow-visible">
+      <div className="flex-1 min-w-0 bg-slate-50 dark:bg-background overflow-visible md:ml-64">
         {/* Header móvil */}
         <div className="md:hidden p-4 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center justify-between">
           <button 
