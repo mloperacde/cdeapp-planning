@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { 
   Plus, Trash2, Edit, Save, X, Users, Briefcase, 
   ChevronRight, ChevronDown, Building2, UserCircle,
@@ -47,8 +47,6 @@ import {
 import { toast } from "sonner";
 import OrganizationalChart from "../hr/OrganizationalChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import EmployeeSearchSelect from "../common/EmployeeSearchSelect";
 
 export default function DepartmentPositionManager() {
@@ -67,7 +65,6 @@ export default function DepartmentPositionManager() {
   const [activeTab, setActiveTab] = useState("positions");
   const [isEmpDialogOpen, setIsEmpDialogOpen] = useState(false);
   const [empToEdit, setEmpToEdit] = useState(null);
-  const [showVacancies, setShowVacancies] = useState(false);
   const [localOrder, setLocalOrder] = useState(new Map());
 
   const normalizeTxt = (s) =>
