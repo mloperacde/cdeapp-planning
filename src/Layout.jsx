@@ -83,7 +83,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-background w-screen overflow-x-hidden">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-background w-full max-w-full overflow-x-hidden">
       {/* Overlay móvil */}
       {menuOpen && (
         <div 
@@ -209,7 +209,7 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       {/* Contenido principal */}
-      <div className="flex-1 bg-slate-50 dark:bg-background overflow-visible">
+      <div className="flex-1 min-w-0 bg-slate-50 dark:bg-background overflow-visible">
         {/* Header móvil */}
         <div className="md:hidden p-4 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center justify-between">
           <button 
