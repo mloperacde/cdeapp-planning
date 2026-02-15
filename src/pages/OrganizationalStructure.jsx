@@ -334,22 +334,25 @@ function ManufacturingConfigWrapper() {
   });
 
   useEffect(() => {
-    if (configRecord?.value) {
-      try {
-        const parsed = typeof configRecord.value === 'string' ? JSON.parse(configRecord.value) : configRecord.value;
-        setConfig(prev => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error("Error parsing manufacturing config", e);
-      }
+    if (!configRecord) return;
+    try {
+      let raw = configRecord.value || configRecord.description || configRecord.app_subtitle || null;
+      if (!raw) return;
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      setConfig(prev => ({ ...prev, ...parsed }));
+    } catch (e) {
+      console.error("Error parsing manufacturing config", e);
     }
   }, [configRecord]);
 
   const saveMutation = useMutation({
     mutationFn: async (newConfig) => {
+      const serialized = JSON.stringify(newConfig);
       const payload = {
         config_key: "manufacturing_config",
-        value: JSON.stringify(newConfig),
-        description: "Configuración de Fabricación: Áreas, Salas y Asignaciones"
+        value: serialized,
+        description: serialized,
+        app_subtitle: serialized
       };
 
       if (configRecord?.id) {
