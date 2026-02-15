@@ -139,67 +139,7 @@ export default function DepartmentPositionManager() {
     positions.filter(p => p.department_id === selectedDeptId).sort((a, b) => (a.orden || 0) - (b.orden || 0)),
   [positions, selectedDeptId]);
   
-  // Calcular vacantes por departamento
-  const vacanciesByDept = useMemo(() => {
-    const result = [];
-    
-    departments.forEach(dept => {
-      const deptPositions = positions.filter(p => p.department_id === dept.id);
-      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
-      
-      // Empleados del departamento
-      let deptEmps = [];
-      
-      // Casos especiales para Producción T1 y T2
-      if (normalizedDeptName === "PRODUCCIÓN T1" || normalizedDeptName === "PRODUCCIÓN T1.1") {
-        deptEmps = employees.filter(e => {
-          const empDept = (e.departamento || "").trim().toUpperCase();
-          return empDept === "PRODUCCIÓN" && e.team_key === "team_1";
-        });
-      } else if (normalizedDeptName === "PRODUCCIÓN T2" || normalizedDeptName === "PRODUCCIÓN T2.2") {
-        deptEmps = employees.filter(e => {
-          const empDept = (e.departamento || "").trim().toUpperCase();
-          return empDept === "PRODUCCIÓN" && e.team_key === "team_2";
-        });
-      } else {
-        deptEmps = employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
-      }
-      
-      const vacancies = [];
-      
-      deptPositions.forEach(pos => {
-        const assignedCount = deptEmps.filter(e => {
-          const empPuesto = canonicalPosName(e.puesto || "");
-          const posName = canonicalPosName(pos.name || "");
-          return empPuesto === posName;
-        }).length;
-        
-        const headcount = Number.isFinite(pos.max_headcount) ? (pos.max_headcount || 0) : (pos.max_headcount ? Number(pos.max_headcount) : 0);
-        if (headcount <= 0) return; // no mostrar vacantes para puestos sin cupo
-        const vacantSlots = headcount - assignedCount;
-        
-        if (vacantSlots > 0) {
-          vacancies.push({
-            position: pos.name,
-            vacantSlots,
-            maxHeadcount: pos.max_headcount || 1,
-            assignedCount
-          });
-        }
-      });
-      
-      if (vacancies.length > 0) {
-        result.push({
-          department: dept.name,
-          departmentId: dept.id,
-          color: dept.color,
-          vacancies
-        });
-      }
-    });
-    
-    return result;
-  }, [departments, positions, employees]);
+  // (Eliminado) Cálculo de vacantes globales
 
   const deptEmployees = useMemo(() => {
     if (!selectedDept) return [];
@@ -223,9 +163,7 @@ export default function DepartmentPositionManager() {
     return employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
   }, [employees, selectedDept]);
 
-  const totalVacancies = useMemo(() => 
-    vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0)
-  , [vacanciesByDept]);
+  // (Eliminado) Total de vacantes globales
 
   const consolidatePositionsMutation = useMutation({
     mutationFn: async () => {
@@ -1112,7 +1050,6 @@ export default function DepartmentPositionManager() {
             <Tabs value={mainTab} onValueChange={setMainTab}>
               <TabsList>
                 <TabsTrigger value="departments">Departamentos</TabsTrigger>
-                <TabsTrigger value="vacancies">Vacantes ({totalVacancies})</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -1387,44 +1324,7 @@ export default function DepartmentPositionManager() {
             )}
             </Card>
           </TabsContent>
-          <TabsContent value="vacancies" className="flex flex-col data-[state=inactive]:hidden p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-600" />
-                Puestos Vacantes en Toda la Estructura
-              </h4>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                {totalVacancies} vacantes
-              </Badge>
-            </div>
-            <div className="border rounded-lg bg-white shadow-sm p-4">
-              <div>
-                <div className="grid grid-cols-3 gap-3">
-                  {vacanciesByDept.map(dept => (
-                    <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
-                      <div className="px-3 py-2 bg-white border-b flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color }}></div>
-                        <span className="font-semibold text-xs text-slate-900 truncate flex-1">{dept.department}</span>
-                        <Badge variant="outline" className="text-[10px] px-1 py-0">
-                          {dept.vacancies.length}
-                        </Badge>
-                      </div>
-                      <div className="p-2 space-y-1">
-                        {dept.vacancies.map((vac, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-[10px] bg-white p-1.5 rounded border">
-                            <span className="font-medium text-slate-700 truncate max-w-[100px]" title={vac.position}>{vac.position}</span>
-                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-[9px] px-1 h-4">
-                              {vac.vacantSlots}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
+          
           </Tabs>
 
         
