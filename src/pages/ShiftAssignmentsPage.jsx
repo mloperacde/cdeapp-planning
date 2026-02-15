@@ -16,7 +16,8 @@ import {
   History,
   Search,
   Factory,
-  Sparkles
+  Sparkles,
+  Edit3
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format, startOfWeek } from "date-fns";
@@ -98,9 +99,28 @@ export default function ShiftAssignmentsPage() {
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [assignments, setAssignments] = useState({});
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+  const [editingPuesto, setEditingPuesto] = useState("");
   
   const queryClient = useQueryClient();
   const { employees = [], teams = [], machines = [] } = useAppData();
+
+  const updateEmployeePosition = useMutation({
+    mutationFn: async ({ id, puesto }) => {
+      return base44.entities.EmployeeMasterDatabase.update(id, { 
+        puesto: puesto ? puesto.toUpperCase() : null 
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success("Puesto actualizado correctamente");
+      setEditingEmployeeId(null);
+      setEditingPuesto("");
+    },
+    onError: (err) => {
+      toast.error(err?.message || "Error al actualizar puesto");
+    }
+  });
 
   // New: Fetch Machine Planning
   const { data: machinePlannings = [] } = useQuery({
@@ -711,7 +731,12 @@ export default function ShiftAssignmentsPage() {
                                         key={emp.id} 
                                         index={index} 
                                         data={groupedAvailableEmployees} 
-                                        style={{}} // No longer needed for standard list
+                                        editingEmployeeId={editingEmployeeId}
+                                        editingPuesto={editingPuesto}
+                                        setEditingEmployeeId={setEditingEmployeeId}
+                                        setEditingPuesto={setEditingPuesto}
+                                        updateEmployeePosition={updateEmployeePosition}
+                                        style={{}}
                                     />
                                 ))}
                                 {provided.placeholder}
@@ -727,9 +752,10 @@ export default function ShiftAssignmentsPage() {
 }
 
 // Adjusted EmployeeRow for standard list
-function EmployeeRow({ index, data }) {
+function EmployeeRow({ index, data, editingEmployeeId, editingPuesto, setEditingEmployeeId, setEditingPuesto, updateEmployeePosition }) {
   const emp = data[index];
-  
+  const isEditing = editingEmployeeId === emp.id;
+
   return (
     <Draggable key={emp.id} draggableId={String(emp.id)} index={index}>
       {(provided, snapshot) => (
@@ -744,19 +770,76 @@ function EmployeeRow({ index, data }) {
               emp.isSkilled ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-slate-200'
           } ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500 opacity-90 z-50' : ''}`}
         >
-          <div className="flex justify-between items-center">
-              <div>
+          <div className="flex justify-between items-center gap-2">
+              <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-slate-900 truncate">{getEmployeeName(emp)}</p>
-                  <p className="text-xs text-slate-500 truncate">{emp.puesto}</p>
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        value={editingPuesto}
+                        onChange={(e) => setEditingPuesto(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateEmployeePosition.mutate({ id: emp.id, puesto: editingPuesto });
+                        }}
+                        disabled={updateEmployeePosition.isPending}
+                      >
+                        <Save className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingEmployeeId(null);
+                          setEditingPuesto("");
+                        }}
+                        disabled={updateEmployeePosition.isPending}
+                      >
+                        <History className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 truncate">{emp.puesto}</p>
+                  )}
               </div>
-              {emp.isSkilled && (
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-slate-500 hover:text-slate-900"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isEditing) {
+                      setEditingEmployeeId(null);
+                      setEditingPuesto("");
+                    } else {
+                      setEditingEmployeeId(emp.id);
+                      setEditingPuesto(emp.puesto || "");
+                    }
+                  }}
+                >
+                  <Edit3 className="w-3 h-3" />
+                </Button>
+                {emp.isSkilled && (
                   <Badge variant="secondary" className="bg-green-50 text-green-700 text-[10px] px-1.5 h-5 shrink-0">
                       Skill
                   </Badge>
-              )}
+                )}
+              </div>
           </div>
         </div>
       )}
     </Draggable>
   );
-};
+}
