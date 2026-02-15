@@ -1024,7 +1024,7 @@ export default function DepartmentPositionManager() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col gap-2 bg-slate-50 dark:bg-slate-950">
+    <div className="h-screen overflow-hidden flex flex-col gap-2 bg-slate-50 dark:bg-slate-950">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
@@ -1105,7 +1105,7 @@ export default function DepartmentPositionManager() {
           </Button>
         </div>
       </div>
-      <div>
+      <div className="flex-1 min-h-0 overflow-auto">
       {viewMode === "editor" ? (
         <div className="flex flex-col gap-4">
           <div className="px-3 pt-2">
