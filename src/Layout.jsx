@@ -83,7 +83,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-background w-screen overflow-hidden">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-background w-screen overflow-x-hidden">
       {/* Overlay móvil */}
       {menuOpen && (
         <div 
@@ -93,7 +93,7 @@ export default function Layout({ children, currentPageName }) {
       )}
       
       {/* Sidebar */}
-      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-card text-white transition-all duration-300 overflow-y-auto fixed md:relative z-40 h-full flex-shrink-0 flex flex-col border-r border-slate-800 dark:border-border`}>
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-card text-white transition-all duration-300 overflow-visible overflow-x-hidden fixed md:relative z-40 h-full flex-shrink-0 flex flex-col border-r border-slate-800 dark:border-border`}>
         {/* Logo y título */}
         <div className="p-4 border-b border-slate-800 dark:border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -209,7 +209,7 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       {/* Contenido principal */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 dark:bg-background">
+      <div className="flex-1 bg-slate-50 dark:bg-background overflow-visible">
         {/* Header móvil */}
         <div className="md:hidden p-4 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center justify-between">
           <button 
