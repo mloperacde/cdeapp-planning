@@ -165,7 +165,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
 
         {/* Navegación por categorías */}
-        <nav className="mt-4 flex-1 overflow-y-auto px-2 pb-4">
+        <nav className="mt-4 flex-1 px-2 pb-4 overflow-visible overflow-x-hidden">
           {Object.entries(groupedMenu).map(([category, items]) => (
             <div key={category} className="mb-2">
               <button
@@ -209,7 +209,7 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       {/* Contenido principal */}
-      <div className="flex-1 overflow-auto bg-slate-50 dark:bg-background">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 dark:bg-background">
         {/* Header móvil */}
         <div className="md:hidden p-4 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center justify-between">
           <button 
