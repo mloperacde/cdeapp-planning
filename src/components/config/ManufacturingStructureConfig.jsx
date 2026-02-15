@@ -27,6 +27,12 @@ import {
 } from "@/components/ui/dialog";
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+const normalizeKey = (str) =>
+  String(str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
 export function StructureConfig({ config, setConfig }) {
   const [newAreaName, setNewAreaName] = useState("");
@@ -71,7 +77,57 @@ export function StructureConfig({ config, setConfig }) {
         return;
       }
 
-      toast.success(`Catálogo de máquinas sincronizado: ${withAlias.length} máquinas disponibles.`);
+      const areas = config.areas || [];
+      const roomIndex = new Map();
+
+      areas.forEach(area => {
+        (area.rooms || []).forEach(room => {
+          const key = normalizeKey(room.name);
+          if (!key) return;
+          if (!roomIndex.has(key)) {
+            roomIndex.set(key, {
+              areaId: area.id,
+              areaName: area.name,
+              roomId: room.id,
+              roomName: room.name,
+            });
+          }
+        });
+      });
+
+      let autoAssigned = 0;
+      let candidates = 0;
+
+      for (const m of machines) {
+        const salaRaw = m.ubicacion || "";
+        if (!salaRaw || m.room_id) continue;
+        const key = normalizeKey(salaRaw);
+        if (!key) continue;
+        const target = roomIndex.get(key);
+        if (!target) continue;
+        candidates++;
+        await base44.entities.MachineMasterDatabase.update(m.id, {
+          area_id: target.areaId,
+          area_name: target.areaName,
+          room_id: target.roomId,
+          room_name: target.roomName,
+        });
+        autoAssigned++;
+      }
+
+      if (autoAssigned > 0) {
+        toast.success(
+          `Catálogo sincronizado: ${withAlias.length} máquinas, ${autoAssigned} asignadas automáticamente a salas.`
+        );
+      } else if (candidates === 0) {
+        toast.info(
+          `Catálogo sincronizado: ${withAlias.length} máquinas, sin coincidencias automáticas entre ubicaciones y salas.`
+        );
+      } else {
+        toast.info(
+          `Catálogo sincronizado: ${withAlias.length} máquinas, sin asignaciones automáticas aplicadas.`
+        );
+      }
     } catch (error) {
       console.error("Sync machines error:", error);
       toast.error(`Error al sincronizar máquinas: ${error.message}`);
