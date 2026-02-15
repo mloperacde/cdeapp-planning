@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { 
   Plus, Trash2, Edit, Save, X, Users, Briefcase, 
-  ChevronRight, ChevronDown, Building2, UserCircle,
+  ChevronRight, ChevronDown, Building2, UserCircle, 
   FolderTree, Layout, Search, ArrowRight, ArrowUp, ArrowDown, Settings2,
-  MoreHorizontal, RefreshCw, CheckCircle2, AlertCircle, Loader2, AlertTriangle
+  MoreHorizontal
 } from "lucide-react";
 import {
   Dialog,
@@ -58,7 +58,6 @@ export default function DepartmentPositionManager() {
   const [editingPos, setEditingPos] = useState(null);
   const [expandedDepts, setExpandedDepts] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [deptToMove, setDeptToMove] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
@@ -288,7 +287,6 @@ export default function DepartmentPositionManager() {
       await queryClient.invalidateQueries({ queryKey: ['departments'] });
       await queryClient.invalidateQueries({ queryKey: ['positions'] });
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
-      await recalculateEmployeeCounts();
       toast.success("Departamento guardado correctamente");
       setIsDeptDialogOpen(false);
     }
@@ -387,8 +385,6 @@ export default function DepartmentPositionManager() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['departments'] });
-      // Recalculate all total_employee_count after move
-      await recalculateEmployeeCounts();
       toast.success("Departamento movido correctamente");
       setIsMoveDialogOpen(false);
       setDeptToMove(null);
@@ -404,47 +400,10 @@ export default function DepartmentPositionManager() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
-      await recalculateEmployeeCounts();
       toast.success("Empleado asignado correctamente");
       setIsEmpDialogOpen(false);
     }
   });
-
-  // Function to recursively calculate total employee count
-  const recalculateEmployeeCounts = async () => {
-    const currentDepts = await base44.entities.Department.list();
-    const currentEmps = await base44.entities.EmployeeMasterDatabase.list();
-    
-    const calculateCount = (deptId, depts, emps) => {
-      const dept = depts.find(d => d.id === deptId);
-      if (!dept) return 0;
-      
-      // Direct employees in this department
-      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
-      const directCount = emps.filter(e => 
-        (e.departamento || "").trim().toUpperCase() === normalizedDeptName
-      ).length;
-      
-      // Children's counts
-      const children = depts.filter(d => d.parent_id === deptId);
-      const childrenCount = children.reduce((sum, child) => 
-        sum + calculateCount(child.id, depts, emps), 0
-      );
-      
-      return directCount + childrenCount;
-    };
-    
-    // Update all departments with their total counts
-    const updates = currentDepts.map(dept => {
-      const totalCount = calculateCount(dept.id, currentDepts, currentEmps);
-      return base44.entities.Department.update(dept.id, { 
-        total_employee_count: totalCount 
-      });
-    });
-    
-    await Promise.all(updates);
-    await queryClient.invalidateQueries({ queryKey: ['departments'] });
-  };
 
   // Handlers
   const toggleExpand = (deptId) => {
@@ -595,195 +554,6 @@ export default function DepartmentPositionManager() {
     });
     setEditingPos(pos);
     setIsPosDialogOpen(true);
-  };
-
-  // Analysis Logic for Sync
-  const analysisResult = useMemo(() => {
-    if (!isSyncDialogOpen) return null;
-
-    const deptMap = new Map();
-    const normalize = (s) => (s || "").trim().toUpperCase();
-
-    // 1. Scan Employees
-    employees.forEach(emp => {
-      // Skip if marked as deleted or inactive if needed, but usually we want to see all structure
-      const dNameRaw = emp.departamento || "Sin Departamento";
-      const pNameRaw = emp.puesto || "Sin Puesto";
-      
-      // Skip "Sin Departamento" for structure creation usually, but show it for info
-      if (!emp.departamento) return; 
-
-      const dKey = normalize(dNameRaw);
-      const pKey = normalize(pNameRaw);
-
-      if (!deptMap.has(dKey)) {
-        const existingDept = departments.find(d => normalize(d.name) === dKey);
-        deptMap.set(dKey, {
-          name: dNameRaw.toUpperCase(), // Force Uppercase
-          key: dKey,
-          count: 0,
-          positions: new Map(),
-          existingId: existingDept?.id,
-          isNew: !existingDept
-        });
-      }
-      const deptEntry = deptMap.get(dKey);
-      deptEntry.count++;
-
-      if (!deptEntry.positions.has(pKey)) {
-        // We can only check for existing position if we have a department ID
-        // If department is new, position is definitely new (or needs linking)
-        const existingPos = deptEntry.existingId 
-          ? positions.find(p => normalize(p.name) === pKey && p.department_id === deptEntry.existingId)
-          : null;
-
-        deptEntry.positions.set(pKey, {
-          name: pNameRaw.toUpperCase(), // Force Uppercase
-          key: pKey,
-          count: 0,
-          existingId: existingPos?.id,
-          isNew: !existingPos
-        });
-      }
-      deptEntry.positions.get(pKey).count++;
-    });
-
-    return Array.from(deptMap.values()).map(d => ({
-        ...d,
-        positions: Array.from(d.positions.values()).sort((a, b) => b.count - a.count)
-    })).sort((a, b) => b.count - a.count);
-
-  }, [employees, departments, positions, isSyncDialogOpen]);
-
-  const [syncing, setSyncing] = useState(false);
-
-  const performSync = async () => {
-    if (!analysisResult) return;
-    setSyncing(true);
-    try {
-      let createdDepts = 0;
-      let createdPos = 0;
-
-      for (const deptData of analysisResult) {
-        let deptId = deptData.existingId;
-
-        // Create Department if missing
-        if (!deptId) {
-          const newDept = await base44.entities.Department.create({
-            name: deptData.name,
-            code: deptData.name.substring(0, 3).toUpperCase(),
-            color: "#64748b" // Default slate
-          });
-          deptId = newDept.id;
-          createdDepts++;
-        }
-
-        // Create Positions
-        for (const posData of deptData.positions) {
-          if (!posData.existingId) {
-            await base44.entities.Position.create({
-              name: posData.name,
-              department_id: deptId,
-              department_name: deptData.name,
-              max_headcount: posData.count, // Set initial headcount to current employee count
-              level: "Mid"
-            });
-            createdPos++;
-          }
-        }
-      }
-
-      await queryClient.invalidateQueries();
-      toast.success(`Sincronización completada: ${createdDepts} dept. y ${createdPos} puestos creados.`);
-      setIsSyncDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("Error durante la sincronización");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const [isNormalizing, setIsNormalizing] = useState(false);
-
-  const normalizeAllData = async () => {
-    if (!confirm("Esta acción convertirá TODOS los nombres de departamentos, puestos y empleados a MAYÚSCULAS. ¿Desea continuar?")) return;
-    
-    setIsNormalizing(true);
-    try {
-      toast.info("Iniciando normalización masiva...");
-      
-      // 1. Fetch current data
-      const allDepts = await base44.entities.Department.list();
-      const allPos = await base44.entities.Position.list();
-      const allEmps = await base44.entities.EmployeeMasterDatabase.list();
-      
-      let updatedDeptsCount = 0;
-      let updatedPosCount = 0;
-      let updatedEmpsCount = 0;
-
-      // 2. Normalize Departments
-      const deptUpdates = allDepts.map(async (dept) => {
-        const normalizedName = (dept.name || "").trim().toUpperCase();
-        if (dept.name !== normalizedName) {
-           await base44.entities.Department.update(dept.id, { name: normalizedName });
-           updatedDeptsCount++;
-           return { ...dept, name: normalizedName };
-        }
-        return dept;
-      });
-      const finalDepts = await Promise.all(deptUpdates);
-
-      // 3. Normalize Positions (and their department_name ref)
-      const posUpdates = allPos.map(async (pos) => {
-        if (!pos.department_id) return;
-
-        const normalizedName = (pos.name || "").trim().toUpperCase();
-        // Find parent dept in updated list
-        const parentDept = finalDepts.find(d => d.id === pos.department_id);
-        const normalizedDeptName = parentDept ? (parentDept.name || "").trim().toUpperCase() : null;
-
-        if (pos.name !== normalizedName || pos.department_name !== normalizedDeptName) {
-           await base44.entities.Position.update(pos.id, { 
-             name: normalizedName,
-             department_name: normalizedDeptName,
-             department_id: pos.department_id
-           });
-           updatedPosCount++;
-        }
-      });
-      await Promise.all(posUpdates);
-
-      // 4. Normalize Employees
-      // Process in chunks to avoid overwhelming the API
-      const chunkSize = 20;
-      for (let i = 0; i < allEmps.length; i += chunkSize) {
-        const chunk = allEmps.slice(i, i + chunkSize);
-        await Promise.all(chunk.map(async (emp) => {
-           const normDept = (emp.departamento || "").trim().toUpperCase();
-           const normPuesto = (emp.puesto || "").trim().toUpperCase();
-           
-           if ((emp.departamento && emp.departamento !== normDept) || (emp.puesto && emp.puesto !== normPuesto)) {
-             await base44.entities.EmployeeMasterDatabase.update(emp.id, {
-               departamento: normDept,
-               puesto: normPuesto
-             });
-             updatedEmpsCount++;
-           }
-        }));
-      }
-
-      await queryClient.invalidateQueries();
-      await recalculateEmployeeCounts();
-      
-      toast.success(`Normalización completa: ${updatedDeptsCount} Depts, ${updatedPosCount} Puestos, ${updatedEmpsCount} Empleados actualizados.`);
-
-    } catch (e) {
-      console.error(e);
-      toast.error("Error al normalizar datos: " + e.message);
-    } finally {
-      setIsNormalizing(false);
-    }
   };
 
   // Forms State
@@ -1604,90 +1374,6 @@ export default function DepartmentPositionManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Sync Dialog */}
-      <Dialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="w-5 h-5 text-indigo-600" />
-              Sincronizar Estructura desde Empleados
-            </DialogTitle>
-            <DialogDescription>
-              Analiza la base de datos de empleados para detectar departamentos y puestos no registrados en la estructura.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="border rounded-md bg-slate-50">
-            {analysisResult ? (
-              <div>
-                <div className="p-4 space-y-6">
-                  {analysisResult.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500">
-                      No se encontraron datos de empleados para analizar.
-                    </div>
-                  ) : (
-                    analysisResult.map(dept => (
-                      <div key={dept.key} className="bg-white border rounded-lg overflow-hidden shadow-sm">
-                        <div className="p-3 bg-slate-50 border-b flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            {dept.isNew ? (
-                              <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600">Nuevo Dept.</Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                <CheckCircle2 className="w-3 h-3 mr-1" /> Existente
-                              </Badge>
-                            )}
-                            <span className="font-bold text-slate-800">{dept.name}</span>
-                          </div>
-                          <Badge variant="secondary">{dept.count} empleados</Badge>
-                        </div>
-                        <div className="divide-y divide-slate-100">
-                          {dept.positions.map(pos => (
-                            <div key={pos.key} className="p-3 pl-8 flex justify-between items-center hover:bg-slate-50">
-                              <div className="flex items-center gap-2">
-                                {pos.isNew ? (
-                                  <div className="w-2 h-2 rounded-full bg-amber-400" title="Nuevo Puesto" />
-                                ) : (
-                                  <div className="w-2 h-2 rounded-full bg-green-400" title="Existente" />
-                                )}
-                                <span className="text-sm text-slate-700">{pos.name}</span>
-                              </div>
-                              <span className="text-xs text-slate-400 font-mono">{pos.count} emp.</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-40">
-                <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="mt-4 gap-2">
-             <div className="flex-1 text-xs text-slate-500 flex items-center">
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Se crearán las entidades marcadas como "Nuevo".
-             </div>
-             <Button variant="outline" onClick={() => setIsSyncDialogOpen(false)}>Cancelar</Button>
-             <Button onClick={performSync} disabled={syncing} className="bg-indigo-600 hover:bg-indigo-700">
-               {syncing ? (
-                 <>
-                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Procesando...
-                 </>
-               ) : (
-                 <>
-                   <Save className="w-4 h-4 mr-2" /> Generar Estructura
-                 </>
-               )}
-             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
