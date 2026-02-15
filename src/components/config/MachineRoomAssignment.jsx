@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,6 +34,18 @@ export default function MachineRoomAssignment({ config }) {
   const [filterAssigned, setFilterAssigned] = useState("all");
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [autoStats, setAutoStats] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem("machineAssignmentStats");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setAutoStats(parsed);
+      }
+    } catch {}
+  }, []);
 
   const { data: machines = [], isLoading } = useQuery({
     queryKey: ['machines'],
@@ -97,6 +109,11 @@ export default function MachineRoomAssignment({ config }) {
   const unassignedCount = machines.filter(m => !m.room_id).length;
   const assignedCount = machines.filter(m => m.room_id).length;
 
+  const autoAssignedText =
+    autoStats && typeof autoStats.autoAssigned === "number"
+      ? `Última auto-asignación: ${autoStats.autoAssigned} máquinas`
+      : "Sin datos de auto-asignación automática";
+
   if (isLoading) {
     return <div className="p-6 text-center">Cargando máquinas...</div>;
   }
@@ -112,6 +129,9 @@ export default function MachineRoomAssignment({ config }) {
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Asigna cada máquina a un área y sala específica
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            {autoAssignedText}
           </p>
         </div>
       </div>

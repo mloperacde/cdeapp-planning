@@ -98,12 +98,30 @@ export function StructureConfig({ config, setConfig }) {
       let autoAssigned = 0;
       let candidates = 0;
 
+      const roomEntries = Array.from(roomIndex.entries());
+
       for (const m of machines) {
         const salaRaw = m.ubicacion || "";
         if (!salaRaw || m.room_id) continue;
         const key = normalizeKey(salaRaw);
         if (!key) continue;
-        const target = roomIndex.get(key);
+
+        let target = roomIndex.get(key);
+
+        if (!target) {
+          for (const [roomKey, info] of roomEntries) {
+            if (!roomKey) continue;
+            if (roomKey.length >= 3 && key.includes(roomKey)) {
+              target = info;
+              break;
+            }
+            if (key.length >= 3 && roomKey.includes(key)) {
+              target = info;
+              break;
+            }
+          }
+        }
+
         if (!target) continue;
         candidates++;
         await base44.entities.MachineMasterDatabase.update(m.id, {
@@ -113,6 +131,17 @@ export function StructureConfig({ config, setConfig }) {
           room_name: target.roomName,
         });
         autoAssigned++;
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          const stats = {
+            autoAssigned,
+            total: withAlias.length,
+            updatedAt: new Date().toISOString(),
+          };
+          window.localStorage.setItem("machineAssignmentStats", JSON.stringify(stats));
+        } catch {}
       }
 
       if (autoAssigned > 0) {
