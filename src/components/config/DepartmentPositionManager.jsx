@@ -994,51 +994,6 @@ export default function DepartmentPositionManager() {
             </Button>
           </div>
         </div>
-        
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
-            disabled={isNormalizing}
-            onClick={normalizeAllData}
-          >
-            {isNormalizing ? <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Settings2 className="w-3.5 h-3.5 mr-2" />}
-            {isNormalizing ? "Normalizando..." : "Normalizar Mayúsculas"}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-            onClick={() => setIsSyncDialogOpen(true)}
-          >
-            <RefreshCw className="w-3.5 h-3.5 mr-2" />
-            Sincronizar Estructura
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-            onClick={async () => {
-              toast.info("Recalculando conteos...");
-              await recalculateEmployeeCounts();
-              toast.success("Conteos actualizados");
-            }}
-          >
-            <Users className="w-3.5 h-3.5 mr-2" />
-            Recalcular Conteos
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
-            onClick={normalizeAllData}
-            disabled={isNormalizing}
-          >
-            {isNormalizing ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5 mr-2" />}
-            Normalizar DB
-          </Button>
-        </div>
       </div>
       <div className="flex-1 min-h-0 flex flex-col">
       {viewMode === "editor" ? (
