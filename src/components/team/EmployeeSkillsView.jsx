@@ -221,7 +221,15 @@ export default function EmployeeSkillsView({ department = "all" }) {
     };
 
     const getUniquePositions = () => {
-        const positions = new Set(employees.filter(e => e.departamento === "FABRICACION").map(e => e.puesto).filter(Boolean));
+        const positions = new Set(
+            employees
+              .filter(e => {
+                const d = (e.departamento || "").toString().trim().toUpperCase();
+                return d === "PRODUCCIÓN" || d === "PRODUCCION";
+              })
+              .map(e => e.puesto)
+              .filter(Boolean)
+        );
         return Array.from(positions);
     };
 

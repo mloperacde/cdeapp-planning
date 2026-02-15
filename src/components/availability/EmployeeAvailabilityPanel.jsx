@@ -14,11 +14,14 @@ export default function EmployeeAvailabilityPanel({
   showDetails = true 
 }) {
   const availability = useMemo(() => {
-    const emps = employees.filter(emp => 
-      emp.departamento === "FABRICACION" && 
-      emp.estado_empleado === "Alta" && 
-      emp.incluir_en_planning !== false
-    );
+    const emps = employees.filter(emp => {
+      const d = (emp.departamento || "").toString().trim().toUpperCase();
+      return (
+        (d === "PRODUCCIÓN" || d === "PRODUCCION") &&
+        emp.estado_empleado === "Alta" &&
+        emp.incluir_en_planning !== false
+      );
+    });
     const r = getAvailability(emps, absences, selectedDate);
     return {
       total: r.totalEmpleados,
@@ -35,7 +38,7 @@ export default function EmployeeAvailabilityPanel({
       <CardHeader className="border-b border-blue-200 dark:border-blue-800">
         <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
           <Users className="w-6 h-6 text-blue-600" />
-          Panel de Disponibilidad - FABRICACIÓN
+          Panel de Disponibilidad - PRODUCCIÓN
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">

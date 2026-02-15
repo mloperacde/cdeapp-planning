@@ -70,7 +70,8 @@ export default function MachineSkillsView() {
         const identifiers = getMachineIdentifiers(machineId);
         
         const candidates = employees.filter(e => {
-            if (e.departamento !== "FABRICACION") return false;
+            const d = (e.departamento || "").toString().trim().toUpperCase();
+            if (!(d === "PRODUCCIÓN" || d === "PRODUCCION")) return false;
             
             // Filter by Team
             if (selectedTeam !== "all" && e.equipo !== selectedTeam) return false;

@@ -3,11 +3,14 @@ import { Bug, CheckCircle2, UserX } from "lucide-react";
 import { format } from "date-fns";
 
 export default function AvailabilityDebugPanel({ employees, absences, selectedDate }) {
-  const fabricacionEmployees = employees.filter(emp => 
-    emp.departamento === "FABRICACION" &&
-    emp.estado_empleado === "Alta" &&
-    emp.incluir_en_planning !== false
-  );
+  const fabricacionEmployees = employees.filter(emp => {
+    const d = (emp.departamento || "").toString().trim().toUpperCase();
+    return (
+      (d === "PRODUCCIÓN" || d === "PRODUCCION") &&
+      emp.estado_empleado === "Alta" &&
+      emp.incluir_en_planning !== false
+    );
+  });
 
   const selectedDateObj = new Date(selectedDate + 'T00:00:00');
   const ausenciasConfirmadas = absences.filter(abs => {
@@ -38,7 +41,7 @@ export default function AvailabilityDebugPanel({ employees, absences, selectedDa
             <p className="text-2xl font-bold">{employees.length}</p>
           </div>
           <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200">
-            <p className="text-blue-700 dark:text-blue-300 mb-1">FABRICACION Alta</p>
+          <p className="text-blue-700 dark:text-blue-300 mb-1">PRODUCCIÓN Alta</p>
             <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{fabricacionEmployees.length}</p>
           </div>
           <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200">

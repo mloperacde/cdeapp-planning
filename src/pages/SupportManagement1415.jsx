@@ -114,7 +114,7 @@ export default function SupportManagement1415Page() {
     );
 
     if (useQuickFilter) {
-      const validDepts = ['FABRICACION', 'MANTENIMIENTO', 'ALMACEN'];
+      const validDepts = ['PRODUCCIÓN', 'PRODUCCION', 'MANTENIMIENTO', 'ALMACEN'];
       
       filtered = filtered.filter(emp => {
         if (emp.tipo_jornada !== "Jornada Completa") return false;
@@ -130,13 +130,13 @@ export default function SupportManagement1415Page() {
         
         if (!hasTardeTurn) return false;
         
-        return validDepts.includes(emp.departamento);
+        return validDepts.includes((emp.departamento || "").toString().trim().toUpperCase());
       });
       
       filtered.sort((a, b) => {
-        const deptOrder = { 'FABRICACION': 0, 'MANTENIMIENTO': 1, 'ALMACEN': 2 };
-        const orderA = deptOrder[a.departamento] ?? 999;
-        const orderB = deptOrder[b.departamento] ?? 999;
+        const deptOrder = { 'PRODUCCIÓN': 0, 'PRODUCCION': 0, 'MANTENIMIENTO': 1, 'ALMACEN': 2 };
+        const orderA = deptOrder[(a.departamento || "").toString().trim().toUpperCase()] ?? 999;
+        const orderB = deptOrder[(b.departamento || "").toString().trim().toUpperCase()] ?? 999;
         return orderA - orderB;
       });
     }

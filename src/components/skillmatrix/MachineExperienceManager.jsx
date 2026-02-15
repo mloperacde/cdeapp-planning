@@ -144,9 +144,10 @@ export default function MachineExperienceManager() {
   }, [employees, employeeSkills]);
 
   const fabricacionMantenimientoEmployees = useMemo(() => {
-    return employees.filter(emp => 
-      emp.departamento === "FABRICACION" || emp.departamento === "MANTENIMIENTO"
-    );
+    return employees.filter(emp => {
+      const d = (emp.departamento || "").toString().trim().toUpperCase();
+      return d === "PRODUCCIÓN" || d === "PRODUCCION" || d === "MANTENIMIENTO";
+    });
   }, [employees]);
 
   const departments = useMemo(() => 

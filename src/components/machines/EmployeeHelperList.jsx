@@ -12,7 +12,8 @@ export default function EmployeeHelperList({ employees, currentTeam, machines })
     const filteredEmployees = useMemo(() => {
         return employees.filter(e => {
             // Filter by department
-            if (e.departamento !== "FABRICACION") return false;
+            const d = (e.departamento || "").toString().trim().toUpperCase();
+            if (!(d === "PRODUCCIÓN" || d === "PRODUCCION")) return false;
             
             // Filter by team if selected (optional, user might want to see all)
             // The prompt implies a list to HELP assignment, probably filtering by current team is best initially

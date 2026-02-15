@@ -84,7 +84,7 @@ export default function EmployeesShiftManagerPage() {
     crear: true,
     editar: true, 
     eliminar: false,
-    visibleDepartments: ['FABRICACION'],
+    visibleDepartments: ['PRODUCCIÓN'],
     campos: {
       ver_salario: false,
       ver_bancarios: false,
@@ -113,9 +113,12 @@ export default function EmployeesShiftManagerPage() {
     staleTime: 5 * 60 * 1000 
   });
 
-  // Strict Filter: Only FABRICACION
+  // Strict Filter: Only PRODUCCIÓN
   const effectiveEmployees = useMemo(() => {
-    return allEmployees.filter(emp => emp.departamento === 'FABRICACION');
+    return allEmployees.filter(emp => {
+      const d = (emp.departamento || "").toString().trim().toUpperCase();
+      return d === 'PRODUCCIÓN' || d === 'PRODUCCION';
+    });
   }, [allEmployees]);
 
   const filterOptions = useMemo(() => {
@@ -233,7 +236,7 @@ export default function EmployeesShiftManagerPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 shadow-sm">
             <CardContent className="p-4">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total Fabricación</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total Producción</p>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
               </div>
@@ -302,7 +305,7 @@ export default function EmployeesShiftManagerPage() {
           </CardHeader>
           <CardContent className="p-0">
             {currentViewEmployees.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">No se encontraron empleados de fabricación.</div>
+              <div className="p-12 text-center text-slate-500">No se encontraron empleados de producción.</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>

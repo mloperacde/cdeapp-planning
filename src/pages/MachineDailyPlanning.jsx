@@ -116,14 +116,15 @@ export default function MachineDailyPlanningPage() {
     // FILTRAR POR EQUIPO Y DEPARTAMENTO
     const fabricacionEmployees = employees.filter(emp => {
       const isActive = emp.estado_empleado === "Alta";
-      const isFabricacion = emp.departamento === "FABRICACION";
+      const d = (emp.departamento || "").toString().trim().toUpperCase();
+      const isFabricacion = d === "PRODUCCIÓN" || d === "PRODUCCION";
       const incluir = emp.incluir_en_planning !== false;
       const matchesTeam = !selectedTeam || emp.equipo === teams.find(t => t.team_key === selectedTeam)?.team_name;
       
       return isActive && isFabricacion && incluir && matchesTeam;
     });
 
-    console.log('👷 Empleados FABRICACION del equipo seleccionado:', fabricacionEmployees.length);
+    console.log('👷 Empleados PRODUCCIÓN del equipo seleccionado:', fabricacionEmployees.length);
 
     const selectedDateObj = new Date(selectedDate + 'T00:00:00');
     const ausenciasConfirmadas = absences.filter(abs => {

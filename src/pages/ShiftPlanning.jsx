@@ -329,8 +329,8 @@ export default function ShiftPlanningPage() {
       // 1. Assigned Check
       if (assignedIds.has(e.id)) return false;
 
-      // 2. Department: Fabricación
-      if (normalize(e.departamento) !== "fabricacion") return false;
+      // 2. Department: Producción
+      if (normalize(e.departamento) !== "produccion") return false;
 
       // 3. Availability: Disponible
       if (normalize(e.disponibilidad) !== "disponible") return false;
