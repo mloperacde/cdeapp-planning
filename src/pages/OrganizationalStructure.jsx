@@ -20,7 +20,6 @@ import DepartmentPositionManager from "../components/config/DepartmentPositionMa
 import TeamManagementConfig from "../components/config/TeamManagementConfig";
 import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import { StructureConfig, AssignmentsConfig, TasksConfig } from "../components/config/ManufacturingStructureConfig";
-import DepartmentVerificationPanel from "../components/hr/DepartmentVerificationPanel";
 import TeamVerificationPanel from "../components/hr/TeamVerificationPanel";
 import MachineRoomAssignment from "../components/config/MachineRoomAssignment";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -174,10 +173,6 @@ export default function OrganizationalStructure() {
                 <Factory className="w-3 h-3 mr-2" />
                 Fabricación
               </TabsTrigger>
-              <TabsTrigger value="verification" className="flex-1 text-xs py-1.5">
-                <ClipboardList className="w-3 h-3 mr-2" />
-                Verificación
-              </TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-2">
@@ -253,8 +248,9 @@ export default function OrganizationalStructure() {
                       Configura turnos rotativos, composición de equipos y calendarios
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 overflow-y-auto">
+                  <CardContent className="p-4 overflow-y-auto space-y-6">
                     <TeamManagementConfig />
+                    <TeamVerificationPanel />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -293,39 +289,6 @@ export default function OrganizationalStructure() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="verification" className="m-0 h-full">
-                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-full flex flex-col overflow-hidden">
-                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-3 px-4 shrink-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <ClipboardList className="w-4 h-4 text-green-600" />
-                      Verificación y Validación
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Verifica la consistencia de departamentos y equipos
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0 overflow-y-auto">
-                    <Tabs defaultValue="departments" className="w-full">
-                      <TabsList className="w-full grid grid-cols-2 m-4 mb-2">
-                        <TabsTrigger value="departments">
-                          <Building2 className="w-4 h-4 mr-2" />
-                          Departamentos
-                        </TabsTrigger>
-                        <TabsTrigger value="teams">
-                          <Users className="w-4 h-4 mr-2" />
-                          Equipos
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="departments">
-                        <DepartmentVerificationPanel />
-                      </TabsContent>
-                      <TabsContent value="teams">
-                        <TeamVerificationPanel />
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
-              </TabsContent>
             </div>
           </Tabs>
         </div>
