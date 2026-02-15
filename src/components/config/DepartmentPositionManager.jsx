@@ -1105,7 +1105,7 @@ export default function DepartmentPositionManager() {
           </Button>
         </div>
       </div>
-
+      <div className="flex-1 min-h-0 overflow-auto">
       {viewMode === "editor" ? (
         <div className="flex flex-col gap-4">
           <div className="px-3 pt-2">
@@ -1449,6 +1449,7 @@ export default function DepartmentPositionManager() {
           }}
         />
       )}
+      </div>
 
       {/* Dialogs reused and simplified */}
       <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
