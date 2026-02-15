@@ -1024,7 +1024,7 @@ export default function DepartmentPositionManager() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-2 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="min-h-screen flex flex-col gap-2 bg-slate-50 dark:bg-slate-950">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
@@ -1107,7 +1107,7 @@ export default function DepartmentPositionManager() {
       </div>
 
       {viewMode === "editor" ? (
-        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+        <div className="flex flex-col gap-4">
           <div className="px-3 pt-2">
             <Tabs value={mainTab} onValueChange={setMainTab}>
               <TabsList>
@@ -1116,10 +1116,10 @@ export default function DepartmentPositionManager() {
               </TabsList>
             </Tabs>
           </div>
-          <Tabs value={mainTab} onValueChange={setMainTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsContent value="departments" className="flex-1 flex gap-6 overflow-hidden data-[state=inactive]:hidden">
+          <Tabs value={mainTab} onValueChange={setMainTab} className="flex flex-col">
+          <TabsContent value="departments" className="flex gap-6 data-[state=inactive]:hidden">
           {/* Left Sidebar: Tree View */}
-          <Card className="flex-1 min-w-[320px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+          <Card className="flex-1 min-w-[320px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <div className="p-4 border-b border-slate-100 flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -1136,7 +1136,7 @@ export default function DepartmentPositionManager() {
               </Button>
             </div>
             
-            <ScrollArea className="flex-1 p-3">
+            <div className="p-3">
               <div className="space-y-1">
                 {departments
                   .filter(d => !d.parent_id)
@@ -1156,13 +1156,13 @@ export default function DepartmentPositionManager() {
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </Card>
 
           {/* Right Panel: Details & Positions */}
-          <Card className="flex-1 flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full overflow-hidden">
+          <Card className="flex-1 flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             {selectedDept ? (
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col">
                 {/* Header Info */}
                 <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                   <div className="flex justify-between items-start mb-4">
@@ -1224,7 +1224,7 @@ export default function DepartmentPositionManager() {
                 </div>
 
                 {/* Content Tabs */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
                   <div className="px-6 pt-4 border-b bg-white">
                     <TabsList>
                       <TabsTrigger value="positions">Puestos ({deptPositions.length})</TabsTrigger>
@@ -1233,7 +1233,7 @@ export default function DepartmentPositionManager() {
                   </div>
 
                   {/* Positions Tab */}
-                  <TabsContent value="positions" className="flex-1 p-6 overflow-hidden flex flex-col mt-0 data-[state=inactive]:hidden">
+                  <TabsContent value="positions" className="p-6 flex flex-col mt-0 data-[state=inactive]:hidden">
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                         <Briefcase className="w-5 h-5 text-slate-500" />
@@ -1249,7 +1249,7 @@ export default function DepartmentPositionManager() {
                       </div>
                     </div>
 
-                    <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
+                    <div className="border rounded-lg bg-white flex flex-col shadow-sm">
                       <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         <div className="col-span-4">Nombre del Puesto</div>
                         <div className="col-span-2">Nivel</div>
@@ -1258,7 +1258,7 @@ export default function DepartmentPositionManager() {
                         <div className="col-span-1 text-right">Acciones</div>
                       </div>
                       
-                      <ScrollArea className="flex-1">
+                      <div>
                         {deptPositions.length > 0 ? (
                           <div className="divide-y divide-slate-100">
                             {deptPositions.map(pos => (
@@ -1298,12 +1298,12 @@ export default function DepartmentPositionManager() {
                             <Button variant="link" onClick={handleCreatePos}>Crear el primero</Button>
                           </div>
                         )}
-                      </ScrollArea>
+                      </div>
                     </div>
                   </TabsContent>
 
                   {/* Employees Tab */}
-                  <TabsContent value="employees" className="flex-1 p-6 overflow-hidden flex flex-col mt-0 data-[state=inactive]:hidden">
+                  <TabsContent value="employees" className="p-6 flex flex-col mt-0 data-[state=inactive]:hidden">
                    <div className="flex justify-between items-center mb-4">
                       <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                          <Users className="w-5 h-5 text-slate-500" />
@@ -1319,7 +1319,7 @@ export default function DepartmentPositionManager() {
                       </div>
                    </div>
 
-                   <div className="border rounded-lg bg-white overflow-hidden flex-1 flex flex-col shadow-sm">
+                   <div className="border rounded-lg bg-white flex flex-col shadow-sm">
                       <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase tracking-wider">
                          <div className="col-span-1">Código</div>
                          <div className="col-span-3">Nombre</div>
@@ -1328,7 +1328,7 @@ export default function DepartmentPositionManager() {
                          <div className="col-span-1">Equipo</div>
                          <div className="col-span-2 text-right">Acciones</div>
                       </div>
-                      <ScrollArea className="flex-1">
+                      <div>
                          {deptEmployees.length > 0 ? (
                             <div className="divide-y divide-slate-100">
                                {deptEmployees
@@ -1369,13 +1369,13 @@ export default function DepartmentPositionManager() {
                                <Button variant="link" onClick={() => { setEmpToEdit(null); setIsEmpDialogOpen(true); }}>Asignar ahora</Button>
                             </div>
                          )}
-                      </ScrollArea>
+                      </div>
                    </div>
                   </TabsContent>
                 </Tabs>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <div className="flex flex-col items-center justify-center text-slate-400">
                 <div className="bg-slate-50 p-6 rounded-full mb-4">
                   <Building2 className="w-12 h-12 text-slate-300" />
                 </div>
@@ -1387,7 +1387,7 @@ export default function DepartmentPositionManager() {
             )}
             </Card>
           </TabsContent>
-          <TabsContent value="vacancies" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden p-4">
+          <TabsContent value="vacancies" className="flex flex-col data-[state=inactive]:hidden p-4">
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-amber-600" />
@@ -1397,8 +1397,8 @@ export default function DepartmentPositionManager() {
                 {totalVacancies} vacantes
               </Badge>
             </div>
-            <div className="flex-1 border rounded-lg bg-white overflow-hidden shadow-sm p-4">
-              <ScrollArea className="h-full">
+            <div className="border rounded-lg bg-white shadow-sm p-4">
+              <div>
                 <div className="grid grid-cols-3 gap-3">
                   {vacanciesByDept.map(dept => (
                     <div key={dept.departmentId} className="border rounded-lg overflow-hidden bg-slate-50">
@@ -1422,7 +1422,7 @@ export default function DepartmentPositionManager() {
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </TabsContent>
           </Tabs>
@@ -1764,9 +1764,9 @@ export default function DepartmentPositionManager() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-hidden border rounded-md bg-slate-50">
+          <div className="border rounded-md bg-slate-50">
             {analysisResult ? (
-              <ScrollArea className="h-full">
+              <div>
                 <div className="p-4 space-y-6">
                   {analysisResult.length === 0 ? (
                     <div className="text-center py-10 text-slate-500">
@@ -1807,7 +1807,7 @@ export default function DepartmentPositionManager() {
                     ))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-40">
                 <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
