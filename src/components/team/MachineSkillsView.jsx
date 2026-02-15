@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.jsx";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, X, AlertTriangle, Edit3, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Plus, X, AlertTriangle, Edit3, ArrowUp, ArrowDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -389,51 +389,54 @@ export default function MachineSkillsView() {
                                                         )}
                                                     >
                                                         {isEditing ? (
-                                                            <div className="flex items-center gap-1">
-                                                                <Select
-                                                                    value={editingPuesto || e.puesto || "none"}
-                                                                    onValueChange={(val) => {
-                                                                        const next = val === "none" ? "" : val;
-                                                                        setEditingPuesto(next);
-                                                                    }}
-                                                                >
-                                                                    <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
-                                                                        <SelectValue placeholder="Seleccionar puesto" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="none">- Sin puesto -</SelectItem>
-                                                                        {productionPositions.map(p => (
-                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="outline"
-                                                                    className="h-6 w-6"
-                                                                    onClick={(ev) => {
-                                                                        ev.stopPropagation();
-                                                                        updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
-                                                                    }}
-                                                                    disabled={updateEmployeePosition.isPending}
-                                                                >
-                                                                    <ArrowUp className="hidden" />
-                                                                </Button>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="outline"
-                                                                    className="h-6 w-6"
-                                                                    onClick={(ev) => {
-                                                                        ev.stopPropagation();
-                                                                        setEditingEmployeeId(null);
-                                                                        setEditingPuesto("");
-                                                                    }}
-                                                                    disabled={updateEmployeePosition.isPending}
-                                                                >
-                                                                    <X className="w-3 h-3" />
-                                                                </Button>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[10px] text-slate-600 truncate">{e.nombre}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <Select
+                                                                        value={editingPuesto || e.puesto || "none"}
+                                                                        onValueChange={(val) => {
+                                                                            const next = val === "none" ? "" : val;
+                                                                            setEditingPuesto(next);
+                                                                        }}
+                                                                    >
+                                                                        <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
+                                                                            <SelectValue placeholder="Seleccionar puesto" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="none">- Sin puesto -</SelectItem>
+                                                                            {productionPositions.map(p => (
+                                                                                <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="outline"
+                                                                        className="h-6 w-6"
+                                                                        onClick={(ev) => {
+                                                                            ev.stopPropagation();
+                                                                            updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
+                                                                        }}
+                                                                        disabled={updateEmployeePosition.isPending}
+                                                                    >
+                                                                        <Check className="w-3 h-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="outline"
+                                                                        className="h-6 w-6"
+                                                                        onClick={(ev) => {
+                                                                            ev.stopPropagation();
+                                                                            setEditingEmployeeId(null);
+                                                                            setEditingPuesto("");
+                                                                        }}
+                                                                        disabled={updateEmployeePosition.isPending}
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1">
@@ -515,51 +518,54 @@ export default function MachineSkillsView() {
                                                         )}
                                                     >
                                                         {isEditing ? (
-                                                            <div className="flex items-center gap-1">
-                                                                <Select
-                                                                    value={editingPuesto || e.puesto || "none"}
-                                                                    onValueChange={(val) => {
-                                                                        const next = val === "none" ? "" : val;
-                                                                        setEditingPuesto(next);
-                                                                    }}
-                                                                >
-                                                                    <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
-                                                                        <SelectValue placeholder="Seleccionar puesto" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="none">- Sin puesto -</SelectItem>
-                                                                        {productionPositions.map(p => (
-                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="outline"
-                                                                    className="h-6 w-6"
-                                                                    onClick={(ev) => {
-                                                                        ev.stopPropagation();
-                                                                        updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
-                                                                    }}
-                                                                    disabled={updateEmployeePosition.isPending}
-                                                                >
-                                                                    <ArrowUp className="hidden" />
-                                                                </Button>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="outline"
-                                                                    className="h-6 w-6"
-                                                                    onClick={(ev) => {
-                                                                        ev.stopPropagation();
-                                                                        setEditingEmployeeId(null);
-                                                                        setEditingPuesto("");
-                                                                    }}
-                                                                    disabled={updateEmployeePosition.isPending}
-                                                                >
-                                                                    <X className="w-3 h-3" />
-                                                                </Button>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[10px] text-slate-600 truncate">{e.nombre}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <Select
+                                                                        value={editingPuesto || e.puesto || "none"}
+                                                                        onValueChange={(val) => {
+                                                                            const next = val === "none" ? "" : val;
+                                                                            setEditingPuesto(next);
+                                                                        }}
+                                                                    >
+                                                                        <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
+                                                                            <SelectValue placeholder="Seleccionar puesto" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="none">- Sin puesto -</SelectItem>
+                                                                            {productionPositions.map(p => (
+                                                                                <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="outline"
+                                                                        className="h-6 w-6"
+                                                                        onClick={(ev) => {
+                                                                            ev.stopPropagation();
+                                                                            updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
+                                                                        }}
+                                                                        disabled={updateEmployeePosition.isPending}
+                                                                    >
+                                                                        <Check className="w-3 h-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="outline"
+                                                                        className="h-6 w-6"
+                                                                        onClick={(ev) => {
+                                                                            ev.stopPropagation();
+                                                                            setEditingEmployeeId(null);
+                                                                            setEditingPuesto("");
+                                                                        }}
+                                                                        disabled={updateEmployeePosition.isPending}
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1">
@@ -641,51 +647,54 @@ export default function MachineSkillsView() {
                                                         )}
                                                     >
                                                         {isEditing ? (
-                                                            <div className="flex items-center gap-1">
-                                                                <Select
-                                                                    value={editingPuesto || e.puesto || "none"}
-                                                                    onValueChange={(val) => {
-                                                                        const next = val === "none" ? "" : val;
-                                                                        setEditingPuesto(next);
-                                                                    }}
-                                                                >
-                                                                    <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
-                                                                        <SelectValue placeholder="Seleccionar puesto" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="none">- Sin puesto -</SelectItem>
-                                                                        {productionPositions.map(p => (
-                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="outline"
-                                                                    className="h-6 w-6"
-                                                                    onClick={(ev) => {
-                                                                        ev.stopPropagation();
-                                                                        updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
-                                                                    }}
-                                                                    disabled={updateEmployeePosition.isPending}
-                                                                >
-                                                                    <ArrowUp className="hidden" />
-                                                                </Button>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="outline"
-                                                                    className="h-6 w-6"
-                                                                    onClick={(ev) => {
-                                                                        ev.stopPropagation();
-                                                                        setEditingEmployeeId(null);
-                                                                        setEditingPuesto("");
-                                                                    }}
-                                                                    disabled={updateEmployeePosition.isPending}
-                                                                >
-                                                                    <X className="w-3 h-3" />
-                                                                </Button>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[10px] text-slate-600 truncate">{e.nombre}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <Select
+                                                                        value={editingPuesto || e.puesto || "none"}
+                                                                        onValueChange={(val) => {
+                                                                            const next = val === "none" ? "" : val;
+                                                                            setEditingPuesto(next);
+                                                                        }}
+                                                                    >
+                                                                        <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
+                                                                            <SelectValue placeholder="Seleccionar puesto" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="none">- Sin puesto -</SelectItem>
+                                                                            {productionPositions.map(p => (
+                                                                                <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="outline"
+                                                                        className="h-6 w-6"
+                                                                        onClick={(ev) => {
+                                                                            ev.stopPropagation();
+                                                                            updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
+                                                                        }}
+                                                                        disabled={updateEmployeePosition.isPending}
+                                                                    >
+                                                                        <Check className="w-3 h-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="outline"
+                                                                        className="h-6 w-6"
+                                                                        onClick={(ev) => {
+                                                                            ev.stopPropagation();
+                                                                            setEditingEmployeeId(null);
+                                                                            setEditingPuesto("");
+                                                                        }}
+                                                                        disabled={updateEmployeePosition.isPending}
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1">
