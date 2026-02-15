@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.jsx";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, X, AlertTriangle } from "lucide-react";
+import { Search, Plus, X, AlertTriangle, Edit3, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ export default function MachineSkillsView() {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedTeam, setSelectedTeam] = useState("all");
+    const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+    const [editingPuesto, setEditingPuesto] = useState("");
 
     // Fetch Data
     const { data: employees = [] } = useQuery({
@@ -56,6 +58,17 @@ export default function MachineSkillsView() {
         queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
     });
 
+    const productionPositions = useMemo(() => {
+        const set = new Set();
+        employees.forEach(e => {
+            const d = (e.departamento || "").toString().trim().toUpperCase();
+            if ((d === "PRODUCCIÓN" || d === "PRODUCCION") && e.puesto) {
+                set.add(e.puesto);
+            }
+        });
+        return Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""));
+    }, [employees]);
+
     // Robust ID matching helper
     const getMachineIdentifiers = (machineId) => {
         const machine = machines.find(m => String(m.id) === String(machineId));
@@ -65,7 +78,21 @@ export default function MachineSkillsView() {
         ].filter(Boolean) : [String(machineId)];
     };
 
-    // Helper to get employees for a machine grouped by role and ordered by preference
+    const getPreferenceSlot = (empId, machineId) => {
+        const skill = employeeSkills.find(s => 
+            s.employee_id === empId && s.machine_id === machineId
+        );
+        if (skill?.orden_preferencia) return skill.orden_preferencia;
+        const identifiers = getMachineIdentifiers(machineId);
+        const emp = employees.find(e => e.id === empId);
+        if (!emp) return 99;
+        for (let i = 1; i <= 10; i++) {
+            const val = emp[`maquina_${i}`];
+            if (val && identifiers.includes(String(val))) return i;
+        }
+        return 99;
+    };
+
     const getMachineStaff = (machineId, roleType) => {
         const identifiers = getMachineIdentifiers(machineId);
         
@@ -89,21 +116,7 @@ export default function MachineSkillsView() {
         });
 
         // Sort by preference (orden_preferencia from EmployeeMachineSkill or legacy slot)
-        candidates.sort((a, b) => {
-            const getSlot = (emp) => {
-                const skill = employeeSkills.find(s => 
-                    s.employee_id === emp.id && s.machine_id === machineId
-                );
-                if (skill?.orden_preferencia) return skill.orden_preferencia;
-                // Fallback to legacy
-                for(let i=1; i<=10; i++) {
-                     const val = emp[`maquina_${i}`];
-                     if (val && identifiers.includes(String(val))) return i;
-                }
-                return 99;
-            };
-            return getSlot(a) - getSlot(b);
-        });
+        candidates.sort((a, b) => getPreferenceSlot(a.id, machineId) - getPreferenceSlot(b.id, machineId));
 
         return candidates;
     };
@@ -234,6 +247,51 @@ export default function MachineSkillsView() {
         }
     });
 
+    const updateEmployeePosition = useMutation({
+        mutationFn: async ({ employeeId, puesto }) => {
+            return base44.entities.EmployeeMasterDatabase.update(employeeId, {
+                puesto: puesto ? puesto.toUpperCase() : null
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            toast.success("Puesto actualizado correctamente");
+            setEditingEmployeeId(null);
+            setEditingPuesto("");
+        },
+        onError: (err) => {
+            toast.error(err?.message || "Error al actualizar puesto");
+        }
+    });
+
+    const reorderPreferenceMutation = useMutation({
+        mutationFn: async ({ employeeId, machineId, direction }) => {
+            const skillsForEmp = employeeSkills.filter(s => s.employee_id === employeeId);
+            const current = skillsForEmp.find(s => s.machine_id === machineId);
+            if (!current || !current.orden_preferencia) return;
+            const currentSlot = current.orden_preferencia;
+            let newSlot = direction === "up" ? currentSlot - 1 : currentSlot + 1;
+            if (newSlot < 1 || newSlot > 10) return;
+            const other = skillsForEmp.find(s => s.orden_preferencia === newSlot);
+            if (other) {
+                await base44.entities.EmployeeMachineSkill.update(other.id, {
+                    orden_preferencia: currentSlot
+                });
+            }
+            await base44.entities.EmployeeMachineSkill.update(current.id, {
+                orden_preferencia: newSlot
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employeeSkills'] });
+            toast.success("Orden de preferencia actualizado");
+        },
+        onError: (err) => {
+            toast.error(err?.message || "Error al actualizar orden");
+        }
+    });
+
     // Removed nested Popover AddEmployeeButton definition to fix selection issue
     // Using EmployeeSelect directly in render with custom trigger
 
@@ -315,22 +373,116 @@ export default function MachineSkillsView() {
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">
-                                            {responsables.map(e => (
-                                                <Badge 
-                                                    key={e.id} 
-                                                    variant="outline" 
-                                                    className={cn(
-                                                        "font-normal justify-start group pr-1",
-                                                        e.disponibilidad === "Ausente" 
-                                                            ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
-                                                            : "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                                                    )}
-                                                >
-                                                    {e.nombre}
-                                                    {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
-                                                    <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
-                                                </Badge>
-                                            ))}
+                                            {responsables.map(e => {
+                                                const isEditing = editingEmployeeId === e.id;
+                                                const skill = employeeSkills.find(s => s.employee_id === e.id && s.machine_id === machine.id);
+                                                const disabledReorder = !skill;
+                                                return (
+                                                    <Badge 
+                                                        key={e.id} 
+                                                        variant="outline" 
+                                                        className={cn(
+                                                            "font-normal justify-start group pr-1",
+                                                            e.disponibilidad === "Ausente" 
+                                                                ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
+                                                                : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                                        )}
+                                                    >
+                                                        {isEditing ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <Select
+                                                                    value={editingPuesto || e.puesto || "none"}
+                                                                    onValueChange={(val) => {
+                                                                        const next = val === "none" ? "" : val;
+                                                                        setEditingPuesto(next);
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
+                                                                        <SelectValue placeholder="Seleccionar puesto" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="none">- Sin puesto -</SelectItem>
+                                                                        {productionPositions.map(p => (
+                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="outline"
+                                                                    className="h-6 w-6"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
+                                                                    }}
+                                                                    disabled={updateEmployeePosition.isPending}
+                                                                >
+                                                                    <ArrowUp className="hidden" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="outline"
+                                                                    className="h-6 w-6"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        setEditingEmployeeId(null);
+                                                                        setEditingPuesto("");
+                                                                    }}
+                                                                    disabled={updateEmployeePosition.isPending}
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1">
+                                                                <span>{e.nombre}</span>
+                                                                {e.puesto && (
+                                                                    <span className="text-[10px] text-slate-600 ml-1">
+                                                                        ({e.puesto})
+                                                                    </span>
+                                                                )}
+                                                                {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-1 text-slate-500 hover:text-slate-900"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        setEditingEmployeeId(e.id);
+                                                                        setEditingPuesto(e.puesto || "");
+                                                                    }}
+                                                                >
+                                                                    <Edit3 className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-1 text-slate-500 hover:text-slate-900 disabled:opacity-40"
+                                                                    disabled={disabledReorder || reorderPreferenceMutation.isPending}
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        reorderPreferenceMutation.mutate({ employeeId: e.id, machineId: machine.id, direction: "up" });
+                                                                    }}
+                                                                >
+                                                                    <ArrowUp className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-0.5 text-slate-500 hover:text-slate-900 disabled:opacity-40"
+                                                                    disabled={disabledReorder || reorderPreferenceMutation.isPending}
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        reorderPreferenceMutation.mutate({ employeeId: e.id, machineId: machine.id, direction: "down" });
+                                                                    }}
+                                                                >
+                                                                    <ArrowDown className="w-3 h-3" />
+                                                                </button>
+                                                                <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
+                                                            </div>
+                                                        )}
+                                                    </Badge>
+                                                );
+                                            })}
                                             <div className="flex items-center gap-2 mt-1">
                                                 {responsables.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno</span>}
                                                 <EmployeeSelect 
@@ -347,22 +499,116 @@ export default function MachineSkillsView() {
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-col gap-1">
-                                            {segundas.map(e => (
-                                                <Badge 
-                                                    key={e.id} 
-                                                    variant="outline" 
-                                                    className={cn(
-                                                        "font-normal justify-start group pr-1",
-                                                        e.disponibilidad === "Ausente" 
-                                                            ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
-                                                            : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                                                    )}
-                                                >
-                                                    {e.nombre}
-                                                    {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
-                                                    <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
-                                                </Badge>
-                                            ))}
+                                            {segundas.map(e => {
+                                                const isEditing = editingEmployeeId === e.id;
+                                                const skill = employeeSkills.find(s => s.employee_id === e.id && s.machine_id === machine.id);
+                                                const disabledReorder = !skill;
+                                                return (
+                                                    <Badge 
+                                                        key={e.id} 
+                                                        variant="outline" 
+                                                        className={cn(
+                                                            "font-normal justify-start group pr-1",
+                                                            e.disponibilidad === "Ausente" 
+                                                                ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
+                                                                : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                                                        )}
+                                                    >
+                                                        {isEditing ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <Select
+                                                                    value={editingPuesto || e.puesto || "none"}
+                                                                    onValueChange={(val) => {
+                                                                        const next = val === "none" ? "" : val;
+                                                                        setEditingPuesto(next);
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
+                                                                        <SelectValue placeholder="Seleccionar puesto" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="none">- Sin puesto -</SelectItem>
+                                                                        {productionPositions.map(p => (
+                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="outline"
+                                                                    className="h-6 w-6"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
+                                                                    }}
+                                                                    disabled={updateEmployeePosition.isPending}
+                                                                >
+                                                                    <ArrowUp className="hidden" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="outline"
+                                                                    className="h-6 w-6"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        setEditingEmployeeId(null);
+                                                                        setEditingPuesto("");
+                                                                    }}
+                                                                    disabled={updateEmployeePosition.isPending}
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1">
+                                                                <span>{e.nombre}</span>
+                                                                {e.puesto && (
+                                                                    <span className="text-[10px] text-slate-600 ml-1">
+                                                                        ({e.puesto})
+                                                                    </span>
+                                                                )}
+                                                                {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-1 text-slate-500 hover:text-slate-900"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        setEditingEmployeeId(e.id);
+                                                                        setEditingPuesto(e.puesto || "");
+                                                                    }}
+                                                                >
+                                                                    <Edit3 className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-1 text-slate-500 hover:text-slate-900 disabled:opacity-40"
+                                                                    disabled={disabledReorder || reorderPreferenceMutation.isPending}
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        reorderPreferenceMutation.mutate({ employeeId: e.id, machineId: machine.id, direction: "up" });
+                                                                    }}
+                                                                >
+                                                                    <ArrowUp className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-0.5 text-slate-500 hover:text-slate-900 disabled:opacity-40"
+                                                                    disabled={disabledReorder || reorderPreferenceMutation.isPending}
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        reorderPreferenceMutation.mutate({ employeeId: e.id, machineId: machine.id, direction: "down" });
+                                                                    }}
+                                                                >
+                                                                    <ArrowDown className="w-3 h-3" />
+                                                                </button>
+                                                                <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
+                                                            </div>
+                                                        )}
+                                                    </Badge>
+                                                );
+                                            })}
                                             <div className="flex items-center gap-2 mt-1">
                                                 {segundas.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno</span>}
                                                 <EmployeeSelect 
@@ -379,22 +625,116 @@ export default function MachineSkillsView() {
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <div className="flex flex-wrap gap-1">
-                                            {operarios.map(e => (
-                                                <Badge 
-                                                    key={e.id} 
-                                                    variant="outline" 
-                                                    className={cn(
-                                                        "font-normal justify-start group pr-1",
-                                                        e.disponibilidad === "Ausente" 
-                                                            ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
-                                                            : "bg-slate-50 text-slate-700"
-                                                    )}
-                                                >
-                                                    {e.nombre}
-                                                    {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
-                                                    <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
-                                                </Badge>
-                                            ))}
+                                            {operarios.map(e => {
+                                                const isEditing = editingEmployeeId === e.id;
+                                                const skill = employeeSkills.find(s => s.employee_id === e.id && s.machine_id === machine.id);
+                                                const disabledReorder = !skill;
+                                                return (
+                                                    <Badge 
+                                                        key={e.id} 
+                                                        variant="outline" 
+                                                        className={cn(
+                                                            "font-normal justify-start group pr-1",
+                                                            e.disponibilidad === "Ausente" 
+                                                                ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" 
+                                                                : "bg-slate-50 text-slate-700"
+                                                        )}
+                                                    >
+                                                        {isEditing ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <Select
+                                                                    value={editingPuesto || e.puesto || "none"}
+                                                                    onValueChange={(val) => {
+                                                                        const next = val === "none" ? "" : val;
+                                                                        setEditingPuesto(next);
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="h-7 text-[10px] bg-white min-w-[140px]">
+                                                                        <SelectValue placeholder="Seleccionar puesto" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="none">- Sin puesto -</SelectItem>
+                                                                        {productionPositions.map(p => (
+                                                                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="outline"
+                                                                    className="h-6 w-6"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        updateEmployeePosition.mutate({ employeeId: e.id, puesto: editingPuesto || e.puesto || "" });
+                                                                    }}
+                                                                    disabled={updateEmployeePosition.isPending}
+                                                                >
+                                                                    <ArrowUp className="hidden" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="outline"
+                                                                    className="h-6 w-6"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        setEditingEmployeeId(null);
+                                                                        setEditingPuesto("");
+                                                                    }}
+                                                                    disabled={updateEmployeePosition.isPending}
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1">
+                                                                <span>{e.nombre}</span>
+                                                                {e.puesto && (
+                                                                    <span className="text-[10px] text-slate-600 ml-1">
+                                                                        ({e.puesto})
+                                                                    </span>
+                                                                )}
+                                                                {e.disponibilidad === "Ausente" && <AlertTriangle className="w-3 h-3 ml-1" />}
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-1 text-slate-500 hover:text-slate-900"
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        setEditingEmployeeId(e.id);
+                                                                        setEditingPuesto(e.puesto || "");
+                                                                    }}
+                                                                >
+                                                                    <Edit3 className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-1 text-slate-500 hover:text-slate-900 disabled:opacity-40"
+                                                                    disabled={disabledReorder || reorderPreferenceMutation.isPending}
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        reorderPreferenceMutation.mutate({ employeeId: e.id, machineId: machine.id, direction: "up" });
+                                                                    }}
+                                                                >
+                                                                    <ArrowUp className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-0.5 text-slate-500 hover:text-slate-900 disabled:opacity-40"
+                                                                    disabled={disabledReorder || reorderPreferenceMutation.isPending}
+                                                                    onClick={(ev) => {
+                                                                        ev.stopPropagation();
+                                                                        reorderPreferenceMutation.mutate({ employeeId: e.id, machineId: machine.id, direction: "down" });
+                                                                    }}
+                                                                >
+                                                                    <ArrowDown className="w-3 h-3" />
+                                                                </button>
+                                                                <RemoveEmployeeButton employeeId={e.id} machineId={machine.id} />
+                                                            </div>
+                                                        )}
+                                                    </Badge>
+                                                );
+                                            })}
                                             <div className="flex items-center gap-2 mt-1">
                                                 {operarios.length === 0 && <span className="text-xs text-slate-400 italic">Ninguno</span>}
                                                 <EmployeeSelect 
