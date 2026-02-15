@@ -1040,7 +1040,7 @@ export default function DepartmentPositionManager() {
           </Button>
         </div>
       </div>
-      <div>
+      <div className="flex-1 min-h-0 flex flex-col">
       {viewMode === "editor" ? (
         <div className="flex-1 min-h-0 flex flex-col gap-4">
           <div className="px-3 pt-2">
@@ -1051,9 +1051,9 @@ export default function DepartmentPositionManager() {
             </Tabs>
           </div>
           <Tabs value={mainTab} onValueChange={setMainTab} className="flex-1 min-h-0 flex flex-col">
-          <TabsContent value="departments" className="flex gap-6 min-h-0 data-[state=inactive]:hidden">
+          <TabsContent value="departments" className="flex flex-1 min-h-0 gap-6 items-stretch data-[state=inactive]:hidden">
           {/* Left Sidebar: Tree View */}
-          <Card className="flex-none w-full lg:w-[46%] xl:w-[50%] min-w-[420px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="flex-none h-full w-full lg:w-[46%] xl:w-[50%] min-w-[420px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <div className="p-4 border-b border-slate-100 flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
