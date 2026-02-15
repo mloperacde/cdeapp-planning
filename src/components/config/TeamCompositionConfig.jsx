@@ -36,8 +36,13 @@ export default function TeamCompositionConfig() {
 
   const selectedTeam = teams.find(t => t.team_key === selectedTeamKey);
   
+  const isActive = (s) => {
+    const v = (s || "").toString().trim().toUpperCase();
+    return v === "ALTA" || v === "ACTIVO";
+  };
+
   const teamEmployees = useMemo(() => 
-    employees.filter(e => e.team_key === selectedTeamKey && e.estado_empleado === 'Alta'),
+    employees.filter(e => e.team_key === selectedTeamKey && isActive(e.estado_empleado)),
   [employees, selectedTeamKey]);
 
   // Agrupar empleados del equipo por departamento y puesto
