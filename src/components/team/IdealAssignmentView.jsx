@@ -129,26 +129,28 @@ export default function IdealAssignmentView() {
         if (emp.disponibilidad !== "Disponible") return false; // Only available for pre-selection
 
         const puesto = (emp.puesto || "").toUpperCase();
+        const isTecnicoProceso = puesto.includes("TECNICO DE PROCESO") || puesto.includes("TÉCNICO DE PROCESO");
         
         const slot = getExperienceSlot(emp, machineId);
 
+        if (isTecnicoProceso) {
+            return true;
+        }
+
         if (roleType === "RESPONSABLE") {
             if (!puesto.includes("RESPONSABLE DE LINEA") && !puesto.includes("RESPONSABLE DE LÍNEA")) return false;
-            // Strict experience: orden_preferencia 1
             if (slot !== 1) return false;
             return true;
         }
 
         if (roleType === "SEGUNDA") {
             if (!puesto.includes("SEGUNDA") && !puesto.includes("2ª")) return false;
-            // Strict experience: ANY orden_preferencia or legacy field
             if (slot === 999) return false;
             return true;
         }
 
         if (roleType === "OPERARIO") {
             if (!puesto.includes("OPERARI") && !puesto.includes("OPERARIO") && !puesto.includes("OPERARIA")) return false;
-            // Strict experience check
             if (slot === 999) return false;
             return true; 
         }
@@ -279,6 +281,7 @@ export default function IdealAssignmentView() {
           const slot = getExperienceSlot(emp, machineId);
           const puesto = (emp.puesto || "").toUpperCase();
           const isFixedShift = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
+          const isTecnicoProceso = puesto.includes("TECNICO DE PROCESO") || puesto.includes("TÉCNICO DE PROCESO");
 
           // Check if this employee is assigned to this role in another team
           const assignedInOtherTeam = machineAssignments.some(ma => {
@@ -293,21 +296,21 @@ export default function IdealAssignmentView() {
           });
 
           let matchesRole = false;
-          if (!isFixedShift) {
-              // Normal employees: check role match
+          if (isTecnicoProceso) {
+              matchesRole = true;
+          } else if (!isFixedShift) {
               if (roleType === "RESPONSABLE" && (puesto.includes("RESPONSABLE"))) matchesRole = true;
               else if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) matchesRole = true;
               else if (roleType === "OPERARIO" && (puesto.includes("OPERARI"))) matchesRole = true;
           } else {
-              // Fixed shift employees: can fill any role
               matchesRole = true;
           }
 
-          if (assignedInOtherTeam && isFixedShift) group = "Sugeridos (Asignado en otro equipo)";
+          if (assignedInOtherTeam && (isFixedShift || isTecnicoProceso)) group = "Sugeridos (Asignado en otro equipo)";
           else if (matchesRole && slot <= 10) group = "Sugeridos (Perfil Ideal)"; 
           else if (matchesRole) group = "Con puesto correcto";
           else if (slot <= 10) group = "Con experiencia en máquina";
-          else if (isFixedShift) group = "Turno Fijo (Disponible)";
+          else if (isFixedShift || isTecnicoProceso) group = "Turno Fijo / Técnico Proceso (Disponible)";
 
           return { ...emp, _group: group, _slot: slot };
       }).sort((a, b) => {

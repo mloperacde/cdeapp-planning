@@ -80,6 +80,8 @@ export default function MachineSkillsView() {
             if (!defaultMachines.some(dm => identifiers.includes(String(dm)))) return false;
 
             const puesto = (e.puesto || "").toUpperCase();
+            const isTecnicoProceso = puesto.includes("TECNICO DE PROCESO") || puesto.includes("TÉCNICO DE PROCESO");
+            if (isTecnicoProceso) return true;
             if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) return true;
             if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) return true;
             if (roleType === "OPERARIO" && puesto.includes("OPERARI")) return true;
@@ -124,9 +126,11 @@ export default function MachineSkillsView() {
         }).map(e => {
             let group = "Otros";
             const puesto = (e.puesto || "").toUpperCase();
+            const isTecnicoProceso = puesto.includes("TECNICO DE PROCESO") || puesto.includes("TÉCNICO DE PROCESO");
             let isSuggested = false;
 
-            if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) isSuggested = true;
+            if (isTecnicoProceso) isSuggested = true;
+            else if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) isSuggested = true;
             else if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) isSuggested = true;
             else if (roleType === "OPERARIO" && puesto.includes("OPERARI")) isSuggested = true;
 

@@ -350,6 +350,8 @@ export default function ShiftAssignmentsPage() {
   
   const checkRoleMatch = (emp, roleKey) => {
       const puesto = normalize(emp.puesto);
+      const isTecnicoProceso = puesto.includes('tecnico de proceso');
+      if (isTecnicoProceso) return true;
       if (roleKey === 'responsable_linea') {
           return puesto.includes('responsable de linea') || puesto.includes('responsable de línea');
       }
