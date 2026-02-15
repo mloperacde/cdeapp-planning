@@ -533,6 +533,17 @@ export default function ShiftAssignmentsPage() {
      });
   }, [employees, assignments, selectedTeam, searchTerm, selectedDate]);
 
+  const productionPositions = useMemo(() => {
+     const set = new Set();
+     employees.forEach(e => {
+        const d = (e.departamento || "").toString().trim().toUpperCase();
+        if ((d === "PRODUCCIÓN" || d === "PRODUCCION") && e.puesto) {
+          set.add(e.puesto);
+        }
+     });
+     return Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""));
+  }, [employees]);
+
   // Grouped Employees for Right Panel
   const groupedAvailableEmployees = useMemo(() => {
       // Sort by Role: Responsable, Segunda, Operario, Others
@@ -731,6 +742,7 @@ export default function ShiftAssignmentsPage() {
                                         key={emp.id} 
                                         index={index} 
                                         data={groupedAvailableEmployees} 
+                                        positions={productionPositions}
                                         editingEmployeeId={editingEmployeeId}
                                         editingPuesto={editingPuesto}
                                         setEditingEmployeeId={setEditingEmployeeId}
@@ -752,7 +764,7 @@ export default function ShiftAssignmentsPage() {
 }
 
 // Adjusted EmployeeRow for standard list
-function EmployeeRow({ index, data, editingEmployeeId, editingPuesto, setEditingEmployeeId, setEditingPuesto, updateEmployeePosition }) {
+function EmployeeRow({ index, data, positions, editingEmployeeId, editingPuesto, setEditingEmployeeId, setEditingPuesto, updateEmployeePosition }) {
   const emp = data[index];
   const isEditing = editingEmployeeId === emp.id;
 
@@ -775,11 +787,23 @@ function EmployeeRow({ index, data, editingEmployeeId, editingPuesto, setEditing
                   <p className="font-medium text-sm text-slate-900 truncate">{getEmployeeName(emp)}</p>
                   {isEditing ? (
                     <div className="flex items-center gap-2 mt-1">
-                      <Input
-                        value={editingPuesto}
-                        onChange={(e) => setEditingPuesto(e.target.value)}
-                        className="h-7 text-xs"
-                      />
+                      <Select
+                        value={editingPuesto || emp.puesto || "none"}
+                        onValueChange={(val) => {
+                          const next = val === "none" ? "" : val;
+                          setEditingPuesto(next);
+                        }}
+                      >
+                        <SelectTrigger className="h-7 text-xs bg-white">
+                          <SelectValue placeholder="Seleccionar puesto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">- Sin puesto -</SelectItem>
+                          {positions.map((p) => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Button
                         type="button"
                         size="icon"
@@ -787,7 +811,7 @@ function EmployeeRow({ index, data, editingEmployeeId, editingPuesto, setEditing
                         className="h-7 w-7"
                         onClick={(e) => {
                           e.stopPropagation();
-                          updateEmployeePosition.mutate({ id: emp.id, puesto: editingPuesto });
+                          updateEmployeePosition.mutate({ id: emp.id, puesto: editingPuesto || emp.puesto || "" });
                         }}
                         disabled={updateEmployeePosition.isPending}
                       >

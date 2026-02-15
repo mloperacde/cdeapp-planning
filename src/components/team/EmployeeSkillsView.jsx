@@ -342,10 +342,10 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                         <TableCell>
                                             {editingPositionId === emp.id ? (
                                                 <div className="flex items-center gap-2">
-                                                    <Input
-                                                        value={editingState[emp.id]?.puesto ?? emp.puesto ?? ""}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
+                                                    <Select
+                                                        value={editingState[emp.id]?.puesto ?? emp.puesto ?? "none"}
+                                                        onValueChange={(v) => {
+                                                            const value = v === "none" ? "" : v;
                                                             setEditingState(prev => ({
                                                                 ...prev,
                                                                 [emp.id]: {
@@ -354,8 +354,17 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                                                 }
                                                             }));
                                                         }}
-                                                        className="h-7 text-xs"
-                                                    />
+                                                    >
+                                                        <SelectTrigger className="h-7 text-xs bg-white min-w-[150px]">
+                                                            <SelectValue placeholder="Seleccionar puesto" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">- Sin puesto -</SelectItem>
+                                                            {getUniquePositions().map(p => (
+                                                                <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                     <Button
                                                         type="button"
                                                         size="icon"
