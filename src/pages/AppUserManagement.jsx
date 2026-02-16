@@ -178,6 +178,7 @@ export default function AppUserManagement() {
     isLoading,
     updatePermission,
     updatePagePermission,
+    updateModulePermission, // NEW
     updateFieldPermission, // NEW
     updateParentRole, // NEW
     setRoleMode,
@@ -757,23 +758,7 @@ export default function AppUserManagement() {
                                       <Checkbox
                                         checked={isEnabled}
                                         onCheckedChange={(checked) => {
-                                          const newModulePerms = {
-                                            ...localConfig.roles[selectedRoleForModules].module_permissions,
-                                            [pageName]: {
-                                              ...(localConfig.roles[selectedRoleForModules].module_permissions?.[pageName] || {}),
-                                              [moduleKey]: checked
-                                            }
-                                          };
-                                          
-                                          // Actualizar en localConfig usando el hook
-                                          const updatedRole = {
-                                            ...localConfig.roles[selectedRoleForModules],
-                                            module_permissions: newModulePerms
-                                          };
-                                          
-                                          // Necesitamos llamar a una función del hook para actualizar
-                                          // Por ahora, hacemos la actualización manual
-                                          localConfig.roles[selectedRoleForModules].module_permissions = newModulePerms;
+                                          updateModulePermission(selectedRoleForModules, pageName, moduleKey, checked);
                                         }}
                                       />
                                       <div className="flex-1">
