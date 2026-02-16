@@ -676,9 +676,9 @@ export default function IdealAssignmentView() {
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-12 gap-4">
                                 {/* Responsable */}
-                                <div className="space-y-3">
+                                <div className="space-y-3 md:col-span-6 lg:col-span-3">
                                     <Label className="flex items-center gap-2 text-blue-700">
                                         <UserCheck className="w-4 h-4" /> Responsable de Línea
                                     </Label>
@@ -691,7 +691,7 @@ export default function IdealAssignmentView() {
                                 </div>
 
                                 {/* Segunda */}
-                                <div className="space-y-3">
+                                <div className="space-y-3 md:col-span-6 lg:col-span-3">
                                     <Label className="flex items-center gap-2 text-indigo-700">
                                         <User className="w-4 h-4" /> Segunda de Línea
                                     </Label>
@@ -704,7 +704,7 @@ export default function IdealAssignmentView() {
                                 </div>
 
                                 {/* Operarios */}
-                                <div className="space-y-3 lg:col-span-1 md:col-span-2">
+                                <div className="space-y-3 md:col-span-12 lg:col-span-6">
                                     <Label className="flex items-center gap-2 text-slate-700">
                                         <Users className="w-4 h-4" /> Operarios de Línea
                                     </Label>
