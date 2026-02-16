@@ -88,6 +88,15 @@ export default function EmployeeSelect({
     return groups;
   }, [sortedEmployees]);
 
+  const isNewEmployee = (emp) => {
+    if (!emp?.fecha_alta) return false;
+    const hireDate = new Date(emp.fecha_alta);
+    if (isNaN(hireDate.getTime())) return false;
+    const now = new Date();
+    const diffDays = (now.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays < 365;
+  };
+
   const selectedEmployee = employees.find(e => String(e.id) === String(value));
 
   return (
@@ -109,12 +118,24 @@ export default function EmployeeSelect({
             {selectedEmployee ? (
               <span className="truncate flex items-center gap-2">
                 {selectedEmployee.nombre}
+                {isNewEmployee(selectedEmployee) && (
+                  <span className="text-[9px] text-amber-700 bg-amber-50 border border-amber-300 rounded-full px-1.5 py-0.5">
+                    &lt;1 año
+                  </span>
+                )}
                 {selectedEmployee.disponibilidad === "Ausente" && (
-                     <AlertTriangle className="w-3 h-3 text-red-500" />
+                  <AlertTriangle className="w-3 h-3 text-red-500" />
                 )}
                 {showDepartment && selectedEmployee.departamento && (
-                  <span className={cn("ml-1", selectedEmployee.disponibilidad === "Ausente" ? "text-red-700/70" : "text-slate-500")}>
-                      • {selectedEmployee.departamento}
+                  <span
+                    className={cn(
+                      "ml-1",
+                      selectedEmployee.disponibilidad === "Ausente"
+                        ? "text-red-700/70"
+                        : "text-slate-500"
+                    )}
+                  >
+                    • {selectedEmployee.departamento}
                   </span>
                 )}
               </span>

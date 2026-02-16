@@ -313,6 +313,15 @@ export default function EmployeeSkillsView({ department = "all" }) {
         return Array.from(positions);
     };
 
+    const isNewEmployee = (emp) => {
+        if (!emp?.fecha_alta) return false;
+        const hireDate = new Date(emp.fecha_alta);
+        if (isNaN(hireDate.getTime())) return false;
+        const now = new Date();
+        const diffDays = (now.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays < 365;
+    };
+
     return (
         <div className="h-full flex flex-col md:flex-row gap-4">
             {/* Sidebar Filters */}
@@ -440,12 +449,19 @@ export default function EmployeeSkillsView({ department = "all" }) {
                                 .map(emp => {
                                 const isEdited = !!editingState[emp.id];
                                 return (
-                                    <TableRow key={emp.id} className={cn("hover:bg-slate-50", emp.disponibilidad === "Ausente" ? "bg-red-50 hover:bg-red-100" : "")}>
+                                <TableRow key={emp.id} className={cn("hover:bg-slate-50", emp.disponibilidad === "Ausente" ? "bg-red-50 hover:bg-red-100" : "")}>
                                         <TableCell className={cn("font-medium", emp.disponibilidad === "Ausente" ? "text-red-700" : "")}>
-                                            {getEmployeeName(emp)}
-                                            {emp.disponibilidad === "Ausente" && (
-                                                <span className="ml-2 text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded-full">Ausente</span>
-                                            )}
+                                            <div className="flex items-center gap-2">
+                                                <span>{getEmployeeName(emp)}</span>
+                                                {isNewEmployee(emp) && (
+                                                    <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">
+                                                        &lt;1 año
+                                                    </Badge>
+                                                )}
+                                                {emp.disponibilidad === "Ausente" && (
+                                                    <span className="ml-1 text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded-full">Ausente</span>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell>{emp.equipo}</TableCell>
                                         <TableCell>

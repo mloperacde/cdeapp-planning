@@ -69,6 +69,15 @@ export default function MachineSkillsView() {
         return Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""));
     }, [employees]);
 
+    const isNewEmployee = (emp) => {
+        if (!emp?.fecha_alta) return false;
+        const hireDate = new Date(emp.fecha_alta);
+        if (isNaN(hireDate.getTime())) return false;
+        const now = new Date();
+        const diffDays = (now.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays < 365;
+    };
+
     // Robust ID matching helper
     const getMachineIdentifiers = (machineId) => {
         const machine = machines.find(m => String(m.id) === String(machineId));
@@ -441,6 +450,11 @@ export default function MachineSkillsView() {
                                                         ) : (
                                                             <div className="flex items-center gap-1">
                                                                 <span>{e.nombre}</span>
+                                                                {isNewEmployee(e) && (
+                                                                    <Badge variant="outline" className="text-[9px] border-amber-300 text-amber-700 bg-amber-50 ml-1">
+                                                                        &lt;1 año
+                                                                    </Badge>
+                                                                )}
                                                                 {e.puesto && (
                                                                     <span className="text-[10px] text-slate-600 ml-1">
                                                                         ({e.puesto})
@@ -570,6 +584,11 @@ export default function MachineSkillsView() {
                                                         ) : (
                                                             <div className="flex items-center gap-1">
                                                                 <span>{e.nombre}</span>
+                                                                {isNewEmployee(e) && (
+                                                                    <Badge variant="outline" className="text-[9px] border-amber-300 text-amber-700 bg-amber-50 ml-1">
+                                                                        &lt;1 año
+                                                                    </Badge>
+                                                                )}
                                                                 {e.puesto && (
                                                                     <span className="text-[10px] text-slate-600 ml-1">
                                                                         ({e.puesto})
