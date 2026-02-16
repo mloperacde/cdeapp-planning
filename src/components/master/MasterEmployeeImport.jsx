@@ -123,7 +123,8 @@ export default function MasterEmployeeImport() {
             }
           });
 
-          employeeData.estado_sincronizacion = 'Pendiente';
+          employeeData.estado_sincronizacion = 'Sincronizado';
+          employeeData.ultimo_sincronizado = new Date().toISOString();
 
           if (!employeeData.nombre) {
             errors.push({ fila: i + 1, error: 'Nombre es obligatorio', row });

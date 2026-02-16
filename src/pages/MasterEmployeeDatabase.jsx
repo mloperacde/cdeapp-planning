@@ -148,6 +148,7 @@ export default function MasterEmployeeDatabasePage() {
   const appData = useAppData() || {};
   const { employees: masterEmployees = EMPTY_ARRAY, employeesLoading: isLoading } = appData;
   const permissions = usePermissions() || {};
+  const [autoSyncDone, setAutoSyncDone] = useState(false);
 
   const canCreateEmployee = permissions.isAdmin || permissions.canEditEmployees;
   // Use centralized permission check instead of hardcoded role check
@@ -192,6 +193,31 @@ export default function MasterEmployeeDatabasePage() {
       }
     );
   };
+
+  useEffect(() => {
+    if (autoSyncDone) return;
+    if (!masterEmployees || masterEmployees.length === 0) return;
+    const pending = masterEmployees.filter(emp => emp.estado_sincronizacion === 'Pendiente');
+    if (pending.length === 0) return;
+    setAutoSyncDone(true);
+    (async () => {
+      try {
+        await Promise.all(
+          pending.map(emp =>
+            base44.entities.EmployeeMasterDatabase.update(emp.id, {
+              estado_sincronizacion: 'Sincronizado',
+              ultimo_sincronizado: new Date().toISOString()
+            })
+          )
+        );
+        queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+        toast.success(`Sincronizados automáticamente ${pending.length} empleados pendientes`);
+      } catch (e) {
+        console.error("Error auto-sync empleados pendientes", e);
+        toast.error("Error al sincronizar empleados pendientes");
+      }
+    })();
+  }, [autoSyncDone, masterEmployees, queryClient]);
 
   const handleExportToExcel = () => {
     try {
