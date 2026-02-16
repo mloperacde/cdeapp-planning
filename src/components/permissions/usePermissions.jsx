@@ -319,6 +319,44 @@ export function usePermissions() {
       }
     };
 
+    // 5. Agregar función para verificar permisos de módulos
+    base.canAccessModule = (pageName, moduleName) => {
+      // Admin siempre tiene acceso
+      if (permissions.isAdmin) return true;
+      
+      // Verificar permisos de módulo del usuario
+      const modulePerms = user.module_permissions?.[pageName]?.[moduleName];
+      if (modulePerms !== undefined) return modulePerms;
+      
+      // Verificar permisos de módulo del rol en rolesConfig
+      if (roleConfig?.module_permissions?.[pageName]?.[moduleName] !== undefined) {
+        return roleConfig.module_permissions[pageName][moduleName];
+      }
+      
+      // Por defecto, denegar acceso a módulos no configurados
+      return false;
+    };
+
+    // Función helper para obtener todos los permisos de módulo de una página
+    base.getModulePermissions = (pageName) => {
+      if (permissions.isAdmin) {
+        // Admin tiene todos los permisos
+        const allPerms = {};
+        if (MODULE_DEFINITIONS[pageName]) {
+          Object.keys(MODULE_DEFINITIONS[pageName]).forEach(key => {
+            allPerms[key] = true;
+          });
+        }
+        return allPerms;
+      }
+      
+      // Combinar permisos del usuario y del rol
+      const userModulePerms = user.module_permissions?.[pageName] || {};
+      const roleModulePerms = roleConfig?.module_permissions?.[pageName] || {};
+      
+      return { ...roleModulePerms, ...userModulePerms };
+    };
+
     return base;
   }, [user, rolesConfig]);
 }
@@ -327,7 +365,23 @@ export function useIsAdmin() {
   const { isAdmin } = useAppData();
   return isAdmin;
 }
+
 export function useHasPermission(permission) {
   const permissions = usePermissions();
   return permissions[permission] || false;
+}
+
+// Nuevo hook para permisos de módulos
+export function useModulePermissions(pageName) {
+  const permissions = usePermissions();
+  return useMemo(() => {
+    return {
+      canAccessModule: (moduleName) => permissions.canAccessModule?.(pageName, moduleName) || false,
+      getModulePermissions: () => permissions.getModulePermissions?.(pageName) || {},
+      hasAnyModuleAccess: () => {
+        const modulePerms = permissions.getModulePermissions?.(pageName) || {};
+        return Object.values(modulePerms).some(perm => perm === true);
+      }
+    };
+  }, [permissions, pageName]);
 }
