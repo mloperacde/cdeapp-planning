@@ -340,17 +340,30 @@ export function usePermissions() {
       // Admin siempre tiene acceso
       if (permissions.isAdmin) return true;
       
-      // Verificar permisos de módulo del usuario
-      const modulePerms = user.module_permissions?.[pageName]?.[moduleName];
-      if (modulePerms !== undefined) return modulePerms;
+      // IMPORTANTE: Si el usuario puede acceder a la página, puede acceder a sus módulos
+      // A menos que haya una denegación explícita en module_permissions
+      const canAccessThePage = base.canAccessPage(`/${pageName}`);
+      if (!canAccessThePage) return false; // Si no puede ver la página, no puede ver sus módulos
+      
+      // Verificar permisos de módulo del usuario (override explícito)
+      const userModulePerms = user.module_permissions?.[pageName]?.[moduleName];
+      if (userModulePerms !== undefined) return userModulePerms;
       
       // Verificar permisos de módulo del rol en rolesConfig
-      if (roleConfig?.module_permissions?.[pageName]?.[moduleName] !== undefined) {
-        return roleConfig.module_permissions[pageName][moduleName];
+      const roleModulePerms = roleConfig?.module_permissions?.[pageName];
+      
+      // Si hay configuración de módulos para esta página en el rol
+      if (roleModulePerms && Object.keys(roleModulePerms).length > 0) {
+        // Si el módulo está explícitamente configurado, usar ese valor
+        if (roleModulePerms[moduleName] !== undefined) {
+          return roleModulePerms[moduleName];
+        }
+        // Si hay configuración de módulos pero este módulo no está, denegar
+        return false;
       }
       
-      // Por defecto, denegar acceso a módulos no configurados
-      return false;
+      // Por defecto: Si puede ver la página y no hay restricciones de módulos, permitir
+      return true;
     };
 
     // Función helper para obtener todos los permisos de módulo de una página
