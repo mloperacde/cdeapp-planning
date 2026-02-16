@@ -60,7 +60,6 @@ import CalidadSkills from './pages/CalidadSkills';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
 import DailyProductionPlanningPage from './pages/DailyProductionPlanningPage';
-import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import Dashboard from './pages/Dashboard';
 import DireccionSkills from './pages/DireccionSkills';
 import DocumentManagement from './pages/DocumentManagement';
@@ -105,7 +104,6 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import DailyShiftPlanning from './pages/DailyShiftPlanning';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
 import __Layout from './Layout.jsx';
@@ -125,7 +123,6 @@ export const PAGES = {
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
     "DailyProductionPlanningPage": DailyProductionPlanningPage,
-    "DailyShiftPlanning": DailyShiftPlanning,
     "Dashboard": Dashboard,
     "DireccionSkills": DireccionSkills,
     "DocumentManagement": DocumentManagement,
@@ -170,7 +167,6 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "DailyShiftPlanning": DailyShiftPlanning,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
 }
