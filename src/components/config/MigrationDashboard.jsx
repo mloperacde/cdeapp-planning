@@ -81,6 +81,7 @@ function SkillsMigrationPanel() {
   const [analyzing, setAnalyzing] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [analysis, setAnalysis] = useState(null);
+  const autoRunRef = React.useRef(false);
 
   const analyzeData = async () => {
     setAnalyzing(true);
@@ -196,6 +197,19 @@ function SkillsMigrationPanel() {
         setMigrating(false);
     }
   };
+
+  useEffect(() => {
+    analyzeData();
+  }, []);
+
+  useEffect(() => {
+    if (autoRunRef.current) return;
+    if (!analysis) return;
+    if (analysis.pendingCount > 0 && !migrating) {
+      autoRunRef.current = true;
+      executeMigration();
+    }
+  }, [analysis, migrating]);
 
   return (
     <Card>
