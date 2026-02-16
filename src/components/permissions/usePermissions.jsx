@@ -1,6 +1,48 @@
 import { useMemo } from "react";
 import { useAppData } from "../data/DataProvider";
 
+// Módulos disponibles por página
+export const MODULE_DEFINITIONS = {
+  Dashboard: {
+    viewMetrics: "Ver métricas y KPIs",
+    viewTrends: "Ver tendencias y gráficos",
+    viewAlerts: "Ver alertas y notificaciones",
+    exportData: "Exportar datos del dashboard"
+  },
+  ShiftPlanning: {
+    viewSchedule: "Ver horarios",
+    editSchedule: "Editar horarios",
+    assignOperators: "Asignar operadores",
+    viewCosts: "Ver costos de turnos"
+  },
+  MachineDailyPlanning: {
+    viewPlanning: "Ver planificación",
+    editPlanning: "Editar planificación",
+    viewMachineStatus: "Ver estado de máquinas",
+    editMachineStatus: "Editar estado de máquinas",
+    assignOperators: "Asignar operadores a máquinas"
+  },
+  AbsenceManagement: {
+    viewOwnAbsences: "Ver ausencias propias",
+    createAbsences: "Crear ausencias",
+    viewAllAbsences: "Ver todas las ausencias",
+    approveAbsences: "Aprobar/Rechazar ausencias",
+    deleteAbsences: "Eliminar ausencias"
+  },
+  MachineManagement: {
+    viewMachines: "Ver información de máquinas",
+    editMachines: "Editar configuración de máquinas",
+    viewMaintenance: "Ver mantenimiento",
+    scheduleMaintenance: "Programar mantenimiento"
+  },
+  Reports: {
+    viewBasicReports: "Ver informes básicos",
+    viewAdvancedReports: "Ver informes avanzados",
+    exportReports: "Exportar informes",
+    viewFinancialData: "Ver datos financieros"
+  }
+};
+
 export const ROLE_PERMISSIONS = {
   admin: {
     isAdmin: true,
