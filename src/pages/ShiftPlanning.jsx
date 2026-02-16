@@ -21,7 +21,7 @@ import {
   History
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -210,6 +210,39 @@ export default function ShiftPlanningPage() {
       return schedule ? schedule.team_key : defaultTeam;
   };
 
+  const getExpectedShift = (employee, date) => {
+    if (!employee) return null;
+
+    if (employee.tipo_turno === "Fijo Mañana") {
+      return {
+        turno: "Mañana",
+      };
+    } else if (employee.tipo_turno === "Fijo Tarde") {
+      return {
+        turno: "Tarde",
+      };
+    } else if (employee.tipo_turno === "Turno Partido") {
+      return {
+        turno: "Partido",
+      };
+    } else if (employee.tipo_turno === "Rotativo" && employee.equipo) {
+      const weekStart = startOfWeek(new Date(date), { weekStartsOn: 1 });
+      const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+      const team = teams.find(t => t.team_name === employee.equipo);
+      const schedule = teamSchedules.find(s => 
+        s.team_key === team?.team_key && s.fecha_inicio_semana === weekStartStr
+      );
+      
+      if (schedule?.turno === "Mañana") {
+        return { turno: "Mañana" };
+      } else if (schedule?.turno === "Tarde") {
+        return { turno: "Tarde" };
+      }
+    }
+    
+    return null;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -334,6 +367,18 @@ export default function ShiftPlanningPage() {
 
       // 3. Availability: Disponible
       if (normalize(e.disponibilidad) !== "disponible") return false;
+
+      // 3b. Shift Match based on tipo_turno and team weekly schedule
+      const expected = getExpectedShift(e, selectedDate);
+      if (expected && expected.turno) {
+        const turnoNorm = normalize(expected.turno);
+        const selectedNorm = normalize(selectedShift);
+        const isMorning = turnoNorm.includes("manana");
+        const isAfternoon = turnoNorm.includes("tarde");
+
+        if (isMorning && selectedNorm.includes("tarde")) return false;
+        if (isAfternoon && selectedNorm.includes("manana")) return false;
+      }
 
       // 4. Role (Puesto)
       const currentPuesto = normalize(e.puesto);
