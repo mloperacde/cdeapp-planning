@@ -208,6 +208,24 @@ export function useRolesManager() {
     setIsDirty(true);
   }, []);
 
+  // NEW: Update module permission
+  const updateModulePermission = useCallback((roleId, pageName, moduleName, value) => {
+    setLocalConfig(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (next.roles[roleId]) {
+        if (!next.roles[roleId].module_permissions) {
+          next.roles[roleId].module_permissions = {};
+        }
+        if (!next.roles[roleId].module_permissions[pageName]) {
+          next.roles[roleId].module_permissions[pageName] = {};
+        }
+        next.roles[roleId].module_permissions[pageName][moduleName] = value;
+      }
+      return next;
+    });
+    setIsDirty(true);
+  }, []);
+
   // NEW: Update field permission
   const updateFieldPermission = useCallback((roleId, entityName, fieldName, permissionType, value) => {
     setLocalConfig(prev => {
@@ -451,6 +469,7 @@ export function useRolesManager() {
     isLoading: rolesConfigLoading,
     updatePermission,
     updatePagePermission,
+    updateModulePermission, // NEW
     updateFieldPermission, // NEW
     updateParentRole, // NEW
     setRoleMode,
