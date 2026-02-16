@@ -202,9 +202,27 @@ export default function EmployeeSkillsView({ department = "all" }) {
 
     // Filter Logic
     const filteredEmployees = useMemo(() => {
+        const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+        const allowedRoles = [
+            "tecnico de proceso",
+            "técnico de proceso",
+            "responsable de linea",
+            "segunda de linea",
+            "operaria de linea",
+            "operario de linea"
+        ].map(normalize);
+
         let result = employees.filter(e => {
             const matchesDepartment = department === "all" || e.departamento === department;
-            return matchesDepartment && e.estado_empleado === "Alta";
+            if (!matchesDepartment || e.estado_empleado !== "Alta") return false;
+
+            const deptNorm = normalize(e.departamento);
+            if (deptNorm !== "produccion") return false;
+
+            const puestoNorm = normalize(e.puesto);
+            if (!allowedRoles.some(r => puestoNorm.includes(r))) return false;
+
+            return true;
         });
 
         if (filters.searchTerm) {
@@ -225,7 +243,6 @@ export default function EmployeeSkillsView({ department = "all" }) {
         }
         
         if (filters.tipo_turno && filters.tipo_turno !== "all") {
-            const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
             const target = normalize(filters.tipo_turno);
             result = result.filter(e => normalize(e.tipo_turno) === target);
         }
@@ -249,7 +266,7 @@ export default function EmployeeSkillsView({ department = "all" }) {
         result.sort((a, b) => getRank(a.puesto) - getRank(b.puesto));
 
         return result;
-    }, [employees, filters]);
+    }, [employees, filters, department]);
 
     // Handlers
     const handleFilterChange = (key, value) => {
