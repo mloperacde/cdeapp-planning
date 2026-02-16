@@ -57,7 +57,6 @@ export const MENU_STRUCTURE = [
   { name: 'Planificación Producción', path: '/ProductionPlanning', icon: Factory, category: 'Planificación' },
   { name: 'Planning Diario Máquinas', path: '/MachineDailyPlanning', icon: Factory, category: 'Planificación' },
   { name: 'Asignaciones de Máquinas', path: '/MachineAssignments', icon: Settings, category: 'Planificación' },
-  
   // Fabricación
   { name: 'Máquinas (Master)', path: '/MachineMaster', icon: Database, category: 'Fabricación' },
   { name: 'Gestión de Máquinas', path: '/MachineManagement', icon: Settings, category: 'Fabricación' },

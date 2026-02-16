@@ -80,7 +80,12 @@ export const DEFAULT_ROLES_CONFIG = {
         '/QualityControl': true,
         '/Reports': true,
         '/DailyShiftPlanning': true,
-        '/MachineAssignments': true
+        '/MachineAssignments': true,
+        '/ShiftPlanning': true,
+        '/LockerManagement': true,
+        '/PerformanceManagement': true,
+        '/Breaks': true,
+        '/SupportManagement1415': true
       }
     },
     shift_manager_quality: {

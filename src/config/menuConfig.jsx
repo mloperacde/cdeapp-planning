@@ -64,7 +64,6 @@ export const MENU_STRUCTURE = [
   { name: 'EmailNotifications', icon: FileText, path: '/EmailNotifications', category: 'Revisión de páginas' },
   { name: 'EmployeeAbsenceInfo', icon: Users, path: '/EmployeeAbsenceInfo', category: 'Revisión de páginas' },
   { name: 'ArticleManagement', icon: FileText, path: '/ArticleManagement', category: 'Revisión de páginas' },
-  { name: 'MachineAssignments', icon: Users, path: '/MachineAssignments', category: 'Revisión de páginas' },
   { name: 'PerformanceManagement', icon: FileText, path: '/PerformanceManagement', category: 'Revisión de páginas' },
 
 ];
