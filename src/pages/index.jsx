@@ -13,7 +13,6 @@ import MaintenancePlanningPage from "./MaintenancePlanningPage";
 import WarehousePlanningPage from "./WarehousePlanningPage";
 import QualityPlanningPage from "./QualityPlanningPage";
 import DailyProductionPlanningPage from "./DailyProductionPlanningPage";
-import DailyShiftPlanning from "./DailyShiftPlanning";
 import Dashboard from "./Dashboard";
 import DocumentManagement from "./DocumentManagement";
 import ETTTemporaryEmployees from "./ETTTemporaryEmployees";
@@ -95,7 +94,6 @@ const PAGES = {
   WarehousePlanningPage: WarehousePlanningPage,
   QualityPlanningPage: QualityPlanningPage,
   DailyProductionPlanningPage: DailyProductionPlanningPage,
-  DailyShiftPlanning: DailyShiftPlanning,
   DocumentManagement: DocumentManagement,
   ETTTemporaryEmployees: ETTTemporaryEmployees,
   EmailNotifications: EmailNotifications,
@@ -204,8 +202,7 @@ function PagesContent() {
                 <Route path="/WarehousePlanningPage" element={<WarehousePlanningPage />} />
                 <Route path="/QualityPlanningPage" element={<QualityPlanningPage />} />
                 <Route path="/DailyProductionPlanningPage" element={<DailyProductionPlanningPage />} />
-                <Route path="/DailyShiftPlanning" element={<DailyShiftPlanning />} />
-                
+                                
                 <Route path="/Dashboard" element={<Dashboard />} />
                 
 

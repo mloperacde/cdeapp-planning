@@ -79,7 +79,6 @@ export const DEFAULT_ROLES_CONFIG = {
         '/MachineManagement': true,
         '/QualityControl': true,
         '/Reports': true,
-        '/DailyShiftPlanning': true,
         '/MachineAssignments': true,
         '/ShiftPlanning': true,
         '/LockerManagement': true,
