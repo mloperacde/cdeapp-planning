@@ -18,7 +18,6 @@ import { Shield, Users, Save, Plus, Trash2, AlertCircle, RotateCcw, Factory, Sea
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
-import { PAGES } from '@/pages.config';
 import { useRolesManager } from '@/components/hooks/useRolesManager';
 import { ROLE_PERMISSIONS } from '@/components/permissions/usePermissions';
 import { toast } from "sonner";
@@ -221,31 +220,6 @@ export default function AppUserManagement() {
   const roleKeys = useMemo(() => {
     return localConfig ? Object.keys(localConfig.roles) : [];
   }, [localConfig]);
-
-  const navGroups = useMemo(() => {
-    const metaByPath = new Map(MENU_STRUCTURE.map(item => [item.path, item]));
-    const groups = {};
-
-    Object.keys(PAGES).forEach(pageId => {
-      const path = createPageUrl(pageId);
-      if (!path || path === "/" || path === "/index") return;
-
-      const meta = metaByPath.get(path);
-      const category = meta?.category || "General";
-      const title = meta?.name || meta?.title || pageId;
-
-      if (!groups[category]) groups[category] = [];
-      if (!groups[category].some(p => p.path === path)) {
-        groups[category].push({ path, title });
-      }
-    });
-
-    Object.values(groups).forEach(items => {
-      items.sort((a, b) => a.title.localeCompare(b.title));
-    });
-
-    return groups;
-  }, []);
 
   // Derived state: Departments list for filter
   const departments = useMemo(() => {
@@ -669,41 +643,48 @@ export default function AppUserManagement() {
                <ScrollArea className="h-[600px] pr-4">
                  {/* Reutilizando la lógica de renderizado de pestañas anterior pero simplificada */}
                   <div className="space-y-8">
-                    {Object.entries(navGroups).map(([category, items]) => (
-                        <div key={category} className="space-y-3">
-                            <h3 className="font-semibold text-lg text-slate-800 border-b pb-1 flex items-center gap-2">
-                                {category === 'Configuración' ? <UserCog className="w-5 h-5" /> : <Factory className="w-5 h-5" />}
-                                {category}
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {items.map(item => (
-                                    <div key={item.path} className="border rounded-lg p-3 bg-white shadow-sm">
-                                        <div className="font-medium mb-2 flex items-center gap-2">
-                                            <span className="text-sm">{item.title}</span>
-                                            <code className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{item.path}</code>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {roleKeys.map(roleId => {
-                                                if (roleId === 'admin') return null; // Admin always has access
-                                                const role = localConfig.roles[roleId];
-                                                const hasAccess = role.page_permissions?.[item.path] === true;
-                                                
-                                                return (
-                                                    <Badge 
-                                                        key={roleId}
-                                                        variant={hasAccess ? "default" : "outline"}
-                                                        className={`cursor-pointer select-none text-[10px] ${hasAccess ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-400 hover:border-slate-400'}`}
-                                                        onClick={() => updatePagePermission(roleId, item.path, !hasAccess)}
-                                                    >
-                                                        {role.name}
-                                                    </Badge>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
+                    {Object.entries(
+                      MENU_STRUCTURE.reduce((acc, item) => {
+                        const cat = item.category || 'General';
+                        if (!acc[cat]) acc[cat] = [];
+                        acc[cat].push(item);
+                        return acc;
+                      }, {})
+                    ).map(([category, items]) => (
+                      <div key={category} className="space-y-3">
+                        <h3 className="font-semibold text-lg text-slate-800 border-b pb-1 flex items-center gap-2">
+                          {category === 'Configuración' ? <UserCog className="w-5 h-5" /> : <Factory className="w-5 h-5" />}
+                          {category}
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {items.map(menuItem => (
+                            <div key={menuItem.path} className="border rounded-lg p-3 bg-white shadow-sm">
+                              <div className="font-medium mb-2 flex items-center gap-2">
+                                <span className="text-sm">{menuItem.title}</span>
+                                <code className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{menuItem.path}</code>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {roleKeys.map(roleId => {
+                                  if (roleId === 'admin') return null;
+                                  const role = localConfig.roles[roleId];
+                                  const hasAccess = role.page_permissions?.[menuItem.path] === true;
+
+                                  return (
+                                    <Badge
+                                      key={roleId}
+                                      variant={hasAccess ? "default" : "outline"}
+                                      className={`cursor-pointer select-none text-[10px] ${hasAccess ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-400 hover:border-slate-400'}`}
+                                      onClick={() => updatePagePermission(roleId, menuItem.path, !hasAccess)}
+                                    >
+                                      {role.name}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
                             </div>
+                          ))}
                         </div>
+                      </div>
                     ))}
                   </div>
                </ScrollArea>
