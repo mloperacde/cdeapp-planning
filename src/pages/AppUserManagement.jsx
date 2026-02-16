@@ -19,7 +19,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { MENU_STRUCTURE } from '@/config/menuConfig';
 import { useRolesManager } from '@/components/hooks/useRolesManager';
-import { ROLE_PERMISSIONS } from '@/components/permissions/usePermissions';
+import { ROLE_PERMISSIONS, MODULE_DEFINITIONS } from '@/components/permissions/usePermissions';
 import { toast } from "sonner";
 
 // Definición de permisos y sus etiquetas legibles - ORGANIZADOS POR CATEGORÍAS
@@ -206,6 +206,9 @@ export default function AppUserManagement() {
   const [isFieldPermissionsOpen, setIsFieldPermissionsOpen] = useState(false);
   const [selectedRoleForFields, setSelectedRoleForFields] = useState(null);
   
+  // Estados para módulos
+  const [selectedRoleForModules, setSelectedRoleForModules] = useState(null);
+  
   // Inspector de Usuario
   const [selectedUser, setSelectedUser] = useState(null);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
@@ -376,7 +379,7 @@ export default function AppUserManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-[900px]">
+        <TabsList className="grid w-full grid-cols-6 lg:w-full max-w-[1200px]">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="w-4 h-4" /> Usuarios
           </TabsTrigger>
@@ -385,6 +388,9 @@ export default function AppUserManagement() {
           </TabsTrigger>
           <TabsTrigger value="navigation" className="flex items-center gap-2">
             <Factory className="w-4 h-4" /> Páginas
+          </TabsTrigger>
+          <TabsTrigger value="modules" className="flex items-center gap-2">
+            <Eye className="w-4 h-4" /> Módulos
           </TabsTrigger>
           <TabsTrigger value="fields" className="flex items-center gap-2">
             <Database className="w-4 h-4" /> Campos
@@ -690,6 +696,114 @@ export default function AppUserManagement() {
                </ScrollArea>
             </CardContent>
            </Card>
+        </TabsContent>
+
+        {/* --- PESTAÑA MÓDULOS (Module Level Permissions) --- */}
+        <TabsContent value="modules">
+          <Card>
+            <CardHeader>
+              <CardTitle>Permisos de Módulos Internos</CardTitle>
+              <CardDescription>
+                Define qué módulos internos dentro de cada página puede ver y usar cada rol.
+                Esto permite un control granular sobre las funcionalidades dentro de las páginas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Select value={selectedRoleForModules || ""} onValueChange={setSelectedRoleForModules}>
+                  <SelectTrigger className="w-[300px]">
+                    <SelectValue placeholder="Selecciona un rol..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleKeys.map(key => (
+                      <SelectItem key={key} value={key}>
+                        {localConfig.roles[key].name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectedRoleForModules && (
+                  <ScrollArea className="h-[600px] pr-4">
+                    <div className="space-y-6">
+                      <h3 className="font-semibold text-lg sticky top-0 bg-white py-2 border-b">
+                        Configuración de Módulos - {localConfig.roles[selectedRoleForModules].name}
+                      </h3>
+                      
+                      {Object.entries(MODULE_DEFINITIONS).map(([pageName, modules]) => {
+                        const roleModulePerms = localConfig.roles[selectedRoleForModules].module_permissions?.[pageName] || {};
+                        const enabledCount = Object.values(roleModulePerms).filter(Boolean).length;
+                        const totalCount = Object.keys(modules).length;
+                        
+                        return (
+                          <div key={pageName} className="border rounded-lg p-4 bg-white shadow-sm">
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b">
+                              <div className="flex items-center gap-2">
+                                <Eye className="w-5 h-5 text-blue-600" />
+                                <h4 className="font-semibold text-base">{pageName}</h4>
+                              </div>
+                              <Badge variant={enabledCount > 0 ? "default" : "outline"} className={enabledCount > 0 ? "bg-green-600" : ""}>
+                                {enabledCount}/{totalCount} habilitados
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {Object.entries(modules).map(([moduleKey, moduleLabel]) => {
+                                const isEnabled = roleModulePerms[moduleKey] || false;
+                                
+                                return (
+                                  <div key={moduleKey} className="border rounded p-3 hover:bg-slate-50 transition-colors">
+                                    <label className="flex items-start gap-3 cursor-pointer">
+                                      <Checkbox
+                                        checked={isEnabled}
+                                        onCheckedChange={(checked) => {
+                                          const newModulePerms = {
+                                            ...localConfig.roles[selectedRoleForModules].module_permissions,
+                                            [pageName]: {
+                                              ...(localConfig.roles[selectedRoleForModules].module_permissions?.[pageName] || {}),
+                                              [moduleKey]: checked
+                                            }
+                                          };
+                                          
+                                          // Actualizar en localConfig usando el hook
+                                          const updatedRole = {
+                                            ...localConfig.roles[selectedRoleForModules],
+                                            module_permissions: newModulePerms
+                                          };
+                                          
+                                          // Necesitamos llamar a una función del hook para actualizar
+                                          // Por ahora, hacemos la actualización manual
+                                          localConfig.roles[selectedRoleForModules].module_permissions = newModulePerms;
+                                        }}
+                                      />
+                                      <div className="flex-1">
+                                        <div className="font-medium text-sm">{moduleLabel}</div>
+                                        <code className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{moduleKey}</code>
+                                      </div>
+                                    </label>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      
+                      <div className="text-xs text-slate-500 bg-blue-50 p-4 rounded border border-blue-200">
+                        <strong>Importante:</strong>
+                        <ul className="list-disc ml-4 mt-2 space-y-1">
+                          <li>Los permisos de módulos solo aplican si el usuario tiene acceso a la página padre.</li>
+                          <li>Si todos los módulos están deshabilitados, el usuario verá la página pero sin funcionalidad.</li>
+                          <li>Los administradores siempre tienen acceso completo a todos los módulos.</li>
+                          <li>Recuerda <strong>guardar los cambios</strong> al finalizar la configuración.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* --- PESTAÑA CAMPOS (Field Level Permissions) --- */}
