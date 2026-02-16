@@ -40,6 +40,22 @@ export const MODULE_DEFINITIONS = {
     viewAdvancedReports: "Ver informes avanzados",
     exportReports: "Exportar informes",
     viewFinancialData: "Ver datos financieros"
+  },
+  ShiftManagers: {
+    viewDashboard: "Ver dashboard principal",
+    viewKPIs: "Ver KPIs y métricas",
+    viewTeamStatus: "Ver estado de equipos",
+    viewAlerts: "Ver alertas",
+    accessModules: "Acceder a módulos de gestión",
+    manageCommunication: "Gestionar comunicación",
+    viewRequests: "Ver solicitudes y cumpleaños",
+    manageAbsences: "Gestionar ausencias"
+  },
+  MachineAssignments: {
+    viewAssignments: "Ver asignaciones de máquinas",
+    editAssignments: "Editar asignaciones",
+    viewMachineStatus: "Ver estado de máquinas",
+    assignOperators: "Asignar operadores"
   }
 };
 

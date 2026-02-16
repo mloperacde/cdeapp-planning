@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 import ThemeToggle from "../components/common/ThemeToggle";
 import { useShiftConfig } from "@/hooks/useShiftConfig";
+import ModuleGuard from "../components/common/ModuleGuard";
 
 const EMPTY_ARRAY = [];
 
@@ -333,9 +334,11 @@ export default function ShiftManagersPage() {
           </div>
         </div>
         
-        <div className="flex flex-col gap-6">
-          <UnifiedAbsenceManager sourceContext="shift_manager" />
-        </div>
+        <ModuleGuard pageName="ShiftManagers" moduleName="manageAbsences">
+          <div className="flex flex-col gap-6">
+            <UnifiedAbsenceManager sourceContext="shift_manager" />
+          </div>
+        </ModuleGuard>
       </div>
     );
   }
@@ -406,23 +409,42 @@ export default function ShiftManagersPage() {
             {activeWidgets.map(widget => {
                 if (!widget.enabled) return null;
                 const WidgetComponent = widget.component;
+                
+                // Mapeo de widgets a permisos de módulos
+                const widgetPermissions = {
+                  'kpi': 'viewKPIs',
+                  'team_status': 'viewTeamStatus',
+                  'alerts': 'viewAlerts',
+                  'modules': 'accessModules',
+                  'communication': 'manageCommunication',
+                  'requests_birthdays': 'viewRequests'
+                };
+                
+                const requiredPermission = widgetPermissions[widget.id] || 'viewDashboard';
+                
                 return (
-                    <WidgetComponent 
+                    <ModuleGuard 
                         key={widget.id}
-                        employees={employees}
-                        activeAbsencesToday={activeAbsencesToday}
-                        pendingSwaps={pendingSwaps}
-                        lockersWithoutNumber={lockersWithoutNumber}
-                        selectedTeamFilter={selectedTeamFilter}
-                        teamStats={teamStats}
-                        absencesByTeam={absencesByTeam}
-                        setActiveView={setActiveView}
-                        upcomingBirthdays={upcomingBirthdays}
-                        machines={machines}
-                        dailyStaffing={dailyStaffing}
-                        manufacturingConfig={manufacturingConfig}
-                        shifts={shifts}
-                    />
+                        pageName="ShiftManagers" 
+                        moduleName={requiredPermission}
+                        silent={true}
+                    >
+                        <WidgetComponent 
+                            employees={employees}
+                            activeAbsencesToday={activeAbsencesToday}
+                            pendingSwaps={pendingSwaps}
+                            lockersWithoutNumber={lockersWithoutNumber}
+                            selectedTeamFilter={selectedTeamFilter}
+                            teamStats={teamStats}
+                            absencesByTeam={absencesByTeam}
+                            setActiveView={setActiveView}
+                            upcomingBirthdays={upcomingBirthdays}
+                            machines={machines}
+                            dailyStaffing={dailyStaffing}
+                            manufacturingConfig={manufacturingConfig}
+                            shifts={shifts}
+                        />
+                    </ModuleGuard>
                 );
             })}
         </div>
@@ -435,7 +457,9 @@ export default function ShiftManagersPage() {
         />
 
         {/* Unified Absence Manager */}
-        <UnifiedAbsenceManager sourceContext="shift_manager" />
+        <ModuleGuard pageName="ShiftManagers" moduleName="manageAbsences" silent={true}>
+          <UnifiedAbsenceManager sourceContext="shift_manager" />
+        </ModuleGuard>
       </div>
     </div>
   );
