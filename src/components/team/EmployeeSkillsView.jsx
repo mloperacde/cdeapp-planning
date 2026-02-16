@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { Badge } from "@/components/ui/badge";
 import { Search, Save, Edit3, History } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getEmployeeDefaultMachineExperience } from "@/lib/domain/planning";
@@ -25,6 +26,9 @@ export default function EmployeeSkillsView({ department = "all" }) {
     const [editingState, setEditingState] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
     const [editingPositionId, setEditingPositionId] = useState(null);
+    const [applyOpen, setApplyOpen] = useState(false);
+    const [sourceTeamKey, setSourceTeamKey] = useState("");
+    const [targetTeamKey, setTargetTeamKey] = useState("");
     const pageSize = 20;
 
     // Fetch Data
@@ -66,6 +70,58 @@ export default function EmployeeSkillsView({ department = "all" }) {
         queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
         staleTime: 0,
         gcTime: 0
+    });
+
+    const applyBothTeamsMutation = useMutation({
+        mutationFn: async ({ fromKey, toKey }) => {
+            if (!fromKey || !toKey || fromKey === toKey) throw new Error("Equipos inválidos");
+            const fromRecords = machineAssignments.filter(ma => ma.team_key === fromKey);
+            const toRecords = machineAssignments.filter(ma => ma.team_key === toKey);
+            const toByMachine = new Map(toRecords.map(r => [String(r.machine_id), r]));
+            const ops = [];
+            const fixedIds = new Set(
+              (employees || [])
+                .filter(e => e?.tipo_turno === "Fijo Mañana" || e?.tipo_turno === "Fijo Tarde")
+                .map(e => e.id)
+            );
+            for (const src of fromRecords) {
+                const filterArray = (val) => {
+                  if (Array.isArray(val)) return val.filter((id) => fixedIds.has(id));
+                  if (val == null) return [];
+                  return fixedIds.has(val) ? [val] : [];
+                };
+                const filterScalar = (val) => (val && fixedIds.has(val) ? val : null);
+                const payload = {
+                    team_key: toKey,
+                    machine_id: src.machine_id,
+                    responsable_linea: filterArray(src.responsable_linea),
+                    segunda_linea: filterArray(src.segunda_linea),
+                    operador_1: filterScalar(src.operador_1),
+                    operador_2: filterScalar(src.operador_2),
+                    operador_3: filterScalar(src.operador_3),
+                    operador_4: filterScalar(src.operador_4),
+                    operador_5: filterScalar(src.operador_5),
+                    operador_6: filterScalar(src.operador_6),
+                    operador_7: filterScalar(src.operador_7),
+                    operador_8: filterScalar(src.operador_8),
+                };
+                const existing = toByMachine.get(String(src.machine_id));
+                if (existing) {
+                    ops.push(base44.entities.MachineAssignment.update(existing.id, payload));
+                } else {
+                    ops.push(base44.entities.MachineAssignment.create(payload));
+                }
+            }
+            await Promise.all(ops);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
+            toast.success("Asignación aplicada al equipo destino");
+            setApplyOpen(false);
+        },
+        onError: (e) => {
+            toast.error("No se pudo aplicar la asignación");
+        }
     });
 
     // Update Mutation
@@ -318,6 +374,22 @@ export default function EmployeeSkillsView({ department = "all" }) {
                     >
                         Limpiar Filtros
                     </Button>
+
+                    <div className="pt-2">
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => {
+                            if (teams.length >= 2) {
+                                setSourceTeamKey(teams[0].team_key);
+                                setTargetTeamKey(teams[1].team_key);
+                            }
+                            setApplyOpen(true);
+                        }}
+                      >
+                        Aplicar asignación a ambos equipos
+                      </Button>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -501,6 +573,55 @@ export default function EmployeeSkillsView({ department = "all" }) {
                     </div>
                 </div>
             </div>
+
+            <Dialog open={applyOpen} onOpenChange={setApplyOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Aplicar asignación a ambos equipos</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Equipo Origen</Label>
+                    <Select value={sourceTeamKey} onValueChange={setSourceTeamKey}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {teams.map(t => (
+                          <SelectItem key={t.team_key} value={t.team_key}>{t.team_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Equipo Destino</Label>
+                    <Select value={targetTeamKey} onValueChange={setTargetTeamKey}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {teams.map(t => (
+                          <SelectItem key={t.team_key} value={t.team_key}>{t.team_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Copia las asignaciones del equipo origen al destino, SOLO para empleados con turno fijo (mañana/tarde). Sobrescribe el destino.
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setApplyOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={() => applyBothTeamsMutation.mutate({ fromKey: sourceTeamKey, toKey: targetTeamKey })}
+                    disabled={applyBothTeamsMutation.isPending || !sourceTeamKey || !targetTeamKey || sourceTeamKey === targetTeamKey}
+                  >
+                    {applyBothTeamsMutation.isPending ? "Aplicando..." : "Aplicar"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
         </div>
     );
 }
