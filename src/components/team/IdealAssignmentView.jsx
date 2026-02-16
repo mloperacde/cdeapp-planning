@@ -109,57 +109,56 @@ export default function IdealAssignmentView() {
   };
 
   const getSortValue = (emp, machineId) => {
-      // Priority: Experience Slot ASC, Category ASC, Name ASC
       const slot = getExperienceSlot(emp, machineId);
-      const category = parseInt(emp.categoria) || 99; // Assume numeric or comparable
+      const category = parseInt(emp.categoria) || 99;
       return { slot, category, name: emp.nombre };
   };
 
-  // Helper to filter eligible employees per role/machine (for pre-selection only - strict criteria)
-  const getEligibleEmployees = (machineId, roleType) => {
+  const isProductionAvailable = (emp) => {
+    const dept = (emp.departamento || "").toString().trim().toUpperCase();
+    if (dept !== "PRODUCCION" && dept !== "PRODUCCIÓN") return false;
+    const estado = (emp.estado_empleado || "Alta");
+    if (estado !== "Alta") return false;
+    const disponibilidad = (emp.disponibilidad || "Disponible");
+    if (disponibilidad !== "Disponible") return false;
+    return true;
+  };
+
+  const getRoleCandidates = (machineId, roleType) => {
     if (!currentTeam) return [];
     
     const teamConfig = teams.find(t => t.team_key === currentTeam);
     const teamName = teamConfig ? teamConfig.team_name : "";
 
     return employees.filter(emp => {
-        // Common Criteria for pre-selection (strict)
-        if (emp.departamento !== "FABRICACION") return false;
-        if (emp.equipo !== teamName) return false;
-        if (emp.disponibilidad !== "Disponible") return false; // Only available for pre-selection
+        if (!isProductionAvailable(emp)) return false;
+
+        const isTeamMember = emp.equipo === teamName || emp.equipo === currentTeam;
+        const isFixedShift = emp.tipo_turno === "Fijo Mañana" || emp.tipo_turno === "Fijo Tarde";
+        if (!isTeamMember && !isFixedShift) return false;
+
+        const slot = getExperienceSlot(emp, machineId);
+        if (slot === 999) return false;
 
         const puesto = (emp.puesto || "").toUpperCase();
         const isTecnicoProceso = puesto.includes("TECNICO DE PROCESO") || puesto.includes("TÉCNICO DE PROCESO");
-        
-        const slot = getExperienceSlot(emp, machineId);
 
-        if (isTecnicoProceso) {
-            return true;
-        }
+        if (isTecnicoProceso) return true;
 
-        if (roleType === "RESPONSABLE") {
-            if (!puesto.includes("RESPONSABLE DE LINEA") && !puesto.includes("RESPONSABLE DE LÍNEA")) return false;
-            if (slot !== 1) return false;
-            return true;
-        }
-
-        if (roleType === "SEGUNDA") {
-            if (!puesto.includes("SEGUNDA") && !puesto.includes("2ª")) return false;
-            if (slot === 999) return false;
-            return true;
-        }
-
-        if (roleType === "OPERARIO") {
-            if (!puesto.includes("OPERARI") && !puesto.includes("OPERARIO") && !puesto.includes("OPERARIA")) return false;
-            if (slot === 999) return false;
-            return true; 
-        }
+        if (roleType === "RESPONSABLE" && puesto.includes("RESPONSABLE")) return true;
+        if (roleType === "SEGUNDA" && (puesto.includes("SEGUNDA") || puesto.includes("2ª"))) return true;
+        if (roleType === "OPERARIO" && (puesto.includes("OPERARI") || puesto.includes("OPERARIO") || puesto.includes("OPERARIA"))) return true;
 
         return false;
+    }).sort((a, b) => {
+        const sortA = getSortValue(a, machineId);
+        const sortB = getSortValue(b, machineId);
+        if (sortA.slot !== sortB.slot) return sortA.slot - sortB.slot;
+        if (sortA.category !== sortB.category) return sortA.category - sortB.category;
+        return (sortA.name || "").localeCompare(sortB.name || "");
     });
   };
 
-  // 4. Calculate Defaults (Pre-selection)
   const calculateDefaultAssignment = (machineId) => {
     const defaultAssign = {
         responsable_linea: null,
@@ -169,55 +168,42 @@ export default function IdealAssignmentView() {
         operador_3: null,
         operador_4: null,
         operador_5: null,
-        // ... unused slots
     };
 
     const assignedIds = new Set();
 
-    // Responsable
-    const eligibleResp = getEligibleEmployees(machineId, "RESPONSABLE")
-        .sort((a, b) => {
-             const catA = parseInt(a.categoria) || 99;
-             const catB = parseInt(b.categoria) || 99;
-             if (catA !== catB) return catA - catB;
-             return (a.nombre || "").localeCompare(b.nombre || "");
-        });
-    if (eligibleResp.length > 0) {
-        defaultAssign.responsable_linea = eligibleResp[0].id;
-        assignedIds.add(eligibleResp[0].id);
-    }
+    const responsables = getRoleCandidates(machineId, "RESPONSABLE");
+    const segundas = getRoleCandidates(machineId, "SEGUNDA");
+    const operarios = getRoleCandidates(machineId, "OPERARIO");
 
-    // Segunda
-    const eligibleSeg = getEligibleEmployees(machineId, "SEGUNDA")
-        .filter(e => !assignedIds.has(e.id))
-        .sort((a, b) => {
-            const sortA = getSortValue(a, machineId);
-            const sortB = getSortValue(b, machineId);
-            if (sortA.slot !== sortB.slot) return sortA.slot - sortB.slot;
-            if (sortA.category !== sortB.category) return sortA.category - sortB.category;
-            return (sortA.name || "").localeCompare(sortB.name || "");
-        });
-    if (eligibleSeg.length > 0) {
-        defaultAssign.segunda_linea = eligibleSeg[0].id;
-        assignedIds.add(eligibleSeg[0].id);
-    }
+    const pickFirstAvailable = (list) => list.find(emp => !assignedIds.has(emp.id) && isProductionAvailable(emp));
 
-    // Operarios (1-5)
-    const eligibleOps = getEligibleEmployees(machineId, "OPERARIO")
-        .filter(e => !assignedIds.has(e.id))
-        .sort((a, b) => {
-            const sortA = getSortValue(a, machineId);
-            const sortB = getSortValue(b, machineId);
-            if (sortA.slot !== sortB.slot) return sortA.slot - sortB.slot;
-            if (sortA.category !== sortB.category) return sortA.category - sortB.category;
-            return (sortA.name || "").localeCompare(sortB.name || "");
-        });
-    
-    for (let i = 1; i <= 5; i++) {
-        if (eligibleOps.length > 0) {
-            const picked = eligibleOps.shift();
-            defaultAssign[`operador_${i}`] = picked.id;
+    let responsable = pickFirstAvailable(responsables);
+    if (!responsable) {
+        const segundaComoResp = pickFirstAvailable(segundas);
+        if (segundaComoResp) {
+            responsable = segundaComoResp;
+        } else {
+            const restantesResp = responsables.slice(1);
+            responsable = pickFirstAvailable(restantesResp);
         }
+    }
+    if (responsable) {
+        defaultAssign.responsable_linea = responsable.id;
+        assignedIds.add(responsable.id);
+    }
+
+    const segunda = pickFirstAvailable(segundas);
+    if (segunda) {
+        defaultAssign.segunda_linea = segunda.id;
+        assignedIds.add(segunda.id);
+    }
+
+    for (let i = 1; i <= 5; i++) {
+        const op = pickFirstAvailable(operarios);
+        if (!op) break;
+        defaultAssign[`operador_${i}`] = op.id;
+        assignedIds.add(op.id);
     }
 
     return defaultAssign;
