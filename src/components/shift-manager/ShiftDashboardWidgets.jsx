@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
+import ModuleGuard from "../common/ModuleGuard";
 
 // Widget: KPI Summary
 export function KPIWidget({ employees, activeAbsencesToday, pendingSwaps, lockersWithoutNumber, selectedTeamFilter }) {
@@ -290,6 +291,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
 export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
     const modules = [
         {
+            id: "planningTeams",
             title: "Planificación Equipos",
             icon: UsersRound,
             url: createPageUrl("ShiftPlanning"),
@@ -297,6 +299,7 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
             description: "Asigna turnos"
         },
         {
+            id: "employeesManagement",
             title: "Empleados",
             icon: Users,
             url: createPageUrl("EmployeesShiftManager"),
@@ -304,6 +307,7 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
             description: "Personal fabricación"
         },
         {
+            id: "machineAssignments",
             title: "Asignaciones",
             icon: UserCog,
             url: createPageUrl("MachineAssignments"),
@@ -311,6 +315,7 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
             description: "Distribuye operarios"
         },
         {
+            id: "lockerManagement",
             title: "Taquillas",
             icon: KeyRound,
             url: createPageUrl("LockerManagement"),
@@ -319,6 +324,7 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
             badge: lockersWithoutNumber > 0 ? lockersWithoutNumber : null
         },
         {
+            id: "performance",
             title: "Rendimiento",
             icon: TrendingUp,
             url: createPageUrl("PerformanceManagement"),
@@ -326,6 +332,7 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
             description: "Evaluaciones y PIPs"
         },
         {
+            id: "absencesManagement",
             title: "Ausencias",
             icon: MessageSquare,
             action: "absences",
@@ -376,14 +383,23 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
                         </Card>
                     );
                     
-                    return module.action ? (
-                        <button key={module.title} onClick={() => setActiveView(module.action)} className="w-full text-left">
-                            {content}
-                        </button>
-                    ) : (
-                        <Link key={module.title} to={module.url}>
-                            {content}
-                        </Link>
+                    return (
+                        <ModuleGuard 
+                            key={module.id}
+                            pageName="ShiftManagers" 
+                            moduleName={module.id}
+                            silent={true}
+                        >
+                            {module.action ? (
+                                <button onClick={() => setActiveView(module.action)} className="w-full text-left">
+                                    {content}
+                                </button>
+                            ) : (
+                                <Link to={module.url}>
+                                    {content}
+                                </Link>
+                            )}
+                        </ModuleGuard>
                     );
                 })}
             </div>
@@ -393,55 +409,79 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
 
 // Widget: Communication
 export function CommunicationWidget() {
+    const modules = [
+        {
+            id: "shiftHandover",
+            title: "Traspaso",
+            icon: ArrowLeftRight,
+            url: createPageUrl("ShiftHandover"),
+            color: "cyan",
+            description: "Entre turnos"
+        },
+        {
+            id: "breaksManagement",
+            title: "Descansos",
+            icon: Coffee,
+            url: createPageUrl("Breaks"),
+            color: "teal",
+            description: "Gestión de turnos"
+        },
+        {
+            id: "support",
+            title: "Apoyos",
+            icon: Clock,
+            url: createPageUrl("SupportManagement1415"),
+            color: "violet",
+            description: "14:00 - 15:00"
+        }
+    ];
+
+    const colorClasses = {
+        purple: "from-purple-500 to-purple-600",
+        blue: "from-blue-500 to-blue-600",
+        green: "from-green-500 to-green-600",
+        orange: "from-orange-500 to-orange-600",
+        red: "from-red-500 to-red-600",
+        cyan: "from-cyan-500 to-cyan-600",
+        teal: "from-teal-500 to-teal-600",
+        violet: "from-violet-500 to-violet-600"
+    };
+
     return (
         <div className="mb-6">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Coordinación</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link to={createPageUrl("ShiftHandover")}>
-                    <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
-                        <CardContent className="p-5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                                    <ArrowLeftRight className="w-6 h-6 text-white" />
+                {modules.map((module) => {
+                    const Icon = module.icon;
+                    const content = (
+                        <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
+                            <CardContent className="p-5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[module.color]} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
+                                        <Icon className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">{module.title}</h3>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400">{module.description}</p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">Traspaso</h3>
-                                    <p className="text-xs text-slate-600 dark:text-slate-400">Entre turnos</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Link>
-                <Link to={createPageUrl("Breaks")}>
-                    <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
-                        <CardContent className="p-5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                                    <Coffee className="w-6 h-6 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">Descansos</h3>
-                                    <p className="text-xs text-slate-600 dark:text-slate-400">Gestión de turnos</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Link>
-                <Link to={createPageUrl("SupportManagement1415")}>
-                    <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group h-full border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
-                        <CardContent className="p-5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                                    <Clock className="w-6 h-6 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">Apoyos</h3>
-                                    <p className="text-xs text-slate-600 dark:text-slate-400">14:00 - 15:00</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Link>
+                            </CardContent>
+                        </Card>
+                    );
+
+                    return (
+                        <ModuleGuard 
+                            key={module.id}
+                            pageName="ShiftManagers" 
+                            moduleName={module.id}
+                            silent={true}
+                        >
+                            <Link to={module.url}>
+                                {content}
+                            </Link>
+                        </ModuleGuard>
+                    );
+                })}
             </div>
         </div>
     );
