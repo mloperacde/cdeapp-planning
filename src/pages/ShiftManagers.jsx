@@ -415,12 +415,34 @@ export default function ShiftManagersPage() {
                   'kpi': 'viewKPIs',
                   'team_status': 'viewTeamStatus',
                   'alerts': 'viewAlerts',
-                  'modules': 'accessModules',
-                  'communication': 'manageCommunication',
+                  'modules': null, // No verificar permiso para el contenedor, los módulos individuales ya tienen ModuleGuard
+                  'communication': null, // No verificar permiso para el contenedor, los módulos individuales ya tienen ModuleGuard
                   'requests_birthdays': 'viewRequests'
                 };
                 
-                const requiredPermission = widgetPermissions[widget.id] || 'viewDashboard';
+                const requiredPermission = widgetPermissions[widget.id];
+                
+                // Si no hay permiso requerido, renderizar sin ModuleGuard
+                if (!requiredPermission) {
+                    return (
+                        <WidgetComponent 
+                            key={widget.id}
+                            employees={employees}
+                            activeAbsencesToday={activeAbsencesToday}
+                            pendingSwaps={pendingSwaps}
+                            lockersWithoutNumber={lockersWithoutNumber}
+                            selectedTeamFilter={selectedTeamFilter}
+                            teamStats={teamStats}
+                            absencesByTeam={absencesByTeam}
+                            setActiveView={setActiveView}
+                            upcomingBirthdays={upcomingBirthdays}
+                            machines={machines}
+                            dailyStaffing={dailyStaffing}
+                            manufacturingConfig={manufacturingConfig}
+                            shifts={shifts}
+                        />
+                    );
+                }
                 
                 return (
                     <ModuleGuard 

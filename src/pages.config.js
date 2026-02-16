@@ -51,6 +51,7 @@ import AbsenceManagement from './pages/AbsenceManagement';
 import AbsenceTypeConfig from './pages/AbsenceTypeConfig';
 import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import AlmacenSkills from './pages/AlmacenSkills';
+import AppUserManagement from './pages/AppUserManagement';
 import ArticleManagement from './pages/ArticleManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
 import BrandingConfig from './pages/BrandingConfig';
@@ -103,7 +104,6 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import AppUserManagement from './pages/AppUserManagement';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
 import __Layout from './Layout.jsx';
@@ -114,6 +114,7 @@ export const PAGES = {
     "AbsenceTypeConfig": AbsenceTypeConfig,
     "AdvancedHRDashboard": AdvancedHRDashboard,
     "AlmacenSkills": AlmacenSkills,
+    "AppUserManagement": AppUserManagement,
     "ArticleManagement": ArticleManagement,
     "AttendanceManagement": AttendanceManagement,
     "BrandingConfig": BrandingConfig,
@@ -166,7 +167,6 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "AppUserManagement": AppUserManagement,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
 }
