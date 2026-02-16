@@ -168,6 +168,12 @@ export default function EmployeeSkillsView({ department = "all" }) {
              result = result.filter(e => e.puesto === filters.puesto);
         }
         
+        if (filters.tipo_turno && filters.tipo_turno !== "all") {
+            const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+            const target = normalize(filters.tipo_turno);
+            result = result.filter(e => normalize(e.tipo_turno) === target);
+        }
+        
         if (filters.maquina && filters.maquina !== "all") {
             result = result.filter(e => {
                 const defaults = getEmployeeDefaultMachineExperience(e, employeeSkills);
@@ -272,6 +278,20 @@ export default function EmployeeSkillsView({ department = "all" }) {
                             <SelectContent>
                                 <SelectItem value="all">Todos</SelectItem>
                                 {getUniquePositions().map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Tipo de Turno</Label>
+                        <Select value={filters.tipo_turno || "all"} onValueChange={(v) => handleFilterChange("tipo_turno", v)}>
+                            <SelectTrigger className="bg-white w-full"><SelectValue placeholder="Todos" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos</SelectItem>
+                                <SelectItem value="Fijo Mañana">Fijo Mañana</SelectItem>
+                                <SelectItem value="Fijo Tarde">Fijo Tarde</SelectItem>
+                                <SelectItem value="Rotativo">Rotativo</SelectItem>
+                                <SelectItem value="Turno Partido">Turno Partido</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
