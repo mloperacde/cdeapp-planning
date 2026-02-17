@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
     CheckCircle2, UserX, RefreshCw, Clock, 
-    Sunrise, Sunset, Users, 
+    Sunrise, Sunset, Users, KeyRound,
     UserCog, UsersRound, TrendingUp,
     MessageSquare, ArrowLeftRight, Coffee, Cake, Calendar, AlertTriangle, MapPin
 } from "lucide-react";
