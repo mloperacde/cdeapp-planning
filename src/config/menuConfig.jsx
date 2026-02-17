@@ -18,6 +18,7 @@ export const MENU_STRUCTURE = [
   { name: 'Comités y PRL', icon: Shield, path: '/CommitteeManagement', category: 'Recursos Humanos' },
   { name: 'Plan Incentivos', icon: DollarSign, path: '/IncentiveManagement', category: 'Recursos Humanos' },
   { name: 'Gestión Salarios', icon: DollarSign, path: '/SalaryManagement', category: 'Recursos Humanos' },
+  { name: 'Taquillas', icon: Package, path: '/LockerManagement', category: 'Recursos Humanos' },
 
   // Dirección
   { name: 'Dirección - Habilidades', icon: Award, path: '/DireccionSkills', category: 'Dirección' },
