@@ -231,6 +231,46 @@ export default function AppUserManagement() {
     return Array.from(depts).sort();
   }, [employees]);
 
+  const navigationGroups = useMemo(() => {
+    const pathMeta = {};
+
+    MENU_STRUCTURE.forEach(item => {
+      pathMeta[item.path] = {
+        path: item.path,
+        title: item.name || item.title || item.path,
+        category: item.category || "General"
+      };
+    });
+
+    if (localConfig?.roles) {
+      Object.values(localConfig.roles).forEach(role => {
+        const perms = role.page_permissions || {};
+        Object.keys(perms).forEach(path => {
+          if (!pathMeta[path]) {
+            pathMeta[path] = {
+              path,
+              title: path,
+              category: "Otros"
+            };
+          }
+        });
+      });
+    }
+
+    const groups = {};
+    Object.values(pathMeta).forEach(item => {
+      const cat = item.category || "General";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    });
+
+    Object.values(groups).forEach(items => {
+      items.sort((a, b) => a.title.localeCompare(b.title));
+    });
+
+    return groups;
+  }, [localConfig]);
+
   const moduleGroups = useMemo(() => {
     const metaByPath = new Map(MENU_STRUCTURE.map(item => [item.path, item]));
     const groups = {};
@@ -670,14 +710,7 @@ export default function AppUserManagement() {
                <ScrollArea className="h-[600px] pr-4">
                  {/* Reutilizando la lógica de renderizado de pestañas anterior pero simplificada */}
                   <div className="space-y-8">
-                    {Object.entries(
-                      MENU_STRUCTURE.reduce((acc, item) => {
-                        const cat = item.category || 'General';
-                        if (!acc[cat]) acc[cat] = [];
-                        acc[cat].push(item);
-                        return acc;
-                      }, {})
-                    ).map(([category, items]) => (
+                    {Object.entries(navigationGroups).map(([category, items]) => (
                       <div key={category} className="space-y-3">
                         <h3 className="font-semibold text-lg text-slate-800 border-b pb-1 flex items-center gap-2">
                           {category === 'Configuración' ? <UserCog className="w-5 h-5" /> : <Factory className="w-5 h-5" />}
