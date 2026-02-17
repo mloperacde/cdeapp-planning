@@ -40,10 +40,15 @@ export const MODULE_DEFINITIONS = {
     viewKPIs: "Ver KPIs y métricas",
     viewTeamStatus: "Ver estado de equipos",
     viewAlerts: "Ver alertas",
-    accessModules: "Acceder a módulos de gestión",
-    manageCommunication: "Gestionar comunicación",
-    viewRequests: "Ver solicitudes y cumpleaños",
-    manageAbsences: "Gestionar ausencias"
+    planningTeams: "Planificación Equipos",
+    employeesManagement: "Gestión de Empleados",
+    machineAssignments: "Asignaciones de Máquinas",
+    lockerManagement: "Gestión de Taquillas",
+    performance: "Rendimiento",
+    absencesManagement: "Gestión de Ausencias",
+    shiftHandover: "Traspaso de Turnos",
+    breaksManagement: "Gestión de Descansos",
+    support: "Apoyos"
   },
   MachineAssignments: {
     viewAssignments: "Ver asignaciones de máquinas",
@@ -337,26 +342,37 @@ export function usePermissions() {
       // IMPORTANTE: Si el usuario puede acceder a la página, puede acceder a sus módulos
       // A menos que haya una denegación explícita en module_permissions
       const canAccessThePage = base.canAccessPage(`/${pageName}`);
-      if (!canAccessThePage) return false; // Si no puede ver la página, no puede ver sus módulos
+      if (!canAccessThePage) {
+        console.log(`[canAccessModule] DENIED - No page access: page=${pageName}, module=${moduleName}`);
+        return false; // Si no puede ver la página, no puede ver sus módulos
+      }
       
       // Verificar permisos de módulo del usuario (override explícito)
       const userModulePerms = user.module_permissions?.[pageName]?.[moduleName];
-      if (userModulePerms !== undefined) return userModulePerms;
+      if (userModulePerms !== undefined) {
+        console.log(`[canAccessModule] User override: page=${pageName}, module=${moduleName}, value=${userModulePerms}`);
+        return userModulePerms;
+      }
       
       // Verificar permisos de módulo del rol en rolesConfig
       const roleModulePerms = roleConfig?.module_permissions?.[pageName];
+      
+      console.log(`[canAccessModule] Check: page=${pageName}, module=${moduleName}, roleKey=${effectiveRoleKey}, hasRoleConfig=${!!roleConfig}, roleModulePerms=`, roleModulePerms);
       
       // Si hay configuración de módulos para esta página en el rol
       if (roleModulePerms && Object.keys(roleModulePerms).length > 0) {
         // Si el módulo está explícitamente configurado, usar ese valor
         if (roleModulePerms[moduleName] !== undefined) {
+          console.log(`[canAccessModule] Module found in role config: ${roleModulePerms[moduleName]}`);
           return roleModulePerms[moduleName];
         }
         // Si hay configuración de módulos pero este módulo no está, denegar
+        console.log(`[canAccessModule] DENIED - Module not in role config`);
         return false;
       }
       
       // Por defecto: Si puede ver la página y no hay restricciones de módulos, permitir
+      console.log(`[canAccessModule] ALLOWED - Default (no module restrictions)`);
       return true;
     };
 
