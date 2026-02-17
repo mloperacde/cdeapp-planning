@@ -177,11 +177,16 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                     {teamStats.map((team) => {
                         const activeSalas = getTeamSalas(team.team_name);
                         const leaders = getShiftLeaders(team.shift);
+                        const employeesUrl = `${createPageUrl("EmployeesShiftManager")}?team=${encodeURIComponent(team.team_name)}`;
                         
                         return (
+                        <Link 
+                            key={team.team_key}
+                            to={employeesUrl}
+                            className="block group"
+                        >
                         <div 
-                            key={team.team_key} 
-                            className="border-2 rounded-lg p-4"
+                            className="border-2 rounded-lg p-4 group-hover:shadow-md transition-shadow cursor-pointer"
                             style={{ borderColor: team.color }}
                         >
                             <div className="flex items-center justify-between mb-4">
@@ -244,7 +249,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
 
                             {leaders.length > 0 && (
                                 <div className="mt-3 pt-3 border-t border-slate-200">
-                                    <p className="text-xs font-semibold text-slate-700 mb-2">Responsables de Turno:</p>
+                                    <p className="text-xs font-semibold text-slate-700 mb-2">Jefes de Turno Producción:</p>
                                     {leaders.map(l => (
                                         <div key={l.role} className="mb-2">
                                             <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
@@ -279,6 +284,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                                 </div>
                             )}
                         </div>
+                        </Link>
                     );
                     })}
                 </div>

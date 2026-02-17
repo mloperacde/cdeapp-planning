@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +57,12 @@ const ALL_COLUMNS = {
 };
 
 export default function EmployeesShiftManagerPage() {
-  const [filters, setFilters] = useState({});
+  const [searchParams] = useSearchParams();
+  const initialTeam = searchParams.get("team");
+
+  const [filters, setFilters] = useState(() => (
+    initialTeam ? { equipo: initialTeam } : {}
+  ));
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
   const [page, setPage] = useState(0);
@@ -193,13 +199,17 @@ export default function EmployeesShiftManagerPage() {
 
   // KPIs
   const stats = useMemo(() => {
-    const total = effectiveEmployees.length;
-    const activos = effectiveEmployees.filter(e => e.estado_empleado === 'Alta').length;
-    const disponibles = effectiveEmployees.filter(e => e.estado_empleado === 'Alta' && e.disponibilidad === 'Disponible').length;
+    const base = filters.equipo && filters.equipo !== 'all'
+      ? effectiveEmployees.filter(e => e.equipo === filters.equipo)
+      : effectiveEmployees;
+
+    const total = base.length;
+    const activos = base.filter(e => e.estado_empleado === 'Alta').length;
+    const disponibles = base.filter(e => e.estado_empleado === 'Alta' && e.disponibilidad === 'Disponible').length;
     const now = new Date();
     
     // Contract Expirations (Next 30 days)
-    const upcomingContractExpirations = effectiveEmployees.filter(e => {
+    const upcomingContractExpirations = base.filter(e => {
       if (!e.fecha_fin_contrato || e.estado_empleado !== 'Alta') return false;
       const endContract = new Date(e.fecha_fin_contrato);
       const diffTime = endContract - now;
@@ -208,7 +218,11 @@ export default function EmployeesShiftManagerPage() {
     }).length;
 
     return { total, activos, disponibles, upcomingContractExpirations };
-  }, [effectiveEmployees]);
+  }, [effectiveEmployees, filters.equipo]);
+
+  const currentTeamLabel = filters.equipo && filters.equipo !== 'all'
+    ? ` - Equipo ${filters.equipo}`
+    : '';
 
   return (
     <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
@@ -220,7 +234,7 @@ export default function EmployeesShiftManagerPage() {
             </div>
             <div>
               <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                Gestión de empleados Producción
+                Gestión de empleados Producción{currentTeamLabel}
               </h1>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
                 Administración equipos producción
