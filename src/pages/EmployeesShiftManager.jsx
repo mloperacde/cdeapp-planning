@@ -220,10 +220,10 @@ export default function EmployeesShiftManagerPage() {
             </div>
             <div>
               <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                Gestión de Turnos
+                Gestión de empleados Producción
               </h1>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                Administra los turnos y contratos de los empleados
+                Administración equipos producción
               </p>
             </div>
           </div>
@@ -281,7 +281,7 @@ export default function EmployeesShiftManagerPage() {
         <Card className="shadow-lg border-0 bg-white dark:bg-slate-900">
           <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Listado de Operarios</CardTitle>
+              <CardTitle className="text-lg">Personal de Producción</CardTitle>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="ml-auto">

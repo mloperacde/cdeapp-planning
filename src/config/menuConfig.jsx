@@ -26,7 +26,7 @@ export const MENU_STRUCTURE = [
   { name: 'Planning Producción', icon: Calendar, path: '/DailyProductionPlanningPage', category: 'Dirección' },
   
   // Planificación
-  { name: 'Personal Fabricación', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Planificación' },
+  { name: 'Personal Producción', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Planificación' },
   { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
   { name: 'Importar Órdenes', icon: Download, path: '/OrderImport', category: 'Planificación' },
   { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
