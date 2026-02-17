@@ -9,12 +9,6 @@ export const MODULE_DEFINITIONS = {
     viewAlerts: "Ver alertas y notificaciones",
     exportData: "Exportar datos del dashboard"
   },
-  ShiftPlanning: {
-    viewSchedule: "Ver horarios",
-    editSchedule: "Editar horarios",
-    assignOperators: "Asignar operadores",
-    viewCosts: "Ver costos de turnos"
-  },
   MachineDailyPlanning: {
     viewPlanning: "Ver planificación",
     editPlanning: "Editar planificación",

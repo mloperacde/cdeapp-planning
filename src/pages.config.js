@@ -96,7 +96,6 @@ import SenioritySettings from './pages/SenioritySettings';
 import ShiftAssignmentsPage from './pages/ShiftAssignmentsPage';
 import ShiftHandover from './pages/ShiftHandover';
 import ShiftManagers from './pages/ShiftManagers';
-import ShiftPlanning from './pages/ShiftPlanning';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
 import Timeline from './pages/Timeline';
@@ -159,7 +158,6 @@ export const PAGES = {
     "ShiftAssignmentsPage": ShiftAssignmentsPage,
     "ShiftHandover": ShiftHandover,
     "ShiftManagers": ShiftManagers,
-    "ShiftPlanning": ShiftPlanning,
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
     "Timeline": Timeline,

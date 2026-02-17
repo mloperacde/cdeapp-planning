@@ -44,7 +44,6 @@ const DEFAULT_CONFIG = {
         canScheduleProduction: true,
         canModifyProductionOrders: true,
         canViewProductionCosts: true,
-        canAccessShiftPlanning: true,
         canAssignOperators: true,
         // Máquinas
         canViewMachines: true,
@@ -119,7 +118,6 @@ const DEFAULT_CONFIG = {
         canScheduleProduction: false,
         canModifyProductionOrders: false,
         canViewProductionCosts: false,
-        canAccessShiftPlanning: false,
         canAssignOperators: false,
         // Máquinas - Solo lectura
         canViewMachines: true,

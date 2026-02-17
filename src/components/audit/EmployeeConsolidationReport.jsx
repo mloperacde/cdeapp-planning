@@ -68,7 +68,6 @@ export default function EmployeeConsolidationReport() {
         { name: "Dashboard", status: "✅ Optimizado", source: "useAppData()" },
         { name: "AbsenceManagement", status: "✅ Optimizado", source: "useAppData()" },
         { name: "Timeline", status: "✅ Migrado", source: "useAppData()" },
-        { name: "ShiftPlanning", status: "✅ Migrado", source: "useAppData()" },
         { name: "EmployeeAbsences", status: "✅ Migrado", source: "useAppData()" },
         { name: "EmployeeVacations", status: "✅ Migrado", source: "useAppData()" },
         { name: "MasterEmployeeDatabase", status: "✅ Optimizado", source: "useAppData()" },

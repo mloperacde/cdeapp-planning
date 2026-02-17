@@ -80,7 +80,6 @@ export const DEFAULT_ROLES_CONFIG = {
         '/QualityControl': true,
         '/Reports': true,
         '/MachineAssignments': true,
-        '/ShiftPlanning': true,
         '/LockerManagement': true,
         '/PerformanceManagement': true,
         '/Breaks': true,

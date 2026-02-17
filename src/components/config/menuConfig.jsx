@@ -49,7 +49,6 @@ export const MENU_STRUCTURE = [
   { name: 'Gestión de Usuarios', path: '/AppUserManagement', icon: UserCog, category: 'Dirección' },
   
   // Planificación
-  { name: 'Planificación Turnos', path: '/ShiftPlanning', icon: Calendar, category: 'Planificación' },
   { name: 'Empleados (Responsables)', path: '/EmployeesShiftManager', icon: Users, category: 'Planificación' },
   { name: 'Responsables de Turno', path: '/ShiftManagers', icon: Briefcase, category: 'Planificación' },
   { name: 'Descansos', path: '/Breaks', icon: Coffee, category: 'Planificación' },

@@ -39,7 +39,6 @@ import QualityControl from "./QualityControl";
 import Reports from "./Reports";
 import ShiftHandover from "./ShiftHandover";
 import ShiftManagers from "./ShiftManagers";
-import ShiftPlanning from "./ShiftPlanning";
 import ShiftAssignmentsPage from "./ShiftAssignmentsPage";
 import SkillMatrix from "./SkillMatrix";
 import SupportManagement1415 from "./SupportManagement1415";
@@ -117,7 +116,6 @@ const PAGES = {
   Reports: Reports,
   ShiftHandover: ShiftHandover,
   ShiftManagers: ShiftManagers,
-  ShiftPlanning: ShiftPlanning,
   ShiftAssignmentsPage: ShiftAssignmentsPage,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
@@ -254,8 +252,6 @@ function PagesContent() {
                 <Route path="/ShiftHandover" element={<ShiftHandover />} />
                 
                 <Route path="/ShiftManagers" element={<ShiftManagers />} />
-                
-                <Route path="/ShiftPlanning" element={<ShiftPlanning />} />
                 <Route path="/ShiftAssignmentsPage" element={<ShiftAssignmentsPage />} />
                 
                 <Route path="/SkillMatrix" element={<SkillMatrix />} />

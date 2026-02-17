@@ -73,7 +73,6 @@ const PERMISSION_CATEGORIES = {
       canScheduleProduction: "Programar Órdenes de Producción",
       canModifyProductionOrders: "Modificar Órdenes Activas",
       canViewProductionCosts: "Ver Costos de Producción",
-      canAccessShiftPlanning: "Acceder a Planificación de Turnos",
       canAssignOperators: "Asignar Operadores a Máquinas"
     }
   },

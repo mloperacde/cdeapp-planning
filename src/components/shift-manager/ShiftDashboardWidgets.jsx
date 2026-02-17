@@ -290,13 +290,6 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
 export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
     const modules = [
         {
-            title: "Planificación Equipos",
-            icon: UsersRound,
-            url: createPageUrl("ShiftPlanning"),
-            color: "purple",
-            description: "Asigna turnos"
-        },
-        {
             title: "Empleados",
             icon: Users,
             url: createPageUrl("EmployeesShiftManager"),
