@@ -231,6 +231,27 @@ export default function AppUserManagement() {
     return Array.from(depts).sort();
   }, [employees]);
 
+  const moduleGroups = useMemo(() => {
+    const metaByPath = new Map(MENU_STRUCTURE.map(item => [item.path, item]));
+    const groups = {};
+
+    Object.entries(MODULE_DEFINITIONS).forEach(([pageName, modules]) => {
+      const path = createPageUrl(pageName);
+      const meta = metaByPath.get(path);
+      const category = meta?.category || "Otros";
+      const title = meta?.name || pageName;
+
+      if (!groups[category]) groups[category] = [];
+      groups[category].push({ pageName, path, title, modules });
+    });
+
+    Object.values(groups).forEach(items => {
+      items.sort((a, b) => a.title.localeCompare(b.title));
+    });
+
+    return groups;
+  }, []);
+
   // Derived state: Filtered Employees
   const filteredEmployees = useMemo(() => {
     if (!employees || !localConfig) return [];
@@ -730,48 +751,58 @@ export default function AppUserManagement() {
                         Configuración de Módulos - {localConfig.roles[selectedRoleForModules].name}
                       </h3>
                       
-                      {Object.entries(MODULE_DEFINITIONS).map(([pageName, modules]) => {
-                        const roleModulePerms = localConfig.roles[selectedRoleForModules].module_permissions?.[pageName] || {};
-                        const enabledCount = Object.values(roleModulePerms).filter(Boolean).length;
-                        const totalCount = Object.keys(modules).length;
-                        
-                        return (
-                          <div key={pageName} className="border rounded-lg p-4 bg-white shadow-sm">
-                            <div className="flex items-center justify-between mb-3 pb-2 border-b">
-                              <div className="flex items-center gap-2">
-                                <Eye className="w-5 h-5 text-blue-600" />
-                                <h4 className="font-semibold text-base">{pageName}</h4>
-                              </div>
-                              <Badge variant={enabledCount > 0 ? "default" : "outline"} className={enabledCount > 0 ? "bg-green-600" : ""}>
-                                {enabledCount}/{totalCount} habilitados
-                              </Badge>
-                            </div>
+                      {Object.entries(moduleGroups).map(([category, pages]) => (
+                        <div key={category} className="space-y-4">
+                          <h4 className="font-semibold text-base text-slate-800 border-b pb-1 mt-2">
+                            {category}
+                          </h4>
+                          {pages.map(({ pageName, path, title, modules }) => {
+                            const roleModulePerms = localConfig.roles[selectedRoleForModules].module_permissions?.[pageName] || {};
+                            const enabledCount = Object.values(roleModulePerms).filter(Boolean).length;
+                            const totalCount = Object.keys(modules).length;
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {Object.entries(modules).map(([moduleKey, moduleLabel]) => {
-                                const isEnabled = roleModulePerms[moduleKey] || false;
-                                
-                                return (
-                                  <div key={moduleKey} className="border rounded p-3 hover:bg-slate-50 transition-colors">
-                                    <label className="flex items-start gap-3 cursor-pointer">
-                                      <Checkbox
-                                        checked={isEnabled}
-                                        onCheckedChange={(checked) => {
-                                          updateModulePermission(selectedRoleForModules, pageName, moduleKey, checked);
-                                        }}
-                                      />
-                                      <div className="flex-1">
-                                        <div className="font-medium text-sm">{moduleLabel}</div>
-                                        <code className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{moduleKey}</code>
-                                      </div>
-                                    </label>
+                            return (
+                              <div key={pageName} className="border rounded-lg p-4 bg-white shadow-sm">
+                                <div className="flex items-center justify-between mb-3 pb-2 border-b">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      <Eye className="w-5 h-5 text-blue-600" />
+                                      <span className="font-semibold text-base">{title}</span>
+                                    </div>
+                                    <code className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{path}</code>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
+                                  <Badge variant={enabledCount > 0 ? "default" : "outline"} className={enabledCount > 0 ? "bg-green-600" : ""}>
+                                    {enabledCount}/{totalCount} habilitados
+                                  </Badge>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {Object.entries(modules).map(([moduleKey, moduleLabel]) => {
+                                    const isEnabled = roleModulePerms[moduleKey] || false;
+                                    
+                                    return (
+                                      <div key={moduleKey} className="border rounded p-3 hover:bg-slate-50 transition-colors">
+                                        <label className="flex items-start gap-3 cursor-pointer">
+                                          <Checkbox
+                                            checked={isEnabled}
+                                            onCheckedChange={(checked) => {
+                                              updateModulePermission(selectedRoleForModules, pageName, moduleKey, checked);
+                                            }}
+                                          />
+                                          <div className="flex-1">
+                                            <div className="font-medium text-sm">{moduleLabel}</div>
+                                            <code className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{moduleKey}</code>
+                                          </div>
+                                        </label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
                       
                       <div className="text-xs text-slate-500 bg-blue-50 p-4 rounded border border-blue-200">
                         <strong>Importante:</strong>

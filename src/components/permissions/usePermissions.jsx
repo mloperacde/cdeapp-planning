@@ -40,15 +40,16 @@ export const MODULE_DEFINITIONS = {
     viewKPIs: "Ver KPIs y métricas",
     viewTeamStatus: "Ver estado de equipos",
     viewAlerts: "Ver alertas",
-    planningTeams: "Planificación Equipos",
     employeesManagement: "Gestión de Empleados",
     machineAssignments: "Asignaciones de Máquinas",
     lockerManagement: "Gestión de Taquillas",
     performance: "Rendimiento",
     absencesManagement: "Gestión de Ausencias",
+    viewRequests: "Ver solicitudes y cumpleaños",
     shiftHandover: "Traspaso de Turnos",
     breaksManagement: "Gestión de Descansos",
-    support: "Apoyos"
+    support: "Apoyos",
+    manageAbsences: "Gestión avanzada de ausencias"
   },
   MachineAssignments: {
     viewAssignments: "Ver asignaciones de máquinas",
