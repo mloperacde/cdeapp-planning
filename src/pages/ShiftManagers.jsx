@@ -127,6 +127,34 @@ export default function ShiftManagersPage() {
     },
   });
 
+  // Normalizador y filtros de elegibilidad (Producción asignable a máquinas, excluye Jefes de Turno)
+  const normalize = (str) =>
+    str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+
+  const isProductionDept = (emp) => {
+    const d = normalize(emp?.departamento);
+    return d === "produccion" || d === "producción";
+  };
+
+  const isShiftLeaderProduction = (emp) => {
+    const p = normalize(emp?.puesto);
+    if (!p) return false;
+    // Excluir jefes/responsables de turno de producción
+    if (p.includes("jefe") && (p.includes("turno") || p.includes("produccion") || p.includes("producción"))) return true;
+    if (p.includes("responsable") && p.includes("turno")) return true;
+    return false;
+  };
+
+  const employeesAssignable = useMemo(() => {
+    return (employees || []).filter((e) => {
+      const isAlta = (e.estado_empleado || "Alta") === "Alta";
+      if (!isAlta) return false;
+      if (!isProductionDept(e)) return false;
+      if (isShiftLeaderProduction(e)) return false;
+      return true;
+    });
+  }, [employees]);
+
   const { data: teams = EMPTY_ARRAY } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
@@ -181,7 +209,7 @@ export default function ShiftManagersPage() {
     // We use the 'employees' list which is already filtered for Fabricacion & Alta
     return absences.filter(abs => {
       // Check if absence belongs to one of our relevant employees
-      const employee = employees.find(e => e.id === abs.employee_id);
+      const employee = employeesAssignable.find(e => e.id === abs.employee_id);
       if (!employee) return false;
 
       // Filter by team if selected
@@ -194,7 +222,7 @@ export default function ShiftManagersPage() {
       
       return now >= start && now <= end;
     });
-  }, [absences, employees, selectedTeamFilter]);
+  }, [absences, employeesAssignable, selectedTeamFilter]);
 
   // Ausencias por equipo
   const absencesByTeam = useMemo(() => {
@@ -205,14 +233,14 @@ export default function ShiftManagersPage() {
     });
 
     activeAbsencesToday.forEach(abs => {
-      const employee = employees.find(e => e.id === abs.employee_id);
+      const employee = employeesAssignable.find(e => e.id === abs.employee_id);
       if (employee && employee.equipo && byTeam[employee.equipo]) {
         byTeam[employee.equipo].push({ ...abs, employee });
       }
     });
 
     return byTeam;
-  }, [activeAbsencesToday, employees, teams]);
+  }, [activeAbsencesToday, employeesAssignable, teams]);
 
   // Pending swap requests
   const pendingSwaps = useMemo(() => {
@@ -236,12 +264,12 @@ export default function ShiftManagersPage() {
       
       // Filter by team
       if (selectedTeamFilter !== "all") {
-          const employee = employees.find(e => e.id === la.employee_id);
+          const employee = employeesAssignable.find(e => e.id === la.employee_id);
           if (!employee || employee.equipo !== selectedTeamFilter) return false;
       }
       return true;
     }).length;
-  }, [lockerAssignments, employees, selectedTeamFilter]);
+  }, [lockerAssignments, employeesAssignable, selectedTeamFilter]);
 
   // Get shift for today
   const getTodayShift = (teamKey) => {
@@ -277,7 +305,7 @@ export default function ShiftManagersPage() {
     return teams
         .filter(team => selectedTeamFilter === "all" || team.team_name === selectedTeamFilter)
         .map(team => {
-        const teamEmployees = employees.filter(emp => emp.equipo === team.team_name && (emp.estado_empleado || "Alta") === "Alta");
+        const teamEmployees = employeesAssignable.filter(emp => emp.equipo === team.team_name);
         const absencesCount = absencesByTeam[team.team_name]?.length || 0;
         
         // Disponibles = Total Activos - Ausencias Reales
@@ -303,7 +331,7 @@ export default function ShiftManagersPage() {
             absencesCount
         };
     });
-  }, [teams, employees, teamSchedules, absencesByTeam, selectedTeamFilter]);
+  }, [teams, employeesAssignable, teamSchedules, absencesByTeam, selectedTeamFilter]);
 
 
 
@@ -427,7 +455,7 @@ export default function ShiftManagersPage() {
                     return (
                         <WidgetComponent 
                             key={widget.id}
-                            employees={employees}
+                            employees={employeesAssignable}
                             activeAbsencesToday={activeAbsencesToday}
                             pendingSwaps={pendingSwaps}
                             lockersWithoutNumber={lockersWithoutNumber}
@@ -452,7 +480,7 @@ export default function ShiftManagersPage() {
                         silent={true}
                     >
                         <WidgetComponent 
-                            employees={employees}
+                            employees={employeesAssignable}
                             activeAbsencesToday={activeAbsencesToday}
                             pendingSwaps={pendingSwaps}
                             lockersWithoutNumber={lockersWithoutNumber}
