@@ -178,6 +178,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                         const activeSalas = getTeamSalas(team.team_name);
                         const leaders = getShiftLeaders(team.shift);
                         const employeesUrl = `${createPageUrl("EmployeesShiftManager")}?team=${encodeURIComponent(team.team_name)}`;
+                        const leaderNames = leaders.map(l => l.name).filter(Boolean).join(' · ');
                         
                         return (
                         <Link 
@@ -192,6 +193,11 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{team.team_name}</h3>
+                                    {leaderNames && (
+                                        <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                                            {leaderNames}
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                                         {team.shift === (shifts?.MORNING || "Mañana") && (
                                             <Badge className="bg-amber-100 text-amber-800">
