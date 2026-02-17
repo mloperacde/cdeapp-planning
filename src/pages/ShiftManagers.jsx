@@ -257,6 +257,25 @@ export default function ShiftManagersPage() {
     });
   }, [swapRequests, employees, selectedTeamFilter]);
 
+  // Métricas globales de departamento (no filtradas por equipo)
+  const activeAbsencesDept = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return absences.filter(abs => {
+      const employee = employeesAssignable.find(e => e.id === abs.employee_id);
+      if (!employee) return false;
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return now >= start && now <= end;
+    });
+  }, [absences, employeesAssignable]);
+
+  const pendingSwapsDept = useMemo(() => {
+    return swapRequests.filter(req => req.estado === "Pendiente" || req.estado === "Aceptada por Receptor");
+  }, [swapRequests]);
+
   // Lockers without assignment
   const lockersWithoutNumber = useMemo(() => {
     return lockerAssignments.filter(la => {
@@ -305,11 +324,9 @@ export default function ShiftManagersPage() {
     return teams
         .filter(team => selectedTeamFilter === "all" || team.team_name === selectedTeamFilter)
         .map(team => {
-        const teamEmployees = employeesAssignable.filter(emp => emp.equipo === team.team_name);
-        const absencesCount = absencesByTeam[team.team_name]?.length || 0;
+        let teamEmployees = employeesAssignable.filter(emp => emp.equipo === team.team_name);
         
         // Disponibles = Total Activos - Ausencias Reales
-        const available = Math.max(0, teamEmployees.length - absencesCount);
         let shift = getTodayShift(team.team_key);
         
         // Fallback: Infer shift from team name if not found in schedule
@@ -321,6 +338,19 @@ export default function ShiftManagersPage() {
                 shift = shifts.MORNING || "Mañana";
             }
         }
+
+        // Incluir fijos de mañana/tarde en el equipo según el turno del día
+        if (shift === (shifts.MORNING || "Mañana")) {
+            const morningFixed = employeesAssignable.filter(e => e.tipo_turno === "Fijo Mañana");
+            teamEmployees = [...teamEmployees, ...morningFixed.filter(e => !teamEmployees.some(t => String(t.id) === String(e.id)))];
+        } else if (shift === (shifts.AFTERNOON || "Tarde")) {
+            const afternoonFixed = employeesAssignable.filter(e => e.tipo_turno === "Fijo Tarde");
+            teamEmployees = [...teamEmployees, ...afternoonFixed.filter(e => !teamEmployees.some(t => String(t.id) === String(e.id)))];
+        }
+
+        const teamEmployeeIds = new Set(teamEmployees.map(e => e.id));
+        const absencesCount = activeAbsencesDept.filter(a => teamEmployeeIds.has(a.employee_id)).length;
+        const available = Math.max(0, teamEmployees.length - absencesCount);
         
         return {
             ...team,
@@ -331,7 +361,7 @@ export default function ShiftManagersPage() {
             absencesCount
         };
     });
-  }, [teams, employeesAssignable, teamSchedules, absencesByTeam, selectedTeamFilter]);
+  }, [teams, employeesAssignable, teamSchedules, activeAbsencesDept, selectedTeamFilter]);
 
 
 
@@ -456,6 +486,8 @@ export default function ShiftManagersPage() {
                         <WidgetComponent 
                             key={widget.id}
                             employees={employeesAssignable}
+                            activeAbsencesDept={activeAbsencesDept}
+                            pendingSwapsDept={pendingSwapsDept}
                             activeAbsencesToday={activeAbsencesToday}
                             pendingSwaps={pendingSwaps}
                             lockersWithoutNumber={lockersWithoutNumber}
@@ -481,6 +513,8 @@ export default function ShiftManagersPage() {
                     >
                         <WidgetComponent 
                             employees={employeesAssignable}
+                            activeAbsencesDept={activeAbsencesDept}
+                            pendingSwapsDept={pendingSwapsDept}
                             activeAbsencesToday={activeAbsencesToday}
                             pendingSwaps={pendingSwaps}
                             lockersWithoutNumber={lockersWithoutNumber}

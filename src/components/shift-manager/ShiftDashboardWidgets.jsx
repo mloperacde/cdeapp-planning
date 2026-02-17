@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-    CheckCircle2, UserX, RefreshCw, KeyRound, Clock, 
+    CheckCircle2, UserX, RefreshCw, Clock, 
     Sunrise, Sunset, Users, 
     UserCog, UsersRound, TrendingUp,
     MessageSquare, ArrowLeftRight, Coffee, Cake, Calendar, AlertTriangle, MapPin
@@ -14,20 +14,43 @@ import { es } from "date-fns/locale";
 import ModuleGuard from "../common/ModuleGuard";
 
 // Widget: KPI Summary
-export function KPIWidget({ employees, activeAbsencesToday, pendingSwaps, lockersWithoutNumber, selectedTeamFilter }) {
+export function KPIWidget({ employees, activeAbsencesDept, pendingSwapsDept }) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Total Producción */}
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-blue-700 dark:text-blue-200 font-medium">Total Empleados Producción</p>
+                            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{employees.length}</p>
+                        </div>
+                        <Users className="w-8 h-8 text-blue-600" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Ausentes Hoy */}
+            <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+                <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-red-700 dark:text-red-200 font-medium">Ausentes Hoy</p>
+                            <p className="text-2xl font-bold text-red-900 dark:text-red-100">{activeAbsencesDept?.length || 0}</p>
+                        </div>
+                        <UserX className="w-8 h-8 text-red-600" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Disponibles (Saldo Neto) */}
             <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
                 <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs text-green-700 dark:text-green-200 font-medium">Empleados Disponibles</p>
                             <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                                {employees.filter(e => 
-                                    e.disponibilidad === "Disponible" && 
-                                    e.equipo && 
-                                    (selectedTeamFilter === "all" || e.equipo === selectedTeamFilter)
-                                ).length}
+                                {Math.max(0, (employees?.length || 0) - (activeAbsencesDept?.length || 0))}
                             </p>
                         </div>
                         <CheckCircle2 className="w-8 h-8 text-green-600" />
@@ -35,38 +58,15 @@ export function KPIWidget({ employees, activeAbsencesToday, pendingSwaps, locker
                 </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-                <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-red-700 dark:text-red-200 font-medium">Ausentes Hoy</p>
-                            <p className="text-2xl font-bold text-red-900 dark:text-red-100">{activeAbsencesToday.length}</p>
-                        </div>
-                        <UserX className="w-8 h-8 text-red-600" />
-                    </div>
-                </CardContent>
-            </Card>
-
+            {/* Intercambios Pendientes */}
             <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
                 <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs text-amber-700 dark:text-amber-200 font-medium">Intercambios Pendientes</p>
-                            <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{pendingSwaps.length}</p>
+                            <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{pendingSwapsDept?.length || 0}</p>
                         </div>
                         <RefreshCw className="w-8 h-8 text-amber-600" />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-                <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-orange-700 dark:text-orange-200 font-medium">Taquillas sin Asignar</p>
-                            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{lockersWithoutNumber}</p>
-                        </div>
-                        <KeyRound className="w-8 h-8 text-orange-600" />
                     </div>
                 </CardContent>
             </Card>
