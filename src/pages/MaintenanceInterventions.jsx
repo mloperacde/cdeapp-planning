@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAppData } from "@/components/data/DataProvider";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,13 @@ export default function MaintenanceInterventions() {
   const [editIntervention, setEditIntervention] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.MaintenanceIntervention.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['maintenanceInterventions'] });
+    },
+  });
+
   const { data: interventions = [], isLoading, refetch } = useQuery({
     queryKey: ['maintenanceInterventions'],
     queryFn: () => base44.entities.MaintenanceIntervention.list('-created_date', 200),
@@ -83,6 +90,16 @@ export default function MaintenanceInterventions() {
     setEditIntervention(selectedIntervention);
     setIsDetailOpen(false);
     setShowForm(true);
+  };
+
+  const handleDelete = (intervention) => {
+    if (!intervention?.id) return;
+    if (!window.confirm("¿Eliminar esta intervención? Esta acción no se puede deshacer.")) return;
+    deleteMutation.mutate(intervention.id, {
+      onSuccess: () => {
+        if (isDetailOpen) setIsDetailOpen(false);
+      }
+    });
   };
 
   const handleOpenDetail = (intervention) => {
@@ -197,13 +214,15 @@ export default function MaintenanceInterventions() {
             return (
               <Card
                 key={intervention.id}
-                className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 border border-slate-200"
-                onClick={() => handleOpenDetail(intervention)}
+                className="hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 border border-slate-200"
               >
                 <CardContent className="p-4 space-y-3">
                   {/* Top row */}
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleOpenDetail(intervention)}
+                    >
                       <div className="flex items-center gap-1.5 flex-wrap mb-1">
                         <Badge className={`${sc.color} border flex items-center gap-1 text-xs`}>
                           <Icon className="w-3 h-3" />{intervention.estado}
@@ -215,7 +234,19 @@ export default function MaintenanceInterventions() {
                       </div>
                       <h3 className="font-semibold text-slate-900 text-sm line-clamp-2">{intervention.titulo}</h3>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-1" />
+                    <div className="flex flex-col items-end gap-2">
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(intervention)}
+                      >
+                        Eliminar
+                      </button>
+                      <ChevronRight
+                        className="w-4 h-4 text-slate-300 flex-shrink-0 mt-1 cursor-pointer"
+                        onClick={() => handleOpenDetail(intervention)}
+                      />
+                    </div>
                   </div>
 
                   <p className="text-xs text-slate-500 line-clamp-2">{intervention.descripcion}</p>

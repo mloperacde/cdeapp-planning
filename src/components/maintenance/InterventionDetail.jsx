@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   FileDown, Mail, Pencil, Plus, CheckCircle2, Clock, 
   AlertCircle, MapPin, Users, Package, Image, ArrowUpCircle,
-  Loader2, ChevronDown, ChevronUp, Send
+  Loader2, ChevronDown, ChevronUp, Send, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +44,7 @@ export default function InterventionDetail({ intervention, onEdit, onRefresh }) 
   const [selectedRecipients, setSelectedRecipients] = useState(
     intervention.destinatarios?.map(d => d.email) || []
   );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [progressForm, setProgressForm] = useState({
     descripcion: "", porcentaje: intervention.progreso?.slice(-1)[0]?.porcentaje || 0, estado: intervention.estado
@@ -104,6 +105,21 @@ export default function InterventionDetail({ intervention, onEdit, onRefresh }) 
       onRefresh();
     } catch (err) {
       toast.error("Error: " + err.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!intervention?.id) return;
+    if (!window.confirm("¿Eliminar esta intervención? Esta acción no se puede deshacer.")) return;
+    try {
+      setIsDeleting(true);
+      await base44.entities.MaintenanceIntervention.delete(intervention.id);
+      toast.success("Intervención eliminada");
+      onRefresh();
+    } catch (err) {
+      toast.error("Error eliminando intervención: " + err.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -197,6 +213,20 @@ export default function InterventionDetail({ intervention, onEdit, onRefresh }) 
           </Button>
           <Button size="sm" onClick={() => handleGeneratePdf(true)} className="bg-blue-600 hover:bg-blue-700">
             <Mail className="w-4 h-4 mr-1" /> Enviar por Email
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-red-300 text-red-700 hover:bg-red-50"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4 mr-1" />
+            )}
+            Eliminar
           </Button>
         </div>
       </div>
