@@ -65,6 +65,7 @@ export const MENU_STRUCTURE = [
   
   // Mantenimiento
   { name: 'Seguimiento Mantenimiento', path: '/MaintenanceTracking', icon: Wrench, category: 'Mantenimiento' },
+  { name: 'Intervenciones', path: '/MaintenanceInterventions', icon: ClipboardCheck, category: 'Mantenimiento' },
   
   // Almacén
   { name: 'Planning Soporte 14:15', path: '/SupportManagement1415', icon: Users, category: 'Almacén' },
