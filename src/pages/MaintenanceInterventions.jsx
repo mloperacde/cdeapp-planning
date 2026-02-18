@@ -270,6 +270,18 @@ export default function MaintenanceInterventions() {
                       {intervention.objetivo_tipo && intervention.objetivo_tipo !== "Personalizado" && (
                         <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{intervention.objetivo_tipo}</span>
                       )}
+                      {intervention.objetivo_tipo === "Máquina" && intervention.objetivo_maquina_nombre && (
+                        <span className="flex items-center gap-1"><Wrench className="w-3 h-3" />{intervention.objetivo_maquina_nombre}</span>
+                      )}
+                      {intervention.objetivo_tipo === "Área" && intervention.objetivo_area && (
+                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{intervention.objetivo_area}</span>
+                      )}
+                      {intervention.objetivo_tipo === "Sala" && intervention.objetivo_sala && (
+                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{intervention.objetivo_sala}</span>
+                      )}
+                      {intervention.objetivo_tipo === "Personalizado" && intervention.objetivo_descripcion_manual && (
+                        <span className="truncate max-w-[200px]">{intervention.objetivo_descripcion_manual}</span>
+                      )}
                       {intervention.destinatarios?.length > 0 && (
                         <span className="flex items-center gap-1"><Users className="w-3 h-3" />{intervention.destinatarios.length}</span>
                       )}
