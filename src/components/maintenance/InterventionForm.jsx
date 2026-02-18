@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useAppData } from "@/components/data/DataProvider";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Plus, X, Upload, Image, Wrench, Users, MapPin, 
@@ -38,6 +38,10 @@ export default function InterventionForm({ intervention, onSave, onCancel }) {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [newNecesidad, setNewNecesidad] = useState({ tipo: "Herramienta", descripcion: "", cantidad: "", disponible: false });
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
     if (intervention) {
@@ -76,18 +80,23 @@ export default function InterventionForm({ intervention, onSave, onCancel }) {
     update("necesidades", form.necesidades.filter((_, idx) => idx !== i));
   };
 
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
+  const uploadFiles = async (files) => {
     if (!files.length) return;
     setUploadingImage(true);
     try {
       for (const file of files) {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        update("imagenes_adjuntas", [...form.imagenes_adjuntas, {
-          url: file_url,
-          nombre: file.name,
-          descripcion: ""
-        }]);
+        setForm(prev => ({
+          ...prev,
+          imagenes_adjuntas: [
+            ...prev.imagenes_adjuntas,
+            {
+              url: file_url,
+              nombre: file.name,
+              descripcion: ""
+            }
+          ]
+        }));
       }
       toast.success("Imagen(es) subida(s) correctamente");
     } catch (err) {
@@ -97,9 +106,75 @@ export default function InterventionForm({ intervention, onSave, onCancel }) {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    await uploadFiles(files);
+    e.target.value = "";
+  };
+
   const removeImage = (i) => {
     update("imagenes_adjuntas", form.imagenes_adjuntas.filter((_, idx) => idx !== i));
   };
+
+  const startCamera = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        toast.error("Este dispositivo no permite abrir la cámara desde el navegador");
+        setShowCamera(false);
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (err) {
+      toast.error("No se pudo acceder a la cámara: " + err.message);
+      setShowCamera(false);
+    }
+  };
+
+  const stopCamera = () => {
+    const stream = streamRef.current;
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, width, height);
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        toast.error("No se pudo capturar la imagen");
+        return;
+      }
+      const file = new File([blob], `foto-intervencion-${Date.now()}.jpg`, { type: "image/jpeg" });
+      await uploadFiles([file]);
+      setShowCamera(false);
+      stopCamera();
+    }, "image/jpeg", 0.9);
+  };
+
+  useEffect(() => {
+    if (showCamera) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [showCamera]);
 
   const handleSubmit = async () => {
     if (!form.titulo || !form.descripcion) {
@@ -348,11 +423,15 @@ export default function InterventionForm({ intervention, onSave, onCancel }) {
               <span className="text-sm text-slate-500">{uploadingImage ? "Subiendo..." : "Seleccionar imágenes del dispositivo..."}</span>
               <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
             </label>
-            <label className="flex-1 flex items-center gap-2 cursor-pointer border-2 border-dashed border-slate-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+            <button
+              type="button"
+              className="flex-1 flex items-center gap-2 cursor-pointer border-2 border-dashed border-slate-300 rounded-lg p-4 hover:border-blue-400 transition-colors bg-white"
+              onClick={() => setShowCamera(true)}
+              disabled={uploadingImage}
+            >
               {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Upload className="w-5 h-5 text-slate-400" />}
               <span className="text-sm text-slate-500">{uploadingImage ? "Subiendo..." : "Tomar foto con la cámara"}</span>
-              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
-            </label>
+            </button>
           </div>
           {form.imagenes_adjuntas.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -402,6 +481,30 @@ export default function InterventionForm({ intervention, onSave, onCancel }) {
           {intervention?.id ? "Guardar Cambios" : "Crear Intervención"}
         </Button>
       </div>
+
+      <Dialog open={showCamera} onOpenChange={v => setShowCamera(v)}>
+        <DialogContent className="max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <Image className="w-4 h-4 text-blue-600" />
+              Tomar foto
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Permite capturar una imagen directamente desde la cámara del dispositivo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <video ref={videoRef} className="w-full rounded bg-black" autoPlay playsInline />
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCamera(false)}>Cancelar</Button>
+              <Button onClick={capturePhoto} className="bg-blue-600 hover:bg-blue-700">
+                Tomar foto
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
