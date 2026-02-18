@@ -234,6 +234,7 @@ function PagesContent() {
                 <Route path="/MachineMaster" element={<MachineMaster />} />
                 
                 <Route path="/MaintenanceTracking" element={<MaintenanceTracking />} />
+                <Route path="/MaintenanceInterventions" element={<MaintenanceInterventions />} />
                 
                 <Route path="/MasterEmployeeDatabase" element={<MasterEmployeeDatabase />} />
                 
