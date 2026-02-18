@@ -344,7 +344,7 @@ export default function MaintenanceInterventions() {
 
       {/* FORM DIALOG */}
       <Dialog open={showForm} onOpenChange={v => { if (!v) { setShowForm(false); setEditIntervention(null); } }}>
-        <DialogContent className="max-w-3xl w-full">
+        <DialogContent className="max-w-5xl w-full">
           <DialogHeader className="mb-2">
             <DialogTitle className="flex items-center gap-2">
               <Wrench className="w-5 h-5 text-blue-600" />
