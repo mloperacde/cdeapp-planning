@@ -15,6 +15,7 @@ export const MENU_STRUCTURE = [
   { name: 'ETT y Temporales', icon: Users, path: '/ETTTemporaryEmployees', category: 'Recursos Humanos' },
   { name: 'Onboarding', icon: Users, path: '/EmployeeOnboarding', category: 'Recursos Humanos' },
   { name: 'Control Presencia', icon: Calendar, path: '/AttendanceManagement', category: 'Recursos Humanos' },
+  { name: 'Estructura Organizativa', icon: Factory, path: '/OrganizationalStructure?tab=manufacturing', category: 'Recursos Humanos' },
   { name: 'Comités y PRL', icon: Shield, path: '/CommitteeManagement', category: 'Recursos Humanos' },
   { name: 'Plan Incentivos', icon: DollarSign, path: '/IncentiveManagement', category: 'Recursos Humanos' },
   { name: 'Gestión Salarios', icon: DollarSign, path: '/SalaryManagement', category: 'Recursos Humanos' },
@@ -32,12 +33,11 @@ export const MENU_STRUCTURE = [
 
   // Fabricación
   { name: 'Empleados Personal de Producción', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Fabricación' },
-  { name: 'Config. Fabricación', icon: Factory, path: '/OrganizationalStructure?tab=manufacturing', category: 'Fabricación' },
   { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Fabricación' },
   { name: 'Asignación de Turno', icon: Users, path: '/ShiftAssignmentsPage', category: 'Fabricación' },
   { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Fabricación' },
   { name: 'Control Calidad', icon: ClipboardCheck, path: '/QualityControl', category: 'Fabricación' },
-  { name: 'Config. Procesos', icon: Cog, path: '/ProcessConfiguration', category: 'Fabricación' },
+  { name: 'Config. Calidad', icon: Cog, path: '/ProcessConfiguration', category: 'Fabricación' },
   { name: 'Fabricación - Habilidades', icon: Award, path: '/FabricacionSkills', category: 'Fabricación' },
   
   // Mantenimiento
