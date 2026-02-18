@@ -270,7 +270,8 @@ export function usePermissions() {
       userName: user.full_name,
       ...permissions,
       canAccessPage: (path) => {
-        if (permissions.isAdmin) return true;
+        // Admin siempre tiene acceso a todo, independientemente de page_permissions configurados
+        if (permissions.isAdmin === true) return true;
         
         // Hard security check: Solo admin puede ver RolesConfig
         if (path.includes('RolesConfig')) return false;
