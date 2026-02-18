@@ -178,8 +178,10 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                     {teamStats.map((team) => {
                         const activeSalas = getTeamSalas(team.team_name);
                         const leaders = getShiftLeaders(team.shift);
-                        const employeesUrl = `${createPageUrl("EmployeesShiftManager")}?team=${encodeURIComponent(team.team_name)}`;
+                        const employeesUrl = `${createPageUrl("EmployeesShiftManager")}?team=${encodeURIComponent(team.team_name)}&shift=${encodeURIComponent(team.shift || "")}`;
                         const leaderNames = leaders.map(l => l.name).filter(Boolean).join(' · ');
+                        const leaderP0 = leaders.find(l => (l.areas || []).includes("P0"));
+                        const leaderP1 = leaders.find(l => (l.areas || []).includes("P1"));
                         
                         return (
                         <Link 
@@ -254,26 +256,25 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
                                 </div>
                             </div>
 
-                            {leaders.length > 0 && (
+                            {(leaderP0 || leaderP1) && (
                                 <div className="mt-3 pt-3 border-t border-slate-200">
                                     <p className="text-xs font-semibold text-slate-700 mb-2">Jefes de Turno Producción:</p>
-                                    {leaders.map(l => (
-                                        <div key={l.role} className="mb-2">
+                                    {leaderP0 && (
+                                        <div className="mb-1">
                                             <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
-                                                <span className="text-slate-500">{l.role}:</span>
-                                                <span className="font-medium text-slate-800 dark:text-slate-200">{l.name}</span>
+                                                <span className="text-slate-500">Responsable Area P0:</span>
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">{leaderP0.name}</span>
                                             </div>
-                                            {l.areas && l.areas.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-1 pl-2 border-l-2 border-slate-100 ml-1">
-                                                    {l.areas.map(area => (
-                                                        <span key={area} className="text-[10px] text-slate-500 bg-slate-50 px-1 rounded">
-                                                            {area}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
-                                    ))}
+                                    )}
+                                    {leaderP1 && (
+                                        <div className="mb-1">
+                                            <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
+                                                <span className="text-slate-500">Responsable Area P1:</span>
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">{leaderP1.name}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

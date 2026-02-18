@@ -59,6 +59,7 @@ const ALL_COLUMNS = {
 export default function EmployeesShiftManagerPage() {
   const [searchParams] = useSearchParams();
   const initialTeam = searchParams.get("team");
+  const shiftFromUrl = searchParams.get("shift");
 
   const [filters, setFilters] = useState(() => (
     initialTeam ? { equipo: initialTeam } : {}
@@ -164,8 +165,19 @@ export default function EmployeesShiftManagerPage() {
       const matchesTurno = !filters.tipo_turno || filters.tipo_turno === 'all' || 
         emp.tipo_turno === filters.tipo_turno;
 
-      const matchesEquipo = !filters.equipo || filters.equipo === 'all' ||
-        emp.equipo === filters.equipo;
+      let matchesEquipo = !filters.equipo || filters.equipo === 'all';
+      if (!matchesEquipo) {
+        const isTeamEmployee = emp.equipo === filters.equipo;
+        const shiftLower = (shiftFromUrl || "").toLowerCase();
+        const isMorningShift = shiftLower.includes("mañana");
+        const isAfternoonShift = shiftLower.includes("tarde");
+        const isFixedMorning = emp.tipo_turno === "Fijo Mañana";
+        const isFixedAfternoon = emp.tipo_turno === "Fijo Tarde";
+        matchesEquipo =
+          isTeamEmployee ||
+          (isMorningShift && isFixedMorning) ||
+          (isAfternoonShift && isFixedAfternoon);
+      }
 
       return matchesSearch && matchesPuesto && matchesTurno && matchesEquipo;
     });
@@ -199,9 +211,20 @@ export default function EmployeesShiftManagerPage() {
 
   // KPIs
   const stats = useMemo(() => {
-    const base = filters.equipo && filters.equipo !== 'all'
-      ? effectiveEmployees.filter(e => e.equipo === filters.equipo)
-      : effectiveEmployees;
+    const base = effectiveEmployees.filter(e => {
+      if (!filters.equipo || filters.equipo === 'all') return true;
+      const isTeamEmployee = e.equipo === filters.equipo;
+      const shiftLower = (shiftFromUrl || "").toLowerCase();
+      const isMorningShift = shiftLower.includes("mañana");
+      const isAfternoonShift = shiftLower.includes("tarde");
+      const isFixedMorning = e.tipo_turno === "Fijo Mañana";
+      const isFixedAfternoon = e.tipo_turno === "Fijo Tarde";
+      return (
+        isTeamEmployee ||
+        (isMorningShift && isFixedMorning) ||
+        (isAfternoonShift && isFixedAfternoon)
+      );
+    });
 
     const total = base.length;
     const activos = base.filter(e => e.estado_empleado === 'Alta').length;
@@ -218,7 +241,7 @@ export default function EmployeesShiftManagerPage() {
     }).length;
 
     return { total, activos, disponibles, upcomingContractExpirations };
-  }, [effectiveEmployees, filters.equipo]);
+  }, [effectiveEmployees, filters.equipo, shiftFromUrl]);
 
   const currentTeamLabel = filters.equipo && filters.equipo !== 'all'
     ? ` - Equipo ${filters.equipo}`
