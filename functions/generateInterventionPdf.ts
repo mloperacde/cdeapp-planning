@@ -1,45 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.1';
 
-const FONT_NAME = 'InterventionFont';
-let fontsLoaded = false;
-let fontsFailed = false;
-
-function bufferToBase64(buffer: ArrayBuffer) {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-async function ensurePdfFonts(doc: jsPDF) {
-  if (fontsLoaded || fontsFailed) return;
-  const anyDoc: any = doc;
-  try {
-    const [regularRes, boldRes] = await Promise.all([
-      fetch('https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/DejaVuSans.ttf'),
-      fetch('https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/DejaVuSans-Bold.ttf')
-    ]);
-    const [regularBuf, boldBuf] = await Promise.all([
-      regularRes.arrayBuffer(),
-      boldRes.arrayBuffer()
-    ]);
-    const regularBase64 = bufferToBase64(regularBuf);
-    const boldBase64 = bufferToBase64(boldBuf);
-    anyDoc.addFileToVFS('DejaVuSans.ttf', regularBase64);
-    anyDoc.addFileToVFS('DejaVuSans-Bold.ttf', boldBase64);
-    anyDoc.addFont('DejaVuSans.ttf', FONT_NAME, 'normal');
-    anyDoc.addFont('DejaVuSans-Bold.ttf', FONT_NAME, 'bold');
-    fontsLoaded = true;
-  } catch (error) {
-    console.warn('generateInterventionPdf: no se pudieron cargar las fuentes personalizadas, usando helvetica.', error);
-    fontsFailed = true;
-  }
-}
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -56,24 +17,13 @@ Deno.serve(async (req) => {
     }
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    await ensurePdfFonts(doc);
     const pageW = 210;
     const margin = 15;
     const contentW = pageW - margin * 2;
     let y = 15;
 
-    const drawRoundedOrRect = (x: number, y: number, w: number, h: number, r: number, style: 'S' | 'F' | 'DF' | 'FD' = 'F') => {
-      const anyDoc: any = doc;
-      if (typeof anyDoc.roundedRect === 'function') {
-        anyDoc.roundedRect(x, y, w, h, r, r, style);
-      } else {
-        doc.rect(x, y, w, h, style);
-      }
-    };
-
     const prepareText = (val: any) => {
       const str = String(val || '');
-      if (fontsLoaded) return str;
       try {
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       } catch {
@@ -84,11 +34,7 @@ Deno.serve(async (req) => {
     const addText = (text, x, yPos, options = {}) => {
       doc.setFontSize((options as any).size || 10);
       const style = options.style || 'normal';
-      if (fontsLoaded) {
-        doc.setFont(FONT_NAME, style as any);
-      } else {
-        doc.setFont('helvetica', style as any);
-      }
+      doc.setFont('helvetica', style as any);
       if ((options as any).color) doc.setTextColor(...(options as any).color);
       else doc.setTextColor(30, 30, 30);
       const finalText = prepareText(text);
@@ -132,7 +78,7 @@ Deno.serve(async (req) => {
     };
     const estadoColor = estadoColors[intervention.estado] || [100, 100, 100];
     doc.setFillColor(...estadoColor);
-    drawRoundedOrRect(pageW - margin - 35, 27, 35, 8, 2, 'F');
+    doc.rect(pageW - margin - 35, 27, 35, 8, 'F');
     addText(intervention.estado || 'Pendiente', pageW - margin - 32, 33, { size: 8, style: 'bold', color: [255, 255, 255] });
 
     y = 50;
