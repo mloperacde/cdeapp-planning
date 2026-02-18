@@ -2,7 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.1';
 
 const FONT_NAME = 'InterventionFont';
-let fontsReady = false;
+let fontsLoaded = false;
+let fontsFailed = false;
 
 function bufferToBase64(buffer: ArrayBuffer) {
   let binary = '';
@@ -15,7 +16,7 @@ function bufferToBase64(buffer: ArrayBuffer) {
 }
 
 async function ensurePdfFonts(doc: jsPDF) {
-  if (fontsReady) return;
+  if (fontsLoaded || fontsFailed) return;
   const anyDoc: any = doc;
   try {
     const [regularRes, boldRes] = await Promise.all([
@@ -32,9 +33,10 @@ async function ensurePdfFonts(doc: jsPDF) {
     anyDoc.addFileToVFS('DejaVuSans-Bold.ttf', boldBase64);
     anyDoc.addFont('DejaVuSans.ttf', FONT_NAME, 'normal');
     anyDoc.addFont('DejaVuSans-Bold.ttf', FONT_NAME, 'bold');
-    fontsReady = true;
-  } catch {
-    fontsReady = true;
+    fontsLoaded = true;
+  } catch (error) {
+    console.warn('generateInterventionPdf: no se pudieron cargar las fuentes personalizadas, usando helvetica.', error);
+    fontsFailed = true;
   }
 }
 
@@ -63,7 +65,7 @@ Deno.serve(async (req) => {
     const addText = (text, x, yPos, options = {}) => {
       doc.setFontSize(options.size || 10);
       const style = options.style || 'normal';
-      if (fontsReady) {
+      if (fontsLoaded) {
         doc.setFont(FONT_NAME, style as any);
       } else {
         doc.setFont('helvetica', style as any);
