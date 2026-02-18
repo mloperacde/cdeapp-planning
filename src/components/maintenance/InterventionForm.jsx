@@ -342,11 +342,18 @@ export default function InterventionForm({ intervention, onSave, onCancel }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <label className="flex items-center gap-2 cursor-pointer border-2 border-dashed border-slate-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
-            {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Upload className="w-5 h-5 text-slate-400" />}
-            <span className="text-sm text-slate-500">{uploadingImage ? "Subiendo..." : "Seleccionar imágenes del problema..."}</span>
-            <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
-          </label>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <label className="flex-1 flex items-center gap-2 cursor-pointer border-2 border-dashed border-slate-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+              {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Upload className="w-5 h-5 text-slate-400" />}
+              <span className="text-sm text-slate-500">{uploadingImage ? "Subiendo..." : "Seleccionar imágenes del dispositivo..."}</span>
+              <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+            </label>
+            <label className="flex-1 flex items-center gap-2 cursor-pointer border-2 border-dashed border-slate-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+              {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Upload className="w-5 h-5 text-slate-400" />}
+              <span className="text-sm text-slate-500">{uploadingImage ? "Subiendo..." : "Tomar foto con la cámara"}</span>
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+            </label>
+          </div>
           {form.imagenes_adjuntas.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {form.imagenes_adjuntas.map((img, i) => (

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, Search, Wrench, Clock, CheckCircle2, AlertCircle,
@@ -111,21 +112,35 @@ export default function MaintenanceInterventions() {
   const hasFilters = estadoFilter !== "all" || prioridadFilter !== "all" || tipoFilter !== "all" || search;
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Wrench className="w-6 h-6 text-blue-600" />
-            Gestión de Intervenciones
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">Acciones, mejoras, incidencias y órdenes de trabajo de mantenimiento</p>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Standard Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Wrench className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Gestión de Intervenciones
+            </h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              Acciones, mejoras, incidencias y órdenes de trabajo de mantenimiento
+            </p>
+          </div>
         </div>
-        <Button onClick={() => { setEditIntervention(null); setShowForm(true); setIsDetailOpen(false); }} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" /> Nueva Intervención
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => { setEditIntervention(null); setShowForm(true); setIsDetailOpen(false); }}
+            size="sm"
+            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nueva Intervención</span>
+          </Button>
+        </div>
       </div>
 
+      <div className="flex flex-col gap-6">
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
@@ -327,22 +342,28 @@ export default function MaintenanceInterventions() {
         </SheetContent>
       </Sheet>
 
-      {/* FORM SHEET */}
-      <Sheet open={showForm} onOpenChange={v => { if (!v) { setShowForm(false); setEditIntervention(null); } }}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle className="flex items-center gap-2">
+      {/* FORM DIALOG */}
+      <Dialog open={showForm} onOpenChange={v => { if (!v) { setShowForm(false); setEditIntervention(null); } }}>
+        <DialogContent className="max-w-3xl w-full">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="flex items-center gap-2">
               <Wrench className="w-5 h-5 text-blue-600" />
               {editIntervention ? "Editar Intervención" : "Nueva Intervención"}
-            </SheetTitle>
-          </SheetHeader>
-          <InterventionForm
-            intervention={editIntervention}
-            onSave={handleSave}
-            onCancel={() => { setShowForm(false); setEditIntervention(null); }}
-          />
-        </SheetContent>
-      </Sheet>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Configura los datos principales de la intervención de mantenimiento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[70vh] overflow-y-auto pr-1">
+            <InterventionForm
+              intervention={editIntervention}
+              onSave={handleSave}
+              onCancel={() => { setShowForm(false); setEditIntervention(null); }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+      </div>
     </div>
   );
 }
