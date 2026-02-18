@@ -9,17 +9,17 @@ export const MENU_STRUCTURE = [
   
   // Recursos Humanos
   { name: 'Dashboard RRHH', icon: Users, path: '/AdvancedHRDashboard', category: 'Recursos Humanos' },
+  { name: 'Estructura Organizativa', icon: Factory, path: '/OrganizationalStructure?tab=manufacturing', category: 'Recursos Humanos' },
   { name: 'Base de datos de Empleados', icon: Users, path: '/MasterEmployeeDatabase', category: 'Recursos Humanos' },
-  { name: 'Gestión Ausencias', icon: Calendar, path: '/AbsenceManagement', category: 'Recursos Humanos' },
-  { name: 'Matriz Habilidades', icon: Award, path: '/SkillMatrix', category: 'Recursos Humanos' },
   { name: 'ETT y Temporales', icon: Users, path: '/ETTTemporaryEmployees', category: 'Recursos Humanos' },
   { name: 'Onboarding', icon: Users, path: '/EmployeeOnboarding', category: 'Recursos Humanos' },
   { name: 'Control Presencia', icon: Calendar, path: '/AttendanceManagement', category: 'Recursos Humanos' },
-  { name: 'Estructura Organizativa', icon: Factory, path: '/OrganizationalStructure?tab=manufacturing', category: 'Recursos Humanos' },
+  { name: 'Gestión Ausencias', icon: Calendar, path: '/AbsenceManagement', category: 'Recursos Humanos' },
   { name: 'Comités y PRL', icon: Shield, path: '/CommitteeManagement', category: 'Recursos Humanos' },
+  { name: 'Vestuarios/Taquillas', icon: Package, path: '/LockerManagement', category: 'Recursos Humanos' },
+  { name: 'Matriz Habilidades', icon: Award, path: '/SkillMatrix', category: 'Recursos Humanos' },
+  { name: 'Gestión Salarial', icon: DollarSign, path: '/SalaryManagement', category: 'Recursos Humanos' },
   { name: 'Plan Incentivos', icon: DollarSign, path: '/IncentiveManagement', category: 'Recursos Humanos' },
-  { name: 'Gestión Salarios', icon: DollarSign, path: '/SalaryManagement', category: 'Recursos Humanos' },
-  { name: 'Taquillas', icon: Package, path: '/LockerManagement', category: 'Recursos Humanos' },
 
   // Dirección
   { name: 'Dirección - Habilidades', icon: Award, path: '/DireccionSkills', category: 'Dirección' },

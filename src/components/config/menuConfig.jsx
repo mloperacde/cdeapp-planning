@@ -40,7 +40,7 @@ export const MENU_STRUCTURE = [
   { name: 'Antigüedad', path: '/SenioritySettings', icon: Award, category: 'Recursos Humanos' },
   { name: 'Comités', path: '/CommitteeManagement', icon: Shield, category: 'Recursos Humanos' },
   { name: 'Incentivos', path: '/IncentiveManagement', icon: Target, category: 'Recursos Humanos' },
-  { name: 'Taquillas', path: '/LockerManagement', icon: Package, category: 'Recursos Humanos' },
+  { name: 'Vestuarios/Taquillas', path: '/LockerManagement', icon: Package, category: 'Recursos Humanos' },
   
   // Dirección
   { name: 'Estructura Organizativa', path: '/OrganizationalStructure', icon: GitBranch, category: 'Dirección' },
