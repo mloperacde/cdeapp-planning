@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useAppData } from "../data/DataProvider";
-import { DEFAULT_ROLES_CONFIG } from "@/hooks/useRolesManager";
 
 // Módulos disponibles por página
 export const MODULE_DEFINITIONS = {
@@ -57,6 +56,13 @@ export const MODULE_DEFINITIONS = {
     editAssignments: "Editar asignaciones",
     viewMachineStatus: "Ver estado de máquinas",
     assignOperators: "Asignar operadores"
+  },
+  MaintenanceInterventions: {
+    viewInterventions: "Ver intervenciones",
+    createInterventions: "Crear intervenciones",
+    editInterventions: "Editar intervenciones",
+    deleteInterventions: "Eliminar intervenciones",
+    generatePDF: "Generar PDF de orden de trabajo"
   }
 };
 
@@ -170,247 +176,139 @@ export function usePermissions() {
       return {
         isAuthenticated: false,
         isAdmin: false,
-        canViewSalary: false,
-        canViewPersonalData: false,
-        canViewBankingData: false,
-        canEditEmployees: false,
-        canApproveAbsences: false,
-        canManageMachines: false,
-        canViewReports: false,
-        canConfigureSystem: false,
         canAccessPage: () => false,
+        canAccessModule: () => false,
+        getModulePermissions: () => ({}),
       };
     }
 
-    // 1. Determinar el rol efectivo (Raw)
-    let rawRole = "user"; // Default
-
-    // Prioridad A: Asignación explícita en roles_config (si existe)
-    // Normalizar email para evitar problemas de casing
+    // 1. Determinar rol efectivo
+    let rawRole = "user";
     const userEmail = user.email?.toLowerCase();
+
     if (rolesConfig?.user_assignments?.[userEmail]) {
       rawRole = rolesConfig.user_assignments[userEmail];
-    }
-    // Prioridad B: Rol nativo de Base44
-    else if (user.role) {
+    } else if (user.role) {
       rawRole = user.role;
     }
 
-    // 2. Resolver a Key de Configuración (Normalization Strategy)
-    // Esto conecta el nombre "humano" de Base44 (ej. "Gerente RRHH") con la key interna (ej. "hr_manager")
+    // 2. Resolver a configuración de rol
     let effectiveRoleKey = rawRole;
     let roleConfig = null;
 
     if (rolesConfig?.roles) {
-        if (rolesConfig.roles[rawRole]) {
-             effectiveRoleKey = rawRole;
-             roleConfig = rolesConfig.roles[rawRole];
-        } else if (typeof rawRole === 'string') {
-             const roleLower = rawRole.replace(/\s+/g, ' ').trim().toLowerCase();
-             let foundKey = Object.keys(rolesConfig.roles).find(k => k.toLowerCase() === roleLower);
-             if (!foundKey) {
-                 foundKey = Object.keys(rolesConfig.roles).find(k => 
-                     rolesConfig.roles[k].name?.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower
-                 );
-             }
-             if (foundKey) {
-                 effectiveRoleKey = foundKey;
-                 roleConfig = rolesConfig.roles[foundKey];
-             }
-        }
-    }
-
-    if (!roleConfig && typeof rawRole === 'string') {
+      if (rolesConfig.roles[rawRole]) {
+        effectiveRoleKey = rawRole;
+        roleConfig = rolesConfig.roles[rawRole];
+      } else if (typeof rawRole === 'string') {
         const roleLower = rawRole.replace(/\s+/g, ' ').trim().toLowerCase();
-        const defaultRoles = DEFAULT_ROLES_CONFIG?.roles || {};
-        const defaultKeys = Object.keys(defaultRoles);
-        let fallbackKey = defaultKeys.find(k => k.toLowerCase() === roleLower);
-        if (!fallbackKey) {
-            fallbackKey = defaultKeys.find(k => {
-                const cfg = defaultRoles[k];
-                if (!cfg || !cfg.name) return false;
-                return cfg.name.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower;
-            });
+        let foundKey = Object.keys(rolesConfig.roles).find(k => k.toLowerCase() === roleLower);
+        if (!foundKey) {
+          foundKey = Object.keys(rolesConfig.roles).find(k =>
+            rolesConfig.roles[k].name?.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower
+          );
         }
-        if (fallbackKey) {
-            effectiveRoleKey = fallbackKey;
-            roleConfig = defaultRoles[fallbackKey];
+        if (foundKey) {
+          effectiveRoleKey = foundKey;
+          roleConfig = rolesConfig.roles[foundKey];
         }
-    } else if (roleConfig && DEFAULT_ROLES_CONFIG?.roles?.[effectiveRoleKey]) {
-        const defaultRole = DEFAULT_ROLES_CONFIG.roles[effectiveRoleKey];
-        const defaultPages = defaultRole.page_permissions || {};
-        const currentPages = roleConfig.page_permissions || {};
-        roleConfig = {
-            ...defaultRole,
-            ...roleConfig,
-            page_permissions: { ...defaultPages, ...currentPages }
-        };
+      }
     }
 
-    // 3. Obtener permisos para ese rol
-    let permissions = { ...ROLE_PERMISSIONS.user }; // Start with default safe permissions
+    // 3. Obtener permisos
+    let permissions = { ...ROLE_PERMISSIONS.user };
 
-    if (roleConfig && roleConfig.permissions) {
+    if (roleConfig?.permissions) {
       permissions = { ...roleConfig.permissions };
     } else if (ROLE_PERMISSIONS[effectiveRoleKey]) {
       permissions = { ...ROLE_PERMISSIONS[effectiveRoleKey] };
     }
 
-    // 4. Mergear permisos explícitos de Base44 (si existen)
-    // Esto permite usar el campo 'permisos' del usuario en Base44 como override
+    // Override con permisos explícitos del usuario en Base44
     if (user.permisos && typeof user.permisos === 'object') {
-        permissions = { ...permissions, ...user.permisos };
+      permissions = { ...permissions, ...user.permisos };
     }
+
+    // CRÍTICO: El admin (isAdmin===true) SIEMPRE tiene acceso a todo
+    const isAdminUser = permissions.isAdmin === true;
+
+    const canAccessPage = (path) => {
+      // ADMIN: acceso total sin restricciones
+      if (isAdminUser) return true;
+
+      // Bloqueo hard: RolesConfig solo admin
+      if (path.includes('RolesConfig')) return false;
+
+      if (roleConfig) {
+        const pagePerms = roleConfig.page_permissions || {};
+        const keys = Object.keys(pagePerms);
+        const hasConfiguredPages = keys.length > 0;
+        const isStrict = roleConfig.is_strict === true;
+
+        if (!hasConfiguredPages && !isStrict) {
+          return path === '/Dashboard' || path === '/';
+        }
+
+        const cleanPath = path.split('?')[0].replace(/\/$/, '');
+        const pathNoSlash = cleanPath.replace(/^\//, '');
+        const pathWithSlash = '/' + pathNoSlash;
+
+        if (pagePerms[path] === true) return true;
+        if (pagePerms[cleanPath] === true) return true;
+        if (pagePerms[pathNoSlash] === true) return true;
+        if (pagePerms[pathWithSlash] === true) return true;
+
+        const matchedKey = keys.find(key => {
+          const cleanKey = key.split('?')[0].replace(/\/$/, '');
+          const keyNoSlash = cleanKey.replace(/^\//, '');
+          if (keyNoSlash === pathNoSlash) return true;
+          if (pathWithSlash.startsWith('/' + keyNoSlash + '/')) return true;
+          return false;
+        });
+
+        if (matchedKey && pagePerms[matchedKey] === true) return true;
+        return false;
+      }
+
+      // Fallback: solo Dashboard si no hay config de rol
+      return path === '/Dashboard' || path === '/';
+    };
 
     const base = {
       isAuthenticated: true,
-      role: effectiveRoleKey, // Usamos la key resuelta internamente
-      originalRole: rawRole,  // Mantenemos el original por si acaso
+      role: effectiveRoleKey,
+      originalRole: rawRole,
       userEmail: user.email,
       userName: user.full_name,
       ...permissions,
-      canAccessPage: (path) => {
-        // Admin siempre tiene acceso a todo, independientemente de page_permissions configurados
-        if (permissions.isAdmin === true) return true;
-        
-        // Hard security check: Solo admin puede ver RolesConfig
-        if (path.includes('RolesConfig')) return false;
-
-        // DIAGNOSTIC LOG (Solo en desarrollo o si hay problemas)
-        // console.log(`usePermissions Check: Role=${effectiveRoleKey}, Path=${path}, FoundConfig=${!!roleConfig}, IsAdmin=${permissions.isAdmin}`);
-        
-        // Si el rol existe en la configuración dinámica (es un rol gestionado), 
-        // aplicamos política de "Deny by Default" (Lista blanca) SOLO si hay permisos de página configurados
-        // O si está explícitamente marcado como estricto (is_strict).
-        if (roleConfig) {
-           const pagePerms = roleConfig.page_permissions || {};
-           const keys = Object.keys(pagePerms);
-           const hasConfiguredPages = keys.length > 0;
-           const isStrict = roleConfig.is_strict === true;
-
-           // Si NO hay ninguna página configurada (ni true ni false) Y NO es estricto, 
-           // asumimos que es un rol nuevo/legacy.
-           // CAMBIO DE SEGURIDAD: Ya no aplicamos modo permisivo.
-           // Si el rol está en el sistema de gestión, debe tener permisos explícitos.
-           if (!hasConfiguredPages && !isStrict) {
-               // Solo permitir Dashboard
-               if (path === '/Dashboard' || path === '/') return true;
-               
-               // Bloquear todo lo demás
-               // console.warn(`Access Denied (Empty Config): Role=${effectiveRoleKey} Path=${path}`);
-               return false;
-           }
-
-           // Si HAY configuración o es ESTRICTO:
-           // Normalizar path de entrada (quitar query params y trailing slash)
-           const cleanPath = path.split('?')[0].replace(/\/$/, '');
-           
-           // Generar variantes para comparación robusta (con y sin slash inicial)
-           const pathNoSlash = cleanPath.replace(/^\//, '');
-           const pathWithSlash = '/' + pathNoSlash;
-           
-           // 1. Coincidencia exacta y variantes (Key lookup rápido)
-           if (pagePerms[path] === true) return true;
-           if (pagePerms[cleanPath] === true) return true;
-           if (pagePerms[pathNoSlash] === true) return true;
-           if (pagePerms[pathWithSlash] === true) return true;
-           
-           // 2. Búsqueda por coincidencia normalizada (robustez y sub-rutas)
-           // Busca si alguna key configurada coincide con el path solicitado
-           const matchedKey = keys.find(key => {
-              // Normalizar la key de configuración
-              const cleanKey = key.split('?')[0].replace(/\/$/, '');
-              const keyNoSlash = cleanKey.replace(/^\//, '');
-              
-              // Coincidencia exacta de path (ignorando slash inicial)
-              if (keyNoSlash === pathNoSlash) return true;
-              
-              // Coincidencia de sub-ruta (ej. /NewProcessConfigurator/*)
-              // Comprobamos si el path solicitado empieza con la key configurada + '/'
-              if (pathWithSlash.startsWith('/' + keyNoSlash + '/')) return true;
-              
-              return false;
-           });
-
-           if (matchedKey && pagePerms[matchedKey] === true) return true;
-
-           // Si no está definido explícitamente en un rol gestionado -> DENEGAR
-           return false;
-        }
-        
-        // FALLBACK (Roles NO gestionados o Configuración no cargada)
-        // CAMBIO DE SEGURIDAD: Deny by Default (Modo Estricto)
-        // Antes era permisivo (return true), ahora cerramos el acceso si no hay config explícita.
-        
-        // 1. Siempre permitir Dashboard
-        if (path === '/Dashboard' || path === '/') return true;
-
-        // 2. Bloquear todo lo demás si no se encontró configuración del rol
-        // Esto evita que roles mal configurados o huérfanos vean toda la app.
-        // console.warn(`Access Denied (Fallback): Role=${effectiveRoleKey} Path=${path} - No configuration found for role.`);
-        return false;
-      }
+      canAccessPage,
     };
 
-    // 5. Agregar función para verificar permisos de módulos
     base.canAccessModule = (pageName, moduleName) => {
-      // Admin siempre tiene acceso
-      if (permissions.isAdmin) return true;
-      
-      // IMPORTANTE: Si el usuario puede acceder a la página, puede acceder a sus módulos
-      // A menos que haya una denegación explícita en module_permissions
-      const canAccessThePage = base.canAccessPage(`/${pageName}`);
-      if (!canAccessThePage) {
-        console.log(`[canAccessModule] DENIED - No page access: page=${pageName}, module=${moduleName}`);
-        return false; // Si no puede ver la página, no puede ver sus módulos
-      }
-      
-      // Verificar permisos de módulo del usuario (override explícito)
+      if (isAdminUser) return true;
+      if (!canAccessPage(`/${pageName}`)) return false;
+
       const userModulePerms = user.module_permissions?.[pageName]?.[moduleName];
-      if (userModulePerms !== undefined) {
-        console.log(`[canAccessModule] User override: page=${pageName}, module=${moduleName}, value=${userModulePerms}`);
-        return userModulePerms;
-      }
-      
-      // Verificar permisos de módulo del rol en rolesConfig
+      if (userModulePerms !== undefined) return userModulePerms;
+
       const roleModulePerms = roleConfig?.module_permissions?.[pageName];
-      
-      console.log(`[canAccessModule] Check: page=${pageName}, module=${moduleName}, roleKey=${effectiveRoleKey}, hasRoleConfig=${!!roleConfig}, roleModulePerms=`, roleModulePerms);
-      
-      // Si hay configuración de módulos para esta página en el rol
       if (roleModulePerms && Object.keys(roleModulePerms).length > 0) {
-        // Si el módulo está explícitamente configurado, usar ese valor
-        if (roleModulePerms[moduleName] !== undefined) {
-          console.log(`[canAccessModule] Module found in role config: ${roleModulePerms[moduleName]}`);
-          return roleModulePerms[moduleName];
-        }
-        // Si hay configuración de módulos pero este módulo no está, denegar
-        console.log(`[canAccessModule] DENIED - Module not in role config`);
+        if (roleModulePerms[moduleName] !== undefined) return roleModulePerms[moduleName];
         return false;
       }
-      
-      // Por defecto: Si puede ver la página y no hay restricciones de módulos, permitir
-      console.log(`[canAccessModule] ALLOWED - Default (no module restrictions)`);
       return true;
     };
 
-    // Función helper para obtener todos los permisos de módulo de una página
     base.getModulePermissions = (pageName) => {
-      if (permissions.isAdmin) {
-        // Admin tiene todos los permisos
+      if (isAdminUser) {
         const allPerms = {};
         if (MODULE_DEFINITIONS[pageName]) {
-          Object.keys(MODULE_DEFINITIONS[pageName]).forEach(key => {
-            allPerms[key] = true;
-          });
+          Object.keys(MODULE_DEFINITIONS[pageName]).forEach(key => { allPerms[key] = true; });
         }
         return allPerms;
       }
-      
-      // Combinar permisos del usuario y del rol
       const userModulePerms = user.module_permissions?.[pageName] || {};
       const roleModulePerms = roleConfig?.module_permissions?.[pageName] || {};
-      
       return { ...roleModulePerms, ...userModulePerms };
     };
 
@@ -428,7 +326,6 @@ export function useHasPermission(permission) {
   return permissions[permission] || false;
 }
 
-// Nuevo hook para permisos de módulos
 export function useModulePermissions(pageName) {
   const permissions = usePermissions();
   return useMemo(() => {
