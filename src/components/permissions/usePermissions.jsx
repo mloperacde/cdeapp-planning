@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAppData } from "../data/DataProvider";
+import { DEFAULT_ROLES_CONFIG } from "@/hooks/useRolesManager";
 
 // Módulos disponibles por página
 export const MODULE_DEFINITIONS = {
@@ -200,27 +201,18 @@ export function usePermissions() {
     let effectiveRoleKey = rawRole;
     let roleConfig = null;
 
-    // Intentar resolver usando rolesConfig si está disponible
     if (rolesConfig?.roles) {
-        // A. Match directo (Key exacta)
         if (rolesConfig.roles[rawRole]) {
              effectiveRoleKey = rawRole;
              roleConfig = rolesConfig.roles[rawRole];
-        } 
-        // B. Match normalizado (Key o Name)
-        else if (typeof rawRole === 'string') {
+        } else if (typeof rawRole === 'string') {
              const roleLower = rawRole.replace(/\s+/g, ' ').trim().toLowerCase();
-             
-             // 1. Buscar case-insensitive por Key (ID del rol)
              let foundKey = Object.keys(rolesConfig.roles).find(k => k.toLowerCase() === roleLower);
-             
-             // 2. Si no, buscar por Name (propiedad 'name' del rol - ej. "Gerente RRHH")
              if (!foundKey) {
                  foundKey = Object.keys(rolesConfig.roles).find(k => 
                      rolesConfig.roles[k].name?.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower
                  );
              }
-
              if (foundKey) {
                  effectiveRoleKey = foundKey;
                  roleConfig = rolesConfig.roles[foundKey];
@@ -228,15 +220,39 @@ export function usePermissions() {
         }
     }
 
+    if (!roleConfig && typeof rawRole === 'string') {
+        const roleLower = rawRole.replace(/\s+/g, ' ').trim().toLowerCase();
+        const defaultRoles = DEFAULT_ROLES_CONFIG?.roles || {};
+        const defaultKeys = Object.keys(defaultRoles);
+        let fallbackKey = defaultKeys.find(k => k.toLowerCase() === roleLower);
+        if (!fallbackKey) {
+            fallbackKey = defaultKeys.find(k => {
+                const cfg = defaultRoles[k];
+                if (!cfg || !cfg.name) return false;
+                return cfg.name.replace(/\s+/g, ' ').trim().toLowerCase() === roleLower;
+            });
+        }
+        if (fallbackKey) {
+            effectiveRoleKey = fallbackKey;
+            roleConfig = defaultRoles[fallbackKey];
+        }
+    } else if (roleConfig && DEFAULT_ROLES_CONFIG?.roles?.[effectiveRoleKey]) {
+        const defaultRole = DEFAULT_ROLES_CONFIG.roles[effectiveRoleKey];
+        const defaultPages = defaultRole.page_permissions || {};
+        const currentPages = roleConfig.page_permissions || {};
+        roleConfig = {
+            ...defaultRole,
+            ...roleConfig,
+            page_permissions: { ...defaultPages, ...currentPages }
+        };
+    }
+
     // 3. Obtener permisos para ese rol
     let permissions = { ...ROLE_PERMISSIONS.user }; // Start with default safe permissions
 
-    // Intento A: Configuración dinámica (si existe el rol resuelto)
-    if (roleConfig) {
+    if (roleConfig && roleConfig.permissions) {
       permissions = { ...roleConfig.permissions };
-    }
-    // Intento B: Configuración estática (fallback usando key resuelta)
-    else if (ROLE_PERMISSIONS[effectiveRoleKey]) {
+    } else if (ROLE_PERMISSIONS[effectiveRoleKey]) {
       permissions = { ...ROLE_PERMISSIONS[effectiveRoleKey] };
     }
 
