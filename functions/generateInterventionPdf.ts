@@ -1,6 +1,43 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.1';
 
+const FONT_NAME = 'InterventionFont';
+let fontsReady = false;
+
+function bufferToBase64(buffer: ArrayBuffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+async function ensurePdfFonts(doc: jsPDF) {
+  if (fontsReady) return;
+  const anyDoc: any = doc;
+  try {
+    const [regularRes, boldRes] = await Promise.all([
+      fetch('https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/DejaVuSans.ttf'),
+      fetch('https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/DejaVuSans-Bold.ttf')
+    ]);
+    const [regularBuf, boldBuf] = await Promise.all([
+      regularRes.arrayBuffer(),
+      boldRes.arrayBuffer()
+    ]);
+    const regularBase64 = bufferToBase64(regularBuf);
+    const boldBase64 = bufferToBase64(boldBuf);
+    anyDoc.addFileToVFS('DejaVuSans.ttf', regularBase64);
+    anyDoc.addFileToVFS('DejaVuSans-Bold.ttf', boldBase64);
+    anyDoc.addFont('DejaVuSans.ttf', FONT_NAME, 'normal');
+    anyDoc.addFont('DejaVuSans-Bold.ttf', FONT_NAME, 'bold');
+    fontsReady = true;
+  } catch {
+    fontsReady = true;
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -16,8 +53,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Datos de intervención requeridos' }, { status: 400 });
     }
 
-    // Generate PDF
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    await ensurePdfFonts(doc);
     const pageW = 210;
     const margin = 15;
     const contentW = pageW - margin * 2;
@@ -25,7 +62,12 @@ Deno.serve(async (req) => {
 
     const addText = (text, x, yPos, options = {}) => {
       doc.setFontSize(options.size || 10);
-      doc.setFont('helvetica', options.style || 'normal');
+      const style = options.style || 'normal';
+      if (fontsReady) {
+        doc.setFont(FONT_NAME, style as any);
+      } else {
+        doc.setFont('helvetica', style as any);
+      }
       if (options.color) doc.setTextColor(...options.color);
       else doc.setTextColor(30, 30, 30);
       doc.text(String(text || ''), x, yPos, options);
