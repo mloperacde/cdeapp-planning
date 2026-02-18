@@ -75,7 +75,7 @@ export function KPIWidget({ employees, activeAbsencesDept, pendingSwapsDept }) {
 }
 
 // Widget: Team Status
-export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailyStaffing, employees, manufacturingConfig, shifts }) {
+export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailyStaffing, employees, employeesAll, manufacturingConfig, shifts }) {
 
     const getTeamSalas = (teamName) => {
         if (!dailyStaffing?.length || !machines?.length || !employees?.length) return [];
@@ -124,7 +124,8 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
     };
 
     const getShiftLeaders = (shiftName) => {
-        if (!manufacturingConfig?.assignments || !employees) return [];
+        const sourceEmployees = employeesAll || employees;
+        if (!manufacturingConfig?.assignments || !sourceEmployees) return [];
         
         let shiftKey = null;
         const normalizedShift = shiftName?.toLowerCase()?.trim() || "";
@@ -148,7 +149,7 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
         const areasMap = manufacturingConfig.assignments[shiftKey].areas || {};
         
         return Object.entries(leaderMap).map(([role, empId]) => {
-            const emp = employees.find(e => String(e.id) === String(empId));
+            const emp = sourceEmployees.find(e => String(e.id) === String(empId));
             const areaIds = areasMap[role] || [];
             const areaNames = areaIds.map(id => {
                 const area = manufacturingConfig.areas?.find(a => a.id === id);

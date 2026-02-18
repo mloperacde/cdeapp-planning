@@ -486,6 +486,7 @@ export default function ShiftManagersPage() {
                         <WidgetComponent 
                             key={widget.id}
                             employees={employeesAssignable}
+                            employeesAll={employees}
                             activeAbsencesDept={activeAbsencesDept}
                             pendingSwapsDept={pendingSwapsDept}
                             activeAbsencesToday={activeAbsencesToday}
@@ -513,6 +514,7 @@ export default function ShiftManagersPage() {
                     >
                         <WidgetComponent 
                             employees={employeesAssignable}
+                            employeesAll={employees}
                             activeAbsencesDept={activeAbsencesDept}
                             pendingSwapsDept={pendingSwapsDept}
                             activeAbsencesToday={activeAbsencesToday}
