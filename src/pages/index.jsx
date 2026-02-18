@@ -28,6 +28,7 @@ import MachineMaintenance from "./MachineMaintenance";
 import MachineMaster from "./MachineMaster";
 import MachineManagement from "./MachineManagement";
 import MaintenanceTracking from "./MaintenanceTracking";
+import MaintenanceInterventions from "./MaintenanceInterventions";
 import MasterEmployeeDatabase from "./MasterEmployeeDatabase";
 import PerformanceManagement from "./PerformanceManagement";
 import ProcessConfiguration from "./ProcessConfiguration";

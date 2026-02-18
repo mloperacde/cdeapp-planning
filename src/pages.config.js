@@ -66,6 +66,7 @@ import DocumentManagement from './pages/DocumentManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
 import EmployeeAbsenceInfo from './pages/EmployeeAbsenceInfo';
 import EmployeeOnboarding from './pages/EmployeeOnboarding';
+import EmployeesShiftManager from './pages/EmployeesShiftManager';
 import FabricacionSkills from './pages/FabricacionSkills';
 import IncentiveManagement from './pages/IncentiveManagement';
 import LockerManagement from './pages/LockerManagement';
@@ -75,6 +76,7 @@ import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
+import MaintenanceInterventions from './pages/MaintenanceInterventions';
 import MaintenancePlanningPage from './pages/MaintenancePlanningPage';
 import MaintenanceTracking from './pages/MaintenanceTracking';
 import MantenimientoSkills from './pages/MantenimientoSkills';
@@ -102,10 +104,8 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import EmployeesShiftManager from './pages/EmployeesShiftManager';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
-import MaintenanceInterventions from './pages/MaintenanceInterventions';
 import __Layout from './Layout.jsx';
 
 
@@ -129,6 +129,7 @@ export const PAGES = {
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
     "EmployeeAbsenceInfo": EmployeeAbsenceInfo,
     "EmployeeOnboarding": EmployeeOnboarding,
+    "EmployeesShiftManager": EmployeesShiftManager,
     "FabricacionSkills": FabricacionSkills,
     "IncentiveManagement": IncentiveManagement,
     "LockerManagement": LockerManagement,
@@ -138,6 +139,7 @@ export const PAGES = {
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
     "MachineMaster": MachineMaster,
+    "MaintenanceInterventions": MaintenanceInterventions,
     "MaintenancePlanningPage": MaintenancePlanningPage,
     "MaintenanceTracking": MaintenanceTracking,
     "MantenimientoSkills": MantenimientoSkills,
@@ -165,10 +167,8 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "EmployeesShiftManager": EmployeesShiftManager,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
-    "MaintenanceInterventions": MaintenanceInterventions,
 }
 
 export const pagesConfig = {
