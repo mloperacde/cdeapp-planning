@@ -108,6 +108,7 @@ const PAGES = {
   MachineManagement: MachineManagement,
   MachineMaster: MachineMaster,
   MaintenanceTracking: MaintenanceTracking,
+  MaintenanceInterventions: MaintenanceInterventions,
   MasterEmployeeDatabase: MasterEmployeeDatabase,
   PerformanceManagement: PerformanceManagement,
   ProcessConfiguration: ProcessConfiguration,
