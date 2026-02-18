@@ -62,17 +62,37 @@ Deno.serve(async (req) => {
     const contentW = pageW - margin * 2;
     let y = 15;
 
+    const drawRoundedOrRect = (x: number, y: number, w: number, h: number, r: number, style: 'S' | 'F' | 'DF' | 'FD' = 'F') => {
+      const anyDoc: any = doc;
+      if (typeof anyDoc.roundedRect === 'function') {
+        anyDoc.roundedRect(x, y, w, h, r, r, style);
+      } else {
+        doc.rect(x, y, w, h, style);
+      }
+    };
+
+    const prepareText = (val: any) => {
+      const str = String(val || '');
+      if (fontsLoaded) return str;
+      try {
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      } catch {
+        return str;
+      }
+    };
+
     const addText = (text, x, yPos, options = {}) => {
-      doc.setFontSize(options.size || 10);
+      doc.setFontSize((options as any).size || 10);
       const style = options.style || 'normal';
       if (fontsLoaded) {
         doc.setFont(FONT_NAME, style as any);
       } else {
         doc.setFont('helvetica', style as any);
       }
-      if (options.color) doc.setTextColor(...options.color);
+      if ((options as any).color) doc.setTextColor(...(options as any).color);
       else doc.setTextColor(30, 30, 30);
-      doc.text(String(text || ''), x, yPos, options);
+      const finalText = prepareText(text);
+      doc.text(finalText, x, yPos, options as any);
       return yPos;
     };
 
@@ -112,7 +132,7 @@ Deno.serve(async (req) => {
     };
     const estadoColor = estadoColors[intervention.estado] || [100, 100, 100];
     doc.setFillColor(...estadoColor);
-    doc.roundedRect(pageW - margin - 35, 27, 35, 8, 2, 2, 'F');
+    drawRoundedOrRect(pageW - margin - 35, 27, 35, 8, 2, 'F');
     addText(intervention.estado || 'Pendiente', pageW - margin - 32, 33, { size: 8, style: 'bold', color: [255, 255, 255] });
 
     y = 50;
@@ -146,7 +166,7 @@ Deno.serve(async (req) => {
         addText(new Date(intervention.fecha_inicio_prevista).toLocaleDateString('es-ES'), margin + 35, y, { size: 9 });
       }
       if (intervention.fecha_fin_prevista) {
-        addText('Fin Previsto:', margin + 90, y, { size: 9, style: 'bold' });
+      addText('Fin Previsto:', margin + 90, y, { size: 9, style: 'bold' });
         addText(new Date(intervention.fecha_fin_prevista).toLocaleDateString('es-ES'), margin + 120, y, { size: 9 });
       }
       y += 8;
@@ -208,7 +228,7 @@ Deno.serve(async (req) => {
     }
     if (intervention.objetivo_descripcion_manual) {
       addText('Descripción:', margin, y, { size: 9, style: 'bold' });
-      const lines = doc.splitTextToSize(intervention.objetivo_descripcion_manual, contentW - 30);
+      const lines = doc.splitTextToSize(prepareText(intervention.objetivo_descripcion_manual), contentW - 30);
       lines.forEach(line => {
         addText(line, margin + 30, y, { size: 9 });
         y += 5;
@@ -226,7 +246,7 @@ Deno.serve(async (req) => {
     addText('DESCRIPCIÓN DE LA INTERVENCIÓN', margin + 2, y + 5.5, { size: 9, style: 'bold', color: [30, 64, 175] });
     y += 12;
 
-    const descLines = doc.splitTextToSize(intervention.descripcion || '', contentW);
+    const descLines = doc.splitTextToSize(prepareText(intervention.descripcion || ''), contentW);
     descLines.forEach(line => {
       y = checkNewPage(y, 6);
       addText(line, margin, y, { size: 9 });
@@ -282,7 +302,7 @@ Deno.serve(async (req) => {
         doc.setFillColor(i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 250 : 255, i % 2 === 0 ? 252 : 255);
         doc.rect(margin, y - 4, contentW, 7, 'F');
         addText(nec.tipo || '', margin + 2, y, { size: 8 });
-        const descNecLines = doc.splitTextToSize(nec.descripcion || '', 80);
+        const descNecLines = doc.splitTextToSize(prepareText(nec.descripcion || ''), 80);
         addText(descNecLines[0] || '', margin + 35, y, { size: 8 });
         addText(nec.cantidad || '-', margin + 120, y, { size: 8 });
         addText(nec.disponible ? '✓ Sí' : '✗ No', margin + 150, y, { size: 8, style: 'bold', color: nec.disponible ? [34, 197, 94] : [239, 68, 68] });
@@ -325,7 +345,7 @@ Deno.serve(async (req) => {
 
       if (prog) {
         addText(prog.fecha ? new Date(prog.fecha).toLocaleDateString('es-ES') : '', margin + 2, y + 1, { size: 8 });
-        const pDescLines = doc.splitTextToSize(prog.descripcion || '', 95);
+        const pDescLines = doc.splitTextToSize(prepareText(prog.descripcion || ''), 95);
         addText(pDescLines[0] || '', margin + 32, y + 1, { size: 8 });
         addText(prog.porcentaje != null ? `${prog.porcentaje}%` : '', margin + 130, y + 1, { size: 8 });
         addText(prog.registrado_por_nombre || prog.registrado_por || '', margin + 145, y + 1, { size: 8 });
@@ -346,7 +366,7 @@ Deno.serve(async (req) => {
     if (intervention.resolucion?.descripcion) {
       addText('Detalles de Resolución:', margin, y, { size: 9, style: 'bold' });
       y += 5;
-      const resLines = doc.splitTextToSize(intervention.resolucion.descripcion, contentW);
+      const resLines = doc.splitTextToSize(prepareText(intervention.resolucion.descripcion), contentW);
       resLines.forEach(line => {
         y = checkNewPage(y, 6);
         addText(line, margin, y, { size: 9 });
@@ -393,7 +413,8 @@ Deno.serve(async (req) => {
     doc.rect(0, 285, pageW, 12, 'F');
     addText(`Orden de Trabajo generada el ${new Date().toLocaleDateString('es-ES')} - Sistema de Gestión CDE PlanApp`, pageW / 2, 292, { size: 7, color: [200, 220, 255], align: 'center' });
 
-    const pdfOutput = doc.output('arraybuffer');
+    const pdfBuffer = doc.output('arraybuffer') as ArrayBuffer;
+    const pdfBytes = new Uint8Array(pdfBuffer);
 
     // Send email if requested
     if (sendEmail && recipients && recipients.length > 0) {
@@ -450,7 +471,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(pdfOutput, {
+    return new Response(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
