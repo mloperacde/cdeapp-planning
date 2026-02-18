@@ -309,7 +309,8 @@ export default function EmployeesShiftManagerPage() {
               filterOptions={filterOptions}
               sortOptions={SORT_OPTIONS}
               placeholder="Buscar por nombre, puesto, equipo..."
-              pageId="employees_shift_manager"
+              pageId={initialTeam ? null : "employees_shift_manager"}
+              initialFilters={initialTeam ? { equipo: initialTeam } : null}
             />
           </CardContent>
         </Card>
