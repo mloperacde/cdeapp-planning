@@ -55,14 +55,14 @@ export default function ShiftManagersPage() {
     queryFn: async () => {
       const configs = await base44.entities.AppConfig.filter({ config_key: "manufacturing_config" });
       const record = configs[0] || null;
-      if (record?.value) {
-          try {
-              return typeof record.value === 'string' ? JSON.parse(record.value) : record.value;
-          } catch (e) {
-              return null;
-          }
+      if (!record) return null;
+      try {
+        const raw = record.value || record.description || record.app_subtitle || null;
+        if (!raw) return null;
+        return typeof raw === "string" ? JSON.parse(raw) : raw;
+      } catch (e) {
+        return null;
       }
-      return null;
     },
   });
 
