@@ -49,7 +49,6 @@ export const MENU_STRUCTURE = [
   { name: 'Gestión de Usuarios', path: '/AppUserManagement', icon: UserCog, category: 'Dirección' },
   
   // Planificación
-  { name: 'Empleados (Responsables)', path: '/EmployeesShiftManager', icon: Users, category: 'Planificación' },
   { name: 'Responsables de Turno', path: '/ShiftManagers', icon: Briefcase, category: 'Planificación' },
   { name: 'Descansos', path: '/Breaks', icon: Coffee, category: 'Planificación' },
   { name: 'Timeline', path: '/Timeline', icon: Clock, category: 'Planificación' },
@@ -57,6 +56,7 @@ export const MENU_STRUCTURE = [
   { name: 'Planning Diario Máquinas', path: '/MachineDailyPlanning', icon: Factory, category: 'Planificación' },
   { name: 'Asignaciones de Máquinas', path: '/MachineAssignments', icon: Settings, category: 'Planificación' },
   // Fabricación
+  { name: 'Empleados Personal de Producción', path: '/EmployeesShiftManager', icon: Users, category: 'Fabricación' },
   { name: 'Máquinas (Master)', path: '/MachineMaster', icon: Database, category: 'Fabricación' },
   { name: 'Gestión de Máquinas', path: '/MachineManagement', icon: Settings, category: 'Fabricación' },
   { name: 'Matriz de Habilidades', path: '/SkillMatrix', icon: BarChart3, category: 'Fabricación' },

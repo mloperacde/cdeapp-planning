@@ -23,7 +23,7 @@ export default function Breadcrumbs({ items = [], auto = true, showBack = false,
     MobileHome: "Móvil",
     MobilePlanning: "Mi Planificación"
   };
-  labelMap.EmployeesShiftManager = "Personal de Fabricación";
+  labelMap.EmployeesShiftManager = "Empleados Personal de Producción";
   labelMap.MachineAssignments = "Asignaciones de Máquinas";
 
   const formatLabel = (segment) => {

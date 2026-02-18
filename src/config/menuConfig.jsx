@@ -26,12 +26,12 @@ export const MENU_STRUCTURE = [
   { name: 'Planning Producción', icon: Calendar, path: '/DailyProductionPlanningPage', category: 'Dirección' },
   
   // Planificación
-  { name: 'Personal Producción', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Planificación' },
   { name: 'Planificador Órdenes', icon: Package, path: '/ProductionPlanning', category: 'Planificación' },
   { name: 'Importar Órdenes', icon: Download, path: '/OrderImport', category: 'Planificación' },
   { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
 
   // Fabricación
+  { name: 'Empleados Personal de Producción', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Fabricación' },
   { name: 'Config. Fabricación', icon: Factory, path: '/OrganizationalStructure?tab=manufacturing', category: 'Fabricación' },
   { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Fabricación' },
   { name: 'Asignación de Turno', icon: Users, path: '/ShiftAssignmentsPage', category: 'Fabricación' },
