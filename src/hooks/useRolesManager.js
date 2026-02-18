@@ -126,6 +126,7 @@ export const DEFAULT_ROLES_CONFIG = {
         '/Dashboard': true,
         '/MaintenancePlanningPage': true,
         '/MaintenanceTracking': true,
+        '/MaintenanceInterventions': true,
         '/MachineManagement': true,
         '/Reports': true,
         '/MantenimientoSkills': true
@@ -172,6 +173,7 @@ export const DEFAULT_ROLES_CONFIG = {
       page_permissions: {
         '/Dashboard': true,
         '/MaintenanceTracking': true,
+        '/MaintenanceInterventions': true,
         '/MachineManagement': true
       }
     },
