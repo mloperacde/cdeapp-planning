@@ -30,8 +30,7 @@ export default function AdvancedSearch({
   placeholder = "Buscar...",
   pageId = null, // Identificador para guardar filtros
   enableSearch = true,
-  currentSearchTerm = "",
-  initialFilters = null
+  currentSearchTerm = ""
 }) {
   const [searchTerm, setSearchTerm] = useState(currentSearchTerm);
   const debouncedSearchTerm = useDebounce(searchTerm, 400); // 400ms delay
@@ -66,32 +65,6 @@ export default function AdvancedSearch({
 
   // Use a ref to track if we've already applied these specific preferences
   const appliedPrefRef = React.useRef(null);
-
-  // Track if initialFilters have been applied (for pages sin pageId)
-  const initialAppliedRef = React.useRef(false);
-
-  // Apply initialFilters solo cuando no hay pageId (vista contextual, ej. desde otra página)
-  React.useEffect(() => {
-    if (pageId) return;
-    if (!initialFilters || initialAppliedRef.current) return;
-    if (Object.keys(initialFilters).length === 0) return;
-
-    setFilters(prev => {
-      if (Object.keys(prev).length > 0) return prev;
-      return initialFilters;
-    });
-
-    const searchToUse = enableSearch ? debouncedSearchTerm : currentSearchTerm;
-    onFilterChange({
-      searchTerm: searchToUse,
-      sortField,
-      sortDirection,
-      ...initialFilters
-    });
-
-    initialAppliedRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialFilters, pageId]);
 
   // Handle preference loading with useEffect
   React.useEffect(() => {
