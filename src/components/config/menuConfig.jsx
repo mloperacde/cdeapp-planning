@@ -82,4 +82,5 @@ export const MENU_STRUCTURE = [
   // Configuración
   { name: 'Configuración General', path: '/Configuration', icon: Settings, category: 'Configuración' },
   { name: 'Branding', path: '/BrandingConfig', icon: Palette, category: 'Configuración' },
+  { name: 'Modelo de Datos', path: '/DataModelView', icon: GitBranch, category: 'Configuración' },
 ];
