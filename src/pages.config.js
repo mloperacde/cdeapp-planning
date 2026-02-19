@@ -53,6 +53,7 @@ import AdvancedHRDashboard from './pages/AdvancedHRDashboard';
 import AlmacenSkills from './pages/AlmacenSkills';
 import AppUserManagement from './pages/AppUserManagement';
 import ArticleManagement from './pages/ArticleManagement';
+import AttendanceControl from './pages/AttendanceControl';
 import AttendanceManagement from './pages/AttendanceManagement';
 import BrandingConfig from './pages/BrandingConfig';
 import Breaks from './pages/Breaks';
@@ -69,6 +70,7 @@ import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
 import FabricacionSkills from './pages/FabricacionSkills';
 import IncentiveManagement from './pages/IncentiveManagement';
+import LockerManagement from './pages/LockerManagement';
 import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
 import MachineDailyPlanning from './pages/MachineDailyPlanning';
@@ -104,8 +106,6 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import LockerManagement from './pages/LockerManagement';
-import AttendanceControl from './pages/AttendanceControl';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
 import __Layout from './Layout.jsx';
@@ -118,6 +118,7 @@ export const PAGES = {
     "AlmacenSkills": AlmacenSkills,
     "AppUserManagement": AppUserManagement,
     "ArticleManagement": ArticleManagement,
+    "AttendanceControl": AttendanceControl,
     "AttendanceManagement": AttendanceManagement,
     "BrandingConfig": BrandingConfig,
     "Breaks": Breaks,
@@ -134,6 +135,7 @@ export const PAGES = {
     "EmployeesShiftManager": EmployeesShiftManager,
     "FabricacionSkills": FabricacionSkills,
     "IncentiveManagement": IncentiveManagement,
+    "LockerManagement": LockerManagement,
     "MLInsights": MLInsights,
     "MachineAssignments": MachineAssignments,
     "MachineDailyPlanning": MachineDailyPlanning,
@@ -169,8 +171,6 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "LockerManagement": LockerManagement,
-    "AttendanceControl": AttendanceControl,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
 }
