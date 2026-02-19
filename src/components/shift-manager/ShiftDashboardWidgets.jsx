@@ -321,6 +321,14 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
             description: "Distribuye operarios"
         },
         {
+            id: "shiftIncidents",
+            title: "Incidencias",
+            icon: AlertTriangle,
+            url: createPageUrl("ShiftIncidentManagement"),
+            color: "purple",
+            description: "Comunica y sigue incidencias"
+        },
+        {
             id: "lockerManagement",
             title: "Taquillas",
             icon: KeyRound,

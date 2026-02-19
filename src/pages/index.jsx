@@ -41,6 +41,7 @@ import Reports from "./Reports";
 import ShiftHandover from "./ShiftHandover";
 import ShiftManagers from "./ShiftManagers";
 import ShiftAssignmentsPage from "./ShiftAssignmentsPage";
+import ShiftIncidentManagement from "./ShiftIncidentManagement";
 import SkillMatrix from "./SkillMatrix";
 import SupportManagement1415 from "./SupportManagement1415";
 
@@ -119,6 +120,7 @@ const PAGES = {
   ShiftHandover: ShiftHandover,
   ShiftManagers: ShiftManagers,
   ShiftAssignmentsPage: ShiftAssignmentsPage,
+  ShiftIncidentManagement: ShiftIncidentManagement,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
   SalaryManagement: SalaryManagement,
@@ -256,6 +258,7 @@ function PagesContent() {
                 
                 <Route path="/ShiftManagers" element={<ShiftManagers />} />
                 <Route path="/ShiftAssignmentsPage" element={<ShiftAssignmentsPage />} />
+                <Route path="/ShiftIncidentManagement" element={<ShiftIncidentManagement />} />
                 
                 <Route path="/SkillMatrix" element={<SkillMatrix />} />
                 <Route path="/SalaryManagement" element={<SalaryManagement />} />

@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 export default function IncidentForm({ incident, employees, onClose }) {
   const [formData, setFormData] = useState(incident || {
     codigo_incidente: `INC-${Date.now()}`,
     tipo: "Incidente",
+    categoria_incidencia: "Operario",
     employee_id: "",
     fecha_hora: new Date().toISOString().slice(0, 16),
     lugar: "",
@@ -25,6 +27,8 @@ export default function IncidentForm({ incident, employees, onClose }) {
     causas_basicas: "",
     estado_investigacion: "Pendiente",
     notificado_autoridad: false,
+    es_incumplimiento_normas: false,
+    carta_advertencia: "",
     notas: ""
   });
 
@@ -122,7 +126,28 @@ export default function IncidentForm({ incident, employees, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <Label className="dark:text-slate-300">Empleado Afectado *</Label>
+              <Label className="dark:text-slate-300">Ámbito de la incidencia *</Label>
+              <Select
+                value={formData.categoria_incidencia}
+                onValueChange={(value) => setFormData({ ...formData, categoria_incidencia: value })}
+                required
+              >
+                <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                  <SelectItem value="Máquina" className="dark:text-slate-100 dark:focus:bg-slate-700">Máquina</SelectItem>
+                  <SelectItem value="Instalación" className="dark:text-slate-100 dark:focus:bg-slate-700">Instalación</SelectItem>
+                  <SelectItem value="Técnica" className="dark:text-slate-100 dark:focus:bg-slate-700">Técnica</SelectItem>
+                  <SelectItem value="Operario" className="dark:text-slate-100 dark:focus:bg-slate-700">Operario</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="dark:text-slate-300">
+                {formData.categoria_incidencia === "Operario" ? "Empleado implicado *" : "Empleado implicado"}
+              </Label>
               <Select
                 value={formData.employee_id}
                 onValueChange={(value) => {
@@ -133,7 +158,7 @@ export default function IncidentForm({ incident, employees, onClose }) {
                     departamento: emp?.departamento || ""
                   });
                 }}
-                required
+                required={formData.categoria_incidencia === "Operario"}
               >
                 <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100">
                   <SelectValue placeholder="Seleccionar empleado" />
@@ -220,6 +245,36 @@ export default function IncidentForm({ incident, employees, onClose }) {
               className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
             />
           </div>
+
+          {formData.categoria_incidencia === "Operario" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <div className="space-y-1">
+                  <Label className="dark:text-slate-200 text-xs">Incumplimiento de normas</Label>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Activa la preparación de una carta de advertencia al operario.
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.es_incumplimiento_normas}
+                  onCheckedChange={(value) => setFormData({ ...formData, es_incumplimiento_normas: value })}
+                />
+              </div>
+
+              {formData.es_incumplimiento_normas && (
+                <div className="space-y-2">
+                  <Label className="dark:text-slate-300">Carta de advertencia y comunicación</Label>
+                  <Textarea
+                    value={formData.carta_advertencia}
+                    onChange={(e) => setFormData({ ...formData, carta_advertencia: e.target.value })}
+                    rows={4}
+                    placeholder="Define el texto de la carta de advertencia que se entregará al operario."
+                    className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label className="dark:text-slate-300">Causas Inmediatas</Label>

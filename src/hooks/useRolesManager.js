@@ -76,6 +76,7 @@ export const DEFAULT_ROLES_CONFIG = {
         '/OrderImport': true,
         '/ShiftManagers': true,
         '/ShiftAssignmentsPage': true,
+        '/ShiftIncidentManagement': true,
         '/MachineManagement': true,
         '/QualityControl': true,
         '/Reports': true,
@@ -152,6 +153,7 @@ export const DEFAULT_ROLES_CONFIG = {
         '/DailyProductionPlanningPage': true,
         '/EmployeesShiftManager': true,
         '/ProductionPlanning': true,
+        '/ShiftIncidentManagement': true,
         '/Reports': true,
         '/PlanificacionSkills': true
       }
