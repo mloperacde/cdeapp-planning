@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Package, ArrowLeft, UserCog, FolderOpen, Activity, Database, Palette, Factory, Gavel, Building2 } from "lucide-react";
+import { Settings, Users, Calendar, FileText, Shield, Bell, Wrench, DollarSign, Award, MessageSquare, Package, ArrowLeft, UserCog, FolderOpen, Activity, Database, Palette, Factory, Gavel, Building2, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import AdminOnly from "@/components/security/AdminOnly";
