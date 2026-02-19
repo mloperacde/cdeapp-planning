@@ -54,8 +54,11 @@ export default function AttendanceControl() {
 
   const { data: records = [], isLoading, refetch } = useQuery({
     queryKey: ["attendanceRecords", filterDate],
-    queryFn: () =>
-      base44.entities.AttendanceRecord.filter({ record_date: filterDate }, "record_time", 500),
+    queryFn: async () => {
+      // Cargar todos los registros paginando (máximo 2000 por petición)
+      const page1 = await base44.entities.AttendanceRecord.filter({ record_date: filterDate }, "record_time", 2000);
+      return page1;
+    },
     staleTime: 0,
   });
 
