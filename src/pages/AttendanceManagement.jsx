@@ -140,10 +140,13 @@ export default function AttendanceManagementPage() {
             <Brain className="w-3 h-3 mr-1" />
             Predicciones
           </TabsTrigger>
+          <TabsTrigger value="config" className="flex-1 text-xs py-1.5">
+            <Settings className="w-3 h-3 mr-1" />
+            Configuración
+          </TabsTrigger>
         </TabsList>
 
         <div className="flex-1 overflow-y-auto min-h-0">
-          {/* Pestaña Importar: ahora usa AttendanceControl directamente */}
           <TabsContent value="import" className="m-0">
             <AttendanceControl />
           </TabsContent>
@@ -155,11 +158,9 @@ export default function AttendanceManagementPage() {
             />
           </TabsContent>
 
-          {/* Análisis: incluye análisis comparativo + monitor + configuración */}
+          {/* Análisis: solo Monitor de presencia en tiempo real */}
           <TabsContent value="analysis" className="m-0 space-y-4">
-            <AttendanceAnalysisReport />
             <AttendanceMonitor />
-            <AttendanceConfig />
           </TabsContent>
 
           <TabsContent value="dashboard" className="m-0 space-y-4">
@@ -168,6 +169,11 @@ export default function AttendanceManagementPage() {
 
           <TabsContent value="predictions" className="m-0 space-y-4">
             <AttendancePredictions />
+          </TabsContent>
+
+          {/* Nueva pestaña Configuración */}
+          <TabsContent value="config" className="m-0 space-y-4">
+            <AttendanceConfig />
           </TabsContent>
         </div>
       </Tabs>
