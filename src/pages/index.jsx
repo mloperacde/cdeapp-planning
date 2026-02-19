@@ -194,6 +194,7 @@ function PagesContent() {
                 <Route path="/ArticleManagement" element={<ArticleManagement />} />
                 
                 <Route path="/AttendanceManagement" element={<AttendanceManagement />} />
+                <Route path="/AttendanceControl" element={<AttendanceControl />} />
                 <Route path="/BrandingConfig" element={<BrandingConfig />} />
                 
                 <Route path="/CommitteeManagement" element={<CommitteeManagement />} />
