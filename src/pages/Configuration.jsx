@@ -126,6 +126,13 @@ export default function ConfigurationPage() {
           color: "red"
         },
         {
+          title: "Modelo de Datos",
+          description: "Diagrama de relaciones entre entidades (Fase 1 Plan de Mejora)",
+          icon: GitBranch,
+          url: "/DataModelView",
+          color: "teal"
+        },
+        {
           title: "Reglas y Plantillas",
           description: "Reglas de negocio, notificaciones y plantillas",
           icon: Gavel,
