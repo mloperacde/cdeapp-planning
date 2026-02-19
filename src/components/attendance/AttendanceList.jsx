@@ -178,7 +178,10 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
                       <div className="flex items-center gap-1"><ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" /> Marcajes intermedios</div>
                     </th>
                     <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300 w-28">
-                      <div className="flex items-center gap-1"><Timer className="w-3.5 h-3.5 text-purple-500" /> Presencia</div>
+                      <div className="flex items-center gap-1"><Timer className="w-3.5 h-3.5 text-purple-500" /> Presencia total</div>
+                    </th>
+                    <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300 w-28">
+                      <div className="flex items-center gap-1"><Timer className="w-3.5 h-3.5 text-green-600" /> P. efectiva</div>
                     </th>
                   </tr>
                 </thead>
