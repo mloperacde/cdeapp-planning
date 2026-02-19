@@ -314,10 +314,8 @@ export default function AttendanceControl() {
   const handleClearDay = async () => {
     if (!confirm(`¿Eliminar TODOS los registros del ${filterDate}? Esta acción no se puede deshacer.`)) return;
     try {
-      for (const r of records) {
-        await base44.entities.AttendanceRecord.delete(r.id);
-      }
-      toast.success("Todos los registros del día eliminados.");
+      const result = await base44.functions.invoke('deleteAttendanceRecords', { record_date: filterDate });
+      toast.success(`${result.data?.deleted || 0} registros del día eliminados.`);
       queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
     } catch (err) {
       toast.error("Error al eliminar: " + err.message);
