@@ -210,10 +210,8 @@ export default function AttendanceControl() {
 
   // ── ELIMINAR POR BATCH ───────────────────────────────────────────────────────
   const deleteBatch = async (batchId) => {
-    const toDelete = records.filter(r => r.import_batch === batchId);
-    for (const r of toDelete) {
-      await base44.entities.AttendanceRecord.delete(r.id);
-    }
+    const result = await base44.functions.invoke('deleteAttendanceRecords', { import_batch: batchId });
+    return result.data;
   };
 
   // ── HANDLER PRINCIPAL DE IMPORTACIÓN ────────────────────────────────────────
