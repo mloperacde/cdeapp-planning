@@ -20,7 +20,24 @@ import AttendanceConfig from "../components/attendance/AttendanceConfig";
 import AttendanceList from "../components/attendance/AttendanceList";
 import AttendancePredictions from "../components/attendance/AttendancePredictions";
 import AttendanceMonitor from "../components/attendance/AttendanceMonitor";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+
+// Wrapper que carga la config activa y la pasa al formulario (evita crear duplicados)
+function AttendanceConfigWrapper() {
+  const { data: configs = [], isLoading } = useQuery({
+    queryKey: ['attendanceConfig'],
+    queryFn: () => base44.entities.AttendanceConfig.list(),
+    staleTime: 0,
+  });
+
+  // Usar solo la config activa más reciente; si hay varias activas, tomar la última creada
+  const activeConfig = configs.find(c => c.activo) || configs[0] || null;
+
+  if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
+
+  return <AttendanceConfig config={activeConfig} />;
+}
 
 export default function AttendanceManagementPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
