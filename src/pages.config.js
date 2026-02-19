@@ -108,6 +108,7 @@ import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
+import DataModelView from './pages/DataModelView';
 import __Layout from './Layout.jsx';
 
 
@@ -173,6 +174,7 @@ export const PAGES = {
     "index": index,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
+    "DataModelView": DataModelView,
 }
 
 export const pagesConfig = {
