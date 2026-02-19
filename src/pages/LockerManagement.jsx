@@ -902,7 +902,7 @@ export default function LockerManagementPage() {
                         <TableHead>Vestuario</TableHead>
                         <TableHead>Taquilla</TableHead>
                         <TableHead>Empleado</TableHead>
-                        <TableHead>Copia Jefes</TableHead>
+                        <TableHead>Copia en consigna</TableHead>
                         <TableHead>Solicitud Duplicado</TableHead>
                         <TableHead>Préstamo</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
