@@ -280,8 +280,9 @@ export default function AttendanceControl() {
       await base44.functions.invoke('deleteAttendanceRecords', { record_date: conflictDialog.date });
       const { count } = await saveRecords(conflictDialog.pendingRecords);
       toast.success(`${count} registros importados (se sobreescribieron los anteriores).`);
-      queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
+      await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
       setFilterDate(conflictDialog.date);
+      await refetch();
     } catch (err) {
       toast.error("Error al sobreescribir: " + err.message);
     } finally {
