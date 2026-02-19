@@ -109,8 +109,8 @@ export default function Layout({ children, currentPageName }) {
               </div>
             )}
             <div className="overflow-hidden">
-              <h1 className="font-bold text-lg text-white truncate">{branding?.app_name || 'CDE PlanApp'}</h1>
-              <p className="text-xs text-slate-400 truncate">{branding?.app_subtitle || 'Sistema de Gestión'}</p>
+              <h1 className="font-bold text-lg text-white leading-tight">{branding?.app_name || 'CDE PlanApp'}</h1>
+              <p className="text-xs text-slate-400 leading-snug">{branding?.app_subtitle || 'Sistema de Gestión'}</p>
             </div>
             </div>
           <button 
