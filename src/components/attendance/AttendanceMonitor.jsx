@@ -1,217 +1,266 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Users, UserCheck, UserX, Clock, AlertTriangle } from "lucide-react";
+import { RefreshCw, Users, UserCheck, UserX, Clock, Search } from "lucide-react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { toast } from "sonner";
+
+// Horas de inicio por turno para calcular retrasos
+const SHIFT_START = {
+  "Mañana": "06:00",
+  "Tarde": "14:00",
+  "Noche": "22:00",
+};
 
 export default function AttendanceMonitor() {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedShift, setSelectedShift] = useState('Mañana');
-  const queryClient = useQueryClient();
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [selectedShift, setSelectedShift] = useState("Mañana");
+  const [consulted, setConsulted] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchAttendanceMutation = useMutation({
-    mutationFn: async ({ date, shift }) => {
-      const response = await base44.functions.invoke('fetchAttendanceData', { date, shift });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['attendanceRecords'] });
-      toast.success(`Datos de presencia actualizados: ${data.summary.present} presentes, ${data.summary.absent} ausentes`);
-    },
-    onError: (error) => {
-      toast.error(`Error al obtener datos: ${error.message}`);
-    }
+  const { data: rawRecords = [], isLoading, refetch } = useQuery({
+    queryKey: ["attendanceMonitor", selectedDate],
+    queryFn: () =>
+      base44.entities.AttendanceRecord.filter(
+        { record_date: selectedDate },
+        "record_time",
+        2000
+      ),
+    staleTime: 0,
+    enabled: false, // solo se lanza al pulsar el botón
   });
 
-  const { data: lastAnalysis } = useQuery({
-    queryKey: ['lastAttendanceAnalysis', selectedDate, selectedShift],
-    queryFn: () => null,
-    enabled: false,
-  });
-
-  const handleRefresh = () => {
-    fetchAttendanceMutation.mutate({
-      date: selectedDate,
-      shift: selectedShift
-    });
+  const handleConsultar = async () => {
+    setConsulted(false);
+    await refetch();
+    setConsulted(true);
   };
 
-  const analysisData = fetchAttendanceMutation.data || lastAnalysis;
+  // Agrupar por empleado y calcular métricas
+  const employeeData = useMemo(() => {
+    if (!rawRecords.length) return [];
+
+    const map = {};
+    for (const r of rawRecords) {
+      if (!map[r.employee_id]) {
+        map[r.employee_id] = {
+          employee_id: r.employee_id,
+          employee_name: r.employee_name,
+          department: r.department || "—",
+          registros: [],
+        };
+      }
+      map[r.employee_id].registros.push(r);
+    }
+
+    const shiftStart = SHIFT_START[selectedShift] || "06:00";
+    const [shiftH, shiftM] = shiftStart.split(":").map(Number);
+    const shiftMinutes = shiftH * 60 + shiftM;
+
+    return Object.values(map).map((emp) => {
+      const sorted = [...emp.registros].sort((a, b) =>
+        a.record_time.localeCompare(b.record_time)
+      );
+      const entrada = sorted.find((r) => r.direction === "E");
+      const salida = [...sorted].reverse().find((r) => r.direction === "S");
+
+      let retrasoMin = 0;
+      if (entrada) {
+        const [h, m] = entrada.record_time.split(":").map(Number);
+        const entradaMin = h * 60 + m;
+        retrasoMin = Math.max(0, entradaMin - shiftMinutes);
+      }
+
+      return {
+        ...emp,
+        entrada: entrada?.record_time || null,
+        salida: salida?.record_time || null,
+        totalMarcajes: sorted.length,
+        retrasoMin,
+      };
+    });
+  }, [rawRecords, selectedShift]);
+
+  // Filtrar por búsqueda
+  const filtered = useMemo(() => {
+    return employeeData.filter((emp) =>
+      !searchTerm ||
+      emp.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.department.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [employeeData, searchTerm]);
+
+  // Estadísticas
+  const stats = useMemo(() => {
+    const presentes = employeeData.filter((e) => e.entrada !== null);
+    const conSalida = employeeData.filter((e) => e.salida !== null);
+    const conRetraso = presentes.filter((e) => e.retrasoMin > 0);
+    return {
+      total: employeeData.length,
+      presentes: presentes.length,
+      conSalida: conSalida.length,
+      retrasos: conRetraso.length,
+    };
+  }, [employeeData]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 p-4">
       <Card>
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="border-b pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
             <Users className="w-5 h-5 text-blue-600" />
             Monitor de Presencia en Tiempo Real
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Fecha</label>
-              <input
+        <CardContent className="p-4">
+          {/* Controles */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Fecha</label>
+              <Input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(e) => { setSelectedDate(e.target.value); setConsulted(false); }}
               />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Turno</label>
-              <Select value={selectedShift} onValueChange={setSelectedShift}>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Turno</label>
+              <Select value={selectedShift} onValueChange={(v) => { setSelectedShift(v); setConsulted(false); }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Mañana">Mañana</SelectItem>
-                  <SelectItem value="Tarde">Tarde</SelectItem>
+                  <SelectItem value="Mañana">Mañana (desde 06:00)</SelectItem>
+                  <SelectItem value="Tarde">Tarde (desde 14:00)</SelectItem>
+                  <SelectItem value="Noche">Noche (desde 22:00)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div className="flex items-end">
               <Button
-                onClick={handleRefresh}
-                disabled={fetchAttendanceMutation.isPending}
+                onClick={handleConsultar}
+                disabled={isLoading}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${fetchAttendanceMutation.isPending ? 'animate-spin' : ''}`} />
-                {fetchAttendanceMutation.isPending ? 'Consultando...' : 'Consultar Fichajes'}
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                {isLoading ? "Consultando..." : "Consultar Fichajes"}
               </Button>
             </div>
           </div>
 
-          {analysisData && (
+          {/* Resultados */}
+          {consulted && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {/* KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-blue-700">Total</p>
-                        <p className="text-2xl font-bold text-blue-900">{analysisData.summary?.total_employees || 0}</p>
-                      </div>
-                      <Users className="w-8 h-8 text-blue-600" />
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-blue-700 font-medium uppercase">Empleados</p>
+                      <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
                     </div>
+                    <Users className="w-6 h-6 text-blue-500" />
                   </CardContent>
                 </Card>
-
-                <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-green-700 dark:text-green-300">Presentes</p>
-                        <p className="text-2xl font-bold text-green-900 dark:text-green-100">{analysisData.summary?.present || 0}</p>
-                      </div>
-                      <UserCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-green-700 font-medium uppercase">Con entrada</p>
+                      <p className="text-2xl font-bold text-green-900">{stats.presentes}</p>
                     </div>
+                    <UserCheck className="w-6 h-6 text-green-500" />
                   </CardContent>
                 </Card>
-
-                <Card className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-red-700 dark:text-red-300">Ausentes</p>
-                        <p className="text-2xl font-bold text-red-900 dark:text-red-100">{analysisData.summary?.absent || 0}</p>
-                      </div>
-                      <UserX className="w-8 h-8 text-red-600 dark:text-red-400" />
+                <Card className="bg-orange-50 border-orange-200">
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-orange-700 font-medium uppercase">Con salida</p>
+                      <p className="text-2xl font-bold text-orange-900">{stats.conSalida}</p>
                     </div>
+                    <UserX className="w-6 h-6 text-orange-500" />
                   </CardContent>
                 </Card>
-
-                <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-orange-700 dark:text-orange-300">Retrasos</p>
-                        <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{analysisData.summary?.late || 0}</p>
-                      </div>
-                      <Clock className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                <Card className="bg-red-50 border-red-200">
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-red-700 font-medium uppercase">Retrasos</p>
+                      <p className="text-2xl font-bold text-red-900">{stats.retrasos}</p>
                     </div>
+                    <Clock className="w-6 h-6 text-red-500" />
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Conflictos de ausencia */}
-              {analysisData.analysis?.absenceConflicts?.length > 0 && (
-                <Card className="mb-6 bg-amber-50 border-amber-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      Conflictos Detectados
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {analysisData.analysis.absenceConflicts.map((conflict, idx) => (
-                        <div key={idx} className="p-3 bg-white rounded-lg border border-amber-200">
-                          <p className="font-semibold text-sm text-amber-900">{conflict.employee_name}</p>
-                          <p className="text-xs text-amber-700">
-                            Tenía ausencia programada pero fichó entrada a las {conflict.actual_entry}
-                          </p>
-                          <p className="text-xs text-amber-600 mt-1">
-                            Motivo ausencia: {conflict.scheduled_absence?.reason}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Buscador */}
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar empleado o departamento..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
 
-              {/* Empleados con retraso */}
-              {analysisData.analysis?.late?.length > 0 && (
-                <Card className="mb-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Retrasos Detectados</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {analysisData.analysis.late.map((late, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 bg-orange-50 rounded-lg">
-                          <span className="font-medium text-sm">{late.employee_name}</span>
-                          <div className="text-right">
-                            <Badge className="bg-orange-600">{late.delay_minutes} min</Badge>
-                            <p className="text-xs text-slate-600 mt-1">
-                              Esperado: {late.expected} | Real: {late.actual}
-                            </p>
-                          </div>
-                        </div>
+              {/* Tabla */}
+              {filtered.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p>No hay registros para esta fecha y turno.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800">
+                      <tr>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">ID</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Empleado</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Departamento</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Entrada</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Salida</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Marcajes</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Retraso</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {filtered.map((emp) => (
+                        <tr key={emp.employee_id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td className="px-4 py-2 text-xs text-slate-400">{emp.employee_id}</td>
+                          <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{emp.employee_name}</td>
+                          <td className="px-4 py-2 text-xs text-slate-500">{emp.department}</td>
+                          <td className="px-4 py-2">
+                            {emp.entrada
+                              ? <Badge className="bg-green-100 text-green-800 text-xs">{emp.entrada}</Badge>
+                              : <span className="text-slate-300">—</span>}
+                          </td>
+                          <td className="px-4 py-2">
+                            {emp.salida
+                              ? <Badge className="bg-orange-100 text-orange-800 text-xs">{emp.salida}</Badge>
+                              : <span className="text-slate-300">—</span>}
+                          </td>
+                          <td className="px-4 py-2 text-xs text-slate-500 text-center">{emp.totalMarcajes}</td>
+                          <td className="px-4 py-2">
+                            {emp.retrasoMin > 0
+                              ? <Badge className="bg-red-100 text-red-700 text-xs">+{emp.retrasoMin} min</Badge>
+                              : emp.entrada
+                                ? <Badge className="bg-green-100 text-green-700 text-xs">A tiempo</Badge>
+                                : <span className="text-slate-300">—</span>}
+                          </td>
+                          <td className="px-4 py-2">
+                            {!emp.entrada && <Badge className="bg-red-100 text-red-700 text-xs">Sin entrada</Badge>}
+                            {emp.entrada && !emp.salida && <Badge className="bg-blue-100 text-blue-700 text-xs">En planta</Badge>}
+                            {emp.entrada && emp.salida && <Badge className="bg-slate-100 text-slate-600 text-xs">Salió</Badge>}
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Ausentes */}
-              {analysisData.analysis?.absent?.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Empleados Ausentes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {analysisData.analysis.absent.map((absent, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 bg-red-50 rounded-lg">
-                          <span className="font-medium text-sm">{absent.employee_name}</span>
-                          <Badge variant={absent.has_scheduled_absence ? "outline" : "destructive"}>
-                            {absent.has_scheduled_absence ? "Programada" : "Sin justificar"}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </tbody>
+                  </table>
+                </div>
               )}
             </>
           )}
