@@ -6,6 +6,7 @@ import AdvancedHRDashboard from "./AdvancedHRDashboard";
 import AppUserManagement from "./AppUserManagement";
 import ArticleManagement from "./ArticleManagement";
 import AttendanceManagement from "./AttendanceManagement";
+import AttendanceControl from "./AttendanceControl";
 import BrandingConfig from "./BrandingConfig";
 import CommitteeManagement from "./CommitteeManagement";
 import Configuration from "./Configuration";
