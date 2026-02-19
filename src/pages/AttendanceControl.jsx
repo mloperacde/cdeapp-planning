@@ -30,14 +30,19 @@ function parseFecha(valor) {
 }
 
 function parseHora(valor) {
-  if (!valor && valor !== 0) return "";
+  if (valor === null || valor === undefined || valor === "") return "";
   if (typeof valor === "number") {
+    if (valor === 0) return "";
     const totalMinutes = Math.round(valor * 24 * 60);
     const h = Math.floor(totalMinutes / 60) % 24;
     const m = totalMinutes % 60;
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   }
-  return String(valor).trim().substring(0, 5);
+  const s = String(valor).trim();
+  // Formato HH:mm:ss o HH:mm
+  const match = s.match(/^(\d{1,2}):(\d{2})/);
+  if (match) return `${match[1].padStart(2, "0")}:${match[2]}`;
+  return "";
 }
 
 export default function AttendanceControl() {
