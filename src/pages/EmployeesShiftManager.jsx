@@ -150,6 +150,11 @@ export default function EmployeesShiftManagerPage() {
   }, [effectiveEmployees]);
 
   const filteredEmployees = useMemo(() => {
+    const effectiveEquipoFilter =
+      filters.equipo && filters.equipo !== 'all'
+        ? filters.equipo
+        : (initialTeam || null);
+
     let result = effectiveEmployees.filter(emp => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
@@ -165,9 +170,9 @@ export default function EmployeesShiftManagerPage() {
       const matchesTurno = !filters.tipo_turno || filters.tipo_turno === 'all' || 
         emp.tipo_turno === filters.tipo_turno;
 
-      let matchesEquipo = !filters.equipo || filters.equipo === 'all';
+      let matchesEquipo = !effectiveEquipoFilter;
       if (!matchesEquipo) {
-        const isTeamEmployee = emp.equipo === filters.equipo;
+        const isTeamEmployee = emp.equipo === effectiveEquipoFilter;
         const shiftLower = (shiftFromUrl || "").toLowerCase();
         const isMorningShift = shiftLower.includes("mañana");
         const isAfternoonShift = shiftLower.includes("tarde");
@@ -211,9 +216,14 @@ export default function EmployeesShiftManagerPage() {
 
   // KPIs
   const stats = useMemo(() => {
+    const effectiveEquipoFilter =
+      filters.equipo && filters.equipo !== 'all'
+        ? filters.equipo
+        : (initialTeam || null);
+
     const base = effectiveEmployees.filter(e => {
-      if (!filters.equipo || filters.equipo === 'all') return true;
-      const isTeamEmployee = e.equipo === filters.equipo;
+      if (!effectiveEquipoFilter) return true;
+      const isTeamEmployee = e.equipo === effectiveEquipoFilter;
       const shiftLower = (shiftFromUrl || "").toLowerCase();
       const isMorningShift = shiftLower.includes("mañana");
       const isAfternoonShift = shiftLower.includes("tarde");
@@ -243,8 +253,13 @@ export default function EmployeesShiftManagerPage() {
     return { total, activos, disponibles, upcomingContractExpirations };
   }, [effectiveEmployees, filters.equipo, shiftFromUrl]);
 
-  const currentTeamLabel = filters.equipo && filters.equipo !== 'all'
-    ? ` - Equipo ${filters.equipo}`
+  const currentEquipoFilter =
+    filters.equipo && filters.equipo !== 'all'
+      ? filters.equipo
+      : (initialTeam || null);
+
+  const currentTeamLabel = currentEquipoFilter
+    ? ` - Equipo ${currentEquipoFilter}`
     : '';
 
   return (
