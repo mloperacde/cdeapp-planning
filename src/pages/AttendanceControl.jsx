@@ -276,11 +276,8 @@ export default function AttendanceControl() {
     if (!conflictDialog) return;
     setImporting(true);
     try {
-      // Eliminar todos los registros del día
-      const existing = await base44.entities.AttendanceRecord.filter({ record_date: conflictDialog.date }, "record_time", 1000);
-      for (const r of existing) {
-        await base44.entities.AttendanceRecord.delete(r.id);
-      }
+      // Eliminar todos los registros del día vía backend (evita rate limit y 404)
+      await base44.functions.invoke('deleteAttendanceRecords', { record_date: conflictDialog.date });
       const { count } = await saveRecords(conflictDialog.pendingRecords);
       toast.success(`${count} registros importados (se sobreescribieron los anteriores).`);
       queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
