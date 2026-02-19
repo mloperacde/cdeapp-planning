@@ -69,7 +69,6 @@ import EmployeeOnboarding from './pages/EmployeeOnboarding';
 import EmployeesShiftManager from './pages/EmployeesShiftManager';
 import FabricacionSkills from './pages/FabricacionSkills';
 import IncentiveManagement from './pages/IncentiveManagement';
-import LockerManagement from './pages/LockerManagement';
 import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
 import MachineDailyPlanning from './pages/MachineDailyPlanning';
@@ -97,6 +96,7 @@ import SalaryManagement from './pages/SalaryManagement';
 import SenioritySettings from './pages/SenioritySettings';
 import ShiftAssignmentsPage from './pages/ShiftAssignmentsPage';
 import ShiftHandover from './pages/ShiftHandover';
+import ShiftIncidentManagement from './pages/ShiftIncidentManagement';
 import ShiftManagers from './pages/ShiftManagers';
 import SkillMatrix from './pages/SkillMatrix';
 import SupportManagement1415 from './pages/SupportManagement1415';
@@ -104,8 +104,10 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
+import LockerManagement from './pages/LockerManagement';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
+import AttendanceControl from './pages/AttendanceControl';
 import __Layout from './Layout.jsx';
 
 
@@ -132,7 +134,6 @@ export const PAGES = {
     "EmployeesShiftManager": EmployeesShiftManager,
     "FabricacionSkills": FabricacionSkills,
     "IncentiveManagement": IncentiveManagement,
-    "LockerManagement": LockerManagement,
     "MLInsights": MLInsights,
     "MachineAssignments": MachineAssignments,
     "MachineDailyPlanning": MachineDailyPlanning,
@@ -160,6 +161,7 @@ export const PAGES = {
     "SenioritySettings": SenioritySettings,
     "ShiftAssignmentsPage": ShiftAssignmentsPage,
     "ShiftHandover": ShiftHandover,
+    "ShiftIncidentManagement": ShiftIncidentManagement,
     "ShiftManagers": ShiftManagers,
     "SkillMatrix": SkillMatrix,
     "SupportManagement1415": SupportManagement1415,
@@ -167,8 +169,10 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
+    "LockerManagement": LockerManagement,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
+    "AttendanceControl": AttendanceControl,
 }
 
 export const pagesConfig = {
