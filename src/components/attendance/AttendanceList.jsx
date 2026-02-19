@@ -7,9 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogIn, LogOut, Clock, Search, ArrowRightLeft, Timer } from "lucide-react";
 
-// Calcular minutos totales de presencia a partir de pares entrada/salida
-function calcularPresencia(registros) {
-  // ordenar por hora
+// Presencia total: diferencia entre primer y último marcaje
+function calcularPresenciaTotal(registros) {
+  if (registros.length < 2) return 0;
+  const sorted = [...registros].sort((a, b) => a.record_time.localeCompare(b.record_time));
+  const primera = sorted[0].record_time;
+  const ultima = sorted[sorted.length - 1].record_time;
+  const [hE, mE] = primera.split(":").map(Number);
+  const [hS, mS] = ultima.split(":").map(Number);
+  const diff = (hS * 60 + mS) - (hE * 60 + mE);
+  return diff > 0 ? diff : 0;
+}
+
+// Presencia efectiva: suma de pares entrada/salida
+function calcularPresenciaEfectiva(registros) {
   const sorted = [...registros].sort((a, b) => a.record_time.localeCompare(b.record_time));
   let minutos = 0;
   let entradaActual = null;
