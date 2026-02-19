@@ -6,22 +6,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ClipboardCheck, 
   Upload, 
-  TrendingUp,
-  AlertCircle,
   CheckCircle2,
   Clock,
-  UserX,
   Users,
   BarChart3,
   Brain,
-  FileSearch
+  FileSearch,
+  Settings
 } from "lucide-react";
 import AttendanceControl from "./AttendanceControl";
 import AttendanceDashboard from "../components/attendance/AttendanceDashboard";
 import AttendanceConfig from "../components/attendance/AttendanceConfig";
 import AttendanceList from "../components/attendance/AttendanceList";
 import AttendancePredictions from "../components/attendance/AttendancePredictions";
-import AttendanceAnalysisReport from "../components/attendance/AttendanceAnalysisReport";
 import AttendanceMonitor from "../components/attendance/AttendanceMonitor";
 import { format } from "date-fns";
 
