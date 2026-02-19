@@ -42,7 +42,7 @@ export const MODULE_DEFINITIONS = {
     viewAlerts: "Ver alertas",
     employeesManagement: "Gestión de Empleados",
     machineAssignments: "Asignaciones de Máquinas",
-    lockerManagement: "Gestión de Taquillas",
+    lockerManagement: "Gestión de Vestuarios/Taquillas",
     performance: "Rendimiento",
     absencesManagement: "Gestión de Ausencias",
     viewRequests: "Ver solicitudes y cumpleaños",

@@ -24,8 +24,8 @@ export default function ConfigurationPage() {
           color: "green"
         },
         {
-          title: "Taquillas",
-          description: "Gestión de taquillas y vestuarios",
+          title: "Vestuarios/Taquillas",
+          description: "Gestión de vestuarios y taquillas",
           icon: FileText,
           url: "/LockerManagement",
           color: "indigo"

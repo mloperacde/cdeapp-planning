@@ -48,6 +48,7 @@ import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 import { useLockerData } from "@/hooks/useLockerData";
 import { base44 } from "@/api/base44Client";
+import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
 
 const EMPTY_ARRAY = [];
 
@@ -78,6 +79,17 @@ export default function LockerManagementPage() {
     saveAssignments,
     isSaving
   } = useLockerData() || {};
+
+  const {
+    data: keysRegistry = {},
+    save: saveKeysRegistry,
+    isSaving: savingKeys
+  } = usePersistentAppConfig("locker_keys_registry", {}, "lockerKeysRegistry", false, { enabled: true });
+
+  const [localKeysRegistry, setLocalKeysRegistry] = useState({});
+  useEffect(() => {
+    setLocalKeysRegistry(keysRegistry || {});
+  }, [keysRegistry]);
 
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
@@ -672,7 +684,7 @@ export default function LockerManagementPage() {
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Gestión de Taquillas
+              Vestuarios/Taquillas
             </h1>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
               Configura vestuarios y asigna taquillas a empleados
@@ -752,7 +764,7 @@ export default function LockerManagementPage() {
         )}
 
         <Tabs defaultValue="estadisticas" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="estadisticas">
               <BarChart3 className="w-4 h-4 mr-2" />
               Estadísticas
@@ -772,6 +784,10 @@ export default function LockerManagementPage() {
             <TabsTrigger value="auditoria">
               <Database className="w-4 h-4 mr-2" />
               Auditoría
+            </TabsTrigger>
+            <TabsTrigger value="llaves">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Duplicados
             </TabsTrigger>
             <TabsTrigger value="configuracion">
               <Settings className="w-4 h-4 mr-2" />
@@ -852,6 +868,201 @@ export default function LockerManagementPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="llaves">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-900/80">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800">
+                <CardTitle className="flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  Registro de copias de llaves
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-slate-600">
+                    Cada taquilla debe tener dos llaves: empleado y jefes de turno.
+                  </p>
+                  <Button
+                    onClick={() => saveKeysRegistry(localKeysRegistry)}
+                    disabled={savingKeys}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {savingKeys ? "Guardando..." : "Guardar registro"}
+                  </Button>
+                </div>
+                <div className="overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vestuario</TableHead>
+                        <TableHead>Taquilla</TableHead>
+                        <TableHead>Empleado</TableHead>
+                        <TableHead>Copia Jefes</TableHead>
+                        <TableHead>Solicitud Duplicado</TableHead>
+                        <TableHead>Préstamo</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(lockerAssignments || [])
+                        .filter(la => la.vestuario && la.numero_taquilla_actual)
+                        .map((la) => {
+                          const lockerKey = `${la.vestuario}#${cleanLockerNumber(la.numero_taquilla_actual)}`;
+                          const reg = localKeysRegistry[lockerKey] || {};
+                          const emp = employees.find(e => String(e.id) === String(la.employee_id));
+                          const hasCopy = !!reg.hasCopy;
+                          const request = reg.request || null;
+                          const loan = reg.loan || null;
+                          return (
+                            <TableRow key={lockerKey}>
+                              <TableCell className="font-medium">{la.vestuario}</TableCell>
+                              <TableCell>{cleanLockerNumber(la.numero_taquilla_actual)}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-900">{emp?.nombre || "-"}</span>
+                                  <span className="text-xs text-slate-500">{emp?.departamento || "-"}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={hasCopy ? "bg-green-600" : "bg-red-600"}>
+                                  {hasCopy ? "Disponible" : "Falta"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {request?.status ? (
+                                  <Badge className={
+                                    request.status === "pendiente" ? "bg-amber-600" :
+                                    request.status === "aprobada" ? "bg-green-600" :
+                                    "bg-red-600"
+                                  }>
+                                    {request.status}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-slate-500">Ninguna</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {loan?.active ? (
+                                  <div className="flex flex-col">
+                                    <Badge className="bg-amber-600 mb-1">Prestado</Badge>
+                                    <span className="text-[11px] text-slate-600">
+                                      {emp?.nombre || "Empleado"} • {loan.borrowed_at ? format(new Date(loan.borrowed_at), "dd/MM HH:mm", { locale: es }) : "-"}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-500">Ninguno</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const next = { ...localKeysRegistry };
+                                      const cur = next[lockerKey] || {};
+                                      next[lockerKey] = { ...cur, hasCopy: !cur.hasCopy };
+                                      setLocalKeysRegistry(next);
+                                    }}
+                                  >
+                                    {hasCopy ? "Marcar falta" : "Marcar disponible"}
+                                  </Button>
+                                  {!request?.status && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const next = { ...localKeysRegistry };
+                                        const cur = next[lockerKey] || {};
+                                        next[lockerKey] = { 
+                                          ...cur, 
+                                          request: { status: "pendiente", requested_by: la.employee_id, requested_at: Date.now() } 
+                                        };
+                                        setLocalKeysRegistry(next);
+                                      }}
+                                    >
+                                      Solicitar duplicado
+                                    </Button>
+                                  )}
+                                  {request?.status === "pendiente" && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const next = { ...localKeysRegistry };
+                                          const cur = next[lockerKey] || {};
+                                          next[lockerKey] = { 
+                                            ...cur, 
+                                            request: { ...cur.request, status: "aprobada", approved_at: Date.now() } 
+                                          };
+                                          setLocalKeysRegistry(next);
+                                        }}
+                                      >
+                                        Aprobar
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const next = { ...localKeysRegistry };
+                                          const cur = next[lockerKey] || {};
+                                          next[lockerKey] = { 
+                                            ...cur, 
+                                            request: { ...cur.request, status: "rechazada", rejected_at: Date.now() } 
+                                          };
+                                          setLocalKeysRegistry(next);
+                                        }}
+                                      >
+                                        Rechazar
+                                      </Button>
+                                    </>
+                                  )}
+                                  {!loan?.active ? (
+                                    <Button
+                                      size="sm"
+                                      className="bg-amber-600 hover:bg-amber-700"
+                                      onClick={() => {
+                                        const next = { ...localKeysRegistry };
+                                        const cur = next[lockerKey] || {};
+                                        next[lockerKey] = { 
+                                          ...cur, 
+                                          loan: { active: true, borrowed_by: la.employee_id, borrowed_at: Date.now() } 
+                                        };
+                                        setLocalKeysRegistry(next);
+                                      }}
+                                    >
+                                      Prestar duplicado
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700"
+                                      onClick={() => {
+                                        const next = { ...localKeysRegistry };
+                                        const cur = next[lockerKey] || {};
+                                        next[lockerKey] = { 
+                                          ...cur, 
+                                          loan: { ...cur.loan, active: false, returned_at: Date.now() } 
+                                        };
+                                        setLocalKeysRegistry(next);
+                                      }}
+                                    >
+                                      Marcar devolución
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>

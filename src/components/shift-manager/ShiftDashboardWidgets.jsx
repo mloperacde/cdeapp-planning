@@ -330,7 +330,7 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
         },
         {
             id: "lockerManagement",
-            title: "Taquillas",
+            title: "Vestuarios/Taquillas",
             icon: KeyRound,
             url: createPageUrl("LockerManagement"),
             color: "orange",
