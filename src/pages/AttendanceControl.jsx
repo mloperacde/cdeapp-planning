@@ -5,12 +5,45 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Search, LogIn, LogOut } from "lucide-react";
+import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Search, LogIn, LogOut, FileWarning } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
+function parseFecha(valor) {
+  if (!valor && valor !== 0) return null;
+  if (typeof valor === "number") {
+    // Número serial de Excel
+    const d = XLSX.SSF.parse_date_code(valor);
+    if (!d) return null;
+    return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
+  }
+  const s = String(valor).trim();
+  // DD/MM/YYYY o DD/MM/YY
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) {
+    const parts = s.split("/");
+    const year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+    return `${year}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+  }
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  return null;
+}
+
+function parseHora(valor) {
+  if (!valor && valor !== 0) return "";
+  if (typeof valor === "number") {
+    // Fracción de día de Excel (ej: 0.58 = 13:55)
+    const totalMinutes = Math.round(valor * 24 * 60);
+    const h = Math.floor(totalMinutes / 60) % 24;
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+  return String(valor).trim().substring(0, 5);
+}
+
 export default function AttendanceControl() {
   const [importing, setImporting] = useState(false);
+  const [importErrors, setImportErrors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
   const fileInputRef = useRef(null);
@@ -42,7 +75,7 @@ export default function AttendanceControl() {
     }, {})
   ).filter((e) =>
     !searchTerm ||
-    e.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    e.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -58,73 +91,132 @@ export default function AttendanceControl() {
     if (!file) return;
 
     setImporting(true);
+    setImportErrors([]);
+
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
 
-      // Buscar la fila de cabecera (ID, Empleado, Sentido...)
+      let workbook;
+      try {
+        workbook = XLSX.read(buffer, { type: "array", cellDates: false, raw: false });
+      } catch (xlsxErr) {
+        toast.error("No se pudo leer el archivo. Asegúrate de que es un Excel válido (.xlsx o .xls).");
+        return;
+      }
+
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        toast.error("El archivo Excel no contiene ninguna hoja.");
+        return;
+      }
+
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
+
+      // Buscar fila de cabecera buscando "ID" y "Empleado" (puede llamarse "Empleado" o "Nombre")
       let headerRowIdx = -1;
-      for (let i = 0; i < rows.length; i++) {
+      for (let i = 0; i < Math.min(rows.length, 20); i++) {
         const row = rows[i];
-        if (row && row.some((cell) => String(cell || "").trim() === "ID") &&
-            row.some((cell) => String(cell || "").trim() === "Empleado")) {
+        if (!row) continue;
+        const cells = row.map((c) => String(c || "").trim().toUpperCase());
+        if (cells.includes("ID") && (cells.includes("EMPLEADO") || cells.includes("NOMBRE"))) {
           headerRowIdx = i;
           break;
         }
       }
 
       if (headerRowIdx === -1) {
-        toast.error("No se encontró la cabecera del archivo. Verifica el formato.");
+        toast.error('No se encontró la cabecera. El archivo debe tener columnas "ID" y "Empleado".');
         return;
       }
 
       const headers = rows[headerRowIdx].map((h) => String(h || "").trim());
-      const idxId = headers.indexOf("ID");
-      const idxEmpleado = headers.findIndex(h => h === "Empleado");
-      const idxSentido = headers.findIndex(h => h === "Sentido");
-      const idxIncidencia = headers.findIndex(h => h === "Incidencia");
-      const idxCentro = headers.findIndex(h => h === "Centro");
-      const idxDepartamento = headers.findIndex(h => h === "Departamento");
-      const idxDispositivo = headers.findIndex(h => h === "Dispositivo");
-      const idxFecha = headers.findIndex(h => h === "Fecha");
-      const idxHora = headers.findIndex(h => h === "Hora");
+      const findCol = (names) => {
+        for (const name of names) {
+          const idx = headers.findIndex((h) => h.toLowerCase() === name.toLowerCase());
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
 
-      const batchId = `import_${Date.now()}`;
-      const dataRows = rows.slice(headerRowIdx + 1).filter(
-        (row) => row && row[idxId] && row[idxEmpleado]
-      );
+      const idxId = findCol(["ID"]);
+      const idxEmpleado = findCol(["Empleado", "Nombre"]);
+      const idxSentido = findCol(["Sentido", "Tipo", "Dirección", "Direccion"]);
+      const idxIncidencia = findCol(["Incidencia"]);
+      const idxCentro = findCol(["Centro"]);
+      const idxDepartamento = findCol(["Departamento", "Depto"]);
+      const idxDispositivo = findCol(["Dispositivo"]);
+      const idxFecha = findCol(["Fecha", "Date"]);
+      const idxHora = findCol(["Hora", "Hora marcaje", "Time"]);
 
-      if (dataRows.length === 0) {
-        toast.error("No se encontraron registros válidos en el archivo.");
+      // Validar columnas obligatorias
+      const missing = [];
+      if (idxId === -1) missing.push("ID");
+      if (idxEmpleado === -1) missing.push("Empleado");
+      if (idxFecha === -1) missing.push("Fecha");
+      if (idxHora === -1) missing.push("Hora");
+      if (missing.length > 0) {
+        toast.error(`Faltan columnas obligatorias: ${missing.join(", ")}`);
         return;
       }
 
-      const toCreate = dataRows.map((row) => {
-        // Parsear fecha de Excel si es número
-        let fechaStr = row[idxFecha];
-        if (typeof fechaStr === "number") {
-          const d = XLSX.SSF.parse_date_code(fechaStr);
-          fechaStr = `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
-        } else if (typeof fechaStr === "string" && fechaStr.includes("/")) {
-          const parts = fechaStr.split("/");
-          fechaStr = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+      const batchId = `import_${Date.now()}`;
+      const dataRows = rows.slice(headerRowIdx + 1).filter(
+        (row) => row && row[idxId] !== null && row[idxId] !== undefined && row[idxEmpleado]
+      );
+
+      if (dataRows.length === 0) {
+        toast.error("No se encontraron filas de datos en el archivo.");
+        return;
+      }
+
+      const toCreate = [];
+      const errors = [];
+
+      dataRows.forEach((row, rowNum) => {
+        const rawId = row[idxId];
+        const rawEmpleado = row[idxEmpleado];
+        const rawFecha = idxFecha !== -1 ? row[idxFecha] : null;
+        const rawHora = idxHora !== -1 ? row[idxHora] : null;
+        const rawSentido = idxSentido !== -1 ? row[idxSentido] : null;
+
+        const employeeId = rawId !== null ? String(rawId).trim() : null;
+        const employeeName = rawEmpleado ? String(rawEmpleado).trim() : null;
+        const fechaStr = parseFecha(rawFecha);
+        const horaStr = parseHora(rawHora);
+        const sentido = rawSentido ? String(rawSentido).trim() : "";
+
+        if (!employeeId || !employeeName) {
+          errors.push(`Fila ${headerRowIdx + 2 + rowNum}: ID o nombre de empleado vacío.`);
+          return;
+        }
+        if (!fechaStr) {
+          errors.push(`Fila ${headerRowIdx + 2 + rowNum} (${employeeName}): Fecha inválida — "${rawFecha}".`);
+          return;
+        }
+        if (!horaStr) {
+          errors.push(`Fila ${headerRowIdx + 2 + rowNum} (${employeeName}): Hora inválida — "${rawHora}".`);
+          return;
         }
 
-        return {
-          employee_id: String(row[idxId]),
-          employee_name: String(row[idxEmpleado] || "").trim(),
-          direction: String(row[idxSentido] || "").trim(),
-          incident: String(row[idxIncidencia] || "N/A").trim(),
-          center: String(row[idxCentro] || "").trim(),
-          department: String(row[idxDepartamento] || "").trim(),
-          device: String(row[idxDispositivo] || "").trim(),
+        toCreate.push({
+          employee_id: employeeId,
+          employee_name: employeeName,
+          direction: sentido,
+          incident: idxIncidencia !== -1 && row[idxIncidencia] ? String(row[idxIncidencia]).trim() : "N/A",
+          center: idxCentro !== -1 && row[idxCentro] ? String(row[idxCentro]).trim() : "",
+          department: idxDepartamento !== -1 && row[idxDepartamento] ? String(row[idxDepartamento]).trim() : "",
+          device: idxDispositivo !== -1 && row[idxDispositivo] ? String(row[idxDispositivo]).trim() : "",
           record_date: fechaStr,
-          record_time: String(row[idxHora] || "").trim(),
+          record_time: horaStr,
           import_batch: batchId,
-        };
+        });
       });
+
+      if (toCreate.length === 0) {
+        setImportErrors(errors);
+        toast.error(`No se importó ningún registro. ${errors.length} errores detectados.`);
+        return;
+      }
 
       // Crear en lotes de 50
       const chunkSize = 50;
@@ -132,14 +224,21 @@ export default function AttendanceControl() {
         await base44.entities.AttendanceRecord.bulkCreate(toCreate.slice(i, i + chunkSize));
       }
 
-      toast.success(`${toCreate.length} registros importados correctamente.`);
+      if (errors.length > 0) {
+        setImportErrors(errors);
+        toast.warning(`${toCreate.length} registros importados. ${errors.length} filas con errores.`);
+      } else {
+        toast.success(`${toCreate.length} registros importados correctamente.`);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
 
       // Auto-set filter date to imported date
       if (toCreate[0]?.record_date) setFilterDate(toCreate[0].record_date);
+
     } catch (err) {
       console.error(err);
-      toast.error("Error al procesar el archivo: " + err.message);
+      toast.error("Error inesperado al procesar el archivo: " + err.message);
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -148,8 +247,7 @@ export default function AttendanceControl() {
 
   const handleClearDay = async () => {
     if (!confirm(`¿Eliminar todos los registros del ${filterDate}?`)) return;
-    const toDelete = records;
-    for (const r of toDelete) {
+    for (const r of records) {
       await base44.entities.AttendanceRecord.delete(r.id);
     }
     toast.success("Registros eliminados.");
@@ -177,6 +275,31 @@ export default function AttendanceControl() {
           )}
         </div>
       </div>
+
+      {/* Errores de importación */}
+      {importErrors.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-sm text-orange-700 dark:text-orange-400 flex items-center gap-2">
+              <FileWarning className="w-4 h-4" />
+              {importErrors.length} fila(s) con errores (no importadas)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 pb-3">
+            <ul className="text-xs text-orange-600 dark:text-orange-300 space-y-0.5 max-h-32 overflow-y-auto">
+              {importErrors.slice(0, 10).map((err, i) => (
+                <li key={i}>• {err}</li>
+              ))}
+              {importErrors.length > 10 && (
+                <li className="text-orange-400 italic">... y {importErrors.length - 10} más</li>
+              )}
+            </ul>
+            <Button variant="ghost" size="sm" className="mt-2 text-xs h-6 text-orange-600" onClick={() => setImportErrors([])}>
+              Cerrar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filtro de fecha */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">

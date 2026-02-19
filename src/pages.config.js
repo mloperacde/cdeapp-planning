@@ -105,9 +105,9 @@ import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
 import LockerManagement from './pages/LockerManagement';
+import AttendanceControl from './pages/AttendanceControl';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
-import AttendanceControl from './pages/AttendanceControl';
 import __Layout from './Layout.jsx';
 
 
@@ -170,9 +170,9 @@ export const PAGES = {
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
     "LockerManagement": LockerManagement,
+    "AttendanceControl": AttendanceControl,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
-    "AttendanceControl": AttendanceControl,
 }
 
 export const pagesConfig = {
