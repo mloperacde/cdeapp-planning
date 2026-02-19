@@ -52,11 +52,11 @@ export default function AttendanceControl() {
   const [conflictDialog, setConflictDialog] = useState(null); // { pendingRecords, date, existingBatches }
   const [shiftName, setShiftName] = useState("tarde");
 
-  const { data: records = [], isLoading } = useQuery({
+  const { data: records = [], isLoading, refetch } = useQuery({
     queryKey: ["attendanceRecords", filterDate],
     queryFn: () =>
       base44.entities.AttendanceRecord.filter({ record_date: filterDate }, "record_time", 500),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
   });
 
   // Batches únicos del día actual (para poder borrar por turno)
