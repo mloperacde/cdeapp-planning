@@ -92,14 +92,10 @@ export default function AttendanceMonitor() {
     staleTime: 60000,
   });
 
-  // Ausencias activas (Aprobadas o Pendientes)
+  // Ausencias activas (Aprobadas o Pendientes) — sin filtro de fecha para traerlas todas
   const { data: ausencias = [], isLoading: loadingAusencias } = useQuery({
     queryKey: ["ausenciasMonitor"],
-    queryFn: () => base44.entities.Absence.filter(
-      { estado_aprobacion: { $in: ["Aprobada", "Pendiente"] } },
-      "-fecha_inicio",
-      500
-    ),
+    queryFn: () => base44.entities.Absence.list("-fecha_inicio", 1000),
     staleTime: 30000,
   });
 
