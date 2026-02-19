@@ -120,23 +120,20 @@ export default function AttendanceMonitor() {
     return map;
   }, [masterEmployees]);
 
-  // Mapa employee_id (ID de Employee entity) → ausencias activas en la fecha
-  // Necesitamos este mapa para: codigo_empleado → ausencia
-  // La relación es: Absence.employee_id → EmployeeMasterDatabase.employee_id → codigo_empleado
+  // ausenciasMap: codigo_empleado → ausencia activa en selectedDate
+  // Absence.employee_id apunta al ID del registro de EmployeeMasterDatabase (master.id)
   const ausenciasMap = useMemo(() => {
-    // Mapa: employee_id (del Employee record) → master record
-    const masterByEmployeeId = {};
+    // Mapa: master.id → codigo_empleado
+    const masterIdToCodigo = {};
     for (const m of masterEmployees) {
-      if (m.employee_id) masterByEmployeeId[m.employee_id] = m;
+      if (m.id && m.codigo_empleado) masterIdToCodigo[m.id] = String(m.codigo_empleado);
     }
-    // Mapa: codigo_empleado → ausencia activa en selectedDate
     const map = {};
     for (const a of ausencias) {
+      if (!a.employee_id) continue;
       if (!ausenciaActivaEnFecha(a, selectedDate)) continue;
-      const master = masterByEmployeeId[a.employee_id];
-      if (master?.codigo_empleado) {
-        map[String(master.codigo_empleado)] = a;
-      }
+      const codigo = masterIdToCodigo[a.employee_id];
+      if (codigo) map[codigo] = a;
     }
     return map;
   }, [ausencias, masterEmployees, selectedDate]);
