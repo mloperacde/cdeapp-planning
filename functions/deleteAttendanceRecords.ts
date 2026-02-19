@@ -13,34 +13,48 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Se requiere record_date o import_batch' }, { status: 400 });
     }
 
-    // Construir filtro
+    // Obtener registros de 1 en 1 con pausa larga para evitar rate limit
     const filter = {};
     if (record_date) filter.record_date = record_date;
     if (import_batch) filter.import_batch = import_batch;
 
-    // Obtener registros (máx 500 por llamada)
-    const records = await base44.asServiceRole.entities.AttendanceRecord.filter(filter, 'record_date', 500);
+    let allIds = [];
+    let skip = 0;
+    const pageSize = 50;
 
-    if (!records || records.length === 0) {
+    while (true) {
+      await new Promise(res => setTimeout(res, 300));
+      let page;
+      try {
+        page = await base44.asServiceRole.entities.AttendanceRecord.filter(filter, 'record_date', pageSize);
+      } catch {
+        break;
+      }
+      if (!page || page.length === 0) break;
+      allIds = allIds.concat(page.map(r => r.id));
+      if (page.length < pageSize) break;
+      skip += pageSize;
+      // Evitar bucle infinito
+      if (allIds.length >= 2000) break;
+    }
+
+    if (allIds.length === 0) {
       return Response.json({ deleted: 0, message: 'No se encontraron registros' });
     }
 
-    // Eliminar de 10 en 10 con pequeña pausa
+    // Eliminar de 1 en 1 con pausa para respetar rate limit
     let deleted = 0;
-    const batchSize = 10;
-
-    for (let i = 0; i < records.length; i += batchSize) {
-      const batch = records.slice(i, i + batchSize);
-      const results = await Promise.allSettled(
-        batch.map(r => base44.asServiceRole.entities.AttendanceRecord.delete(r.id))
-      );
-      deleted += results.filter(r => r.status === 'fulfilled').length;
-      if (i + batchSize < records.length) {
-        await new Promise(res => setTimeout(res, 150));
+    for (const id of allIds) {
+      await new Promise(res => setTimeout(res, 100));
+      try {
+        await base44.asServiceRole.entities.AttendanceRecord.delete(id);
+        deleted++;
+      } catch {
+        // ignorar errores individuales (404, etc.)
       }
     }
 
-    return Response.json({ deleted, total: records.length });
+    return Response.json({ deleted, total: allIds.length });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
