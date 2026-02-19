@@ -316,7 +316,8 @@ export default function AttendanceControl() {
     try {
       const result = await base44.functions.invoke('deleteAttendanceRecords', { record_date: filterDate });
       toast.success(`${result.data?.deleted || 0} registros del día eliminados.`);
-      queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
+      await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
+      await refetch();
     } catch (err) {
       toast.error("Error al eliminar: " + err.message);
     }
@@ -329,7 +330,8 @@ export default function AttendanceControl() {
     try {
       await deleteBatch(batchId);
       toast.success(`Registros del turno "${label}" eliminados.`);
-      queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
+      await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
+      await refetch();
     } catch (err) {
       toast.error("Error al eliminar: " + err.message);
     }
