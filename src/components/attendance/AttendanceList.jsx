@@ -256,18 +256,27 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
                         )}
                       </td>
 
-                      {/* Saldo presencia */}
+                      {/* Presencia total */}
                       <td className="px-4 py-2">
                         <span className={`font-semibold text-sm ${
-                          emp.minutosPresencia >= 420
-                            ? "text-green-700"
-                            : emp.minutosPresencia > 0
-                            ? "text-amber-600"
-                            : "text-slate-400"
+                          emp.minutosTotal >= 420 ? "text-purple-700"
+                          : emp.minutosTotal > 0 ? "text-amber-600"
+                          : "text-slate-400"
                         }`}>
-                          {formatHoras(emp.minutosPresencia)}
+                          {formatHoras(emp.minutosTotal)}
                         </span>
                         <div className="text-[10px] text-slate-400">{emp.totalMarcajes} marcajes</div>
+                      </td>
+
+                      {/* Presencia efectiva */}
+                      <td className="px-4 py-2">
+                        <span className={`font-semibold text-sm ${
+                          emp.minutosEfectiva >= 420 ? "text-green-700"
+                          : emp.minutosEfectiva > 0 ? "text-amber-600"
+                          : "text-slate-400"
+                        }`}>
+                          {formatHoras(emp.minutosEfectiva)}
+                        </span>
                       </td>
                     </tr>
                   ))}
